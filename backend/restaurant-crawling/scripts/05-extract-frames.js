@@ -9,18 +9,18 @@
  * 2. 스마트 다운로드: `yt-dlp`를 사용하여 지정된 화질(기본 1080p)로 영상 다운로드
  * 3. 정밀 프레임 추출: `ffmpeg`를 사용하여 피크 시점 전후(Buffer) 구간을 프레임 단위로 저장
  * 4. 자동 메타데이터 연동: 기존 수집된 메타 정보(recollect_id 등)를 자동으로 감지하여 데이터 일관성 유지
- * 5. 포맷 지원: 비손실 BMP(기본) 및 무손실 압축 PNG 지원
+ * 5. 포맷 지원: WebP(기본/무손실), BMP, PNG, JPG 등 다양한 포맷 지원
  *
  * [사용법]
- * node 05-extract-frames.js --url "https://youtu.be/..." --fps 4 --buffer 5 --quality 1080p [--compress]
+ * node 05-extract-frames.js --url "https://youtu.be/..." --fps 1 --buffer 0 --quality 360p [--ext webp]
  *
  * [옵션]
  * --url       : 대상 유튜브 영상 URL (필수)
  * --channel   : 채널명 (기본: manual)
- * --fps       : 초당 추출 프레임 수 (기본: 4.0)
- * --buffer    : 피크 지점 기준 앞뒤 여유 시간(초) (기본: 5.0)
- * --quality   : 다운로드 화질 (예: 1080p, 720p) (기본: 1080p)
- * --compress  : PNG 압축 사용 (기본: BMP - 빠른 속도)
+ * --fps       : 초당 추출 프레임 수 (기본: 1.0)
+ * --buffer    : 피크 지점 기준 앞뒤 여유 시간(초) (기본: 0.0)
+ * --quality   : 다운로드 화질 (예: 1080p, 720p, 360p) (기본: 360p)
+ * --ext       : 이미지 포맷 (webp, png, jpg, bmp) (기본: webp)
  */
 
 import fs from 'fs';
@@ -52,10 +52,10 @@ function parseArgs() {
     const params = {
         url: null,
         channel: 'manual',
-        fps: 4.0,
-        buffer: 5.0,
-        quality: '1080p',
-        compress: false // false: BMP(Raw, 빠름), true: PNG(압축, 용량 절약)
+        fps: 1.0,
+        buffer: 0.0,
+        quality: '360p',
+        ext: 'webp' // 기본 포맷: WebP (무손실)
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -65,7 +65,7 @@ function parseArgs() {
             case '--fps': params.fps = parseFloat(args[++i]); break;
             case '--buffer': params.buffer = parseFloat(args[++i]); break;
             case '--quality': params.quality = args[++i]; break;
-            case '--compress': params.compress = true; break;
+            case '--ext': params.ext = args[++i].toLowerCase(); break; // jpg, png, webp, bmp
             case '--delete-cache': params.deleteCache = true; break;
         }
     }
@@ -416,8 +416,8 @@ async function downloadVideo(videoId, outputDir, quality) {
     return null;
 }
 
-// [수정] quality 인자 추가
-async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, bufferSec, compress) {
+// [수정] quality 인자 추가, compress -> ext 변경
+async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, bufferSec, ext) {
     if (!fs.existsSync(videoPath)) return;
 
     let duration = 0;
@@ -429,11 +429,21 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         log('warn', `길이 확인 실패 (진행): ${e.message}`);
     }
 
-    const ext = compress ? 'png' : 'bmp';
-    log('info', `🖼️ 이미지 포맷 설정: ${ext.toUpperCase()} (압축: ${compress ? 'ON' : 'OFF'})`);
+    log('info', `🖼️ 이미지 포맷 설정: ${ext.toUpperCase()}`);
+
+    // 확장자별 FFMPEG 인코딩 옵션 설정
+    let encodingOpts = '';
+    if (ext === 'webp') {
+        encodingOpts = '-c:v libwebp -lossless 1'; // WebP 무손실
+    } else if (ext === 'png') {
+        encodingOpts = '-c:v png -compression_level 3'; // PNG (속도/압축 균형)
+    } else if (ext === 'jpg' || ext === 'jpeg') {
+        encodingOpts = '-q:v 2'; // JPG 고화질 (1-31, 낮을수록 좋음)
+    } else if (ext === 'bmp') {
+        encodingOpts = '-c:v bmp'; // BMP (기본)
+    }
 
     // [최적화] Promise.all을 사용하여 모든 구간을 병렬로 처리 (CPU 활용 극대화)
-    // 주의: FFMPEG는 로컬 작업이므로 유튜브 네트워크 요청 제한과 무관함 -> 안심하고 병렬 처리 가능
     await Promise.all(segments.map(async (seg, i) => {
         // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
         const startTime = Math.max(0, seg.startSec - bufferSec);
@@ -441,11 +451,10 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
 
         const segDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
 
-        // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/FORMAT_DIR/QUALITY_FPS/frame_x.ext
-        // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/FORMAT_DIR/QUALITY_FPS/frame_x.ext
         const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
         const configDirName = `${quality}_${fpsStr}fps`;
 
+        // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/EXT_DIR/QUALITY_FPS/frame_x.ext
         const segDirPath = path.join(outputBaseDir, segDirName, ext, configDirName);
         fs.mkdirSync(segDirPath, { recursive: true });
 
@@ -463,13 +472,13 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
             segDuration = 1.0 / fps; // 최소 1프레임 보장
         }
 
-        // ffmpeg 명령 생성
-        const cmd = `ffmpeg -y -ss ${startTime} -t ${segDuration} -i "${videoPath}" -vf "fps=${fps}" -frame_pts 1 "${path.join(segDirPath, `frame_%d.${ext}`)}"`;
+        // ffmpeg 명령 생성 (인코딩 옵션 추가)
+        const cmd = `ffmpeg -y -ss ${startTime} -t ${segDuration} -i "${videoPath}" -vf "fps=${fps}" ${encodingOpts} -frame_pts 1 "${path.join(segDirPath, `frame_%d.${ext}`)}"`;
 
         try {
             await execPromise(cmd);
 
-            // 파일명 정리: frame_1.bmp -> 정확한 시간(초).bmp 로 변경
+            // 파일명 정리: frame_1.ext -> 정확한 시간(초).ext 로 변경
             const files = fs.readdirSync(segDirPath).filter(f => f.startsWith('frame_'));
             let count = 0;
             for (const file of files) {
@@ -493,7 +502,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
 }
 
 async function processSingleVideo(videoId, params) {
-    const { channel, fps, buffer, quality, url, compress } = params;
+    const { channel, fps, buffer, quality, url, ext } = params;
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
     const segments = await fetchAndSaveHeatmap(channel, videoId, url);
@@ -522,7 +531,7 @@ async function processSingleVideo(videoId, params) {
         // 3. 프레임 추출
         const recollectId = getMetaRecollectId(channel, videoId);
         const outputDir = getFramesOutputDir(channel, videoId, recollectId);
-        await extractFrames(videoPath, segments, outputDir, quality, fps, buffer, compress);
+        await extractFrames(videoPath, segments, outputDir, quality, fps, buffer, ext);
 
         // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
         if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
@@ -574,9 +583,8 @@ async function main() {
         // URL 정규화 (youtu.be 단축 링크 등 리다이렉트 방지)
         params.url = `https://www.youtube.com/watch?v=${videoId}`;
 
-        const modeStr = params.compress ? 'PNG (압축)' : 'BMP (원본/무압축)';
         log('info', `=== 비디오 Frame 추출 시작: ${videoId} ===`);
-        log('info', `설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality}, 포맷=${modeStr}`);
+        log('info', `설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality}, 포맷=${params.ext.toUpperCase()}`);
 
         if (params.channel === 'manual') {
             fs.mkdirSync(path.join(BASE_DATA_DIR, 'manual'), { recursive: true });
