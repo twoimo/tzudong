@@ -19,7 +19,7 @@
  * --channel   : 채널명 (기본: manual)
  * --fps       : 초당 추출 프레임 수 (기본: 1.0)
  * --buffer    : 피크 지점 기준 앞뒤 여유 시간(초) (기본: 0.0)
- * --quality   : 다운로드 화질 (예: 1080p, 720p, 360p) (기본: 360p)
+ * --quality   : 다운로드 화질 (예: 1080p,720p,360p) (기본: 360p) - 쉼표로 구분하여 다중 지정 가능
  * --ext       : 이미지 포맷 (webp, png, jpg, bmp) (기본: webp)
  */
 
@@ -54,7 +54,7 @@ function parseArgs() {
         channel: 'manual',
         fps: 1.0,
         buffer: 0.0,
-        quality: '360p',
+        quality: ['360p'], // 배열로 변경
         ext: 'webp' // 기본 포맷: WebP (무손실)
     };
 
@@ -64,7 +64,7 @@ function parseArgs() {
             case '--channel': params.channel = args[++i]; break;
             case '--fps': params.fps = parseFloat(args[++i]); break;
             case '--buffer': params.buffer = parseFloat(args[++i]); break;
-            case '--quality': params.quality = args[++i]; break;
+            case '--quality': params.quality = args[++i].split(','); break; // 콤마로 구분하여 배열로 변환
             case '--ext': params.ext = args[++i].toLowerCase(); break; // jpg, png, webp, bmp
             case '--delete-cache': params.deleteCache = true; break;
         }
@@ -502,7 +502,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
 }
 
 async function processSingleVideo(videoId, params) {
-    const { channel, fps, buffer, quality, url, ext } = params;
+    const { channel, fps, buffer, quality, url, ext } = params; // quality는 이제 배열입니다
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
     const segments = await fetchAndSaveHeatmap(channel, videoId, url);
@@ -513,59 +513,67 @@ async function processSingleVideo(videoId, params) {
 
     log('info', `🔎 ${videoId}: ${segments.length}개의 주요 구간 발견`);
 
-    // 2. 영상 다운로드 (임시 폴더) - 파일 잠금 충돌 방지용 랜덤 접미사
-    const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    const tempDir = path.join(getChannelDir(channel), 'temp_video', uniqueSuffix);
-    fs.mkdirSync(tempDir, { recursive: true });
+    // 모든 화질에 대해 반복 처리
+    const qualities = Array.isArray(quality) ? quality : [quality];
+    log('info', `🎯 처리할 화질 목록: [${qualities.join(', ')}]`);
 
-    // 다운로드 및 처리 로직
-    let videoPath = null;
-    try {
-        videoPath = await downloadVideo(videoId, tempDir, quality);
+    for (const currentQuality of qualities) {
+        log('info', `\n🚀 화질 처리 시작: ${currentQuality}`);
 
-        if (!videoPath) {
-            log('error', '❌ 비디오 파일 확보 실패. 종료합니다.');
-            return;
-        }
+        // 2. 영상 다운로드 (임시 폴더) - 파일 잠금 충돌 방지용 랜덤 접미사
+        const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        const tempDir = path.join(getChannelDir(channel), 'temp_video', uniqueSuffix);
+        fs.mkdirSync(tempDir, { recursive: true });
 
-        // 3. 프레임 추출
-        const recollectId = getMetaRecollectId(channel, videoId);
-        const outputDir = getFramesOutputDir(channel, videoId, recollectId);
-        await extractFrames(videoPath, segments, outputDir, quality, fps, buffer, ext);
+        // 다운로드 및 처리 로직
+        let videoPath = null;
+        try {
+            videoPath = await downloadVideo(videoId, tempDir, currentQuality);
 
-        // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
-        if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
+            if (!videoPath) {
+                log('error', `❌ 비디오 파일 확보 실패 (${currentQuality}). 건너뜁니다.`);
+                continue; // 다음 화질 처리
+            }
+
+            // 3. 프레임 추출
+            const recollectId = getMetaRecollectId(channel, videoId);
+            const outputDir = getFramesOutputDir(channel, videoId, recollectId);
+            await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, ext);
+
+            // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
+            if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
+                try {
+                    fs.unlinkSync(videoPath);
+                    log('info', `🗑️ 비디오 캐시 파일 삭제 완료: ${videoPath}`);
+
+                    // 폴더가 비었으면 폴더도 삭제
+                    if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {
+                        fs.rmdirSync(VIDEO_CACHE_DIR);
+                        log('info', `🗑️ 비디오 캐시 폴더 삭제 완료: ${VIDEO_CACHE_DIR}`);
+                    }
+                } catch (e) {
+                    log('warn', `캐시 삭제 실패: ${e.message}`);
+                }
+            }
+
+        } catch (e) {
+            log('error', `오류 발생 (${currentQuality}): ${e.message}`);
+        } finally {
+            // 4. 임시 파일 정리 (항상 수행)
+            // tempDir은 매번 생성되는 고유 임시 폴더이므로 무조건 삭제해도 안전함 (캐시 폴더와 무관)
             try {
-                fs.unlinkSync(videoPath);
-                log('info', `🗑️ 비디오 캐시 파일 삭제 완료: ${videoPath}`);
+                if (fs.existsSync(tempDir)) {
+                    fs.rmSync(tempDir, { recursive: true, force: true });
+                }
 
-                // 폴더가 비었으면 폴더도 삭제
-                if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {
-                    fs.rmdirSync(VIDEO_CACHE_DIR);
-                    log('info', `🗑️ 비디오 캐시 폴더 삭제 완료: ${VIDEO_CACHE_DIR}`);
+                // 상위 temp_video 폴더가 비어있으면 삭제 시도
+                const parentTempDir = path.dirname(tempDir);
+                if (fs.existsSync(parentTempDir) && fs.readdirSync(parentTempDir).length === 0) {
+                    fs.rmdirSync(parentTempDir);
                 }
             } catch (e) {
-                log('warn', `캐시 삭제 실패: ${e.message}`);
+                log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
             }
-        }
-
-    } catch (e) {
-        log('error', `오류 발생: ${e.message}`);
-    } finally {
-        // 4. 임시 파일 정리 (항상 수행)
-        // tempDir은 매번 생성되는 고유 임시 폴더이므로 무조건 삭제해도 안전함 (캐시 폴더와 무관)
-        try {
-            if (fs.existsSync(tempDir)) {
-                fs.rmSync(tempDir, { recursive: true, force: true });
-            }
-
-            // 상위 temp_video 폴더가 비어있으면 삭제 시도
-            const parentTempDir = path.dirname(tempDir);
-            if (fs.existsSync(parentTempDir) && fs.readdirSync(parentTempDir).length === 0) {
-                fs.rmdirSync(parentTempDir);
-            }
-        } catch (e) {
-            log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
         }
     }
 }
@@ -584,7 +592,7 @@ async function main() {
         params.url = `https://www.youtube.com/watch?v=${videoId}`;
 
         log('info', `=== 비디오 Frame 추출 시작: ${videoId} ===`);
-        log('info', `설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality}, 포맷=${params.ext.toUpperCase()}`);
+        log('info', `설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality.join(', ')}, 포맷=${params.ext.toUpperCase()}`);
 
         if (params.channel === 'manual') {
             fs.mkdirSync(path.join(BASE_DATA_DIR, 'manual'), { recursive: true });
