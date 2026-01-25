@@ -19,7 +19,7 @@
  * --fps       : 초당 추출 프레임 수 (기본: 1.0)
  * --buffer    : 피크 지점 기준 앞뒤 여유 시간(초) (기본: 0.0)
  * --quality   : 다운로드 화질 (예: 1080p,720p,360p) (기본: 360p) - 쉼표로 구분하여 다중 지정 가능
- * --ext       : 이미지 포맷 (예: webp,png,jpg) (기본: webp) - 쉼표로 구분하여 다중 지정 가능
+ * --ext       : 이미지 포맷 (예: webp,png,jpg) (기본: jpg) - 쉼표로 구분하여 다중 지정 가능
  */
 
 import fs from 'fs';
@@ -54,7 +54,7 @@ function parseArgs() {
         fps: 1.0,
         buffer: 0.0,
         quality: ['360p'], // 배열로 변경
-        ext: ['webp'] // 배열로 변경
+        ext: ['jpg'] // 배열로 변경
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -428,9 +428,14 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
     const recollectId = getMetaRecollectId(channel, videoId);
 
+    // [추가] 메타 정보에서 duration 가져오기
+    const metaInfo = getMetaInfo(channel, videoId);
+    const duration = metaInfo ? metaInfo.duration : 0;
+
     const saveData = {
         youtube_link: url,
         video_id: videoId,
+        duration: duration, // duration 필드 추가
         interaction_data: formattedInteraction,
         most_replayed_markers: parsed.mostReplayedMarkers,
         status: 'success',
