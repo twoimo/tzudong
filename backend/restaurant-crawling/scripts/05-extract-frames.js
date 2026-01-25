@@ -323,23 +323,44 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
 // --- 비디오 다운로드 및 프레임 추출 ---
 
-async function downloadVideo(videoId, outputPath, quality) {
+async function downloadVideo(videoId, outputDir, quality) {
     const match = quality.match(/\d+/);
     const height = match ? parseInt(match[0]) : 1080;
 
     const cookieTxt = path.join(BASE_DATA_DIR, 'cookies.txt');
     const cookieArg = fs.existsSync(cookieTxt) ? `--cookies "${cookieTxt}"` : '';
 
-    const format = `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${height}][ext=mp4]/best[ext=mp4]`;
-    const cmd = `yt-dlp ${cookieArg} -f "${format}" -o "${outputPath}" "https://www.youtube.com/watch?v=${videoId}"`;
+    // 포맷 유연성 확보: mp4 강제 제거 후 remux 사용 (n-challenge 해결 확률 높임)
+    const format = `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`;
 
-    log('info', `📥 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) ${cookieArg ? '[쿠키 적용]' : ''}`);
+    // 1. Python 모듈 사용 (최신 버전 보장)
+    // 2. Node.js 경로 명시 (n-challenge 해결 필수)
+    // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
+    // 4. Output Template: 확장자 자동 결정 (%(ext)s) - Merge 에러 방지
+    const nodePath = "C:\\Program Files\\nodejs\\node.exe";
+    const outputFileTemplate = path.join(outputDir, `${videoId}.%(ext)s`);
+
+    // --merge-output-format 제거: 원본 컨테이너 그대로 저장
+    const cmd = `python -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+
+    log('info', `📥 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [Python Module + Node.js + Auto Format]`);
     try {
         await execPromise(cmd);
-        return true;
+
+        // 다운로드된 파일 찾기
+        const files = fs.readdirSync(outputDir);
+        const videoFile = files.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
+
+        if (videoFile) {
+            return path.join(outputDir, videoFile);
+        }
+
+        log('error', '❌ 파일 다운로드는 완료되었으나 파일을 찾을 수 없습니다.');
+        return null;
+
     } catch (e) {
         log('error', `❌ 다운로드 실패: ${e.message}`);
-        return false;
+        return null;
     }
 }
 
@@ -417,18 +438,20 @@ async function processSingleVideo(videoId, params) {
 
     // 2. 영상 다운로드 (임시 폴더)
     const tempDir = path.join(getChannelDir(channel), 'temp_video');
-    fs.mkdirSync(tempDir, { recursive: true });
-    const videoPath = path.join(tempDir, `${videoId}.mp4`);
-
-    let downloaded = false;
-    if (fs.existsSync(videoPath)) {
-        log('info', "♻️ 기존 다운로드된 영상 재사용");
-        downloaded = true;
+    if (fs.existsSync(tempDir)) {
+        // 기존 임시 파일 정리
+        fs.readdirSync(tempDir).forEach(f => fs.unlinkSync(path.join(tempDir, f)));
     } else {
-        downloaded = await downloadVideo(videoId, videoPath, quality);
+        fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    if (!downloaded) return;
+    // 다운로드 실행 (경로가 아닌 폴더 전달, 실제 다운로드된 파일 경로 반환)
+    const videoPath = await downloadVideo(videoId, tempDir, quality);
+
+    if (!videoPath) {
+        log('error', '❌ 비디오 파일 확보 실패. 종료합니다.');
+        return;
+    }
 
     // 3. 프레임 추출
     const outputDir = getFramesOutputDir(channel, videoId, quality, fps, compress);
