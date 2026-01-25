@@ -249,6 +249,7 @@ def process_video(
                 "video_id": video_id,
                 "title": title,
                 "channel_name": channel_name,
+                "duration": video_duration,
                 "recollect_id": recollect_id,
                 "chunk_index": chunk["chunk_index"],
                 "char_count": chunk["char_count"],
