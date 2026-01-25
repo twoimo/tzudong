@@ -37,6 +37,8 @@ const __dirname = path.dirname(__filename);
 // --- 환경 설정 ---
 const SCRIPT_DIR = __dirname;
 const BASE_DATA_DIR = path.resolve(SCRIPT_DIR, '../data');
+const VIDEO_CACHE_DIR = path.join(BASE_DATA_DIR, 'video_cache');
+if (!fs.existsSync(VIDEO_CACHE_DIR)) fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
 
 // --- 로깅 헬퍼 ---
 function log(level, message) {
@@ -64,6 +66,7 @@ function parseArgs() {
             case '--buffer': params.buffer = parseFloat(args[++i]); break;
             case '--quality': params.quality = args[++i]; break;
             case '--compress': params.compress = true; break;
+            case '--delete-cache': params.deleteCache = true; break;
         }
     }
     return params;
@@ -361,6 +364,14 @@ async function downloadVideo(videoId, outputDir, quality) {
     const nodePath = "C:\\Program Files\\nodejs\\node.exe";
     const outputFileTemplate = path.join(outputDir, `${videoId}.%(ext)s`);
 
+    // [최적화] 캐시된 파일 확인
+    const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
+    const cachedFile = cacheFiles.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
+    if (cachedFile) {
+        log('info', `♻️ 캐시된 비디오 사용: ${cachedFile}`);
+        return path.join(VIDEO_CACHE_DIR, cachedFile);
+    }
+
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
     const cmd = `python -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
@@ -375,7 +386,18 @@ async function downloadVideo(videoId, outputDir, quality) {
             const videoFile = files.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
 
             if (videoFile) {
-                return path.join(outputDir, videoFile);
+                const downloadedPath = path.join(outputDir, videoFile);
+
+                // [최적화] 다운로드 성공 시 캐시에 복사
+                try {
+                    const cachePath = path.join(VIDEO_CACHE_DIR, videoFile);
+                    fs.copyFileSync(downloadedPath, cachePath);
+                    log('info', `💾 비디오 캐시 저장 완료: ${cachePath}`);
+                } catch (e) {
+                    log('warn', `캐시 저장 실패: ${e.message}`);
+                }
+
+                return downloadedPath;
             }
 
             log('warn', `❌ 다운로드 완료 보고되었으나 파일 없음 (재시도 대기...)`);
@@ -420,11 +442,19 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         const segDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
 
         // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/FORMAT_DIR/QUALITY_FPS/frame_x.ext
+        // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/FORMAT_DIR/QUALITY_FPS/frame_x.ext
         const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
         const configDirName = `${quality}_${fpsStr}fps`;
 
         const segDirPath = path.join(outputBaseDir, segDirName, ext, configDirName);
         fs.mkdirSync(segDirPath, { recursive: true });
+
+        // [최적화] 이미 프레임이 추출되어 있다면 스킵
+        const existingFiles = fs.readdirSync(segDirPath).filter(f => f.endsWith(`.${ext}`));
+        if (existingFiles.length > 0) {
+            log('info', `   ⏭️ 이미 프레임이 존재하여 건너뜀 [${i + 1}/${segments.length}]: ${segDirPath}`);
+            return;
+        }
 
         log('info', `   ✂️ 구간 추출 시작 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 -> .../${configDirName}`);
 
@@ -494,19 +524,32 @@ async function processSingleVideo(videoId, params) {
         const outputDir = getFramesOutputDir(channel, videoId, recollectId);
         await extractFrames(videoPath, segments, outputDir, quality, fps, buffer, compress);
 
+        // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
+        if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
+            try {
+                fs.unlinkSync(videoPath);
+                log('info', `🗑️ 비디오 캐시 삭제 완료: ${videoPath}`);
+            } catch (e) {
+                log('warn', `캐시 삭제 실패: ${e.message}`);
+            }
+        }
+
     } catch (e) {
         log('error', `오류 발생: ${e.message}`);
     } finally {
-        // 4. 임시 파일 정리 (강력 삭제)
-        try {
-            if (fs.existsSync(tempDir)) {
-                // Node.js 14.14+ required for recursive: true
-                // 만약 구버전이면 rmdirSync(tempDir, { recursive: true }) 사용
-                fs.rmdirSync(tempDir, { recursive: true });
-                // log('info', `🧹 임시 폴더 삭제 완료: ${tempDir}`);
+        // 4. 임시 파일 정리 (캐시된 파일은 삭제하지 않음)
+        // videoPath가 캐시 폴더에 있다면 삭제 건너뜀
+        if (videoPath && videoPath.startsWith(VIDEO_CACHE_DIR)) {
+            // log('info', '♻️ 캐시된 파일이므로 삭제하지 않습니다.');
+        } else {
+            try {
+                if (fs.existsSync(tempDir)) {
+                    // Node.js 14.14+ required for recursive: true
+                    fs.rmSync(tempDir, { recursive: true, force: true });
+                }
+            } catch (e) {
+                log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
             }
-        } catch (e) {
-            log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
         }
     }
 }
