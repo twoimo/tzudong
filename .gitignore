@@ -79,5 +79,6 @@ $RECYCLE.BIN/
 # Custom - Large Data
 supabase/backup_db/*.sql
 backend/backups/*.dump
-backend/restaurant-crawling/data/frames
-backend/restaurant-crawling/data/video_cache
+backend/restaurant-crawling/data/tzuyang/frames
+backend/restaurant-crawling/data/tzuyang/video_cache
+backend/restaurant-crawling/data/tzuyang/temp_video
