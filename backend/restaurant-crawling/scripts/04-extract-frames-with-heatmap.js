@@ -486,6 +486,7 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     const outPath = getHeatmapOutputPath(channel, videoId);
 
     // [수정] 이미 데이터가 존재하면 다시 수집하지 않고 읽어서 반환 (중복 저장 방지)
+    // 단, recollect_id가 증가했거나 트리거 변수가 있다면 무시하고 재수집
     if (fs.existsSync(outPath)) {
         try {
             const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
@@ -494,12 +495,21 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
                 // 마지막 줄이 완전하지 않을 경우 대비 (간단 체크)
                 if (lastLine.endsWith('}')) {
                     const existingData = JSON.parse(lastLine);
-                    log('info', `♻️ 기존 히트맵 데이터 사용: ${outPath}`);
-                    return existingData.most_replayed_markers.map(m => ({
-                        startSec: m.startMillis / 1000,
-                        endSec: m.endMillis / 1000,
-                        peakSec: m.peakMillis / 1000
-                    }));
+                    const currentMetaId = getMetaRecollectId(channel, videoId);
+
+                    // 메타 ID가 더 크면 재수집 (업데이트)
+                    if (currentMetaId > existingData.recollect_id) {
+                        const vars = getRecollectVars(channel, videoId);
+                        log('info', `🔄 히트맵 업데이트 감지 (ID: ${existingData.recollect_id} -> ${currentMetaId}), 사유: [${vars.join(', ')}]`);
+                        // 여기서 return 하지 않고 아래로 진행하여 재수집 수행
+                    } else {
+                        log('info', `♻️ 기존 히트맵 데이터 사용: ${outPath}`);
+                        return existingData.most_replayed_markers.map(m => ({
+                            startSec: m.startMillis / 1000,
+                            endSec: m.endMillis / 1000,
+                            peakSec: m.peakMillis / 1000
+                        }));
+                    }
                 }
             }
         } catch (e) {
