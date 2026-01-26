@@ -356,6 +356,17 @@ function shouldCollect(channelName, videoId, params) {
     }
 
     // 폴더가 없거나 비어있으면 수집 필요
+    // [중요] 단, recollect_vars에 'daily_collection'만 있다면 수집 스킵 (주간/월간 스케줄 아님)
+    // new_video, scheduled_*, duration_changed, viral_growth 등이 있어야 함
+    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
+    const hasTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
+
+    // 강제 수집 모드가 아니고 트리거가 없다면 스킵 (daily_collection은 메타만 수집)
+    if (!ignoreExisting && !hasTrigger && recollectVars.includes('daily_collection')) {
+        // log('info', `[스킵] ${videoId}: Daily Collection (프레임 수집 대상 아님)`);
+        return false;
+    }
+
     return true;
 }
 
