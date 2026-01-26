@@ -49,32 +49,36 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzu
 echo "[$(date)] [Step 3] 자막 수집 중..." >> "$LOG_FILE"
 node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang >> "$LOG_FILE" 2>&1
 
-# 3.1. 자막 컨텍스트 생성 (Gemini 분석용 전처리)
-echo "[$(date)] [Step 3.1] 자막 컨텍스트 생성 중..." >> "$LOG_FILE"
-$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --channel tzuyang >> "$LOG_FILE" 2>&1
+# 3.1. 자막 컨텍스트 생성 (Gemini 분석용 전처리) [제외됨]
+# echo "[$(date)] [Step 3.1] 자막 컨텍스트 생성 중..." >> "$LOG_FILE"
+# $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --channel tzuyang >> "$LOG_FILE" 2>&1
 
-# 4. 히트맵 수집 (02번 단계의 트리거에 따름)
-echo "[$(date)] [Step 4] 히트맵 수집 중..." >> "$LOG_FILE"
-node backend/restaurant-crawling/scripts/04-collect-heatmap.js --channel tzuyang >> "$LOG_FILE" 2>&1
+# 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
+echo "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..." >> "$LOG_FILE"
+node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang >> "$LOG_FILE" 2>&1
 
-# 5. Gemini 분석 (자막 분석 및 리뷰 추출)
-echo "[$(date)] [Step 5] Gemini 분석 실행..." >> "$LOG_FILE"
-# 쉘 스크립트 실행 시 bash 명시
-bash backend/restaurant-crawling/scripts/06-gemini-crawling.sh --channel tzuyang >> "$LOG_FILE" 2>&1
+# 5. Gemini 분석 (자막 분석 및 리뷰 추출) [제외됨]
+# echo "[$(date)] [Step 5] Gemini 분석 실행..." >> "$LOG_FILE"
+# # 쉘 스크립트 실행 시 bash 명시
+# bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang >> "$LOG_FILE" 2>&1
 
-# 6. Supabase 마이그레이션 (메타 데이터 동기화)
-echo "[$(date)] [Step 6] Supabase 마이그레이션..." >> "$LOG_FILE"
-$PYTHON_CMD backend/restaurant-crawling/scripts/08-migrate-to-supabase.py --channel tzuyang >> "$LOG_FILE" 2>&1
+# 6. Supabase 마이그레이션 (메타 데이터 동기화) [제외됨]
+# echo "[$(date)] [Step 6] Supabase 마이그레이션..." >> "$LOG_FILE"
+# $PYTHON_CMD backend/restaurant-crawling/scripts/08-migrate-to-supabase.py --channel tzuyang >> "$LOG_FILE" 2>&1
 
 echo "============================================================" >> "$LOG_FILE"
 echo "[$(date)] ✅ 일일 데이터 수집 파이프라인 완료" >> "$LOG_FILE"
 echo "============================================================" >> "$LOG_FILE"
 
-# 7. Git 커밋 및 푸시 (데이터 백업)
-echo "[$(date)] [Step 7] 변경 사항 커밋 및 푸시..." >> "$LOG_FILE"
+# 7. Git 커밋, 푸시, PR 생성 및 병합 (자동화)
+echo "[$(date)] [Step 7] 변경 사항 커밋, 푸시 및 PR 병합..." >> "$LOG_FILE"
 
-# 다시 프로젝트 루트 확인 (혹시 모를 경로 변경 대비)
+# 다시 프로젝트 루트 확인
 cd "$PROJECT_ROOT" || exit 1
+
+# develop 브랜치로 전환 및 최신화
+git checkout develop >> "$LOG_FILE" 2>&1
+git pull origin develop >> "$LOG_FILE" 2>&1
 
 # 변경된 데이터 파일 스테이징
 git add backend/restaurant-crawling/data/ >> "$LOG_FILE" 2>&1
@@ -87,12 +91,30 @@ else
     COMMIT_MSG="chore(data): 일일 크롤링 데이터 업데이트 ($DATE)"
     git commit -m "$COMMIT_MSG" >> "$LOG_FILE" 2>&1
     
-    # 현재 브랜치로 푸시
-    CURRENT_BRANCH=$(git branch --show-current)
-    git push origin "$CURRENT_BRANCH" >> "$LOG_FILE" 2>&1
+    # develop 브랜치로 푸시
+    git push origin develop >> "$LOG_FILE" 2>&1
     
     if [ $? -eq 0 ]; then
-        echo "[$(date)] ✅ $CURRENT_BRANCH 브랜치로 Git 푸시 성공" >> "$LOG_FILE"
+        echo "[$(date)] ✅ develop 브랜치로 Git 푸시 성공" >> "$LOG_FILE"
+        
+        # PR 생성 및 병합 (GitHub CLI 필요)
+        if command -v gh >/dev/null 2>&1; then
+            PR_TITLE="chore(data): 일일 크롤링 데이터 업데이트 ($DATE)"
+            PR_BODY="자동 스크립트에 의한 일일 데이터 업데이트 ($DATE)"
+            
+            # PR 생성
+            gh pr create --base main --head develop --title "$PR_TITLE" --body "$PR_BODY" >> "$LOG_FILE" 2>&1
+            
+            # PR 자동 병합 (create 실패 시(이미 있는 경우 등)를 대비해 별도 실행보다는 create 성공 시 바로 merge 시도 추천하지만, 여기선 순차 실행)
+            # --auto --merge: 검사 통과 시 자동 병합 (admin 권한 필요할 수 있음. 즉시 병합은 --merge)
+            # 여기서는 즉시 병합 시도 (--admin 옵션은 필요시 추가)
+            gh pr merge develop --merge --delete-branch=false >> "$LOG_FILE" 2>&1
+            
+            echo "[$(date)] ✅ PR 생성 및 병합 시도 완료" >> "$LOG_FILE"
+        else
+            echo "[$(date)] ⚠️ GitHub CLI (gh)가 설치되지 않아 PR 자동화를 건너뜁니다." >> "$LOG_FILE"
+        fi
+        
     else
         echo "[$(date)] ⚠️ Git 푸시 실패" >> "$LOG_FILE"
     fi
