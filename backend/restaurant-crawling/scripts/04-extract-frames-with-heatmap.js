@@ -6,11 +6,11 @@
  *
  * [실행 모드]
  * 1. 자동 배치 수집 (Automatic Batch Mode)
- *    - 사용법: node 05-extract-frames-with-heatmap.js
+ *    - 사용법: node 04-extract-frames-with-heatmap.js
  *    - 동작: `urls.txt`의 모든 영상을 순회하며 수집 조건(게시 5일 경과, 역주행 등)을 만족하는 경우에만 실행
  *
  * 2. 단일 영상 수집 (Single Video Mode)
- *    - 사용법: node 05-extract-frames-with-heatmap.js --url "https://youtu.be/..."
+ *    - 사용법: node 04-extract-frames-with-heatmap.js --url "https://youtu.be/..."
  *    - 동작: 조건과 관계없이 지정된 영상의 프레임을 즉시 추출
  *
  * [옵션]
