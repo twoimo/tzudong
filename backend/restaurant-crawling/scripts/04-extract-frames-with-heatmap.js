@@ -62,6 +62,64 @@ function toRelativePath(p) {
     }
 }
 
+// --- RClone 및 Env 헬퍼 ---
+async function setupRCloneConfig() {
+    const configBase64 = process.env.RCLONE_CONFIG_BASE64;
+    // Base64 인코딩된 Config가 있으면 디코딩해서 파일로 저장 (GitHub Actions 환경 등)
+    if (configBase64) {
+        try {
+            const configPath = path.join(process.env.HOME || process.env.USERPROFILE, '.config', 'rclone', 'rclone.conf');
+            const configDir = path.dirname(configPath);
+            if (!fs.existsSync(configDir)) fs.mkdirSync(configDir, { recursive: true });
+
+            const configContent = Buffer.from(configBase64, 'base64').toString('utf-8');
+            fs.writeFileSync(configPath, configContent, 'utf-8');
+            log('info', `[RClone] Config 설정 완료: ${configPath}`);
+            return true;
+        } catch (e) {
+            log('warn', `[RClone] Config 설정 실패: ${e.message}`);
+        }
+    }
+    return false;
+}
+
+async function findVideoInGDrive(remotePath, videoId) {
+    // rclone lsf로 해당 비디오 ID를 포함하는 파일 검색
+    // 예: rclone lsf "remote:path" --files-only --include "*videoId*"
+    const cmd = `rclone lsf "${remotePath}" --files-only --include "*${videoId}*" --format "p"`;
+    try {
+        const { stdout } = await execPromise(cmd);
+        const files = stdout.trim().split('\n').filter(f => f);
+        if (files.length > 0) {
+            // 가장 유력한 파일 선택 (mp4, webm, mkv 우선)
+            const bestFile = files.find(f => /\.(mp4|webm|mkv)$/i.test(f)) || files[0];
+            return bestFile;
+        }
+    } catch (e) {
+        log('warn', `[RClone] 파일 검색 실패: ${e.message}`);
+    }
+    return null;
+}
+
+async function fetchVideoFromGDrive(remotePath, fileName, outputDir) {
+    const source = `${remotePath}/${fileName}`.replace('//', '/');
+    const target = path.join(outputDir, fileName);
+
+    log('info', `[RClone] GDrive 다운로드 시작: ${source} -> ${toRelativePath(target)}`);
+    const cmd = `rclone copy "${source}" "${outputDir}" --progress`;
+
+    try {
+        await execPromise(cmd);
+        if (fs.existsSync(target)) {
+            log('info', `[RClone] 다운로드 완료: ${fileName}`);
+            return target;
+        }
+    } catch (e) {
+        log('error', `[RClone] 다운로드 실패: ${e.message}`);
+    }
+    return null;
+}
+
 // --- 인자 파싱 ---
 function parseArgs() {
     const args = process.argv.slice(2);
@@ -612,15 +670,56 @@ async function downloadVideo(videoId, outputDir, quality) {
         return path.join(VIDEO_CACHE_DIR, cachedFile);
     }
 
+    // [추가] GDrive 우선 검색 및 다운로드 로직
+    const gdriveRemotePath = process.env.GDRIVE_REMOTE_PATH; // 예: "gdrive:tzuyang_archive"
+    if (gdriveRemotePath) {
+        // RClone Config 설정 시도 (없으면 로컬 설정 사용)
+        await setupRCloneConfig();
+
+        const gdriveFileName = await findVideoInGDrive(gdriveRemotePath, videoId);
+        if (gdriveFileName) {
+            log('info', `[GDrive] 영상 발견: ${gdriveFileName} -> 다운로드 시도`);
+            const downloaded = await fetchVideoFromGDrive(gdriveRemotePath, gdriveFileName, outputDir);
+            if (downloaded) {
+                // 캐시 업데이트
+                try {
+                    const cachePath = path.join(VIDEO_CACHE_DIR, path.basename(downloaded));
+                    if (!fs.existsSync(cachePath)) {
+                        fs.copyFileSync(downloaded, cachePath);
+                        log('info', `[Cache] GDrive 원본 캐시 저장 완료: ${toRelativePath(cachePath)}`);
+                    }
+                } catch (e) {
+                    log('warn', `캐시 저장 실패: ${e.message}`);
+                }
+                return downloaded;
+            }
+        } else {
+            log('info', `[GDrive] 영상 없음 (${videoId}) -> HTTP 다운로드(yt-dlp)로 전환`);
+        }
+    }
+
+
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
     // [수정] 시스템 python 대신 Anaconda python 명시적 사용 (yt-dlp 모듈 보유)
-    const pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
-    const cmd = `"${pythonPath}" -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    // [수정] GitHub Actions 등 환경에 따라 python 경로 유연화
+    let pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
+    if (!fs.existsSync(pythonPath)) {
+        // 윈도우가 아니거나 해당 경로 없으면 시스템 python 시도
+        pythonPath = "python3";
+    }
+
+    // Windows가 아닌 경우 nodePath 조정 필요할 수 있음
+    // 일단 간단히 node만 호출
+    const runtimesArg = process.platform === 'win32' ? `--js-runtimes "node:${nodePath}"` : '';
+
+    const cmd = `"${pythonPath}" -m yt_dlp ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            log('info', `[Downloader] 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [시도 ${attempt}/${maxRetries}]`);
+            log('info', `[Downloader] 영상 다운로드 시작(HTTP): ${videoId} (목표 화질: ${height}p) [시도 ${attempt}/${maxRetries}]`);
+            // yt-dlp 명령어는 stderr로 진행상황을 출력하므로, 오류 감지가 까다로울 수 있음.
+            // execPromise 사용 시 stderr도 에러로 간주되지 않음.
             await execPromise(cmd);
 
             // 다운로드된 파일 찾기

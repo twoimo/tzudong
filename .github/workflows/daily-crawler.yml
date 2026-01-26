@@ -1,0 +1,71 @@
+name: Daily Data Collection
+
+on:
+  schedule:
+    # 한국 시간(KST) 새벽 3시 = UTC 18:00
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+jobs:
+  daily-crawl:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 전체 히스토리 가져오기 (PR 병합 등을 위해)
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install RClone
+        run: |
+          sudo -v ; curl https://rclone.org/install.sh | sudo bash
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # 추가 필수 패키지 명시적 설치 (requirements.txt에 없을 경우 대비)
+          pip install google-api-python-client python-dotenv yt-dlp
+
+      - name: Install Node.js dependencies
+        run: |
+          npm install
+          # ffmpeg-static 등 로컬 의존성 확실히 설치
+          npm install ffmpeg-static ffprobe-static
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Daily Pipeline
+        env:
+          # Secret에서 API 키 및 설정 주입
+          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # RClone 설정 (Base64 인코딩된 문자열을 Env로 전달 -> 스크립트에서 파일로 복원)
+          RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+          # GDrive 원격 경로 (예: gdrive:tzuyang_archive)
+          GDRIVE_REMOTE_PATH: "gdrive:tzuyang_archive"
+          # CI 환경 플래그
+          CI: true
+        run: |
+          # 실행 권한 부여
+          chmod +x backend/run_daily.sh
+          # 스크립트 실행
+          bash backend/run_daily.sh
