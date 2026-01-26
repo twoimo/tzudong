@@ -85,6 +85,34 @@ function parseArgs() {
 }
 
 // --- 경로 헬퍼 ---
+function copyFolderRecursiveSync(source, target) {
+    if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true });
+
+    if (fs.lstatSync(source).isDirectory()) {
+        const files = fs.readdirSync(source);
+        for (const file of files) {
+            const curSource = path.join(source, file);
+            const curTarget = path.join(target, file);
+            if (fs.lstatSync(curSource).isDirectory()) {
+                copyFolderRecursiveSync(curSource, curTarget);
+            } else {
+                // [최적화] 하드 링크 시도 -> 실패 시 복사 (Cross-device 등 대비)
+                try {
+                    // 이미 타겟이 있으면 건너뜀 (덮어쓰기 방지)
+                    if (!fs.existsSync(curTarget)) {
+                        fs.linkSync(curSource, curTarget);
+                    }
+                } catch (e) {
+                    // 하드 링크 실패 시 일반 복사 (폴백)
+                    if (!fs.existsSync(curTarget)) {
+                        fs.copyFileSync(curSource, curTarget);
+                    }
+                }
+            }
+        }
+    }
+}
+
 function getChannelDir(channelName) {
     return path.join(BASE_DATA_DIR, channelName);
 }
@@ -715,11 +743,94 @@ async function processSingleVideo(videoId, params) {
         // 다운로드 및 처리 로직
         let videoPath = null;
         try {
-            // [최적화] 스마트 재개: 이미 모든 구간의 프레임이 추출되어 있다면 다운로드/추출 스킵
+            // [최적화] 스마트 재개 & 데이터 재사용 로직
+            const metaInfo = getMetaInfo(channel, videoId);
+            const duration = metaInfo ? metaInfo.duration : 0; // Duration 확보
+
             const recollectId = getMetaRecollectId(channel, videoId);
             const outputDir = getFramesOutputDir(channel, videoId, recollectId);
             const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
             const configDirName = `${currentQuality}_${fpsStr}fps`;
+
+            // [재사용] 이전 주기(recollect_id - 1 등)의 데이터가 유효한지 확인하고 복사
+            // 조건: 현재 필요한 Segment 폴더구조와 이전 주기의 폴더구조가 일치해야 함
+            // 로직: 
+            // 1. channel/frames/videoId/ 하위 폴더 검색
+            // 2. 현재 ID보다 작은 최대 ID 찾기
+            // 3. 해당 ID의 폴더가 현재 필요한 segment 폴더들을 모두 가지고 있는지 확인
+            const framesVideoRoot = path.dirname(outputDir); // channel/frames/videoId
+            if (fs.existsSync(framesVideoRoot)) {
+                const existingIds = fs.readdirSync(framesVideoRoot)
+                    .map(d => parseInt(d))
+                    .filter(n => !isNaN(n) && n < recollectId)
+                    .sort((a, b) => b - a); // 내림차순 정렬
+
+                const previousId = existingIds.length > 0 ? existingIds[0] : -1;
+
+                if (previousId >= 0) {
+                    const prevDir = path.join(framesVideoRoot, previousId.toString());
+                    let canReuse = true;
+
+                    // 현재 필요한 모든 세그먼트가 이전 폴더에 존재하는지 확인
+                    for (let i = 0; i < segments.length; i++) {
+                        const seg = segments[i];
+                        const startTime = Math.max(0, seg.startSec - buffer);
+                        const endTime = Math.min(duration || 99999, seg.endSec + buffer);
+
+                        // [중요] 폴더명 정확히 매칭 (시간까지 일치해야 함)
+                        // extractFrames 로직: `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`
+                        const expectedSegDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
+
+                        const targetPath = path.join(prevDir, expectedSegDirName);
+
+                        if (!fs.existsSync(targetPath)) {
+                            canReuse = false;
+                            break;
+                        }
+
+                        // 세부 내용물 확인
+                        let allExtsExist = true;
+                        for (const currentExt of extensions) {
+                            const extPath = path.join(targetPath, currentExt, configDirName);
+                            // 폴더가 있고 비어있지 않아야 함
+                            if (!fs.existsSync(extPath) || fs.readdirSync(extPath).length === 0) {
+                                allExtsExist = false;
+                                break;
+                            }
+                        }
+                        if (!allExtsExist) {
+                            canReuse = false;
+                            break;
+                        }
+                    }
+
+                    if (canReuse) {
+                        log('info', `♻️ [데이터 재사용] 이전 주기(ID: ${previousId}) 프레임 하드링크 생성 중... -> ID: ${recollectId}`);
+                        try {
+                            // 필요한 세그먼트 폴더만 복사 (하드링크)
+                            for (let i = 0; i < segments.length; i++) {
+                                const seg = segments[i];
+                                const startTime = Math.max(0, seg.startSec - buffer);
+                                const endTime = Math.min(duration || 99999, seg.endSec + buffer);
+                                const expectedSegDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
+
+                                const srcPath = path.join(prevDir, expectedSegDirName);
+                                const destPath = path.join(outputDir, expectedSegDirName);
+
+                                if (fs.existsSync(srcPath)) {
+                                    copyFolderRecursiveSync(srcPath, destPath);
+                                }
+                            }
+                            log('info', `✅ 하드링크 생성 완료. 다운로드 스킵.`);
+                        } catch (copyErr) {
+                            log('warn', `링크 생성 중 오류 발생 (다운로드로 전환): ${copyErr.message}`);
+                            // 복사하다 망가졌을 수 있으므로 부분적으로 있을 수 있음. 
+                            // 아래의 스마트 스킵 로직이 남은 부분을 처리하거나 다시 다운로드하도록 둠.
+                        }
+                    }
+                }
+            }
+
 
             let allSegmentsExist = true;
             for (const currentExt of extensions) {
