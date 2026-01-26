@@ -60,8 +60,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # RClone 설정 (Base64 인코딩된 문자열을 Env로 전달 -> 스크립트에서 파일로 복원)
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
-          # GDrive 원격 경로 (예: gdrive:tzuyang_archive)
-          GDRIVE_REMOTE_PATH: "gdrive:tzuyang_archive"
+          # GDrive 원격 경로 (영상 캐시 경로)
+          GDRIVE_REMOTE_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/video_cache"
+          # 결과 저장 경로 (Frames)
+          GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
           # CI 환경 플래그
           CI: true
         run: |
@@ -69,3 +71,25 @@ jobs:
           chmod +x backend/run_daily.sh
           # 스크립트 실행
           bash backend/run_daily.sh
+          
+      - name: Upload Results to GDrive
+        if: always() # 스크립트 실패 여부와 관계없이 저장 시도 (부분 결과라도 보존)
+        env:
+          RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+          # 로컬 Frames 경로 (스크립트 기준 backend/restaurant-crawling/data/tzuyang/frames 가 될 수 있음 - 확인 필요)
+          # 사용자가 기존에 frames를 'H:\My Drive\...' 에 저장한다고 했으므로,
+          # 리눅스 환경에서는 스크립트 내에서 경로가 어떻게 잡히는지 04 스크립트 확인 필요.
+          # 04 스크립트는 'FRAMES_ROOT_DIR'를 사용.
+          # 기본값은 윈도우 경로. 리눅스에서는?
+          # 일단 로컬 데이터 전체를 Sync 하는 것이 안전함.
+        run: |
+           # rclone 설정 복원 (위 단계에서 안 했을 경우 대비, 이미 했으면 생략 가능하지만 명시)
+           mkdir -p ~/.config/rclone
+           echo ${{ secrets.GDRIVE_RCLONE_CONFIG }} | base64 -d > ~/.config/rclone/rclone.conf
+           
+           # 04 스크립트가 'backend/restaurant-crawling/data/frames' (기본값)에 결과 저장
+           # 이 경로를 GDrive로 Sync
+           
+           echo "Syncing frames to GDrive..."
+           rclone copy backend/restaurant-crawling/data/frames "${{ env.GDRIVE_FRAMES_PATH }}" --progress
+

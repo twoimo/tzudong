@@ -41,10 +41,21 @@ const __dirname = path.dirname(__filename);
 // --- 환경 설정 ---
 const SCRIPT_DIR = __dirname;
 const BASE_DATA_DIR = path.resolve(SCRIPT_DIR, '../data');
-const VIDEO_CACHE_DIR_DEFAULT = 'H:\\My Drive\\04_빠른공유\\tzudong_tzuyang_data\\video_cache';
-const FRAMES_DIR_DEFAULT = 'H:\\My Drive\\04_빠른공유\\tzudong_tzuyang_data\\frames';
-let VIDEO_CACHE_DIR = VIDEO_CACHE_DIR_DEFAULT;
-let FRAMES_ROOT_DIR = FRAMES_DIR_DEFAULT;
+
+// [수정] 환경 변수 또는 상대 경로 우선 사용 (CI/CD 및 다중 환경 호환성)
+// 기존 하드코딩된 Windows 경로는 로컬 개발 환경용 fallback으로 유지하되, 존재하지 않으면 상대 경로 사용
+const LOCAL_DRIVE_CACHE = 'H:\\My Drive\\04_빠른공유\\tzudong_tzuyang_data\\video_cache';
+const LOCAL_DRIVE_FRAMES = 'H:\\My Drive\\04_빠른공유\\tzudong_tzuyang_data\\frames';
+
+let VIDEO_CACHE_DIR = process.env.VIDEO_CACHE_DIR || (fs.existsSync(LOCAL_DRIVE_CACHE) ? LOCAL_DRIVE_CACHE : path.join(BASE_DATA_DIR, 'video_cache'));
+let FRAMES_ROOT_DIR = process.env.FRAMES_ROOT_DIR || (fs.existsSync(LOCAL_DRIVE_FRAMES) ? LOCAL_DRIVE_FRAMES : path.join(BASE_DATA_DIR, 'frames'));
+
+// 캐시/프레임 디렉토리 자동 생성
+if (!fs.existsSync(VIDEO_CACHE_DIR)) fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
+if (!fs.existsSync(FRAMES_ROOT_DIR)) fs.mkdirSync(FRAMES_ROOT_DIR, { recursive: true });
+
+log('info', `[Config] Video Cache: ${VIDEO_CACHE_DIR}`);
+log('info', `[Config] Frames Dir: ${FRAMES_ROOT_DIR}`);
 
 // --- 로깅 헬퍼 ---
 function log(level, message) {
