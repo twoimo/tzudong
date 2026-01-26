@@ -13,3 +13,9 @@
 {"timestamp": "2026-01-26T17:24:41.928208+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
 {"timestamp": "2026-01-26T17:24:42.140251+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "  🔍 수집 대상: 1013개", "data": null}
 {"timestamp": "2026-01-26T17:24:42.230476+09:00", "level": "INFO", "phase": "collect-meta", "step": "progress", "message": "진행: 0/1013 (0.0%)", "data": null}
+{"timestamp": "2026-01-26T17:36:36.258369+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "완료: 업데이트 95개", "data": null}
+{"timestamp": "2026-01-26T17:36:36.850095+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-26T17:36:37.627149+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🏁 [COLLECT-META] 파이프라인 종료", "data": null}
+{"timestamp": "2026-01-26T17:36:38.401411+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 종료 시간: 2026-01-26 17:36:36", "data": null}
+{"timestamp": "2026-01-26T17:36:39.077751+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏱️ 소요 시간: 11분 56초", "data": null}
+{"timestamp": "2026-01-26T17:36:39.851325+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}

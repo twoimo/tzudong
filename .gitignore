@@ -1,5 +1,6 @@
 node_modules/
 .env
+.env.local
 .DS_Store
 dist/
 coverage/
@@ -11,6 +12,8 @@ venv/
 .venv/
 *.egg-info/
 *.log
+.sync_trigger
+bun.lock
 
 # Large backup files
 supabase/backup_db/*.sql
