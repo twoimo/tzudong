@@ -49,7 +49,17 @@ let FRAMES_ROOT_DIR = FRAMES_DIR_DEFAULT;
 // --- 로깅 헬퍼 ---
 function log(level, message) {
     const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    console.log(`[${timestamp}] [${level.toUpperCase()}] ${message}`);
+    // [Styling] 레벨에 따라 색상이나 포맷을 다르게 할 수 있지만, 일단 직관적인 텍스트로 통일
+    console.log(`[${timestamp}] [${level.toUpperCase().padEnd(5)}] ${message}`);
+}
+
+function toRelativePath(p) {
+    if (!p) return '';
+    try {
+        return path.relative(process.cwd(), p);
+    } catch (e) {
+        return p;
+    }
 }
 
 // --- 인자 파싱 ---
@@ -181,7 +191,7 @@ function getRecollectVars(channelName, videoId) {
         const fallbackPath = path.join(BASE_DATA_DIR, 'tzuyang', 'meta', `${videoId}.jsonl`);
         if (fs.existsSync(fallbackPath)) {
             metaPath = fallbackPath;
-            log('info', `📋 메타 참조 변경: 'tzuyang' 채널 데이터 사용 -> ${path.basename(metaPath)}`);
+            log('info', `[Meta] 메타 참조 변경: 'tzuyang' 채널 데이터 사용 -> ${path.basename(metaPath)}`);
         }
     }
 
@@ -191,7 +201,7 @@ function getRecollectVars(channelName, videoId) {
             if (content) {
                 const data = JSON.parse(content);
                 const vars = data.recollect_vars || [];
-                log('info', `📋 감지된 변경 변수: [${vars.join(', ')}]`);
+                log('info', `[Meta] 감지된 변경 변수: [${vars.join(', ')}]`);
                 return vars;
             }
         } catch (e) {
@@ -238,7 +248,7 @@ function shouldCollect(channelName, videoId, params) {
         // [추가] 180초(3분) 미만 영상은 Shorts로 간주하여 자동 수집 제외
         const duration = metaInfo.duration || 0;
         if (duration < 180) {
-            log('info', `[스킵] ${videoId}: 3분 미만 영상 (${duration}초)`);
+            log('info', `[Skip] ${videoId}: 3분 미만 영상 (${duration}초)`);
             return false;
         }
     } else {
@@ -261,7 +271,7 @@ function shouldCollect(channelName, videoId, params) {
     if (diffDays < 5) {
         // [중요] 5일 미만이라도 'new_video' 같은 즉시 수집 트리거가 있으면 수집해야 할 수도 있음.
         // 하지만 04 스크립트 로직에 따르면 5일 미만은 무조건 false 입니다.
-        log('info', `[스킵] ${videoId}: 게시 후 5일 미만 (${diffDays}일)`);
+        log('info', `[Skip] ${videoId}: 게시 후 5일 미만 (${diffDays}일)`);
         return false;
     }
 
@@ -309,7 +319,7 @@ function shouldCollect(channelName, videoId, params) {
                         });
 
                         if (missingInSegments) {
-                            log('info', `[체크] ${videoId}: ${configDirName} (${e}) 데이터 누락 확인 -> 수집 필요`);
+                            log('info', `[Check] ${videoId}: ${configDirName} (${e}) 데이터 누락 확인 -> 수집 필요`);
                             isFullyCollected = false;
                             break;
                         }
@@ -335,7 +345,7 @@ function shouldCollect(channelName, videoId, params) {
                                     const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
                                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
                                     if (shouldTrigger) {
-                                        log('info', `[트리거] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
+                                        log('info', `[Trigger] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
                                         return true;
                                     }
                                 }
@@ -379,7 +389,7 @@ async function loadCookies() {
         try {
             const content = fs.readFileSync(jsonPath, 'utf-8');
             const cookies = JSON.parse(content);
-            log('info', `🍪 cookies.json 로드 완료 (${cookies.length}개)`);
+            log('info', `[Auth] cookies.json 로드 완료 (${cookies.length}개)`);
             return cookies.map(c => `${c.name}=${c.value}`).join('; ');
         } catch (e) {
             log('warn', `cookies.json 로드 실패: ${e.message}`);
@@ -400,7 +410,7 @@ async function loadCookies() {
                     cookies.push(`${parts[5]}=${parts[6]}`);
                 }
             }
-            log('info', `🍪 cookies.txt 로드 완료 (${cookies.length}개)`);
+            log('info', `[Auth] cookies.txt 로드 완료 (${cookies.length}개)`);
             return cookies.join('; ');
         } catch (e) {
             log('warn', `cookies.txt 로드 실패: ${e.message}`);
@@ -511,10 +521,10 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
                     // 메타 ID가 더 크면 재수집 (업데이트)
                     if (currentMetaId > existingData.recollect_id) {
                         const vars = getRecollectVars(channel, videoId);
-                        log('info', `🔄 히트맵 업데이트 감지 (ID: ${existingData.recollect_id} -> ${currentMetaId}), 사유: [${vars.join(', ')}]`);
+                        log('info', `[Update] 히트맵 업데이트 감지 (ID: ${existingData.recollect_id} -> ${currentMetaId}), 사유: [${vars.join(', ')}]`);
                         // 여기서 return 하지 않고 아래로 진행하여 재수집 수행
                     } else {
-                        log('info', `♻️ 기존 히트맵 데이터 사용: ${outPath}`);
+                        log('info', `[Reuse] 기존 히트맵 데이터 사용: ${toRelativePath(outPath)}`);
                         return existingData.most_replayed_markers.map(m => ({
                             startSec: m.startMillis / 1000,
                             endSec: m.endMillis / 1000,
@@ -533,7 +543,7 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     const parsed = parseHeatmap(html);
 
     if (!parsed || (!parsed.mostReplayedMarkers.length && !parsed.interactionData)) {
-        log('warn', `⚠️ ${videoId}: 히트맵 정보가 없습니다.`);
+        log('warn', `[Warn] ${videoId}: 히트맵 정보가 없습니다.`);
         return null;
     }
 
@@ -566,7 +576,7 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     };
 
     fs.appendFileSync(outPath, JSON.stringify(saveData) + '\n', 'utf8');
-    log('info', `💾 히트맵 데이터 저장됨: ${outPath} (포인트: ${formattedInteraction.length}개)`);
+    log('info', `[Saved] 히트맵 데이터 저장됨: ${toRelativePath(outPath)} (포인트: ${formattedInteraction.length}개)`);
 
     return parsed.mostReplayedMarkers.map(m => ({
         startSec: m.startMillis / 1000,
@@ -598,7 +608,7 @@ async function downloadVideo(videoId, outputDir, quality) {
     const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
     const cachedFile = cacheFiles.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
     if (cachedFile) {
-        log('info', `♻️ 캐시된 비디오 사용: ${cachedFile}`);
+        log('info', `[Cache] 캐시된 비디오 사용: ${cachedFile}`);
         return path.join(VIDEO_CACHE_DIR, cachedFile);
     }
 
@@ -610,7 +620,7 @@ async function downloadVideo(videoId, outputDir, quality) {
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            log('info', `📥 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [시도 ${attempt}/${maxRetries}]`);
+            log('info', `[Downloader] 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [시도 ${attempt}/${maxRetries}]`);
             await execPromise(cmd);
 
             // 다운로드된 파일 찾기
@@ -624,7 +634,7 @@ async function downloadVideo(videoId, outputDir, quality) {
                 try {
                     const cachePath = path.join(VIDEO_CACHE_DIR, videoFile);
                     fs.copyFileSync(downloadedPath, cachePath);
-                    log('info', `💾 비디오 캐시 저장 완료: ${cachePath}`);
+                    log('info', `[Cache] 비디오 캐시 저장 완료: ${toRelativePath(cachePath)}`);
                 } catch (e) {
                     log('warn', `캐시 저장 실패: ${e.message}`);
                 }
@@ -632,10 +642,10 @@ async function downloadVideo(videoId, outputDir, quality) {
                 return downloadedPath;
             }
 
-            log('warn', `❌ 다운로드 완료 보고되었으나 파일 없음 (재시도 대기...)`);
+            log('warn', `[Warn] 다운로드 완료 보고되었으나 파일 없음 (재시도 대기...)`);
 
         } catch (e) {
-            log('warn', `❌ 다운로드 실패 (시도 ${attempt}/${maxRetries}): ${e.message}`);
+            log('warn', `[Warn] 다운로드 실패 (시도 ${attempt}/${maxRetries}): ${e.message}`);
         }
 
         // 재시도 전 대기 (2초)
@@ -644,7 +654,7 @@ async function downloadVideo(videoId, outputDir, quality) {
         }
     }
 
-    log('error', '❌ 최대 재시도 횟수 초과. 다운로드 포기.');
+    log('error', '[Error] 최대 재시도 횟수 초과. 다운로드 포기.');
     return null;
 }
 
@@ -656,12 +666,12 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
     try {
         const { stdout } = await execPromise(`"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`);
         duration = parseFloat(stdout);
-        log('info', `🎞️ 영상 길이 확인: ${duration}초`);
+        log('info', `[Video] 영상 길이 확인: ${duration}초`);
     } catch (e) {
         log('warn', `길이 확인 실패 (진행): ${e.message}`);
     }
 
-    log('info', `🖼️ 이미지 포맷 설정: ${ext.toUpperCase()}`);
+    log('info', `[Image] 이미지 포맷 설정: ${ext.toUpperCase()}`);
 
     // 확장자별 FFMPEG 인코딩 옵션 설정
     let encodingOpts = '';
@@ -693,11 +703,11 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         // [최적화] 이미 프레임이 추출되어 있다면 스킵
         const existingFiles = fs.readdirSync(segDirPath).filter(f => f.endsWith(`.${ext}`));
         if (existingFiles.length > 0) {
-            log('info', `   ⏭️ 이미 프레임이 존재하여 건너뜀 [${i + 1}/${segments.length}]: ${segDirPath}`);
+            log('info', `   [Skip] 이미 프레임이 존재하여 건너뜀 [${i + 1}/${segments.length}]: ${toRelativePath(segDirPath)}`);
             return;
         }
 
-        log('info', `   ✂️ 구간 추출 시작 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 -> .../${configDirName}`);
+        log('info', `   [Extract] 구간 추출 시작 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 -> .../${configDirName}`);
 
         let segDuration = endTime - startTime;
         if (segDuration < (1.0 / fps)) {
@@ -726,35 +736,36 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                     count++;
                 }
             }
-            log('info', `      ✅ 추출 완료 [${i + 1}/${segments.length}]: ${count}장`);
+            log('info', `      [Done] 추출 완료 [${i + 1}/${segments.length}]: ${count}장`);
 
         } catch (e) {
-            log('error', `      ❌ FFmpeg 오류 [${i + 1}/${segments.length}]: ${e.message}`);
+            log('error', `      [Error] FFmpeg 오류 [${i + 1}/${segments.length}]: ${e.message}`);
         }
     }));
 }
 
 async function processSingleVideo(videoId, params) {
+    let downloadPerformed = false;
     const { channel, fps, buffer, quality, url, ext } = params; // quality는 이제 배열입니다
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
     const segments = await fetchAndSaveHeatmap(channel, videoId, url);
     if (!segments || segments.length === 0) {
-        log('info', `ℹ️ ${videoId}: 처리할 중요 구간(Most Replayed)이 없습니다.`);
+        log('info', `[Info] ${videoId}: 처리할 중요 구간(Most Replayed)이 없습니다.`);
         return;
     }
 
-    log('info', `🔎 ${videoId}: ${segments.length}개의 주요 구간 발견`);
+    log('info', `[Heatmap] ${videoId}: ${segments.length}개의 주요 구간 발견`);
 
     // 모든 화질에 대해 반복 처리
     const qualities = Array.isArray(quality) ? quality : [quality];
     const extensions = Array.isArray(ext) ? ext : [ext];
 
-    log('info', `🎯 처리할 화질 목록: [${qualities.join(', ')}]`);
-    log('info', `🎨 처리할 포맷 목록: [${extensions.join(', ')}]`);
+    log('info', `[Target] 처리할 화질 목록: [${qualities.join(', ')}]`);
+    log('info', `[Format] 처리할 포맷 목록: [${extensions.join(', ')}]`);
 
     for (const currentQuality of qualities) {
-        log('info', `\n🚀 화질 처리 시작: ${currentQuality}`);
+        log('info', `\n[Process] 화질 처리 시작: ${currentQuality}`);
 
         // 2. 영상 다운로드 (임시 폴더) - 파일 잠금 충돌 방지용 랜덤 접미사
         const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
@@ -826,7 +837,7 @@ async function processSingleVideo(videoId, params) {
                     }
 
                     if (canReuse) {
-                        log('info', `♻️ [데이터 재사용] 이전 주기(ID: ${previousId}) 프레임 하드링크 생성 중... -> ID: ${recollectId}`);
+                        log('info', `[Reuse] 이전 주기(ID: ${previousId}) 프레임 하드링크 생성 중... -> ID: ${recollectId}`);
                         try {
                             // 필요한 세그먼트 폴더만 복사 (하드링크)
                             for (let i = 0; i < segments.length; i++) {
@@ -842,7 +853,7 @@ async function processSingleVideo(videoId, params) {
                                     copyFolderRecursiveSync(srcPath, destPath);
                                 }
                             }
-                            log('info', `✅ 하드링크 생성 완료. 다운로드 스킵.`);
+                            log('info', `[Done] 하드링크 생성 완료. 다운로드 스킵.`);
                         } catch (copyErr) {
                             log('warn', `링크 생성 중 오류 발생 (다운로드로 전환): ${copyErr.message}`);
                             // 복사하다 망가졌을 수 있으므로 부분적으로 있을 수 있음. 
@@ -891,14 +902,19 @@ async function processSingleVideo(videoId, params) {
             }
 
             if (allSegmentsExist) {
-                log('info', `⏭️ [스마트 스킵] ${videoId}: 이미 ${currentQuality} 프레임 수집 완료됨.`);
+                log('info', `[Skip] ${videoId}: 이미 ${currentQuality} 프레임 수집 완료됨.`);
                 continue;
             }
 
             videoPath = await downloadVideo(videoId, tempDir, currentQuality);
 
+            // [추가] 캐시 경로가 아니면 다운로드 수행된 것
+            if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR)) {
+                downloadPerformed = true;
+            }
+
             if (!videoPath) {
-                log('error', `❌ 비디오 파일 확보 실패 (${currentQuality}). 건너뜁니다.`);
+                log('error', `[Fail] 비디오 파일 확보 실패 (${currentQuality}). 건너뜁니다.`);
                 logFailedUrl(channel, url); // [추가] 실패 로깅
                 continue; // 다음 화질 처리
             }
@@ -918,12 +934,12 @@ async function processSingleVideo(videoId, params) {
             if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
                 try {
                     fs.unlinkSync(videoPath);
-                    log('info', `🗑️ 비디오 캐시 파일 삭제 완료: ${videoPath}`);
+                    log('info', `[Clean] 비디오 캐시 파일 삭제 완료: ${toRelativePath(videoPath)}`);
 
                     // 폴더가 비었으면 폴더도 삭제
                     if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {
                         fs.rmdirSync(VIDEO_CACHE_DIR);
-                        log('info', `🗑️ 비디오 캐시 폴더 삭제 완료: ${VIDEO_CACHE_DIR}`);
+                        log('info', `[Clean] 비디오 캐시 폴더 삭제 완료: ${toRelativePath(VIDEO_CACHE_DIR)}`);
                     }
                 } catch (e) {
                     log('warn', `캐시 삭제 실패: ${e.message}`);
@@ -953,6 +969,8 @@ async function processSingleVideo(videoId, params) {
             }
         }
     }
+
+    return downloadPerformed;
 }
 
 // [추가] 실패한 URL 로깅 함수
@@ -991,7 +1009,7 @@ function removeFailedUrl(channel, url) {
 
         if (lines.length !== newLines.length) {
             fs.writeFileSync(failedPath, newLines.join('\n') + (newLines.length ? '\n' : ''), 'utf8');
-            log('info', `✅ 실패 목록에서 제거됨: ${targetId}`);
+            log('info', `[Resolved] 실패 목록에서 제거됨: ${targetId}`);
         }
     } catch (e) {
         log('warn', `실패 목록 업데이트 실패: ${e.message}`);
@@ -1009,8 +1027,8 @@ async function main() {
     if (!fs.existsSync(VIDEO_CACHE_DIR)) fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
     if (!fs.existsSync(FRAMES_ROOT_DIR)) fs.mkdirSync(FRAMES_ROOT_DIR, { recursive: true });
 
-    log('info', `📂 Frame Output Dir: ${FRAMES_ROOT_DIR}`);
-    log('info', `📂 Video Cache Dir: ${VIDEO_CACHE_DIR}`);
+    log('info', `[Config] Frame Output Dir: ${toRelativePath(FRAMES_ROOT_DIR)}`);
+    log('info', `[Config] Video Cache Dir: ${toRelativePath(VIDEO_CACHE_DIR)}`);
 
     if (params.url) {
         const videoId = extractVideoId(params.url);
@@ -1023,7 +1041,7 @@ async function main() {
         params.url = `https://www.youtube.com/watch?v=${videoId}`;
 
         log('info', `=== 비디오 Frame 추출 시작: ${videoId} ===`);
-        log('info', `설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality.join(', ')}, 포맷=${params.ext.join(', ').toUpperCase()}`);
+        log('info', `[Config] 설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality.join(', ')}, 포맷=${params.ext.join(', ').toUpperCase()}`);
 
         if (params.channel === 'manual') {
             fs.mkdirSync(path.join(BASE_DATA_DIR, 'manual'), { recursive: true });
@@ -1044,7 +1062,7 @@ async function processBatch(params) {
     const deletedPath = path.join(getChannelDir(channel), 'deleted_urls.txt');
 
     if (!fs.existsSync(urlsPath)) {
-        log('error', `urls.txt를 찾을 수 없습니다: ${urlsPath}`);
+        log('error', `urls.txt를 찾을 수 없습니다: ${toRelativePath(urlsPath)}`);
         return;
     }
 
@@ -1083,19 +1101,24 @@ async function processBatch(params) {
         if (shouldCollect(channel, videoId, params)) { // [수정] params 객체 전달
             log('info', `\n--- [${processedCount + 1}] 처리 시작: ${videoId} ---`);
             params.url = url; // 현재 URL 설정
-            await processSingleVideo(videoId, params);
+            const downloadPerformed = await processSingleVideo(videoId, params);
             processedCount++;
 
-            // IP 차단 방지 딜레이 강화 (10 ~ 30초)
-            const delay = 10000 + Math.random() * 20000;
-            log('info', `⏳ 대기: ${(delay / 1000).toFixed(1)}초...`);
-            await new Promise(r => setTimeout(r, delay));
+            // [변경] 다운로드가 실제로 수행되었을 때만 대기 (캐시 사용 시 즉시 진행)
+            if (downloadPerformed) {
+                // IP 차단 방지 딜레이 강화 (10 ~ 30초)
+                const delay = 10000 + Math.random() * 20000;
+                log('info', `[Wait] 대기: ${(delay / 1000).toFixed(1)}초...`);
+                await new Promise(r => setTimeout(r, delay));
 
-            // [추가] 10개마다 긴 휴식 (1분 ~ 3분)
-            if (processedCount % 10 === 0) {
-                const longPause = 60000 + Math.random() * 120000;
-                log('info', `☕ 긴 휴식 (IP 차단 방지): ${(longPause / 1000).toFixed(1)}초...`);
-                await new Promise(r => setTimeout(r, longPause));
+                // [추가] 10개마다 긴 휴식 (1분 ~ 3분)
+                if (processedCount % 10 === 0) {
+                    const longPause = 60000 + Math.random() * 120000;
+                    log('info', `[Pause] 긴 휴식 (IP 차단 방지): ${(longPause / 1000).toFixed(1)}초...`);
+                    await new Promise(r => setTimeout(r, longPause));
+                }
+            } else {
+                log('info', `[Skip] 캐시된 비디오 사용 (또는 프레임 수집 완료) -> 대기 시간 스킵`);
             }
         } else {
             skippedCount++;
