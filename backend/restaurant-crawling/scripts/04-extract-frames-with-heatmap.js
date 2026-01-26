@@ -41,8 +41,10 @@ const __dirname = path.dirname(__filename);
 // --- 환경 설정 ---
 const SCRIPT_DIR = __dirname;
 const BASE_DATA_DIR = path.resolve(SCRIPT_DIR, '../data');
-const VIDEO_CACHE_DIR = path.join(BASE_DATA_DIR, 'video_cache');
-if (!fs.existsSync(VIDEO_CACHE_DIR)) fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
+const VIDEO_CACHE_DIR_DEFAULT = 'H:\\My Drive\\04_빠른공유\\tzudong_tzuyang_data\\video_cache';
+const FRAMES_DIR_DEFAULT = 'H:\\My Drive\\04_빠른공유\\tzudong_tzuyang_data\\frames';
+let VIDEO_CACHE_DIR = VIDEO_CACHE_DIR_DEFAULT;
+let FRAMES_ROOT_DIR = FRAMES_DIR_DEFAULT;
 
 // --- 로깅 헬퍼 ---
 function log(level, message) {
@@ -60,7 +62,9 @@ function parseArgs() {
         buffer: 0.0,
         quality: ['360p'], // 배열로 변경
         ext: ['jpg'], // 배열로 변경
-        force: false // [추가] 기본값 false
+        force: false, // [추가] 기본값 false
+        framesDir: null, // [추가] 프레임 저장 경로
+        videoCacheDir: null // [추가] 비디오 캐시 경로
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -73,6 +77,8 @@ function parseArgs() {
             case '--ext': params.ext = args[++i].toLowerCase().split(','); break; // 콤마로 구분하여 배열로 변환
             case '--delete-cache': params.deleteCache = true; break;
             case '--force': params.force = true; break; // [추가] 강제 수집 플래그
+            case '--frames-dir': params.framesDir = args[++i]; break; // [추가] 프레임 경로 설정
+            case '--video-cache-dir': params.videoCacheDir = args[++i]; break; // [추가] 캐시 경로 설정
         }
     }
     return params;
@@ -86,7 +92,13 @@ function getChannelDir(channelName) {
 // 프레임 저장 경로: channel/frames/videoId/recollectId/
 function getFramesOutputDir(channelName, videoId, recollectId) {
     const rId = recollectId !== undefined && recollectId !== null ? recollectId.toString() : '0';
-    return path.join(getChannelDir(channelName), 'frames', videoId, rId);
+    // [수정] FRAMES_ROOT_DIR 전역 변수 사용 (채널 구분 없이 루트 사용 혹은 채널 하위?)
+    // 사용자 요청 경로에 'tzudong_tzuyang_data'가 있으므로, 이미 채널(tzuyang) 특화 경로일 수 있음.
+    // 하지만 channelName이 바뀌면 꼬일 수 있으므로, 만약 기본값이 아니면 채널명을 붙일지 고민.
+    // 일단 요청사항대로 고정 경로 하위에 videoId 생성
+    // 만약 채널별 구분이 필요하다면 FRAMES_ROOT_DIR 하위에 channelName을 붙여야 함.
+    // 여기서는 사용자가 지정한 'frames' 폴더 바로 아래에 videoId를 둠.
+    return path.join(FRAMES_ROOT_DIR, videoId, rId);
 }
 
 function getHeatmapOutputPath(channelName, videoId) {
@@ -856,6 +868,17 @@ function removeFailedUrl(channel, url) {
 
 async function main() {
     const params = parseArgs();
+
+    // [설정 적용] 파라미터로 경로가 들어왔으면 덮어쓰기
+    if (params.framesDir) FRAMES_ROOT_DIR = params.framesDir;
+    if (params.videoCacheDir) VIDEO_CACHE_DIR = params.videoCacheDir;
+
+    // [초기화] 경로 생성
+    if (!fs.existsSync(VIDEO_CACHE_DIR)) fs.mkdirSync(VIDEO_CACHE_DIR, { recursive: true });
+    if (!fs.existsSync(FRAMES_ROOT_DIR)) fs.mkdirSync(FRAMES_ROOT_DIR, { recursive: true });
+
+    log('info', `📂 Frame Output Dir: ${FRAMES_ROOT_DIR}`);
+    log('info', `📂 Video Cache Dir: ${VIDEO_CACHE_DIR}`);
 
     if (params.url) {
         const videoId = extractVideoId(params.url);
