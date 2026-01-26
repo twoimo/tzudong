@@ -786,6 +786,9 @@ async function processSingleVideo(videoId, params) {
                 }
             }
 
+            // [추가] 성공 시 실패 목록에서 제거
+            removeFailedUrl(channel, url);
+
         } catch (e) {
             log('error', `오류 발생 (${currentQuality}): ${e.message}`);
         } finally {
@@ -811,11 +814,43 @@ async function processSingleVideo(videoId, params) {
 // [추가] 실패한 URL 로깅 함수
 function logFailedUrl(channel, url) {
     const failedPath = path.join(getChannelDir(channel), 'failed_urls.txt');
+
     try {
-        fs.appendFileSync(failedPath, url + '\n', 'utf8');
-        log('info', `📝 실패 목록에 추가됨: ${failedPath}`);
+        const content = fs.existsSync(failedPath) ? fs.readFileSync(failedPath, 'utf8') : '';
+        const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+        const targetId = extractVideoId(url);
+
+        // 이미 존재하는지 확인
+        const exists = lines.some(line => extractVideoId(line) === targetId);
+        if (!exists) {
+            fs.appendFileSync(failedPath, url + '\n', 'utf8');
+        }
     } catch (e) {
-        log('error', `실패 목록 저장 실패: ${e.message}`);
+        log('warn', `실패 목록 업데이트 실패: ${e.message}`);
+    }
+}
+
+// [추가] 성공한 URL을 실패 목록에서 제거
+function removeFailedUrl(channel, url) {
+    const failedPath = path.join(getChannelDir(channel), 'failed_urls.txt');
+    if (!fs.existsSync(failedPath)) return;
+
+    try {
+        const content = fs.readFileSync(failedPath, 'utf8');
+        const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+        const targetId = extractVideoId(url);
+
+        const newLines = lines.filter(line => {
+            const vid = extractVideoId(line);
+            return vid !== targetId;
+        });
+
+        if (lines.length !== newLines.length) {
+            fs.writeFileSync(failedPath, newLines.join('\n') + (newLines.length ? '\n' : ''), 'utf8');
+            log('info', `✅ 실패 목록에서 제거됨: ${targetId}`);
+        }
+    } catch (e) {
+        log('warn', `실패 목록 업데이트 실패: ${e.message}`);
     }
 }
 
