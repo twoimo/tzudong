@@ -1,21 +1,82 @@
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+bun.lock
+
+# Testing
+coverage/
+
+# Next.js
+/.next/
+/out/
+/build/
+
+# Production
+dist/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local Env Files
 .env
 .env.local
-.DS_Store
-dist/
-coverage/
-.vscode/
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Turbo
+.turbo/
+
+# Vercel
+.vercel/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.Python
+env/
 venv/
 .venv/
-*.egg-info/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
 *.log
-.sync_trigger
-bun.lock
+.git
+.mypy_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
 
-# Large backup files
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Custom - Sync
+.sync_trigger
+
+# Custom - Large Data
 supabase/backup_db/*.sql
 backend/backups/*.dump
 backend/restaurant-crawling/data/*
