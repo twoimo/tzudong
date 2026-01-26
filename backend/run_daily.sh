@@ -100,7 +100,7 @@ fi
 
 # 7. 코드 에디터 동기화 신호 (Antigravity 등)
 # .sync_trigger 파일을 생성하여 에디터가 파일 변경을 감지하도록 함
-SYNC_TRIGGER_FILE="$PROJECT_ROOT/.sync_trigger"
+SYNC_TRIGGER_FILE="$PROJECT_ROOT/backend/.sync_trigger"
 echo "$(date)" > "$SYNC_TRIGGER_FILE"
 echo "[$(date)] ✅ 코드 에디터 동기화용 트리거 파일 생성됨" >> "$LOG_FILE"
 
