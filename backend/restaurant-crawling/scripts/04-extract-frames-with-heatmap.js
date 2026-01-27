@@ -1143,6 +1143,7 @@ async function processSingleVideo(videoId, params) {
                     // 만약 모든 구간이 재사용되었다면 다운로드 불필요
                     if (reusedCount === segments.length) {
                         log('info', `[Skip] 모든 구간 재사용 완료. 비디오 다운로드 스킵.`);
+                        markFrameCollectionCompleted(channel, videoId, recollectId); // [Fix] 스킵 시에도 완료 마킹
                         continue; // 다음 화질 처리 Loop (processSingleVideo 내)
                     } else {
                         log('info', `[Partial] ${segments.length - reusedCount}개 신규 구간 추출 필요.`);
