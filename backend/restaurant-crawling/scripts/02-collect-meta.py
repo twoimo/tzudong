@@ -532,6 +532,7 @@ def collect_channel_meta(
             
             output_file = meta_dir / f"{vid}.jsonl"
             append_to_jsonl(str(output_file), current_meta)
+            logger.info(f"  [Meta Updated] {vid} - {current_meta.get('title', 'No Title')[:30]}...")
             success_count += 1
 
     logger.progress_done()

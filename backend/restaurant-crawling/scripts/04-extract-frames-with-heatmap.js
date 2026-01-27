@@ -739,7 +739,7 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     };
 
     fs.appendFileSync(outPath, JSON.stringify(saveData) + '\n', 'utf8');
-    log('info', `[Saved] 히트맵 데이터 저장됨: ${toRelativePath(outPath)} (포인트: ${formattedInteraction.length}개)`);
+    log('info', `[Heatmap Saved] ${videoId} (Points: ${formattedInteraction.length})`);
 
     // 반환값에 '재사용 가능 여부' 정보를 포함하면 좋겠지만, 
     // 기존 구조 유지를 위해 마커 리스트만 반환하고, 실제 부분 업데이트 로직은 extractFrames에서 수행
@@ -1163,6 +1163,7 @@ async function processSingleVideo(videoId, params) {
 
             for (const currentExt of extensions) {
                 await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
+                log('info', `[Frames Extracted] ${videoId} (${currentExt})`);
             }
 
             // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)

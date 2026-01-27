@@ -178,7 +178,7 @@ else
 fi
 
 # Heatmap
-HEATMAP_CNT=$(grep -c "\[Saved\] 히트맵 데이터 저장됨" "$LOG_FILE")
+HEATMAP_CNT=$(grep -c "\[Heatmap Saved\]" "$LOG_FILE")
 if [ "$HEATMAP_CNT" -gt 0 ]; then
     echo "| 🔥 Heatmaps | $HEATMAP_CNT | ✅ Saved |" >> "$SUMMARY_MD"
 else
@@ -215,19 +215,58 @@ echo "" >> "$SUMMARY_MD"
 echo "### 📜 Details" >> "$SUMMARY_MD"
 echo "<details><summary>Click to expand execution details</summary>" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
-echo "**1. URL & Meta**" >> "$SUMMARY_MD"
-echo "- $URL_LINE" >> "$SUMMARY_MD"
-echo "- $META_LINE" >> "$SUMMARY_MD"
-echo "" >> "$SUMMARY_MD"
 
+# 1. New URLs List
+if [ "$URL_CNT" != "0" ] && [ "$URL_CNT" != "-" ]; then
+    echo "**🔗 New URLs ($URL_CNT)**" >> "$SUMMARY_MD"
+    grep "\[New URL\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[New URL\] /- /' >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
+# 2. Metadata Updates
+if [ "$META_CNT" != "0" ] && [ "$META_CNT" != "-" ]; then
+    echo "**📝 Metadata Updates ($META_CNT)**" >> "$SUMMARY_MD"
+    if [ "$META_CNT" -le 20 ]; then
+        grep "\[Meta Updated\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Meta Updated\] /- /' >> "$SUMMARY_MD"
+    else
+        grep "\[Meta Updated\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Meta Updated\] /- /' | head -n 20 >> "$SUMMARY_MD"
+        echo "- ... (Total $META_CNT items)" >> "$SUMMARY_MD"
+    fi
+    echo "" >> "$SUMMARY_MD"
+fi
+
+# 3. Transcripts
 if [ "$TRANSCRIPT_CNT" != "0" ]; then
-    echo "**2. Transcripts**" >> "$SUMMARY_MD"
-    echo "- Collected $TRANSCRIPT_CNT transcripts." >> "$SUMMARY_MD"
+    echo "**💬 Transcripts Saved**" >> "$SUMMARY_MD"
+    grep "\[Transcript Saved\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Transcript Saved\] /- /' >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
+# 4. Heatmaps
+if [ "$HEATMAP_CNT" -gt 0 ]; then
+    echo "**🔥 Heatmaps Processed**" >> "$SUMMARY_MD"
+    grep "\[Heatmap Saved\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Heatmap Saved\] /- /' >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
+# 5. Frames
+# Use [Frames Extracted] marker
+FRAME_VIDEO_CNT=$(grep -c "\[Frames Extracted\]" "$LOG_FILE")
+if [ "$FRAME_VIDEO_CNT" -gt 0 ]; then
+    echo "**🖼️ Frames Extracted (Videos: $FRAME_VIDEO_CNT)**" >> "$SUMMARY_MD"
+    grep "\[Frames Extracted\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Frames Extracted\] /- /' >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
+# 6. Gemini
+if [ -n "$GEMINI_SUCCESS_LINE" ]; then
+    echo "**🧠 Gemini Analysis**" >> "$SUMMARY_MD"
+    echo "- $GEMINI_SUCCESS_LINE" >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
 if [ "$YOUTUBE_CNT" -gt 0 ]; then
-    echo "**3. YouTube Downloads (New)**" >> "$SUMMARY_MD"
+    echo "**📺 YouTube Downloads**" >> "$SUMMARY_MD"
     grep "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE" | strip_ansi | sed 's/^/- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi

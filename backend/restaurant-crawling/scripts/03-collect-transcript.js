@@ -614,7 +614,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
             if (result) {
                 stats.success++;
-                log('success', `    → ${result.segments.length}개 세그먼트`);
+                log('success', `[Transcript Saved] ${videoId} (${result.segments.length} segments)`);
             } else {
                 stats.noTranscript++;
                 // 블랙리스트에 추가

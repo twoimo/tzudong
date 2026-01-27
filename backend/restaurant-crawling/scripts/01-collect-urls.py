@@ -173,6 +173,7 @@ def save_urls(
         with open(urls_file, "a", encoding="utf-8") as f:
             for url in new_urls:
                 f.write(url + "\n")
+                logger.info(f"  [New URL] {url}")
 
     logger.info(f"신규 저장: {len(new_urls)}개, 스킵 (기존): {skip_count}개")
     logger.add_statistic("new_urls_saved", len(new_urls))
