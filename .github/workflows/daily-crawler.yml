@@ -73,6 +73,16 @@ jobs:
           echo "Starting Ollama server..."
           ollama serve &
           
+      - name: Cache Ollama Models
+        uses: actions/cache@v3
+        with:
+          path: ~/.ollama
+          key: ${{ runner.os }}-ollama-models-v1
+          restore-keys: |
+            ${{ runner.os }}-ollama-models-
+
+      - name: Pull Model
+        run: |
           echo "Waiting for Ollama to be ready..."
           max_retries=10
           count=0
