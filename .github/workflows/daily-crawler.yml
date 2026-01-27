@@ -43,7 +43,7 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           # 추가 필수 패키지 명시적 설치 (requirements.txt에 없을 경우 대비)
-          pip install google-api-python-client python-dotenv yt-dlp pyyaml openai requests
+          pip install google-api-python-client python-dotenv yt-dlp pyyaml openai requests langchain langchain-community
 
       - name: Install Node.js dependencies
         working-directory: ./backend
@@ -65,6 +65,32 @@ jobs:
             echo "⚠️ GEMINI_CREDENTIALS_BASE64 secret is missing."
           fi
 
+      - name: Setup Ollama (CPU Mode)
+        run: |
+          echo "Installing Ollama..."
+          curl -fsSL https://ollama.com/install.sh | sh
+          
+          echo "Starting Ollama server..."
+          ollama serve &
+          
+          echo "Waiting for Ollama to be ready..."
+          max_retries=10
+          count=0
+          while ! curl -s http://localhost:11434/api/tags > /dev/null; do
+            count=$((count+1))
+            if [ $count -eq $max_retries ]; then
+              echo "Timeout waiting for Ollama!"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "✅ Ollama server is ready!"
+          
+          echo "Pulling model 'cookieshake/a.x-4.0-light-imatrix:Q8_0'..."
+          # 모델 Pull (시간이 좀 걸릴 수 있음)
+          ollama pull cookieshake/a.x-4.0-light-imatrix:Q8_0
+          echo "✅ Model pulled successfully!"
+
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
@@ -82,6 +108,8 @@ jobs:
           GDRIVE_REMOTE_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/video_cache"
           # 결과 저장 경로 (Frames)
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
+          # Ollama 호스트 (Self-Hosted Runner 또는 터널링 사용 시)
+          OLLAMA_HOST: ${{ secrets.OLLAMA_HOST }}
           # CI 환경 플래그
           CI: true
         run: |
