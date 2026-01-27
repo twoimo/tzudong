@@ -318,40 +318,50 @@ echo "" >> "$SUMMARY_MD"
 echo "### 🏗️ Pipeline Architecture" >> "$SUMMARY_MD"
 echo "\`\`\`wmgraph" >> "$SUMMARY_MD"
 cat <<EOF >> "$SUMMARY_MD"
-+-----------------------------------------------------------------------------------------------+
-|                                 🚀 TZUDONG DATA PIPELINE                                      |
-+-----------------------------------------------------------------------------------------------+
-|                                                                                               |
-|  [GitHub Actions Runner]                                                                      |
-|         |                                                                                     |
-|         v                                                                                     |
-|  [Step 0: Sync Data] <======= (Git Fetch/Checkout) ======== [Branch: data]                    |
-|         |                                                                                     |
-|         v                                                                                     |
-|  [Step 1: Collect URLs] ---> [urls.txt]                                                       |
-|         |                                                                                     |
-|         v                                                                                     |
-|  [Step 2: Collect Meta] ---> [meta/*.jsonl]                                                   |
-|         |    +---> [Scheduling & Change Detection]                                            |
-|         |                                                                                     |
-|         +===+=========================+=============================+                         |
-|             |                         |                             |                         |
-|             v                         v                             v                         |
-|  [Step 3: Transcript]      [Step 4: Frames & Heatmap]     [Step 6: Gemini Analysis]           |
-|  (Puppeteer Browser)       (yt-dlp + ffmpeg + rclone)     (Gemini API / CLI + Python)         |
-|             |                         |                             |                         |
-|             v                         v                             v                         |
-|   [transcript/*.jsonl]     [frames/*] [heatmap/*.jsonl]     [crawling/*.jsonl]                |
-|                                       ^                             ^                         |
-|                                       |                             |                         |
-|                          (Cache: GDrive / YouTube)                  |                         |
-|                                                                     |                         |
-|         +=============================+=============================+                         |
-|         |                                                                                     |
-|         v                                                                                     |
-|  [Step 7: Push Data] ======= (Git Add/Commit/Push) =======> [Branch: data]                    |
-|                                                                                               |
-+-----------------------------------------------------------------------------------------------+
++-------------------------------------------------------------------------------------------------------+
+|                                  🚀 TZUDONG DETAILED PIPELINE FLOW                                    |
++-------------------------------------------------------------------------------------------------------+
+|                                                                                                       |
+|  [GitHub Actions Trigger]                                                                             |
+|             |                                                                                         |
+|             v                                                                                         |
+|  [Step 0: Sync 'data'] <--(Git Fetch)-- [Remote Branch: data]                                         |
+|             |                                                                                         |
+|             v                                                                                         |
+|     [Step 1: Collect URLs]                                                                            |
+|             |                                                                                         |
+|     < New URLs found? > ----(No)-----.                                                                |
+|             | (Yes)                  |                                                                |
+|             v                        |                                                                |
+|     [Step 2: Collect Meta]           |                                                                |
+|             |                        |                                                                |
+|     < Meta Changed / Scheduled? > --(No)--> [Skip Extraction]                                         |
+|             | (Yes: daily/weekly)                                                                     |
+|             |                                                                                         |
+|             +-----------------------+-----------------------------+                                   |
+|             |                       |                             |                                   |
+|             v                       v                             v                                   |
+|     [Step 3: Transcript]    [Step 4: Frames/Heatmap]      [Step 6: Gemini]                            |
+|     (Puppeteer)             (Meta Triggered)              (New Video/Meta)                            |
+|             |                       |                             |                                   |
+|             |               < GDrive Cache Exists? >              |                                   |
+|             |               / (Yes)           (No) \              |                                   |
+|             |        [RClone DL]             [yt-dlp DL]          |                                   |
+|             |             |                       |               |                                   |
+|             |             \`--> [FFmpeg Extractor] <               |                                   |
+|             |                       |                             |                                   |
+|             v                       v                             v                                   |
+|    [transcript/*.jsonl]    [frames/*] [heatmap/*.jsonl]   [crawling/*.jsonl]                          |
+|             |                       |                             |                                   |
+|             +-----------+-----------+-----------------------------+                                   |
+|                         |                                                                             |
+|                         v                                                                             |
+|              < Any File Changes? > --(No)---> [End Job]                                               |
+|                         | (Yes: Modified/Untracked)                                                   |
+|                         v                                                                             |
+|             [Step 7: Commit & Push] --(Git Push)--> [Remote Branch: data]                             |
+|                                                                                                       |
++-------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
 
