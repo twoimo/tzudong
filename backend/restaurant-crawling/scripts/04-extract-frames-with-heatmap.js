@@ -822,8 +822,10 @@ async function downloadVideo(videoId, outputDir, quality) {
     }
 
     // Windows가 아닌 경우 nodePath 조정 필요할 수 있음
-    // 일단 간단히 node만 호출
-    const runtimesArg = process.platform === 'win32' ? `--js-runtimes "node:${nodePath}"` : '';
+    // Linux/Mac 환경에서는 PATH의 node를 사용하도록 설정
+    const runtimesArg = process.platform === 'win32'
+        ? `--js-runtimes "node:${nodePath}"`
+        : '--js-runtimes "node:node"';
 
     const cmd = `"${pythonPath}" -m yt_dlp ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
