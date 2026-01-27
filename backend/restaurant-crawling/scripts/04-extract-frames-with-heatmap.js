@@ -411,7 +411,7 @@ function shouldCollect(channelName, videoId, params) {
 
                                 if (metaRecollectId > lastRecollectId) {
                                     // ... 트리거 로직 ...
-                                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
+                                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
                                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
                                     if (shouldTrigger) {
                                         log('info', `[Trigger] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
@@ -434,10 +434,27 @@ function shouldCollect(channelName, videoId, params) {
         }
     }
 
+    // [수정] D+5 강제 수집 로직 추가
+    // 히트맵/프레임이 아예 없는 신규 영상이면, 스케줄 트리거가 없어도 D+5가 지났으면 수집해야 함
+    // (get_schedule_frequency에서 D+5 미만은 None을 반환하므로, 메타 수집 단계에서 걸러졌을 수 있음.
+    // 하지만 여기까지 왔다는 건 메타가 있다는 뜻일 수도 있고, shouldCollect가 호출된 시점에서 판단)
+
+    // 데이터 부재 확인
+    const heatmapPath = getHeatmapOutputPath(channelName, videoId);
+    const hasHeatmap = fs.existsSync(heatmapPath);
+
+    // D+5 경과 확인 (위에서 계산한 diffDays 사용)
+    if (diffDays >= 5) {
+        if (!hasHeatmap) {
+            log('info', `[Force] ${videoId}: D+5 경과 & 히트맵 없음 -> 강제 수집 트리거 (Initial Collection)`);
+            return true;
+        }
+    }
+
     // 폴더가 없거나 비어있으면 수집 필요
     // [중요] 단, recollect_vars에 'daily_collection'만 있다면 수집 스킵 (주간/월간 스케줄 아님)
-    // new_video, scheduled_*, duration_changed, viral_growth 등이 있어야 함
-    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
+    // new_video, scheduled_*, duration_changed, heatmap_changed 등이 있어야 함
+    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'heatmap_changed'];
     const hasTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
     // 강제 수집 모드가 아니고 트리거가 없다면 스킵 (daily_collection은 메타만 수집)
@@ -445,6 +462,10 @@ function shouldCollect(channelName, videoId, params) {
         // log('info', `[스킵] ${videoId}: Daily Collection (프레임 수집 대상 아님)`);
         return false;
     }
+
+    // 스케줄링(scheduled_*)에 의해 왔더라도, 히트맵이 바뀌지 않았다면 굳이 수집할 필요 없음.
+    // 이는 processSingleVideo 내부의 fetchAndSaveHeatmap 단계에서 "히트맵 비교"를 통해 최종 결정됨.
+    // 여기서는 일단 "수집 시도 대상"으로는 분류함.
 
     return true;
 }
@@ -590,9 +611,12 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
                     // 메타 ID가 더 크면 재수집 (업데이트)
                     if (currentMetaId > existingData.recollect_id) {
                         const vars = getRecollectVars(channel, videoId);
-                        log('info', `[Update] 히트맵 업데이트 감지 (ID: ${existingData.recollect_id} -> ${currentMetaId}), 사유: [${vars.join(', ')}]`);
-                        // 여기서 return 하지 않고 아래로 진행하여 재수집 수행
+                        log('info', `[Check] 히트맵 ID 변경 감지 (ID: ${existingData.recollect_id} -> ${currentMetaId}), 사유: [${vars.join(', ')}]`);
+
+                        // [최적화] 여기서 무조건 재수집하지 않고, "진짜 바뀌었는지" 확인하기 위해
+                        // 아래로 흘려보내서 새 히트맵을 가져온 뒤 비교 로직 수행 (Intersection Check)
                     } else {
+                        // ID도 같고 데이터도 있으면 재사용
                         log('info', `[Reuse] 기존 히트맵 데이터 사용: ${toRelativePath(outPath)}`);
                         return existingData.most_replayed_markers.map(m => ({
                             startSec: m.startMillis / 1000,
@@ -616,7 +640,71 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         return null;
     }
 
+    // [추가] 히트맵 변경 감지 & 부분 업데이트(Hard Link) 지원을 위한 비교 로직
+    // 기존 데이터 로드 (최신본)
+    let existingMarkers = [];
+    if (fs.existsSync(outPath)) {
+        try {
+            const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
+            if (lines.length > 0) {
+                const lastData = JSON.parse(lines[lines.length - 1]);
+                existingMarkers = lastData.most_replayed_markers.map(m => ({
+                    startSec: m.startMillis / 1000,
+                    endSec: m.endMillis / 1000,
+                    peakSec: m.peakMillis / 1000
+                }));
+            }
+        } catch (e) { }
+    }
+
+    const newMarkers = parsed.mostReplayedMarkers.map(m => ({
+        startSec: m.startMillis / 1000,
+        endSec: m.endMillis / 1000,
+        peakSec: m.peakMillis / 1000
+    }));
+
+    // 비교: 개수가 같고, 모든 마커가 오차 범위 내(±2초) 라면 '변경 없음'으로 간주
+    // 단, duration_changed 트리거가 있다면 무조건 변경으로 간주 (신뢰도 하락)
+    const vars = getRecollectVars(channel, videoId);
+    const isDurationChanged = vars.includes('duration_changed');
+
+    let isHeatmapChanged = false;
+
+    if (isDurationChanged) {
+        log('info', `[Change] 영상 길이 변경 감지 -> 히트맵 전면 재수집`);
+        isHeatmapChanged = true;
+    } else if (existingMarkers.length !== newMarkers.length) {
+        log('info', `[Change] 히트맵 구간 개수 변경 (${existingMarkers.length} -> ${newMarkers.length})`);
+        isHeatmapChanged = true;
+    } else {
+        // 개수 같음 -> 구간별 시간 비교
+        const TOLERANCE_SEC = 2.0;
+        const hasDiff = newMarkers.some((newM, i) => {
+            const oldM = existingMarkers[i];
+            const startDiff = Math.abs(newM.startSec - oldM.startSec);
+            const endDiff = Math.abs(newM.endSec - oldM.endSec);
+            return startDiff > TOLERANCE_SEC || endDiff > TOLERANCE_SEC;
+        });
+
+        if (hasDiff) {
+            log('info', `[Change] 히트맵 구간 시간 변경 감지 (> ${TOLERANCE_SEC}s)`);
+            isHeatmapChanged = true;
+        } else {
+            // 변경 없음
+            log('info', `[Skip] 히트맵 변경 없음 (허용오차 ±${TOLERANCE_SEC}s 이내) -> 수집 중단`);
+            return null; // Null을 리턴하여 다운로드/프레임 추출 단계로 가지 않게 함
+        }
+    }
+
+    // 변경 없는 경우 처리 로직 (getRecollectVars가 scheduled_* 만 있을 때)
+    // 만약 isHeatmapChanged가 false인데 여기까지 왔다면(위에서 return null 안됨), 뭔가 이상함.
+    // 하지만 new_video인 경우는 existingMarkers가 없으므로 isHeatmapChanged = true가 됨. (0 != N)
+
+    // [중요] 변경되지 않았다면 파일 저장도 하지 않음 (불필요한 로그 방지)
+    // 하지만 여기까지 왔다는 건 변경되었다는 뜻임. 저장 진행.
+
     const formattedInteraction = (parsed.interactionData || []).map(item => {
+
         const seconds = Math.floor((item.startMillis || 0) / 1000);
         const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
         const ss = (seconds % 60).toString().padStart(2, '0');
@@ -632,6 +720,12 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     const metaInfo = getMetaInfo(channel, videoId);
     const duration = metaInfo ? metaInfo.duration : 0;
 
+    // [중요] recollect_vars에 heatmap_changed 추가 (명시적)
+    let finalVars = getRecollectVars(channel, videoId);
+    if (!finalVars.includes('heatmap_changed')) {
+        finalVars.push('heatmap_changed');
+    }
+
     const saveData = {
         youtube_link: url,
         video_id: videoId,
@@ -641,11 +735,19 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         status: 'success',
         collected_at: new Date().toISOString(),
         recollect_id: recollectId,
-        recollect_vars: getRecollectVars(channel, videoId)
+        recollect_vars: finalVars
     };
 
     fs.appendFileSync(outPath, JSON.stringify(saveData) + '\n', 'utf8');
     log('info', `[Saved] 히트맵 데이터 저장됨: ${toRelativePath(outPath)} (포인트: ${formattedInteraction.length}개)`);
+
+    // 반환값에 '재사용 가능 여부' 정보를 포함하면 좋겠지만, 
+    // 기존 구조 유지를 위해 마커 리스트만 반환하고, 실제 부분 업데이트 로직은 extractFrames에서 수행
+    // (extractFrames에서 다시 히트맵 파일 읽거나, 여기서 넘겨줄 수 있으면 좋음)
+
+    // [Fix] extractFrames에서 '어떤 게 바뀌었는지' 알기 쉽게 하기 위해 확장된 객체 반환은 호출부 수정이 많이 필요함.
+    // 대신, extractFrames가 '스마트 재사용' 로직을 내장하고 있으므로(폴더 비교), 
+    // 여기서는 최신 마커 리스트만 잘 넘겨주면 됨.
 
     return parsed.mostReplayedMarkers.map(m => ({
         startSec: m.startMillis / 1000,
@@ -860,8 +962,13 @@ async function processSingleVideo(videoId, params) {
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
     const segments = await fetchAndSaveHeatmap(channel, videoId, url);
-    if (!segments || segments.length === 0) {
-        log('info', `[Info] ${videoId}: 처리할 중요 구간(Most Replayed)이 없습니다.`);
+    // [Mod] segments가 null이면 '변경 없음' 또는 '데이터 없음' -> 수집 중단
+    if (!segments) {
+        // log('info', `[Info] ${videoId}: 처리할 구간이 없거나 변경사항이 없습니다.`);
+        return;
+    }
+    if (segments.length === 0) {
+        log('info', `[Info] ${videoId}: 히트맵 데이터가 비어있습니다.`);
         return;
     }
 
@@ -894,12 +1001,10 @@ async function processSingleVideo(videoId, params) {
             const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
             const configDirName = `${currentQuality}_${fpsStr}fps`;
 
-            // [재사용] 이전 주기(recollect_id - 1 등)의 데이터가 유효한지 확인하고 복사
-            // 조건: 현재 필요한 Segment 폴더구조와 이전 주기의 폴더구조가 일치해야 함
-            // 로직: 
-            // 1. channel/frames/videoId/ 하위 폴더 검색
-            // 2. 현재 ID보다 작은 최대 ID 찾기
-            // 3. 해당 ID의 폴더가 현재 필요한 segment 폴더들을 모두 가지고 있는지 확인
+            // [재사용] 하드링크 부분 업데이트 (Smart Partial Update)
+            // fetchAndSaveHeatmap에서 '변경 없음'이면 아예 여기로 오지 않음 (processSingleVideo에서 return)
+            // 하지만 '변경 있음' 상태로 왔다면, 바뀐 구간은 새로 따고 안 바뀐 구간은 링크를 걸어야 함.
+
             const framesVideoRoot = path.dirname(outputDir); // channel/frames/videoId
             if (fs.existsSync(framesVideoRoot)) {
                 const existingIds = fs.readdirSync(framesVideoRoot)
@@ -911,64 +1016,85 @@ async function processSingleVideo(videoId, params) {
 
                 if (previousId >= 0) {
                     const prevDir = path.join(framesVideoRoot, previousId.toString());
-                    let canReuse = true;
 
-                    // 현재 필요한 모든 세그먼트가 이전 폴더에 존재하는지 확인
+                    // [Partial Update Logic]
+                    // 모든 세그먼트에 대해 순회하며:
+                    // 1. 이전 버전에 "비슷한 구간(±2초)" 폴더가 있는지 확인
+                    // 2. 있으면 해당 폴더 내용을 현재 버전으로 하드링크 복사
+                    // 3. 없으면(새로 생긴 구간) 다운로드 대상(needsDownload)에 추가
+
+                    const TOLERANCE_SEC = 2.0;
+
+                    // 이전 폴더의 세그먼트 목록 파싱
+                    // 폴더명 포맷: {index}_{start}_{end} (예: 1_90_100)
+                    // 정확한 매칭을 위해 폴더명을 파싱해서 시간 정보를 추출해야 함
+
+                    let prevSegmentsMap = [];
+                    try {
+                        const prevSegDirs = fs.readdirSync(prevDir);
+                        prevSegmentsMap = prevSegDirs.map(dirName => {
+                            const parts = dirName.split('_');
+                            if (parts.length >= 3) {
+                                return {
+                                    dirName,
+                                    index: parseInt(parts[0]),
+                                    start: parseInt(parts[1]),
+                                    end: parseInt(parts[2])
+                                };
+                            }
+                            return null;
+                        }).filter(x => x);
+                    } catch (e) { }
+
+                    let reusedCount = 0;
+
+                    // 현재 세그먼트와 비교
                     for (let i = 0; i < segments.length; i++) {
                         const seg = segments[i];
-                        const startTime = Math.max(0, seg.startSec - buffer);
-                        const endTime = Math.min(duration || 99999, seg.endSec + buffer);
+                        const segStart = Math.max(0, seg.startSec - buffer);
+                        const segEnd = Math.min(duration || 99999, seg.endSec + buffer);
 
-                        // [중요] 폴더명 정확히 매칭 (시간까지 일치해야 함)
-                        // extractFrames 로직: `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`
-                        const expectedSegDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
+                        // 현재 생성될 폴더명 (정수형 변환됨)
+                        const currentSegDirName = `${i + 1}_${Math.floor(segStart)}_${Math.floor(segEnd)}`;
+                        const currentSegPath = path.join(outputDir, currentSegDirName);
 
-                        const targetPath = path.join(prevDir, expectedSegDirName);
+                        // 매칭되는 이전 세그먼트 찾기 (Loop)
+                        const matchedPrev = prevSegmentsMap.find(p => {
+                            // 시간 차이가 허용오차 이내인지
+                            const sDiff = Math.abs(p.start - Math.floor(segStart));
+                            const eDiff = Math.abs(p.end - Math.floor(segEnd));
 
-                        if (!fs.existsSync(targetPath)) {
-                            canReuse = false;
-                            break;
-                        }
+                            // 인덱스는 달라도 되지만, 시간이 비슷해야 함.
+                            // 하지만 안전을 위해 내용물(파일 존재 여부) 체크는 필수
+                            return sDiff <= TOLERANCE_SEC && eDiff <= TOLERANCE_SEC;
+                        });
 
-                        // 세부 내용물 확인
-                        let allExtsExist = true;
-                        for (const currentExt of extensions) {
-                            const extPath = path.join(targetPath, currentExt, configDirName);
-                            // 폴더가 있고 비어있지 않아야 함
-                            if (!fs.existsSync(extPath) || fs.readdirSync(extPath).length === 0) {
-                                allExtsExist = false;
-                                break;
+                        if (matchedPrev) {
+                            // 하드링크 수행
+                            const srcPath = path.join(prevDir, matchedPrev.dirName);
+                            if (fs.existsSync(srcPath)) {
+                                try {
+                                    copyFolderRecursiveSync(srcPath, currentSegPath);
+                                    // [중요] 타임스탬프가 조금 다를 수 있으므로, 내용물은 그대로 쓰되
+                                    // 폴더명은 현재(currentSegDirName)로 맞춰짐.
+                                    // (copyFolderRecursiveSync가 destPath로 복사/링크함)
+                                    reusedCount++;
+                                    // log('info', `   [Link] 구간 재사용: ${matchedPrev.dirName} -> ${currentSegDirName}`);
+                                } catch (e) { }
                             }
-                        }
-                        if (!allExtsExist) {
-                            canReuse = false;
-                            break;
                         }
                     }
 
-                    if (canReuse) {
-                        log('info', `[Reuse] 이전 주기(ID: ${previousId}) 프레임 하드링크 생성 중... -> ID: ${recollectId}`);
-                        try {
-                            // 필요한 세그먼트 폴더만 복사 (하드링크)
-                            for (let i = 0; i < segments.length; i++) {
-                                const seg = segments[i];
-                                const startTime = Math.max(0, seg.startSec - buffer);
-                                const endTime = Math.min(duration || 99999, seg.endSec + buffer);
-                                const expectedSegDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
+                    if (reusedCount > 0) {
+                        log('info', `[Partial] 총 ${segments.length}개 구간 중 ${reusedCount}개 재사용(Hard Link) 완료.`);
+                    }
 
-                                const srcPath = path.join(prevDir, expectedSegDirName);
-                                const destPath = path.join(outputDir, expectedSegDirName);
-
-                                if (fs.existsSync(srcPath)) {
-                                    copyFolderRecursiveSync(srcPath, destPath);
-                                }
-                            }
-                            log('info', `[Done] 하드링크 생성 완료. 다운로드 스킵.`);
-                        } catch (copyErr) {
-                            log('warn', `링크 생성 중 오류 발생 (다운로드로 전환): ${copyErr.message}`);
-                            // 복사하다 망가졌을 수 있으므로 부분적으로 있을 수 있음. 
-                            // 아래의 스마트 스킵 로직이 남은 부분을 처리하거나 다시 다운로드하도록 둠.
-                        }
+                    // 만약 모든 구간이 재사용되었다면 다운로드 불필요
+                    if (reusedCount === segments.length) {
+                        log('info', `[Skip] 모든 구간 재사용 완료. 비디오 다운로드 스킵.`);
+                        continue; // 다음 화질 처리 Loop (processSingleVideo 내)
+                    } else {
+                        log('info', `[Partial] ${segments.length - reusedCount}개 신규 구간 추출 필요.`);
                     }
                 }
             }

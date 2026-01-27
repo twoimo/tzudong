@@ -122,12 +122,13 @@ def check_thumbnail_exists(channel_data_path: Path, video_id: str, recollect_id:
 def get_schedule_frequency(published_at_str: str) -> Optional[str]:
     """
     영상 age에 따른 수집 주기 결정 (KST 기준)
-    0~3개월: 매일 (None -> 항상 수집), 히트맵은 주 1회
-    3개월~1년: 2주 1회 (scheduled_biweekly)
-    1년~: 월 1회 (scheduled_monthly)
+    - D+5일 미만: 수집 안함 (단, 최초 수집은 04 스크립트에서 강제)
+    - D+5 ~ D+30: 주 1회 (scheduled_weekly) -> 생존 신고 및 초기 변화 감지
+    - D+30 ~ D+60: 월 1회 (scheduled_monthly) -> 안정화된 데이터 수집 (Final Candidate)
+    - D+60 이상: 정기 수집 중단 (None)
     """
     if not published_at_str:
-        return "scheduled_biweekly" # fallback
+        return "scheduled_weekly" # fallback
 
     pub_date = datetime.fromisoformat(published_at_str.replace("Z", "+00:00")).astimezone(KST)
     now = datetime.now(KST)
@@ -137,19 +138,25 @@ def get_schedule_frequency(published_at_str: str) -> Optional[str]:
     days_diff = delta.days
     
     if days_diff < 0:
-        return None # 미래 날짜는 일단 수집
-        
-    months_diff = days_diff / 30.0 # 대략적 계산
-
-    if months_diff < 3:
-        # 0 ~ 3개월: 매일 수집 (스케줄링 제한 없음)
         return None 
-    elif months_diff < 12:
-        # 3 ~ 12개월: 2주 1회
-        return "scheduled_biweekly"
-    else:
-        # 1년 이상: 월 1회
+        
+    if days_diff < 5:
+        # 5일 미만은 정기 수집 스케줄 없음 (04 스크립트에서 'new_video'나 강제 로직으로 처리)
+        # 단, 메타데이터는 매일 갱신하고 싶다면 여기를 None이나 daily로 둘 수 있으나,
+        # 요구사항에 따라 5일까지는 묵혀둠.
+        return None
+        
+    elif days_diff < 30:
+        # 5일 ~ 30일: 주 1회 (기존보다 완화)
+        return "scheduled_weekly"
+        
+    elif days_diff < 60:
+        # 30일 ~ 60일: 월 1회 (안정화 데이터)
         return "scheduled_monthly"
+        
+    else:
+        # 60일 이상: 정기 수집 중단
+        return None
 
 
 def check_schedule_condition(frequency: str, video_id: str) -> bool:
@@ -197,77 +204,7 @@ def get_meta_history(channel_path: Path, video_id: str, max_records: int = 7) ->
         return []
 
 
-def calculate_daily_growth_rates(history: List[Dict]) -> List[float]:
-    """수집 히스토리에서 일평균 조회수 증가폭 계산"""
-    daily_rates = []
-    for i in range(1, len(history)):
-        prev = history[i - 1]
-        curr = history[i]
-        
-        prev_views = prev.get("stats", {}).get("view_count", 0)
-        curr_views = curr.get("stats", {}).get("view_count", 0)
-        
-        prev_collected = prev.get("collected_at", "")
-        curr_collected = curr.get("collected_at", "")
-        
-        if not prev_collected or not curr_collected:
-            continue
-        
-        try:
-            prev_date = datetime.fromisoformat(prev_collected.replace("Z", "+00:00"))
-            curr_date = datetime.fromisoformat(curr_collected.replace("Z", "+00:00"))
-            days_elapsed = max((curr_date - prev_date).days, 1)
-        except Exception:
-            days_elapsed = 1
-        
-        if prev_views and curr_views and prev_views > 0:
-            daily_rate = (curr_views - prev_views) / days_elapsed
-            daily_rates.append(daily_rate)
-    
-    return daily_rates
 
-
-def detect_viral_anomaly(
-    channel_path: Path, 
-    video_id: str, 
-    current_views: int, 
-    current_date: datetime
-) -> bool:
-    """일평균 증가폭 기준 이상치 탐지 (평균 + 3σ)"""
-    history = get_meta_history(channel_path, video_id, max_records=7)
-    
-    if len(history) < 4:  # 최소 4개 기록 필요 (3개의 증가폭)
-        return False
-    
-    daily_rates = calculate_daily_growth_rates(history)
-    
-    if len(daily_rates) < 3:
-        return False
-    
-    # 평균 및 표준편차 계산
-    mean = sum(daily_rates) / len(daily_rates)
-    variance = sum((r - mean) ** 2 for r in daily_rates) / len(daily_rates)
-    std = variance ** 0.5
-    threshold = mean + 3 * std
-    
-    # 이번 수집의 일평균 증가폭 계산
-    last_record = history[-1]
-    last_views = last_record.get("stats", {}).get("view_count", 0)
-    last_collected = last_record.get("collected_at", "")
-    
-    if not last_collected or not last_views:
-        return False
-    
-    try:
-        last_date = datetime.fromisoformat(last_collected.replace("Z", "+00:00"))
-        days_elapsed = max((current_date - last_date).days, 1)
-    except Exception:
-        days_elapsed = 1
-    
-    current_daily_rate = (current_views - last_views) / days_elapsed
-    
-    # 조건: 임계값 초과 AND 최소 임계값이 양수
-    return current_daily_rate > threshold and threshold > 0
 
 
 def detect_changes(current: Dict, previous: Dict, channel_path: Path = None, video_id: str = None) -> List[str]:
@@ -295,32 +232,7 @@ def detect_changes(current: Dict, previous: Dict, channel_path: Path = None, vid
     if curr_thumb_hash and prev_thumb_hash and curr_thumb_hash != prev_thumb_hash:
         changes.append("thumbnail_changed")
     
-    # 4. 조회수 급등 감지 (Viral Growth)
-    published_at_str = current.get("published_at")
-    if published_at_str and previous:
-        published_at = datetime.fromisoformat(published_at_str.replace('Z', '+00:00')).astimezone(KST)
-        now = datetime.now(KST)
-        elapsed_days = (now - published_at).days
-        elapsed_months = elapsed_days / 30.0
-        
-        curr_views = current.get("stats", {}).get("view_count", 0)
-        prev_views = previous.get("stats", {}).get("view_count", 0)
-        
-        # 분기: 영상 수명에 따라 다른 감지 로직 적용
-        if elapsed_days >= 14 and elapsed_months < 6:
-            # 2주 ~ 6개월: 일평균 증가폭 이상치 탐지 (mean + 3σ)
-            if channel_path and video_id and curr_views:
-                if detect_viral_anomaly(channel_path, video_id, curr_views, now):
-                    changes.append("viral_growth")
-        elif elapsed_months >= 6:
-            # 6개월 이상: 이전 대비 % 증가 로직 (기존 방식 유지)
-            if prev_views and curr_views and prev_views > 0:
-                growth_rate = (curr_views - prev_views) / prev_views
-                absolute_growth = curr_views - prev_views
-                
-                # 조건: 50% 이상 증가 AND 절대값 10만 이상 증가
-                if growth_rate >= 0.5 and absolute_growth >= 100000:
-                    changes.append("viral_growth")
+
 
     return changes
 
@@ -545,11 +457,9 @@ def collect_channel_meta(
                 frequency = get_schedule_frequency(current_meta.get("published_at"))
                 
                 # Viral은 스케줄 무시하고 수집 (detect_changes에서 이미 추가됨)
-                is_viral = "viral_growth" in recollect_vars
+                # [Removed] viral logic
                 
-                if is_viral:
-                    schedule_reason = "viral_growth"
-                elif frequency:
+                if frequency:
                     if check_schedule_condition(frequency, vid):
                         schedule_reason = frequency
                 else:
@@ -569,6 +479,10 @@ def collect_channel_meta(
 
             # 4. 최종 수집 여부 결정
             # 변경사항이 있거나(is_changed) OR 스케줄에 걸렸거나(is_scheduled)
+            # 단, D+5 미만 신규 영상(schedule_reason is None and not is_changed)은 여기서 걸러질 수 있음.
+            # 하지만 new_video는 is_changed에 포함되지 않으므로(recollect_vars=["new_video"]),
+            # new_video인 경우 위에서 schedule_reason="new_video"로 처리됨.
+            
             if not (is_changed or is_scheduled):
                 # 수집 안 함. 하지만 썸네일 백필 체크
                 prev_id = previous_meta.get("recollect_id", 0)

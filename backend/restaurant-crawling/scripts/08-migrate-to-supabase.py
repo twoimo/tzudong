@@ -270,13 +270,7 @@ def verify_data(conn, channel: str):
         with_ads = cur.fetchone()[0]
         print(f"  광고 포함 비디오: {with_ads:,}개")
         
-        # viral_growth 검증 (recollect_vars 복구됨)
-        cur.execute("""
-            SELECT COUNT(*) FROM videos 
-            WHERE channel_name = %s AND 'viral_growth' = ANY(recollect_vars)
-        """, (channel,))
-        viral = cur.fetchone()[0]
-        print(f"  바이럴 성장 비디오: {viral:,}개")
+
 
 
 def test_queries(conn):
@@ -311,16 +305,7 @@ def test_queries(conn):
         for row in cur.fetchall():
             print(f"  {row[0]}: {row[1]}개 비디오")
         
-        # 4. 바이럴 성장 비디오
-        print("\n4️⃣ 바이럴 성장 비디오:")
-        cur.execute("""
-            SELECT id, title, view_count FROM videos 
-            WHERE 'viral_growth' = ANY(recollect_vars)
-            ORDER BY view_count DESC NULLS LAST LIMIT 3
-        """)
-        for row in cur.fetchall():
-            views = f"{row[2]:,}" if row[2] else "N/A"
-            print(f"  [{row[0]}] {row[1][:35]}... ({views} views)")
+
     
     print("\n✅ 쿼리 테스트 완료")
 

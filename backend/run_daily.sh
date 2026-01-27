@@ -37,6 +37,15 @@ echo "============================================================" >> "$LOG_FIL
 echo "[$(date)] 🚀 일일 데이터 수집 파이프라인 시작" >> "$LOG_FILE"
 echo "============================================================" >> "$LOG_FILE"
 
+# 0. 데이터 브랜치에서 최신 데이터 가져오기 (증분 수집을 위해 필수)
+echo "[$(date)] [Step 0] 최신 데이터 동기화 (from data branch)..." >> "$LOG_FILE"
+git fetch origin data >> "$LOG_FILE" 2>&1
+if git checkout origin/data -- backend/restaurant-crawling/data/ >> "$LOG_FILE" 2>&1; then
+    echo "[$(date)] ✅ 기존 데이터 로드 성공" >> "$LOG_FILE"
+else
+    echo "[$(date)] ⚠️ 기존 데이터 로드 실패 (첫 실행이거나 브랜치 없음) - 새로 수집 시작" >> "$LOG_FILE"
+fi
+
 # 1. URL 수집 (새로운 영상 탐색)
 echo "[$(date)] [Step 1] URL 수집 중..." >> "$LOG_FILE"
 $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang >> "$LOG_FILE" 2>&1
@@ -70,54 +79,58 @@ echo "============================================================" >> "$LOG_FIL
 echo "[$(date)] ✅ 일일 데이터 수집 파이프라인 완료" >> "$LOG_FILE"
 echo "============================================================" >> "$LOG_FILE"
 
-# 7. Git 커밋, 푸시, PR 생성 및 병합 (자동화)
-echo "[$(date)] [Step 7] 변경 사항 커밋, 푸시 및 PR 병합..." >> "$LOG_FILE"
+# 7. Data 브랜치에 변경 사항 푸시
+echo "[$(date)] [Step 7] 'data' 브랜치에 데이터 저장..." >> "$LOG_FILE"
 
-# 다시 프로젝트 루트 확인
-cd "$PROJECT_ROOT" || exit 1
-
-# develop 브랜치로 전환 및 최신화
-git checkout develop >> "$LOG_FILE" 2>&1
-git pull origin develop >> "$LOG_FILE" 2>&1
-
-# 변경된 데이터 파일 스테이징
-git add backend/restaurant-crawling/data/ >> "$LOG_FILE" 2>&1
-
-# 변경 사항 확인
-if git diff --cached --quiet; then
-    echo "[$(date)] 커밋할 변경 사항이 없습니다." >> "$LOG_FILE"
+# 데이터 폴더 변경 감지
+if git diff --quiet backend/restaurant-crawling/data/; then
+    echo "[$(date)] ℹ️ 변경된 데이터가 없습니다." >> "$LOG_FILE"
 else
-    # 커밋 메시지 생성
-    COMMIT_MSG="chore(data): 일일 크롤링 데이터 업데이트 ($DATE)"
+    echo "[$(date)] 📦 변경된 데이터를 'data' 브랜치로 푸시합니다." >> "$LOG_FILE"
+    
+    # 1. 현재 변경된 데이터(Working Tree)를 임시 보관 (Staging)
+    git add backend/restaurant-crawling/data/ >> "$LOG_FILE" 2>&1
+    
+    # 2. data 브랜치로 전환 (없으면 생성)
+    # 현재체크아웃된 브랜치와 충돌 방지를 위해 stash 사용 권장되나, 
+    # CI 환경에서는 checkout으로 깔끔하게 이동하거나 orphan 브랜치 활용
+    
+    # 여기서는 "현재 변경사항을 들고" data 브랜치로 이동하는 전략 사용
+    # (이미 git checkout origin/data -- path 로 가져왔으므로 베이스는 data임)
+    
+    # 안전하게 커밋하기 위해 임시 작업용 orphan 브랜치 생성 또는 바로 푸시
+    # GitHub Actions 환경 고려: HEAD 분리 상태일 수 있음.
+    
+    # 로직:
+    # 1. 변경된 data 폴더를 임시 디렉토리로 백업? (너무 큼)
+    # 2. git stash -> git checkout data -> git stash pop? (가장 깔끔)
+    
+    git stash push -m "temp_data_update" -- backend/restaurant-crawling/data/ >> "$LOG_FILE" 2>&1
+    
+    git fetch origin data >> "$LOG_FILE" 2>&1
+    git checkout data || git checkout -b data origin/data || git checkout --orphan data >> "$LOG_FILE" 2>&1
+    
+    # Stash 적용 (충돌 시 -theirs 전략.. 은 stash apply에 없음. 그냥 pop 하고 덮어쓰기)
+    # checkout으로 가져온 파일 위에 덮어쓰는 것이므로 충돌 거의 없음
+    git stash pop >> "$LOG_FILE" 2>&1
+    
+    # 다시 Add & Commit
+    git add backend/restaurant-crawling/data/ >> "$LOG_FILE" 2>&1
+    
+    COMMIT_MSG="chore(data): update crawling data ($DATE)"
     git commit -m "$COMMIT_MSG" >> "$LOG_FILE" 2>&1
     
-    # develop 브랜치로 푸시
-    git push origin develop >> "$LOG_FILE" 2>&1
+    # Push
+    git push origin data >> "$LOG_FILE" 2>&1
     
     if [ $? -eq 0 ]; then
-        echo "[$(date)] ✅ develop 브랜치로 Git 푸시 성공" >> "$LOG_FILE"
-        
-        # PR 생성 및 병합 (GitHub CLI 필요)
-        if command -v gh >/dev/null 2>&1; then
-            PR_TITLE="chore(data): 일일 크롤링 데이터 업데이트 ($DATE)"
-            PR_BODY="자동 스크립트에 의한 일일 데이터 업데이트 ($DATE)"
-            
-            # PR 생성
-            gh pr create --base main --head develop --title "$PR_TITLE" --body "$PR_BODY" >> "$LOG_FILE" 2>&1
-            
-            # PR 자동 병합 (create 실패 시(이미 있는 경우 등)를 대비해 별도 실행보다는 create 성공 시 바로 merge 시도 추천하지만, 여기선 순차 실행)
-            # --auto --merge: 검사 통과 시 자동 병합 (admin 권한 필요할 수 있음. 즉시 병합은 --merge)
-            # 여기서는 즉시 병합 시도 (--admin 옵션은 필요시 추가)
-            gh pr merge develop --merge --delete-branch=false >> "$LOG_FILE" 2>&1
-            
-            echo "[$(date)] ✅ PR 생성 및 병합 시도 완료" >> "$LOG_FILE"
-        else
-            echo "[$(date)] ⚠️ GitHub CLI (gh)가 설치되지 않아 PR 자동화를 건너뜁니다." >> "$LOG_FILE"
-        fi
-        
+        echo "[$(date)] ✅ data 브랜치 업데이트 완료" >> "$LOG_FILE"
     else
-        echo "[$(date)] ⚠️ Git 푸시 실패" >> "$LOG_FILE"
+        echo "[$(date)] ❌ data 브랜치 푸시 실패" >> "$LOG_FILE"
     fi
+     
+    # 원래 브랜치(develop)로 복귀 (로컬 실행 시 편의 위해)
+    git checkout develop >> "$LOG_FILE" 2>&1
 fi
 
 # 7. 코드 에디터 동기화 신호 (Antigravity 등)

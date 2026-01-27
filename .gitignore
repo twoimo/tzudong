@@ -82,3 +82,8 @@ backend/backups/*.dump
 backend/restaurant-crawling/data/tzuyang/frames
 backend/restaurant-crawling/data/tzuyang/video_cache
 backend/restaurant-crawling/data/tzuyang/temp_video
+backend/restaurant-crawling/data/tzuyang/meta
+backend/restaurant-crawling/data/tzuyang/thumbnails
+backend/restaurant-crawling/data/tzuyang/transcript
+backend/restaurant-crawling/data/tzuyang/urls.txt
+backend/restaurant-crawling/data/tzuyang/deleted_urls.txt
