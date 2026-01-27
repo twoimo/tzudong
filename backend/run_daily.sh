@@ -361,6 +361,12 @@ cat <<EOF >> "$SUMMARY_MD"
 |                         v                                                                             |
 |             [Step 7: Commit & Push] --(Git Push)--> [Remote Branch: data]                             |
 |                                                                                                       |
++-----------------------------------+-------------------------------------------------------------------+
+|  📝 EXAMPLES                      |                                                                   |
+|  - Meta Change: Title update ("Mukbang" -> "Spicy Mukbang") -> Triggers full re-crawl                 |
+|  - Schedule: Video Age 15 days -> Weekly Check (D+5~30 rule)                                          |
+|  - Cache Hit: 'video_cache/-Az...mp4' exists -> Skip download (Fast)                                  |
+|  - Gemini Output: Extracted {"restaurant": "GimBap JeonGuk", "menu": "Ramyun"}                        |
 +-------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
