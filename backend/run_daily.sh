@@ -91,6 +91,9 @@ else
     # 1. 현재 변경된 데이터(Working Tree)를 임시 보관 (Staging)
     git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
     
+    # [Fix] package-lock.json 등이 변경되어 있으면 체크아웃이 막히므로 원복
+    git checkout -- backend/package-lock.json 2>&1 | tee -a "$LOG_FILE"
+    
     # 2. data 브랜치로 전환 (없으면 생성)
     # Stash를 사용하여 변경사항을 들고 이동
     git stash push -m "temp_data_update" -- backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
