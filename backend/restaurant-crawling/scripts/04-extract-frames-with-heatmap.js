@@ -1398,19 +1398,8 @@ async function processBatch(params) {
 
             // [변경] 다운로드가 실제로 수행되었을 때만 대기 (캐시 사용 시 즉시 진행)
             if (downloadPerformed) {
-                // IP 차단 방지 딜레이 강화 (10 ~ 30초)
-                const delay = 10000 + Math.random() * 20000;
-                // log('info', `[Wait] 대기: ${(delay / 1000).toFixed(1)}초...`); // 로그 제거 요청
-                await new Promise(r => setTimeout(r, delay));
-
-                // [추가] 10개마다 긴 휴식 (1분 ~ 3분)
-                if (processedCount % 10 === 0) {
-                    const longPause = 60000 + Math.random() * 120000;
-                    log('info', `[Pause] 긴 휴식 (IP 차단 방지) 진행 중...`); // 로그 간소화
-                    await new Promise(r => setTimeout(r, longPause));
-                }
-            } else {
-                // log('info', `[Skip] 캐시된 비디오 사용 (또는 프레임 수집 완료) -> 대기 시간 스킵`);
+                // [수정] 사용자 요청으로 대기 시간 최소화 (1초)
+                await new Promise(r => setTimeout(r, 1000));
             }
         } else {
             skippedCount++;
