@@ -48,6 +48,19 @@ jobs:
           npm install
           # ffmpeg-static 등 로컬 의존성 확실히 설치
           npm install ffmpeg-static ffprobe-static
+          # Gemini CLI 설치 (Global)
+          sudo npm install -g @google/gemini-cli
+
+      - name: Setup Gemini Credentials
+        run: |
+          mkdir -p ~/.gemini
+          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
+            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
+            chmod 600 ~/.gemini/oauth_creds.json
+            echo "✅ Gemini Credentials restored."
+          else
+            echo "⚠️ GEMINI_CREDENTIALS_BASE64 secret is missing."
+          fi
 
       - name: Configure Git
         run: |
@@ -58,6 +71,7 @@ jobs:
         env:
           # Secret에서 API 키 및 설정 주입
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+          GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY_BYEON }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # RClone 설정 (Base64 인코딩된 문자열을 Env로 전달 -> 스크립트에서 파일로 복원)
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}

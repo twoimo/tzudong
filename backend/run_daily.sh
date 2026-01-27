@@ -70,6 +70,10 @@ node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuy
 log "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..."
 node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
+# 6. Gemini 기반 데이터 분석
+log "[$(date)] [Step 6] Gemini 데이터 분석 중..."
+bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+
 log "============================================================"
 log "[$(date)] ✅ 일일 데이터 수집 파이프라인 완료"
 log "============================================================"
@@ -160,6 +164,13 @@ if [ "$YOUTUBE_COUNT" -gt 0 ]; then
     echo "| 📺 YouTube (yt-dlp) | **$YOUTUBE_COUNT** | 🎉 Downloaded successfully! |" >> "$SUMMARY_MD"
 else
     echo "| 📺 YouTube (yt-dlp) | 0 | Blocked by YouTube (Expected) |" >> "$SUMMARY_MD"
+fi
+
+# Gemini 통계
+if grep -q "Gemini CLI 통계" "$LOG_FILE"; then
+    GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | sed 's/.*: //')
+    GEMINI_SUCCESS_CNT=$(grep -A 2 "📊 처리 통계" "$LOG_FILE" | grep "성공:" | tail -n 1 | sed 's/.*: //')
+    echo "| 🧠 Gemini AI | **$GEMINI_CALLS** calls | Analyzed $GEMINI_SUCCESS_CNT videos |" >> "$SUMMARY_MD"
 fi
 
 echo "" >> "$SUMMARY_MD"
