@@ -40,7 +40,7 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           # 추가 필수 패키지 명시적 설치 (requirements.txt에 없을 경우 대비)
-          pip install google-api-python-client python-dotenv yt-dlp pyyaml
+          pip install google-api-python-client python-dotenv yt-dlp pyyaml openai requests
 
       - name: Install Node.js dependencies
         working-directory: ./backend
