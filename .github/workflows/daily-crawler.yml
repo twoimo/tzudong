@@ -54,6 +54,21 @@ jobs:
           # Gemini CLI 설치 (Global)
           sudo npm install -g @google/gemini-cli
 
+      - name: Create credentials.json
+        run: |
+          mkdir -p backend/restaurant-crawling/data
+          echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 -d > backend/restaurant-crawling/data/credentials.json
+
+      - name: Create cookies.txt for yt-dlp
+        run: |
+          mkdir -p backend/restaurant-crawling/data
+          if [ -n "${{ secrets.YOUTUBE_COOKIES_TXT }}" ]; then
+            echo "${{ secrets.YOUTUBE_COOKIES_TXT }}" > backend/restaurant-crawling/data/cookies.txt
+            echo "✅ cookies.txt created from secret."
+          else
+            echo "⚠️ YOUTUBE_COOKIES_TXT secret is not set. Skipping cookie creation."
+          fi
+
       - name: Setup Gemini Credentials
         run: |
           mkdir -p ~/.gemini
