@@ -336,7 +336,7 @@ cat <<EOF >> "$SUMMARY_MD"
 |     [Step 2: Collect Meta]           |                                                                |
 |             |                        |                                                                |
 |     < Meta Changed / Scheduled? > --(No)--> [Skip Extraction]                                         |
-|             | (Yes: daily/weekly)                                                                     |
+|             | (Yes: Age-based Weekly/Monthly)                                                         |
 |             |                                                                                         |
 |             +-----------------------+-----------------------------+                                   |
 |             |                       |                             |                                   |
