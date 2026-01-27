@@ -1,6 +1,5 @@
 ---
 trigger: always_on
-glob: "**/*"
 description: Core system rule for the tzudong project.
 ---
 
