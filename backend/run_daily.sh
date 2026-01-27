@@ -128,36 +128,76 @@ log "============================================================"
 SUMMARY_MD="$PROJECT_ROOT/summary.md"
 echo "## 🚀 Daily Crawling Report ($DATE)" > "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
-echo "| Step | Status | Details |" >> "$SUMMARY_MD"
-echo "|------|--------|---------|" >> "$SUMMARY_MD"
 
-# 1. URL 수집 통계 parsing
+# 1. URL & Meta 통계
 if grep -q "URL 수집 중" "$LOG_FILE"; then
     URL_STATS=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | sed 's/.*tzuyang: //')
-    echo "| 🔗 URL | ✅ Done | $URL_STATS |" >> "$SUMMARY_MD"
+    echo "- **URL Collection**: $URL_STATS" >> "$SUMMARY_MD"
 else
-    echo "| 🔗 URL | ❌ Fail | Check logs |" >> "$SUMMARY_MD"
+    echo "- **URL Collection**: ❌ Failed" >> "$SUMMARY_MD"
 fi
 
-# 2. 메타데이터 통계
 if grep -q "메타데이터 수집" "$LOG_FILE"; then
     META_STATS=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | sed 's/.*완료: //')
-    echo "| 📋 Meta | ✅ Done | $META_STATS |" >> "$SUMMARY_MD"
+    echo "- **Metadata**: $META_STATS" >> "$SUMMARY_MD"
 else
-    echo "| 📋 Meta | ⚠️ Skip/Fail | - |" >> "$SUMMARY_MD"
-fi
-
-# 3. 데이터 푸시 여부
-if grep -q "data 브랜치 업데이트 완료" "$LOG_FILE"; then
-    echo "| 💾 Data | 🚀 Pushed | Updated content pushed to 'data' branch |" >> "$SUMMARY_MD"
-elif grep -q "변경된 데이터가 없습니다" "$LOG_FILE"; then
-    echo "| 💾 Data | ➖ No Change | Nothing to push |" >> "$SUMMARY_MD"
-else
-    echo "| 💾 Data | ❌ Error | Push failed |" >> "$SUMMARY_MD"
+    echo "- **Metadata**: ⚠️ Skipped/Failed" >> "$SUMMARY_MD"
 fi
 
 echo "" >> "$SUMMARY_MD"
-echo "### 🔍 Quick Check"
+echo "### 🎥 Video Processing Stats"
+echo "| Source | Count | Details |" >> "$SUMMARY_MD"
+echo "|--------|-------|---------|" >> "$SUMMARY_MD"
+
+# GDrive 다운로드 성공 수
+GDRIVE_COUNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
+echo "| ☁️ Google Drive | $GDRIVE_COUNT | Fetched from Drive cache |" >> "$SUMMARY_MD"
+
+# YouTube 다운로드 성공 수
+YOUTUBE_COUNT=$(grep -c "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE") 
+# [Cache] 비디오 캐시 저장 완료 로그는 yt-dlp 다운로드 성공 시에만 찍힘 (04 script line 849)
+if [ "$YOUTUBE_COUNT" -gt 0 ]; then
+    echo "| 📺 YouTube (yt-dlp) | **$YOUTUBE_COUNT** | 🎉 Downloaded successfully! |" >> "$SUMMARY_MD"
+else
+    echo "| 📺 YouTube (yt-dlp) | 0 | Blocked by YouTube (Expected) |" >> "$SUMMARY_MD"
+fi
+
+echo "" >> "$SUMMARY_MD"
+
+# 실패한 다운로드 목록 추출 (최대 10개)
+FAILED_DOWNLOADS=$(grep "비디오 파일 확보 실패" "$LOG_FILE" | head -n 10)
+
+if [ -n "$FAILED_DOWNLOADS" ]; then
+    echo "### ⚠️ Manual Action Required (Missing Videos)" >> "$SUMMARY_MD" 
+    echo "> **Note**: 아래 영상들은 구글 드라이브에 없어 수집에 실패했습니다. 로컬에서 받아 드라이브에 올려주세요." >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+    echo "\`\`\`text" >> "$SUMMARY_MD"
+    # 로그에서 비디오 ID만 추출하려고 시도하거나 그대로 출력
+    # 로그 포맷: [Video] 비디오 파일 확보 실패 (360p). 건너뜁니다. -> ID 포함 안될수도 있음. 
+    # 04 스크립트 로그를 보면 "다운로드 실패 ... : -D43ezc57z8" 이런식이 아님.
+    # "영상 다운로드 시작... ID" 로그 밑에 실패가 뜨므로 매칭이 어려움.
+    # 대신 failed_url.txt를 활용하거나 로그를 grep
+    
+    # 04 스크립트의 logFailedUrl 함수가 'failed_urls.txt'를 남김.
+    FAILED_LIST_FILE="$PROJECT_ROOT/backend/restaurant-crawling/data/tzuyang/failed_urls.txt"
+    if [ -f "$FAILED_LIST_FILE" ]; then
+        cat "$FAILED_LIST_FILE" | head -n 10 >> "$SUMMARY_MD"
+        COUNT=$(wc -l < "$FAILED_LIST_FILE")
+        if [ "$COUNT" -gt 10 ]; then
+            echo "... (Total $COUNT failed)" >> "$SUMMARY_MD"
+        fi
+    else
+        echo "No failed_urls.txt found (Check logs)" >> "$SUMMARY_MD"
+    fi
+    echo "\`\`\`" >> "$SUMMARY_MD"
+else
+    echo "### ✅ All Systems Go!" >> "$SUMMARY_MD"
+    echo "모든 영상이 정상적으로 처리되었습니다." >> "$SUMMARY_MD"
+fi
+
+echo "" >> "$SUMMARY_MD"
+echo "### 🔍 Quick Links"
 echo "- **Log File**: \`backend/log/cron/daily_$DATE.log\`"
-echo "- **Branch**: \`data\`"
+echo "- **Data Branch**: [\`data\`](https://github.com/twoimo/tzudong/tree/data)"
+
 
