@@ -109,6 +109,10 @@ jobs:
            mkdir -p ~/.config/rclone
            echo "${{ secrets.GDRIVE_RCLONE_CONFIG }}" | base64 -d > ~/.config/rclone/rclone.conf
            
+           echo "=== DEBUG: File System Layout ==="
+           ls -R backend/restaurant-crawling/data || echo "No data dir found"
+           echo "================================="
+
            # 04 스크립트가 'backend/restaurant-crawling/data/tzuyang/frames' 에 결과 저장
            # 이 경로를 GDrive로 Sync
            
