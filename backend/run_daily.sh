@@ -362,11 +362,11 @@ cat <<EOF >> "$SUMMARY_MD"
 |             [Step 7: Commit & Push] --(Git Push)--> [Remote Branch: data]                             |
 |                                                                                                       |
 +-----------------------------------+-------------------------------------------------------------------+
-|  📝 EXAMPLES                      |                                                                   |
-|  - Meta Change: Title update ("Mukbang" -> "Spicy Mukbang") -> Triggers full re-crawl                 |
-|  - Schedule: Video Age 15 days -> Weekly Check (D+5~30 rule)                                          |
-|  - Cache Hit: 'video_cache/-Az...mp4' exists -> Skip download (Fast)                                  |
-|  - Gemini Output: Extracted {"restaurant": "GimBap JeonGuk", "menu": "Ramyun"}                        |
+|  📝 예시 (Examples)               |                                                                   |
+|  - 메타 변경: 제목 수정 ("먹방" -> "매운 먹방") -> 전체 재수집 트리거                                 |
+|  - 스케줄링: 영상 업로드 15일 경과 -> 주간 수집 대상 (D+5~30 규칙)                                    |
+|  - 캐시 히트: 'video_cache/-Az...mp4' 파일 존재 -> 다운로드 생략 (고속)                               |
+|  - Gemini 결과: {"식당": "김밥천국", "메뉴": "라면"} 정보 추출 완료                                   |
 +-------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
