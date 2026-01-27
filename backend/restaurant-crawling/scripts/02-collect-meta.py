@@ -122,13 +122,12 @@ def check_thumbnail_exists(channel_data_path: Path, video_id: str, recollect_id:
 def get_schedule_frequency(published_at_str: str) -> Optional[str]:
     """
     영상 age에 따른 수집 주기 결정 (KST 기준)
-    - D+5일 미만: 수집 안함 (단, 최초 수집은 04 스크립트에서 강제)
-    - D+5 ~ D+30: 주 1회 (scheduled_weekly) -> 생존 신고 및 초기 변화 감지
-    - D+30 ~ D+60: 월 1회 (scheduled_monthly) -> 안정화된 데이터 수집 (Final Candidate)
-    - D+60 이상: 정기 수집 중단 (None)
+    - D+0 ~ D+5: 수집 대기 (숙성기)
+    - D+5 ~ D+14: 매일 확인 (scheduled_daily) -> 최초 히트맵 포착을 위해 집중 모니터링
+    - D+14 ~ ∞ : 월 1회 (scheduled_monthly) -> 장기 변화 감지 (전수 검사)
     """
     if not published_at_str:
-        return "scheduled_weekly" # fallback
+        return "scheduled_monthly" # fallback
 
     pub_date = datetime.fromisoformat(published_at_str.replace("Z", "+00:00")).astimezone(KST)
     now = datetime.now(KST)
@@ -141,22 +140,16 @@ def get_schedule_frequency(published_at_str: str) -> Optional[str]:
         return None 
         
     if days_diff < 5:
-        # 5일 미만은 정기 수집 스케줄 없음 (04 스크립트에서 'new_video'나 강제 로직으로 처리)
-        # 단, 메타데이터는 매일 갱신하고 싶다면 여기를 None이나 daily로 둘 수 있으나,
-        # 요구사항에 따라 5일까지는 묵혀둠.
+        # 5일 미만은 대기 (숙성)
         return None
         
-    elif days_diff < 30:
-        # 5일 ~ 30일: 주 1회 (기존보다 완화)
-        return "scheduled_weekly"
-        
-    elif days_diff < 60:
-        # 30일 ~ 60일: 월 1회 (안정화 데이터)
-        return "scheduled_monthly"
+    elif days_diff < 14:
+        # 5일 ~ 14일: 최초 히트맵 확보를 위해 매일 체크
+        return "scheduled_daily"
         
     else:
-        # 60일 이상: 정기 수집 중단
-        return None
+        # 14일 이후: 월 1회 전수 검사 (변화 없으면 스킵됨)
+        return "scheduled_monthly"
 
 
 def check_schedule_condition(frequency: str, video_id: str) -> bool:
@@ -165,28 +158,25 @@ def check_schedule_condition(frequency: str, video_id: str) -> bool:
     해싱을 사용하여 부하 분산
     """
     if not frequency:
-        return True
+        return False # None이면 수집 안함
         
+    if frequency == "scheduled_daily":
+        return True # 매일
+
     today = datetime.now(KST).date()
     # video_id 해싱 -> 0~99
     vid_hash = int(hashlib.md5(video_id.encode()).hexdigest(), 16) % 100
     
     if frequency == "scheduled_weekly":
-        # 0~13: 월, 14~27: 화 ... 
-        # 간단히: (vid_hash % 7) == (today.weekday())
-        # 이렇게 하면 같은 요일에 몰림 방지되나? 
-        # weekday()는 0(월)~6(일)
         return (vid_hash % 7) == today.weekday()
         
     if frequency == "scheduled_biweekly":
-        # 14일 주기
-        # 기준일(epoch)로부터 지난 일수 % 14 == vid_hash % 14
         days_since_epoch = (today - datetime(2024, 1, 1).date()).days
         return (days_since_epoch % 14) == (vid_hash % 14)
     
     if frequency == "scheduled_monthly":
-        # 30일 주기
         days_since_epoch = (today - datetime(2024, 1, 1).date()).days
+        # 해시 충돌 분산 (30일 주기)
         return (days_since_epoch % 30) == (vid_hash % 30)
         
     return False
@@ -462,18 +452,9 @@ def collect_channel_meta(
                 if frequency:
                     if check_schedule_condition(frequency, vid):
                         schedule_reason = frequency
-                else:
-                    # frequency is None -> 0~6개월 매일 수집 대상
-                    # 메타는 매일 수집 (daily_collection -> recollect_vars에만 추가)
-                    # 히트맵은 주 1회만 수집 (scheduled_weekly 체크)
-                    
-                    # 1. 메타 데이터 수집 태그 (recollect_vars에만 추가)
-                    if not is_changed:
-                         recollect_vars.append("daily_collection")
-                         
-                    # 2. 히트맵 수집 태그 (주 1회만 부여)
-                    if check_schedule_condition("scheduled_weekly", vid):
-                         recollect_vars.append("scheduled_weekly")
+                
+                # [수정] frequency가 None인 경우(D+5 미만 등)는 정기 수집 스케줄 없음.
+                # 단, is_changed(제목 변경 등)인 경우는 수집됨.
 
             is_scheduled = (schedule_reason is not None or "scheduled_weekly" in recollect_vars or "daily_collection" in recollect_vars)
 
