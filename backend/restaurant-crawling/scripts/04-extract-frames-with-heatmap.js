@@ -218,6 +218,49 @@ function getMetaOutputPath(channelName, videoId) {
     return path.join(getChannelDir(channelName), 'meta', `${videoId}.jsonl`);
 }
 
+// [추가] 완료된 프레임 수집 기록 관리
+function getCompletedFramesPath(channelName) {
+    return path.join(getChannelDir(channelName), 'completed_frames.jsonl');
+}
+
+function isFrameCollectionCompleted(channelName, videoId, metaRecollectId) {
+    const logPath = getCompletedFramesPath(channelName);
+    if (!fs.existsSync(logPath)) return false;
+
+    try {
+        const lines = fs.readFileSync(logPath, 'utf-8').trim().split('\n');
+        // 뒤에서부터 검색 (최신 기록 우선)
+        for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i];
+            try {
+                const data = JSON.parse(line);
+                if (data.video_id === videoId) {
+                    // 기록된 recollect_id가 현재 메타보다 크거나 같으면 완료된 것
+                    return data.recollect_id >= metaRecollectId;
+                }
+            } catch (e) { }
+        }
+    } catch (e) {
+        log('warn', `완료 로그 읽기 실패: ${e.message}`);
+    }
+    return false;
+}
+
+function markFrameCollectionCompleted(channelName, videoId, metaRecollectId) {
+    const logPath = getCompletedFramesPath(channelName);
+    const data = {
+        video_id: videoId,
+        recollect_id: metaRecollectId,
+        completed_at: new Date().toISOString()
+    };
+    try {
+        fs.appendFileSync(logPath, JSON.stringify(data) + '\n', 'utf8');
+        // log('info', `[Log] 수집 완료 기록 저장: ${videoId} (v${metaRecollectId})`);
+    } catch (e) {
+        log('warn', `완료 로그 저장 실패: ${e.message}`);
+    }
+}
+
 function extractVideoId(url) {
     if (!url) return null;
     const match = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
@@ -347,6 +390,12 @@ function shouldCollect(channelName, videoId, params) {
     // [수정] 강제 수집 모드일 경우 기존 파일 확인 스킵
     if (ignoreExisting) {
         return true;
+    }
+
+    // [추가] "완료 기록" 확인 (CI 환경 등에서 파일이 없어도 기록이 있으면 스킵)
+    if (isFrameCollectionCompleted(channelName, videoId, metaRecollectId)) {
+        // log('info', `[Skip] ${videoId}: 수집 완료 기록 있음 (v${metaRecollectId})`);
+        return false;
     }
 
 
@@ -1167,6 +1216,9 @@ async function processSingleVideo(videoId, params) {
                 await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
                 log('info', `[Frames Extracted] ${videoId} (${currentExt})`);
             }
+
+            // [추가] 모든 작업 완료 후 상태 로그 업데이트
+            markFrameCollectionCompleted(channel, videoId, recollectId);
 
             // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
             // 주의: 모든 확장자 처리가 끝난 후 삭제해야 함

@@ -87,3 +87,4 @@ backend/restaurant-crawling/data/tzuyang/thumbnails
 backend/restaurant-crawling/data/tzuyang/transcript
 backend/restaurant-crawling/data/tzuyang/urls.txt
 backend/restaurant-crawling/data/tzuyang/deleted_urls.txt
+!backend/restaurant-crawling/data/tzuyang/completed_frames.jsonl
