@@ -17,7 +17,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 전체 히스토리 가져오기 (PR 병합 등을 위해)
+          fetch-depth: 0
+
+      - name: Cache Puppeteer
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/puppeteer
+          key: ${{ runner.os }}-puppeteer-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-puppeteer-
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -33,10 +41,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements.txt
 
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+
 
       - name: Install RClone
         run: |
@@ -49,6 +54,8 @@ jobs:
 
       - name: Install Node.js dependencies
         working-directory: ./backend
+        env:
+          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
         run: |
           npm install
 
