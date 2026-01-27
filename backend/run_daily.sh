@@ -74,7 +74,7 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context
 
 # 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..."
-node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache 2>&1 | tee -a "$LOG_FILE"
 
 # 6. Gemini 기반 데이터 분석
 log "[$(date)] [Step 6] Gemini 데이터 분석 중..."
