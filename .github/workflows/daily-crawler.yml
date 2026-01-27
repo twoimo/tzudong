@@ -51,10 +51,6 @@ jobs:
         working-directory: ./backend
         run: |
           npm install
-          # ffmpeg-static 등 로컬 의존성 확실히 설치
-          npm install ffmpeg-static ffprobe-static
-          # Gemini CLI 설치 (Global)
-          sudo npm install -g @google/gemini-cli
 
       - name: Create credentials.json
         run: |
