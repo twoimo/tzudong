@@ -82,7 +82,8 @@ log "============================================================"
 log "[$(date)] [Step 7] 'data' 브랜치에 데이터 저장..."
 
 # 데이터 폴더 변경 감지
-if git diff --quiet backend/restaurant-crawling/data/; then
+# 데이터 폴더 변경 감지 (Modified + Untracked)
+if [ -z "$(git status --porcelain backend/restaurant-crawling/data/)" ]; then
     log "[$(date)] ℹ️ 변경된 데이터가 없습니다."
 else
     log "[$(date)] 📦 변경된 데이터를 'data' 브랜치로 푸시합니다."
