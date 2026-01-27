@@ -362,7 +362,50 @@ $TRANSCRIPT_TRUNCATED
         URL_START_TIME=$(date +%s)
         GEMINI_SUCCESS=false
         
-        GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
+        GEMINI_API_SCRIPT="$SCRIPT_DIR/../temp/gemini_api_request.mjs"
+        
+        # Node.js 스크립트 동적 생성 (Inline)
+        cat << 'EOF' > "$GEMINI_API_SCRIPT"
+import fs from 'fs';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+async function main() {
+    const args = process.argv.slice(2);
+    if (args.length < 2) {
+        console.error('Usage: node gemini_api_request.js <prompt_file> <output_file>');
+        process.exit(1);
+    }
+
+    const promptFile = args[0];
+    const outputFile = args[1];
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        console.error('Error: GEMINI_API_KEY environment variable not set.');
+        process.exit(1);
+    }
+
+    try {
+        const prompt = fs.readFileSync(promptFile, 'utf8');
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const modelName = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
+        const model = genAI.getGenerativeModel({ model: modelName });
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        fs.writeFileSync(outputFile, text);
+        process.exit(0);
+
+    } catch (error) {
+        console.error(`Gemini API Error: ${error.message}`);
+        process.exit(1);
+    }
+}
+
+main();
+EOF
         GEMINI_START=$(date +%s)
         log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
         
@@ -480,7 +523,7 @@ $TRANSCRIPT_TRUNCATED
         fi
         
         # 임시 파일 정리
-        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
+        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR" "$GEMINI_API_SCRIPT"
         
         # Rate Limit 준수 (5 RPM = 12초 대기)
         if [ $INDEX -lt $TOTAL ]; then
