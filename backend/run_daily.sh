@@ -133,49 +133,75 @@ SUMMARY_MD="$PROJECT_ROOT/summary.md"
 echo "## 🚀 Daily Crawling Report ($DATE)" > "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
-# 1. URL & Meta 통계
+# 2. 상세 처리 통계
+echo "### 📊 Process Statistics" >> "$SUMMARY_MD"
+echo "| Step | Count | Status |" >> "$SUMMARY_MD"
+echo "|------|-------|--------|" >> "$SUMMARY_MD"
+
+# URL
 if grep -q "URL 수집 중" "$LOG_FILE"; then
-    URL_STATS=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | sed 's/.*tzuyang: //')
-    echo "- **URL Collection**: $URL_STATS" >> "$SUMMARY_MD"
+    URL_CNT=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | sed 's/.*tzuyang: //')
+    echo "| 🔗 URLs | $URL_CNT | ✅ Collected |" >> "$SUMMARY_MD"
 else
-    echo "- **URL Collection**: ❌ Failed" >> "$SUMMARY_MD"
+    echo "| 🔗 URLs | - | ❌ Error |" >> "$SUMMARY_MD"
 fi
 
+# Metadata
 if grep -q "메타데이터 수집" "$LOG_FILE"; then
-    META_STATS=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | sed 's/.*완료: //')
-    echo "- **Metadata**: $META_STATS" >> "$SUMMARY_MD"
+    META_CNT=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | sed 's/.*완료: //')
+    echo "| 📝 Metadata | $META_CNT | ✅ Updated |" >> "$SUMMARY_MD"
 else
-    echo "- **Metadata**: ⚠️ Skipped/Failed" >> "$SUMMARY_MD"
+    echo "| 📝 Metadata | - | ⚠️ Skipped/Fail |" >> "$SUMMARY_MD"
 fi
 
-echo "" >> "$SUMMARY_MD"
-echo "### 🎥 Video Processing Stats"
-echo "| Source | Count | Details |" >> "$SUMMARY_MD"
-echo "|--------|-------|---------|" >> "$SUMMARY_MD"
+# Thumbnails (Proxy via Meta or specific log if added)
+# 02 script doesn't explicitly log "Thumbnail saved" summary, but generally 1 meta = 1 thumb check.
+# We will use Metadata count as a rough proxy or just hide if not sure.
+# Let's skip explicit Thumbnail count for now to be accurate, or assume it matches Meta updates.
 
-# GDrive 다운로드 성공 수
-GDRIVE_COUNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
-echo "| ☁️ Google Drive | $GDRIVE_COUNT | Fetched from Drive cache |" >> "$SUMMARY_MD"
-
-# YouTube 다운로드 성공 수
-YOUTUBE_COUNT=$(grep -c "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE") 
-# [Cache] 비디오 캐시 저장 완료 로그는 yt-dlp 다운로드 성공 시에만 찍힘 (04 script line 849)
-if [ "$YOUTUBE_COUNT" -gt 0 ]; then
-    echo "| 📺 YouTube (yt-dlp) | **$YOUTUBE_COUNT** | 🎉 Downloaded successfully! |" >> "$SUMMARY_MD"
+# Transcript
+TRANSCRIPT_CNT=$(grep "성공 [0-9]*개" "$LOG_FILE" | grep "자막 수집 완료" -A 1 | tail -n 1 | sed 's/.*성공 //;s/개.*//')
+if [ -n "$TRANSCRIPT_CNT" ]; then
+    echo "| 💬 Transcripts | $TRANSCRIPT_CNT | ✅ Saved |" >> "$SUMMARY_MD"
 else
-    echo "| 📺 YouTube (yt-dlp) | 0 | Blocked by YouTube (Expected) |" >> "$SUMMARY_MD"
+    echo "| 💬 Transcripts | 0 | ➖ Skipped |" >> "$SUMMARY_MD"
 fi
 
-# Gemini 통계
+# Heatmap (Count "[Saved] 히트맵 데이터 저장됨")
+HEATMAP_CNT=$(grep -c "\[Saved\] 히트맵 데이터 저장됨" "$LOG_FILE")
+if [ "$HEATMAP_CNT" -gt 0 ]; then
+    echo "| 🔥 Heatmaps | $HEATMAP_CNT | ✅ Saved |" >> "$SUMMARY_MD"
+else
+    echo "| 🔥 Heatmaps | 0 | ➖ Skipped |" >> "$SUMMARY_MD"
+fi
+
+# Frames (Sum of extracted frames)
+# Log format: [Done] 추출 완료 ...: 15장
+FRAME_CNT=$(grep "\[Done\] 추출 완료" "$LOG_FILE" | awk '{sum+=$NF} END {print sum}' | sed 's/장//')
+if [ -z "$FRAME_CNT" ]; then FRAME_CNT=0; fi
+echo "| 🖼️ Frames | $FRAME_CNT | ✅ Extracted |" >> "$SUMMARY_MD"
+
+# GDrive & YouTube
+GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
+YOUTUBE_CNT=$(grep -c "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE")
+
+echo "| ☁️ GDrive Cache | $GDRIVE_CNT | ✅ Hits |" >> "$SUMMARY_MD"
+if [ "$YOUTUBE_CNT" -gt 0 ]; then
+    echo "| 📺 YouTube DL | **$YOUTUBE_CNT** | 🎉 Success |" >> "$SUMMARY_MD"
+else
+    echo "| 📺 YouTube DL | 0 | ➖ (Blocked) |" >> "$SUMMARY_MD"
+fi
+
+# Gemini
 if grep -q "Gemini CLI 통계" "$LOG_FILE"; then
     GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | sed 's/.*: //')
-    GEMINI_SUCCESS_CNT=$(grep -A 2 "📊 처리 통계" "$LOG_FILE" | grep "성공:" | tail -n 1 | sed 's/.*: //')
-    echo "| 🧠 Gemini AI | **$GEMINI_CALLS** calls | Analyzed $GEMINI_SUCCESS_CNT videos |" >> "$SUMMARY_MD"
+    GEMINI_SUCCESS=$(grep "성공:" "$LOG_FILE" | tail -n 1 | sed 's/.*: //')
+    echo "| 🧠 Gemini Analysis | $GEMINI_SUCCESS | (Calls: $GEMINI_CALLS) |" >> "$SUMMARY_MD"
 fi
 
 echo "" >> "$SUMMARY_MD"
 
-# 실패한 다운로드 목록 추출 (최대 10개)
+# 실패 목록 (유튜브 다운로드 실패)
 FAILED_DOWNLOADS=$(grep "비디오 파일 확보 실패" "$LOG_FILE" | head -n 10)
 
 if [ -n "$FAILED_DOWNLOADS" ]; then
