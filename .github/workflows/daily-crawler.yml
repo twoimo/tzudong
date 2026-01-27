@@ -87,9 +87,9 @@ jobs:
            mkdir -p ~/.config/rclone
            echo ${{ secrets.GDRIVE_RCLONE_CONFIG }} | base64 -d > ~/.config/rclone/rclone.conf
            
-           # 04 스크립트가 'backend/restaurant-crawling/data/frames' (기본값)에 결과 저장
+           # 04 스크립트가 'backend/restaurant-crawling/data/tzuyang/frames' 에 결과 저장
            # 이 경로를 GDrive로 Sync
            
            echo "Syncing frames to GDrive..."
-           rclone copy backend/restaurant-crawling/data/frames "${{ env.GDRIVE_FRAMES_PATH }}" --progress
+           rclone copy "backend/restaurant-crawling/data/tzuyang/frames" "${{ env.GDRIVE_FRAMES_PATH }}" --progress
 
