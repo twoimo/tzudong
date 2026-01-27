@@ -88,6 +88,10 @@ jobs:
            # 04 스크립트가 'backend/restaurant-crawling/data/tzuyang/frames' 에 결과 저장
            # 이 경로를 GDrive로 Sync
            
-           echo "Syncing frames to GDrive..."
-           rclone copy "backend/restaurant-crawling/data/tzuyang/frames" "${{ env.GDRIVE_FRAMES_PATH }}" --progress
+           if [ -d "backend/restaurant-crawling/data/tzuyang/frames" ]; then
+             echo "Syncing frames to GDrive..."
+             rclone copy "backend/restaurant-crawling/data/tzuyang/frames" "${{ env.GDRIVE_FRAMES_PATH }}" --progress
+           else
+             echo "No frames directory found, skipping upload."
+           fi
 
