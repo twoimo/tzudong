@@ -138,36 +138,46 @@ echo "### 📊 Process Statistics" >> "$SUMMARY_MD"
 echo "| Step | Count | Status |" >> "$SUMMARY_MD"
 echo "|------|-------|--------|" >> "$SUMMARY_MD"
 
+# ANSI 색상 코드 제거 함수
+strip_ansi() {
+    sed 's/\x1b\[[0-9;]*m//g'
+}
+
+# 2. 상세 처리 통계
+echo "### 📊 Process Statistics" >> "$SUMMARY_MD"
+echo "| Step | Count | Status |" >> "$SUMMARY_MD"
+echo "|------|-------|--------|" >> "$SUMMARY_MD"
+
 # URL
 if grep -q "URL 수집 중" "$LOG_FILE"; then
-    URL_CNT=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | sed 's/.*tzuyang: //')
+    URL_LINE=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | strip_ansi)
+    URL_CNT=$(echo "$URL_LINE" | sed 's/.*tzuyang: //')
     echo "| 🔗 URLs | $URL_CNT | ✅ Collected |" >> "$SUMMARY_MD"
 else
     echo "| 🔗 URLs | - | ❌ Error |" >> "$SUMMARY_MD"
+    URL_LINE=""
 fi
 
 # Metadata
 if grep -q "메타데이터 수집" "$LOG_FILE"; then
-    META_CNT=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | sed 's/.*완료: //')
+    META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
+    META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //')
     echo "| 📝 Metadata | $META_CNT | ✅ Updated |" >> "$SUMMARY_MD"
 else
     echo "| 📝 Metadata | - | ⚠️ Skipped/Fail |" >> "$SUMMARY_MD"
+    META_LINE=""
 fi
 
-# Thumbnails (Proxy via Meta or specific log if added)
-# 02 script doesn't explicitly log "Thumbnail saved" summary, but generally 1 meta = 1 thumb check.
-# We will use Metadata count as a rough proxy or just hide if not sure.
-# Let's skip explicit Thumbnail count for now to be accurate, or assume it matches Meta updates.
-
 # Transcript
-TRANSCRIPT_CNT=$(grep "성공 [0-9]*개" "$LOG_FILE" | grep "자막 수집 완료" -A 1 | tail -n 1 | sed 's/.*성공 //;s/개.*//')
+TRANSCRIPT_CNT=$(grep "성공 [0-9]*개" "$LOG_FILE" | grep "자막 수집 완료" -A 1 | tail -n 1 | strip_ansi | sed 's/.*성공 //;s/개.*//')
 if [ -n "$TRANSCRIPT_CNT" ]; then
     echo "| 💬 Transcripts | $TRANSCRIPT_CNT | ✅ Saved |" >> "$SUMMARY_MD"
 else
     echo "| 💬 Transcripts | 0 | ➖ Skipped |" >> "$SUMMARY_MD"
+    TRANSCRIPT_CNT="0"
 fi
 
-# Heatmap (Count "[Saved] 히트맵 데이터 저장됨")
+# Heatmap
 HEATMAP_CNT=$(grep -c "\[Saved\] 히트맵 데이터 저장됨" "$LOG_FILE")
 if [ "$HEATMAP_CNT" -gt 0 ]; then
     echo "| 🔥 Heatmaps | $HEATMAP_CNT | ✅ Saved |" >> "$SUMMARY_MD"
@@ -175,9 +185,8 @@ else
     echo "| 🔥 Heatmaps | 0 | ➖ Skipped |" >> "$SUMMARY_MD"
 fi
 
-# Frames (Sum of extracted frames)
-# Log format: [Done] 추출 완료 ...: 15장
-FRAME_CNT=$(grep "\[Done\] 추출 완료" "$LOG_FILE" | awk '{sum+=$NF} END {print sum}' | sed 's/장//')
+# Frames
+FRAME_CNT=$(grep "\[Done\] 추출 완료" "$LOG_FILE" | awk '{sum+=$NF} END {print sum}' | strip_ansi | sed 's/장//')
 if [ -z "$FRAME_CNT" ]; then FRAME_CNT=0; fi
 echo "| 🖼️ Frames | $FRAME_CNT | ✅ Extracted |" >> "$SUMMARY_MD"
 
@@ -193,12 +202,37 @@ else
 fi
 
 # Gemini
+GEMINI_SUCCESS_LINE=""
 if grep -q "Gemini CLI 통계" "$LOG_FILE"; then
-    GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | sed 's/.*: //')
-    GEMINI_SUCCESS=$(grep "성공:" "$LOG_FILE" | tail -n 1 | sed 's/.*: //')
+    GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
+    GEMINI_SUCCESS=$(grep "성공:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
+    GEMINI_SUCCESS_LINE="Calls: $GEMINI_CALLS / Success: $GEMINI_SUCCESS"
     echo "| 🧠 Gemini Analysis | $GEMINI_SUCCESS | (Calls: $GEMINI_CALLS) |" >> "$SUMMARY_MD"
 fi
 
+echo "" >> "$SUMMARY_MD"
+
+echo "### 📜 Details" >> "$SUMMARY_MD"
+echo "<details><summary>Click to expand execution details</summary>" >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+echo "**1. URL & Meta**" >> "$SUMMARY_MD"
+echo "- $URL_LINE" >> "$SUMMARY_MD"
+echo "- $META_LINE" >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+if [ "$TRANSCRIPT_CNT" != "0" ]; then
+    echo "**2. Transcripts**" >> "$SUMMARY_MD"
+    echo "- Collected $TRANSCRIPT_CNT transcripts." >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
+if [ "$YOUTUBE_CNT" -gt 0 ]; then
+    echo "**3. YouTube Downloads (New)**" >> "$SUMMARY_MD"
+    grep "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE" | strip_ansi | sed 's/^/- /' >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
+echo "</details>" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
 # 실패 목록 (유튜브 다운로드 실패)
