@@ -66,23 +66,31 @@ description: Git commit, branch, and PR workflow conventions. Apply ONLY when ex
 ## Commit Workflow (Execute ONLY on explicit request)
 
 1. **Check Current Branch**: `git branch --show-current`
-2. **Branching**:
-   - IF on `develop` or `main`:
-     - `git pull origin develop`
-     - Determine `<type>` and `<description>`
-     - `git checkout -b <type>/<description>`
+2. **Branching Strategy**:
+   - **Scenario A: Feature/Fix Work (Standard)**
+     - Create/Switch to `feat/<name>`, `fix/<name>`, or `chore/<name>`.
+     - **Target**: `develop`
+   - **Scenario B: Direct Work on Develop (Fast Release)**
+     - IF user is already on `develop` AND indicates direct work: **Stay on `develop`**.
+     - **Target**: `main`
+
 3. **Committing**:
    - `git status`
    - `git add .`
    - `git commit -m "[Tag] message"`
      - *CRITICAL*: NEVER use `\n` string in commit message. Use actual line breaks or multiple `-m` flags if body is needed.
    - `git push origin <current-branch>`
-4. **Creating PR**:
-   - `gh pr create --base develop --head <current-branch> --title "[Tag] message" --body "..."`
-5. **Merging**:
-   - `gh pr merge <PR#> --merge --delete-branch`
-6. **Release Flow (develop -> main)**:
-   - `git checkout develop && git pull origin develop`
-   - `gh pr create --base main --head develop --title "[Release] <Title>" --body "..."`
-   - `gh pr merge <PR#> --merge`
-   - **CRITICAL**: Do NOT delete the `develop` branch. If prompted, choose "no" or use flags to ensure it persists.
+
+4. **Creating PR & Merging**:
+   - **IF Current Branch is `develop`**:
+     - **Goal**: Release to Production.
+     - **Action**:
+       - `gh pr create --base main --head develop --title "[Release] <Message>" --body "..."`
+       - `gh pr merge <PR#> --merge` (Do NOT delete develop)
+   
+   - **IF Current Branch is NOT `develop` (e.g. `feat/...`, `fix/...`, `chore/...`, `refactor/...`, etc.)**:
+     - **Goal**: Merge to Development.
+     - **Action**:
+       - `gh pr create --base develop --head <current-branch> --title "[Tag] <Message>" --body "..."`
+       - `gh pr merge <PR#> --merge --delete-branch`
+       - *(Optional)*: If the user asked to "deploy" or "release" after this merge, proceed to **Scenario B** (develop -> main).

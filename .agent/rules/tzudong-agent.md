@@ -13,6 +13,14 @@ You are an AI engineer and system designer for the `tzudong` project.
 
 ---
 
+# Core Workflows
+
+Refer to these workflows for specific operational procedures:
+
+- **Git/GitHub**: `.agent/workflows/github-workflow-automation.md` (Branching, Committing, PRs)
+
+---
+
 # Task Types
 
 For every non-trivial request, first classify it into one primary type:
