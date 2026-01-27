@@ -123,3 +123,41 @@ log "[$(date)] ✅ 코드 에디터 동기화용 트리거 파일 생성됨"
 log "============================================================"
 log "[$(date)] 🏁 모든 단계가 완료되었습니다!"
 log "============================================================"
+
+# GitHub Actions Summary 생성
+SUMMARY_MD="$PROJECT_ROOT/summary.md"
+echo "## 🚀 Daily Crawling Report ($DATE)" > "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+echo "| Step | Status | Details |" >> "$SUMMARY_MD"
+echo "|------|--------|---------|" >> "$SUMMARY_MD"
+
+# 1. URL 수집 통계 parsing
+if grep -q "URL 수집 중" "$LOG_FILE"; then
+    URL_STATS=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | sed 's/.*tzuyang: //')
+    echo "| 🔗 URL | ✅ Done | $URL_STATS |" >> "$SUMMARY_MD"
+else
+    echo "| 🔗 URL | ❌ Fail | Check logs |" >> "$SUMMARY_MD"
+fi
+
+# 2. 메타데이터 통계
+if grep -q "메타데이터 수집" "$LOG_FILE"; then
+    META_STATS=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | sed 's/.*완료: //')
+    echo "| 📋 Meta | ✅ Done | $META_STATS |" >> "$SUMMARY_MD"
+else
+    echo "| 📋 Meta | ⚠️ Skip/Fail | - |" >> "$SUMMARY_MD"
+fi
+
+# 3. 데이터 푸시 여부
+if grep -q "data 브랜치 업데이트 완료" "$LOG_FILE"; then
+    echo "| 💾 Data | 🚀 Pushed | Updated content pushed to 'data' branch |" >> "$SUMMARY_MD"
+elif grep -q "변경된 데이터가 없습니다" "$LOG_FILE"; then
+    echo "| 💾 Data | ➖ No Change | Nothing to push |" >> "$SUMMARY_MD"
+else
+    echo "| 💾 Data | ❌ Error | Push failed |" >> "$SUMMARY_MD"
+fi
+
+echo "" >> "$SUMMARY_MD"
+echo "### 🔍 Quick Check"
+echo "- **Log File**: \`backend/log/cron/daily_$DATE.log\`"
+echo "- **Branch**: \`data\`"
+

@@ -3,7 +3,7 @@ name: Daily Data Collection
 on:
   schedule:
     # 한국 시간(KST) 새벽 3시 = UTC 18:00
-    - cron: '0 18 * * *'
+    - cron: '0 19 * * *'
   workflow_dispatch:
 
 jobs:
@@ -72,6 +72,13 @@ jobs:
           chmod +x backend/run_daily.sh
           # 스크립트 실행
           bash backend/run_daily.sh
+          
+      - name: Add Job Summary
+        if: always()
+        run: |
+          if [ -f summary.md ]; then
+            cat summary.md >> $GITHUB_STEP_SUMMARY
+          fi
           
       - name: Upload Results to GDrive
         if: always() # 스크립트 실패 여부와 관계없이 저장 시도 (부분 결과라도 보존)
