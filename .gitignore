@@ -79,12 +79,12 @@ $RECYCLE.BIN/
 # Custom - Large Data
 supabase/backup_db/*.sql
 backend/backups/*.dump
-backend/restaurant-crawling/data/frames
-backend/restaurant-crawling/data/video_cache
-backend/restaurant-crawling/data/temp_video
-backend/restaurant-crawling/data/meta
-backend/restaurant-crawling/data/thumbnails
-backend/restaurant-crawling/data/transcript
+backend/restaurant-crawling/data/*/frames
+backend/restaurant-crawling/data/*/video_cache
+backend/restaurant-crawling/data/*/temp_video
+backend/restaurant-crawling/data/*/meta
+backend/restaurant-crawling/data/*/thumbnails
+backend/restaurant-crawling/data/*/transcript
 backend/restaurant-crawling/data/tzuyang/urls.txt
 backend/restaurant-crawling/data/tzuyang/deleted_urls.txt
 !backend/restaurant-crawling/data/tzuyang/completed_frames.jsonl
