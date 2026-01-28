@@ -214,11 +214,11 @@ process_channel() {
     fi
     
     # [Smart Filter] 파이썬 스크립트로 처리 대상(Pending) URL만 가져오기
-    log_info "🔍 [Smart Filter] 처리 대상 영상 선별 중... (scripts/tool_get_pending_crawling.py)"
+    log_info "🔍 [Smart Filter] 처리 대상 영상 선별 중... (parse_result.py scan)"
     
-    # tool_get_pending_crawling.py 실행
+    # parse_result.py scan 실행
     # stderr는 화면에 나오고, stdout만 URLS 배열로 로드
-    mapfile -t URLS < <(python3 "$SCRIPT_DIR/tool_get_pending_crawling.py" --channel "$channel")
+    mapfile -t URLS < <(python3 "$PARSER_SCRIPT" scan --channel "$channel")
     
     local TOTAL=${#URLS[@]}
     
@@ -473,7 +473,7 @@ EOF
             # 파서 실행 (최대 3회 시도)
             PARSE_SUCCESS=false
             for PARSE_ATTEMPT in 1 2 3; do
-                if python3 "$PARSER_SCRIPT" "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
+                if python3 "$PARSER_SCRIPT" parse "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
                     SUCCESS=$((SUCCESS + 1))
                     PARSE_SUCCESS=true
                     
