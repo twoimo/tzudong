@@ -413,7 +413,7 @@ def main():
     print(f"✅ 스캔 완료: 총 {len(transcript_paths)}개 중 {len(pending_paths)}개 처리 예정 (이미 완료/Shorts: {len(transcript_paths) - len(pending_paths)}개)")
     print("=" * 60)
 
-    print(f"🚀 총 {len(pending_paths)}개 영상 처리를 시작합니다. (CI 로그 출력 주기: 10개)", flush=True)
+    print(f"🚀 총 {len(pending_paths)}개 영상 처리를 시작합니다.", flush=True)
 
     # pending_paths만 순회
     for idx, data_path in enumerate(tqdm(pending_paths, desc="Generating context")):
@@ -422,9 +422,8 @@ def main():
             print(f"🛑 최대 처리 한도({args.max_videos}개) 도달로 중단합니다.", flush=True)
             break
         
-        # [CI-Log] 10개 단위로 진행상황 강제 출력 (tqdm 버퍼링 문제 해결)
-        if (idx + 1) % 10 == 0:
-            print(f"[Progress] {idx + 1}/{len(transcript_paths)} videos processed... (Success: {processed_count}, Skipped: {skipped_count}, Error: {error_count})", flush=True)
+        # [CI-Log] 진행상황 강제 출력 (tqdm 버퍼링 문제 해결)
+        print(f"[Progress] {idx + 1}/{len(transcript_paths)} videos processed... (Success: {processed_count}, Skipped: {skipped_count}, Error: {error_count})", flush=True)
 
         video_id = os.path.basename(data_path).split(".")[0]
 
