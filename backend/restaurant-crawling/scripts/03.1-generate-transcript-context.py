@@ -368,18 +368,24 @@ def main():
     skipped_count = 0
     error_count = 0
 
+    print(f"🚀 총 {len(transcript_paths)}개 영상 처리를 시작합니다. (CI 로그 출력 주기: 10개)", flush=True)
+
     for idx, data_path in enumerate(tqdm(transcript_paths, desc="Generating context")):
         # 최대 처리 수 제한 체크
         if args.max_videos > 0 and processed_count >= args.max_videos:
-            print(f"🛑 최대 처리 한도({args.max_videos}개) 도달로 중단합니다.")
+            print(f"🛑 최대 처리 한도({args.max_videos}개) 도달로 중단합니다.", flush=True)
             break
+        
+        # [CI-Log] 10개 단위로 진행상황 강제 출력 (tqdm 버퍼링 문제 해결)
+        if (idx + 1) % 10 == 0:
+            print(f"[Progress] {idx + 1}/{len(transcript_paths)} videos processed... (Success: {processed_count}, Skipped: {skipped_count}, Error: {error_count})", flush=True)
 
         video_id = os.path.basename(data_path).split(".")[0]
 
         # 트랜스크립트 읽기
         transcript_data = read_jsonl(data_path)
         if not transcript_data:
-            print(f"⚠️ 트랜스크립트 읽기 실패: {video_id}")
+            print(f"⚠️ 트랜스크립트 읽기 실패: {video_id}", flush=True)
             error_count += 1
             continue
 
@@ -396,7 +402,8 @@ def main():
                 continue
             else:
                 print(
-                    f"\n🔄 업데이트 {video_id}: 새 recollect_id ({transcript_recollect_id} > {existing_recollect_id})"
+                    f"\n🔄 업데이트 {video_id}: 새 recollect_id ({transcript_recollect_id} > {existing_recollect_id})",
+                    flush=True
                 )
 
         # 메타데이터 읽기
@@ -404,17 +411,19 @@ def main():
         metadata = get_matching_metadata(str(meta_path), transcript_recollect_id)
         if not metadata:
             print(
-                f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}"
+                f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}",
+                flush=True
             )
 
             # [Fix] 메타데이터가 없으면 트랜스크립트 파일 삭제 (재수집 유도)
             try:
                 os.remove(data_path)
                 print(
-                    f"🗑️ [Auto-Correction] 고아 트랜스크립트 파일 삭제됨: {video_id} (재수집 대기)"
+                    f"🗑️ [Auto-Correction] 고아 트랜스크립트 파일 삭제됨: {video_id} (재수집 대기)",
+                    flush=True
                 )
             except Exception as e:
-                print(f"❌ 파일 삭제 실패: {e}")
+                print(f"❌ 파일 삭제 실패: {e}", flush=True)
 
             error_count += 1
             continue
@@ -437,15 +446,17 @@ def main():
             )
             processed_count += 1
         except Exception as e:
-            print(f"\n❌ 처리 중 치명적 오류 {video_id}: {e}")
+            print(f"\n❌ 처리 중 치명적 오류 {video_id}: {e}", flush=True)
             error_count += 1
 
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 60, flush=True)
     print(
-        f"✅ 완료: 처리 {processed_count} / 스킵 {skipped_count} / 에러 {error_count}"
+        f"✅ 완료: 처리 {processed_count} / 스킵 {skipped_count} / 에러 {error_count}",
+        flush=True
     )
     print(
-        f"ℹ️ 총 소요된 트랜스크립트 파일: {processed_count + skipped_count + error_count} / 전체 {len(transcript_paths)}"
+        f"ℹ️ 총 소요된 트랜스크립트 파일: {processed_count + skipped_count + error_count} / 전체 {len(transcript_paths)}",
+        flush=True
     )
 
 
