@@ -80,3 +80,4 @@ $RECYCLE.BIN/
 supabase/backup_db/*.sql
 backend/backups/*.dump
 backend/restaurant-crawling/data/tzuyang/*
+backend/agent-rag/data/tzuyang/*
