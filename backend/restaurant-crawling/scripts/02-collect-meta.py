@@ -375,7 +375,9 @@ def collect_channel_meta(
         for line in f:
             url = line.strip()
             if url:
-                video_ids.append(extract_video_id(url))
+                vid = extract_video_id(url)
+                if vid:
+                    video_ids.append(vid)
 
     # 2. 삭제된 비디오 필터링 (명시적 체크)
     deleted_ids = set()
