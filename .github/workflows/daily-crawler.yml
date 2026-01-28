@@ -119,9 +119,9 @@ jobs:
           done
           echo "✅ Ollama server is ready!"
           
-          echo "Pulling model 'cookieshake/a.x-4.0-light-imatrix:Q8_0'..."
+          echo "Pulling model 'llama3.2:3b'..."
           # 모델 Pull (시간이 좀 걸릴 수 있음)
-          ollama pull cookieshake/a.x-4.0-light-imatrix:Q8_0
+          ollama pull llama3.2:3b
           echo "✅ Model pulled successfully!"
 
       - name: Configure Git
