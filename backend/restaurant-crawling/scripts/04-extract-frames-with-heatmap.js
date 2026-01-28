@@ -558,7 +558,9 @@ async function loadCookies() {
     return '';
 }
 
-async function fetchPage(url, cookieHeader, redirectCount = 0) {
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
     if (redirectCount > 5) throw new Error('이동 횟수 초과 (Too many redirects)');
 
     const headers = {
@@ -567,34 +569,65 @@ async function fetchPage(url, cookieHeader, redirectCount = 0) {
         'Cookie': cookieHeader || ''
     };
 
-    return new Promise((resolve, reject) => {
-        https.get(url, { headers }, (res) => {
-            // 리다이렉트 처리 (301, 302, 303, 307, 308)
-            if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-                let redirectUrl = res.headers.location;
-                // 상대 경로인 경우 처리
-                if (!redirectUrl.startsWith('http')) {
-                    const parsedUrl = new URL(url);
-                    redirectUrl = new URL(redirectUrl, parsedUrl.origin).toString();
+    try {
+        return await new Promise((resolve, reject) => {
+            const req = https.get(url, { headers }, (res) => {
+                // 1. Google Abuse Check (429 or Soft Ban Redirect)
+                if (res.statusCode === 429) {
+                    reject(new Error('429_TOO_MANY_REQUESTS'));
+                    return;
                 }
-                log('info', `Redirecting to: ${redirectUrl} (Status: ${res.statusCode})`);
 
-                // 재귀 호출
-                fetchPage(redirectUrl, cookieHeader, redirectCount + 1)
-                    .then(resolve)
-                    .catch(reject);
-                return;
-            }
+                // 리다이렉트 처리 (301, 302, 303, 307, 308)
+                if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+                    let redirectUrl = res.headers.location;
 
-            if (res.statusCode !== 200) {
-                reject(new Error(`상태 코드 오류: ${res.statusCode}`));
-                return;
-            }
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => resolve(data));
-        }).on('error', reject);
-    });
+                    // Google Abuse Redirect Check
+                    if (redirectUrl.includes('google.com/sorry')) {
+                        reject(new Error('429_GOOGLE_SORRY_REDIRECT'));
+                        return;
+                    }
+
+                    // 상대 경로인 경우 처리
+                    if (!redirectUrl.startsWith('http')) {
+                        const parsedUrl = new URL(url);
+                        redirectUrl = new URL(redirectUrl, parsedUrl.origin).toString();
+                    }
+                    log('info', `Redirecting to: ${redirectUrl} (Status: ${res.statusCode})`);
+
+                    // 재귀 호출 (retryCount 유지)
+                    resolve(fetchPage(redirectUrl, cookieHeader, redirectCount + 1, retryCount));
+                    return;
+                }
+
+                if (res.statusCode !== 200) {
+                    reject(new Error(`상태 코드 오류: ${res.statusCode}`));
+                    return;
+                }
+
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => resolve(data));
+            });
+
+            req.on('error', reject);
+        });
+    } catch (e) {
+        // Retry Logic for 429 or Network Errors
+        const isRateLimit = e.message === '429_TOO_MANY_REQUESTS' || e.message === '429_GOOGLE_SORRY_REDIRECT';
+        const isNetworkError = e.message.includes('ECONNRESET') || e.message.includes('ETIMEDOUT');
+
+        if ((isRateLimit || isNetworkError) && retryCount < 5) {
+            const baseDelay = isRateLimit ? 10000 : 2000; // Rate limit: 10s start, Network: 2s start
+            const waitTime = Math.pow(2, retryCount) * baseDelay + Math.random() * 1000;
+            const logMsg = isRateLimit ? '⚠️ 요청 제한(429/Block) 감지' : '⚠️ 네트워크 오류 감지';
+
+            log('warn', `${logMsg}. ${Math.round(waitTime / 1000)}초 후 재시도... (${retryCount + 1}/5) - ${e.message}`);
+            await sleep(waitTime);
+            return fetchPage(url, cookieHeader, 0, retryCount + 1); // redirectCount 초기화, retryCount 증가
+        }
+        throw e;
+    }
 }
 
 function parseHeatmap(html) {
