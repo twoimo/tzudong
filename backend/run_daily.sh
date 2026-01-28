@@ -74,6 +74,10 @@ log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
 # [Fix] 1회 실행 시 최대 10개만 처리 (타임아웃/멈춤 방지)
 $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos 10 2>&1 | tee -a "$LOG_FILE"
 
+# 3.2. 자막 재수집 (3.1에서 삭제된 고아 파일 즉시 복구)
+log "[$(date)] [Step 3.2] 자막 재수집 (Auto-Healing)..."
+node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+
 # 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..."
 node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache 2>&1 | tee -a "$LOG_FILE"
