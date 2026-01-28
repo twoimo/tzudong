@@ -354,8 +354,8 @@ def main():
     # 프롬프트 로드
     prompt = load_prompt(str(prompts_dir / args.prompt), encoding="utf-8")
 
-    # 트랜스크립트 파일 목록
-    transcript_paths = glob.glob(str(transcript_dir / "*.jsonl"))
+    # 트랜스크립트 파일 목록 (정렬하여 순서 보장 - 디버깅 용이)
+    transcript_paths = sorted(glob.glob(str(transcript_dir / "*.jsonl")))
 
     print(f"📂 트랜스크립트 파일 {len(transcript_paths)}개 발견")
     print(f"🤖 모델: {args.model} (Host: {ollama_host})")
