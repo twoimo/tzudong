@@ -7,3 +7,4 @@ requests
 langchain
 langchain-community
 langchain-ollama
+supabase

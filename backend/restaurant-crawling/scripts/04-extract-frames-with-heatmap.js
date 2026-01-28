@@ -1251,7 +1251,7 @@ async function processSingleVideo(videoId, params) {
                     const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
                     // 정확한 파일명을 모르므로 videoId로 시작하는 파일 찾기 (확장자 무관)
                     const targetCacheFiles = cacheFiles.filter(f => f.startsWith(videoId + '.'));
-                    
+
                     for (const f of targetCacheFiles) {
                         const targetPath = path.join(VIDEO_CACHE_DIR, f);
                         if (fs.existsSync(targetPath)) {
@@ -1260,11 +1260,11 @@ async function processSingleVideo(videoId, params) {
                         }
                     }
 
-                    // 폴더가 비었으면 폴더도 삭제
-                    if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {
-                        fs.rmdirSync(VIDEO_CACHE_DIR);
-                        log('info', `[Clean] 비디오 캐시 폴더 삭제 완료: ${toRelativePath(VIDEO_CACHE_DIR)}`);
-                    }
+                    // 폴더가 비었으면 폴더도 삭제 (비활성화: 배치 처리 시 다음 루프에서 ENOENT 오류 발생 방지)
+                    // if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {
+                    //    fs.rmdirSync(VIDEO_CACHE_DIR);
+                    //    log('info', `[Clean] 비디오 캐시 폴더 삭제 완료: ${toRelativePath(VIDEO_CACHE_DIR)}`);
+                    // }
                 } catch (e) {
                     log('warn', `캐시 삭제 실패: ${e.message}`);
                 }
