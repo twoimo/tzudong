@@ -70,7 +70,7 @@ node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuy
 log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
 # OLLAMA_HOST 등 연결 실패 시 스킵됨 (스크립트 내 처리)
 # CI 환경(CPU) 고려하여 한 번에 최대 5개 영상만 처리하도록 제한 (속도 문제)
-$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos 5 2>&1 | tee -a "$LOG_FILE"
+$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py 2>&1 | tee -a "$LOG_FILE"
 
 # 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..."
