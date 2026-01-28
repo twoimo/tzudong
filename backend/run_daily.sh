@@ -80,6 +80,11 @@ node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --cha
 log "[$(date)] [Step 6] Gemini 데이터 분석 중..."
 bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
+# 6.1. 자막 문서에 메타데이터 추가 (음식점 + Peak)
+log "[$(date)] [Step 6.1] 자막 문서 메타데이터 추가 중..."
+# Supabase 연결 실패 시 스킵됨 (스크립트 내 처리)
+$PYTHON_CMD backend/restaurant-crawling/scripts/06.1-transcript-document-with-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+
 log "============================================================"
 log "[$(date)] ✅ 일일 데이터 수집 파이프라인 완료"
 log "============================================================"

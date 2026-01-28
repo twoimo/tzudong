@@ -1,170 +1,154 @@
-import os
-import glob
+#!/usr/bin/env python3
+"""
+YouTube 자막 문맥 생성 스크립트
+
+transcript/{video_id}.jsonl 파일들을 읽어서 문맥을 생성하고,
+transcript-document-with-context/{video_id}.jsonl로 저장합니다.
+
+저장 형식:
+- 한 줄에 recollect_id별 Document 리스트 (JSONL append 방식)
+- 기존 문서가 있으면 recollect_id가 더 높은 경우에만 추가
+
+사용법:
+    python 03.1-generate-transcript-context.py --model cookieshake/a.x-4.0-light-imatrix:Q8_0
+"""
+
 import json
-import argparse
 import time
+import os
 import re
+import glob
+import argparse
 import requests
-from pathlib import Path
 from tqdm import tqdm
-from langchain_community.chat_models import ChatOllama
-from langchain_core.prompts import PromptTemplate
+import sys
+from pathlib import Path
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
-from datetime import datetime
-import warnings
+from langchain_core.prompts import load_prompt
+from langchain_ollama import ChatOllama
 
-# 경고 억제 (LangChain, Pydantic Deprecation)
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-warnings.filterwarnings("ignore", module="langchain")
-warnings.filterwarnings("ignore", module="pydantic")
+# src 경로 추가
+SCRIPT_DIR = Path(__file__).parent.resolve()
+SRC_PATH = (SCRIPT_DIR / "../src").resolve()
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
 
-# 스크립트 위치 기준 경로 설정
-SCRIPT_DIR = Path(__file__).parent.absolute()
-
-
-def load_prompt(file_path, encoding="utf-8"):
-    """프롬프트 파일 로드"""
-    with open(file_path, "r", encoding=encoding) as f:
-        return PromptTemplate.from_template(f.read())
+from utils.chunk_utils import create_chunks_with_overlap
 
 
-def read_jsonl(file_path):
-    """JSONL 파일 읽기 (첫 줄만 읽음 - 메타데이터 등)"""
+def read_jsonl(data_path: str) -> dict | None:
+    """JSONL 파일에서 가장 마지막(최신) 라인 읽기"""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                return json.loads(line)
+        with open(data_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            if lines:
+                return json.loads(lines[-1])
     except Exception as e:
-        print(f"❌ 파일 읽기 오류 {file_path}: {e}")
-        return None
-
-
-def get_latest_doc_recollect_id(doc_path: str) -> int:
-    """
-    기존 문서 파일(jsonl)에서 가장 큰 recollect_id를 찾아 반환.
-    파일이 없거나 비어있으면 None 반환.
-    """
-    if not os.path.exists(doc_path):
-        return None
-
-    max_recollect_id = -1
-    found = False
-
-    try:
-        with open(doc_path, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    # 한 줄이 Document 리스트의 JSON 표기임
-                    docs_list = json.loads(line)
-                    if not docs_list:
-                        continue
-                    # 첫 번째 문서의 recollect_id 확인 (같은 줄이면 모두 같다고 가정)
-                    first_doc = docs_list[0]
-                    # Document 객체가 아니라 dict 형태임
-                    meta = first_doc.get("metadata", {})
-                    rid = meta.get("recollect_id", 0)
-                    if rid > max_recollect_id:
-                        max_recollect_id = rid
-                    found = True
-                except json.JSONDecodeError:
-                    continue
-    except Exception as e:
-        print(f"⚠️ 기존 문서 읽기 중 오리 무중: {e}")
-        return None
-
-    return max_recollect_id if found else None
-
-
-def get_matching_metadata(meta_path: str, target_recollect_id: int):
-    """
-    메타데이터 파일(jsonl)에서 target_recollect_id와 일치하는 줄을 찾아 반환.
-    없으면 가장 최근 라인(마지막 라인) 반환 가능성을 고려할 수도 있으나,
-    여기서는 정확한 매칭을 우선으로 함.
-    """
-    if not os.path.exists(meta_path):
-        return None
-
-    matched_meta = None
-    try:
-        with open(meta_path, "r", encoding="utf-8") as f:
-            for line in f:
-                meta = json.loads(line)
-                if meta.get("recollect_id") == target_recollect_id:
-                    return meta
-                # 혹시 모르니 마지막 읽은 것을 저장해둘 수 있음 (필요 시)
-                matched_meta = meta
-    except Exception:
-        return None
-
-    # 정확히 일치하는 id가 없으면, 최신 메타를 쓸지 여부는 정책 결정.
-    # 안전하게 None 반환 혹은 matched_meta 반환.
-    # 여기서는 Transcript와 Meta의 싱크가 맞아야 하므로 None 권장.
+        print(f"파일 읽기 오류 {data_path}: {e}")
     return None
 
 
-def create_chunks_with_overlap(transcript, video_duration, chunk_duration=300, overlap=30):
-    """
-    자막을 시간 단위로 청크 분할 (오버랩 포함)
-    """
-    chunks = []
-    current_time = 0
-
-    while current_time < video_duration:
-        start_time = max(0, current_time - overlap)
-        end_time = min(video_duration, current_time + chunk_duration + overlap)
-
-        chunk_text_parts = []
-        char_count = 0
-        
-        # 해당 시간 범위의 자막 추출
-        for seg in transcript:
-            seg_start = seg.get("start", 0)
-            # seg_end = seg_start + seg.get("duration", 0) # duration이 없을 수도 있음
-            
-            # 자막 시작 시간이 청크 범위 내에 있으면 포함
-            # 더 정교하게 하려면 duration까지 고려해야 하지만, start 만으로도 충분
-            if start_time <= seg_start < end_time:
-                text = seg.get("text", "")
-                chunk_text_parts.append(text)
-                char_count += len(text)
-
-        chunk_content = " ".join(chunk_text_parts)
-        
-        if chunk_content.strip(): # 내용이 있을 때만 추가
-            chunks.append({
-                "chunk_index": len(chunks),
-                "start_time": start_time,
-                "end_time": end_time,
-                "content": chunk_content,
-                "char_count": char_count,
-                "prev_overlap": start_time < current_time, # 이전 청크와 겹치는지 여부
-                "next_overlap": end_time > current_time + chunk_duration # 다음 청크와 겹칠 예정인지
-            })
-
-        current_time += chunk_duration
-
-    return chunks
+def get_matching_metadata(meta_path: str, recollect_id: int) -> dict | None:
+    """메타데이터 파일에서 recollect_id가 일치하는 것 중 가장 마지막(최신) 데이터를 반환"""
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            # recollect_id가 일치하는 라인들 필터링 (뒤에서부터)
+            for line in reversed(lines):
+                if line.strip():
+                    meta = json.loads(line)
+                    if meta.get("recollect_id") == recollect_id:
+                        return meta
+    except Exception as e:
+        print(f"메타데이터 읽기 오류 {meta_path}: {e}")
+    return None
 
 
-def parse_error_context(model, error_context):
-    """모델별 에러 컨텍스트 파싱 (fallback)"""
-    return error_context 
+def get_latest_doc_recollect_id(doc_path: str) -> int | None:
+    """기존 document 파일에서 최신 recollect_id 반환"""
+    if not os.path.exists(doc_path):
+        return None
+    try:
+        with open(doc_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            if lines:
+                last_line = lines[-1].strip()
+                if last_line:
+                    last_docs = json.loads(last_line)
+                    if last_docs and len(last_docs) > 0:
+                        return last_docs[0].get("metadata", {}).get("recollect_id")
+    except Exception as e:
+        print(f"문서 파일 읽기 오류 {doc_path}: {e}")
+    return None
+
+
+def parse_error_context(model: str, error_context: str, max_retries: int = 3) -> str:
+    """문맥을 파싱하여 마크다운 형식으로 변환 (재시도 포함)"""
+    prompts_dir = SCRIPT_DIR / "../prompts"
+    parse_error_prompt = load_prompt(str(prompts_dir / "parse_error_context.yaml"))
+    parse_error_chain = (
+        parse_error_prompt | ChatOllama(model=model, temperature=0) | StrOutputParser()
+    )
+    # print(f"❌ error_context: {error_context}")
+    error_context_result = error_context  # 초기값
+
+    for attempt in range(max_retries):
+        error_context_result = parse_error_chain.invoke(
+            {"error_context": error_context}
+        )
+
+        if is_valid_context(error_context_result):
+            # print(
+            #     f"✅ parsed_context (시도 {attempt + 1}): {error_context_result}",
+            #     end="\n\n",
+            # )
+            return error_context_result
+
+        # print(f"  ⚠️ parse 재시도 {attempt + 1}/{max_retries}")
+
+    # 3회 실패 시 마지막 결과 반환
+    # print(f"❌ parse 최종 실패, 마지막 결과 사용")
+    return error_context_result.strip()
 
 
 def is_valid_context(text: str) -> bool:
-    """생성된 문맥의 유효성 검사"""
-    if not text or len(text) < 10:
-        return False
-        
+    """문맥이 유효한지 확인 (마크다운 형식 포함 여부)"""
+    # 마크다운 패턴 감지
     invalid_patterns = [
-        r"I cannot", r"I apologize", r"As an AI", 
-        r"죄송합니다", r"언어 모델", r"cannot fulfill"
+        r"^\s*[-*•]\s",  # 불릿포인트
+        r"\*\*.*?\*\*",  # **bold**
+        r"^#",  # 헤더
+        r":\s*$",  # "상황 설명:" 같은 패턴
+        r"^\d+\.\s",  # 숫자 리스트
     ]
     for pattern in invalid_patterns:
         if re.search(pattern, text, re.MULTILINE):
             return False
     return True
+
+
+def check_ollama_connection(base_url: str, model: str) -> bool:
+    """Ollama 서버 연결 및 모델 확인"""
+    try:
+        resp = requests.get(f"{base_url}/api/tags", timeout=5)
+        if resp.status_code != 200:
+            print(f"❌ Ollama 서버 응답 오류 ({base_url}): {resp.status_code}")
+            return False
+
+        models = resp.json().get("models", [])
+        found = any(m.get("name") == model for m in models)
+        if not found:
+            print(
+                f"⚠️ 경고: 모델 '{model}'을 목록에서 찾을 수 없습니다. (Pull 필요할 수 있음)"
+            )
+
+        print(f"✅ Ollama 연결 성공: {base_url}")
+        return True
+
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Ollama 연결 실패 ({base_url}): {e}")
+        return False
 
 
 def run_chain(
@@ -175,7 +159,7 @@ def run_chain(
     chunk_transcript: str,
     prompt,
 ) -> str:
-    """문맥 생성 실행"""
+    """문맥 생성"""
     # LLM 설정 (base_url 지원)
     llm = ChatOllama(model=model, base_url=base_url, temperature=0, timeout=120)
 
@@ -188,7 +172,7 @@ def run_chain(
             {
                 "title": title,
                 "full_transcript": full_transcript,
-                "chunk": chunk_transcript, 
+                "chunk": chunk_transcript,
             }
         )
         return result.strip()
@@ -208,6 +192,7 @@ def run_chain_with_retry(
     max_chars: int = 300,
 ) -> str:
     """재시도 로직이 포함된 문맥 생성"""
+    result = ""
     for attempt in range(max_retries + 1):
         result = run_chain(model, base_url, title, full_transcript, chunk, prompt)
 
@@ -218,11 +203,13 @@ def run_chain_with_retry(
         if is_valid_context(result) and len(result) <= max_chars:
             return result
 
-        # 마지막 시도가 아니면 재시도
         if attempt < max_retries:
-             time.sleep(1)
+            time.sleep(1)
 
-    return "" # 실패 시 빈 문자열 반환
+    # 마지막 시도 실패 시 parse_error_context 시도
+    if result:
+        result = parse_error_context(model, error_context=result).strip()
+    return result
 
 
 def save_documents_for_video(
@@ -230,6 +217,8 @@ def save_documents_for_video(
 ):
     """
     video_id.jsonl에 문서 리스트를 한 줄로 추가 (append 모드)
+
+    각 줄은 같은 recollect_id를 가진 Document 리스트
     """
     os.makedirs(output_dir, exist_ok=True)
     filepath = os.path.join(output_dir, f"{video_id}.jsonl")
@@ -263,20 +252,17 @@ def process_video(
 
     full_transcript = "\n".join([seg["text"] for seg in transcript])
     title = metadata["title"]
-    channel_name = metadata.get("channel_name", "tzuyang")
-    video_duration = metadata.get("duration", 0) 
+    channel_name = metadata.get("channel_name", "tzuyang")  # 기본값 tzuyang
+    video_duration = metadata.get("duration")  # 영상 전체 길이 (초)
 
-    # 자막 구간별 청크 생성
+    # 자막 구간별 청크에서 새로운 청크 생성 (video_duration 전달)
     new_chunks = create_chunks_with_overlap(transcript, video_duration=video_duration)
-    
-    if not new_chunks:
-        print(f"⚠️ 청크 생성 실패 (길이 0?): {video_id}")
-        return
 
     documents = []
 
     # 문맥 생성
     for chunk in new_chunks:
+        chunk_index = chunk["chunk_index"]
         chunk_transcript = chunk["content"]
 
         gen_context = run_chain_with_retry(
@@ -289,10 +275,16 @@ def process_video(
             max_retries=1,
             max_chars=300,
         )
-        
-        # 실패하더라도 일단 진행 (빈 문맥) 하거나 스킵할 수 있음. 
-        # 여기서는 빈 문맥이라도 진행
+
+        # [후처리] LLM 생성 문맥에서 이름 오타 수정
+        if gen_context:
+            gen_context = gen_context.replace("쯔위", "쯔양")
+            gen_context = re.sub(r"tzuyu", "tzuyang", gen_context, flags=re.IGNORECASE)
+
         contextualized_chunk = f"문맥: {gen_context}\n\n{chunk_transcript}"
+        # print(f"상황: {gen_context}\n")
+        # print(f"자막: {chunk_transcript[:100]}...")
+        # print("============================================\n")
 
         doc = Document(
             page_content=contextualized_chunk,
@@ -314,34 +306,6 @@ def process_video(
 
     # 저장
     save_documents_for_video(video_id, documents, output_dir, recollect_id)
-
-
-def check_ollama_connection(base_url: str, model: str) -> bool:
-    """Ollama 서버 연결 및 모델 확인"""
-    try:
-        # 1. 서버 연결 확인
-        resp = requests.get(f"{base_url}/api/tags", timeout=5)
-        if resp.status_code != 200:
-            print(f"❌ Ollama 서버 응답 오류 ({base_url}): {resp.status_code}")
-            return False
-        
-        # 2. 모델 존재 확인
-        models = resp.json().get("models", [])
-        found = any(m.get("name") == model for m in models)
-        
-        if not found:
-            # 정확히 일치하지 않아도 태그가 다를 수 있으므로 경고만 하고 진행할 수도 있지만,
-            # 여기서는 엄격하게 체크하거나, 그냥 연결 성공으로 간주.
-            # a.x 모델처럼 이름이 복잡한 경우 매칭이 어려울 수 있으니 연결 성공만 체크.
-            print(f"⚠️ 경고: 모델 '{model}'을 목록에서 찾을 수 없습니다. (Pull 필요할 수 있음)")
-            # return True # 일단 연결은 성공했으므로 True
-        
-        print(f"✅ Ollama 연결 성공: {base_url}")
-        return True
-
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Ollama 연결 실패 ({base_url}): {e}")
-        return False
 
 
 def main():
@@ -366,23 +330,18 @@ def main():
     args = parser.parse_args()
 
     # 환경 변수에서 OLLAMA_HOST 가져오기 (없으면 기본값)
-    ollama_host = os.environ.get("OLLAMA_HOST")
-    if not ollama_host:
-        ollama_host = "http://localhost:11434"
+    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
     # 연결 확인
     if not check_ollama_connection(ollama_host, args.model):
         print("⛔ Ollama를 사용할 수 없어 스크립트를 종료합니다.")
-        # CI 환경에서 이 단계 실패로 전체 파이프라인이 멈추지 않게 하려면 exit 0으로 끝낼 수도 있음
-        # 하지만 명확한 실패를 위해 오류를 내는 게 나을 수도 있음. 
-        # 여기서는 '정상 동작될 수 있게 개선' 이므로, 스킵하고 0 반환.
         print("CI/CD 모드: Ollama 미발견으로 인해 작업을 건너뜁니다.")
-        return 
+        return
 
     if args.check_connection_only:
         return
 
-    # tzuyang 전용
+    # tzuyang 전용 (다른 유튜버는 이 스크립트 사용 불가)
     YOUTUBER = "tzuyang"
 
     # 경로 설정
@@ -397,10 +356,6 @@ def main():
 
     # 트랜스크립트 파일 목록
     transcript_paths = glob.glob(str(transcript_dir / "*.jsonl"))
-    
-    # 최신 순으로 정렬 (선택 사항, 보통 파일명에 날짜가 없으면 뒤죽박죽일 수 있음)
-    # 여기서는 그냥 os.path.getmtime 등으로 정렬하거나 그냥 둠
-    # transcript_paths.sort(key=os.path.getmtime, reverse=True) 
 
     print(f"📂 트랜스크립트 파일 {len(transcript_paths)}개 발견")
     print(f"🤖 모델: {args.model} (Host: {ollama_host})")
@@ -436,21 +391,19 @@ def main():
 
         if existing_recollect_id is not None:
             if transcript_recollect_id <= existing_recollect_id:
-                # 이미 처리됨
+                # 이미 처리됨 (조용히 스킵)
                 skipped_count += 1
                 continue
             else:
                 print(
                     f"\n🔄 업데이트 {video_id}: 새 recollect_id ({transcript_recollect_id} > {existing_recollect_id})"
                 )
-        
+
         # 메타데이터 읽기
         meta_path = meta_dir / f"{video_id}.jsonl"
         metadata = get_matching_metadata(str(meta_path), transcript_recollect_id)
         if not metadata:
-            print(
-                f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id})"
-            )
+            print(f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id})")
             error_count += 1
             continue
 
@@ -471,8 +424,12 @@ def main():
             error_count += 1
 
     print("\n" + "=" * 60)
-    print(f"✅ 완료: 처리 {processed_count} / 스킵 {skipped_count} / 에러 {error_count}")
-    print(f"ℹ️ 총 소요된 트랜스크립트 파일: {processed_count + skipped_count + error_count} / 전체 {len(transcript_paths)}")
+    print(
+        f"✅ 완료: 처리 {processed_count} / 스킵 {skipped_count} / 에러 {error_count}"
+    )
+    print(
+        f"ℹ️ 총 소요된 트랜스크립트 파일: {processed_count + skipped_count + error_count} / 전체 {len(transcript_paths)}"
+    )
 
 
 if __name__ == "__main__":
