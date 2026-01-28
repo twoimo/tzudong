@@ -64,7 +64,7 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzu
 
 # 2.5. 고아 파일 사전 정리 (Auto-Healing Pre-check)
 log "[$(date)] [Step 2.5] 고아 파일 사전 정리..."
-$PYTHON_CMD backend/restaurant-crawling/scripts/99-cleanup-orphans.py 2>&1 | tee -a "$LOG_FILE"
+$PYTHON_CMD backend/restaurant-crawling/scripts/99-cleanup-orphans.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
 # 3. 자막 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 3] 자막 수집 중..."
