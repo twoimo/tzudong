@@ -10,7 +10,7 @@ template: |
   - **Only when describing the subtitle chunk's context involves unknown information (guest names, location names, food names, etc.), refer to the video title and full subtitles for description**
 
   #Example:
-    - Chunk: "[10:21] 원래 간이 보통 간간에서 먹자마자 밥 생각 나는데 얘 진짜 밥 필요 없는 맛이야."
+  - Chunk: "[10:21] 원래 간이 보통 간간에서 먹자마자 밥 생각 나는데 얘 진짜 밥 필요 없는 맛이야."
     Situation: "쯔양이 석관동 분식집 '청춘분식'에서 제육볶음을 먹으며 간이 적당해서 밥 없이도 맛있다고 평가하는 장면."
 
   - Chunk: "[08:03] 엄마 오셨어. >> 우리 엄마요?"
