@@ -81,3 +81,9 @@ supabase/backup_db/*.sql
 backend/backups/*.dump
 backend/restaurant-crawling/data/tzuyang/*
 backend/agent-rag/data/tzuyang/*
+
+# Explicitly ignore heavy folders (just in case)
+**/frames/
+**/video_cache/
+**/temp_video/
+**/thumbnails/

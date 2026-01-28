@@ -122,9 +122,12 @@ else
     git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
     git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
     
-    # Ensure Frames and Thumbnails are NOT added
-    git reset backend/restaurant-crawling/data/*/frames 2>/dev/null || true
-    git reset backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
+    # [Change] Use 'git rm --cached' to completely untrack large folders from the repo
+    # This prevents them from reappearing even if they exist locally
+    git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
+    git rm -r --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
+    git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
+    git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
     
     # Add everything else normally
     git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
