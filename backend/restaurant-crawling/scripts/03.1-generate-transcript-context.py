@@ -315,7 +315,7 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="llama3.2",
+        default="cookieshake/a.x-4.0-light-imatrix:Q8_0",
         help="Ollama model name",
     )
     parser.add_argument(

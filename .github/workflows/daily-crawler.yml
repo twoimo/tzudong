@@ -27,6 +27,16 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      - name: Create Swap Space (12GB)
+        run: |
+          # Free Disk Space 액션 덕분에 공간이 확보되었으므로 스왑 생성 가능
+          sudo fallocate -l 12G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          echo "✅ Swap Created:"
+          free -h
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -130,9 +140,9 @@ jobs:
           done
           echo "✅ Ollama server is ready!"
           
-          echo "Pulling model 'llama3.2'..."
+          echo "Pulling model 'cookieshake/a.x-4.0-light-imatrix:Q8_0'..."
           # 모델 Pull (시간이 좀 걸릴 수 있음)
-          ollama pull llama3.2
+          ollama pull cookieshake/a.x-4.0-light-imatrix:Q8_0
           echo "✅ Model pulled successfully!"
 
       - name: Configure Git
