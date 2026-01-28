@@ -111,6 +111,17 @@ else
     git stash pop 2>&1 | tee -a "$LOG_FILE"
     
     # 다시 Add & Commit
+    # Force add ignored data files (Maintain data in 'data' branch)
+    git add -f backend/restaurant-crawling/data/*/transcript/*.jsonl 2>/dev/null || true
+    git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
+    git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
+    git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
+    
+    # Ensure Frames and Thumbnails are NOT added
+    git reset backend/restaurant-crawling/data/*/frames 2>/dev/null || true
+    git reset backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
+    
+    # Add everything else normally
     git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
     
     COMMIT_MSG="chore(data): update crawling data ($DATE)"
