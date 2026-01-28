@@ -165,8 +165,8 @@ else
     git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
     git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
     
-    # 나머지 모든 변경사항 추가
-    git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+    # 나머지 모든 변경사항 추가 (삭제 포함)
+    git add -A backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
     
     COMMIT_MSG="chore(data): update crawling data ($DATE)"
     git commit -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"
