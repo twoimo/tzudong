@@ -403,7 +403,7 @@ def main():
         meta_path = meta_dir / f"{video_id}.jsonl"
         metadata = get_matching_metadata(str(meta_path), transcript_recollect_id)
         if not metadata:
-            print(f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id})")
+            print(f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}")
             error_count += 1
             continue
 
