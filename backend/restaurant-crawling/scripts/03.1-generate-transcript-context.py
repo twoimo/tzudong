@@ -403,16 +403,25 @@ def main():
         meta_path = meta_dir / f"{video_id}.jsonl"
         metadata = get_matching_metadata(str(meta_path), transcript_recollect_id)
         if not metadata:
-            print(f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}")
-            
+            print(
+                f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}"
+            )
+
             # [Fix] 메타데이터가 없으면 트랜스크립트 파일 삭제 (재수집 유도)
             try:
                 os.remove(data_path)
-                print(f"🗑️ [Auto-Correction] 고아 트랜스크립트 파일 삭제됨: {video_id} (재수집 대기)")
+                print(
+                    f"🗑️ [Auto-Correction] 고아 트랜스크립트 파일 삭제됨: {video_id} (재수집 대기)"
+                )
             except Exception as e:
                 print(f"❌ 파일 삭제 실패: {e}")
-                
+
             error_count += 1
+            continue
+
+        # [Filter] Shorts 영상 필터링 (is_shorts=true면 스킵)
+        if metadata.get("is_shorts"):
+            skipped_count += 1
             continue
 
         # 처리
