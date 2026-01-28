@@ -368,9 +368,55 @@ def main():
     skipped_count = 0
     error_count = 0
 
-    print(f"🚀 총 {len(transcript_paths)}개 영상 처리를 시작합니다. (CI 로그 출력 주기: 10개)", flush=True)
+    # [Smart Filter] 처리 대상 영상 미리 선별
+    print("🔍 [Smart Filter] 처리 대상을 선별 중입니다...", flush=True)
+    pending_paths = []
+    
+    for data_path in tqdm(transcript_paths, desc="Scanning"):
+        video_id = os.path.basename(data_path).split(".")[0]
+        
+        # 1. 트랜스크립트 데이터 확인
+        t_data = read_jsonl(data_path)
+        if not t_data:
+            continue
+        t_recollect_id = t_data.get("recollect_id", 0)
 
-    for idx, data_path in enumerate(tqdm(transcript_paths, desc="Generating context")):
+        # 2. 메타데이터 (Shorts 필터링)
+        meta_path = meta_dir / f"{video_id}.jsonl"
+        # 메타 없으면 -> 메인 루프에서 자동삭제 처리하므로 pending에 포함시켜야 함 (main 로직 유지)
+        if not meta_path.exists():
+            pending_paths.append(data_path)
+            continue
+            
+        try:
+            m_data = read_jsonl(str(meta_path))
+            if m_data and m_data.get("is_shorts"):
+                skipped_count += 1
+                continue
+        except:
+             # 읽기 에러 시 메인 로직에 맡김
+             pending_paths.append(data_path)
+             continue
+
+        # 3. 기존 문맥 확인 (Skip 여부)
+        doc_path = output_dir / f"{video_id}.jsonl"
+        existing_recollect_id = get_latest_doc_recollect_id(str(doc_path))
+        
+        if existing_recollect_id is not None:
+            if t_recollect_id <= existing_recollect_id:
+                skipped_count += 1
+                continue # 이미 처리됨
+                
+        # 여기까지 오면 처리 대상
+        pending_paths.append(data_path)
+
+    print(f"✅ 스캔 완료: 총 {len(transcript_paths)}개 중 {len(pending_paths)}개 처리 예정 (이미 완료/Shorts: {len(transcript_paths) - len(pending_paths)}개)")
+    print("=" * 60)
+
+    print(f"🚀 총 {len(pending_paths)}개 영상 처리를 시작합니다. (CI 로그 출력 주기: 10개)", flush=True)
+
+    # pending_paths만 순회
+    for idx, data_path in enumerate(tqdm(pending_paths, desc="Generating context")):
         # 최대 처리 수 제한 체크
         if args.max_videos > 0 and processed_count >= args.max_videos:
             print(f"🛑 최대 처리 한도({args.max_videos}개) 도달로 중단합니다.", flush=True)

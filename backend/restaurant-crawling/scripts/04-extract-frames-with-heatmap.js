@@ -1442,33 +1442,64 @@ async function processBatch(params) {
 
     log('info', `총 ${urls.length}개 URL 발견`);
 
-    let processedCount = 0;
+    // [Smart Filter] 처리 대상 영상 미리 선별
+    console.log(`\n🔍 [Smart Filter] 처리 대상을 선별 중입니다...`);
+    const pendingUrls = [];
+
+    // 진행바 처럼 점찍기
     let skippedCount = 0;
+    let scanCount = 0;
+    process.stdout.write('Scanning: ');
 
     for (const url of urls) {
+        scanCount++;
+        if (scanCount % 50 === 0) process.stdout.write('.');
+
         const videoId = extractVideoId(url);
         if (!videoId) continue;
-
         if (deletedIds.has(videoId)) {
-            // log('info', `[스킵] ${videoId} (삭제된 영상)`);
             skippedCount++;
             continue;
         }
 
-        if (shouldCollect(channel, videoId, params)) { // [수정] params 객체 전달
-            log('info', `\n--- [${processedCount + 1}] 처리 시작: ${videoId} ---`);
-            params.url = url; // 현재 URL 설정
-            const downloadPerformed = await processSingleVideo(videoId, params);
-            processedCount++;
-
-            // [변경] 다운로드가 실제로 수행되었을 때만 대기 (캐시 사용 시 즉시 진행)
-            if (downloadPerformed) {
-                // [수정] 사용자 요청으로 대기 시간 최소화 (1초)
-                await new Promise(r => setTimeout(r, 1000));
-            }
+        // shouldCollect가 true인 것만 담기
+        // 주의: shouldCollect 내부 로깅이 너무 많으면 시끄러울 수 있으므로,
+        // 필요하다면 shouldCollect 호출 시 silent 옵션을 추가하거나 해야 하지만,
+        // 일단 현재 로직 그대로 사용 (중요 로그만 나오므로)
+        // 단, shouldCollect가 'info' 로그를 찍으므로 스캔 중에 로그가 섞일 수 있음.
+        // 여기서는 일단 진행
+        if (shouldCollect(channel, videoId, params)) {
+            pendingUrls.push(url);
         } else {
             skippedCount++;
-            // log('info', `[스킵] ${videoId} (수집 조건 미달)`);
+        }
+    }
+    process.stdout.write('\n');
+
+    log('info', `✅ 스캔 완료: 총 ${urls.length}개 중 ${pendingUrls.length}개 처리 예정 (건너뜀: ${skippedCount}개)`);
+
+    if (pendingUrls.length === 0) {
+        log('info', `✨ 처리할 대상이 없습니다.`);
+        return;
+    }
+
+    processedCount = 0; // 리셋 (실제 처리 수)
+
+    for (const url of pendingUrls) {
+        const videoId = extractVideoId(url);
+        // shouldCollect는 위에서 이미 했으므로 생략 가능하지만, 
+        // 안전을 위해 더블 체크 하거나 그냥 진행. 
+        // 위에서 체크했으니 바로 진행.
+
+        log('info', `\n--- [${processedCount + 1}/${pendingUrls.length}] 처리 시작: ${videoId} ---`);
+        params.url = url; // 현재 URL 설정
+        const downloadPerformed = await processSingleVideo(videoId, params);
+        processedCount++;
+
+        // [변경] 다운로드가 실제로 수행되었을 때만 대기 (캐시 사용 시 즉시 진행)
+        if (downloadPerformed) {
+            // [수정] 사용자 요청으로 대기 시간 최소화 (1초)
+            await new Promise(r => setTimeout(r, 1000));
         }
     }
 

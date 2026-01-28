@@ -213,16 +213,23 @@ process_channel() {
         return 0
     fi
     
-    # URL 목록 읽기
-    local URLS=()
-    while IFS= read -r line || [ -n "$line" ]; do
-        [ -n "$line" ] && URLS+=("$line")
-    done < "$urls_file"
+    # [Smart Filter] 파이썬 스크립트로 처리 대상(Pending) URL만 가져오기
+    log_info "🔍 [Smart Filter] 처리 대상 영상 선별 중... (scripts/tool_get_pending_crawling.py)"
+    
+    # tool_get_pending_crawling.py 실행
+    # stderr는 화면에 나오고, stdout만 URLS 배열로 로드
+    mapfile -t URLS < <(python3 "$SCRIPT_DIR/tool_get_pending_crawling.py" --channel "$channel")
+    
     local TOTAL=${#URLS[@]}
     
-    log_info "총 URL: $TOTAL 개"
+    if [ $TOTAL -eq 0 ]; then
+        log_success "✨ 처리할 대상이 없습니다 (모두 처리됨)"
+        return 0
+    fi
+
+    log_info "✅ 선별 완료: 총 $TOTAL 개 처리 예정"
     
-    # 통계 변수
+    # 통계 변수 (여기서부터는 실제 시도하는 것들임)
     local PROCESSED=0
     local SUCCESS=0
     local FAILED=0
@@ -232,7 +239,7 @@ process_channel() {
     local GEMINI_CALLS=0
     local TOTAL_GEMINI_TIME=0
 
-    # deleted_urls.txt 로드 (ID만 추출하여 임시 파일에 저장)
+    # deleted_urls.txt 로드 (ID만 추출하여 임시 파일에 저장) - 이미 파이썬에서 걸러지지만 더블 체크용 유지
     local DELETED_IDS_FILE="$full_data_path/deleted_ids.temp"
     if [ -f "$full_data_path/deleted_urls.txt" ]; then
         awk -F'\t' '{print $1}' "$full_data_path/deleted_urls.txt" | sed -n 's/.*v=\([^&]*\).*/\1/p' > "$DELETED_IDS_FILE"

@@ -406,7 +406,43 @@ def collect_channel_meta(
 
     success_count = 0
     
+    # [Smart Filter] 오늘 이미 수집된 영상은 API 요청 목록에서 제외 (Quota 절약)
+    # --force 옵션이 없다고 가정 (args는 main parsing) - 함수 인자로 전달 안됨.
+    # 하지만 collect_channel_meta 호출부 구조상 args 전역 접근이 어려우므로,
+    # 여기서 force 여부를 알기 어렵다면 안전하게 "변경"은 감지해야 함.
+    # 그러나 사용자 요청은 "오늘 했으면 패스"임.
+    # 이미 430라인 근처에 "오늘 이미 수집됨 (스킵)" 로직이 있지만, 이는 API 호출 후 체크함.
+    # 여기서 미리 체크하여 batch_ids에 아예 안 넣는 것이 목표.
+    
+    pending_ids = []
+    today_str = datetime.now(KST).date().isoformat()
+    
+    skipped_today_count = 0
+    
+    for vid in video_ids:
+        meta = get_latest_meta(channel_path, vid)
+        if meta and meta.get("collected_at"):
+            try:
+                last_collected_str = meta.get("collected_at")
+                last_dt = datetime.fromisoformat(last_collected_str.replace("Z", "+00:00")).astimezone(KST)
+                if last_dt.date().isoformat() == today_str:
+                    skipped_today_count += 1
+                    continue # 오늘 이미 수집됨 -> 리스트 제외
+            except:
+                pass
+        pending_ids.append(vid)
+
+    if skipped_today_count > 0:
+        logger.info(f"  ⏭️ [Smart Skip] {skipped_today_count}개 영상은 오늘 이미 수집되어 건너뜁니다.")
+
+    video_ids = pending_ids
+    
+    if not video_ids:
+        logger.info("  ✨ 수집할 대상이 없습니다 (모두 최신 상태)")
+        return {"processed": 0, "success": success_count}
+
     # 배치 처리
+
     BATCH_SIZE = 50
     for i in range(0, len(video_ids), BATCH_SIZE):
         batch_ids = video_ids[i:i+BATCH_SIZE]
