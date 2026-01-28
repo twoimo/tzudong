@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
-import json
+
 import argparse
 from pathlib import Path
 
@@ -12,43 +12,7 @@ SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent # tzudong
 DATA_ROOT = PROJECT_ROOT / "backend" / "restaurant-crawling" / "data"
 
-def get_channel_config(config_path, channel_name):
-    # 간단한 YAML 파싱 (PyYAML 의존성 제거를 위해 직접 파싱하지 않고 구조만 가정)
-    # 하지만 여기서는 경로 규칙이 이미 정해져 있으므로 하드코딩된 규칙 사용
-    # 실제로는 channel_name이 곧 폴더명인 경우가 많음 (tzuyang, manual 등)
-    # 예외: meatcreator -> meatcreator (설정 파일에 따르지만 여기선 폴더명으로 가정)
-    return DATA_ROOT / channel_name
 
-def load_jsonl(path):
-    data = []
-    if not path.exists():
-        return data
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    try:
-                        data.append(json.loads(line))
-                    except:
-                        pass
-    except:
-        pass
-    return data
-
-def get_latest_recollect_id(path):
-    if not path.exists():
-        return 0
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            if lines:
-                last_line = lines[-1].strip()
-                if last_line:
-                    data = json.loads(last_line)
-                    return data.get('recollect_id', 0)
-    except:
-        pass
-    return 0
 
 def extract_video_id(url):
     if "v=" in url:
