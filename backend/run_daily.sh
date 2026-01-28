@@ -62,6 +62,10 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzu
 log "[$(date)] [Step 2] 메타데이터 수집 및 스케줄링..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
+# 2.5. 고아 파일 사전 정리 (Auto-Healing Pre-check)
+log "[$(date)] [Step 2.5] 고아 파일 사전 정리..."
+$PYTHON_CMD backend/restaurant-crawling/scripts/99-cleanup-orphans.py 2>&1 | tee -a "$LOG_FILE"
+
 # 3. 자막 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 3] 자막 수집 중..."
 node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
@@ -73,10 +77,6 @@ log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
 # CI 환경(CPU) 고려하여 한 번에 최대 5개 영상만 처리하도록 제한 (속도 문제)
 # [Fix] 1회 실행 시 최대 10개만 처리 (타임아웃/멈춤 방지)
 $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos 10 2>&1 | tee -a "$LOG_FILE"
-
-# 3.2. 자막 재수집 (3.1에서 삭제된 고아 파일 즉시 복구)
-log "[$(date)] [Step 3.2] 자막 재수집 (Auto-Healing)..."
-node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
 # 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..."
