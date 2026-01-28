@@ -1242,10 +1242,23 @@ async function processSingleVideo(videoId, params) {
 
             // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
             // 주의: 모든 확장자 처리가 끝난 후 삭제해야 함
-            if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
+            if (params.deleteCache) {
+                // 1. 현재 사용한 videoPath 삭제 (tempDir에 있는 경우 finally에서 삭제되지만, 여기서 명시적으로 해도 됨)
+                // (이미 tempDir 정리는 finally에 있으므로 패스)
+
+                // 2. 캐시 디렉토리에 복사된 파일 삭제 (중요: downloadVideo에서 복사해둠)
                 try {
-                    fs.unlinkSync(videoPath);
-                    log('info', `[Clean] 비디오 캐시 파일 삭제 완료: ${toRelativePath(videoPath)}`);
+                    const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
+                    // 정확한 파일명을 모르므로 videoId로 시작하는 파일 찾기 (확장자 무관)
+                    const targetCacheFiles = cacheFiles.filter(f => f.startsWith(videoId + '.'));
+                    
+                    for (const f of targetCacheFiles) {
+                        const targetPath = path.join(VIDEO_CACHE_DIR, f);
+                        if (fs.existsSync(targetPath)) {
+                            fs.unlinkSync(targetPath);
+                            log('info', `[Clean] 비디오 캐시 파일 삭제 완료: ${toRelativePath(targetPath)}`);
+                        }
+                    }
 
                     // 폴더가 비었으면 폴더도 삭제
                     if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {

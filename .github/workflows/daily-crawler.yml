@@ -15,6 +15,17 @@ jobs:
     
     steps:
 
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # 우분투 기본 이미지에서 불필요한 패키지 삭제
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
 
       - name: Checkout repository
         uses: actions/checkout@v4
