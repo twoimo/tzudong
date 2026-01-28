@@ -85,6 +85,39 @@ log "[$(date)] [Step 6.1] 자막 문서 메타데이터 추가 중..."
 # Supabase 연결 실패 시 스킵됨 (스크립트 내 처리)
 $PYTHON_CMD backend/restaurant-crawling/scripts/06.1-transcript-document-with-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
+# 6.2. 메타데이터 마이그레이션 (Supabase용)
+log "[$(date)] [Step 6.2] Meta Migrating to Supabase..."
+$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+
+# 10. 평가 대상 선정
+log "[$(date)] [Step 10] Target Selection..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/10-target-selection.py --channel tzuyang \
+  --crawling-path backend/restaurant-crawling/data/tzuyang \
+  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+
+# 8. Rule 기반 평가 (위치/상호 검증)
+log "[$(date)] [Step 8] Rule Evaluation..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/08-rule-evaluation.py --channel tzuyang \
+  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+
+# 9. LAAJ (LLM) 기반 평가
+log "[$(date)] [Step 9] LAAJ Evaluation..."
+# 주의: --crawling-path는 채널명까지 포함된 상세 경로여야 함
+bash backend/restaurant-evaluation/scripts/09-laaj-evaluation.sh --channel tzuyang \
+  --crawling-path backend/restaurant-crawling/data/tzuyang \
+  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+
+# 11. 결과 변환 (Transforms)
+log "[$(date)] [Step 11] Transform Results..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/11-transform.py --channel tzuyang \
+  --crawling-path backend/restaurant-crawling/data/tzuyang \
+  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+
+# 12. Supabase 결과 삽입
+log "[$(date)] [Step 12] Insert to Supabase..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/12-supabase-insert.py --channel tzuyang \
+  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+
 log "============================================================"
 log "[$(date)] ✅ 일일 데이터 수집 파이프라인 완료"
 log "============================================================"
@@ -116,27 +149,27 @@ else
     git stash pop 2>&1 | tee -a "$LOG_FILE"
     
     # 다시 Add & Commit
-    # Force add ignored data files (Maintain data in 'data' branch)
+    # 무시된(ignored) 데이터 파일 강제 추가 ('data' 브랜치 내 데이터 유지 목적)
     git add -f backend/restaurant-crawling/data/*/transcript/*.jsonl 2>/dev/null || true
     git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
     git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
     git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
     git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
     
-    # [Change] Use 'git rm --cached' to completely untrack large folders from the repo
-    # This prevents them from reappearing even if they exist locally
+    # [변경] 'git rm --cached'를 사용하여 대용량 폴더를 저장소 추적에서 완전히 제외
+    # 로컬에 존재하더라도 레포지토리에 다시 나타나지 않도록 방지
     git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
     git rm -r --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
     git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
     git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
     
-    # Add everything else normally
+    # 나머지 모든 변경사항 추가
     git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
     
     COMMIT_MSG="chore(data): update crawling data ($DATE)"
     git commit -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"
     
-    # [Modify] Pull latest changes with rebase to avoid conflicts with manual updates
+    # [수정] 원격 변경사항을 Rebase로 가져와 수동 업데이트와 충돌 방지
     log "[$(date)] 🔄 원격 변경사항 확인 및 Rebase..."
     git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"
     
@@ -149,7 +182,7 @@ else
         log "[$(date)] ❌ data 브랜치 푸시 실패"
     fi
      
-    # 원래 브랜치(develop)로 복귀 (로컬 실행 시 편의 위해 - CI에서는 굳이 안 해도 됨)
+    # 원래 브랜치(develop)로 복귀 (로컬 실행 시 편의 위해 - CI에서는 필수는 아님)
     git checkout develop 2>&1 | tee -a "$LOG_FILE"
 fi
 
@@ -372,7 +405,6 @@ cat <<EOF >> "$SUMMARY_MD"
 |             |                       |                             |                                   |
 |             v                       v                             v                                   |
 |     [Step 3: Transcript]    [Step 4: Frames/Heatmap]      [Step 6: Gemini]                            |
-|     (Puppeteer)             (Meta Triggered)              (New Video/Meta)                            |
 |             |                       |                             |                                   |
 |             |               < GDrive Cache Exists? >              |                                   |
 |             |               / (Yes)           (No) \              |                                   |
@@ -391,6 +423,7 @@ cat <<EOF >> "$SUMMARY_MD"
 |                         v                                                                             |
 |             [Step 7: Commit & Push] --(Git Push)--> [Remote Branch: data]                             |
 |                                                                                                       |
+393:                                                                                                       |
 +-----------------------------------+-------------------------------------------------------------------+
 |  📝 예시 (Examples)               |                                                                   |
 |  - 신규 영상: 새로운 영상 발견 시 -> 즉시 전체 단계(메타/자막/프레임/분석) 실행                       |
@@ -402,5 +435,3 @@ cat <<EOF >> "$SUMMARY_MD"
 +-------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
-
-

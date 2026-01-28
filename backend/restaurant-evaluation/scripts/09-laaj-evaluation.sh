@@ -129,6 +129,17 @@ if [ ! -d "$RULE_RESULTS_DIR" ]; then
     exit 1
 fi
 
+# GEMINI_API_KEY 확인
+if [ -z "$GEMINI_API_KEY" ]; then
+    if [ -n "$GEMINI_API_KEY_BYEON" ]; then
+        export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
+        log_success "GEMINI_API_KEY 설정 완료 (from GEMINI_API_KEY_BYEON)"
+    else
+        log_error "GEMINI_API_KEY 환경변수가 설정되지 않았습니다"
+        exit 1
+    fi
+fi
+
 # Gemini CLI 확인
 if ! command -v gemini &> /dev/null; then
     log_error "Gemini CLI 미설치"
@@ -324,23 +335,77 @@ $TRANSCRIPT
     
     echo "$PROMPT" > "$TEMP_PROMPT"
     
-    # Gemini CLI 호출
+    # Gemini API 호출 (1차: Node.js SDK -> 2차: CLI Fallback)
     GEMINI_START=$(date +%s)
     GEMINI_SUCCESS=false
     
-    log_debug "Gemini 모델: $CURRENT_MODEL"
-    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+    GEMINI_API_SCRIPT="$TEMP_DIR/gemini_api_request.mjs"
+    
+    # Node.js 스크립트 동적 생성 (Inline)
+    cat << 'EOF' > "$GEMINI_API_SCRIPT"
+import fs from 'fs';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+async function main() {
+    const args = process.argv.slice(2);
+    if (args.length < 2) {
+        console.error('Usage: node gemini_api_request.js <prompt_file> <output_file>');
+        process.exit(1);
+    }
+
+    const promptFile = args[0];
+    const outputFile = args[1];
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        console.error('Error: GEMINI_API_KEY environment variable not set.');
+        process.exit(1);
+    }
+
+    try {
+        const prompt = fs.readFileSync(promptFile, 'utf8');
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const modelName = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
+        const model = genAI.getGenerativeModel({ model: modelName });
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        fs.writeFileSync(outputFile, text);
+        process.exit(0);
+
+    } catch (error) {
+        console.error(`Gemini API Error: ${error.message}`);
+        process.exit(1);
+    }
+}
+
+main();
+EOF
+
+    log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
+    if node "$GEMINI_API_SCRIPT" "$TEMP_PROMPT" "$TEMP_RESPONSE"; then
         GEMINI_SUCCESS=true
+        log_debug "Gemini API 호출 성공"
     else
-        # rate limit 확인 및 fallback
-        ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
-        if [ -f "$ERROR_REPORT" ] && grep -q "exhausted your daily quota\|rate\|limit\|429" "$ERROR_REPORT" 2>/dev/null; then
-            if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
-                log_warning "$PRIMARY_MODEL 할당량 소진 - $FALLBACK_MODEL 으로 전환"
-                CURRENT_MODEL="$FALLBACK_MODEL"
-                sleep 12
-                if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
-                    GEMINI_SUCCESS=true
+        log_warning "Gemini API 호출 실패 (CLI Fallback 시도)"
+        
+        # 2차 시도: Gemini CLI
+        log_debug "Gemini CLI 모델: $CURRENT_MODEL"
+        if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+            GEMINI_SUCCESS=true
+        else
+            # rate limit 확인 및 fallback
+            ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
+            if [ -f "$ERROR_REPORT" ] && grep -q "exhausted your daily quota\|rate\|limit\|429" "$ERROR_REPORT" 2>/dev/null; then
+                if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
+                    log_warning "$PRIMARY_MODEL 할당량 소진 - $FALLBACK_MODEL 으로 전환"
+                    CURRENT_MODEL="$FALLBACK_MODEL"
+                    sleep 12
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                        GEMINI_SUCCESS=true
+                    fi
                 fi
             fi
         fi

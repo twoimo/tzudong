@@ -159,6 +159,11 @@ jobs:
           # Supabase 설정 (06.1 스크립트용)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Naver & NCP API (08-rule-evaluation.py)
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+          NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
+          NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
           # RClone 설정 (Base64 인코딩된 문자열을 Env로 전달 -> 스크립트에서 파일로 복원)
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
           # GDrive 원격 경로 (영상 캐시 경로)
