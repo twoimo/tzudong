@@ -9,25 +9,25 @@ Merged from: tool_get_pending_crawling.py + parse_result.py
 
 import json
 import sys
-import os
 import argparse
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set
 
 # ==============================================================================
 # [CMD] scan: Pending Logic
 # ==============================================================================
 
 def extract_video_id(url: str) -> Optional[str]:
+    """YouTube URL에서 video_id 추출"""
     if "v=" in url:
         return url.split("v=")[1].split("&")[0]
     elif "youtu.be/" in url:
         return url.split("youtu.be/")[1].split("?")[0]
     return None
 
-def scan_pending(args):
+def scan_pending(args: argparse.Namespace) -> None:
     """
-    크롤링 대상(Pending) URL 스캔
+    크롤링 대상(Pending) URL 스캔하여 stdout으로 출력
     """
     # 경로 설정 (backend/restaurant-crawling/scripts/parse_result.py 기준)
     SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -38,14 +38,16 @@ def scan_pending(args):
     urls_file = channel_dir / "urls.txt"
     
     if not urls_file.exists():
+        print(f"❌ URLs file not found: {urls_file}", file=sys.stderr)
         return
 
     # 1. URLs 로드
+    urls: List[str] = []
     with open(urls_file, 'r', encoding='utf-8') as f:
         urls = [line.strip() for line in f if line.strip()]
 
     # 2. 제외 필터 로드 (deleted_urls.txt)
-    deleted_ids = set()
+    deleted_ids: Set[str] = set()
     deleted_file = channel_dir / "deleted_urls.txt"
     if deleted_file.exists():
         with open(deleted_file, 'r', encoding='utf-8') as f:
@@ -54,7 +56,7 @@ def scan_pending(args):
                 if vid: deleted_ids.add(vid)
 
     # 3. 상태 확인
-    pending_urls = []
+    pending_urls: List[str] = []
     
     print(f"Scanning {len(urls)} videos for channel '{args.channel}'...", file=sys.stderr)
     
@@ -93,6 +95,7 @@ def scan_pending(args):
 
     print(f"Found {len(pending_urls)} pending videos.", file=sys.stderr)
     
+    # stdout으로 URL 출력 (Bash 배열로 로드됨)
     for url in pending_urls:
         print(url)
 
@@ -186,7 +189,7 @@ def save_to_jsonl(
     print(f"✅ 저장 완료: {len(restaurants)}개 음식점")
 
 
-def parse_result(args):
+def parse_result(args: argparse.Namespace) -> None:
     """
     Gemini 응답 파싱 및 저장 (Main Logic)
     """
