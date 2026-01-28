@@ -12,6 +12,12 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from datetime import datetime
+import warnings
+
+# 경고 억제 (LangChain, Pydantic Deprecation)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", module="langchain")
+warnings.filterwarnings("ignore", module="pydantic")
 
 # 스크립트 위치 기준 경로 설정
 SCRIPT_DIR = Path(__file__).parent.absolute()
@@ -345,7 +351,7 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="llama3.2:3b",
+        default="cookieshake/a.x-4.0-light-imatrix:Q8_0",
         help="Ollama model name",
     )
     parser.add_argument(
