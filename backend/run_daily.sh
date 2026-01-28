@@ -135,6 +135,10 @@ else
     COMMIT_MSG="chore(data): update crawling data ($DATE)"
     git commit -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"
     
+    # [Modify] Pull latest changes with rebase to avoid conflicts with manual updates
+    log "[$(date)] 🔄 원격 변경사항 확인 및 Rebase..."
+    git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"
+    
     # Push
     git push origin data 2>&1 | tee -a "$LOG_FILE"
     
