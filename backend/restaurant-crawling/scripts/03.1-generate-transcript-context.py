@@ -10,7 +10,7 @@ from tqdm import tqdm
 from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 from datetime import datetime
 
 # 스크립트 위치 기준 경로 설정

@@ -558,7 +558,9 @@ async function loadCookies() {
     return '';
 }
 
-async function fetchPage(url, cookieHeader) {
+async function fetchPage(url, cookieHeader, redirectCount = 0) {
+    if (redirectCount > 5) throw new Error('이동 횟수 초과 (Too many redirects)');
+
     const headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'en-US,en;q=0.9,ko;q=0.8',
@@ -567,6 +569,23 @@ async function fetchPage(url, cookieHeader) {
 
     return new Promise((resolve, reject) => {
         https.get(url, { headers }, (res) => {
+            // 리다이렉트 처리 (301, 302, 303, 307, 308)
+            if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+                let redirectUrl = res.headers.location;
+                // 상대 경로인 경우 처리
+                if (!redirectUrl.startsWith('http')) {
+                    const parsedUrl = new URL(url);
+                    redirectUrl = new URL(redirectUrl, parsedUrl.origin).toString();
+                }
+                log('info', `Redirecting to: ${redirectUrl} (Status: ${res.statusCode})`);
+
+                // 재귀 호출
+                fetchPage(redirectUrl, cookieHeader, redirectCount + 1)
+                    .then(resolve)
+                    .catch(reject);
+                return;
+            }
+
             if (res.statusCode !== 200) {
                 reject(new Error(`상태 코드 오류: ${res.statusCode}`));
                 return;

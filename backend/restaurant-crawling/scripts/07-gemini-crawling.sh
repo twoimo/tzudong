@@ -48,7 +48,11 @@ for env_file in "${ENV_FILES[@]}"; do
 done
 
 if [ "$ENV_LOADED" = false ]; then
-    echo "[$(date '+%H:%M:%S')] ⚠️ .env 파일을 찾지 못했습니다"
+    if [ -n "$GEMINI_API_KEY" ]; then
+        echo "[$(date '+%H:%M:%S')] ℹ️  .env 파일은 없지만 GEMINI_API_KEY 환경변수가 존재합니다 (CI/CD 환경 예상)"
+    else
+        echo "[$(date '+%H:%M:%S')] ⚠️ .env 파일을 찾지 못했습니다"
+    fi
 fi
 
 # Gemini 모델 설정
