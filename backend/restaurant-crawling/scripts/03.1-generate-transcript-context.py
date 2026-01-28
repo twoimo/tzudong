@@ -404,6 +404,14 @@ def main():
         metadata = get_matching_metadata(str(meta_path), transcript_recollect_id)
         if not metadata:
             print(f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}")
+            
+            # [Fix] 메타데이터가 없으면 트랜스크립트 파일 삭제 (재수집 유도)
+            try:
+                os.remove(data_path)
+                print(f"🗑️ [Auto-Correction] 고아 트랜스크립트 파일 삭제됨: {video_id} (재수집 대기)")
+            except Exception as e:
+                print(f"❌ 파일 삭제 실패: {e}")
+                
             error_count += 1
             continue
 

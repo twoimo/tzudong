@@ -121,6 +121,7 @@ else
     git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
     git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
     git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
+    git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
     
     # [Change] Use 'git rm --cached' to completely untrack large folders from the repo
     # This prevents them from reappearing even if they exist locally
