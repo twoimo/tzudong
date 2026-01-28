@@ -360,7 +360,9 @@ def main():
     args = parser.parse_args()
 
     # 환경 변수에서 OLLAMA_HOST 가져오기 (없으면 기본값)
-    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    ollama_host = os.environ.get("OLLAMA_HOST")
+    if not ollama_host:
+        ollama_host = "http://localhost:11434"
 
     # 연결 확인
     if not check_ollama_connection(ollama_host, args.model):
