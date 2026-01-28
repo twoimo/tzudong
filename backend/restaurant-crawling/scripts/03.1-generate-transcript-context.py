@@ -250,7 +250,7 @@ def process_video(
         print(f"⚠️ 자막 없음: {video_id}")
         return
 
-    full_transcript = "\n".join([seg["text"] for seg in transcript])
+    full_transcript = "\n".join([str(seg.get("text", "") or "") for seg in transcript])
     title = metadata["title"]
     channel_name = metadata.get("channel_name", "tzuyang")  # 기본값 tzuyang
     video_duration = metadata.get("duration")  # 영상 전체 길이 (초)
