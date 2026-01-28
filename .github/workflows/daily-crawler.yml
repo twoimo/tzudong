@@ -69,6 +69,7 @@ jobs:
           PUPPETEER_CACHE_DIR: /home/runner/.cache/puppeteer
         run: |
           npm install
+          sudo npm install -g @google/gemini-cli
 
       - name: Create credentials.json
         run: |

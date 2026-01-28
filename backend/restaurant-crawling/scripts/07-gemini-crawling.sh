@@ -476,7 +476,7 @@ EOF
                         sleep 12  # RPM 대기
                         # Gemini CLI 재호출
                         GEMINI_START=$(date +%s)
-                        if npx gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                        if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                             GEMINI_END=$(date +%s)
                             GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
                             TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
@@ -580,13 +580,13 @@ main() {
         exit 1
     fi
     
-    # Gemini CLI 확인 (npx 사용)
-    # if ! command -v gemini &> /dev/null; then
-    #     log_error "Gemini CLI 미설치. 'npm install -g @google/gemini-cli' 실행"
-    #     exit 1
-    # fi
+    # Gemini CLI 확인 (Global)
+    if ! command -v gemini &> /dev/null; then
+        log_error "Gemini CLI 미설치. 'npm install -g @google/gemini-cli' 실행"
+        exit 1
+    fi
     
-    log_success "Gemini CLI 확인 완료 (via npx)"
+    log_success "Gemini CLI 확인 완료"
     
     # GEMINI_API_KEY 확인
     if [ -z "$GEMINI_API_KEY" ]; then
