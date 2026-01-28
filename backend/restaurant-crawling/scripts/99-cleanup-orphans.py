@@ -1,26 +1,59 @@
 #!/usr/bin/env python3
 """
-Orphan Transcript Cleanup Script
+Orphan Transcript Cleanup Script (Deep Validation)
 - Scans `data/{channel}/transcript`
 - Checks if corresponding `data/{channel}/meta` file exists
-- Deletes transcript if meta is missing
+- [Deep Check] Checks if `recollect_id` in transcript matches any entry in meta
+- Deletes transcript if meta is missing OR version mismatch
 """
 
 import os
 import glob
+import json
 import argparse
 import sys
 from pathlib import Path
 
+def read_jsonl(data_path):
+    """JSONL 파일에서 가장 마지막(최신) 라인 읽기"""
+    try:
+        with open(data_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            if lines:
+                return json.loads(lines[-1])
+    except Exception as e:
+        # 파일 읽기 실패 시... 삭제하는 게 맞을까? 안전하게는 일단 무시하지만, 깨진 파일일 수도 있음.
+        # 여기서는 None 반환
+        return None
+    return None
+
+def has_matching_metadata(meta_path, recollect_id):
+    """메타데이터 파일에서 recollect_id가 일치하는 것이 있는지 확인"""
+    if not os.path.exists(meta_path):
+        return False
+        
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            # 최신부터 역순 검색
+            for line in reversed(lines):
+                if line.strip():
+                    try:
+                        meta = json.loads(line)
+                        if meta.get("recollect_id") == recollect_id:
+                            return True
+                    except:
+                        continue
+    except Exception:
+        return False
+    return False
+
 def main():
-    parser = argparse.ArgumentParser(description="Clean up orphan transcript files")
+    parser = argparse.ArgumentParser(description="Clean up orphan transcript files (Deep Check)")
     parser.add_argument("--channel", default="tzuyang", help="Channel name (folder name)")
     args = parser.parse_args()
 
     SCRIPT_DIR = Path(__file__).parent.resolve()
-    # Path resolution: script -> restaurant-crawling -> backend -> ... -> data/{channel}
-    # Current structure: backend/restaurant-crawling/scripts/99...py
-    # Data is at: backend/restaurant-crawling/data/
     DATA_ROOT = (SCRIPT_DIR / "../data").resolve()
     DATA_DIR = DATA_ROOT / args.channel
     
@@ -32,21 +65,39 @@ def main():
         return
 
     transcript_files = glob.glob(str(TRANSCRIPT_DIR / "*.jsonl"))
-    print(f"🔍 Scanning {len(transcript_files)} transcript files in '{args.channel}'...", file=sys.stderr)
+    print(f"🔍 Scanning {len(transcript_files)} transcript files in '{args.channel}' (Deep Validation)...", file=sys.stderr)
 
     orphans = []
+    
+    # [Deep Validation]
+    # 03.1 스크립트와 동일한 로직으로 검증
     for t_path in transcript_files:
         video_id = os.path.basename(t_path)
         meta_path = META_DIR / video_id
         
+        # 1. 메타 파일 존재 여부
         if not meta_path.exists():
+            orphans.append(t_path)
+            continue
+            
+        # 2. 내용 정합성 확인 (recollect_id 매칭)
+        t_data = read_jsonl(t_path)
+        if not t_data:
+            # 트랜스크립트 파일이 비었거나 깨짐 -> 삭제 대상
+            orphans.append(t_path)
+            continue
+            
+        t_recollect_id = t_data.get("recollect_id", 0)
+        
+        if not has_matching_metadata(str(meta_path), t_recollect_id):
+            # 메타 파일은 있지만, 해당 버전(recollect_id)과 일치하는 메타가 없음 -> 불일치(Orphan)
             orphans.append(t_path)
 
     if not orphans:
         print("✅ No orphan files found.", file=sys.stderr)
         return
 
-    print(f"⚠️ Found {len(orphans)} orphan files.", file=sys.stderr)
+    print(f"⚠️ Found {len(orphans)} orphan/mismatched files.", file=sys.stderr)
     
     deleted_count = 0
     failed_count = 0
