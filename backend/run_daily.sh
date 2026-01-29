@@ -290,6 +290,17 @@ FRAME_CNT=$(grep "\[Done\] 추출 완료" "$LOG_FILE" | awk '{sum+=$NF} END {pri
 if [ -z "$FRAME_CNT" ]; then FRAME_CNT=0; fi
 echo "| 🖼️ Frames | $FRAME_CNT | ✅ Extracted |" >> "$SUMMARY_MD"
 
+# GDrive & YouTube
+GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
+YOUTUBE_CNT=$(grep -c "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE")
+
+echo "| ☁️ GDrive Cache | $GDRIVE_CNT | ✅ Hits |" >> "$SUMMARY_MD"
+if [ "$YOUTUBE_CNT" -gt 0 ]; then
+    echo "| 📺 YouTube DL | **$YOUTUBE_CNT** | 🎉 Success |" >> "$SUMMARY_MD"
+else
+    echo "| 📺 YouTube DL | 0 | ➖ (Blocked) |" >> "$SUMMARY_MD"
+fi
+
 # 6. Gemini
 GEMINI_SUCCESS_LINE=""
 if grep -q "Gemini CLI 통계" "$LOG_FILE"; then
