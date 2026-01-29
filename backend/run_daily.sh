@@ -154,8 +154,8 @@ node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuy
 
 # 3.1. 자막 문맥 생성 (Ollama 활용)
 log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
-# [Fix] 1회 실행 시 최대 2개만 처리 (타임아웃 방지: 1개당 약 26분 소요 → 2개 약 52분)
-$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos 2 2>&1 | tee -a "$LOG_FILE"
+# [Fix] 1회 실행 시 최대 2개만 처리 (타임아웃 방지) -> 제한 해제
+$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py 2>&1 | tee -a "$LOG_FILE"
 
 # [Intermediate Sync] 자막/문맥 생성 완료 후 저장 (가장 중요)
 sync_data_to_remote "Step 3.1 (Context)"
