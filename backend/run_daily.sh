@@ -75,8 +75,8 @@ log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
 # OLLAMA_HOST 등 연결 실패 시 스킵됨 (스크립트 내 처리)
 # CI 환경(CPU) 고려하여 한 번에 최대 5개 영상만 처리하도록 제한 (속도 문제)
 # CI 환경(CPU) 고려하여 한 번에 최대 5개 영상만 처리하도록 제한 (속도 문제)
-# [Fix] 1회 실행 시 최대 5개만 처리 (타임아웃 방지: 1개당 약 26분 소요 → 5개 약 2.2시간)
-$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos 5 2>&1 | tee -a "$LOG_FILE"
+# [Fix] 1회 실행 시 최대 2개만 처리 (타임아웃 방지: 1개당 약 26분 소요 → 2개 약 52분)
+$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos 2 2>&1 | tee -a "$LOG_FILE"
 
 # 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..."
