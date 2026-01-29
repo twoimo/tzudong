@@ -67,7 +67,13 @@ sync_data_to_remote() {
         git checkout data || git checkout -b data origin/data || git checkout --orphan data 2>&1 | tee -a "$LOG_FILE"
         
         # Stash 적용
-        git stash pop 2>&1 | tee -a "$LOG_FILE"
+        if ! git stash pop 2>&1 | tee -a "$LOG_FILE"; then
+            log "⚠️ Stash pop 충돌 감지! 로컬 변경사항(Theirs)을 우선 적용합니다."
+            # 충돌 발생 시, Stash된 내용(새로 수집한 데이터)을 우선시
+            git checkout --theirs . 2>/dev/null || true
+            git add .
+            git stash drop || true
+        fi
         
         # 다시 Add & Commit
         # 무시된(ignored) 데이터 파일 강제 추가 ('data' 브랜치 내 데이터 유지 목적)
@@ -253,7 +259,9 @@ fi
 # Metadata
 if grep -q "메타데이터 수집" "$LOG_FILE"; then
     META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
-    META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //')
+    META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
+    # [Fix] 숫자만 추출 (sed로 '업데이트' 등 문자 제거)
+    META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //' | tr -cd '0-9')
     echo "| 📝 Metadata | $META_CNT | ✅ Updated |" >> "$SUMMARY_MD"
 else
     echo "| 📝 Metadata | - | ⚠️ Skipped/Fail |" >> "$SUMMARY_MD"
