@@ -279,6 +279,11 @@ echo "### Process Statistics" >> "$SUMMARY_MD"
 echo "| Step | Count | Status |" >> "$SUMMARY_MD"
 echo "|------|-------|--------|" >> "$SUMMARY_MD"
 
+# ANSI 색상 코드 제거 함수
+strip_ansi() {
+    sed 's/\x1b\[[0-9;]*m//g'
+}
+
 if [ -f "$LOG_FILE" ]; then
     # 1. URL
     if grep -q "URL 수집 중" "$LOG_FILE"; then
