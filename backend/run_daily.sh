@@ -157,9 +157,9 @@ log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
 # [Config] 실행 모드에 따른 배치 크기 제한 (Env: MAX_CONTEXT_VIDEOS -> Default: 0)
 MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
 if [ "$MAX_VIDEOS" -gt 0 ]; then
-    log "ℹ️ Context Generation Limit: $MAX_VIDEOS videos (Manual Trigger)"
+    log "ℹ️ Context Generation Limit: $MAX_VIDEOS videos (Configured)"
 else
-    log "ℹ️ Context Generation Limit: Unlimited (Schedule/Manual-Full)"
+    log "ℹ️ Context Generation Limit: Unlimited"
 fi
 $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
 

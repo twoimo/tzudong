@@ -180,8 +180,9 @@ jobs:
           OLLAMA_HOST: http://localhost:11434
           # CI 환경 플래그
           CI: true
-          # [Config] 자막 문맥 생성 배치 크기 (Manual: 2, Schedule: Unlimited)
-          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '0' }}
+          # [Config] 자막 문맥 생성 배치 크기 (Manual Default: 2, Schedule: 2)
+          # 스케줄 실행 시 inputs가 없으므로 '2'가 적용됨 (메모리 부족 방지)
+          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '2' }}
         run: |
           # 실행 권한 부여
           chmod +x backend/run_daily.sh
