@@ -49,6 +49,10 @@ description: Git commit, branch, and PR workflow conventions. Apply ONLY when ex
 
 - **Title**: `[Tag] message` (Same as commit message)
 - **Body Template** (Strictly in Korean):
+  > **⚠️ Windows/PowerShell Warning**: Do NOT use literal `\n` in the `--body` argument. It will print as `\n` text in the PR.
+  > - **Option 1 (Recommended)**: Write the body to a file (e.g., `pr_body.md`) and use `--body-file pr_body.md`.
+  > - **Option 2 (PowerShell)**: Use `` `n `` for newlines inside the string (e.g. `"Line 1`nLine 2"`).
+
   ```markdown
   ## 개요
   (변경 사항에 대한 간략한 설명)
@@ -85,12 +89,16 @@ description: Git commit, branch, and PR workflow conventions. Apply ONLY when ex
    - **IF Current Branch is `develop`**:
      - **Goal**: Release to Production.
      - **Action**:
-       - `gh pr create --base main --head develop --title "[Release] <Message>" --body "..."`
+       - Create a temporary body file (e.g. `body.md`)
+       - `gh pr create --base main --head develop --title "[Release] <Message>" --body-file body.md`
        - `gh pr merge <PR#> --merge` (Do NOT delete develop)
+       - `rm body.md`
    
    - **IF Current Branch is NOT `develop` (e.g. `feat/...`, `fix/...`, `chore/...`, `refactor/...`, etc.)**:
      - **Goal**: Merge to Development.
      - **Action**:
-       - `gh pr create --base develop --head <current-branch> --title "[Tag] <Message>" --body "..."`
+       - Create a temporary body file (e.g. `body.md`)
+       - `gh pr create --base develop --head <current-branch> --title "[Tag] <Message>" --body-file body.md`
        - `gh pr merge <PR#> --merge --delete-branch`
+       - `rm body.md`
        - *(Optional)*: If the user asked to "deploy" or "release" after this merge, proceed to **Scenario B** (develop -> main).
