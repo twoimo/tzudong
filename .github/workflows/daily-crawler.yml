@@ -21,17 +21,13 @@ jobs:
     
     steps:
 
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # 우분투 기본 이미지에서 불필요한 패키지 삭제
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+      - name: Free Disk Space (Manual Fast)
+        run: |
+          # Fast cleanup of unused large packages (saves ~3-5 mins compared to action)
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
 
       - name: Create Swap Space (12GB)
         run: |
@@ -46,7 +42,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Cache Puppeteer
         uses: actions/cache@v3
@@ -86,7 +82,7 @@ jobs:
         env:
           PUPPETEER_CACHE_DIR: /home/runner/.cache/puppeteer
         run: |
-          npm install
+          npm ci
           sudo npm install -g @google/gemini-cli
 
       - name: Create credentials.json
