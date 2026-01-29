@@ -239,12 +239,7 @@ strip_ansi() {
     sed 's/\x1b\[[0-9;]*m//g'
 }
 
-# 2. 상세 처리 통계
-echo "### 📊 Process Statistics" >> "$SUMMARY_MD"
-echo "| Step | Count | Status |" >> "$SUMMARY_MD"
-echo "|------|-------|--------|" >> "$SUMMARY_MD"
-
-# URL
+# 1. URL
 if grep -q "URL 수집 중" "$LOG_FILE"; then
     URL_LINE=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | strip_ansi)
     URL_CNT=$(echo "$URL_LINE" | sed 's/.*tzuyang: //')
@@ -254,19 +249,17 @@ else
     URL_LINE=""
 fi
 
-# Metadata
+# 2. Metadata
 if grep -q "메타데이터 수집" "$LOG_FILE"; then
     META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
-    META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
-    # [Fix] 숫자만 추출 (sed로 '업데이트' 등 문자 제거)
     META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //' | tr -cd '0-9')
     echo "| 📝 Metadata | $META_CNT | ✅ Updated |" >> "$SUMMARY_MD"
 else
     echo "| 📝 Metadata | - | ⚠️ Skipped/Fail |" >> "$SUMMARY_MD"
-    META_LINE=""
+    META_CNT="0"
 fi
 
-# Transcript
+# 3. Transcript
 TRANSCRIPT_CNT=$(grep "성공 [0-9]*개" "$LOG_FILE" | grep "자막 수집 완료" -A 1 | tail -n 1 | strip_ansi | sed 's/.*성공 //;s/개.*//')
 if [ -n "$TRANSCRIPT_CNT" ]; then
     echo "| 💬 Transcripts | $TRANSCRIPT_CNT | ✅ Saved |" >> "$SUMMARY_MD"
@@ -275,7 +268,15 @@ else
     TRANSCRIPT_CNT="0"
 fi
 
-# Heatmap
+# 3.1 Context Generation
+CONTEXT_CNT=$(grep -c "Context generation for .* completed" "$LOG_FILE")
+if [ "$CONTEXT_CNT" -gt 0 ]; then
+    echo "| 🧠 Contexts | $CONTEXT_CNT | ✅ Generated |" >> "$SUMMARY_MD"
+else
+    echo "| 🧠 Contexts | 0 | ➖ Skipped |" >> "$SUMMARY_MD"
+fi
+
+# 4. Heatmaps
 HEATMAP_CNT=$(grep -c "\[Heatmap Saved\]" "$LOG_FILE")
 if [ "$HEATMAP_CNT" -gt 0 ]; then
     echo "| 🔥 Heatmaps | $HEATMAP_CNT | ✅ Saved |" >> "$SUMMARY_MD"
@@ -283,29 +284,29 @@ else
     echo "| 🔥 Heatmaps | 0 | ➖ Skipped |" >> "$SUMMARY_MD"
 fi
 
-# Frames
+# 4. Frames
 FRAME_CNT=$(grep "\[Done\] 추출 완료" "$LOG_FILE" | awk '{sum+=$NF} END {print sum}' | strip_ansi | sed 's/장//')
 if [ -z "$FRAME_CNT" ]; then FRAME_CNT=0; fi
 echo "| 🖼️ Frames | $FRAME_CNT | ✅ Extracted |" >> "$SUMMARY_MD"
 
-# GDrive & YouTube
-GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
-YOUTUBE_CNT=$(grep -c "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE")
-
-echo "| ☁️ GDrive Cache | $GDRIVE_CNT | ✅ Hits |" >> "$SUMMARY_MD"
-if [ "$YOUTUBE_CNT" -gt 0 ]; then
-    echo "| 📺 YouTube DL | **$YOUTUBE_CNT** | 🎉 Success |" >> "$SUMMARY_MD"
-else
-    echo "| 📺 YouTube DL | 0 | ➖ (Blocked) |" >> "$SUMMARY_MD"
-fi
-
-# Gemini
+# 6. Gemini
 GEMINI_SUCCESS_LINE=""
 if grep -q "Gemini CLI 통계" "$LOG_FILE"; then
     GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
     GEMINI_SUCCESS=$(grep "성공:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
     GEMINI_SUCCESS_LINE="Calls: $GEMINI_CALLS / Success: $GEMINI_SUCCESS"
-    echo "| 🧠 Gemini Analysis | $GEMINI_SUCCESS | (Calls: $GEMINI_CALLS) |" >> "$SUMMARY_MD"
+    echo "| 🤖 Gemini Analysis | $GEMINI_SUCCESS | (Calls: $GEMINI_CALLS) |" >> "$SUMMARY_MD"
+else
+    echo "| 🤖 Gemini Analysis | - | ➖ Skipped |" >> "$SUMMARY_MD"
+fi
+
+# 12. Supabase
+SUPA_INSERTED=$(grep "삽입됨:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*삽입됨: //' | tr -cd '0-9')
+if [ -n "$SUPA_INSERTED" ]; then
+    SUPA_SKIPPED=$(grep "건너뜀 (중복):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*중복): //' | tr -cd '0-9')
+    echo "| 🗄️ DB Insert | $SUPA_INSERTED | (Skip: $SUPA_SKIPPED) |" >> "$SUMMARY_MD"
+else
+    echo "| 🗄️ DB Insert | - | ➖ Skipped |" >> "$SUMMARY_MD"
 fi
 
 echo "" >> "$SUMMARY_MD"
@@ -369,6 +370,20 @@ if [ "$YOUTUBE_CNT" -gt 0 ]; then
     echo "" >> "$SUMMARY_MD"
 fi
 
+if [ "$CONTEXT_CNT" -gt 0 ]; then
+    echo "**🧠 Context Generation**" >> "$SUMMARY_MD"
+    grep "Context generation for" "$LOG_FILE" | strip_ansi | sed 's/^/- /' >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
+if [ -n "$SUPA_INSERTED" ]; then
+    echo "**🗄️ Supabase Status**" >> "$SUMMARY_MD"
+    echo "- Inserted: $SUPA_INSERTED" >> "$SUMMARY_MD"
+    echo "- Skipped: $SUPA_SKIPPED" >> "$SUMMARY_MD"
+    grep "오류:" "$LOG_FILE" | strip_ansi | sed 's/^/- /' >> "$SUMMARY_MD"
+    echo "" >> "$SUMMARY_MD"
+fi
+
 echo "</details>" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
@@ -416,53 +431,26 @@ cat <<EOF >> "$SUMMARY_MD"
 |                                  🚀 TZUDONG DETAILED PIPELINE FLOW                                    |
 +-------------------------------------------------------------------------------------------------------+
 |                                                                                                       |
-|  [GitHub Actions Trigger]                                                                             |
-|             |                                                                                         |
-|             v                                                                                         |
-|  [Step 0: Sync 'data'] <--(Git Fetch)-- [Remote Branch: data]                                         |
-|             |                                                                                         |
-|             v                                                                                         |
-|     [Step 1: Collect URLs]                                                                            |
-|             |                                                                                         |
-|     < New URLs found? > ----(No)-----.                                                                |
-|             | (Yes)                  |                                                                |
-|             v                        |                                                                |
-|     [Step 2: Collect Meta]           |                                                                |
-|             |                        |                                                                |
-|     < Meta Changed / Scheduled? > --(No)--> [Skip Extraction]                                         |
-|             | (Yes: Daily[D+5~14] / Monthly[D+14+])                                  |
-|             |                                                                                         |
-|             +-----------------------+-----------------------------+                                   |
-|             |                       |                             |                                   |
-|             v                       v                             v                                   |
-|     [Step 3: Transcript]    [Step 4: Frames/Heatmap]      [Step 6: Gemini]                            |
-|             |                       |                             |                                   |
-|             |               < GDrive Cache Exists? >              |                                   |
-|             |               / (Yes)           (No) \              |                                   |
-|             |        [RClone DL]             [yt-dlp DL]          |                                   |
-|             |             |                       |               |                                   |
-|             |             \`--> [FFmpeg Extractor] <               |                                   |
-|             |                       |                             |                                   |
-|             v                       v                             v                                   |
-|    [transcript/*.jsonl]    [frames/*] [heatmap/*.jsonl]   [crawling/*.jsonl]                          |
-|             |                       |                             |                                   |
-|             +-----------+-----------+-----------------------------+                                   |
-|                         |                                                                             |
-|                         v                                                                             |
-|              < Any File Changes? > --(No)---> [End Job]                                               |
-|                         | (Yes: Modified/Untracked)                                                   |
-|                         v                                                                             |
-|             [Step 7: Commit & Push] --(Git Push)--> [Remote Branch: data]                             |
+|  [GitHub Actions] --> [Step 0: Sync] <--(Fetch)-- [Data Branch]                                       |
+|                             |                                                                         |
+|                             v                                                                         |
+|  [Step 1: URLs] --> [Step 2: Meta] --> [Step 2.5: Cleanup] ==(Save)==> [Commit]                       |
+|                             | (Scheduled)                                                             |
+|                             v                                                                         |
+|  [Step 3: Transcript] --> [Step 3.1: Context] ==(Save)==> [Commit]                                    |
+|                             |                                                                         |
+|                             v                                                                         |
+|  [Step 4: Frames/Heatmap] ==(Save)==> [Commit]                                                        |
+|                             |                                                                         |
+|                             v                                                                         |
+|  [Step 6: Gemini Analysis] --> [Step 6.1/6.2: Meta Enrichment]                                        |
+|                             |                                                                         |
+|                             v                                                                         |
+|  [Step 10: Target Selection] --> [Step 8: Rule Eval] --> [Step 9: LAAJ Eval]                          |
+|                             |                                                                         |
+|                             v                                                                         |
+|  [Step 11: Transform] --> [Step 12: Supabase Insert] --> [Step 7: Final Sync] ==(Push)==> [Remote]    |
 |                                                                                                       |
-393:                                                                                                       |
-+-----------------------------------+-------------------------------------------------------------------+
-|  📝 예시 (Examples)               |                                                                   |
-|  - 신규 영상: 새로운 영상 발견 시 -> 즉시 전체 단계(메타/자막/프레임/분석) 실행                       |
-|  - 메타 변경: 제목 수정 ("먹방" -> "매운 먹방") -> 전체 재수집 트리거                                 |
-|  - 스케줄링: 영상 업로드 7일 경과 -> 매일 수집 대상 (D+5~14 집중 포획)                    |
-|  - 캐시 히트: 'video_cache/-Az...mp4' 파일 존재 -> 다운로드 생략 (고속)                               |
-|  - Gemini 결과: {"식당": "김밥천국", "메뉴": "라면"} 정보 추출 완료                                   |
-|  - 데이터 푸시: 파일 변경/추가(Modified/Untracked) 감지 시 -> 'data' 브랜치 자동 배포                 |
 +-------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
