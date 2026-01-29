@@ -90,3 +90,5 @@ backend/agent-rag/data/tzuyang/*
 
 # Backend Logs
 backend/log/
+backend/job-logs.txt
+supabase/.temp/
