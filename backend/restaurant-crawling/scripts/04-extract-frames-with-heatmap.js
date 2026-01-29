@@ -1483,7 +1483,7 @@ async function processBatch(params) {
         return;
     }
 
-    processedCount = 0; // 리셋 (실제 처리 수)
+    let processedCount = 0; // 리셋 (실제 처리 수)
 
     for (const url of pendingUrls) {
         const videoId = extractVideoId(url);
