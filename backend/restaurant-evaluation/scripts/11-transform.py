@@ -660,6 +660,11 @@ def main():
                     except json.JSONDecodeError:
                         continue
 
+
+    # 결과 파일이 없으면 빈 파일 생성 (0건일 경우 대비)
+    if not output_file.exists():
+        output_file.touch()
+
     print(f"\n{'='*50}")
     print(f"✅ Transform 완료!")
     print(f"   총 파일: {stats['total_files']}개")

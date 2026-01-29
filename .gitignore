@@ -87,3 +87,6 @@ backend/agent-rag/data/tzuyang/*
 **/video_cache/
 **/temp_video/
 **/thumbnails/
+
+# Backend Logs
+backend/log/

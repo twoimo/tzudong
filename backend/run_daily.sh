@@ -72,8 +72,8 @@ sync_data_to_remote() {
         git checkout -- backend/package-lock.json 2>&1 | tee -a "$LOG_FILE"
         
         # 2. data 브랜치로 전환 (없으면 생성)
-        # Stash를 사용하여 변경사항을 들고 이동
-        git stash push -m "daily-crawler-stash" -- backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+        # Stash를 사용하여 모든 변경사항(Untracked 포함)을 임시 저장하여 충돌 방지
+        git stash push -u -m "daily-crawler-stash" 2>&1 | tee -a "$LOG_FILE"
         
         git fetch origin data 2>&1 | tee -a "$LOG_FILE"
         git checkout data || git checkout -b data origin/data || git checkout --orphan data 2>&1 | tee -a "$LOG_FILE"

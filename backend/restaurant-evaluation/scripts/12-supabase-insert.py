@@ -65,8 +65,13 @@ def main():
     input_file = evaluation_path / "evaluation" / "transforms.jsonl"
 
     if not input_file.exists():
-        print(f"❌ transforms 파일 없음: {input_file}")
-        sys.exit(1)
+        print(f"⚠️ transforms 파일 없음: {input_file} (데이터 없음으로 간주)")
+        # 0건 처리로 종료
+        print(f"\n{'='*50}")
+        print(f"✅ Supabase 삽입 완료! (SKIP)")
+        print(f"   총 레코드: 0개")
+        print(f"{'='*50}")
+        return
 
     print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 📂 입력 파일: {input_file}")
 
