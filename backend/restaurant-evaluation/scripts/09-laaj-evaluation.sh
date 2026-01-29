@@ -17,7 +17,7 @@ set -e
 # 환경 설정
 # ================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 PROMPT_FILE="$SCRIPT_DIR/../prompts/evaluation_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_laaj_evaluation.py"
 
