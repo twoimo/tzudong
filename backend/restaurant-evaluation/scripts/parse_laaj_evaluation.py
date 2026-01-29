@@ -89,7 +89,11 @@ def main():
 
     # 경로 설정
     script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent.parent
+    # script_dir is .../scripts
+    # parents[0]=scripts, parents[1]=restaurant-evaluation, parents[2]=backend, parents[3]=tzudong
+    # But script_dir is already parent.
+    # script_dir.parents[2] -> backend/.. -> tzudong
+    project_root = script_dir.parents[2]
     evaluation_path = project_root / args.evaluation_path
     laaj_results_dir = evaluation_path / "evaluation" / "laaj_results"
     laaj_results_dir.mkdir(parents=True, exist_ok=True)
