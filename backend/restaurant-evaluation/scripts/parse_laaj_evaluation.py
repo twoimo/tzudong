@@ -89,7 +89,7 @@ def main():
 
     # 경로 설정
     script_dir = Path(__file__).parent
-    project_root = script_dir.parent.parent
+    project_root = script_dir.parent.parent.parent
     evaluation_path = project_root / args.evaluation_path
     laaj_results_dir = evaluation_path / "evaluation" / "laaj_results"
     laaj_results_dir.mkdir(parents=True, exist_ok=True)
