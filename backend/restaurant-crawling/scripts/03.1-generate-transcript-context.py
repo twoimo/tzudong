@@ -223,7 +223,7 @@ def save_documents_for_video(
     os.makedirs(output_dir, exist_ok=True)
     filepath = os.path.join(output_dir, f"{video_id}.jsonl")
 
-    docs_data = [doc.dict() for doc in documents]
+    docs_data = [doc.model_dump() for doc in documents]
 
     with open(filepath, "a", encoding="utf-8") as f:
         f.write(json.dumps(docs_data, ensure_ascii=False) + "\n")
