@@ -279,90 +279,88 @@ echo "### Process Statistics" >> "$SUMMARY_MD"
 echo "| Step | Count | Status |" >> "$SUMMARY_MD"
 echo "|------|-------|--------|" >> "$SUMMARY_MD"
 
-# ANSI 색상 코드 제거 함수
-strip_ansi() {
-    sed 's/\x1b\[[0-9;]*m//g'
-}
+if [ -f "$LOG_FILE" ]; then
+    # 1. URL
+    if grep -q "URL 수집 중" "$LOG_FILE"; then
+        URL_LINE=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | strip_ansi)
+        URL_CNT=$(echo "$URL_LINE" | sed 's/.*tzuyang: //')
+        echo "| URLs | $URL_CNT | Collected |" >> "$SUMMARY_MD"
+    else
+        echo "| URLs | - | Error |" >> "$SUMMARY_MD"
+        URL_LINE=""
+    fi
 
-# 1. URL
-if grep -q "URL 수집 중" "$LOG_FILE"; then
-    URL_LINE=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | strip_ansi)
-    URL_CNT=$(echo "$URL_LINE" | sed 's/.*tzuyang: //')
-    echo "| URLs | $URL_CNT | Collected |" >> "$SUMMARY_MD"
+    # 2. Metadata
+    if grep -q "메타데이터 수집" "$LOG_FILE"; then
+        META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
+        META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //' | tr -cd '0-9')
+        echo "| Metadata | $META_CNT | Updated |" >> "$SUMMARY_MD"
+    else
+        echo "| Metadata | - | Skipped/Fail |" >> "$SUMMARY_MD"
+        META_CNT="0"
+    fi
+
+    # 3. Transcript
+    TRANSCRIPT_CNT=$(grep "성공 [0-9]*개" "$LOG_FILE" | grep "자막 수집 완료" -A 1 | tail -n 1 | strip_ansi | sed 's/.*성공 //;s/개.*//')
+    if [ -n "$TRANSCRIPT_CNT" ]; then
+        echo "| Transcripts | $TRANSCRIPT_CNT | Saved |" >> "$SUMMARY_MD"
+    else
+        echo "| Transcripts | 0 | Skipped |" >> "$SUMMARY_MD"
+        TRANSCRIPT_CNT="0"
+    fi
+
+    # 3.1 Context Generation
+    CONTEXT_CNT=$(grep -c "Context generation for .* completed" "$LOG_FILE")
+    if [ "$CONTEXT_CNT" -gt 0 ]; then
+        echo "| Contexts | $CONTEXT_CNT | Generated |" >> "$SUMMARY_MD"
+    else
+        echo "| Contexts | 0 | Skipped |" >> "$SUMMARY_MD"
+    fi
+
+    # 4. Heatmaps
+    HEATMAP_CNT=$(grep -c "Heatmap saved" "$LOG_FILE")
+    if [ "$HEATMAP_CNT" -gt 0 ]; then
+        echo "| Heatmaps | $HEATMAP_CNT | Saved |" >> "$SUMMARY_MD"
+    else
+        echo "| Heatmaps | 0 | Skipped |" >> "$SUMMARY_MD"
+    fi
+
+    # 4. Frames
+    FRAME_CNT=$(grep -c "Frames extracted" "$LOG_FILE")
+    if [ -z "$FRAME_CNT" ]; then FRAME_CNT=0; fi
+    echo "| Frames | $FRAME_CNT | Extracted |" >> "$SUMMARY_MD"
+
+    # GDrive & YouTube
+    GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
+    YOUTUBE_CNT=$(grep -c "\[YouTube\] 다운로드 시도" "$LOG_FILE")
+
+    echo "| GDrive Cache | $GDRIVE_CNT | Hits |" >> "$SUMMARY_MD"
+    if [ "$YOUTUBE_CNT" -gt 0 ]; then
+        echo "| YouTube DL | **$YOUTUBE_CNT** | Success |" >> "$SUMMARY_MD"
+    else
+        echo "| YouTube DL | 0 | (Blocked) |" >> "$SUMMARY_MD"
+    fi
+
+    # 6. Gemini
+    if grep -q "Gemini 분석 완료" "$LOG_FILE"; then
+        GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
+        GEMINI_SUCCESS=$(grep "성공:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
+        GEMINI_SUCCESS_LINE="Calls: $GEMINI_CALLS / Success: $GEMINI_SUCCESS"
+        echo "| Gemini Analysis | $GEMINI_SUCCESS | (Calls: $GEMINI_CALLS) |" >> "$SUMMARY_MD"
+    else
+        echo "| Gemini Analysis | - | Skipped |" >> "$SUMMARY_MD"
+    fi
+
+    # 12. Supabase
+    SUPA_INSERTED=$(grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*Insert): //' | tr -cd '0-9')
+    if [ -n "$SUPA_INSERTED" ]; then
+        SUPA_SKIPPED=$(grep "건너뜀 (중복):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*중복): //' | tr -cd '0-9')
+        echo "| DB Insert | $SUPA_INSERTED | (Skip: $SUPA_SKIPPED) |" >> "$SUMMARY_MD"
+    else
+        echo "| DB Insert | - | Skipped |" >> "$SUMMARY_MD"
+    fi
 else
-    echo "| URLs | - | Error |" >> "$SUMMARY_MD"
-    URL_LINE=""
-fi
-
-# 2. Metadata
-if grep -q "메타데이터 수집" "$LOG_FILE"; then
-    META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
-    META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //' | tr -cd '0-9')
-    echo "| Metadata | $META_CNT | Updated |" >> "$SUMMARY_MD"
-else
-    echo "| Metadata | - | Skipped/Fail |" >> "$SUMMARY_MD"
-    META_CNT="0"
-fi
-
-# 3. Transcript
-TRANSCRIPT_CNT=$(grep "성공 [0-9]*개" "$LOG_FILE" | grep "자막 수집 완료" -A 1 | tail -n 1 | strip_ansi | sed 's/.*성공 //;s/개.*//')
-if [ -n "$TRANSCRIPT_CNT" ]; then
-    echo "| Transcripts | $TRANSCRIPT_CNT | Saved |" >> "$SUMMARY_MD"
-else
-    echo "| Transcripts | 0 | Skipped |" >> "$SUMMARY_MD"
-    TRANSCRIPT_CNT="0"
-fi
-
-# 3.1 Context Generation
-CONTEXT_CNT=$(grep -c "Context generation for .* completed" "$LOG_FILE")
-if [ "$CONTEXT_CNT" -gt 0 ]; then
-    echo "| Contexts | $CONTEXT_CNT | Generated |" >> "$SUMMARY_MD"
-else
-    echo "| Contexts | 0 | Skipped |" >> "$SUMMARY_MD"
-fi
-
-# 4. Heatmaps
-HEATMAP_CNT=$(grep -c "\[Heatmap Saved\]" "$LOG_FILE")
-if [ "$HEATMAP_CNT" -gt 0 ]; then
-    echo "| Heatmaps | $HEATMAP_CNT | Saved |" >> "$SUMMARY_MD"
-else
-    echo "| Heatmaps | 0 | Skipped |" >> "$SUMMARY_MD"
-fi
-
-# 4. Frames
-FRAME_CNT=$(grep "\[Done\] 추출 완료" "$LOG_FILE" | awk '{sum+=$NF} END {print sum}' | strip_ansi | sed 's/장//')
-if [ -z "$FRAME_CNT" ]; then FRAME_CNT=0; fi
-echo "| Frames | $FRAME_CNT | Extracted |" >> "$SUMMARY_MD"
-
-# GDrive & YouTube
-GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
-YOUTUBE_CNT=$(grep -c "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE")
-
-echo "| GDrive Cache | $GDRIVE_CNT | Hits |" >> "$SUMMARY_MD"
-if [ "$YOUTUBE_CNT" -gt 0 ]; then
-    echo "| YouTube DL | **$YOUTUBE_CNT** | Success |" >> "$SUMMARY_MD"
-else
-    echo "| YouTube DL | 0 | (Blocked) |" >> "$SUMMARY_MD"
-fi
-
-# 6. Gemini
-GEMINI_SUCCESS_LINE=""
-if grep -q "Gemini CLI 통계" "$LOG_FILE"; then
-    GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
-    GEMINI_SUCCESS=$(grep "성공:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
-    GEMINI_SUCCESS_LINE="Calls: $GEMINI_CALLS / Success: $GEMINI_SUCCESS"
-    echo "| Gemini Analysis | $GEMINI_SUCCESS | (Calls: $GEMINI_CALLS) |" >> "$SUMMARY_MD"
-else
-    echo "| Gemini Analysis | - | Skipped |" >> "$SUMMARY_MD"
-fi
-
-# 12. Supabase
-SUPA_INSERTED=$(grep "삽입됨:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*삽입됨: //' | tr -cd '0-9')
-if [ -n "$SUPA_INSERTED" ]; then
-    SUPA_SKIPPED=$(grep "건너뜀 (중복):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*중복): //' | tr -cd '0-9')
-    echo "| DB Insert | $SUPA_INSERTED | (Skip: $SUPA_SKIPPED) |" >> "$SUMMARY_MD"
-else
-    echo "| DB Insert | - | Skipped |" >> "$SUMMARY_MD"
+    echo "⚠️ Log file not found at $LOG_FILE. Statistics unavailable." >> "$SUMMARY_MD"
 fi
 
 echo "" >> "$SUMMARY_MD"
@@ -372,7 +370,7 @@ echo "<details><summary>Click to expand execution details</summary>" >> "$SUMMAR
 echo "" >> "$SUMMARY_MD"
 
 # 1. New URLs List
-if [ "$URL_CNT" != "0" ] && [ "$URL_CNT" != "-" ]; then
+if [ -f "$LOG_FILE" ] && [ "$URL_CNT" != "0" ] && [ "$URL_CNT" != "-" ]; then
     echo "**New URLs ($URL_CNT)**" >> "$SUMMARY_MD"
     grep "\[New URL\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[New URL\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
