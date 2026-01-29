@@ -41,6 +41,73 @@ log() {
     echo "$@" | tee -a "$LOG_FILE"
 }
 
+# [Function] 데이터 브랜치 동기화 함수 (단계별 저장용)
+sync_data_to_remote() {
+    local STEP_NAME="$1"
+    log "------------------------------------------------------------"
+    log "[$(date)] 💾 데이터 동기화 시작 (Trigger: $STEP_NAME)"
+
+    # 데이터 폴더 변경 감지 (Modified + Untracked)
+    if [ -z "$(git status --porcelain backend/restaurant-crawling/data/)" ]; then
+        log "[$(date)] ℹ️ 변경된 데이터가 없습니다. (Skip)"
+    else
+        log "[$(date)] 📦 변경된 데이터를 'data' 브랜치로 푸시합니다."
+        
+        # 1. 현재 변경된 데이터(Working Tree)를 임시 보관 (Staging)
+        git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+        
+        # [Fix] package-lock.json 등이 변경되어 있으면 체크아웃이 막히므로 원복
+        git checkout -- backend/package-lock.json 2>&1 | tee -a "$LOG_FILE"
+        
+        # 2. data 브랜치로 전환 (없으면 생성)
+        # Stash를 사용하여 변경사항을 들고 이동
+        git stash push -m "temp_data_update" -- backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+        
+        git fetch origin data 2>&1 | tee -a "$LOG_FILE"
+        git checkout data || git checkout -b data origin/data || git checkout --orphan data 2>&1 | tee -a "$LOG_FILE"
+        
+        # Stash 적용
+        git stash pop 2>&1 | tee -a "$LOG_FILE"
+        
+        # 다시 Add & Commit
+        # 무시된(ignored) 데이터 파일 강제 추가 ('data' 브랜치 내 데이터 유지 목적)
+        git add -f backend/restaurant-crawling/data/*/transcript/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
+        
+        # [변경] 'git rm --cached'를 사용하여 대용량 폴더를 저장소 추적에서 완전히 제외
+        # 로컬에 존재하더라도 레포지토리에 다시 나타나지 않도록 방지
+        git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
+        git rm -r --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
+        git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
+        git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
+        
+        # 나머지 모든 변경사항 추가 (삭제 포함)
+        git add -A backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+        
+        COMMIT_MSG="chore(data): update crawling data ($DATE) - $STEP_NAME"
+        git commit -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"
+        
+        # [수정] 원격 변경사항을 Rebase로 가져와 수동 업데이트와 충돌 방지
+        log "[$(date)] 🔄 원격 변경사항 확인 및 Rebase..."
+        git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"
+        
+        # Push
+        git push origin data 2>&1 | tee -a "$LOG_FILE"
+        
+        if [ $? -eq 0 ]; then
+            log "[$(date)] ✅ data 브랜치 업데이트 완료 ($STEP_NAME)"
+        else
+            log "[$(date)] ❌ data 브랜치 푸시 실패 ($STEP_NAME)"
+        fi
+         
+        # 원래 브랜치(develop)로 복귀
+        git checkout develop 2>&1 | tee -a "$LOG_FILE"
+    fi
+}
+
 log "============================================================"
 log "[$(date)] 🚀 일일 데이터 수집 파이프라인 시작"
 log "============================================================"
@@ -66,21 +133,27 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzu
 log "[$(date)] [Step 2.5] 고아 파일 사전 정리..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/99-cleanup-orphans.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
+# [Intermediate Sync] 메타데이터/정리 완료 후 저장
+sync_data_to_remote "Step 2.5 (Meta/Cleanup)"
+
 # 3. 자막 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 3] 자막 수집 중..."
 node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 
 # 3.1. 자막 문맥 생성 (Ollama 활용)
 log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
-# OLLAMA_HOST 등 연결 실패 시 스킵됨 (스크립트 내 처리)
-# CI 환경(CPU) 고려하여 한 번에 최대 5개 영상만 처리하도록 제한 (속도 문제)
-# CI 환경(CPU) 고려하여 한 번에 최대 5개 영상만 처리하도록 제한 (속도 문제)
 # [Fix] 1회 실행 시 최대 2개만 처리 (타임아웃 방지: 1개당 약 26분 소요 → 2개 약 52분)
 $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos 2 2>&1 | tee -a "$LOG_FILE"
+
+# [Intermediate Sync] 자막/문맥 생성 완료 후 저장 (가장 중요)
+sync_data_to_remote "Step 3.1 (Context)"
 
 # 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
 log "[$(date)] [Step 4] 히트맵 및 프레임 수집 중..."
 node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache 2>&1 | tee -a "$LOG_FILE"
+
+# [Intermediate Sync] 프레임 메타데이터 저장
+sync_data_to_remote "Step 4 (Frames)"
 
 # 6. Gemini 기반 데이터 분석
 log "[$(date)] [Step 6] Gemini 데이터 분석 중..."
@@ -128,70 +201,9 @@ log "============================================================"
 log "[$(date)] ✅ 일일 데이터 수집 파이프라인 완료"
 log "============================================================"
 
-# 7. Data 브랜치에 변경 사항 푸시
-log "[$(date)] [Step 7] 'data' 브랜치에 데이터 저장..."
-
-# 데이터 폴더 변경 감지
-# 데이터 폴더 변경 감지 (Modified + Untracked)
-if [ -z "$(git status --porcelain backend/restaurant-crawling/data/)" ]; then
-    log "[$(date)] ℹ️ 변경된 데이터가 없습니다."
-else
-    log "[$(date)] 📦 변경된 데이터를 'data' 브랜치로 푸시합니다."
-    
-    # 1. 현재 변경된 데이터(Working Tree)를 임시 보관 (Staging)
-    git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
-    
-    # [Fix] package-lock.json 등이 변경되어 있으면 체크아웃이 막히므로 원복
-    git checkout -- backend/package-lock.json 2>&1 | tee -a "$LOG_FILE"
-    
-    # 2. data 브랜치로 전환 (없으면 생성)
-    # Stash를 사용하여 변경사항을 들고 이동
-    git stash push -m "temp_data_update" -- backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
-    
-    git fetch origin data 2>&1 | tee -a "$LOG_FILE"
-    git checkout data || git checkout -b data origin/data || git checkout --orphan data 2>&1 | tee -a "$LOG_FILE"
-    
-    # Stash 적용
-    git stash pop 2>&1 | tee -a "$LOG_FILE"
-    
-    # 다시 Add & Commit
-    # 무시된(ignored) 데이터 파일 강제 추가 ('data' 브랜치 내 데이터 유지 목적)
-    git add -f backend/restaurant-crawling/data/*/transcript/*.jsonl 2>/dev/null || true
-    git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
-    git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
-    git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
-    git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
-    
-    # [변경] 'git rm --cached'를 사용하여 대용량 폴더를 저장소 추적에서 완전히 제외
-    # 로컬에 존재하더라도 레포지토리에 다시 나타나지 않도록 방지
-    git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
-    git rm -r --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
-    git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
-    git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
-    
-    # 나머지 모든 변경사항 추가 (삭제 포함)
-    git add -A backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
-    
-    COMMIT_MSG="chore(data): update crawling data ($DATE)"
-    git commit -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"
-    
-    # [수정] 원격 변경사항을 Rebase로 가져와 수동 업데이트와 충돌 방지
-    log "[$(date)] 🔄 원격 변경사항 확인 및 Rebase..."
-    git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"
-    
-    # Push
-    git push origin data 2>&1 | tee -a "$LOG_FILE"
-    
-    if [ $? -eq 0 ]; then
-        log "[$(date)] ✅ data 브랜치 업데이트 완료"
-    else
-        log "[$(date)] ❌ data 브랜치 푸시 실패"
-    fi
-     
-    # 원래 브랜치(develop)로 복귀 (로컬 실행 시 편의 위해 - CI에서는 필수는 아님)
-    git checkout develop 2>&1 | tee -a "$LOG_FILE"
-fi
-
+# 7. Data 브랜치에 변경 사항 푸시 (Final Sync)
+log "[$(date)] [Step 7] 'data' 브랜치에 최종 데이터 저장..."
+sync_data_to_remote "Step 7 (Final)"
 # 7. 코드 에디터 동기화 신호 (Antigravity 등)
 SYNC_TRIGGER_FILE="$PROJECT_ROOT/backend/.sync_trigger"
 echo "$(date)" > "$SYNC_TRIGGER_FILE"
