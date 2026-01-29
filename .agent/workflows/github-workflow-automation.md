@@ -89,7 +89,8 @@ description: Git commit, branch, and PR workflow conventions. Apply ONLY when ex
    - **IF Current Branch is `develop`**:
      - **Goal**: Release to Production.
      - **Action**:
-       - Create a temporary body file (e.g. `body.md`)
+       - Create a temporary body file with UTF-8 encoding (PowerShell safe):
+         - `Set-Content -Path body.md -Value "..." -Encoding UTF8`
        - `gh pr create --base main --head develop --title "[Release] <Message>" --body-file body.md`
        - `gh pr merge <PR#> --merge` (Do NOT delete develop)
        - `rm body.md`
@@ -97,7 +98,8 @@ description: Git commit, branch, and PR workflow conventions. Apply ONLY when ex
    - **IF Current Branch is NOT `develop` (e.g. `feat/...`, `fix/...`, `chore/...`, `refactor/...`, etc.)**:
      - **Goal**: Merge to Development.
      - **Action**:
-       - Create a temporary body file (e.g. `body.md`)
+       - Create a temporary body file with UTF-8 encoding (PowerShell safe):
+         - `Set-Content -Path body.md -Value "..." -Encoding UTF8`
        - `gh pr create --base develop --head <current-branch> --title "[Tag] <Message>" --body-file body.md`
        - `gh pr merge <PR#> --merge --delete-branch`
        - `rm body.md`
