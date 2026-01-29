@@ -96,7 +96,7 @@ sync_data_to_remote() {
         git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
         # 평가 데이터 강제 추가 (evaluation 폴더)
         # evaluation 폴더 내의 모든 jsonl 파일을 find로 찾아 추가 (globstar 호환성 문제 해결)
-        find backend/restaurant-crawling/data/*/evaluation -name "*.jsonl" 2>/dev/null | xargs -r git add -f 2>/dev/null || true
+        find backend/restaurant-crawling/data/*/evaluation -name "*.jsonl" -print0 2>/dev/null | xargs -0 -r git add -f 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/evaluation/transforms.jsonl 2>/dev/null || true
         
         # 'git rm --cached'를 사용하여 대용량 폴더를 저장소 추적에서 완전히 제외
