@@ -40,7 +40,7 @@ jobs:
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
-          echo "✅ Swap Created:"
+          echo "[OK] Swap Created:"
           free -h
 
       - name: Checkout repository
@@ -99,9 +99,9 @@ jobs:
           mkdir -p backend/restaurant-crawling/data
           if [ -n "${{ secrets.YOUTUBE_COOKIES_TXT }}" ]; then
             echo "${{ secrets.YOUTUBE_COOKIES_TXT }}" > backend/restaurant-crawling/data/cookies.txt
-            echo "✅ cookies.txt created from secret."
+            echo "[OK] cookies.txt created from secret."
           else
-            echo "⚠️ YOUTUBE_COOKIES_TXT secret is not set. Skipping cookie creation."
+            echo "[WARN] YOUTUBE_COOKIES_TXT secret is not set. Skipping cookie creation."
           fi
 
       - name: Setup Gemini Credentials
@@ -110,9 +110,9 @@ jobs:
           if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
             echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
             chmod 600 ~/.gemini/oauth_creds.json
-            echo "✅ Gemini Credentials restored."
+            echo "[OK] Gemini Credentials restored."
           else
-            echo "⚠️ GEMINI_CREDENTIALS_BASE64 secret is missing."
+            echo "[WARN] GEMINI_CREDENTIALS_BASE64 secret is missing."
           fi
 
       - name: Setup Ollama (CPU Mode)
@@ -144,12 +144,12 @@ jobs:
             fi
             sleep 2
           done
-          echo "✅ Ollama server is ready!"
+          echo "[OK] Ollama server is ready!"
           
           echo "Pulling model 'cookieshake/a.x-4.0-light-imatrix:Q8_0'..."
           # 모델 Pull (시간이 좀 걸릴 수 있음)
           ollama pull cookieshake/a.x-4.0-light-imatrix:Q8_0
-          echo "✅ Model pulled successfully!"
+          echo "[OK] Model pulled successfully!"
 
       - name: Configure Git
         run: |
