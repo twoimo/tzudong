@@ -76,6 +76,13 @@ sync_data_to_remote() {
         git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
+        # [New] 평가 데이터 강제 추가 (evaluation 폴더)
+        git add -f backend/restaurant-crawling/data/*/evaluation/selection/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/evaluation/notSelection/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/evaluation/rule_results/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/evaluation/laaj_results/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/evaluation/errors/*.jsonl 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/evaluation/transforms.jsonl 2>/dev/null || true
         
         # [변경] 'git rm --cached'를 사용하여 대용량 폴더를 저장소 추적에서 완전히 제외
         # 로컬에 존재하더라도 레포지토리에 다시 나타나지 않도록 방지
