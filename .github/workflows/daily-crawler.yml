@@ -5,6 +5,12 @@ on:
     # 한국 시간(KST) 새벽 3시 = UTC 18:00
     - cron: '0 19 * * *'
   workflow_dispatch:
+    inputs:
+      max_videos:
+        description: 'Max videos for context gen (0=Unlimited)'
+        required: false
+        default: '2'
+        type: string
 
 permissions:
   contents: write
@@ -174,6 +180,8 @@ jobs:
           OLLAMA_HOST: http://localhost:11434
           # CI 환경 플래그
           CI: true
+          # [Config] 자막 문맥 생성 배치 크기 (Manual: 2, Schedule: Unlimited)
+          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '0' }}
         run: |
           # 실행 권한 부여
           chmod +x backend/run_daily.sh

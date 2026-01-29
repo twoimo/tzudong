@@ -154,8 +154,14 @@ node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuy
 
 # 3.1. 자막 문맥 생성 (Ollama 활용)
 log "[$(date)] [Step 3.1] 자막 문맥 생성 중..."
-# [Fix] 1회 실행 시 최대 2개만 처리 (타임아웃 방지) -> 제한 해제
-$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py 2>&1 | tee -a "$LOG_FILE"
+# [Config] 실행 모드에 따른 배치 크기 제한 (Env: MAX_CONTEXT_VIDEOS -> Default: 0)
+MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
+if [ "$MAX_VIDEOS" -gt 0 ]; then
+    log "ℹ️ Context Generation Limit: $MAX_VIDEOS videos (Manual Trigger)"
+else
+    log "ℹ️ Context Generation Limit: Unlimited (Schedule/Manual-Full)"
+fi
+$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
 
 # [Intermediate Sync] 자막/문맥 생성 완료 후 저장 (가장 중요)
 sync_data_to_remote "Step 3.1 (Context)"
