@@ -9,7 +9,7 @@ on:
       max_videos:
         description: '자막 문맥 생성 개수 설정 (0=Unlimited)'
         required: false
-        default: '2'
+        default: '1'
         type: string
 
 permissions:
@@ -182,7 +182,7 @@ jobs:
           CI: true
           # [Config] 자막 문맥 생성 배치 크기 (Manual Default: 2, Schedule: 2)
           # 스케줄 실행 시 inputs가 없으므로 '2'가 적용됨 (메모리 부족 방지)
-          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '2' }}
+          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '1' }}
         run: |
           # 실행 권한 부여
           chmod +x backend/run_daily.sh
