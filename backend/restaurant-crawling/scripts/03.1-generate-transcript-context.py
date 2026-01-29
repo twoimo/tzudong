@@ -423,7 +423,7 @@ def main():
             break
         
         # [CI-Log] 진행상황 강제 출력 (tqdm 버퍼링 문제 해결)
-        print(f"[Progress] {idx + 1}/{len(transcript_paths)} videos processed... (Success: {processed_count}, Skipped: {skipped_count}, Error: {error_count})", flush=True)
+        print(f"[Progress] {idx + 1}/{len(pending_paths)} videos processed... (Success: {processed_count}, Skipped: {skipped_count}, Error: {error_count})", flush=True)
 
         video_id = os.path.basename(data_path).split(".")[0]
 
