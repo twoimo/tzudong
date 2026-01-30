@@ -704,8 +704,8 @@ export function AdminRestaurantModal({
                     .in("id", existingIds);
 
                 if (allUpdatedRestaurants && allUpdatedRestaurants.length > 0) {
-                    const primaryRestaurant = allUpdatedRestaurants.find(r => r.id === restaurant.id);
-                    const mergedChildren = allUpdatedRestaurants.filter(r => r.id !== restaurant.id);
+                    const primaryRestaurant = (allUpdatedRestaurants as any[]).find(r => r.id === restaurant.id);
+                    const mergedChildren = (allUpdatedRestaurants as any[]).filter(r => r.id !== restaurant.id);
 
                     if (primaryRestaurant) {
                         const finalRestaurant = {
