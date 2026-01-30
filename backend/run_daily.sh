@@ -248,6 +248,14 @@ log "INFO" "[Step 6] Gemini 데이터 분석 중..."
 bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
+# 7. 평가 대상 선정
+echo "::group::[Step 7] Target Selection"
+log "INFO" "[Step 7] Target Selection..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/07-target-selection.py --channel tzuyang \
+  --crawling-path backend/restaurant-crawling/data/tzuyang \
+  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
+
 # 8. Rule 기반 평가 (위치/상호 검증)
 echo "::group::[Step 8] Rule Evaluation"
 log "INFO" "[Step 8] Rule Evaluation..."
@@ -268,26 +276,19 @@ bash backend/restaurant-evaluation/scripts/09-laaj-evaluation.sh --channel tzuya
 grep "🎉 LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 echo "::endgroup::"
 
-# 10. 평가 대상 선정
-echo "::group::[Step 10] Target Selection"
-log "INFO" "[Step 10] Target Selection..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/10-target-selection.py --channel tzuyang \
+
+# 10. 결과 변환 (Transforms)
+echo "::group::[Step 10] Transform Results"
+log "INFO" "[Step 10] Transform Results..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/10-transform.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 11. 결과 변환 (Transforms)
-echo "::group::[Step 11] Transform Results"
-log "INFO" "[Step 11] Transform Results..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/11-transform.py --channel tzuyang \
-  --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-echo "::endgroup::"
-
-# 12. Supabase 결과 삽입
-echo "::group::[Step 12] Insert to Supabase"
-log "INFO" "[Step 12] Insert to Supabase..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/12-supabase-insert.py --channel tzuyang \
+# 11. Supabase 결과 삽입
+echo "::group::[Step 11] Insert to Supabase"
+log "INFO" "[Step 11] Insert to Supabase..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/11-supabase-insert.py --channel tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
@@ -576,10 +577,10 @@ cat <<EOF >> "$SUMMARY_MD"
 |  [Step 6: Gemini Analysis] --> [Step 6.1/6.2: Meta Enrichment]                                        |
 |                             |                                                                         |
 |                             v                                                                         |
-|  [Step 10: Target Selection] --> [Step 8: Rule Eval] --> [Step 9: LAAJ Eval]                          |
+|  [Step 7: Target Selection] --> [Step 8: Rule Eval] --> [Step 9: LAAJ Eval]                            |
 |                             |                                                                         |
 |                             v                                                                         |
-|  [Step 11: Transform] --> [Step 12: Supabase Insert] --> [Step 7: Final Sync] ==(Push)==> [Remote]    |
+|  [Step 10: Transform] --> [Step 11: Supabase Insert] --> [Step 7: Final Sync] ==(Push)==> [Remote]    |
 |                                                                                                       |
 +-------------------------------------------------------------------------------------------------------+
 EOF
