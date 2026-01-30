@@ -325,6 +325,9 @@ def main():
         "--max-videos", type=int, default=0, help="최대 처리 영상 수 (0: 제한 없음)"
     )
     parser.add_argument(
+        "--max-duration", type=int, default=3600, help="최대 처리 영상 길이(초). 이보다 긴 영상은 스킵 (기본: 3600초/1시간)"
+    )
+    parser.add_argument(
         "--check-connection-only", action="store_true", help="연결 확인 후 종료"
     )
     args = parser.parse_args()
@@ -390,9 +393,16 @@ def main():
             
         try:
             m_data = read_jsonl(str(meta_path))
-            if m_data and m_data.get("is_shorts"):
-                skipped_count += 1
-                continue
+            if m_data:
+                # 2.1 Shorts 필터링
+                if m_data.get("is_shorts"):
+                    skipped_count += 1
+                    continue
+                # 2.2 듀레이션 필터링
+                m_duration = m_data.get("duration", 0)
+                if args.max_duration > 0 and m_duration > args.max_duration:
+                    skipped_count += 1
+                    continue
         except:
              # 읽기 에러 시 메인 로직에 맡김
              pending_paths.append(data_path)
@@ -473,8 +483,15 @@ def main():
             error_count += 1
             continue
 
-        # [Filter] Shorts 영상 필터링 (is_shorts=true면 스킵)
+        # [Filter] Shorts 영상 필터링
         if metadata.get("is_shorts"):
+            skipped_count += 1
+            continue
+
+        # [Filter] 듀레이션 필터링
+        m_duration = metadata.get("duration", 0)
+        if args.max_duration > 0 and m_duration > args.max_duration:
+            print(f"\n⏳ [Skip] 장편 영상 스킵 ({m_duration}초 > {args.max_duration}초): {video_id}", flush=True)
             skipped_count += 1
             continue
 
