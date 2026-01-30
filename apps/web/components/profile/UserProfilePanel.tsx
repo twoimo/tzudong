@@ -33,6 +33,12 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { GlobalLoader } from "@/components/ui/global-loader";
+import { StampCard } from "@/components/stamp/StampCard";
+import { ReviewCard } from "@/components/reviews/ReviewCard";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 // [최적화] 빈 상태 컴포넌트 - memo로 래핑
 interface EmptyStateProps {
@@ -49,88 +55,25 @@ const EmptyState = memo(function EmptyState({ icon, message }: EmptyStateProps) 
     );
 });
 
-// [최적화] 스탬프 아이템 컴포넌트 - memo로 래핑
-interface StampItemProps {
-    stamp: { restaurantId: string; restaurantName: string; visitedDate?: string; createdAt: string };
-    formatDate: (date: string) => string;
-}
-
-const StampItem = memo(function StampItem({ stamp, formatDate }: StampItemProps) {
-    return (
-        <div className="p-4 hover:bg-muted/30 transition-colors">
-            <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{stamp.restaurantName}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        {stamp.visitedDate && (
-                            <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                방문: {stamp.visitedDate}
-                            </span>
-                        )}
-                        <span>{formatDate(stamp.createdAt)}</span>
-                    </div>
-                </div>
-                <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-            </div>
-        </div>
-    );
-});
-
-// [최적화] 리뷰 아이템 컴포넌트 - memo로 래핑
-interface ReviewItemProps {
-    review: UserReview;
-    formatDate: (date: string) => string;
-}
-
-const ReviewItem = memo(function ReviewItem({ review, formatDate }: ReviewItemProps) {
-    return (
-        <div className="p-4 hover:bg-muted/30 transition-colors">
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold truncate">{review.restaurantName}</span>
-                        {review.isVerified && (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                        )}
-                    </div>
-                    {review.content && (
-                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                            {review.content}
-                        </p>
-                    )}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        {review.visitedDate && (
-                            <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                방문: {review.visitedDate}
-                            </span>
-                        )}
-                        <span>{formatDate(review.createdAt)}</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-red-600">
-                    <Heart className="h-4 w-4" />
-                    <span>{review.likeCount}</span>
-                </div>
-            </div>
-        </div>
-    );
-});
-
 // [최적화] 좋아요 누른 사용자 아이템 - memo로 래핑
 interface LikerItemProps {
     liker: Liker;
+    onUserClick?: (userId: string) => void;
 }
 
-const LikerItem = memo(function LikerItem({ liker }: LikerItemProps) {
+const LikerItem = memo(function LikerItem({ liker, onUserClick }: LikerItemProps) {
+    const handleClick = (e: React.MouseEvent) => {
+        if (onUserClick) {
+            e.preventDefault();
+            onUserClick(liker.userId);
+        }
+    };
+
     return (
         <Link
             href={`/user/${liker.userId}`}
-            className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors"
+            onClick={handleClick}
+            className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors w-full text-left"
         >
             <div className="flex-1 min-w-0">
                 <span className="font-semibold truncate block">
@@ -170,18 +113,23 @@ interface UserProfilePanelProps {
     userId: string;
     onClose?: () => void;
     showBackButton?: boolean;
+    onUserClick?: (userId: string) => void;
+    onRestaurantClick?: (restaurant: any) => void;
 }
 
-export function UserProfilePanel({ userId, onClose, showBackButton = true }: UserProfilePanelProps) {
+const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showBackButton = true, onUserClick, onRestaurantClick }: UserProfilePanelProps) {
     const router = useRouter();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
 
     const { data: profile, isLoading: profileLoading } = useUserProfile(userId);
     const { data: stamps = [], isLoading: stampsLoading } = useUserStamps(userId);
-    const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId);
+    const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId, user?.id);
     const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
     const { data: leaderboard = [] } = useLeaderboard();
 
     const [activeTab, setActiveTab] = useState<'stamps' | 'reviews' | 'likers'>('stamps');
+    const [thumbnailIndices, setThumbnailIndices] = useState<Record<string, number>>({});
 
     // [최적화] useMemo로 랭킹 계산 메모이제이션
     const userRank = useMemo(() => {
@@ -206,10 +154,61 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
         }
     }, [onClose, router]);
 
-    // [최적화] useCallback으로 탭 변경 핸들러 메모이제이션
+    // [최적화] 탭 변경 핸들러
     const handleTabChange = useCallback((value: string) => {
         setActiveTab(value as 'stamps' | 'reviews' | 'likers');
     }, []);
+
+    // [핸들러] 썸네일 변경
+    const handleThumbnailChange = useCallback((id: string, index: number) => {
+        setThumbnailIndices(prev => ({ ...prev, [id]: index }));
+    }, []);
+
+    // [핸들러] 맛집 클릭 - 메인으로 이동
+    const handleRestaurantClick = useCallback((restaurant: any) => {
+        if (onRestaurantClick) {
+            onRestaurantClick(restaurant);
+            return;
+        }
+        if (onClose) onClose();
+        router.push(`/?restaurant=${restaurant.id}`);
+    }, [onClose, router, onRestaurantClick]);
+
+    // [핸들러] 리뷰 좋아요 토글
+    const handleLike = useCallback(async (reviewId: string) => {
+        if (!user) {
+            toast({
+                title: '로그인 필요',
+                description: '좋아요를 누르려면 로그인이 필요합니다.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        // 현재 리뷰 찾기
+        const targetReview = reviews.find(r => r.id === reviewId);
+        if (!targetReview) return;
+
+        const currentIsLiked = targetReview.isLikedByUser;
+
+        try {
+            if (currentIsLiked) {
+                await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
+            } else {
+                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as any);
+            }
+            // 쿼리 무효화로 UI 업데이트
+            queryClient.invalidateQueries({ queryKey: ['user-reviews', userId] });
+        } catch (error) {
+            console.error('좋아요 토글 실패:', error);
+            toast({
+                title: '오류 발생',
+                description: '좋아요 처리 중 문제가 발생했습니다.',
+                variant: 'destructive',
+            });
+        }
+    }, [user, reviews, queryClient, userId]);
+
 
     if (profileLoading) {
         return (
@@ -295,6 +294,7 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                             </div>
                         </div>
                     </div>
+                    {/* ... stats ... */}
                     {showBackButton && onClose && (
                         <Button
                             variant="ghost"
@@ -358,9 +358,9 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                     </TabsTrigger>
                 </TabsList>
 
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden bg-muted/10">
                     {/* 도장 탭 */}
-                    <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
+                    <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
                         {stampsLoading ? (
                             <GlobalLoader message="도장 불러오는 중..." />
                         ) : stamps.length === 0 ? (
@@ -369,22 +369,25 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                                 message="아직 도장이 없습니다"
                             />
                         ) : (
-                            <ScrollArea className="h-full">
-                                <div className="divide-y divide-border">
-                                    {stamps.map((stamp, index) => (
-                                        <StampItem
-                                            key={`stamp-${stamp.restaurantId || 'unknown'}-${index}`}
-                                            stamp={stamp}
-                                            formatDate={formatDate}
-                                        />
-                                    ))}
-                                </div>
-                            </ScrollArea>
+                            <div className="p-4 flex flex-col gap-3 pb-20">
+                                {stamps.map((stamp, index) => (
+                                    <StampCard
+                                        key={`stamp-${stamp.restaurant.id}-${index}`}
+                                        restaurant={stamp.restaurant}
+                                        isVisited={true}
+                                        isUserStampsReady={true}
+                                        currentThumbnailIndex={thumbnailIndices[stamp.restaurant.id] || 0}
+                                        onThumbnailChange={handleThumbnailChange}
+                                        onClick={handleRestaurantClick}
+                                        size="default"
+                                    />
+                                ))}
+                            </div>
                         )}
                     </TabsContent>
 
                     {/* 리뷰 탭 */}
-                    <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
+                    <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
                         {reviewsLoading ? (
                             <GlobalLoader message="리뷰 불러오는 중..." />
                         ) : reviews.length === 0 ? (
@@ -393,17 +396,35 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                                 message="작성한 리뷰가 없습니다"
                             />
                         ) : (
-                            <ScrollArea className="h-full">
-                                <div className="divide-y divide-border">
-                                    {reviews.map((review, index) => (
-                                        <ReviewItem
-                                            key={`review-${review.id || 'unknown'}-${index}`}
-                                            review={review}
-                                            formatDate={formatDate}
-                                        />
-                                    ))}
-                                </div>
-                            </ScrollArea>
+                            <div className="p-4 space-y-4 pb-20">
+                                {reviews.map((review, index) => (
+                                    <ReviewCard
+                                        key={`review-${review.id}-${index}`}
+                                        review={{
+                                            id: review.id,
+                                            userId: profile.userId,
+                                            userName: profile.nickname,
+                                            userAvatarUrl: profile.avatarUrl,
+                                            restaurantId: review.restaurantId,
+                                            restaurantName: review.restaurantName,
+                                            content: review.content,
+                                            photos: review.photos,
+                                            visitedAt: review.visitedDate || review.createdAt,
+                                            submittedAt: review.createdAt,
+                                            likeCount: review.likeCount,
+                                            isLikedByUser: review.isLikedByUser,
+                                            isVerified: review.isVerified,
+                                        }}
+                                        onLike={handleLike}
+                                        currentUserId={user?.id}
+                                        onUserClick={onUserClick}
+                                        onRestaurantClick={() => handleRestaurantClick(review.restaurant || {
+                                            id: review.restaurantId,
+                                            name: review.restaurantName
+                                        })}
+                                    />
+                                ))}
+                            </div>
                         )}
                     </TabsContent>
 
@@ -420,7 +441,11 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                             <ScrollArea className="h-full">
                                 <div className="divide-y divide-border">
                                     {likers.map((liker, index) => (
-                                        <LikerItem key={`liker-${liker.userId || 'unknown'}-${index}`} liker={liker} />
+                                        <LikerItem
+                                            key={`liker-${liker.userId || 'unknown'}-${index}`}
+                                            liker={liker}
+                                            onUserClick={onUserClick}
+                                        />
                                     ))}
                                 </div>
                             </ScrollArea>
@@ -430,4 +455,6 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
             </Tabs>
         </div>
     );
-}
+});
+
+export { UserProfilePanel };

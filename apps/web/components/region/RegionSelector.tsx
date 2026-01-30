@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { REGIONS, Region } from "@/types/restaurant";
+import { REGIONS, Region, Restaurant } from "@/types/restaurant";
 import { MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,8 +27,9 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
     queryFn: async () => {
       const { data, error } = await supabase
         .from('restaurants')
-        .select('*')
-        .eq('status', 'approved');
+        .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
+        .eq('status', 'approved')
+        .returns<Restaurant[]>();
 
       if (error) {
         console.error('맛집 데이터 조회 실패:', error);

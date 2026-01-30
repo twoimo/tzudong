@@ -107,19 +107,23 @@ const RestaurantSearch = ({
 
       try {
         if (searchType === 'name') {
-          // 맛집 이름으로 검색
+          // 맛집 이름(approved_name)으로 검색
           const categoriesToSearch = filters?.categories && filters.categories.length > 0
             ? filters.categories
             : null;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data, error } = await (supabase as any).rpc("search_restaurants_by_name", {
-            search_query: trimmedQuery,
-            search_categories: categoriesToSearch,
-            max_results: 50,
-            include_all_status: false,
-            korean_only: isKoreanOnly,  // 한국 지역만 필터링 (홈페이지용)
-          });
+          let query = supabase
+            .from('restaurants')
+            .select('*, name:approved_name')
+            .eq('status', 'approved')
+            .ilike('approved_name', `%${trimmedQuery}%`)
+            .limit(50);
+
+          if (categoriesToSearch) {
+            query = query.contains('categories', categoriesToSearch);
+          }
+
+          const { data, error } = await query;
 
           if (error) {
             console.warn("맛집 이름 검색 실패:", error);
@@ -127,6 +131,14 @@ const RestaurantSearch = ({
           }
 
           results = (data || []) as Restaurant[];
+
+          // 한국 지역 필터링 (클라이언트 측 처리)
+          if (isKoreanOnly) {
+            results = results.filter(r => {
+              const addr = r.road_address || r.jibun_address || '';
+              return KOREAN_REGIONS.some(region => addr.includes(region));
+            });
+          }
         } else {
           // 유튜브 제목으로 검색
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

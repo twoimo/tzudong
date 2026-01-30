@@ -700,7 +700,7 @@ export function AdminRestaurantModal({
                 // 첫 번째 레코드의 업데이트된 데이터 가져오기
                 const { data: fetchedRestaurant } = await supabase
                     .from("restaurants")
-                    .select("*")
+                    .select("*, name:approved_name")
                     .eq("id", restaurant.id)
                     .single();
 

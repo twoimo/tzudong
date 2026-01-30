@@ -113,7 +113,7 @@ export async function checkRestaurantDuplicate(
 
   try {
     const normalizedInputAddress = normalizeAddress(jibunAddress);
-    
+
     console.log('🔍 중복 검사 시작:', {
       name,
       jibunAddress,
@@ -125,7 +125,7 @@ export async function checkRestaurantDuplicate(
     // 모든 승인된 맛집들 조회 후 정규화된 주소로 필터링
     let query = supabase
       .from('restaurants')
-      .select('id, name, jibun_address, road_address, status, youtube_link')
+      .select('id, name:approved_name, jibun_address, road_address, status, youtube_link')
       .eq('status', 'approved'); // ✅ approved 상태만 검사
 
     // 수정 시 자기 자신 제외
@@ -153,7 +153,7 @@ export async function checkRestaurantDuplicate(
     const typedRestaurants = (allRestaurants || []) as RestaurantRecord[];
 
     // 정규화된 주소가 일치하는 레스토랑만 필터링
-    const existingRestaurants = typedRestaurants.filter(r => 
+    const existingRestaurants = typedRestaurants.filter(r =>
       r.jibun_address && normalizeAddress(r.jibun_address) === normalizedInputAddress
     );
 
@@ -179,7 +179,7 @@ export async function checkRestaurantDuplicate(
       // 🔥 85% 이상 유사하면 중복으로 판단 (YouTube 링크 무관)
       if (similarity >= NAME_SIMILARITY_THRESHOLD) {
         console.log('⚠️ 중복 감지! (유사도 85% 이상)');
-        
+
         return {
           isDuplicate: true,
           matchedRestaurant: {
@@ -222,7 +222,7 @@ export async function checkDbConflict(params: {
   const trimmedJibunAddress = jibunAddress.trim();
   const trimmedRestaurantName = restaurantName.trim();
   const trimmedYoutubeLink = youtubeLink.trim();
-  
+
   // 주소 정규화 (층/호수 제거)
   const normalizedInputAddress = normalizeAddress(trimmedJibunAddress);
 
@@ -241,7 +241,7 @@ export async function checkDbConflict(params: {
     const { data: allRestaurants, error } = await query;
 
     if (error) throw error;
-    
+
     // 타입 단언으로 Supabase 타입 문제 해결
     type RestaurantRecord = {
       id: string;

@@ -151,7 +151,7 @@ export default function ReviewsPage() {
         const restaurantIds = [...new Set(reviewsData.map((r) => r.restaurant_id))];
         const { data: restaurantsData } = await supabase
           .from("restaurants")
-          .select("id, name")
+          .select("id, name:approved_name") // [수정] approved_name을 name으로 사용
           .in("id", restaurantIds)
           .returns<RestaurantData[]>();
 

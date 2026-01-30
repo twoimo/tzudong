@@ -41,6 +41,7 @@ export interface ReviewCardProps {
     }) => void;
     idPrefix?: string;
     isHighlighted?: boolean;
+    onUserClick?: (userId: string) => void;
 }
 
 import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
@@ -53,7 +54,8 @@ export const ReviewCard = React.memo(function ReviewCard({
     currentUserId,
     onEditReview,
     idPrefix,
-    isHighlighted
+    isHighlighted,
+    onUserClick
 }: ReviewCardProps) {
     const router = useRouter();
     const isOwnReview = currentUserId && review.userId === currentUserId;
@@ -104,11 +106,15 @@ export const ReviewCard = React.memo(function ReviewCard({
     // 맛집 클릭 핸들러 (지도에서 맛집 선택)
     const handleRestaurantClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+
+        if (onRestaurantClick) {
+            onRestaurantClick();
+            return;
+        }
+
         // 홈 페이지로 이동하여 지도에서 맛집 선택
         if (review.restaurantId) {
             router.push(`/?restaurant=${review.restaurantId}`);
-        } else {
-            onRestaurantClick?.();
         }
     }, [router, review.restaurantId, onRestaurantClick]);
 
@@ -195,7 +201,13 @@ export const ReviewCard = React.memo(function ReviewCard({
                             <Link
                                 href={`/user/${review.userId}`}
                                 className="text-sm font-semibold hover:text-primary hover:underline transition-colors"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onUserClick) {
+                                        e.preventDefault();
+                                        onUserClick(review.userId);
+                                    }
+                                }}
                             >
                                 {review.userName}
                             </Link>
@@ -271,7 +283,7 @@ export const ReviewCard = React.memo(function ReviewCard({
             {
                 review.photos && review.photos.length > 0 && (
                     <div className="relative w-full aspect-square bg-muted select-none overflow-hidden group">
-                        <Carousel setApi={setApi} className="w-full h-full">
+                        <Carousel setApi={setApi} className="w-full h-full" opts={{ loop: true }}>
                             <CarouselContent>
                                 {photoUrls.map((url, index) => (
                                     <CarouselItem key={index}>

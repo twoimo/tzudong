@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Restaurant } from "@/types/restaurant";
 
 // ============================================================================
 // Type Definitions
@@ -27,17 +28,20 @@ export interface UserProfile {
     tier: TierInfo;
 }
 
-/** 사용자 리뷰 정보 */
+/** 사용자 리뷰 정보 (ReviewCard용) */
 export interface UserReview {
     id: string;
     restaurantId: string;
     restaurantName: string;
-    rating: number;
+    rating: number; // Deprecated but kept for compatibility
     content: string;
     isVerified: boolean;
     likeCount: number;
+    isLikedByUser: boolean; // [추가] 뷰어가 좋아요 눌렀는지 여부
     createdAt: string;
     visitedDate?: string;
+    photos: { url: string; type: string }[]; // [추가] 리뷰 사진
+    restaurant?: Restaurant; // [추가] 맛집 전체 정보 (모달 표시용)
 }
 
 /** 좋아요를 누른 사용자 정보 */
@@ -47,10 +51,9 @@ export interface Liker {
     likedReviewCount: number;
 }
 
-/** 도장(스탬프) 정보 */
+/** 도장(스탬프) 정보 (StampCard용) */
 export interface UserStamp {
-    restaurantId: string;
-    restaurantName: string;
+    restaurant: Restaurant; // [수정] Restaurant 전체 객체 포함
     visitedDate?: string;
     createdAt: string;
 }
@@ -219,44 +222,87 @@ export function useUserProfile(userId: string) {
 /**
  * 특정 사용자의 리뷰 목록 조회
  * - 승인된 리뷰만 조회하고 좋아요 수 포함
+ * - [수정] 사진 정보 및 뷰어의 좋아요 상태 포함
  */
-export function useUserReviews(userId: string) {
+export function useUserReviews(userId: string, viewerId?: string) {
     return useQuery({
-        queryKey: ['user-reviews', userId],
+        queryKey: ['user-reviews', userId, viewerId],
         queryFn: async (): Promise<UserReview[]> => {
             if (!userId) return [];
 
+            // 1. 리뷰 조회
             const { data: reviews, error: reviewsError } = await supabase
                 .from('reviews')
-                .select('id, restaurant_id, content, is_verified, created_at, visited_at, restaurants(name)')
+                .select('id, restaurant_id, content, is_verified, created_at, visited_at, food_photos')
                 .eq('user_id', userId)
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
 
             if (reviewsError || !reviews?.length) return [];
 
-            const typedReviews = reviews as ReviewWithRestaurantRow[];
-            const reviewIds = typedReviews.map(r => r.id);
+            // 2. 관련 데이터 ID 추출
+            const reviewIds = reviews.map((r: any) => r.id);
+            const restaurantIds = [...new Set(reviews.map((r: any) => r.restaurant_id))];
 
-            // 좋아요 수 조회
+            // 3. 맛집 정보 조회
+            const { data: restaurants } = await supabase
+                .from('restaurants')
+                .select('*')
+                .in('id', restaurantIds);
+
+            const restaurantMap = new Map(
+                restaurants?.map((r: any) => {
+                    const mappedR = { ...r };
+                    if (mappedR.approved_name) {
+                        mappedR.name = mappedR.approved_name;
+                    }
+                    return [r.id, mappedR as Restaurant];
+                }) || []
+            );
+
+            // 4. 좋아요 정보 조회 (뷰어 기준 + 전체 개수)
+            // 개수는 별도 카운트 쿼리가 필요할 수 있으나, 여기서는 기존 로직대로 likes 테이블 조회
             const { data: likes } = await supabase
                 .from('review_likes')
-                .select('review_id')
+                .select('review_id, user_id')
                 .in('review_id', reviewIds);
 
-            const likesMap = buildLikesCountMap(likes as ReviewLikeRow[] | null);
+            const likesCountMap = new Map<string, number>();
+            const userLikedMap = new Map<string, boolean>();
 
-            return typedReviews.map(r => ({
-                id: r.id,
-                restaurantId: r.restaurant_id,
-                restaurantName: r.restaurants?.name ?? '알 수 없음',
-                rating: 5,
-                content: r.content,
-                isVerified: r.is_verified,
-                likeCount: likesMap.get(r.id) ?? 0,
-                createdAt: r.created_at,
-                visitedDate: r.visited_at ?? undefined,
-            }));
+            if (likes) {
+                (likes as any[]).forEach(l => {
+                    likesCountMap.set(l.review_id, (likesCountMap.get(l.review_id) || 0) + 1);
+                    if (viewerId && l.user_id === viewerId) {
+                        userLikedMap.set(l.review_id, true);
+                    }
+                });
+            }
+
+            // 5. 데이터 병합
+            return reviews.map((r: any) => {
+                const photos = r.food_photos?.map((url: string) => ({
+                    url: url,
+                    type: 'image'
+                })) || [];
+
+                const restaurant = restaurantMap.get(r.restaurant_id);
+
+                return {
+                    id: r.id,
+                    restaurantId: r.restaurant_id,
+                    restaurantName: restaurant?.name ?? '알 수 없음',
+                    restaurant: restaurant,
+                    rating: 5,
+                    content: r.content,
+                    isVerified: r.is_verified,
+                    likeCount: likesCountMap.get(r.id) || 0,
+                    isLikedByUser: userLikedMap.get(r.id) || false,
+                    createdAt: r.created_at,
+                    visitedDate: r.visited_at ?? undefined,
+                    photos: photos,
+                };
+            });
         },
         enabled: !!userId,
         staleTime: 0, // 탭 전환 시 즉시 fetch
@@ -327,6 +373,7 @@ export function useUserLikers(userId: string) {
 /**
  * 특정 사용자의 도장(방문한 맛집) 목록 조회
  * - 승인된 리뷰 기준
+ * - [수정] StampCard에 필요한 모든 맛집 정보 조회
  */
 export function useUserStamps(userId: string) {
     return useQuery({
@@ -334,21 +381,47 @@ export function useUserStamps(userId: string) {
         queryFn: async (): Promise<UserStamp[]> => {
             if (!userId) return [];
 
+            // 1. 리뷰(도장) 조회
             const { data: reviews, error: reviewsError } = await supabase
                 .from('reviews')
-                .select('restaurant_id, visited_at, created_at, restaurants(name)')
+                .select('restaurant_id, visited_at, created_at')
                 .eq('user_id', userId)
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
 
             if (reviewsError || !reviews?.length) return [];
 
-            return (reviews as StampRow[]).map(r => ({
-                restaurantId: r.restaurant_id,
-                restaurantName: r.restaurants?.name ?? '알 수 없음',
-                visitedDate: r.visited_at ?? undefined,
-                createdAt: r.created_at,
-            }));
+            // 2. 맛집 ID 추출
+            const restaurantIds = [...new Set(reviews.map(r => r.restaurant_id))];
+
+            // 3. 맛집 상세 정보 조회
+            const { data: restaurants } = await supabase
+                .from('restaurants')
+                .select('*')
+                .in('id', restaurantIds);
+
+            const restaurantMap = new Map(
+                restaurants?.map(r => {
+                    const mappedR = { ...r };
+                    if (mappedR.approved_name) {
+                        mappedR.name = mappedR.approved_name;
+                    }
+                    return [r.id, mappedR as Restaurant];
+                }) || []
+            );
+
+            // 4. 데이터 병합
+            return reviews.map((r: any) => {
+                const restaurant = restaurantMap.get(r.restaurant_id);
+                // 맛집 정보가 없으면 스킵되어야 하지만, 일단 타입 안전을 위해 빈 객체 또는 처리 필요
+                if (!restaurant) return null;
+
+                return {
+                    restaurant: restaurant,
+                    visitedDate: r.visited_at ?? undefined,
+                    createdAt: r.created_at,
+                };
+            }).filter(item => item !== null) as UserStamp[];
         },
         enabled: !!userId,
         staleTime: QUERY_STALE_TIME,

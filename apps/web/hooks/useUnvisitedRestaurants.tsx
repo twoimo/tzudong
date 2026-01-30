@@ -44,7 +44,7 @@ export function useUnvisitedRestaurants() {
             // AdminRestaurantModal 등에서 필요한 데이터를 사용할 수 있음
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('*')
+                .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
                 .order('created_at', { ascending: false });

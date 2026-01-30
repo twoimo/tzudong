@@ -34,35 +34,49 @@ export function useBookmarks() {
         queryFn: async () => {
             if (!user?.id) return [];
 
-            const { data, error } = await (supabase as any)
+            // 1. 북마크 데이터 조회 (관계형 쿼리 제거)
+            const { data: bookmarksData, error: bookmarksError } = await (supabase as any)
                 .from('user_bookmarks')
-                .select(`
-                    id,
-                    user_id,
-                    restaurant_id,
-                    created_at,
-                    restaurant:restaurants(
-                        id,
-                        name,
-                        categories,
-                        road_address,
-                        jibun_address,
-                        youtube_link,
-                        review_count
-                    )
-                `)
+                .select('id, user_id, restaurant_id, created_at')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (bookmarksError) throw bookmarksError;
 
-            return (data || []).map((item: any) => ({
-                ...item,
-                restaurant: {
-                    ...item.restaurant,
-                    category: item.restaurant?.categories
-                }
-            })) as BookmarkWithRestaurant[];
+            if (!bookmarksData || bookmarksData.length === 0) {
+                return [];
+            }
+
+            // 2. 맛집 상세 정보 조회
+            const restaurantIds = bookmarksData.map((b: any) => b.restaurant_id);
+
+            const { data: restaurantsData, error: restaurantsError } = await (supabase as any)
+                .from('restaurants')
+                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count')
+                .in('id', restaurantIds)
+                .eq('status', 'approved'); // 승인된 맛집만 표시
+
+            if (restaurantsError) throw restaurantsError;
+
+            // 3. 데이터 병합
+            const restaurantsMap = new Map((restaurantsData || []).map((r: any) => [r.id, r]));
+
+            return bookmarksData
+                .map((bookmark: any) => {
+                    const restaurant = restaurantsMap.get(bookmark.restaurant_id);
+                    // 맛집 정보가 없으면(삭제/미승인 등) 필터링 대상이 될 수 있음
+                    if (!restaurant) return null;
+
+                    return {
+                        ...bookmark,
+                        restaurant: {
+                            ...restaurant,
+                            name: (restaurant as any).approved_name, // alias 처리
+                            category: (restaurant as any).categories
+                        }
+                    };
+                })
+                .filter((item: any) => item !== null) as BookmarkWithRestaurant[];
         },
         enabled: !!user?.id,
         staleTime: BOOKMARK_STALE_TIME,

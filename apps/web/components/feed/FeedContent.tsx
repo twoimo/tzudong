@@ -36,6 +36,7 @@ export interface FeedReview {
     categories: string[];
     likeCount: number;
     isLikedByUser: boolean;
+    restaurant: any; // Full restaurant object
 }
 
 interface FeedContentProps {
@@ -51,6 +52,8 @@ interface FeedContentProps {
     hideFloatingButton?: boolean;
     /** 초기 하이라이트 리뷰 ID (Deep Link) */
     initialReviewId?: string | null;
+    /** 맛집 상세 모달 열기 핸들러 (오버레이용) */
+    onOpenRestaurantDetail?: (restaurant: any) => void;
 }
 
 
@@ -62,6 +65,7 @@ export default function FeedContent({
     hideReviewModal,
     hideFloatingButton,
     initialReviewId,
+    onOpenRestaurantDetail,
 }: FeedContentProps) {
 
     const { user } = useAuth();
@@ -183,9 +187,17 @@ export default function FeedContent({
             const restaurantIds = [...new Set(reviewsData.map((r: any) => r.restaurant_id))];
             const { data: restaurantsData } = await supabase
                 .from('restaurants')
-                .select('id, name')
+                .select('*')
                 .in('id', restaurantIds) as any;
-            const restaurantsMap = new Map((restaurantsData || []).map((r: any) => [r.id, r.name]));
+
+            const restaurantsMap = new Map<string, any>((restaurantsData || []).map((r: any) => {
+                const mappedR = { ...r };
+                // approved_name을 name으로 사용 (호환성)
+                if (mappedR.approved_name) {
+                    mappedR.name = mappedR.approved_name;
+                }
+                return [r.id, mappedR];
+            }));
 
             const reviewIds = reviewsData.map((r: any) => r.id);
             let userLikesMap = new Map<string, boolean>();
@@ -208,7 +220,8 @@ export default function FeedContent({
                     id: review.id,
                     userId: review.user_id,
                     restaurantId: review.restaurant_id,
-                    restaurantName: restaurantsMap.get(review.restaurant_id) || '알 수 없음',
+                    restaurantName: restaurantsMap.get(review.restaurant_id)?.name || '알 수 없음',
+                    restaurant: restaurantsMap.get(review.restaurant_id),
                     userName: profileInfo.nickname || '탈퇴한 사용자',
                     userAvatarUrl: profileInfo.avatarUrl,
                     visitedAt: review.visited_at,
@@ -327,12 +340,18 @@ export default function FeedContent({
     }, [user, queryClient, queryKey]);
 
     // 맛집으로 이동
-    const goToRestaurant = useCallback((restaurantId: string) => {
+    const goToRestaurant = useCallback((restaurantId: string, restaurant?: any) => {
+        // [오버레이] onOpenRestaurantDetail이 있으면 사이드 패널로 열기
+        if (isOverlay && onOpenRestaurantDetail && restaurant) {
+            onOpenRestaurantDetail(restaurant);
+            return;
+        }
+
         if (isOverlay && onClose) {
             onClose();
         }
         router.push(`/?restaurant=${restaurantId}`);
-    }, [router, isOverlay, onClose]);
+    }, [router, isOverlay, onClose, onOpenRestaurantDetail]);
 
     // 날짜 포맷
     const formatDate = useCallback((dateString: string) => {
@@ -463,7 +482,7 @@ export default function FeedContent({
                                             isLikedByUser: isLiked,
                                         }}
                                         onLike={(reviewId) => toggleLike(reviewId, isLiked, likeCount, review.userId)}
-                                        onRestaurantClick={() => goToRestaurant(review.restaurantId)}
+                                        onRestaurantClick={() => goToRestaurant(review.restaurantId, review.restaurant)}
                                         currentUserId={user?.id}
                                         onEditReview={setEditingReview}
                                     />

@@ -129,17 +129,18 @@ export default function GlobalMapPage() {
     const { data: globalRestaurants = [] } = useQuery({
         queryKey: ['global-restaurants-count'],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data: allRestaurants, error } = await supabase
                 .from('restaurants')
-                .select('*')
-                .eq('status', 'approved');
+                .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
+                .eq('status', 'approved')
+                .returns<Restaurant[]>();
 
             if (error) {
                 console.error('글로벌 맛집 데이터 조회 실패:', error);
                 return [];
             }
             // 병합 로직 적용하여 중복 제거
-            return mergeRestaurants(data || []);
+            return mergeRestaurants(allRestaurants || []);
         },
     });
 
@@ -368,7 +369,7 @@ export default function GlobalMapPage() {
                 .single();
 
             if (submissionError) throw submissionError;
-            
+
             const submission = submissionData as { id: string };
 
             // restaurant_submission_items 테이블에 각 youtube_review 저장

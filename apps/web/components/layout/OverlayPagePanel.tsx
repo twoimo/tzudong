@@ -14,6 +14,7 @@ import LeaderboardContent from '@/components/overlay-pages/LeaderboardOverlay';
 import { Restaurant } from '@/types/restaurant';
 import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
 import { UserProfilePanel } from '@/components/profile/UserProfilePanel';
+import { EditRestaurantModal } from '@/components/modals/EditRestaurantModal';
 
 // 패널별 최대 너비 설정
 const PANEL_WIDTHS: Record<Exclude<OverlayPanelType, null>, string> = {
@@ -40,6 +41,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
     const [isReviewPanelOpen, setIsReviewPanelOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
     const [isDesktop, setIsDesktop] = useState(false);
 
     // 데스크탑 체크 (lg breakpoint = 1024px)
@@ -116,11 +118,16 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
         setSelectedUserId(null);
     }, []);
 
+    const handleRequestEdit = useCallback((restaurant: Restaurant) => {
+        setRestaurantToEdit(restaurant);
+    }, []);
+
     if (!activePanel) return null;
 
     let maxWidth = PANEL_WIDTHS[activePanel];
     const showInlineReviewPanel = activePanel === 'feed' && isReviewPanelOpen && isDesktop;
-    const showRestaurantDetail = activePanel === 'stamp' && selectedRestaurant && isDesktop;
+    // [수정] leaderboard 탭 및 feed 탭에서도 맛집 상세 패널 표시 허용
+    const showRestaurantDetail = (activePanel === 'stamp' || activePanel === 'leaderboard' || activePanel === 'feed') && selectedRestaurant && isDesktop;
     const showUserProfile = activePanel === 'leaderboard' && selectedUserId && isDesktop;
 
     // 사이드 패널이 열려있을 때 메인 패널 너비 조정 로직 제거 (사용자 요청: 크기 유지)
@@ -164,6 +171,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                             hideReviewModal={true}
                             hideFloatingButton={isReviewPanelOpen}
                             initialReviewId={initialReviewId}
+                            onOpenRestaurantDetail={handleOpenRestaurantDetail}
                         />
                     )}
                     {activePanel === 'stamp' && (
@@ -202,6 +210,23 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                     </div>
                 )}
 
+                {/* 우측 사이드 패널 영역 - 사용자 프로필 */}
+                {showUserProfile && (
+                    <div className={cn(
+                        "flex-shrink-0 bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
+                        "w-[400px]",
+                        "rounded-2xl border border-border shadow-2xl overflow-hidden"
+                    )}>
+                        <UserProfilePanel
+                            userId={selectedUserId!}
+                            onClose={handleCloseUserProfile}
+                            showBackButton={true}
+                            onUserClick={handleOpenUserProfile}
+                            onRestaurantClick={handleOpenRestaurantDetail}
+                        />
+                    </div>
+                )}
+
                 {/* 우측 사이드 패널 영역 - 맛집 상세 */}
                 {showRestaurantDetail && (
                     <div className={cn(
@@ -214,33 +239,41 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                             onClose={handleCloseRestaurantDetail}
                             isPanelOpen={true}
                             className="border-none"
-                        />
-                    </div>
-                )}
-
-                {/* 우측 사이드 패널 영역 - 사용자 프로필 */}
-                {showUserProfile && (
-                    <div className={cn(
-                        "flex-shrink-0 bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
-                        "w-[400px]",
-                        "rounded-2xl border border-border shadow-2xl overflow-hidden"
-                    )}>
-                        <UserProfilePanel
-                            userId={selectedUserId!}
-                            onClose={handleCloseUserProfile}
-                            showBackButton={true}
+                            onWriteReview={handleOpenReviewPanel}
+                            onRequestEditRestaurant={handleRequestEdit}
                         />
                     </div>
                 )}
             </div>
 
-            {/* 모바일/태블릿에서는 Dialog로 표시 */}
-            {!isDesktop && isReviewPanelOpen && (
+            {/* 모바일/태블릿 또는 데스크탑 비-피드 모드에서는 Dialog로 표시 */}
+            {(!isDesktop || (isDesktop && activePanel !== 'feed')) && isReviewPanelOpen && (
                 <ReviewModal
                     isOpen={true}
                     onClose={handleCloseReviewPanel}
-                    restaurant={null}
+                    restaurant={selectedRestaurant || null}
                     onSuccess={handleReviewSuccess}
+                />
+            )}
+
+            {restaurantToEdit && (
+                <EditRestaurantModal
+                    isOpen={true}
+                    onClose={() => setRestaurantToEdit(null)}
+                    restaurant={restaurantToEdit}
+                    initialFormData={{
+                        name: restaurantToEdit.name,
+                        address: restaurantToEdit.road_address || restaurantToEdit.jibun_address || '',
+                        phone: restaurantToEdit.phone || '',
+                        category: Array.isArray(restaurantToEdit.categories) ? restaurantToEdit.categories as string[] : [],
+                        youtube_reviews: [
+                            {
+                                youtube_link: restaurantToEdit.youtube_link || '',
+                                tzuyang_review: restaurantToEdit.tzuyang_review || '',
+                                restaurant_id: restaurantToEdit.id
+                            }
+                        ]
+                    }}
                 />
             )}
         </>

@@ -139,7 +139,7 @@ export default function HomeClient() {
                     // 먼저 해당 맛집 조회
                     const { data: targetRestaurant, error } = await supabase
                         .from('restaurants')
-                        .select('*')
+                        .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
                         .eq('id', restaurantId)
                         .single();
 
@@ -198,7 +198,7 @@ export default function HomeClient() {
                         const tolerance = 0.0001; // 약 10m 오차
                         const { data: restaurants, error } = await supabase
                             .from('restaurants')
-                            .select('*')
+                            .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
                             .gte('lat', lat - tolerance)
                             .lte('lat', lat + tolerance)
                             .gte('lng', lng - tolerance)

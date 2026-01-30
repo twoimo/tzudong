@@ -18,8 +18,6 @@ const FOOD_PHOTO_OPTIONS = {
     useWebWorker: true,
 };
 
-
-
 // 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
 const generateSafeFilename = (extension: string = ".webp"): string => {
     const randomString = Math.random().toString(36).substring(2, 15);
@@ -284,8 +282,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         try {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name')
-                .ilike('name', `%${query}%`)
+                .select('id, name:approved_name') // [수정] approved_name을 name으로 사용
+                .ilike('approved_name', `%${query}%`) // [수정] approved_name 기준 검색
                 .limit(10) as any;
 
             if (error) throw error;
@@ -387,7 +385,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             if (data.store_name && !restaurant) {
                 const { data: restaurants, error } = await supabase
                     .from('restaurants')
-                    .select('id, name')
+                    .select('id, name:approved_name') // [수정] approved_name을 name으로 사용
                     .eq('name', data.store_name) // 정확한 일치 우선 검색
                     .limit(1) as any;
 

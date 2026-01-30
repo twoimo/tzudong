@@ -82,7 +82,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('*')
+                .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
                 .eq('status', 'approved');
 
             if (error) {
