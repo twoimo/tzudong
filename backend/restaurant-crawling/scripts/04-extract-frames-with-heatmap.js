@@ -743,30 +743,30 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         }
     }
 
-    // [Mod] 1차 시도: 쿠키 없이 접근 (Public/Incognito Mode) - 시크릿 모드 우선
-    log('info', `[Fetch] 1차 시도: 쿠키 없이 접근 (Public/Incognito Mode)...`);
+    // [Mod] 쿠키 없이 접근 (Public/Incognito Mode) - 최대 3회 재시도 (2차 쿠키 폴백 제거)
     let html, parsed;
-    try {
-        html = await fetchPage(url, '');
-        parsed = parseHeatmap(html);
-    } catch (e) {
-        log('warn', `[Fetch] 1차 시도 요청 실패: ${e.message}`);
-    }
+    const MAX_RETRIES = 3;
 
-    // [Mod] 2차 시도: 1차 실패(히트맵 미발견/접근제한) 시 쿠키 사용 (Fallback)
-    if (!parsed || (!parsed.mostReplayedMarkers.length && !parsed.interactionData)) {
-        log('warn', `[Fetch] 1차 시도 실패 (히트맵 미발견). 2차 시도: 쿠키 사용 (Auth Mode)...`);
-        const cookieHeader = await loadCookies();
-        if (cookieHeader) {
-            try {
-                // 2차 시도
-                html = await fetchPage(url, cookieHeader);
-                parsed = parseHeatmap(html);
-            } catch (e) {
-                log('warn', `[Fetch] 2차 시도 요청 실패: ${e.message}`);
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        log('info', `[Fetch] 히트맵 데이터 요청 (${attempt}/${MAX_RETRIES})...`);
+        try {
+            html = await fetchPage(url, '');
+            parsed = parseHeatmap(html);
+
+            // 데이터가 유효하면 루프 탈출
+            if (parsed && (parsed.mostReplayedMarkers.length || parsed.interactionData)) {
+                break;
+            } else {
+                throw new Error("히트맵 데이터 미발견 (HTML 파싱 실패)");
             }
-        } else {
-            log('warn', `[Fetch] 사용 가능한 쿠키가 없어 2차 시도 생략.`);
+        } catch (e) {
+            log('warn', `[Fetch] 요청 실패 (${attempt}/${MAX_RETRIES}): ${e.message}`);
+            // 마지막 시도가 아니면 대기 후 재시도
+            if (attempt < MAX_RETRIES) {
+                const delay = attempt * 2000 + Math.random() * 1000; // 2s~, 4s~...
+                log('info', `⏳ ${Math.round(delay / 1000)}초 후 재시도...`);
+                await sleep(delay);
+            }
         }
     }
 
