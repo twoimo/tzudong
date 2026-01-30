@@ -310,22 +310,22 @@ def process_video(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate context for YouTube transcripts (tzuyang only)"
+        description="YouTube 자막 문맥 생성 스크립트 (tzuyang 전용)"
     )
     parser.add_argument(
         "--model",
         type=str,
         default="cookieshake/a.x-4.0-light-imatrix:Q8_0",
-        help="Ollama model name",
+        help="사용할 Ollama 모델명",
     )
     parser.add_argument(
-        "--prompt", type=str, default="generate_context_en.yaml", help="Prompt filename"
+        "--prompt", type=str, default="generate_context_en.yaml", help="프롬프트 파일명"
     )
     parser.add_argument(
         "--max-videos", type=int, default=0, help="최대 처리 영상 수 (0: 제한 없음)"
     )
     parser.add_argument(
-        "--max-duration", type=int, default=3600, help="최대 처리 영상 길이(초). 이보다 긴 영상은 스킵 (기본: 3600초/1시간)"
+        "--max-duration", type=int, default=2400, help="최대 처리 영상 길이(초). 이보다 긴 영상은 스킵 (기본: 2400초/40분)"
     )
     parser.add_argument(
         "--check-connection-only", action="store_true", help="연결 확인 후 종료"
@@ -375,30 +375,60 @@ def main():
     print("🔍 [Smart Filter] 처리 대상을 선별 중입니다...", flush=True)
     pending_paths = []
     
+    # 0. 삭제된 영상 목록 로드 (deleted_urls.txt) - 1번 스크립트 연동
+    deleted_ids = set()
+    deleted_urls_path = data_dir / "deleted_urls.txt"
+    if deleted_urls_path.exists():
+        try:
+            with open(deleted_urls_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    parts = line.strip().split('\t')
+                    if parts and parts[0]:
+                        vid = parts[0].split("v=")[-1]  # Extract ID from URL
+                        deleted_ids.add(vid)
+            print(f"🗑️ 삭제된 영상 목록 로드: {len(deleted_ids)}개")
+        except Exception as e:
+            print(f"⚠️ 삭제 목록 로드 실패: {e}")
+
     for data_path in tqdm(transcript_paths, desc="Scanning"):
         video_id = os.path.basename(data_path).split(".")[0]
         
+        # 0.1 삭제된 영상 필터링
+        if video_id in deleted_ids:
+            skipped_count += 1
+            continue
+
         # 1. 트랜스크립트 데이터 확인
         t_data = read_jsonl(data_path)
         if not t_data:
             continue
         t_recollect_id = t_data.get("recollect_id", 0)
 
-        # 2. 메타데이터 (Shorts 필터링)
+        # 2. 메타데이터 (Shorts 및 비공개 필터링)
         meta_path = meta_dir / f"{video_id}.jsonl"
-        # 메타 없으면 -> 메인 루프에서 자동삭제 처리하므로 pending에 포함시켜야 함 (main 로직 유지)
+        
+        # [Mod] 메타데이터 없으면 스킵 (고아 파일)
         if not meta_path.exists():
-            pending_paths.append(data_path)
+            # 메타데이터가 없다는 건, 수집 단계에서 걸러졌거나 식별되지 않은 파일
+            # 실행 목록에 추가하지 않음
             continue
             
         try:
             m_data = read_jsonl(str(meta_path))
             if m_data:
+                title = m_data.get("title", "")
+                
                 # 2.1 Shorts 필터링
                 if m_data.get("is_shorts"):
                     skipped_count += 1
                     continue
-                # 2.2 듀레이션 필터링
+                
+                # 2.2 비공개 영상 필터링 (제목 예: "Private video", "비공개 동영상")
+                if "비공개" in title or "Private" in title:
+                    skipped_count += 1
+                    continue
+
+                # 2.3 듀레이션 필터링
                 m_duration = m_data.get("duration", 0)
                 if args.max_duration > 0 and m_duration > args.max_duration:
                     skipped_count += 1
@@ -420,7 +450,7 @@ def main():
         # 여기까지 오면 처리 대상
         pending_paths.append(data_path)
 
-    print(f"✅ 스캔 완료: 총 {len(transcript_paths)}개 중 {len(pending_paths)}개 처리 예정 (이미 완료/Shorts: {len(transcript_paths) - len(pending_paths)}개)")
+    print(f"✅ 스캔 완료: 총 {len(transcript_paths)}개 중 {len(pending_paths)}개 처리 예정 (이미 완료/Shorts/비공개: {len(transcript_paths) - len(pending_paths)}개)")
     
     # [Info] 처리 예정 비디오 목록 출력
     if pending_paths:
@@ -434,7 +464,11 @@ def main():
     print(f"🚀 총 {len(pending_paths)}개 영상 처리를 시작합니다.", flush=True)
 
     # pending_paths만 순회
-    for idx, data_path in enumerate(tqdm(pending_paths, desc="Generating context")):
+    # [Improve] tqdm 객체 사용하여 동적 설명 업데이트
+    pbar = tqdm(pending_paths, desc="Generating context")
+    for idx, data_path in enumerate(pbar):
+        video_id = os.path.basename(data_path).split(".")[0]
+        pbar.set_description(f"Generating context ({video_id})")
         # 최대 처리 수 제한 체크
         if args.max_videos > 0 and processed_count >= args.max_videos:
             print(f"🛑 최대 처리 한도({args.max_videos}개) 도달로 중단합니다.", flush=True)
@@ -503,7 +537,7 @@ def main():
             skipped_count += 1
             continue
 
-        # 처리
+        # 문맥 생성 처리
         try:
             process_video(
                 video_id=video_id,
