@@ -418,17 +418,21 @@ async function main() {
 main();
 EOF
         GEMINI_START=$(date +%s)
-        log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
-        
-        if node "$GEMINI_API_SCRIPT" "$TEMP_PROMPT" "$TEMP_RESPONSE"; then
-            GEMINI_SUCCESS=true
-            GEMINI_END=$(date +%s)
-            GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
-            TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
-            GEMINI_CALLS=$((GEMINI_CALLS + 1))
-            log_debug "Gemini API 호출 성공"
+        if [ "$USE_OAUTH" = "true" ]; then
+            log_info "OAuth 모드: Node.js API 호출 건너뜀 (CLI 사용)"
         else
-            log_warning "Gemini API 호출 실패 (CLI Fallback 시도)"
+            log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
+            
+            if node "$GEMINI_API_SCRIPT" "$TEMP_PROMPT" "$TEMP_RESPONSE"; then
+                GEMINI_SUCCESS=true
+                GEMINI_END=$(date +%s)
+                GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+                TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+                GEMINI_CALLS=$((GEMINI_CALLS + 1))
+                log_debug "Gemini API 호출 성공"
+            else
+                log_warning "Gemini API 호출 실패 (CLI Fallback 시도)"
+            fi
         fi
 
         # 2차 시도: Gemini CLI (API 실패 시)
@@ -605,8 +609,14 @@ main() {
             export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
             log_success "GEMINI_API_KEY 설정 완료 (from GEMINI_API_KEY_BYEON)"
         else
-            log_error "GEMINI_API_KEY 환경변수가 설정되지 않았습니다"
-            exit 1
+            # [Add] OAuth Creds 체크
+            if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+                log_warning "GEMINI_API_KEY 없음, 하지만 oauth_creds.json 발견됨. OAuth 모드로 진행합니다."
+                export USE_OAUTH=true
+            else
+                log_error "GEMINI_API_KEY 환경변수가 설정되지 않았습니다 (OAuth 파일도 없음)"
+                exit 1
+            fi
         fi
     else
         log_success "GEMINI_API_KEY 환경변수 확인 완료"
