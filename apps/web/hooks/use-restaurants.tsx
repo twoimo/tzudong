@@ -115,7 +115,8 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
     // 1. 데이터 정규화 및 인덱싱 (O(N))
     const normalizedData = restaurants.map((r, i) => {
-        const name = r.name || '';
+        // [Fix] r.name이 없으면 approved_name 사용 (RPC 결과 등)
+        const name = (r as any).name || (r as any).approved_name || '';
         const addr = normalizeAddress(r.jibun_address || r.road_address || '');
 
         if (name) {
@@ -167,9 +168,11 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
         const groupRestaurants = indices.map(idx => restaurants[idx]);
 
         // 이름 길이순으로 정렬하여 가장 긴 이름을 메인으로 사용
-        const sortedByNameLength = [...groupRestaurants].sort((a, b) =>
-            (b.name?.length || 0) - (a.name?.length || 0)
-        );
+        const sortedByNameLength = [...groupRestaurants].sort((a, b) => {
+            const nameA = (a as any).name || (a as any).approved_name || '';
+            const nameB = (b as any).name || (b as any).approved_name || '';
+            return nameB.length - nameA.length;
+        });
 
         const mainRestaurant = sortedByNameLength[0];
 
@@ -212,6 +215,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
         return {
             ...mainRestaurant,
+            name: (mainRestaurant as any).name || (mainRestaurant as any).approved_name || '',
             lat,
             lng,
             categories: allCategories,
