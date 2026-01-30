@@ -184,6 +184,12 @@ log "INFO" "[Step 2] 메타데이터 수집 및 스케줄링..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
+# 2.1. 메타데이터 마이그레이션 (Supabase용)
+echo "::group::[Step 6.2] Meta Migration"
+log "INFO" "[Step 6.2] Meta Migrating to Supabase..."
+$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
+
 # 2.5. 고아 파일 사전 정리 (Auto-Healing Pre-check)
 echo "::group::[Step 2.5] Orphan Cleanup"
 log "INFO" "[Step 2.5] 고아 파일 사전 정리..."
@@ -229,12 +235,6 @@ echo "::endgroup::"
 # [Intermediate Sync] 프레임 메타데이터 저장
 sync_data_to_remote "Step 4 (Frames)"
 
-# 6. Gemini 기반 데이터 분석
-echo "::group::[Step 6] Gemini Data Analysis"
-log "INFO" "[Step 6] Gemini 데이터 분석 중..."
-bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-echo "::endgroup::"
-
 # 6.1. 자막 문서에 메타데이터 추가 (음식점 + Peak)
 echo "::group::[Step 6.1] Enrich Subtitles"
 log "INFO" "[Step 6.1] 자막 문서 메타데이터 추가 중..."
@@ -242,18 +242,10 @@ log "INFO" "[Step 6.1] 자막 문서 메타데이터 추가 중..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/06.1-transcript-document-with-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 6.2. 메타데이터 마이그레이션 (Supabase용)
-echo "::group::[Step 6.2] Meta Migration"
-log "INFO" "[Step 6.2] Meta Migrating to Supabase..."
-$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-echo "::endgroup::"
-
-# 10. 평가 대상 선정
-echo "::group::[Step 10] Target Selection"
-log "INFO" "[Step 10] Target Selection..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/10-target-selection.py --channel tzuyang \
-  --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+# 7. Gemini 기반 데이터 분석
+echo "::group::[Step 6] Gemini Data Analysis"
+log "INFO" "[Step 6] Gemini 데이터 분석 중..."
+bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
 # 8. Rule 기반 평가 (위치/상호 검증)
@@ -274,6 +266,14 @@ bash backend/restaurant-evaluation/scripts/09-laaj-evaluation.sh --channel tzuya
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "🎉 LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
+echo "::endgroup::"
+
+# 10. 평가 대상 선정
+echo "::group::[Step 10] Target Selection"
+log "INFO" "[Step 10] Target Selection..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/10-target-selection.py --channel tzuyang \
+  --crawling-path backend/restaurant-crawling/data/tzuyang \
+  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
 # 11. 결과 변환 (Transforms)
@@ -300,7 +300,8 @@ log "INFO" "============================================================"
 # 7. Data 브랜치에 변경 사항 푸시 (Final Sync)
 log "INFO" "[Step 7] 'data' 브랜치에 최종 데이터 저장..."
 sync_data_to_remote "Step 7 (Final)"
-# 7. 코드 에디터 동기화 신호 (Antigravity 등)
+
+# 8. 코드 에디터 동기화 신호 (Antigravity 등)
 SYNC_TRIGGER_FILE="$PROJECT_ROOT/backend/.sync_trigger"
 echo "$(date)" > "$SYNC_TRIGGER_FILE"
 log "INFO" "코드 에디터 동기화용 트리거 파일 생성됨"
@@ -314,7 +315,7 @@ SUMMARY_MD="$PROJECT_ROOT/summary.md"
 echo "## Daily Crawling Report ($DATE)" > "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
-# 2. 상세 처리 통계
+# 9. 상세 처리 통계
 echo "### Process Statistics" >> "$SUMMARY_MD"
 echo "| Step | Count | Status |" >> "$SUMMARY_MD"
 echo "|------|-------|--------|" >> "$SUMMARY_MD"
