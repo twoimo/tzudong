@@ -378,7 +378,7 @@ export default function FeedContent({
             !isOverlay && "bg-muted/30 overflow-y-auto"
         )} data-testid="feed-content-container">
             <div className={cn(
-                "w-full mx-auto bg-background flex flex-col h-full",
+                "w-full mx-auto bg-background flex flex-col h-full relative",
                 !isOverlay && "max-w-2xl md:border-x md:border-border md:shadow-sm"
             )}>
                 {/* 헤더 */}
@@ -508,7 +508,8 @@ export default function FeedContent({
                     isOverlay ? (
                         <Button
                             onClick={handleWriteReview}
-                            className="fixed right-4 bottom-20 md:right-8 md:bottom-8 z-[100] h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
+                            className="absolute right-8 bottom-8 z-[100] h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
+
                             size="icon"
                         >
                             <Plus className="h-6 w-6" />
