@@ -392,7 +392,7 @@ export function useUserStamps(userId: string) {
             if (reviewsError || !reviews?.length) return [];
 
             // 2. 맛집 ID 추출
-            const restaurantIds = [...new Set(reviews.map(r => r.restaurant_id))];
+            const restaurantIds = [...new Set((reviews as any[]).map(r => r.restaurant_id))];
 
             // 3. 맛집 상세 정보 조회
             const { data: restaurants } = await supabase
@@ -401,7 +401,7 @@ export function useUserStamps(userId: string) {
                 .in('id', restaurantIds);
 
             const restaurantMap = new Map(
-                restaurants?.map(r => {
+                (restaurants as any[])?.map(r => {
                     const mappedR = { ...r };
                     if (mappedR.approved_name) {
                         mappedR.name = mappedR.approved_name;
