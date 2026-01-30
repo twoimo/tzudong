@@ -761,6 +761,13 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
             }
         } catch (e) {
             log('warn', `[Fetch] 요청 실패 (${attempt}/${MAX_RETRIES}): ${e.message}`);
+
+            // [Fix] 429/차단 관련 에러면 즉시 중단 (무리한 재시도 방지)
+            if (e.message.includes('429') || e.message.includes('Block') || e.message.includes('SORRY_REDIRECT')) {
+                log('error', `🛑 429/차단 감지됨. 추가 재시도를 중단합니다.`);
+                break;
+            }
+
             // 마지막 시도가 아니면 대기 후 재시도
             if (attempt < MAX_RETRIES) {
                 const delay = attempt * 2000 + Math.random() * 1000; // 2s~, 4s~...
