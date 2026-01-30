@@ -697,14 +697,28 @@ export function AdminRestaurantModal({
 
                 toast.success("맛집이 수정되었습니다");
 
-                // 첫 번째 레코드의 업데이트된 데이터 가져오기
-                const { data: fetchedRestaurant } = await supabase
+                // [BUG FIX] 병합된 레스토랑 정보가 손실되지 않도록 전체 그룹 재조회 및 구성
+                const { data: allUpdatedRestaurants } = await supabase
                     .from("restaurants")
                     .select("*, name:approved_name")
-                    .eq("id", restaurant.id)
-                    .single();
+                    .in("id", existingIds);
 
-                onSuccess(fetchedRestaurant || undefined);
+                if (allUpdatedRestaurants && allUpdatedRestaurants.length > 0) {
+                    const primaryRestaurant = allUpdatedRestaurants.find(r => r.id === restaurant.id);
+                    const mergedChildren = allUpdatedRestaurants.filter(r => r.id !== restaurant.id);
+
+                    if (primaryRestaurant) {
+                        const finalRestaurant = {
+                            ...primaryRestaurant,
+                            mergedRestaurants: mergedChildren.length > 0 ? mergedChildren : (restaurant.mergedRestaurants || [])
+                        };
+                        onSuccess(finalRestaurant as unknown as Restaurant);
+                    } else {
+                        onSuccess(undefined);
+                    }
+                } else {
+                    onSuccess(undefined);
+                }
             } else {
                 // 새 맛집 등록
                 const restaurantData = {

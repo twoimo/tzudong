@@ -57,6 +57,8 @@ interface RestaurantDetailPanelProps {
     isPanelOpen?: boolean;
     isMobile?: boolean;
     className?: string;
+    onUserClick?: (userId: string) => void;
+    onRestaurantClick?: (restaurant: Restaurant) => void;
 }
 
 interface Review {
@@ -90,6 +92,8 @@ export function RestaurantDetailPanel({
     isPanelOpen = true,
     isMobile = false,
     className,
+    onUserClick,
+    onRestaurantClick,
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
@@ -952,8 +956,9 @@ export function RestaurantDetailPanel({
                                                     }}
                                                     onLike={handleLikeReview}
                                                     onClick={() => { }}
-                                                    onRestaurantClick={() => { }}
+                                                    onRestaurantClick={() => onRestaurantClick?.(restaurant)}
                                                     currentUserId={user?.id}
+                                                    onUserClick={onUserClick}
                                                     onEditReview={(reviewData) => setEditingReview({
                                                         ...reviewData,
                                                         restaurantId: restaurant.id,
@@ -988,8 +993,9 @@ export function RestaurantDetailPanel({
                                                 }}
                                                 onLike={handleLikeReview}
                                                 onClick={() => { }}
-                                                onRestaurantClick={() => { }}
+                                                onRestaurantClick={() => onRestaurantClick?.(restaurant)}
                                                 currentUserId={user?.id}
+                                                onUserClick={onUserClick}
                                                 onEditReview={(reviewData) => setEditingReview({
                                                     ...reviewData,
                                                     restaurantId: restaurant.id,

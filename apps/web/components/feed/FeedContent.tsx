@@ -21,6 +21,7 @@ import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
 import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
 
+
 // ========== Types ==========
 export interface FeedReview {
     id: string;
@@ -54,6 +55,8 @@ interface FeedContentProps {
     initialReviewId?: string | null;
     /** 맛집 상세 모달 열기 핸들러 (오버레이용) */
     onOpenRestaurantDetail?: (restaurant: any) => void;
+    /** 유저 프로필 모달 열기 핸들러 (오버레이용) */
+    onOpenUserProfile?: (userId: string) => void;
 }
 
 
@@ -66,6 +69,7 @@ export default function FeedContent({
     hideFloatingButton,
     initialReviewId,
     onOpenRestaurantDetail,
+    onOpenUserProfile,
 }: FeedContentProps) {
 
     const { user } = useAuth();
@@ -76,6 +80,7 @@ export default function FeedContent({
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [showMyReviewsOnly, setShowMyReviewsOnly] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedQuery, setDebouncedQuery] = useState('');
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
     const [editingReview, setEditingReview] = useState<{
         id: string;
@@ -100,6 +105,14 @@ export default function FeedContent({
     const searchParams = useSearchParams();
     const targetReviewId = searchParams?.get('review') || null;
     const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(null);
+
+    // [성능 최적화] 검색어 디바운싱 (300ms)
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
 
     // [리뷰 공유] URL 파라미터로 스크롤 (마운트 시)
     useEffect(() => {
@@ -248,8 +261,8 @@ export default function FeedContent({
         if (showMyReviewsOnly && user?.id) {
             reviews = reviews.filter(review => review.userId === user.id);
         }
-        if (searchQuery.trim()) {
-            const query = searchQuery.trim().toLowerCase();
+        if (debouncedQuery.trim()) {
+            const query = debouncedQuery.trim().toLowerCase();
             reviews = reviews.filter(review =>
                 review.restaurantName.toLowerCase().includes(query) ||
                 review.userName.toLowerCase().includes(query) ||
@@ -257,7 +270,7 @@ export default function FeedContent({
             );
         }
         return reviews;
-    }, [feedPages, showMyReviewsOnly, user?.id, searchQuery]);
+    }, [feedPages, showMyReviewsOnly, user?.id, debouncedQuery]);
 
     // 무한 스크롤
     const loadMore = useCallback(() => {
@@ -485,6 +498,7 @@ export default function FeedContent({
                                         onRestaurantClick={() => goToRestaurant(review.restaurantId, review.restaurant)}
                                         currentUserId={user?.id}
                                         onEditReview={setEditingReview}
+                                        onUserClick={onOpenUserProfile}
                                     />
                                 );
                             })}
@@ -504,29 +518,26 @@ export default function FeedContent({
                 </div>
 
                 {/* 플로팅 리뷰 작성 버튼 */}
-                {isLoggedIn && !hideFloatingButton && (
-                    isOverlay ? (
+                {isLoggedIn && !hideFloatingButton && (() => {
+                    const FloatingButton = (
                         <Button
                             onClick={handleWriteReview}
-                            className="absolute right-8 bottom-8 z-[100] h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
-
+                            className={cn(
+                                "h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90",
+                                isOverlay
+                                    ? "absolute right-8 bottom-8 z-[100]"
+                                    : "fixed right-4 bottom-20 md:right-8 md:bottom-8 z-50"
+                            )}
                             size="icon"
                         >
                             <Plus className="h-6 w-6" />
                         </Button>
-                    ) : (
-                        typeof document !== 'undefined' && createPortal(
-                            <Button
-                                onClick={handleWriteReview}
-                                className="fixed right-4 bottom-20 md:right-8 md:bottom-8 z-50 h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
-                                size="icon"
-                            >
-                                <Plus className="h-6 w-6" />
-                            </Button>,
-                            document.body
-                        )
-                    )
-                )}
+                    );
+
+                    return isOverlay
+                        ? FloatingButton
+                        : (typeof document !== 'undefined' && createPortal(FloatingButton, document.body));
+                })()}
 
                 {/* 리뷰 작성 모달 */}
                 {!hideReviewModal && (
@@ -555,5 +566,3 @@ export default function FeedContent({
         </div>
     );
 }
-
-

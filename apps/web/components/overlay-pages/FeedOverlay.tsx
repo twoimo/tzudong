@@ -3,12 +3,13 @@
 import FeedContent from '@/components/feed/FeedContent';
 
 interface FeedOverlayProps {
-    onClose?: () => void;
+    onClose: () => void;
     onOpenReviewModal?: () => void;
     hideReviewModal?: boolean;
     hideFloatingButton?: boolean;
     initialReviewId?: string | null;
     onOpenRestaurantDetail?: (restaurant: any) => void;
+    onOpenUserProfile?: (userId: string) => void;
 }
 
 /**
@@ -22,18 +23,18 @@ export default function FeedOverlay({
     hideFloatingButton,
     initialReviewId,
     onOpenRestaurantDetail,
+    onOpenUserProfile,
 }: FeedOverlayProps) {
     return (
-        <div className="h-full flex flex-col">
-            <FeedContent
-                variant="overlay"
-                onClose={onClose}
-                onOpenReviewModal={onOpenReviewModal}
-                hideReviewModal={hideReviewModal}
-                hideFloatingButton={hideFloatingButton}
-                initialReviewId={initialReviewId}
-                onOpenRestaurantDetail={onOpenRestaurantDetail}
-            />
-        </div>
+        <FeedContent
+            variant="overlay"
+            onClose={onClose}
+            onOpenReviewModal={onOpenReviewModal}
+            hideReviewModal={hideReviewModal}
+            hideFloatingButton={hideFloatingButton}
+            initialReviewId={initialReviewId}
+            onOpenRestaurantDetail={onOpenRestaurantDetail}
+            onOpenUserProfile={onOpenUserProfile}
+        />
     );
 }

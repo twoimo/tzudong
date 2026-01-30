@@ -14,7 +14,7 @@ interface BookmarkWithRestaurant extends Bookmark {
     restaurant: {
         id: string;
         name: string;
-        category: string[] | null;
+        category: string[];
         road_address: string | null;
         jibun_address: string | null;
         youtube_link: string | null;
@@ -26,15 +26,32 @@ interface BookmarkWithRestaurant extends Bookmark {
 const BOOKMARK_STALE_TIME = 2 * 60 * 1000; // 2분간 stale 상태가 되지 않음
 const BOOKMARK_GC_TIME = 10 * 60 * 1000; // 10분간 캐시 유지
 
+interface BookmarkRow {
+    id: string;
+    user_id: string;
+    restaurant_id: string;
+    created_at: string;
+}
+
+interface RestaurantRow {
+    id: string;
+    approved_name: string;
+    categories: string[] | string;
+    road_address: string | null;
+    jibun_address: string | null;
+    youtube_link: string | null;
+    review_count: number | null;
+}
+
 export function useBookmarks() {
     const { user } = useAuth();
 
     return useQuery({
-        queryKey: ['bookmarks', user?.id],
+        queryKey: ['user-bookmarks', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
 
-            // 1. 북마크 데이터 조회 (관계형 쿼리 제거)
+            // 1. 북마크 데이터 조회
             const { data: bookmarksData, error: bookmarksError } = await (supabase as any)
                 .from('user_bookmarks')
                 .select('id, user_id, restaurant_id, created_at')
@@ -48,35 +65,43 @@ export function useBookmarks() {
             }
 
             // 2. 맛집 상세 정보 조회
-            const restaurantIds = bookmarksData.map((b: any) => b.restaurant_id);
+            const restaurantIds = (bookmarksData as BookmarkRow[]).map((b) => b.restaurant_id);
 
-            const { data: restaurantsData, error: restaurantsError } = await (supabase as any)
+            const { data: restaurantsData, error: restaurantsError } = await supabase
                 .from('restaurants')
                 .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count')
                 .in('id', restaurantIds)
-                .eq('status', 'approved'); // 승인된 맛집만 표시
+                .eq('status', 'approved');
 
             if (restaurantsError) throw restaurantsError;
 
             // 3. 데이터 병합
-            const restaurantsMap = new Map((restaurantsData || []).map((r: any) => [r.id, r]));
+            const restaurantsMap = new Map((restaurantsData as unknown as RestaurantRow[]).map((r) => [r.id, r]));
 
-            return bookmarksData
-                .map((bookmark: any) => {
+            return (bookmarksData as BookmarkRow[])
+                .map((bookmark) => {
                     const restaurant = restaurantsMap.get(bookmark.restaurant_id);
                     // 맛집 정보가 없으면(삭제/미승인 등) 필터링 대상이 될 수 있음
                     if (!restaurant) return null;
 
+                    const categories = Array.isArray(restaurant.categories)
+                        ? restaurant.categories
+                        : (restaurant.categories ? [restaurant.categories as string] : []);
+
                     return {
                         ...bookmark,
                         restaurant: {
-                            ...restaurant,
-                            name: (restaurant as any).approved_name, // alias 처리
-                            category: (restaurant as any).categories
+                            id: restaurant.id,
+                            name: restaurant.approved_name,
+                            category: categories,
+                            road_address: restaurant.road_address,
+                            jibun_address: restaurant.jibun_address,
+                            youtube_link: restaurant.youtube_link,
+                            review_count: restaurant.review_count || 0
                         }
                     };
                 })
-                .filter((item: any) => item !== null) as BookmarkWithRestaurant[];
+                .filter((item): item is BookmarkWithRestaurant => item !== null);
         },
         enabled: !!user?.id,
         staleTime: BOOKMARK_STALE_TIME,
@@ -228,7 +253,7 @@ export function useBookmarkCount(restaurantId: string) {
     return useQuery({
         queryKey: ['bookmark-count', restaurantId],
         queryFn: async () => {
-            const { count, error } = await (supabase as any)
+            const { count, error } = await supabase
                 .from('user_bookmarks')
                 .select('*', { count: 'exact', head: true })
                 .eq('restaurant_id', restaurantId);

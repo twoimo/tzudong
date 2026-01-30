@@ -104,6 +104,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
 
     const handleOpenRestaurantDetail = useCallback((restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
+        // [UX] 중복 허용: setSelectedUserId(null); 제거
     }, []);
 
     const handleCloseRestaurantDetail = useCallback(() => {
@@ -112,6 +113,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
 
     const handleOpenUserProfile = useCallback((userId: string) => {
         setSelectedUserId(userId);
+        // [UX] 중복 허용: setSelectedRestaurant(null); 제거
     }, []);
 
     const handleCloseUserProfile = useCallback(() => {
@@ -128,13 +130,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
     const showInlineReviewPanel = activePanel === 'feed' && isReviewPanelOpen && isDesktop;
     // [수정] leaderboard 탭 및 feed 탭에서도 맛집 상세 패널 표시 허용
     const showRestaurantDetail = (activePanel === 'stamp' || activePanel === 'leaderboard' || activePanel === 'feed') && selectedRestaurant && isDesktop;
-    const showUserProfile = activePanel === 'leaderboard' && selectedUserId && isDesktop;
-
-    // 사이드 패널이 열려있을 때 메인 패널 너비 조정 로직 제거 (사용자 요청: 크기 유지)
-    // if (showRestaurantDetail) {
-    //    maxWidth = 'max-w-4xl';
-    // }
-    // 랭킹 패널(max-w-3xl)은 사이드 패널이 열려도 너비 유지 (충분히 작음)
+    const showUserProfile = (activePanel === 'leaderboard' || activePanel === 'feed' || activePanel === 'stamp') && selectedUserId && isDesktop;
 
     return (
         <>
@@ -172,6 +168,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                             hideFloatingButton={isReviewPanelOpen}
                             initialReviewId={initialReviewId}
                             onOpenRestaurantDetail={handleOpenRestaurantDetail}
+                            onOpenUserProfile={handleOpenUserProfile}
                         />
                     )}
                     {activePanel === 'stamp' && (
@@ -241,6 +238,8 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                             className="border-none"
                             onWriteReview={handleOpenReviewPanel}
                             onRequestEditRestaurant={handleRequestEdit}
+                            onUserClick={handleOpenUserProfile}
+                            onRestaurantClick={handleOpenRestaurantDetail}
                         />
                     </div>
                 )}
