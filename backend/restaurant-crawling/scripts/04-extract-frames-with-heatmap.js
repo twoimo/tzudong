@@ -624,19 +624,7 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
             req.on('error', reject);
         });
     } catch (e) {
-        // Retry Logic for 429 or Network Errors
-        const isRateLimit = e.message === '429_TOO_MANY_REQUESTS' || e.message === '429_GOOGLE_SORRY_REDIRECT';
-        const isNetworkError = e.message.includes('ECONNRESET') || e.message.includes('ETIMEDOUT');
-
-        if ((isRateLimit || isNetworkError) && retryCount < 5) {
-            const baseDelay = isRateLimit ? 10000 : 2000; // Rate limit: 10s start, Network: 2s start
-            const waitTime = Math.pow(2, retryCount) * baseDelay + Math.random() * 1000;
-            const logMsg = isRateLimit ? '⚠️ 요청 제한(429/Block) 감지' : '⚠️ 네트워크 오류 감지';
-
-            log('warn', `${logMsg}. ${Math.round(waitTime / 1000)}초 후 재시도... (${retryCount + 1}/5) - ${e.message}`);
-            await sleep(waitTime);
-            return fetchPage(url, cookieHeader, 0, retryCount + 1); // redirectCount 초기화, retryCount 증가
-        }
+        // [Mod] 내부 재시도 로직 제거 (외부 루프에서 제어)
         throw e;
     }
 }
