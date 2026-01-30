@@ -404,7 +404,8 @@ EOF
         fi
     fi
         
-        # 2차 시도: Gemini CLI
+    # 2차 시도: Gemini CLI (Node.js 실패 시 또는 OAuth 모드 시 Exec)
+    if [ "$GEMINI_SUCCESS" = false ]; then
         log_debug "Gemini CLI 모델: $CURRENT_MODEL"
         if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
             GEMINI_SUCCESS=true
