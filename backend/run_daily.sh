@@ -194,12 +194,17 @@ node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuy
 log "INFO" "[Step 3.1] 자막 문맥 생성 중..."
 # [Config] 실행 모드에 따른 배치 크기 제한 (Env: MAX_CONTEXT_VIDEOS -> Default: 0)
 MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
-if [[ "$MAX_VIDEOS" -gt 0 ]]; then
-    log "INFO" "Context Generation Limit: $MAX_VIDEOS videos (Configured)"
+
+if [[ "$MAX_VIDEOS" -eq -1 ]]; then
+    log "INFO" "Context Generation Skipped (Configured as -1)"
 else
-    log "INFO" "Context Generation Limit: Unlimited"
+    if [[ "$MAX_VIDEOS" -gt 0 ]]; then
+        log "INFO" "Context Generation Limit: $MAX_VIDEOS videos (Configured)"
+    else
+        log "INFO" "Context Generation Limit: Unlimited"
+    fi
+    $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
 fi
-$PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
 
 # [Intermediate Sync] 자막/문맥 생성 완료 후 저장 (가장 중요)
 sync_data_to_remote "Step 3.1 (Context)"
