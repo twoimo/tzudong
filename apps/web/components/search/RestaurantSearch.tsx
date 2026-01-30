@@ -363,7 +363,7 @@ const RestaurantSearch = ({
                           // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
                           const { data } = await supabase
                             .from('restaurants')
-                            .select('*')
+                            .select('*, name:approved_name') // [Fix] name 별칭 추가
                             .eq('approved_name', item.name)
                             .eq('status', 'approved');
 
@@ -414,7 +414,7 @@ const RestaurantSearch = ({
                           // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
                           const { data } = await supabase
                             .from('restaurants')
-                            .select('*')
+                            .select('*, name:approved_name') // [Fix] name 별칭 추가
                             .eq('approved_name', restaurant.name)
                             .eq('status', 'approved');
 
