@@ -421,6 +421,14 @@ def main():
         pending_paths.append(data_path)
 
     print(f"✅ 스캔 완료: 총 {len(transcript_paths)}개 중 {len(pending_paths)}개 처리 예정 (이미 완료/Shorts: {len(transcript_paths) - len(pending_paths)}개)")
+    
+    # [Info] 처리 예정 비디오 목록 출력
+    if pending_paths:
+        print("\n📋 [처리 예정 비디오 목록]")
+        for path_str in pending_paths:
+             vid = os.path.basename(path_str).split(".")[0]
+             print(f" - https://youtu.be/{vid} ({vid})")
+    
     print("=" * 60)
 
     print(f"🚀 총 {len(pending_paths)}개 영상 처리를 시작합니다.", flush=True)
