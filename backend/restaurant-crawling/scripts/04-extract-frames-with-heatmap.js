@@ -743,9 +743,32 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         }
     }
 
-    const cookieHeader = await loadCookies();
-    const html = await fetchPage(url, cookieHeader);
-    const parsed = parseHeatmap(html);
+    // [Mod] 1차 시도: 쿠키 없이 접근 (Public/Incognito Mode) - 시크릿 모드 우선
+    log('info', `[Fetch] 1차 시도: 쿠키 없이 접근 (Public/Incognito Mode)...`);
+    let html, parsed;
+    try {
+        html = await fetchPage(url, '');
+        parsed = parseHeatmap(html);
+    } catch (e) {
+        log('warn', `[Fetch] 1차 시도 요청 실패: ${e.message}`);
+    }
+
+    // [Mod] 2차 시도: 1차 실패(히트맵 미발견/접근제한) 시 쿠키 사용 (Fallback)
+    if (!parsed || (!parsed.mostReplayedMarkers.length && !parsed.interactionData)) {
+        log('warn', `[Fetch] 1차 시도 실패 (히트맵 미발견). 2차 시도: 쿠키 사용 (Auth Mode)...`);
+        const cookieHeader = await loadCookies();
+        if (cookieHeader) {
+            try {
+                // 2차 시도
+                html = await fetchPage(url, cookieHeader);
+                parsed = parseHeatmap(html);
+            } catch (e) {
+                log('warn', `[Fetch] 2차 시도 요청 실패: ${e.message}`);
+            }
+        } else {
+            log('warn', `[Fetch] 사용 가능한 쿠키가 없어 2차 시도 생략.`);
+        }
+    }
 
     if (!parsed || (!parsed.mostReplayedMarkers.length && !parsed.interactionData)) {
         log('warn', `[Warn] ${videoId}: 히트맵 정보가 없습니다.`);
