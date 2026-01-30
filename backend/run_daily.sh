@@ -53,6 +53,11 @@ log() {
   echo "[$TIMESTAMP] [$LEVEL] $MESSAGE" | tee -a "$LOG_FILE"
 }
 
+# ANSI 색상 코드 제거 함수
+strip_ansi() {
+    sed 's/\x1b\[[0-9;]*m//g'
+}
+
 # [Function] 데이터 브랜치 동기화 함수 (단계별 저장용)
 sync_data_to_remote() {
     local STEP_NAME="$1"
@@ -248,7 +253,7 @@ log "INFO" "[Step 6] Gemini 데이터 분석 중..."
 bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 08. 평가 대상 선정
+# 8. 평가 대상 선정
 echo "::group::[Step 08] Target Selection"
 log "INFO" "[Step 08] Target Selection..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/08-target-selection.py --channel tzuyang \
@@ -256,7 +261,7 @@ $PYTHON_CMD backend/restaurant-evaluation/scripts/08-target-selection.py --chann
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 09. Rule 기반 평가 (위치/상호 검증)
+# 9. Rule 기반 평가 (위치/상호 검증)
 echo "::group::[Step 09] Rule Evaluation"
 log "INFO" "[Step 09] Rule Evaluation..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/09-rule-evaluation.py --channel tzuyang \
@@ -321,10 +326,8 @@ echo "### Process Statistics" >> "$SUMMARY_MD"
 echo "| Step | Count | Status |" >> "$SUMMARY_MD"
 echo "|------|-------|--------|" >> "$SUMMARY_MD"
 
-# ANSI 색상 코드 제거 함수
-strip_ansi() {
-    sed 's/\x1b\[[0-9;]*m//g'
-}
+echo "| Step | Count | Status |" >> "$SUMMARY_MD"
+echo "|------|-------|--------|" >> "$SUMMARY_MD"
 
 if [ -f "$LOG_FILE" ]; then
     # 1. URL
