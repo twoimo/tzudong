@@ -32,6 +32,11 @@ jobs:
       - name: Create Swap Space (12GB)
         run: |
           # Free Disk Space 액션 덕분에 공간이 확보되었으므로 스왑 생성 가능
+          # 만약 이전 실행의 잔여물이 있다면 정리
+          if [ -f /swapfile ]; then
+            sudo swapoff /swapfile || true
+            sudo rm -f /swapfile
+          fi
           sudo fallocate -l 12G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
