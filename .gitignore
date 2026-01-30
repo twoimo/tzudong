@@ -92,3 +92,6 @@ backend/agent-rag/data/tzuyang/*
 backend/log/
 backend/job-logs.txt
 supabase/.temp/
+# Sensitive Credentials
+.gemini/
+oauth_creds.json
