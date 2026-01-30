@@ -786,8 +786,8 @@ const NaverMapView = memo(({
             targetLng = selectedRestaurant.lng;
             isRestaurantSelected = true;
 
-            // [Fix] 마커 클릭 시 기존 줌 레벨 유지 (줌 변경 없이 패널만 열기)
-            targetZoom = currentMapZoom;
+            // [Fix] 마커 클릭/북마크 이동 시 줌 레벨이 너무 낮으면 확대 (최소 15), 충분히 확대된 상태면 유지
+            targetZoom = Math.max(currentMapZoom, 15);
         } else {
             // [Fix] URL 파라미터가 있으면 그대로 유지 (공유 URL 시나리오)
             const urlParams = new URLSearchParams(window.location.search);

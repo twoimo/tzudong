@@ -409,7 +409,7 @@ export default function HomeClient() {
 
                 const { data: targetRestaurant, error } = await supabase
                     .from('restaurants')
-                    .select('*')
+                    .select('*, name:approved_name')
                     .eq('id', restaurantId)
                     .single();
 

@@ -104,8 +104,12 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
 
     const handleOpenRestaurantDetail = useCallback((restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
-        // [UX] 중복 허용: setSelectedUserId(null); 제거
-    }, []);
+
+        // [UX] 도장(Stamp) 및 리뷰(Feed) 탭에서는 유저 프로필을 닫고 맛집 상세로 "전환"
+        if (activePanel === 'stamp' || activePanel === 'feed') {
+            setSelectedUserId(null);
+        }
+    }, [activePanel]);
 
     const handleCloseRestaurantDetail = useCallback(() => {
         setSelectedRestaurant(null);
@@ -113,8 +117,13 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
 
     const handleOpenUserProfile = useCallback((userId: string) => {
         setSelectedUserId(userId);
-        // [UX] 중복 허용: setSelectedRestaurant(null); 제거
-    }, []);
+
+        // [UX] 도장(Stamp) 및 리뷰(Feed) 탭에서는 맛집 모달을 닫고 프로필로 "전환"
+        if (activePanel === 'stamp' || activePanel === 'feed') {
+            setSelectedRestaurant(null);
+        }
+        // 랭킹(Leaderboard)에서는 나란히 표시 유지
+    }, [activePanel]);
 
     const handleCloseUserProfile = useCallback(() => {
         setSelectedUserId(null);
