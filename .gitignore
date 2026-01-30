@@ -95,3 +95,6 @@ supabase/.temp/
 # Sensitive Credentials
 .gemini/
 oauth_creds.json
+
+backend/restaurant-crawling/data/*
+backend/restaurant-evaluation/data/*

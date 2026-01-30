@@ -17,8 +17,11 @@ if [ -f "$HOME/.bashrc" ]; then
     source "$HOME/.bashrc"
 fi
 
-# Python 명령어 감지 (python3 우선, 없으면 python 사용)
-if command -v python3 >/dev/null 2>&1; then
+# [Local Config] Anaconda Python 우선 사용 (패키지 설치 환경)
+if [ -f "/c/Users/twoimo/anaconda3/python.exe" ]; then
+    PYTHON_CMD="/c/Users/twoimo/anaconda3/python.exe"
+    export PATH="/c/Users/twoimo/anaconda3:/c/Users/twoimo/anaconda3/Scripts:$PATH"
+elif command -v python3 >/dev/null 2>&1; then
     PYTHON_CMD="python3"
 else
     if command -v python >/dev/null 2>&1; then
