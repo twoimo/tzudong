@@ -270,6 +270,9 @@ $PYTHON_CMD backend/restaurant-evaluation/scripts/09-rule-evaluation.py --channe
 grep "✅ Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 echo "::endgroup::"
 
+# [Intermediate Sync] Rule 평가 완료 후 저장 (LAAJ 전 중간 저장)
+sync_data_to_remote "Step 9 (Rule Eval)"
+
 # 10. LAAJ (LLM) 기반 평가
 echo "::group::[Step 10] LAAJ Evaluation"
 log "INFO" "[Step 10] LAAJ Evaluation..."
@@ -281,6 +284,9 @@ bash backend/restaurant-evaluation/scripts/10-laaj-evaluation.sh --channel tzuya
 grep "🎉 LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 echo "::endgroup::"
 
+# [Intermediate Sync] LAAJ 평가 완료 후 저장 (중요)
+sync_data_to_remote "Step 10 (LAAJ Eval)"
+
 
 # 11. 결과 변환 (Transforms)
 echo "::group::[Step 11] Transform Results"
@@ -289,6 +295,9 @@ $PYTHON_CMD backend/restaurant-evaluation/scripts/11-transform.py --channel tzuy
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
+
+# [Intermediate Sync] 변환 완료 후 저장 (Supabase 입력 전 백업)
+sync_data_to_remote "Step 11 (Transform)"
 
 # 12. Supabase 결과 삽입
 echo "::group::[Step 12] Insert to Supabase"
