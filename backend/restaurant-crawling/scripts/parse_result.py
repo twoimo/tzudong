@@ -90,6 +90,21 @@ def scan_pending(args: argparse.Namespace) -> None:
         if not meta_file.exists() or not transcript_file.exists():
             continue
 
+        # (5) 자막 내용 확인 (빈 자막이면 스킵)
+        try:
+            with open(transcript_file, 'r', encoding='utf-8') as tf:
+                # 최신 라인 로드
+                lines = tf.readlines()
+                if not lines:
+                    continue
+                last_data = json.loads(lines[-1])
+                transcript_list = last_data.get("transcript", [])
+                if not transcript_list:
+                    # 자막이 비어있으면 크롤링 불가하므로 스킵
+                    continue
+        except (json.JSONDecodeError, IOError, IndexError):
+            continue
+
         # 여기까지 오면 pending
         pending_urls.append(url)
 
