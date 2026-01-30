@@ -248,28 +248,28 @@ log "INFO" "[Step 6] Gemini 데이터 분석 중..."
 bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 7. 평가 대상 선정
-echo "::group::[Step 7] Target Selection"
-log "INFO" "[Step 7] Target Selection..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/07-target-selection.py --channel tzuyang \
+# 08. 평가 대상 선정
+echo "::group::[Step 08] Target Selection"
+log "INFO" "[Step 08] Target Selection..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/08-target-selection.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 8. Rule 기반 평가 (위치/상호 검증)
-echo "::group::[Step 8] Rule Evaluation"
-log "INFO" "[Step 8] Rule Evaluation..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/08-rule-evaluation.py --channel tzuyang \
+# 09. Rule 기반 평가 (위치/상호 검증)
+echo "::group::[Step 09] Rule Evaluation"
+log "INFO" "[Step 09] Rule Evaluation..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/09-rule-evaluation.py --channel tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "✅ Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 echo "::endgroup::"
 
-# 9. LAAJ (LLM) 기반 평가
-echo "::group::[Step 9] LAAJ Evaluation"
-log "INFO" "[Step 9] LAAJ Evaluation..."
+# 10. LAAJ (LLM) 기반 평가
+echo "::group::[Step 10] LAAJ Evaluation"
+log "INFO" "[Step 10] LAAJ Evaluation..."
 # 주의: --crawling-path는 채널명까지 포함된 상세 경로여야 함
-bash backend/restaurant-evaluation/scripts/09-laaj-evaluation.sh --channel tzuyang \
+bash backend/restaurant-evaluation/scripts/10-laaj-evaluation.sh --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
@@ -277,18 +277,18 @@ grep "🎉 LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while
 echo "::endgroup::"
 
 
-# 10. 결과 변환 (Transforms)
-echo "::group::[Step 10] Transform Results"
-log "INFO" "[Step 10] Transform Results..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/10-transform.py --channel tzuyang \
+# 11. 결과 변환 (Transforms)
+echo "::group::[Step 11] Transform Results"
+log "INFO" "[Step 11] Transform Results..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/11-transform.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 11. Supabase 결과 삽입
-echo "::group::[Step 11] Insert to Supabase"
-log "INFO" "[Step 11] Insert to Supabase..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/11-supabase-insert.py --channel tzuyang \
+# 12. Supabase 결과 삽입
+echo "::group::[Step 12] Insert to Supabase"
+log "INFO" "[Step 12] Insert to Supabase..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/12-supabase-insert.py --channel tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
@@ -404,19 +404,19 @@ if [ -f "$LOG_FILE" ]; then
         echo "| Gemini Analysis | - | Skipped |" >> "$SUMMARY_MD"
     fi
 
-    # 10. Target Selection
+    # 08. Target Selection
     if grep -q "대상 비디오:" "$LOG_FILE"; then
         TARGET_CNT=$(grep "대상 비디오:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*비디오: //;s/개.*//')
         echo "| Target Selection | $TARGET_CNT | Selected |" >> "$SUMMARY_MD"
     fi
 
-    # 8. Rule Evaluation
+    # 09. Rule Evaluation
     if grep -q "Rule 평가 완료!" "$LOG_FILE"; then
         RULE_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep -v "LAAJ" | tail -n 1 | strip_ansi | sed 's/.*: //')
         echo "| Rule Eval | $RULE_SUCCESS | Verified |" >> "$SUMMARY_MD"
     fi
 
-    # 9. LAAJ Evaluation
+    # 10. LAAJ Evaluation
     if grep -q "LAAJ 평가 완료" "$LOG_FILE"; then
         LAAJ_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep "LAAJ" -A 5 | tail -n 5 | grep "성공:" | strip_ansi | sed 's/.*: //')
         echo "| LAAJ Eval | $LAAJ_SUCCESS | Verified |" >> "$SUMMARY_MD"
@@ -484,7 +484,7 @@ fi
 FRAME_VIDEO_CNT=$(grep -c "\[Frames Extracted\]" "$LOG_FILE")
 if [ "$FRAME_VIDEO_CNT" -gt 0 ]; then
     echo "**🖼️ Frames Extracted (Videos: $FRAME_VIDEO_CNT)**" >> "$SUMMARY_MD"
-    grep "\[Frames Extracted\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Frames Extracted\] /- /' >> "$SUMMARY_MD"
+    grep "\[Frames Extracted    \]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Frames Extracted\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
@@ -577,10 +577,11 @@ cat <<EOF >> "$SUMMARY_MD"
 |  [Step 6: Gemini Analysis] --> [Step 6.1/6.2: Meta Enrichment]                                        |
 |                             |                                                                         |
 |                             v                                                                         |
-|  [Step 7: Target Selection] --> [Step 8: Rule Eval] --> [Step 9: LAAJ Eval]                            |
+|                             v                                                                         |
+|  [Step 08: Target Selection] --> [Step 09: Rule Eval] --> [Step 10: LAAJ Eval]                        |
 |                             |                                                                         |
 |                             v                                                                         |
-|  [Step 10: Transform] --> [Step 11: Supabase Insert] --> [Step 7: Final Sync] ==(Push)==> [Remote]    |
+|  [Step 11: Transform] --> [Step 12: Supabase Insert] --> [Step 7: Final Sync] ==(Push)==> [Remote]    |
 |                                                                                                       |
 +-------------------------------------------------------------------------------------------------------+
 EOF

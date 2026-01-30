@@ -588,6 +588,17 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
                         return;
                     }
 
+                    // [Fix] Cookie Mismatch or Auth Redirect Check
+                    if (redirectUrl.includes('CookieMismatch') || redirectUrl.includes('accounts.google.com')) {
+                        log('warn', `⚠️ 인증 리다이렉트 감지: ${redirectUrl}`);
+                        if (cookieHeader && cookieHeader.length > 0) {
+                            log('info', `🍪 유효하지 않은 쿠키 제거 후 재시도...`);
+                            // 쿠키 없이 현재 URL 다시 요청
+                            resolve(fetchPage(url, '', 0, retryCount));
+                            return;
+                        }
+                    }
+
                     // 상대 경로인 경우 처리
                     if (!redirectUrl.startsWith('http')) {
                         const parsedUrl = new URL(url);

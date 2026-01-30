@@ -126,7 +126,7 @@ def main():
                     "trace_id_name_source": data.get("trace_id_name_source"),
                     "categories": categories,
                     "reasoning_basis": data.get("reasoning_basis"),
-                    "youtuber_review": data.get("youtuber_review"),
+                    # "youtuber_review": data.get("youtuber_review"),  # DB 컬럼 부재로 제외
                     "origin_address": data.get("origin_address"),
                     "road_address": data.get("roadAddress"),
                     "jibun_address": data.get("jibunAddress"),
