@@ -28,6 +28,7 @@ else
         exit 1
     fi
 fi
+export PYTHONUNBUFFERED=1
 
 # 로그 디렉토리 생성
 LOG_DIR="$PROJECT_ROOT/backend/log/cron"
@@ -172,25 +173,34 @@ else
 fi
 
 # 1. URL 수집 (새로운 영상 탐색)
+echo "::group::[Step 1] URL Collection"
 log "INFO" "[Step 1] URL 수집 중..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 2. 메타데이터 수집 & 스케줄링 (관제탑 역할)
+echo "::group::[Step 2] Metadata Collection"
 log "INFO" "[Step 2] 메타데이터 수집 및 스케줄링..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 2.5. 고아 파일 사전 정리 (Auto-Healing Pre-check)
+echo "::group::[Step 2.5] Orphan Cleanup"
 log "INFO" "[Step 2.5] 고아 파일 사전 정리..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/99-cleanup-orphans.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # [Intermediate Sync] 메타데이터/정리 완료 후 저장
 sync_data_to_remote "Step 2.5 (Meta/Cleanup)"
 
 # 3. 자막 수집 (02번 단계의 트리거에 따름)
+echo "::group::[Step 3] Transcript Collection"
 log "INFO" "[Step 3] 자막 수집 중..."
 node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 3.1. 자막 문맥 생성 (Ollama 활용)
+echo "::group::[Step 3.1] Context Generation"
 log "INFO" "[Step 3.1] 자막 문맥 생성 중..."
 # [Config] 실행 모드에 따른 배치 크기 제한 (Env: MAX_CONTEXT_VIDEOS -> Default: 0)
 MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
@@ -205,58 +215,83 @@ else
     fi
     $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
 fi
+echo "::endgroup::"
 
 # [Intermediate Sync] 자막/문맥 생성 완료 후 저장 (가장 중요)
 sync_data_to_remote "Step 3.1 (Context)"
 
 # 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
+echo "::group::[Step 4] Heatmap & Frames"
 log "INFO" "[Step 4] 히트맵 및 프레임 수집 중..."
 node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # [Intermediate Sync] 프레임 메타데이터 저장
 sync_data_to_remote "Step 4 (Frames)"
 
 # 6. Gemini 기반 데이터 분석
+echo "::group::[Step 6] Gemini Data Analysis"
 log "INFO" "[Step 6] Gemini 데이터 분석 중..."
 bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 6.1. 자막 문서에 메타데이터 추가 (음식점 + Peak)
+echo "::group::[Step 6.1] Enrich Subtitles"
 log "INFO" "[Step 6.1] 자막 문서 메타데이터 추가 중..."
 # Supabase 연결 실패 시 스킵됨 (스크립트 내 처리)
 $PYTHON_CMD backend/restaurant-crawling/scripts/06.1-transcript-document-with-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 6.2. 메타데이터 마이그레이션 (Supabase용)
+echo "::group::[Step 6.2] Meta Migration"
 log "INFO" "[Step 6.2] Meta Migrating to Supabase..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 10. 평가 대상 선정
+echo "::group::[Step 10] Target Selection"
 log "INFO" "[Step 10] Target Selection..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/10-target-selection.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 8. Rule 기반 평가 (위치/상호 검증)
+echo "::group::[Step 8] Rule Evaluation"
 log "INFO" "[Step 8] Rule Evaluation..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/08-rule-evaluation.py --channel tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+# GH Action Notice 추가
+grep "✅ Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
+echo "::endgroup::"
 
 # 9. LAAJ (LLM) 기반 평가
+echo "::group::[Step 9] LAAJ Evaluation"
 log "INFO" "[Step 9] LAAJ Evaluation..."
 # 주의: --crawling-path는 채널명까지 포함된 상세 경로여야 함
 bash backend/restaurant-evaluation/scripts/09-laaj-evaluation.sh --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+# GH Action Notice 추가
+grep "🎉 LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
+echo "::endgroup::"
 
 # 11. 결과 변환 (Transforms)
+echo "::group::[Step 11] Transform Results"
 log "INFO" "[Step 11] Transform Results..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/11-transform.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+echo "::endgroup::"
 
 # 12. Supabase 결과 삽입
+echo "::group::[Step 12] Insert to Supabase"
 log "INFO" "[Step 12] Insert to Supabase..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/12-supabase-insert.py --channel tzuyang \
   --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+# GH Action Notice 추가
+grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
+echo "::endgroup::"
 
 log "INFO" "============================================================"
 log "INFO" "일일 데이터 수집 파이프라인 완료"
@@ -351,6 +386,12 @@ if [ -f "$LOG_FILE" ]; then
         echo "| YouTube DL | 0 | (Blocked) |" >> "$SUMMARY_MD"
     fi
 
+    # 5. Map URLs
+    MAP_CNT=$(grep -c "✅ 지도 URL 수집 완료" "$LOG_FILE")
+    if [ "$MAP_CNT" -gt 0 ]; then
+        echo "| Map Crawling | $MAP_CNT | Collected |" >> "$SUMMARY_MD"
+    fi
+
     # 6. Gemini
     if grep -q "Gemini 분석 완료" "$LOG_FILE"; then
         GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
@@ -359,6 +400,30 @@ if [ -f "$LOG_FILE" ]; then
         echo "| Gemini Analysis | $GEMINI_SUCCESS | (Calls: $GEMINI_CALLS) |" >> "$SUMMARY_MD"
     else
         echo "| Gemini Analysis | - | Skipped |" >> "$SUMMARY_MD"
+    fi
+
+    # 10. Target Selection
+    if grep -q "대상 비디오:" "$LOG_FILE"; then
+        TARGET_CNT=$(grep "대상 비디오:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*비디오: //;s/개.*//')
+        echo "| Target Selection | $TARGET_CNT | Selected |" >> "$SUMMARY_MD"
+    fi
+
+    # 8. Rule Evaluation
+    if grep -q "Rule 평가 완료!" "$LOG_FILE"; then
+        RULE_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep -v "LAAJ" | tail -n 1 | strip_ansi | sed 's/.*: //')
+        echo "| Rule Eval | $RULE_SUCCESS | Verified |" >> "$SUMMARY_MD"
+    fi
+
+    # 9. LAAJ Evaluation
+    if grep -q "LAAJ 평가 완료" "$LOG_FILE"; then
+        LAAJ_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep "LAAJ" -A 5 | tail -n 5 | grep "성공:" | strip_ansi | sed 's/.*: //')
+        echo "| LAAJ Eval | $LAAJ_SUCCESS | Verified |" >> "$SUMMARY_MD"
+    fi
+
+    # 11. Transform
+    if grep -q "변환 완료:" "$LOG_FILE"; then
+        TRANS_CNT=$(grep "변환 완료:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.* 완료: //;s/개.*//')
+        echo "| Transform | $TRANS_CNT | Processed |" >> "$SUMMARY_MD"
     fi
 
     # 12. Supabase
