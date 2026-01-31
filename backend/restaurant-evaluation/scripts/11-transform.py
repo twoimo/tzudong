@@ -159,6 +159,7 @@ def transform_json_object(
     original_eval_results = original_data.get("evaluation_results")
     restaurants_list = original_data.get("restaurants", [])
     evaluation_targets = original_data.get("evaluation_target", {})
+    recollect_version = original_data.get("recollect_version", {})
 
     # youtube_meta는 앞 단계(09-rule, 10-laaj)에서 이미 결합되어 넘어옴
     youtube_meta = original_data.get("youtube_meta", {})

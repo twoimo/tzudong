@@ -485,6 +485,23 @@ def process_one_line(obj: Dict[str, Any], meta_dir: Optional[Path] = None) -> Di
         youtube_meta = std_meta
 
 
+    # [Step 9-2] 메타데이터 누락 검사 (title, publishedAt)
+    metadata_validity = {
+        "is_valid": True,
+        "missing_fields": []
+    }
+    if youtube_meta:
+        if not youtube_meta.get("title"):
+            metadata_validity["is_valid"] = False
+            metadata_validity["missing_fields"].append("title")
+        if not youtube_meta.get("publishedAt"):
+            metadata_validity["is_valid"] = False
+            metadata_validity["missing_fields"].append("publishedAt")
+    else:
+        # youtube_meta 자체가 없으면 전부 누락으로 처리할 수도 있으나,
+        # 여기서는 meta_dir이 있었는데 못 찾은 경우 등은 위 로직에 따라 youtube_meta가 빈 딕셔너리일 수 있음
+        pass
+
     # 1. 위치 정합성 평가 (네이버 API) - 먼저 실행하여 naver_name 획득
     location_eval_list: List[Dict[str, Any]] = []
     for r in restaurants:
@@ -529,6 +546,7 @@ def process_one_line(obj: Dict[str, Any], meta_dir: Optional[Path] = None) -> Di
         "evaluation_target": evaluation_target,
         "youtube_meta": youtube_meta,  # 결합된 메타데이터 포함
         "evaluation_results": {
+            "metadata_validity": metadata_validity,
             "evaluation_name_source": evaluation_name_source,
             "category_validity_TF": category_eval_list,
             "location_match_TF": location_eval_list,
