@@ -13,7 +13,27 @@
 
 set -e
 
-# ================================
+# [Hotfix] Local path support (jq & node)
+if [ -d "/mnt/c/Users" ]; then
+    PREFIX="/mnt/c"
+else
+    PREFIX="/c"
+fi
+
+export PATH="$PATH:$PREFIX/Users/twoimo/Desktop/tzudong/backend/bin"
+JQ_EXE="$PREFIX/Users/twoimo/Desktop/tzudong/backend/bin/jq.exe"
+NODE_EXE="$PREFIX/Program Files/nodejs/node.exe"
+
+jq() {
+    "$JQ_EXE" "$@" | tr -d '\r'
+}
+
+node() {
+    "$NODE_EXE" "$@"
+}
+
+# ============
+====================
 # 환경 설정
 # ================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
