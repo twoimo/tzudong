@@ -17,7 +17,19 @@ laaj_results, map_url_crawling 데이터를 최종 형식으로 변환합니다.
 """
 
 import json
-import os
+import re
+
+def get_video_id(url):
+    if not url: return None
+    patterns = [
+        r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
+        r'(?:embed\/|v\/|shorts\/|watch\?v=|youtu\.be\/)([0-9A-Za-z_-]{11})',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
 import hashlib
 import sys
 import argparse
@@ -150,10 +162,11 @@ def transform_json_object(
 
     # recollect_version 기반으로 meta 파일에서 youtube_meta 조회
     youtube_meta = None
-    recollect_version = original_data.get("recollect_version", {})
+    recollect_version = original_data.get("recollect_version", {}) # meta 데이터 로드
     target_meta_id = recollect_version.get("meta", 0)
 
-    if meta_dir and video_id:
+    video_id = get_video_id(youtube_link)
+    if video_id and meta_dir:
         meta_file = meta_dir / f"{video_id}.jsonl"
         if meta_file.exists():
             with open(meta_file, "r", encoding="utf-8") as f:
@@ -174,7 +187,7 @@ def transform_json_object(
                             break
                     except:
                         pass
-            # 못 찾으면 마지막 줄 사용
+            # 만약 특정버전 못찾으면 마지막 줄 사용
             if not youtube_meta:
                 with open(meta_file, "r", encoding="utf-8") as f:
                     for line in f:
@@ -447,7 +460,7 @@ def transform_map_url_crawling_object(
     # recollect_version 기반 youtube_meta 조회
     youtube_meta = None
     if recollect_version.get("meta") is not None:
-        video_id = youtube_link.split("v=")[-1].split("&")[0] if youtube_link else None
+        video_id = get_video_id(youtube_link)
         if video_id and meta_dir:
             meta_file = meta_dir / f"{video_id}.jsonl"
             if meta_file.exists():
