@@ -381,52 +381,9 @@ $TRANSCRIPT
     GEMINI_START=$(date +%s)
     GEMINI_SUCCESS=false
     
-    GEMINI_API_SCRIPT="$TEMP_DIR/gemini_api_request.mjs"
+    GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
     
-    # Node.js 스크립트 동적 생성 (Inline)
-    cat << 'EOF' > "$GEMINI_API_SCRIPT"
-import fs from 'fs';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-async function main() {
-    const args = process.argv.slice(2);
-    if (args.length < 2) {
-        console.error('Usage: node gemini_api_request.js <prompt_file> <output_file>');
-        process.exit(1);
-    }
-
-    const promptFile = args[0];
-    const outputFile = args[1];
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-        console.error('Error: GEMINI_API_KEY environment variable not set.');
-        process.exit(1);
-    }
-
-    try {
-        const prompt = fs.readFileSync(promptFile, 'utf8');
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
-        const model = genAI.getGenerativeModel({ model: modelName });
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        fs.writeFileSync(outputFile, text);
-        process.exit(0);
-
-    } catch (error) {
-        console.error(`Gemini API Error: ${error.message}`);
-        process.exit(1);
-    }
-}
-
-main();
-EOF
-
-    log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
+    log_debug "Gemini API 호출 시도 (via gemini_api_request.mjs)"
     
     if [ "$USE_OAUTH" = "true" ]; then
         log_info "OAuth 모드: Node.js API 호출 건너뜀 (CLI 사용)"
