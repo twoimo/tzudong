@@ -37,7 +37,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 def get_paths(channel: str) -> tuple[Path, Path, Path]:
     """채널별 경로 반환"""
     input_dir = SCRIPT_DIR / f"../data/{channel}/transcript-document-with-context"
-    output_dir = SCRIPT_DIR / f"../data/{channel}/transcript-documents-with-meta"
+    output_dir = SCRIPT_DIR / f"../data/{channel}/transcript-document-with-meta"
     heatmap_dir = SCRIPT_DIR / f"../data/{channel}/heatmap"
     return input_dir.resolve(), output_dir.resolve(), heatmap_dir.resolve()
 

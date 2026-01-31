@@ -72,13 +72,14 @@ sync_data_to_remote() {
     log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
 
     # 데이터 폴더 변경 감지 (Modified + Untracked)
-    if [ -z "$(git status --porcelain backend/restaurant-crawling/data/)" ]; then
+    if [ -z "$(git status --porcelain backend/restaurant-crawling/data/)" ] && [ -z "$(git status --porcelain backend/restaurant-evaluation/data/)" ]; then
         log "INFO" "변경 된 데이터가 없습니다. (Skip)"
     else
         log "INFO" "변경 된 데이터를 'data' 브랜치로 푸시합니다."
         
         # 1. 현재 변경된 데이터(Working Tree)를 임시 보관 (Staging)
         git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+        git add backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"
         
         # [Fix] package-lock.json 등이 변경되어 있으면 체크아웃이 막히므로 원복
         git checkout -- backend/package-lock.json 2>&1 | tee -a "$LOG_FILE"
@@ -107,9 +108,10 @@ sync_data_to_remote() {
         git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
         # 평가 데이터 강제 추가 (evaluation 폴더)
+        # 평가 데이터 강제 추가 (evaluation 폴더)
         # evaluation 폴더 내의 모든 jsonl 파일을 find로 찾아 추가 (globstar 호환성 문제 해결)
-        find backend/restaurant-crawling/data/*/evaluation -name "*.jsonl" -print0 2>/dev/null | xargs -0 -r git add -f 2>/dev/null || true
-        git add -f backend/restaurant-crawling/data/*/evaluation/transforms.jsonl 2>/dev/null || true
+        find backend/restaurant-evaluation/data/*/evaluation -name "*.jsonl" -print0 2>/dev/null | xargs -0 -r git add -f 2>/dev/null || true
+        git add -f backend/restaurant-evaluation/data/*/evaluation/transforms.jsonl 2>/dev/null || true
         
         # 'git rm --cached'를 사용하여 대용량 폴더를 저장소 추적에서 완전히 제외
         # 로컬에 존재하더라도 레포지토리에 다시 나타나지 않도록 방지
@@ -120,6 +122,7 @@ sync_data_to_remote() {
         
         # 나머지 모든 변경사항 추가 (삭제 포함)
         git add -A backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+        git add -A backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"
         
         COMMIT_MSG="chore(data): update crawling data ($DATE) - $STEP_NAME"
         
@@ -178,6 +181,7 @@ log "INFO" "============================================================"
 log "INFO" "[Step 0] 최신 데이터 동기화 (from data branch)..."
 git fetch origin data 2>&1 | tee -a "$LOG_FILE"
 if git checkout origin/data -- backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"; then
+    git checkout origin/data -- backend/restaurant-evaluation/data/ 2>/dev/null || true
     log "SUCCESS" "기존 데이터 로드 성공"
 else
     log "WARN" "기존 데이터 로드 실패 (첫 실행이거나 브랜치 없음) - 새로 수집 시작"
@@ -269,14 +273,14 @@ echo "::group::[Step 08] Target Selection"
 log "INFO" "[Step 08] Target Selection..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/08-target-selection.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
 # 9. Rule 기반 평가 (위치/상호 검증)
 echo "::group::[Step 09] Rule Evaluation"
 log "INFO" "[Step 09] Rule Evaluation..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/09-rule-evaluation.py --channel tzuyang \
-  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "✅ Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 echo "::endgroup::"
@@ -290,7 +294,7 @@ log "INFO" "[Step 10] LAAJ Evaluation..."
 # 주의: --crawling-path는 채널명까지 포함된 상세 경로여야 함
 bash backend/restaurant-evaluation/scripts/10-laaj-evaluation.sh --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "🎉 LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 echo "::endgroup::"
@@ -304,7 +308,7 @@ echo "::group::[Step 11] Transform Results"
 log "INFO" "[Step 11] Transform Results..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/11-transform.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
 # [Intermediate Sync] 변환 완료 후 저장 (Supabase 입력 전 백업)
@@ -314,7 +318,7 @@ sync_data_to_remote "Step 11 (Transform)"
 echo "::group::[Step 12] Insert to Supabase"
 log "INFO" "[Step 12] Insert to Supabase..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/12-supabase-insert.py --channel tzuyang \
-  --evaluation-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
 echo "::endgroup::"

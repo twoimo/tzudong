@@ -13,16 +13,27 @@
 
 set -e
 
-# [Hotfix] Local path support (jq & node)
-if [ -d "/mnt/c/Users" ]; then
-    PREFIX="/mnt/c"
-else
-    PREFIX="/c"
-fi
+# ================================
+# 환경 설정
+# ================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-export PATH="$PATH:$PREFIX/Users/twoimo/Desktop/tzudong/backend/bin"
-JQ_EXE="$PREFIX/Users/twoimo/Desktop/tzudong/backend/bin/jq.exe"
-NODE_EXE="$PREFIX/Program Files/nodejs/node.exe"
+# [Hotfix] Local path support (jq & node)
+# Use PROJECT_ROOT to find backend/bin safely
+export PATH="$PATH:$PROJECT_ROOT/backend/bin"
+JQ_EXE="$PROJECT_ROOT/backend/bin/jq.exe"
+
+# Node Check: Try system node first, then fallback to common paths
+if command -v node >/dev/null 2>&1; then
+    NODE_EXE="node"
+elif [ -f "/c/Program Files/nodejs/node.exe" ]; then
+    NODE_EXE="/c/Program Files/nodejs/node.exe"
+elif [ -f "/mnt/c/Program Files/nodejs/node.exe" ]; then
+    NODE_EXE="/mnt/c/Program Files/nodejs/node.exe"
+else
+    NODE_EXE="node" # Default to hoping it's in PATH
+fi
 
 jq() {
     "$JQ_EXE" "$@" | tr -d '\r'
@@ -32,12 +43,6 @@ node() {
     "$NODE_EXE" "$@"
 }
 
-# ============
-====================
-# 환경 설정
-# ================================
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 PROMPT_FILE="$SCRIPT_DIR/../prompts/evaluation_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_laaj_evaluation.py"
 
