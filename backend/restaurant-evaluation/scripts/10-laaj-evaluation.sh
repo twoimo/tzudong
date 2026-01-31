@@ -64,7 +64,7 @@ format_duration() {
 
 # 경로 정규화 (Windows의 경우 cygpath -m 사용)
 normalize_path() {
-    if [[ "$OS_NAME" == "Windows" ]] && command -v cygpath &> /dev/null; then
+    if [[ "$OS_NAME" == "Windows" ]] && command -v cygpath > /dev/null 2>&1; then
         cygpath -m "$1"
     else
         echo "$1"
@@ -175,7 +175,7 @@ export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
 
 # ================================
-# 인자 파싱
+# 인자 파싱 (Argument Parsing)
 # ================================
 CHANNEL=""
 CRAWLING_PATH=""
@@ -225,12 +225,58 @@ if [ ! -d "$RULE_RESULTS_DIR" ]; then
 fi
 
 # Gemini CLI 확인 (Fallback용)
-if ! command -v gemini &> /dev/null; then
+if ! command -v gemini > /dev/null 2>&1; then
     log_error "Gemini CLI 미설치 (Fallback 불가)"
     exit 1
 fi
 
+GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
+
 PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
+
+# ================================
+# Gemini Health Check (Pre-flight)
+# ================================
+log_info "🏥 Gemini Health Check (1+1=?) 수행 중..."
+HEALTH_CHECK_PROMPT="$TEMP_DIR/health_check_prompt.txt"
+HEALTH_CHECK_RESPONSE="$TEMP_DIR/health_check_response.json"
+echo "1+1=?" > "$HEALTH_CHECK_PROMPT"
+
+HEALTH_CHECK_PASSED=false
+
+# 1. Node.js Check
+if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
+    WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
+    WIN_PROMPT=$(normalize_path "$HEALTH_CHECK_PROMPT")
+    WIN_RESPONSE=$(normalize_path "$HEALTH_CHECK_RESPONSE")
+    
+    set +e
+    "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE" > /dev/null 2>&1
+    EXIT_CODE=$?
+    set -e
+    
+    if [ $EXIT_CODE -eq 0 ]; then
+        HEALTH_CHECK_PASSED=true
+        log_success "Health Check 성공 (Node.js API)"
+    else
+        log_warning "Health Check 실패 (Node.js API) -> Sticky Fallback 활성화"
+        FORCE_CLI_FALLBACK=true
+    fi
+fi
+
+# 2. CLI Check (Fallback or Primary)
+if [ "$HEALTH_CHECK_PASSED" = false ]; then
+    if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
+        HEALTH_CHECK_PASSED=true
+        log_success "Health Check 성공 (Gemini CLI)"
+    else
+        log_error "Health Check 실패 (Gemini CLI)"
+        log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
+        exit 1
+    fi
+fi
+
+rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
 
 # ================================
 # 처리할 video_id 수집
@@ -252,10 +298,10 @@ SKIPPED_NO_TRANSCRIPT=0
 GEMINI_CALLS=0
 TOTAL_GEMINI_TIME=0
 
-GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
+
 
 # ================================
-# 메인 루프
+# 메인 루프 (Main Loop)
 # ================================
 for i in "${!VIDEO_IDS[@]}"; do
     VIDEO_ID="${VIDEO_IDS[$i]}"
@@ -413,9 +459,13 @@ $TRANSCRIPT
     if [ "$GEMINI_SUCCESS" = false ]; then
         log_debug "Gemini CLI 호출 (모델: $CURRENT_MODEL)"
         
-        if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+        if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
             GEMINI_SUCCESS=true
         else
+            # Error logging
+            log_error "Gemini CLI Error Output:"
+            cat "$TEMP_STDERR"
+            
             # Rate Limit 체크
             ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
             if [ -f "$ERROR_REPORT" ] && grep -q "exhausted\|429" "$ERROR_REPORT" 2>/dev/null; then
@@ -423,7 +473,7 @@ $TRANSCRIPT
                    log_warning "할당량 소진 -> Fallback 모델($FALLBACK_MODEL) 전환"
                    CURRENT_MODEL="$FALLBACK_MODEL"
                    sleep 10
-                   if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                   if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                        GEMINI_SUCCESS=true
                    fi
                fi
@@ -445,7 +495,7 @@ $TRANSCRIPT
             if "$PYTHON_EXE" "$PARSER_SCRIPT" \
                 --channel "$CHANNEL" \
                 --evaluation-path "$EVALUATION_PATH" \
-                --video-id "$VIDEO_ID" \
+                --video-id="$VIDEO_ID" \
                 --response-file "$TEMP_RESPONSE" \
                 --rule-file "$RULE_FILE"; then
                 
@@ -458,7 +508,7 @@ $TRANSCRIPT
                 if [ $PARSE_ATTEMPT -lt 3 ]; then
                     log_warning "파싱 실패 (${PARSE_ATTEMPT}/3) - 재요청..."
                     sleep 10
-                    gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>/dev/null
+                    gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
                 fi
             fi
         done
