@@ -162,6 +162,7 @@ jobs:
           # Secret에서 API 키 및 설정 주입
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Supabase 설정 (06.1 스크립트용)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

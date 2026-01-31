@@ -38,6 +38,16 @@ for env_file in "${ENV_FILES[@]}"; do
     fi
 done
 
+# [Auth] Check for OAuth Credentials in Env
+if [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
+    OAUTH_CREDS_PATH="$HOME/.gemini/oauth_creds.json"
+    if [ ! -f "$OAUTH_CREDS_PATH" ]; then
+        echo "GEMINI_CREDENTIALS_BASE64 감지됨 - 인증 파일 생성 중..."
+        mkdir -p "$HOME/.gemini"
+        echo "$GEMINI_CREDENTIALS_BASE64" | base64 -d > "$OAUTH_CREDS_PATH"
+    fi
+fi
+
 # Gemini 모델 설정
 export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
 export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-2.5-flash}"
