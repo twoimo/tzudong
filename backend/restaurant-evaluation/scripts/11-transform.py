@@ -160,51 +160,15 @@ def transform_json_object(
     restaurants_list = original_data.get("restaurants", [])
     evaluation_targets = original_data.get("evaluation_target", {})
 
-    # recollect_version 기반으로 meta 파일에서 youtube_meta 조회
-    youtube_meta = None
-    recollect_version = original_data.get("recollect_version", {}) # meta 데이터 로드
-    target_meta_id = recollect_version.get("meta", 0)
-
-    video_id = get_video_id(youtube_link)
-    if video_id and meta_dir:
-        meta_file = meta_dir / f"{video_id}.jsonl"
-        if meta_file.exists():
-            with open(meta_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    try:
-                        meta_obj = json.loads(line.strip())
-                        if meta_obj.get("recollect_id", 0) == target_meta_id:
-                            youtube_meta = {
-                                "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("view_count") or meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("like_count") or meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("comment_count") or meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("published_at") or meta_obj.get("publishedAt"),
-                                "is_shorts": meta_obj.get("is_shorts", False),
-                                "duration": meta_obj.get("duration"),
-                                "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
-                            }
-                            break
-                    except:
-                        pass
-            # 만약 특정버전 못찾으면 마지막 줄 사용
-            if not youtube_meta:
-                with open(meta_file, "r", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            meta_obj = json.loads(line.strip())
-                            youtube_meta = {
-                                "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("view_count") or meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("like_count") or meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("comment_count") or meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("published_at") or meta_obj.get("publishedAt"),
-                                "is_shorts": meta_obj.get("is_shorts", False),
-                                "duration": meta_obj.get("duration"),
-                                "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
-                            }
-                        except:
-                            pass
+    # youtube_meta는 앞 단계(09-rule, 10-laaj)에서 이미 결합되어 넘어옴
+    youtube_meta = original_data.get("youtube_meta", {})
+    
+    # 만약 앞 단계에서 결합 안 된 경우 (구버전 데이터 등) 대비하여 최소한의 fallback만 유지하거나
+    # 아예 신뢰하고 그대로 사용. 여기서는 그대로 사용하되, 없으면 빈 딕셔너리.
+    if not youtube_meta:
+        # 혹시 모르니 map_info 등에서 가져올 수도 있지만, 
+        # 이제 09-rule에서 처리하므로 여기선 pass
+        pass
 
     # results 파일 처리
     if source_file_type == "results":
@@ -457,51 +421,10 @@ def transform_map_url_crawling_object(
     recollect_version = original_data.get("recollect_version", {})
     restaurants_list = original_data.get("restaurants", [])
 
-    # recollect_version 기반 youtube_meta 조회
-    youtube_meta = None
-    if recollect_version.get("meta") is not None:
-        video_id = get_video_id(youtube_link)
-        if video_id and meta_dir:
-            meta_file = meta_dir / f"{video_id}.jsonl"
-            if meta_file.exists():
-                with open(meta_file, "r", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            data = json.loads(line.strip())
-                            if data.get("recollect_id") == recollect_version.get(
-                                "meta"
-                            ):
-                                youtube_meta = {
-                                    "title": data.get("title"),
-                                    "viewCount": data.get("view_count") or data.get("viewCount"),
-                                    "likeCount": data.get("like_count") or data.get("likeCount"),
-                                    "commentCount": data.get("comment_count") or data.get("commentCount"),
-                                    "publishedAt": data.get("published_at") or data.get("publishedAt"),
-                                    "is_shorts": data.get("is_shorts", False),
-                                    "duration": data.get("duration"),
-                                    "ads_info": data.get("ads_info", {"is_ads": False, "what_ads": None}),
-                                }
-                                break
-                        except:
-                            pass
-                # 해당 버전 못 찾으면 마지막 줄 사용
-                if not youtube_meta:
-                    with open(meta_file, "r", encoding="utf-8") as f:
-                        for line in f:
-                            try:
-                                data = json.loads(line.strip())
-                                youtube_meta = {
-                                    "title": data.get("title"),
-                                    "viewCount": data.get("view_count") or data.get("viewCount"),
-                                    "likeCount": data.get("like_count") or data.get("likeCount"),
-                                    "commentCount": data.get("comment_count") or data.get("commentCount"),
-                                    "publishedAt": data.get("published_at") or data.get("publishedAt"),
-                                    "is_shorts": data.get("is_shorts", False),
-                                    "duration": data.get("duration"),
-                                    "ads_info": data.get("ads_info", {"is_ads": False, "what_ads": None}),
-                                }
-                            except:
-                                pass
+    # youtube_meta는 앞 단계에서 결합되어 있음
+    youtube_meta = original_data.get("youtube_meta", {})
+    if not youtube_meta:
+        pass
 
     for restaurant_data in restaurants_list:
         origin_name = restaurant_data.get("origin_name")  # 크롤링에서 받은 원본
