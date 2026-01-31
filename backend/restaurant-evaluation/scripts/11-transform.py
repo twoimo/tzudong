@@ -163,10 +163,13 @@ def transform_json_object(
                         if meta_obj.get("recollect_id", 0) == target_meta_id:
                             youtube_meta = {
                                 "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("publishedAt"),
+                                "viewCount": meta_obj.get("view_count") or meta_obj.get("viewCount"),
+                                "likeCount": meta_obj.get("like_count") or meta_obj.get("likeCount"),
+                                "commentCount": meta_obj.get("comment_count") or meta_obj.get("commentCount"),
+                                "publishedAt": meta_obj.get("published_at") or meta_obj.get("publishedAt"),
+                                "is_shorts": meta_obj.get("is_shorts", False),
+                                "duration": meta_obj.get("duration"),
+                                "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
                             }
                             break
                     except:
@@ -179,10 +182,13 @@ def transform_json_object(
                             meta_obj = json.loads(line.strip())
                             youtube_meta = {
                                 "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("publishedAt"),
+                                "viewCount": meta_obj.get("view_count") or meta_obj.get("viewCount"),
+                                "likeCount": meta_obj.get("like_count") or meta_obj.get("likeCount"),
+                                "commentCount": meta_obj.get("comment_count") or meta_obj.get("commentCount"),
+                                "publishedAt": meta_obj.get("published_at") or meta_obj.get("publishedAt"),
+                                "is_shorts": meta_obj.get("is_shorts", False),
+                                "duration": meta_obj.get("duration"),
+                                "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
                             }
                         except:
                             pass
@@ -454,10 +460,13 @@ def transform_map_url_crawling_object(
                             ):
                                 youtube_meta = {
                                     "title": data.get("title"),
-                                    "viewCount": data.get("viewCount"),
-                                    "likeCount": data.get("likeCount"),
-                                    "commentCount": data.get("commentCount"),
-                                    "publishedAt": data.get("publishedAt"),
+                                    "viewCount": data.get("view_count") or data.get("viewCount"),
+                                    "likeCount": data.get("like_count") or data.get("likeCount"),
+                                    "commentCount": data.get("comment_count") or data.get("commentCount"),
+                                    "publishedAt": data.get("published_at") or data.get("publishedAt"),
+                                    "is_shorts": data.get("is_shorts", False),
+                                    "duration": data.get("duration"),
+                                    "ads_info": data.get("ads_info", {"is_ads": False, "what_ads": None}),
                                 }
                                 break
                         except:
@@ -470,10 +479,13 @@ def transform_map_url_crawling_object(
                                 data = json.loads(line.strip())
                                 youtube_meta = {
                                     "title": data.get("title"),
-                                    "viewCount": data.get("viewCount"),
-                                    "likeCount": data.get("likeCount"),
-                                    "commentCount": data.get("commentCount"),
-                                    "publishedAt": data.get("publishedAt"),
+                                    "viewCount": data.get("view_count") or data.get("viewCount"),
+                                    "likeCount": data.get("like_count") or data.get("likeCount"),
+                                    "commentCount": data.get("comment_count") or data.get("commentCount"),
+                                    "publishedAt": data.get("published_at") or data.get("publishedAt"),
+                                    "is_shorts": data.get("is_shorts", False),
+                                    "duration": data.get("duration"),
+                                    "ads_info": data.get("ads_info", {"is_ads": False, "what_ads": None}),
                                 }
                             except:
                                 pass
