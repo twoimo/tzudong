@@ -13,7 +13,7 @@
 #   ./07-gemini-crawling.sh --channel meatcreator
 #   ./07-gemini-crawling.sh  # 모든 채널
 
-set -e  # 에러 발생 시 즉시 종료
+# set -e  # 에러 발생 시 즉시 종료 (디버깅을 위해 비활성화)
 
 # ================================
 # 환경 설정
@@ -219,7 +219,8 @@ process_channel() {
     
     # parse_result.py scan 실행
     # stderr는 화면에 나오고, stdout만 URLS 배열로 로드
-    mapfile -t URLS < <($PYTHON_CMD "$PARSER_SCRIPT" scan --channel "$channel")
+    # [Fix] Windows 환경에서 Python 출력의 \r 제거
+    mapfile -t URLS < <($PYTHON_CMD "$PARSER_SCRIPT" scan --channel "$channel" | tr -d '\r')
     
     local TOTAL=${#URLS[@]}
     
@@ -229,6 +230,9 @@ process_channel() {
     fi
 
     log_info "✅ 선별 완료: 총 $TOTAL 개 처리 예정"
+    
+    # [Debug] URLS 배열 내용 확인
+    declare -p URLS 2>/dev/null || true
     
     # 통계 변수 (여기서부터는 실제 시도하는 것들임)
     local PROCESSED=0
@@ -240,18 +244,16 @@ process_channel() {
     local GEMINI_CALLS=0
     local TOTAL_GEMINI_TIME=0
 
-    # deleted_urls.txt 로드 (ID만 추출하여 임시 파일에 저장) - 이미 파이썬에서 걸러지지만 더블 체크용 유지
-    local DELETED_IDS_FILE="$full_data_path/deleted_ids.temp"
-    if [ -f "$full_data_path/deleted_urls.txt" ]; then
-        awk -F'\t' '{print $1}' "$full_data_path/deleted_urls.txt" | sed -n 's/.*v=\([^&]*\).*/\1/p' > "$DELETED_IDS_FILE"
-    else
-        touch "$DELETED_IDS_FILE"
-    fi
+    # [Note] deleted_urls.txt 필터링은 parse_result.py scan 단계에서 이미 수행됨
+    # 별도의 임시 파일(deleted_ids.temp) 생성을 생략하여 윈도우/리눅스 경로 호환성 문제 방지
     
     # 각 URL 처리
     for i in "${!URLS[@]}"; do
         URL="${URLS[$i]}"
         INDEX=$((i + 1))
+        
+        # [Progress] 루프 진입
+        log_info "[$INDEX/$TOTAL] 데이터 분석 준비 중... (URL: $URL)"
         
         # 빈 줄 건너뛰기
         if [ -z "$URL" ]; then
@@ -286,12 +288,6 @@ process_channel() {
             continue
         fi
 
-        # 삭제된 영상 체크
-        if grep -qF "$VIDEO_ID" "$DELETED_IDS_FILE"; then
-            log_debug "[$INDEX/$TOTAL] 삭제된 영상 - 스킵: $VIDEO_ID"
-            continue
-        fi
-        
         # 에러 파일 있으면 재시도 대상 (에러 파일 삭제 후 진행)
         ERROR_FILE="$errors_dir/${VIDEO_ID}.jsonl"
         IS_RETRY=false
