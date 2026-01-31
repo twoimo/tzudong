@@ -99,6 +99,26 @@ def get_latest_meta(channel_data_path: Path, video_id: str) -> Optional[Dict]:
     return None
 
 
+def load_checked_cache(channel_path: Path) -> Dict[str, str]:
+    """오늘 확인한 영상 캐시 로드"""
+    cache_file = channel_path / "checked_cache.json"
+    if not cache_file.exists():
+        return {}
+    try:
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    except:
+        return {}
+
+
+def save_checked_cache(channel_path: Path, cache: Dict[str, str]):
+    """확인된 영상 캐시 저장"""
+    cache_file = channel_path / "checked_cache.json"
+    try:
+        cache_file.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+
 def get_image_hash(url: str) -> Optional[str]:
     """썸네일 이미지의 MD5 해시 계산"""
     try:
@@ -414,26 +434,40 @@ def collect_channel_meta(
     # 이미 430라인 근처에 "오늘 이미 수집됨 (스킵)" 로직이 있지만, 이는 API 호출 후 체크함.
     # 여기서 미리 체크하여 batch_ids에 아예 안 넣는 것이 목표.
     
+    # [Smart Filter] 오늘 이미 수집된 영상은 API 요청 목록에서 제외 (Quota 절약)
     pending_ids = []
     today_str = datetime.now(KST).date().isoformat()
+    
+    # 캐시 로드
+    checked_cache = load_checked_cache(channel_path)
     
     skipped_today_count = 0
     
     for vid in video_ids:
+        # 1. 캐시 확인
+        if checked_cache.get(vid) == today_str:
+            skipped_today_count += 1
+            continue
+
+        # 2. 메타데이터 파일 확인 (이중 체크)
         meta = get_latest_meta(channel_path, vid)
         if meta and meta.get("collected_at"):
             try:
                 last_collected_str = meta.get("collected_at")
                 last_dt = datetime.fromisoformat(last_collected_str.replace("Z", "+00:00")).astimezone(KST)
                 if last_dt.date().isoformat() == today_str:
+                    # 메타데이터가 있으면 캐시도 업데이트
+                    checked_cache[vid] = today_str
                     skipped_today_count += 1
-                    continue # 오늘 이미 수집됨 -> 리스트 제외
+                    continue
             except:
                 pass
         pending_ids.append(vid)
 
+    # 초기 캐시 저장 (메타데이터로 업데이트된 내용 반영)
     if skipped_today_count > 0:
-        logger.info(f"  ⏭️ [Smart Skip] {skipped_today_count}개 영상은 오늘 이미 수집되어 건너뜁니다.")
+        save_checked_cache(channel_path, checked_cache)
+        logger.info(f"  ⏭️ [Smart Skip] {skipped_today_count}개 영상은 오늘 이미 확인되어 건너뜁니다.")
 
     video_ids = pending_ids
     
@@ -553,6 +587,11 @@ def collect_channel_meta(
             append_to_jsonl(str(output_file), current_meta)
             logger.info(f"  [Meta Updated] {vid} - {current_meta.get('title', 'No Title')[:30]}...")
             success_count += 1
+
+        # 배치 처리 후 캐시 업데이트 (처리된 모든 비디오)
+        for vid in batch_ids:
+            checked_cache[vid] = today_str
+        save_checked_cache(channel_path, checked_cache)
 
     logger.progress_done()
     logger.info(f"완료: 업데이트 {success_count}개")
