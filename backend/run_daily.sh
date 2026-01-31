@@ -105,6 +105,7 @@ sync_data_to_remote() {
         git add -f backend/restaurant-crawling/data/*/transcript/*.jsonl 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
+        git add -f backend/restaurant-crawling/data/*/checked_cache.json 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
         # 평가 데이터 강제 추가 (evaluation 폴더)
