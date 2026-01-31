@@ -202,8 +202,8 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzu
 echo "::endgroup::"
 
 # 2.1. 메타데이터 마이그레이션 (Supabase용)
-echo "::group::[Step 6.2] Meta Migration"
-log "INFO" "[Step 6.2] Meta Migrating to Supabase..."
+echo "::group::[Step 2.2] Meta Migration"
+log "INFO" "[Step 2.2] Meta Migrating to Supabase..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
