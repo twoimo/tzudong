@@ -485,8 +485,6 @@ def process_one_line(obj: Dict[str, Any], meta_dir: Optional[Path] = None) -> Di
         youtube_meta = std_meta
 
 
-
-
     # 1. 위치 정합성 평가 (네이버 API) - 먼저 실행하여 naver_name 획득
     location_eval_list: List[Dict[str, Any]] = []
     for r in restaurants:
@@ -531,7 +529,6 @@ def process_one_line(obj: Dict[str, Any], meta_dir: Optional[Path] = None) -> Di
         "evaluation_target": evaluation_target,
         "youtube_meta": youtube_meta,  # 결합된 메타데이터 포함
         "evaluation_results": {
-
             "evaluation_name_source": evaluation_name_source,
             "category_validity_TF": category_eval_list,
             "location_match_TF": location_eval_list,
