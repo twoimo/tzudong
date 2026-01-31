@@ -33,6 +33,9 @@ else
 fi
 export PYTHONUNBUFFERED=1
 
+# [Local Config] RClone 경로 추가 (사용자 환경)
+export PATH="$PATH:/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64"
+
 # 로그 디렉토리 생성
 LOG_DIR="$PROJECT_ROOT/backend/log/cron"
 mkdir -p "$LOG_DIR"
@@ -217,7 +220,12 @@ echo "::endgroup::"
 echo "::group::[Step 3.1] Context Generation"
 log "INFO" "[Step 3.1] 자막 문맥 생성 중..."
 # [Config] 실행 모드에 따른 배치 크기 제한 (Env: MAX_CONTEXT_VIDEOS -> Default: 0)
-MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
+# 로컬 실행(CI 아님)인 경우 -1(Skip)으로 설정
+if [ -z "$CI" ]; then
+    MAX_VIDEOS=-1
+else
+    MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
+fi
 
 if [[ "$MAX_VIDEOS" -eq -1 ]]; then
     log "INFO" "Context Generation Skipped (Configured as -1)"
