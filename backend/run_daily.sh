@@ -34,6 +34,7 @@ fi
 export PYTHONUNBUFFERED=1
 
 # [Local Config] RClone 경로 추가 (사용자 환경)
+export PYTHON_CMD
 export PATH="$PATH:/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64"
 
 # 로그 디렉토리 생성

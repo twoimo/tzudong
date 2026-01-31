@@ -62,6 +62,7 @@ export CURRENT_MODEL="$PRIMARY_MODEL"
 
 # 한국 시간대 설정
 export TZ="Asia/Seoul"
+PYTHON_CMD="${PYTHON_CMD:-python}"
 
 # 색상 코드
 RED='\033[0;31m'
@@ -218,7 +219,7 @@ process_channel() {
     
     # parse_result.py scan 실행
     # stderr는 화면에 나오고, stdout만 URLS 배열로 로드
-    mapfile -t URLS < <(python3 "$PARSER_SCRIPT" scan --channel "$channel")
+    mapfile -t URLS < <($PYTHON_CMD "$PARSER_SCRIPT" scan --channel "$channel")
     
     local TOTAL=${#URLS[@]}
     
@@ -477,7 +478,7 @@ EOF
             # 파서 실행 (최대 3회 시도)
             PARSE_SUCCESS=false
             for PARSE_ATTEMPT in 1 2 3; do
-                if python3 "$PARSER_SCRIPT" parse "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
+                if $PYTHON_CMD "$PARSER_SCRIPT" parse "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
                     SUCCESS=$((SUCCESS + 1))
                     PARSE_SUCCESS=true
                     
