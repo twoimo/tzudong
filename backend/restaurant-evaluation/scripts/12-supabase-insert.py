@@ -85,14 +85,14 @@ def main():
     # 기존 trace_id 조회
     print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 🔍 기존 데이터 조회 중...")
 
-    existing_ids = set()
+    existing_status_map = {}
     try:
         offset = 0
         limit = 1000
         while True:
             response = (
                 supabase.table("restaurants")
-                .select("trace_id")
+                .select("trace_id, status")
                 .eq("channel_name", channel)
                 .range(offset, offset + limit - 1)
                 .execute()
@@ -101,16 +101,17 @@ def main():
             if not response.data:
                 break
                 
-            batch_ids = {row["trace_id"] for row in response.data if row.get("trace_id")}
-            existing_ids.update(batch_ids)
+            for row in response.data:
+                if row.get("trace_id"):
+                    existing_status_map[row["trace_id"]] = row.get("status")
             
             if len(response.data) < limit:
                 break
                 
             offset += limit
-            print(f"   ...{len(existing_ids)}개 로드 중")
+            print(f"   ...{len(existing_status_map)}개 로드 중")
 
-        print(f"   기존 레코드: {len(existing_ids)}개 (전체 로드 완료)")
+        print(f"   기존 레코드: {len(existing_status_map)}개 (전체 로드 완료)")
     except Exception as e:
         print(f"⚠️ 기존 데이터 조회 실패: {e}")
 
@@ -149,7 +150,7 @@ def main():
                     "trace_id": trace_id,
                     "youtube_link": data.get("youtube_link"),
                     "channel_name": data.get("channel_name") or channel,
-                    "status": data.get("status", "pending"),
+                    "status": existing_status_map.get(trace_id, data.get("status", "pending")),
                     "origin_name": data.get("origin_name"),
                     "naver_name": data.get("naver_name"),
                     "trace_id_name_source": data.get("trace_id_name_source"),
