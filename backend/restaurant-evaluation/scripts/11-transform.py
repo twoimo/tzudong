@@ -163,13 +163,13 @@ def transform_json_object(
                         if meta_obj.get("recollect_id", 0) == target_meta_id:
                             youtube_meta = {
                                 "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("publishedAt"),
+                                "viewCount": meta_obj.get("viewCount") or meta_obj.get("view_count"),
+                                "likeCount": meta_obj.get("likeCount") or meta_obj.get("like_count"),
+                                "commentCount": meta_obj.get("commentCount") or meta_obj.get("comment_count"),
+                                "publishedAt": meta_obj.get("publishedAt") or meta_obj.get("published_at"),
                                 "is_shorts": meta_obj.get("is_shorts", False),
                                 "duration": meta_obj.get("duration"),
-                                "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
+                                "ads_info": meta_obj.get("ads_info") or {"is_ads": False, "what_ads": None},
                             }
                             break
                     except:
@@ -182,10 +182,10 @@ def transform_json_object(
                             meta_obj = json.loads(line.strip())
                             youtube_meta = {
                                 "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("publishedAt"),
+                                "viewCount": meta_obj.get("viewCount") or meta_obj.get("view_count"),
+                                "likeCount": meta_obj.get("likeCount") or meta_obj.get("like_count"),
+                                "commentCount": meta_obj.get("commentCount") or meta_obj.get("comment_count"),
+                                "publishedAt": meta_obj.get("publishedAt") or meta_obj.get("published_at"),
                                 "is_shorts": meta_obj.get("is_shorts", False),
                                 "duration": meta_obj.get("duration"),
                                 "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
