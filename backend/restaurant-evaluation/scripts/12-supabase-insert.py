@@ -41,12 +41,12 @@ def main():
 
     # .env 로드
     # .env 로드 (backend/.env)
-    # 1. backend/restaurant-evaluation/.env (Legacy)
+    # 1. backend/restaurant-evaluation/.env (기존)
     env_path = Path(__file__).parent.parent / ".env"
     if env_path.exists():
         load_dotenv(env_path)
     
-    # 2. backend/.env (Standard)
+    # 2. backend/.env (표준)
     env_path_backend = Path(__file__).parent.parent.parent / ".env"
     if env_path_backend.exists():
         load_dotenv(env_path_backend)

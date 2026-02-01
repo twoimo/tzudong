@@ -12,8 +12,8 @@ laaj_results, map_url_crawling 데이터를 최종 형식으로 변환합니다.
   - evaluation/transforms.jsonl (채널별로 각각)
 
 - trace_id = hash(youtube_link + (naver_name || name) + youtuber_review)
-- trace_id_name_source: "naver_name" or "original"
-- source_type: "geminiCLI" or "map_url_crawling"
+- trace_id_name_source: "naver_name" 또는 "original"
+- source_type: "geminiCLI" 또는 "map_url_crawling"
 """
 
 import json
@@ -74,7 +74,7 @@ def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict
 def get_location_data(
     eval_results: dict, rest_name: str, is_missing_flag: bool, source_file_type: str
 ) -> dict:
-    """location_match_TF에서 위치 데이터 추출 (기존 backup 로직 그대로)"""
+    """location_match_TF에서 위치 데이터 추출 (기존 백업 로직 유지)"""
     loc_data = {
         "naver_name": None,  # ★ 추가
         "roadAddress": None,
@@ -139,7 +139,7 @@ def transform_json_object(
     video_id: str = None,
 ) -> List[dict]:
     """
-    하나의 원본 JSON 객체를 변환 (기존 backup 로직 그대로)
+    하나의 원본 JSON 객체를 변환 (기존 백업 로직 유지)
     """
     flattened_results = []
 
