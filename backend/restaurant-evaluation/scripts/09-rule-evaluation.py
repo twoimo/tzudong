@@ -28,25 +28,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone, timedelta
 import requests
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    def load_dotenv(*args, **kwargs):
-        pass
-
-# get_video_id 정규식 사용
-def get_video_id(url: str) -> Optional[str]:
-    if not url:
-        return None
-    patterns = [
-        r"(?:v=|\/)([0-9A-Za-z_-]{11}).*",
-        r"(?:embed\/|v\/|shorts\/|watch\?v=|youtu\.be\/)([0-9A-Za-z_-]{11})",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
-    return None
+from dotenv import load_dotenv
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -439,55 +421,12 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def process_one_line(obj: Dict[str, Any], meta_dir: Optional[Path] = None) -> Dict[str, Any]:
+def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
     """하나의 selection 데이터 처리"""
     youtube_link = obj.get("youtube_link")
     channel_name = obj.get("channel_name")
     evaluation_target = obj.get("evaluation_target", {})
     restaurants = obj.get("restaurants", [])
-    recollect_version = obj.get("recollect_version", {})
-
-    # [Step 9에서 메타데이터 결합]
-    youtube_meta = {}
-    if meta_dir and youtube_link:
-        video_id = get_video_id(youtube_link)
-        if video_id:
-            meta_file = meta_dir / f"{video_id}.jsonl"
-            target_meta_id = recollect_version.get("meta", 0)
-
-            if meta_file.exists():
-                found_meta = False
-                last_meta = None
-                with open(meta_file, "r", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            m = json.loads(line.strip())
-                            last_meta = m
-                            if m.get("recollect_id") == target_meta_id:
-                                youtube_meta = m
-                                found_meta = True
-                                break
-                        except:
-                            pass
-                
-                # 특정 버전 못 찾으면 마지막 줄 사용
-                if not found_meta and last_meta:
-                    youtube_meta = last_meta
-    
-    # youtube_meta 필드명 표준화 (camelCase) - 여기서 미리 해둠
-    if youtube_meta:
-        std_meta = {
-            "title": youtube_meta.get("title"),
-            "viewCount": youtube_meta.get("view_count") or youtube_meta.get("viewCount"),
-            "likeCount": youtube_meta.get("like_count") or youtube_meta.get("likeCount"),
-            "commentCount": youtube_meta.get("comment_count") or youtube_meta.get("commentCount"),
-            "publishedAt": youtube_meta.get("published_at") or youtube_meta.get("publishedAt"),
-            "is_shorts": youtube_meta.get("is_shorts", False),
-            "duration": youtube_meta.get("duration"),
-            "ads_info": youtube_meta.get("ads_info", {"is_ads": False, "what_ads": None}),
-        }
-        youtube_meta = std_meta
-
 
     # 1. 위치 정합성 평가 (네이버 API) - 먼저 실행하여 naver_name 획득
     location_eval_list: List[Dict[str, Any]] = []
@@ -531,7 +470,6 @@ def process_one_line(obj: Dict[str, Any], meta_dir: Optional[Path] = None) -> Di
         "youtube_link": youtube_link,
         "channel_name": channel_name,
         "evaluation_target": evaluation_target,
-        "youtube_meta": youtube_meta,  # 결합된 메타데이터 포함
         "evaluation_results": {
             "evaluation_name_source": evaluation_name_source,
             "category_validity_TF": category_eval_list,
@@ -546,12 +484,10 @@ def main():
     parser = argparse.ArgumentParser(description="Rule 기반 평가")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
     parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
-    parser.add_argument("--crawling-path", required=False, help="크롤링 데이터 경로 (메타데이터 로드용)")
     args = parser.parse_args()
 
     channel = args.channel
     evaluation_path = Path(args.evaluation_path)
-    crawling_path = Path(args.crawling_path) if args.crawling_path else None
 
     print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Rule 평가 시작: {channel}")
     print(f"평가 경로: {evaluation_path}")
@@ -564,16 +500,6 @@ def main():
     if not selection_dir.exists():
         print(f"❌ selection 폴더 없음: {selection_dir}")
         return
-
-    # 메타데이터 경로 설정
-    meta_dir = None
-    if crawling_path:
-        meta_dir = crawling_path / "meta"
-        if not meta_dir.exists():
-            print(f"⚠️ 메타 폴더 없음: {meta_dir} (메타데이터 결합 건너뜀)")
-            meta_dir = None
-        else:
-            print(f"✅ 메타데이터 폴더 확인: {meta_dir}")
 
     # video_id 수집
     video_ids = set()
@@ -617,8 +543,8 @@ def main():
         if not any(value for value in evaluation_target.values() if value is True):
             continue
 
-        # 처리 (meta_dir 전달)
-        result = process_one_line(data, meta_dir=meta_dir)
+        # 처리
+        result = process_one_line(data)
 
         # 저장
         with open(output_file, "w", encoding="utf-8") as f:
