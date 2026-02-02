@@ -301,8 +301,7 @@ echo "::endgroup::"
 echo "::group::[Step 09] Rule Evaluation"
 log "INFO" "[Step 09] Rule Evaluation..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/09-rule-evaluation.py --channel tzuyang \
-  --evaluation-path backend/restaurant-evaluation/data/tzuyang \
-  --crawling-path backend/restaurant-crawling/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 # GH Action Notice 추가
 grep "✅ Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 echo "::endgroup::"

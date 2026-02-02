@@ -72,6 +72,46 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# ================================
+# 명령어 감지
+# ================================
+
+# 1. JQ 감지
+if command -v jq &> /dev/null; then
+    JQ_EXE="jq"
+elif [ -f "$PROJECT_ROOT/bin/jq.exe" ]; then
+    JQ_EXE="$PROJECT_ROOT/bin/jq.exe"
+else
+    # CI/CD 환경이나 Git Bash 일부 환경을 위한 Fallback
+    if [ -f "/usr/bin/jq" ]; then
+        JQ_EXE="/usr/bin/jq"
+    else
+        echo "❌ jq 명령어를 찾을 수 없습니다."
+        exit 1
+    fi
+fi
+
+# 2. Node 감지
+if command -v node &> /dev/null; then
+    NODE_EXE="node"
+elif [ -f "/c/Program Files/nodejs/node.exe" ]; then
+    NODE_EXE="/c/Program Files/nodejs/node.exe"
+elif [ -f "/mnt/c/Program Files/nodejs/node.exe" ]; then
+    NODE_EXE="/mnt/c/Program Files/nodejs/node.exe"
+else
+    NODE_EXE=""
+fi
+
+# 3. Python 감지
+if command -v python &> /dev/null; then
+    PYTHON_CMD="python"
+elif command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+else
+    echo "python 또는 python3 명령어를 찾을 수 없습니다."
+    exit 1
+fi
+
 # mkdir temp
 mkdir -p "$SCRIPT_DIR/../temp"
 
@@ -315,17 +355,17 @@ process_channel() {
         
         # 메타데이터 최신 줄 로드
         META_DATA=$(get_latest_jsonl_data "$META_FILE")
-        TITLE=$(echo "$META_DATA" | jq -r '.title // ""' 2>/dev/null | head -c 100)
-        META_RECOLLECT_ID=$(echo "$META_DATA" | jq -r '.recollect_id // 0' 2>/dev/null)
+        TITLE=$(echo "$META_DATA" | "$JQ_EXE" -r '.title // ""' 2>/dev/null | head -c 100)
+        META_RECOLLECT_ID=$(echo "$META_DATA" | "$JQ_EXE" -r '.recollect_id // 0' 2>/dev/null)
         YOUTUBE_LINK="https://www.youtube.com/watch?v=$VIDEO_ID"
         
         # 자막 최신 줄 로드
         TRANSCRIPT_DATA=$(get_latest_jsonl_data "$TRANSCRIPT_FILE")
-        TRANSCRIPT_LANGUAGE=$(echo "$TRANSCRIPT_DATA" | jq -r '.language // "ko"' 2>/dev/null)
-        TRANSCRIPT_RECOLLECT_ID=$(echo "$TRANSCRIPT_DATA" | jq -r '.recollect_id // 0' 2>/dev/null)
+        TRANSCRIPT_LANGUAGE=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '.language // "ko"' 2>/dev/null)
+        TRANSCRIPT_RECOLLECT_ID=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '.recollect_id // 0' 2>/dev/null)
         
         # 자막을 [MM:SS] 형식으로 변환
-        TRANSCRIPT=$(echo "$TRANSCRIPT_DATA" | jq -r '
+        TRANSCRIPT=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '
             .transcript // [] | 
             map("[" + (if (.start | type) == "string" then .start else ((.start / 60 | floor | tostring | if length < 2 then "0" + . else . end)) + ":" + ((.start % 60 | floor | tostring | if length < 2 then "0" + . else . end)) end) + "] " + .text) | 
             join("\n")
@@ -508,7 +548,7 @@ EOF
                 echo "[$(date)] 파서 실패: $URL" >> "$error_log"
                 # 에러 JSONL 저장 (recollect_version 포함)
                 if [ ! -d "$errors_dir" ]; then mkdir -p "$errors_dir"; fi
-                jq -n \
+                "$JQ_EXE" -n \
                     --arg yl "$YOUTUBE_LINK" \
                     --arg vid "$VIDEO_ID" \
                     --arg err "파싱 실패 (3회 시도 후)" \
@@ -522,7 +562,7 @@ EOF
             echo "[$(date)] Gemini CLI 실패: $URL" >> "$error_log"
             # 에러 JSONL 저장 (recollect_version 포함)
             if [ ! -d "$errors_dir" ]; then mkdir -p "$errors_dir"; fi
-            jq -n \
+            "$JQ_EXE" -n \
                 --arg yl "$YOUTUBE_LINK" \
                 --arg vid "$VIDEO_ID" \
                 --arg err "Gemini CLI 호출 실패 (3회 시도 후)" \
