@@ -152,7 +152,7 @@ export default function HomeClient() {
                     const { data: sameNameRestaurants } = await supabase
                         .from('restaurants')
                         .select('*')
-                        .eq('name', (targetRestaurant as any).name)
+                        .eq('approved_name', (targetRestaurant as any).name)
                         .eq('status', 'approved');
 
                     // 병합 로직 적용
@@ -418,7 +418,7 @@ export default function HomeClient() {
                 const { data: sameNameRestaurants } = await supabase
                     .from('restaurants')
                     .select('*')
-                    .eq('name', (targetRestaurant as any).name)
+                    .eq('approved_name', (targetRestaurant as any).name)
                     .eq('status', 'approved');
 
                 const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);

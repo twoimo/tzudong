@@ -571,7 +571,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
 
     const updateData = {
-      name: trimmedName,
+
       road_address: selectedResult.road_address,
       jibun_address: selectedResult.jibun_address,
       english_address: selectedResult.english_address,
@@ -681,7 +681,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       // 수정 사항만 업데이트 (status는 변경하지 않음)
       const updateData: Record<string, unknown> = {
-        name: trimmedName,
+        approved_name: trimmedName,
         phone: trimmedPhone || null,
         updated_by_admin_id: user?.id || null,
         updated_at: new Date().toISOString(),
@@ -1261,15 +1261,15 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           <AlertDialogHeader>
             <AlertDialogTitle>승인 확인</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
+              <span className="block">이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</span>
               {conflictingRestaurantInfo && (
-                <div className="mt-3 p-3 bg-muted rounded-md">
-                  <p className="font-medium">기존 레스토랑:</p>
-                  <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
-                  <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
-                </div>
+                <span className="block mt-3 p-3 bg-muted rounded-md">
+                  <span className="block font-medium">기존 레스토랑:</span>
+                  <span className="block text-sm mt-1">이름: {conflictingRestaurantInfo.name}</span>
+                  <span className="block text-sm">주소: {conflictingRestaurantInfo.address}</span>
+                </span>
               )}
-              <p className="mt-3 font-medium">승인하시겠습니까?</p>
+              <span className="block mt-3 font-medium">승인하시겠습니까?</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

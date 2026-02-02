@@ -865,11 +865,11 @@ function AdminEvaluationPage() {
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
   const performApproval = async (record: EvaluationRecord) => {
-    // Naver Name Extraction logic
-    // 1. Try DB column first
+    // Naver Name 추출 로직
+    // 1. DB 컬럼(naver_name)을 최우선으로 사용
     let naverName: string | null = record.naver_name || null;
 
-    // 2. Fallback to evaluation_results extraction
+    // 2. naver_name이 없는 경우 evaluation_results에서 추출 시도 (Fallback)
     if (!naverName) {
       const locationMatch = (record.evaluation_results?.location_match_TF as any);
       if (locationMatch) {
@@ -881,8 +881,19 @@ function AdminEvaluationPage() {
       }
     }
 
+    // 3. 그래도 없으면 기존 이름 사용 (매우 드문 케이스)
+    if (!naverName) {
+      naverName = record.restaurant_name || record.name || '이름 없음';
+    }
+
+    console.log('🚀 승인 요청 시작:', {
+      id: record.id,
+      naverName,
+      original_status: record.status
+    });
+
     // status를 'approved'로 업데이트 및 approved_name 저장
-    const { error } = await supabase
+    const { data: updatedData, error } = await supabase
       .from('restaurants')
       // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
@@ -892,11 +903,22 @@ function AdminEvaluationPage() {
         db_error_details: null, // 에러 상세 초기화
         updated_at: new Date().toISOString(),
       })
-      .eq('id', record.id);
+      .eq('id', record.id)
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ DB 업데이트 에러:', error);
+      throw error;
+    }
 
-    // 상태 업데이트 (새로고침 없이)
+    console.log('✅ DB 업데이트 성공:', updatedData);
+
+    if ((updatedData as any)?.status !== 'approved') {
+      console.warn('⚠️ 업데이트 후 status가 approved가 아님:', (updatedData as any)?.status);
+    }
+
+    // 상태 업데이트 (새로고침 없이 UI 반영)
     updateRecordInState(record.id, {
       status: 'approved',
       approved_name: naverName,
@@ -907,7 +929,7 @@ function AdminEvaluationPage() {
 
     toast({
       title: '승인 완료',
-      description: `✅ "${record.restaurant_name || record.name}" 맛집이 승인되었습니다`,
+      description: `✅ "${naverName}" 맛집이 승인되었습니다`,
     });
   };
 
@@ -1336,7 +1358,7 @@ function AdminEvaluationPage() {
       // 레스토랑 이름 조회
       const { data: restaurant } = await supabase
         .from('restaurants')
-        .select('name, review_count')
+        .select('name:approved_name, review_count')
         .eq('id', typedReview.restaurant_id)
         .single();
 
@@ -1395,7 +1417,7 @@ function AdminEvaluationPage() {
       // 레스토랑 이름 조회
       const { data: restaurant } = await supabase
         .from('restaurants')
-        .select('name, review_count')
+        .select('name:approved_name, review_count')
         .eq('id', typedReview.restaurant_id)
         .single();
 
@@ -2148,18 +2170,16 @@ function AdminEvaluationPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>승인 확인</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
-                {conflictingRestaurantInfo && (
-                  <div className="mt-3 p-3 bg-muted rounded-md">
-                    <p className="font-medium">기존 레스토랑:</p>
-                    <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
-                    <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
-                  </div>
-                )}
-                <p className="mt-3 font-medium">승인하시겠습니까?</p>
-              </div>
+            <AlertDialogDescription className="text-sm text-muted-foreground space-y-2">
+              <span className="block">이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</span>
+              {conflictingRestaurantInfo && (
+                <span className="block mt-3 p-3 bg-muted rounded-md">
+                  <span className="block font-medium">기존 레스토랑:</span>
+                  <span className="block text-sm mt-1">이름: {conflictingRestaurantInfo.name}</span>
+                  <span className="block text-sm">주소: {conflictingRestaurantInfo.address}</span>
+                </span>
+              )}
+              <span className="block mt-3 font-medium">승인하시겠습니까?</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

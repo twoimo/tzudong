@@ -289,7 +289,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       const { error: insertError } = await (supabase
         .from('restaurants') as any)
         .insert({
-          name: trimmedName,
+          approved_name: trimmedName,
           road_address: geocodingData.road_address,
           jibun_address: geocodingData.jibun_address,
           english_address: geocodingData.english_address,

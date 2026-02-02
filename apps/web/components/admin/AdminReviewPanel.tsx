@@ -102,7 +102,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             const { data: restaurantsData } = await supabase
                 .from('restaurants')
-                .select('id, name, address')
+                .select('id, name:approved_name, address')
                 .in('id', restaurantIds);
 
             const typedProfilesData = (profilesData || []) as any[];
