@@ -82,37 +82,8 @@ def main():
 
     print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 📂 입력 파일: {input_file}")
 
-    # 기존 trace_id 조회
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 🔍 기존 데이터 조회 중...")
-
-    existing_ids = set()
-    try:
-        offset = 0
-        limit = 1000
-        while True:
-            response = (
-                supabase.table("restaurants")
-                .select("trace_id")
-                .eq("channel_name", channel)
-                .range(offset, offset + limit - 1)
-                .execute()
-            )
-            
-            if not response.data:
-                break
-                
-            batch_ids = {row["trace_id"] for row in response.data if row.get("trace_id")}
-            existing_ids.update(batch_ids)
-            
-            if len(response.data) < limit:
-                break
-                
-            offset += limit
-            print(f"   ...{len(existing_ids)}개 로드 중")
-
-        print(f"   기존 레코드: {len(existing_ids)}개 (전체 로드 완료)")
-    except Exception as e:
-        print(f"⚠️ 기존 데이터 조회 실패: {e}")
+    # 기존 trace_id 조회 로직 제거 (배치 단위로 처리)
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 🚀 데이터 처리 시작...")
 
     # 통계
     stats = {"total_records": 0, "inserted": 0, "skipped": 0, "errors": 0}
@@ -120,6 +91,52 @@ def main():
     # 데이터 읽기 및 삽입
     batch_size = 50
     batch = []
+
+    def process_and_upsert(batch_data):
+        if not batch_data:
+            return
+
+        # 1. 배치 내 ID 추출
+        trace_ids = [item["trace_id"] for item in batch_data]
+        
+        existing_map = {}
+        # dry_run이 아닐 때만 조회 (또는 dry_run이라도 병합 로직 확인을 위해 조회할 수도 있으나, 보통 쓰기 방지 목적임)
+        # 정확한 병합 시뮬레이션을 위해 dry_run이어도 조회는 수행
+        try:
+            response = supabase.table("restaurants").select("*").in_("trace_id", trace_ids).execute()
+            if response.data:
+                existing_map = {row["trace_id"]: row for row in response.data}
+        except Exception as e:
+            # 조회 실패 시에는 신규 데이터로만 진행 (로그 출력)
+            print(f"⚠️ 기존 데이터 조회 실패 (Batch): {e}")
+
+        # 2. 데이터 병합 (기존 데이터 보존)
+        final_batch = []
+        for item in batch_data:
+            tid = item["trace_id"]
+            existing = existing_map.get(tid)
+            
+            if existing:
+                # 기존 레코드가 있으면, DB에 있는 Not None 값들을 우선 사용
+                for key in list(item.keys()):
+                    db_val = existing.get(key)
+                    if db_val is not None:
+                        item[key] = db_val
+            
+            final_batch.append(item)
+
+        # 3. Upsert
+        if not dry_run:
+            try:
+                supabase.table("restaurants").upsert(final_batch, on_conflict="trace_id").execute()
+                stats["inserted"] += len(final_batch)
+                print(f"   {stats['inserted']}개 처리 완료 (Upsert/Merge)...")
+            except Exception as e:
+                print(f"⚠️ 배치 Upsert 오류: {e}")
+                stats["errors"] += len(final_batch)
+        else:
+            stats["inserted"] += len(final_batch)
+            # print(f"   [Dry Run] {len(final_batch)}개 병합 처리됨")
 
     with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
@@ -181,17 +198,7 @@ def main():
 
                 # 배치 삽입
                 if len(batch) >= batch_size:
-                    if not dry_run:
-                        try:
-                            # trace_id 기반 upsert
-                            supabase.table("restaurants").upsert(batch, on_conflict="trace_id").execute()
-                            stats["inserted"] += len(batch)
-                            print(f"   {stats['inserted']}개 처리 완료 (Upsert)...")
-                        except Exception as e:
-                            print(f"⚠️ 배치 Upsert 오류: {e}")
-                            stats["errors"] += len(batch)
-                    else:
-                        stats["inserted"] += len(batch)
+                    process_and_upsert(batch)
                     batch = []
 
             except json.JSONDecodeError:
@@ -199,15 +206,7 @@ def main():
 
     # 남은 배치 삽입
     if batch:
-        if not dry_run:
-            try:
-                supabase.table("restaurants").upsert(batch, on_conflict="trace_id").execute()
-                stats["inserted"] += len(batch)
-            except Exception as e:
-                print(f"⚠️ 마지막 배치 Upsert 오류: {e}")
-                stats["errors"] += len(batch)
-        else:
-            stats["inserted"] += len(batch)
+        process_and_upsert(batch)
 
     # 결과 출력
     print(f"\n{'='*50}")
