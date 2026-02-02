@@ -82,38 +82,8 @@ def main():
 
     print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 📂 입력 파일: {input_file}")
 
-    # 기존 trace_id 조회
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 🔍 기존 데이터 조회 중...")
-
-    existing_status_map = {}
-    try:
-        offset = 0
-        limit = 1000
-        while True:
-            response = (
-                supabase.table("restaurants")
-                .select("trace_id, status")
-                .eq("channel_name", channel)
-                .range(offset, offset + limit - 1)
-                .execute()
-            )
-            
-            if not response.data:
-                break
-                
-            for row in response.data:
-                if row.get("trace_id"):
-                    existing_status_map[row["trace_id"]] = row.get("status")
-            
-            if len(response.data) < limit:
-                break
-                
-            offset += limit
-            print(f"   ...{len(existing_status_map)}개 로드 중")
-
-        print(f"   기존 레코드: {len(existing_status_map)}개 (전체 로드 완료)")
-    except Exception as e:
-        print(f"⚠️ 기존 데이터 조회 실패: {e}")
+    # 기존 trace_id 조회 로직 제거 (배치 단위로 처리)
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 🚀 데이터 처리 시작 (기존 데이터 보존 로직 적용)...")
 
     # 통계
     stats = {"total_records": 0, "inserted": 0, "skipped": 0, "errors": 0}
@@ -121,6 +91,55 @@ def main():
     # 데이터 읽기 및 삽입
     batch_size = 50
     batch = []
+
+    def process_and_upsert(batch_data):
+        if not batch_data:
+            return
+
+        # 1. 배치 내 ID 추출
+        trace_ids = [item["trace_id"] for item in batch_data]
+        
+        existing_map = {}
+        try:
+            # 배치에 포함된 trace_id들의 기존 전체 데이터를 조회
+            response = supabase.table("restaurants").select("*").in_("trace_id", trace_ids).execute()
+            if response.data:
+                existing_map = {row["trace_id"]: row for row in response.data}
+        except Exception as e:
+            print(f"⚠️ 기존 데이터 조회 실패 (Batch): {e}")
+
+        # 2. 데이터 병합 (기존 데이터 보존)
+        final_batch = []
+        for item in batch_data:
+            tid = item["trace_id"]
+            existing = existing_map.get(tid)
+            
+            if existing:
+                # 기존 레코드가 존재하면, '새 데이터의 키'에 해당하는 '기존 DB 값'이 Not Null 인 경우
+                # 기존 값을 우선 사용하여 덮어쓰기 방지 (즉, DB값 유지)
+                for key in list(item.keys()):
+                    db_val = existing.get(key)
+                    # 주의: DB 값이 None이 아니면 그걸 쓴다. (새 값이 있어도 DB값 우선? User: "기존에 있는 값 유지")
+                    # 만약 새 값으로 업데이트를 '원하는' 경우라면 이 로직은 방해가 될 수 있음.
+                    # 하지만 요청사항은 "NULL 변경되는 문제"를 막는 것. 
+                    # 안전하게: 새 값이 None이거나 빈 값일 때만 DB 값을 쓰는 게 아니라, 
+                    # "기존에 있는 값 유지" -> DB Priority.
+                    if db_val is not None:
+                        item[key] = db_val
+            
+            final_batch.append(item)
+
+        # 3. Upsert
+        if not dry_run:
+            try:
+                supabase.table("restaurants").upsert(final_batch, on_conflict="trace_id").execute()
+                stats["inserted"] += len(final_batch)
+                print(f"   {stats['inserted']}개 처리 완료 (Upsert/Merge)...")
+            except Exception as e:
+                print(f"⚠️ 배치 Upsert 오류: {e}")
+                stats["errors"] += len(final_batch)
+        else:
+            stats["inserted"] += len(final_batch)
 
     with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
@@ -150,7 +169,7 @@ def main():
                     "trace_id": trace_id,
                     "youtube_link": data.get("youtube_link"),
                     "channel_name": data.get("channel_name") or channel,
-                    "status": existing_status_map.get(trace_id, data.get("status", "pending")),
+                    "status": data.get("status", "pending"),
                     "origin_name": data.get("origin_name"),
                     "naver_name": data.get("naver_name"),
                     "trace_id_name_source": data.get("trace_id_name_source"),
@@ -182,17 +201,7 @@ def main():
 
                 # 배치 삽입
                 if len(batch) >= batch_size:
-                    if not dry_run:
-                        try:
-                            # trace_id 기반 upsert
-                            supabase.table("restaurants").upsert(batch, on_conflict="trace_id").execute()
-                            stats["inserted"] += len(batch)
-                            print(f"   {stats['inserted']}개 처리 완료 (Upsert)...")
-                        except Exception as e:
-                            print(f"⚠️ 배치 Upsert 오류: {e}")
-                            stats["errors"] += len(batch)
-                    else:
-                        stats["inserted"] += len(batch)
+                    process_and_upsert(batch)
                     batch = []
 
             except json.JSONDecodeError:
@@ -200,15 +209,7 @@ def main():
 
     # 남은 배치 삽입
     if batch:
-        if not dry_run:
-            try:
-                supabase.table("restaurants").upsert(batch, on_conflict="trace_id").execute()
-                stats["inserted"] += len(batch)
-            except Exception as e:
-                print(f"⚠️ 마지막 배치 Upsert 오류: {e}")
-                stats["errors"] += len(batch)
-        else:
-            stats["inserted"] += len(batch)
+        process_and_upsert(batch)
 
     # 결과 출력
     print(f"\n{'='*50}")
