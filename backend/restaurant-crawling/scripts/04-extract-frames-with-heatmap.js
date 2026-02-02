@@ -821,8 +821,9 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
             isHeatmapChanged = true;
         } else {
             // 변경 없음
-            log('info', `[Skip] 히트맵 변경 없음 (허용오차 ±${TOLERANCE_SEC}s 이내) -> 수집 중단`);
-            return null; // Null을 리턴하여 다운로드/프레임 추출 단계로 가지 않게 함
+            log('info', `[Skip] 히트맵 변경 없음 (허용오차 ±${TOLERANCE_SEC}s 이내) -> ID 동기화 및 수집 중단`);
+            // [Fix] return null 제거 -> 아래 저장 로직을 태워서 Heatmap ID를 Meta ID와 동기화시킴
+            // 이렇게 해야 다음 실행 시 'ID 불일치'로 인한 중복 검사를 방지할 수 있음.
         }
     }
 
@@ -851,9 +852,15 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     const duration = metaInfo ? metaInfo.duration : 0;
 
     // [중요] recollect_vars에 heatmap_changed 추가 (명시적)
+    // [Fix] 변경되었을 때만 추가
     let finalVars = getRecollectVars(channel, videoId);
-    if (!finalVars.includes('heatmap_changed')) {
-        finalVars.push('heatmap_changed');
+    if (isHeatmapChanged) {
+        if (!finalVars.includes('heatmap_changed')) {
+            finalVars.push('heatmap_changed');
+        }
+    } else {
+        // 변경 안됐으면 제거 (혹시 있다면)
+        finalVars = finalVars.filter(v => v !== 'heatmap_changed');
     }
 
     const saveData = {
@@ -870,6 +877,12 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
     fs.appendFileSync(outPath, JSON.stringify(saveData) + '\n', 'utf8');
     log('info', `[Heatmap Saved] ${videoId} (Points: ${formattedInteraction.length})`);
+
+    // [Fix] 변경 없으면 저장(ID동기화) 후 여기서 종료 -> 프레임 추출 스킵
+    if (!isHeatmapChanged) {
+        log('info', `[Skip] 히트맵 변경 없으므로 프레임 추출 단계 건너뜀`);
+        return null;
+    }
 
     // 반환값에 '재사용 가능 여부' 정보를 포함하면 좋겠지만, 
     // 기존 구조 유지를 위해 마커 리스트만 반환하고, 실제 부분 업데이트 로직은 extractFrames에서 수행

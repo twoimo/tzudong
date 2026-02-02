@@ -44,6 +44,22 @@ mkdir -p "$LOG_DIR"
 DATE=$(date +%Y-%m-%d)
 LOG_FILE="$LOG_DIR/daily_$DATE.log"
 
+# [Check] 이미 완료된 실행인지 확인 (중복 실행 방지)
+FORCE_RUN=false
+for arg in "$@"; do
+  if [ "$arg" == "--force" ]; then
+    FORCE_RUN=true
+  fi
+done
+
+if [ -f "$LOG_FILE" ] && [ "$FORCE_RUN" = false ]; then
+    if grep -q "일일 데이터 수집 파이프라인 완료" "$LOG_FILE"; then
+        echo "✅ [Skip] 오늘($DATE)의 수집이 이미 완료되었습니다."
+        echo "   (재실행하려면 --force 옵션을 사용하세요)"
+        exit 0
+    fi
+fi
+
 # 로그 출력 함수 (화면 + 파일 동시 출력)
 log() {
   local LEVEL=$1
@@ -95,6 +111,9 @@ sync_data_to_remote() {
         # Stash 적용
         if ! git stash pop 2>&1 | tee -a "$LOG_FILE"; then
             log "WARN" "Stash pop 충돌 감지! 로컬 변경사항(Theirs)을 우선 적용합니다."
+            # [Fix] urls.txt 충돌 시 최신 수집 데이터(Stash)를 강제로 적용 (Merge Marker 방지)
+            git checkout stash@{0} -- backend/restaurant-crawling/data/*/urls.txt 2>/dev/null || true
+            
             # 충돌 발생 시, Stash된 내용(새로 수집한 데이터)을 우선시
             git checkout --theirs . 2>/dev/null || true
             git add .
