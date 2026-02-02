@@ -122,6 +122,8 @@ sync_data_to_remote() {
         
         # 다시 Add & Commit
         # 무시된(ignored) 데이터 파일 강제 추가 ('data' 브랜치 내 데이터 유지 목적)
+        # 중요: 삭제된 파일도 반영하기 위해 update 모드 사용
+        git add -u backend/restaurant-crawling/data/ 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/transcript/*.jsonl 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
         git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
