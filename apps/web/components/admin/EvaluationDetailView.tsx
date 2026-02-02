@@ -269,34 +269,36 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                     </div>
 
                     {/* Row 2 */}
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium">전화번호</span>
-                        <span className="text-gray-900 text-sm">{record.phone || '-'}</span>
-                    </div>
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
-                            좌표 (lat, lng)
-                        </span>
-                        <span className="font-mono text-xs text-gray-600">
-                            {record.lat ?? '-'}, {record.lng ?? '-'}
-                        </span>
-                    </div>
-
-                    {/* Row 3 - Full Width Address */}
-                    <div className="col-span-2 flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium">원본 주소</span>
-                        <span className="text-gray-900 text-sm break-all">{record.restaurant_info?.origin_address || '-'}</span>
-                    </div>
-
-                    {/* Row 4 - Naver Addresses */}
-                    <div className="col-span-2 grid grid-cols-1 gap-1 min-w-0">
-                        <div className="flex items-start gap-1.5 min-w-0">
-                            <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 도로명</Badge>
-                            <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.road_address || '-'}</span>
+                    <div className="flex flex-col gap-3 min-w-0">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-gray-500 text-xs font-medium">원본 주소</span>
+                            <span className="text-gray-900 text-sm break-all">{record.restaurant_info?.origin_address || '-'}</span>
                         </div>
-                        <div className="flex items-start gap-1.5 min-w-0">
-                            <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 지번</Badge>
-                            <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.jibun_address || '-'}</span>
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-start gap-1.5 min-w-0">
+                                <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 도로명</Badge>
+                                <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.road_address || '-'}</span>
+                            </div>
+                            <div className="flex items-start gap-1.5 min-w-0">
+                                <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 지번</Badge>
+                                <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.jibun_address || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-3 min-w-0">
+                        {record.phone && (
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="text-gray-500 text-xs font-medium">전화번호</span>
+                                <span className="text-gray-900 text-sm">{record.phone}</span>
+                            </div>
+                        )}
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
+                                좌표 (lat, lng)
+                            </span>
+                            <span className="font-mono text-xs text-gray-600">
+                                {record.lat ?? '-'}, {record.lng ?? '-'}
+                            </span>
                         </div>
                     </div>
                 </div>
