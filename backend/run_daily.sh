@@ -554,31 +554,85 @@ echo "" >> "$SUMMARY_MD"
 echo "### 🏗️ Pipeline Architecture" >> "$SUMMARY_MD"
 echo "\`\`\`wmgraph" >> "$SUMMARY_MD"
 cat <<EOF >> "$SUMMARY_MD"
-+-------------------------------------------------------------------------------------------------------+
-|                                  🚀 TZUDONG DETAILED PIPELINE FLOW                                    |
-+-------------------------------------------------------------------------------------------------------+
-|                                                                                                       |
-|  [GitHub Actions] --> [Step 0: Sync] <--(Fetch)-- [Data Branch]                                       |
-|                             |                                                                         |
-|                             v                                                                         |
-|  [Step 1: URLs] --> [Step 2: Meta] --> [Step 2.5: Cleanup] ==(Save)==> [Commit]                       |
-|                             | (Scheduled)                                                             |
-|                             v                                                                         |
-|  [Step 3: Transcript] --> [Step 3.1: Context] ==(Save)==> [Commit]                                    |
-|                             |                                                                         |
-|                             v                                                                         |
-|  [Step 4: Frames/Heatmap] ==(Save)==> [Commit]                                                        |
-|                             |                                                                         |
-|                             v                                                                         |
-|  [Step 6: Gemini Analysis] --> [Step 6.1/6.2: Meta Enrichment]                                        |
-|                             |                                                                         |
-|                             v                                                                         |
-|                             v                                                                         |
-|  [Step 08: Target Selection] --> [Step 09: Rule Eval] --> [Step 10: LAAJ Eval]                        |
-|                             |                                                                         |
-|                             v                                                                         |
-|  [Step 11: Transform] --> [Step 12: Supabase Insert] --> [Step 7: Final Sync] ==(Push)==> [Remote]    |
-|                                                                                                       |
-+-------------------------------------------------------------------------------------------------------+
++----------------------------------------------------------------------------------------------------------+
+|                                    🚀 TZUDONG DETAILED PIPELINE FLOW                                     |
++----------------------------------------------------------------------------------------------------------+
+|                                                                                                          |
+|  [Daily Start]                                                                                           |
+|        |                                                                                                 |
+|        v                                                                                                 |
+|  [Step 1: URLs] --> [Step 2: Meta] --> [Step 2.1: Migr] --> [Step 2.5: Clean] ==(Save)==> [Git Commit]   |
+|                                                                                                          |
+|        v                                                                                                 |
+|  [Step 3: Transcript] --> [Step 3.1: Context (Ollama)] ==(Save)==> [Git Commit]                          |
+|                                                                                                          |
+|        v                                                                                                 |
+|  [Step 4: Frames/Heatmap] ==(Save)==> [Git Commit]                                                       |
+|                                                                                                          |
+|        v                                                                                                 |
+|  [Step 6.1: Meta Enrich] --> [Step 6: Gemini Analysis]                                                   |
+|                                                                                                          |
+|        v                                                                                                 |
+|  [Step 08: Target Select] --> [Step 09: Rule Eval] --> [Step 10: LAAJ Eval] ==(Save)==> [Git Commit]     |
+|                                                                                                          |
+|        v                                                                                                 |
+|  [Step 11: Transform] --> [Step 12: Supabase Insert] --> [Step 7: Final Sync] ==(Push)==> [Remote]       |
+|                                                                                                          |
++----------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "### 📘 파이프라인 스크립트별 5W1H 정밀 분석" >> "$SUMMARY_MD"
+echo "각 단계가 **왜(Why)** 필요하고, **어떻게(How)** 작동하며, **무엇(What)** 을 남기는지 육하원칙에 따라 기술합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "#### 1. 수집 및 전처리 (Data Collection)" >> "$SUMMARY_MD"
+echo "**Step 1: URL 수집 (\`01-collect-urls.py\`)**" >> "$SUMMARY_MD"
+echo "- **Why (목적)**: 채널의 최신 영상 상태를 정확히 동기화하기 위함입니다." >> "$SUMMARY_MD"
+echo "- **How (작동)**: YouTube Data API로 전체 목록을 조회한 뒤, 로컬 \`urls.txt\`와 **Diff 연산**을 수행하여 '신규 추가'와 '삭제된 영상'을 구분합니다." >> "$SUMMARY_MD"
+echo "- **What (결과)**: 최신화된 URL 목록 및 삭제 이력(History)." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "**Step 2: 메타데이터 (\`02-collect-meta.py\`)**" >> "$SUMMARY_MD"
+echo "- **Why (목적)**: API 쿼터를 절약하면서도 시계열 데이터(조회수 추이 등)를 확보합니다." >> "$SUMMARY_MD"
+echo "- **When (시기)**: **Smart Scheduling** 알고리즘(게시일 기준 D+5~14일은 매일, 그 외엔 월 1회)에 따라 선별적으로 실행됩니다." >> "$SUMMARY_MD"
+echo "- **How (작동)**: 썸네일 파일의 **MD5 Hash**를 비교하여 실제 이미지가 변경된 경우에만 다운로드를 수행하는 최적화 로직이 포함됩니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "#### 2. 멀티모달 데이터 확보 (Multi-modal Processing)" >> "$SUMMARY_MD"
+echo "**Step 3: 자막 확보 (\`03-collect-transcript.js\`)**" >> "$SUMMARY_MD"
+echo "- **Why (목적)**: 영상의 내용을 텍스트로 분석하기 위한 기초 데이터입니다." >> "$SUMMARY_MD"
+echo "- **How (작동)**: \`youtube-transcript-api\`를 사용하여 타임스탬프가 포함된 전체 자막을 JSONL 포맷으로 구조화하여 저장합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "**Step 3.1: 문맥 생성 (\`03.1-generate-transcript-context.py\`)**" >> "$SUMMARY_MD"
+echo "- **Who (주체)**: **Local AI (Ollama)**." >> "$SUMMARY_MD"
+echo "- **How (작동)**: 긴 자막을 **Chunking**하고 요약(Summarization)하여, 후속 단계의 AI가 영상을 '먹방', '여행' 등으로 이해할 수 있도록 문맥(Context)을 생성합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "**Step 4: 고화질 프레임 (\`04-extract-frames-with-heatmap.js\`)**" >> "$SUMMARY_MD"
+echo "- **Why (목적)**: 사용자가 가장 관심 있어 하는 '음식 근접샷'을 자동으로 포착하기 위함입니다." >> "$SUMMARY_MD"
+echo "- **How (작동)**: YouTube Player 내부의 **Heatmap Peak** 데이터를 파싱하여 시청 지속 시간이 가장 높은 초(sec)를 찾고, FFmpeg로 해당 순간을 고화질 캡처합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "#### 3. AI 분석 및 검증 (Analysis & Verification)" >> "$SUMMARY_MD"
+echo "**Step 6: Gemini 비전 분석 (\`06-gemini-vision.sh\`)**" >> "$SUMMARY_MD"
+echo "- **What (기능)**: 비구조화된 영상 데이터를 구조화된 식당 정보(이름, 메뉴, 위치)로 변환합니다." >> "$SUMMARY_MD"
+echo "- **How (작동)**: **Vision-Text Multi-modal** 모델을 사용합니다. Node.js API 호출 실패 시 자동으로 CLI 모드로 전환하는 **Sticky Fallback** 로직으로 안정성을 보장합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "**Step 9: 위치 검증 (\`09-rule-evaluation.py\`)**" >> "$SUMMARY_MD"
+echo "- **Why (목적)**: AI가 잘못 인식한 정보(Hallucination)를 걸러내고 실존 여부를 확인합니다." >> "$SUMMARY_MD"
+echo "- **How (작동)**: 추출된 상호명으로 네이버 지도를 검색하고, 반환된 좌표와 영상 내 지명 정보를 **Geocoding**하여 **반경 20m 이내** 일치 여부를 수학적으로 검증합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "**Step 10: 리뷰 평가 (\`10-laaj-evaluation.sh\`)**" >> "$SUMMARY_MD"
+echo "- **Who (주체)**: LAAJ (LLM as a Judge) 페르소나." >> "$SUMMARY_MD"
+echo "- **How (작동)**: 리뷰 텍스트의 감성 및 패턴을 분석하여 단순 긍/부정이 아닌 '진정성'과 '광고성' 여부를 심사합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
+echo "#### 4. 배포 (Deployment)" >> "$SUMMARY_MD"
+echo "**Step 12: DB 동기화 (\`12-supabase-insert.py\`)**" >> "$SUMMARY_MD"
+echo "- **How (작동)**: 데이터 무결성을 위해 \`Trace ID = Hash(Link + Name + Review)\`를 생성하여 중복을 방지합니다. **Selective Upsert** 전략을 통해, 사람이 수동으로 검수한 필드는 덮어쓰지 않고 보존합니다." >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
