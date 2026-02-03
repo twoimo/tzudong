@@ -1,8 +1,14 @@
 name: Daily Data Collection
 
 on:
+  # data 브랜치에서만 워크플로우 트리거
+  push:
+    branches:
+      - data
+    paths:
+      - '.github/workflows/daily-crawler.yml'
   schedule:
-    # 한국 시간(KST) 새벽 3시 = UTC 18:00
+    # 한국 시간(KST) 새벽 4시 = UTC 19:00
     - cron: '0 19 * * *'
   workflow_dispatch:
     inputs:
@@ -47,6 +53,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: data
           fetch-depth: 1
 
       - name: Cache Puppeteer

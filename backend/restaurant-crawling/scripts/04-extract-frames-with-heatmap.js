@@ -865,6 +865,7 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
     const saveData = {
         youtube_link: url,
+        channel_name: channel,
         video_id: videoId,
         duration: duration, // duration 필드 추가
         interaction_data: formattedInteraction,

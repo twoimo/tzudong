@@ -1,102 +1,53 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
-bun.lock
+backend/node_modules/
+backend/bun.lock
+__pycache__/
 
-# Testing
-coverage/
-
-# Next.js
-/.next/
-/out/
-/build/
-
-# Production
-dist/
-
-# Misc
-.DS_Store
-*.pem
-
-# Debug
+# Logs
+logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
+backend/log/
+daily_run.log
+run_*.log
 
-# Local Env Files
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.test
+backend/.env
 
-# Turbo
-.turbo/
-
-# Vercel
-.vercel/
-
-# Python
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.git
-.mypy_cache/
-.pytest_cache/
-.ipynb_checkpoints/
-*.egg-info/
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+*.desktop.ini
 
 # IDEs
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# OS
-Thumbs.db
-Desktop.ini
-$RECYCLE.BIN/
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Custom - Sync
-.sync_trigger
+# Project Specific Data (Large files & Generated)
+backend/restaurant-crawling/data/*/frames
+backend/restaurant-crawling/data/*/video_cache
+backend/restaurant-crawling/data/*/temp_video
+backend/restaurant-crawling/data/*/thumbnails
 
-# Custom - Large Data
-supabase/backup_db/*.sql
-backend/backups/*.dump
-backend/restaurant-crawling/data/tzuyang/*
-backend/agent-rag/data/tzuyang/*
-
-# Explicitly ignore heavy folders (just in case)
-**/frames/
-**/video_cache/
-**/temp_video/
-**/thumbnails/
-
-# Backend Logs
-backend/log/
-backend/job-logs.txt
-supabase/.temp/
-# Sensitive Credentials
-.gemini/
-oauth_creds.json
-
-backend/restaurant-crawling/data/*
-backend/restaurant-evaluation/data/*
-backend/restaurant-evaluation/temp/
-*.stackdump
+# Supabase
+supabase/

@@ -44,22 +44,6 @@ mkdir -p "$LOG_DIR"
 DATE=$(date +%Y-%m-%d)
 LOG_FILE="$LOG_DIR/daily_$DATE.log"
 
-# [Check] 이미 완료된 실행인지 확인 (중복 실행 방지)
-FORCE_RUN=false
-for arg in "$@"; do
-  if [ "$arg" == "--force" ]; then
-    FORCE_RUN=true
-  fi
-done
-
-if [ -f "$LOG_FILE" ] && [ "$FORCE_RUN" = false ]; then
-    if grep -q "일일 데이터 수집 파이프라인 완료" "$LOG_FILE"; then
-        echo "✅ [Skip] 오늘($DATE)의 수집이 이미 완료되었습니다."
-        echo "   (재실행하려면 --force 옵션을 사용하세요)"
-        exit 0
-    fi
-fi
-
 # 로그 출력 함수 (화면 + 파일 동시 출력)
 log() {
   local LEVEL=$1
@@ -81,134 +65,57 @@ strip_ansi() {
     sed 's/\x1b\[[0-9;]*m//g'
 }
 
-# [Function] 데이터 브랜치 동기화 함수 (단계별 저장용)
+# [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
 sync_data_to_remote() {
     local STEP_NAME="$1"
-    local CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     log "INFO" "------------------------------------------------------------"
     log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
 
     # 데이터 폴더 변경 감지 (Modified + Untracked)
     if [ -z "$(git status --porcelain backend/restaurant-crawling/data/)" ] && [ -z "$(git status --porcelain backend/restaurant-evaluation/data/)" ]; then
         log "INFO" "변경 된 데이터가 없습니다. (Skip)"
-    else
-        log "INFO" "변경 된 데이터를 'data' 브랜치로 푸시합니다."
-        
-        # 1. 현재 변경된 데이터(Working Tree)를 임시 보관 (Staging)
-        git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
-        git add backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"
-        
-        # [Fix] package-lock.json 등이 변경되어 있으면 체크아웃이 막히므로 원복
-        git checkout -- backend/package-lock.json 2>&1 | tee -a "$LOG_FILE"
-        
-        # 2. data 브랜치로 전환 (없으면 생성)
-        # Stash를 사용하여 변경사항을 임시 저장 (Untracked 제외 - .gitignore로 제어)
-        git stash push -m "daily-crawler-stash" 2>&1 | tee -a "$LOG_FILE"
-        
-        git fetch origin data 2>&1 | tee -a "$LOG_FILE"
-        git checkout data || git checkout -b data origin/data || git checkout --orphan data 2>&1 | tee -a "$LOG_FILE"
-        
-        # Stash 적용
-        if ! git stash pop 2>&1 | tee -a "$LOG_FILE"; then
-            log "WARN" "Stash pop 충돌 감지! 로컬 변경사항(Theirs)을 우선 적용합니다."
-            # [Fix] urls.txt 충돌 시 최신 수집 데이터(Stash)를 강제로 적용 (Merge Marker 방지)
-            git checkout stash@{0} -- backend/restaurant-crawling/data/*/urls.txt 2>/dev/null || true
-            
-            # 충돌 발생 시, Stash된 내용(새로 수집한 데이터)을 우선시
-            git checkout --theirs . 2>/dev/null || true
-            git add .
-            git stash drop || true
-        fi
-        
-        # 다시 Add & Commit
-        # 무시된(ignored) 데이터 파일 강제 추가 ('data' 브랜치 내 데이터 유지 목적)
-        # 중요: 삭제된 파일도 반영하기 위해 update 모드 사용
-        git add -u backend/restaurant-crawling/data/ 2>/dev/null || true
-        git add -f backend/restaurant-crawling/data/*/transcript/*.jsonl 2>/dev/null || true
-        git add -f backend/restaurant-crawling/data/*/meta/*.jsonl 2>/dev/null || true
-        git add -f backend/restaurant-crawling/data/*/*.txt 2>/dev/null || true
-        git add -f backend/restaurant-crawling/data/*/checked_cache.json 2>/dev/null || true
-        git add -f backend/restaurant-crawling/data/*/crawling/*.jsonl 2>/dev/null || true
-        git add -f backend/restaurant-crawling/data/*/transcript-document-with-context/*.jsonl 2>/dev/null || true
-        # 평가 데이터 강제 추가 (evaluation 폴더)
-        # 평가 데이터 강제 추가 (evaluation 폴더)
-        # evaluation 폴더 내의 모든 jsonl 파일을 find로 찾아 추가 (globstar 호환성 문제 해결)
-        find backend/restaurant-evaluation/data/*/evaluation -name "*.jsonl" -print0 2>/dev/null | xargs -0 -r git add -f 2>/dev/null || true
-        git add -f backend/restaurant-evaluation/data/*/evaluation/transforms.jsonl 2>/dev/null || true
-        
-        # 'git rm --cached'를 사용하여 대용량 폴더를 저장소 추적에서 완전히 제외
-        # 로컬에 존재하더라도 레포지토리에 다시 나타나지 않도록 방지
-        git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
-        git rm -r --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
-        git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
-        git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
-        
-        # 나머지 모든 변경사항 추가 (삭제 포함)
-        git add -A backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
-        git add -A backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"
-        
-        COMMIT_MSG="chore(data): update crawling data ($DATE) - $STEP_NAME"
-        
-        if git diff --staged --quiet; then
-            log "INFO" "No changes to commit."
-        else
-            log "INFO" "Committing changes..."
-            if ! git commit -q -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"; then
-                log "ERROR" "Commit failed"
-                git checkout "$CURRENT_BRANCH"
-                git stash pop 2>/dev/null || true
-                return 1
-            fi
-
-            # 원격 변경사항을 Rebase로 가져와 수동 업데이트와 충돌 방지
-            log "INFO" "원격 변경사항 확인 및 Rebase..."
-            git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"
-            
-            # Push
-            log "INFO" "Pushing to remote..."
-            if ! git push origin data 2>&1 | tee -a "$LOG_FILE"; then
-                log "ERROR" "Failed to push to data branch"
-                git checkout "$CURRENT_BRANCH"
-                git stash pop 2>/dev/null || true
-                return 1
-            fi
-        fi
-        
-        if [ $? -eq 0 ]; then
-            log "SUCCESS" "data 브랜치 업데이트 완료 ($STEP_NAME)"
-        else
-            log "ERROR" "data 브랜치 푸시 실패 ($STEP_NAME)"
-        fi
-         
-        # 원래 브랜치로 복귀
-        git checkout "$CURRENT_BRANCH" 2>&1 | tee -a "$LOG_FILE"
-
-        # Restore data files from data branch (Critical for subsequent steps)
-        log "INFO" "Restoring data files from data branch..."
-        git checkout data -- backend/restaurant-crawling/data/ 2>/dev/null || true
-        git checkout data -- backend/restaurant-evaluation/data/ 2>/dev/null || true
-
-        # Restore stash
-        if git stash list | grep -q "daily-crawler-stash"; then
-            log "INFO" "Restoring stashed changes..."
-            git stash pop 2>&1 | tee -a "$LOG_FILE"
-        fi
+        return 0
     fi
+
+    log "INFO" "변경 된 데이터를 커밋합니다."
+
+    # 데이터 파일 추가
+    git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
+    git add backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"
+
+    # 대용량 폴더는 추적에서 제외
+    git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
+    git rm -r --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
+    git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
+    git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
+
+    COMMIT_MSG="chore(data): update crawling data ($DATE) - $STEP_NAME"
+
+    if git diff --staged --quiet; then
+        log "INFO" "No changes to commit."
+        return 0
+    fi
+
+    log "INFO" "Committing changes..."
+    if ! git commit -q -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"; then
+        log "ERROR" "Commit failed"
+        return 1
+    fi
+
+    # Push
+    log "INFO" "Pushing to remote..."
+    if ! git push origin data 2>&1 | tee -a "$LOG_FILE"; then
+        log "ERROR" "Failed to push to data branch"
+        return 1
+    fi
+
+    log "SUCCESS" "data 브랜치 업데이트 완료 ($STEP_NAME)"
 }
 
 log "INFO" "============================================================"
 log "INFO" "일일 데이터 수집 파이프라인 시작"
 log "INFO" "============================================================"
-
-# 0. 데이터 브랜치에서 최신 데이터 가져오기 (증분 수집을 위해 필수)
-log "INFO" "[Step 0] 최신 데이터 동기화 (from data branch)..."
-git fetch origin data 2>&1 | tee -a "$LOG_FILE"
-if git checkout origin/data -- backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"; then
-    git checkout origin/data -- backend/restaurant-evaluation/data/ 2>/dev/null || true
-    log "SUCCESS" "기존 데이터 로드 성공"
-else
-    log "WARN" "기존 데이터 로드 실패 (첫 실행이거나 브랜치 없음) - 새로 수집 시작"
-fi
+log "INFO" "현재 브랜치: $(git rev-parse --abbrev-ref HEAD)"
 
 # 1. URL 수집 (새로운 영상 탐색)
 echo "::group::[Step 1] URL Collection"

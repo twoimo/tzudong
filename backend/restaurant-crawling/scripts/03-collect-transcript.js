@@ -769,6 +769,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
                 // 결과 저장
                 const outputData = {
                     youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
+                    channel_name: channelName,
                     language: result.language,
                     collected_at: getKSTISOString(),
                     transcript: result.transcript,
