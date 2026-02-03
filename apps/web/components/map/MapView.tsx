@@ -424,43 +424,44 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         // categories가 배열이면 첫 번째 값 사용, 아니면 그대로 사용
         const categoryStr = Array.isArray(categories) ? categories[0] : categories;
 
-        const iconMap: { [key: string]: string } = {
-          '고기': '🥩',
-          '치킨': '🍗',
-          '한식': '🍚',
-          '중식': '🥢',
-          '일식': '🍣',
-          '양식': '🍝',
-          '분식': '🥟',
-          '카페·디저트': '☕',
-          '아시안': '🍜',
-          '패스트푸드': '🍔',
-          '족발·보쌈': '🍖',
-          '돈까스·회': '🍱',
-          '피자': '🍕',
-          '찜·탕': '🥘',
-          '야식': '🌙',
-          '도시락': '🍱'
+        const imageMap: { [key: string]: string } = {
+          '고기': '/images/maker-images/meat_bbq.png',
+          '치킨': '/images/maker-images/chicken.png',
+          '한식': '/images/maker-images/korean.png',
+          '중식': '/images/maker-images/chinese.png',
+          '일식': '/images/maker-images/cutlet_sashimi.png',
+          '양식': '/images/maker-images/western.png',
+          '분식': '/images/maker-images/snack_bar.png',
+          '카페·디저트': '/images/maker-images/cafe_dessert.png',
+          '아시안': '/images/maker-images/asian.png',
+          '패스트푸드': '/images/maker-images/fastfood.png',
+          '족발·보쌈': '/images/maker-images/pork_feet.png',
+          '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
+          '피자': '/images/maker-images/pizza.png',
+          '찜·탕': '/images/maker-images/stew.png',
+          '야식': '/images/maker-images/late_night.png',
+          '도시락': '/images/maker-images/lunch_box.png'
         };
-        return iconMap[categoryStr] || '⭐'; // 기본값은 별표
+        return imageMap[categoryStr] || '/images/maker-images/korean.png'; // 기본값
       };
 
-      const icon = getCategoryIcon(restaurant.categories);
+      const imagePath = getCategoryIcon(restaurant.categories);
 
-      // 선택된 마커는 더 큰 크기와 강조 효과 (조금 더 작게)
-      const markerSize = isSelected ? 32 : 24;
+      // 선택된 마커는 더 큰 크기와 강조 효과
+      const markerSize = isSelected ? 42 : 32;
 
       const markerElement = document.createElement("div");
       markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
       markerElement.innerHTML = `
         <div style="
           position: relative;
-          font-size: ${markerSize}px;
+          width: ${markerSize}px;
+          height: ${markerSize}px;
           cursor: pointer;
           transition: all 0.3s ease;
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+          filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
         " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
-          ${icon}
+          <img src="${imagePath}" alt="${restaurant.name}" style="width: 100%; height: 100%; object-fit: contain;" draggable="false" />
         </div>
       `;
 
@@ -515,8 +516,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       if (!innerDiv) return;
 
       // 크기 업데이트
-      const markerSize = isSelected ? 32 : 24;
-      innerDiv.style.fontSize = `${markerSize}px`;
+      const markerSize = isSelected ? 42 : 32;
+      innerDiv.style.width = `${markerSize}px`;
+      innerDiv.style.height = `${markerSize}px`;
 
       // 애니메이션 클래스 업데이트
       if (isSelected) {
@@ -548,8 +550,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           if (!innerDiv) return;
 
           // 크기 업데이트
-          const markerSize = isSelected ? 32 : 24;
-          innerDiv.style.fontSize = `${markerSize}px`;
+          const markerSize = isSelected ? 42 : 32;
+          innerDiv.style.width = `${markerSize}px`;
+          innerDiv.style.height = `${markerSize}px`;
 
           // 애니메이션 클래스 업데이트
           if (isSelected) {

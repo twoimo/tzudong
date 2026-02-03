@@ -94,7 +94,7 @@ function MobileControlOverlayComponent({
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, road_address, jibun_address, categories')
+                .select('id, name:approved_name, road_address, jibun_address, categories')
                 .eq('status', 'approved');
 
             if (error) return [];

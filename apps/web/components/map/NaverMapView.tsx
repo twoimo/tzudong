@@ -102,23 +102,24 @@ interface NaverMapViewProps {
  * 카테고리별 아이콘 매핑
  * 컴포넌트 외부에서 정의하여 불필요한 재생성을 방지합니다.
  */
-const CATEGORY_ICON_MAP: Record<string, string> = {
-    '고기': '🥩',
-    '치킨': '🍗',
-    '한식': '🍚',
-    '중식': '🥢',
-    '일식': '🍣',
-    '양식': '🍝',
-    '분식': '🥟',
-    '카페·디저트': '☕',
-    '아시안': '🍜',
-    '패스트푸드': '🍔',
-    '족발·보쌈': '🍖',
-    '돈까스·회': '🍱',
-    '피자': '🍕',
-    '찜·탕': '🥘',
-    '야식': '🌙',
-    '도시락': '🍱'
+// 카테고리별 이미지 경로 매핑
+const CATEGORY_IMAGE_MAP: Record<string, string> = {
+    '고기': '/images/maker-images/meat_bbq.png',
+    '치킨': '/images/maker-images/chicken.png',
+    '한식': '/images/maker-images/korean.png',
+    '중식': '/images/maker-images/chinese.png',
+    '일식': '/images/maker-images/cutlet_sashimi.png', // 일식, 돈까스/회 공유
+    '양식': '/images/maker-images/western.png',
+    '분식': '/images/maker-images/snack_bar.png',
+    '카페·디저트': '/images/maker-images/cafe_dessert.png',
+    '아시안': '/images/maker-images/asian.png',
+    '패스트푸드': '/images/maker-images/fastfood.png',
+    '족발·보쌈': '/images/maker-images/pork_feet.png',
+    '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
+    '피자': '/images/maker-images/pizza.png',
+    '찜·탕': '/images/maker-images/stew.png',
+    '야식': '/images/maker-images/late_night.png',
+    '도시락': '/images/maker-images/lunch_box.png'
 };
 
 /**
@@ -127,10 +128,16 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
  * @param category 카테고리 문자열 또는 배열
  * @returns 매핑된 이모지 아이콘
  */
-const getCategoryIcon = (category: string | string[] | null | undefined): string => {
-    if (!category) return '⭐';
+/**
+ * 카테고리 이미지 경로 반환 함수
+ * 
+ * @param category 카테고리 문자열 또는 배열
+ * @returns 매핑된 이미지 경로 (없을 경우 기본값 없음, 호출처에서 처리)
+ */
+const getCategoryIsImage = (category: string | string[] | null | undefined): string => {
+    if (!category) return '/images/maker-images/korean.png'; // 기본값 (임시)
     const categoryStr = Array.isArray(category) ? category[0] : category;
-    return CATEGORY_ICON_MAP[categoryStr] || '⭐';
+    return CATEGORY_IMAGE_MAP[categoryStr] || '/images/maker-images/korean.png';
 };
 
 /**
@@ -209,8 +216,8 @@ const markerContentCache = new LRUCache<string, string>(500);
  */
 const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): string => {
     // 캐시 키: "restaurantId-categoryIcon_selected" 또는 "restaurantId-categoryIcon_normal"
-    const icon = getCategoryIcon(restaurant.categories || restaurant.category);
-    const cacheKey = `${restaurant.id}-${icon}_${isSelected ? 'sel' : 'nor'}`;
+    const imagePath = getCategoryIsImage(restaurant.categories || restaurant.category);
+    const cacheKey = `${restaurant.id}-${imagePath}_${isSelected ? 'sel' : 'nor'}`;
 
     // 캐시에서 조회
     if (markerContentCache.has(cacheKey)) {
@@ -218,12 +225,15 @@ const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): str
     }
 
     // 캐시 미스: 새로 생성
-    const size = isSelected ? 36 : 28;
-    const fontSize = isSelected ? 28 : 22;
+    // 이미지 마커: 선택 시 42px, 기본 32px (사이즈 축소)
+    const size = isSelected ? 42 : 32;
+
+    // 그림자 효과: 선택 시 더 강하게
     const dropShadow = isSelected
-        ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 rgba(239, 68, 68, 0.5))'
-        : 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25))';
-    const transform = isSelected ? 'scale(1.15)' : 'scale(1)';
+        ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 0 2px rgba(255, 255, 255, 0.9))'
+        : 'drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 1px rgba(255, 255, 255, 0.8))';
+
+    const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
     // [최적화] 스타일 외부화: animation은 CSS 클래스명만 참조
     const animationClass = isSelected ? 'marker-bounce' : '';
     const zIndex = isSelected ? '100' : '1';
@@ -234,7 +244,6 @@ const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): str
             style="
                 width: ${size}px;
                 height: ${size}px;
-                font-size: ${fontSize}px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -250,7 +259,18 @@ const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): str
             role="button"
             aria-label="${restaurant.name}"
             title="${restaurant.name}"
-        >${icon}</div>
+        >
+            <img 
+                src="${imagePath}" 
+                alt="${restaurant.name}"
+                style="
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                "
+                draggable="false"
+            />
+        </div>
     `;
 
     // 캐시에 저장 (LRU 방지: 최대 1000개로 제한)
@@ -786,8 +806,8 @@ const NaverMapView = memo(({
             targetLng = selectedRestaurant.lng;
             isRestaurantSelected = true;
 
-            // [Fix] 마커 클릭/북마크 이동 시 줌 레벨이 너무 낮으면 확대 (최소 15), 충분히 확대된 상태면 유지
-            targetZoom = Math.max(currentMapZoom, 15);
+            // [Fix] 마커 클릭 시 사용자 줌 레벨 유지 (기존 강제 확대 제거)
+            targetZoom = currentMapZoom;
         } else {
             // [Fix] URL 파라미터가 있으면 그대로 유지 (공유 URL 시나리오)
             const urlParams = new URLSearchParams(window.location.search);

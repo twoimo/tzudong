@@ -116,30 +116,33 @@ export const clusterAnimationManager = new ClusterAnimationManager();
 /**
  * 카테고리별 이모지 매핑
  */
-const CATEGORY_ICONS: Record<string, string> = {
-  '고기': '🥩',
-  '치킨': '🍗',
-  '한식': '🍚',
-  '중식': '🥢',
-  '일식': '🍣',
-  '양식': '🍝',
-  '분식': '🥟',
-  '카페·디저트': '☕',
-  '아시안': '🍜',
-  '패스트푸드': '🍔',
-  '족발·보쌈': '🍖',
-  '돈까스·회': '🍱',
-  '피자': '🍕',
-  '찜·탕': '🥘',
-  '야식': '🌙',
-  '도시락': '🍱',
+/**
+ * 카테고리별 이미지 경로 매핑
+ */
+const CATEGORY_IMAGES: Record<string, string> = {
+  '고기': '/images/maker-images/meat_bbq.png',
+  '치킨': '/images/maker-images/chicken.png',
+  '한식': '/images/maker-images/korean.png',
+  '중식': '/images/maker-images/chinese.png',
+  '일식': '/images/maker-images/cutlet_sashimi.png',
+  '양식': '/images/maker-images/western.png',
+  '분식': '/images/maker-images/snack_bar.png',
+  '카페·디저트': '/images/maker-images/cafe_dessert.png',
+  '아시안': '/images/maker-images/asian.png',
+  '패스트푸드': '/images/maker-images/fastfood.png',
+  '족발·보쌈': '/images/maker-images/pork_feet.png',
+  '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
+  '피자': '/images/maker-images/pizza.png',
+  '찜·탕': '/images/maker-images/stew.png',
+  '야식': '/images/maker-images/late_night.png',
+  '도시락': '/images/maker-images/lunch_box.png',
 };
 
 /**
- * 카테고리 이모지 가져오기
+ * 카테고리 이미지 경로 가져오기
  */
-const getCategoryIcon = (category: string): string => {
-  return CATEGORY_ICONS[category] || '⭐';
+const getCategoryIsImage = (category: string): string => {
+  return CATEGORY_IMAGES[category] || '/images/maker-images/korean.png';
 };
 
 /**
@@ -157,9 +160,9 @@ export const createClusterMarkerHTML = (
 ): string => {
   const count = cluster.properties.point_count || 0;
   const displayCategory = categories[currentIndex % categories.length] || '기타';
-  const icon = getCategoryIcon(displayCategory);
+  const imagePath = getCategoryIsImage(displayCategory);
 
-  // 개수에 따라 크기 동적 조정 (32px ~ 72px) - 확대된 범위
+  // 개수에 따라 크기 동적 조정 (32px ~ 72px) - 이미지에 맞춰 조정
   let size: number;
   if (count < 3) {
     size = 32;
@@ -176,7 +179,8 @@ export const createClusterMarkerHTML = (
   } else {
     size = 72;
   }
-  const iconSize = Math.floor(size * 0.65);
+  // 아이콘 크기는 컨테이너의 70% 정도
+  const iconSize = Math.floor(size * 0.7);
 
   // z-index 계산: 마커 개수가 많을수록 위에 표시 (100 ~ 200)
   const zIndex = Math.min(100 + Math.floor(count / 5), 200);
@@ -197,13 +201,21 @@ export const createClusterMarkerHTML = (
         z-index: ${zIndex};
       "
     >
-      <!-- 카테고리 이모지 (애니메이션) -->
+      <!-- 카테고리 이미지 (애니메이션) -->
       <div 
         class="cluster-icon"
         style="
-          font-size: ${iconSize}px;
+          width: ${iconSize}px;
+          height: ${iconSize}px;
         "
-      >${icon}</div>
+      >
+        <img 
+            src="${imagePath}" 
+            alt="cluster" 
+            style="width: 100%; height: 100%; object-fit: contain;"
+            draggable="false" 
+        />
+      </div>
       
       <!-- 맛집 개수 배지 (우측 하단) -->
       ${count > 0 ? `
@@ -243,13 +255,15 @@ export const createIndividualMarkerHTML = (
   category: string,
   isSelected: boolean
 ): string => {
-  const icon = getCategoryIcon(category);
-  const size = isSelected ? 36 : 28;
-  const fontSize = isSelected ? 28 : 22;
+  const imagePath = getCategoryIsImage(category);
+  // 이미지 마커: 선택 시 42px, 기본 32px
+  const size = isSelected ? 42 : 32;
+
   const dropShadow = isSelected
-    ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
-    : 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25))';
-  const transform = isSelected ? 'scale(1.15)' : 'scale(1)';
+    ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 0 2px rgba(255, 255, 255, 0.9))'
+    : 'drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 1px rgba(255, 255, 255, 0.8))';
+
+  const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
   const animationClass = isSelected ? 'marker-bounce' : '';
   const zIndex = isSelected ? '100' : '1';
 
@@ -259,7 +273,6 @@ export const createIndividualMarkerHTML = (
       style="
         width: ${size}px;
         height: ${size}px;
-        font-size: ${fontSize}px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -274,7 +287,18 @@ export const createIndividualMarkerHTML = (
       "
       role="button"
       data-testid="marker"
-    >${icon}</div>
+    >
+        <img 
+            src="${imagePath}" 
+            alt="marker"
+            style="
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            "
+            draggable="false"
+        />
+    </div>
   `;
 };
 

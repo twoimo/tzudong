@@ -362,14 +362,23 @@ export function RestaurantDetailPanel({
             setTimeout(() => setIsShareCopied(false), 2000);
             toast.success('공유 링크가 복사되었습니다');
         } catch (err) {
-            console.error('URL 단축/복사 실패:', err);
+            // [Fix] 클립보드 권한/포커스 문제 등으로 실패 시 console.error 대신 warn 사용 (불필요한 에러 오버레이 방지)
+            console.warn('URL 단축/복사 실패:', err);
+
             // 실패 시 원본 URL이라도 복사 시도
             try {
-                await navigator.clipboard.writeText(longUrl);
-                setIsShareCopied(true);
-                setTimeout(() => setIsShareCopied(false), 2000);
-                toast.success('공유 링크가 복사되었습니다 (단축 실패)');
+                // 포커스 확인: 문서가 포커스되지 않은 경우 복사 시도 자체가 실패할 수 있음
+                if (!document.hasFocus()) {
+                    // 포커스가 없으면 그냥 토스트만 띄우거나 조용히 실패 (사용자 경험상 에러 팝업보다 나음)
+                    console.warn('문저 포커스 없음, 클립보드 쓰기 건너뜀');
+                } else {
+                    await navigator.clipboard.writeText(longUrl);
+                    setIsShareCopied(true);
+                    setTimeout(() => setIsShareCopied(false), 2000);
+                    toast.success('공유 링크가 복사되었습니다 (단축 실패)');
+                }
             } catch (copyErr) {
+                console.warn('원본 링크 복사 실패:', copyErr);
                 toast.error('링크 복사에 실패했습니다');
             }
         }
