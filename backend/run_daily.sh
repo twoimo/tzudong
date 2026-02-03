@@ -336,6 +336,7 @@ if [ -f "$LOG_FILE" ]; then
     if grep -q "메타데이터 수집" "$LOG_FILE"; then
         META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
         META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //' | tr -cd '0-9')
+        if [ -z "$META_CNT" ]; then META_CNT="0"; fi
         echo "| Metadata | $META_CNT | Updated |" >> "$SUMMARY_MD"
     else
         echo "| Metadata | - | Skipped/Fail |" >> "$SUMMARY_MD"
