@@ -376,8 +376,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         <NextImage
           src="/logo.png"
           alt="Tzudong Logo"
-          width={42}
-          height={42}
+          width={32}
+          height={32}
           className="rounded-lg object-contain"
           priority
         />
