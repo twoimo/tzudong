@@ -1,0 +1,197 @@
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
+import Header from '@/components/layout/Header';
+
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
+import AuthModal from '@/components/auth/AuthModal';
+import { ProfileModal } from '@/components/profile/ProfileModal';
+import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
+import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
+import CombinedPopup from '@/components/layout/CombinedPopup';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLayout } from '@/contexts/LayoutContext';
+import { useDeviceType } from '@/hooks/useDeviceType';
+import { cn } from '@/lib/utils';
+import { Restaurant } from '@/types/restaurant';
+import { Announcement } from '@/types/announcement';
+
+// [OPTIMIZATION] Lazy load components
+const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPrefetcher'), {
+    ssr: false,
+});
+
+// [NEW] 오버레이 레이아웃 지연 로딩
+const OverlayLayout = dynamic(() => import('@/components/layout/OverlayLayout'), {
+    ssr: false,
+});
+
+export function MainLayoutContent({ children }: { children: React.ReactNode }) {
+    const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup, isLoading } = useAuth();
+    const queryClient = useQueryClient();
+    const pathname = usePathname();
+    const router = useRouter();
+    const { isSidebarOpen, setIsSidebarOpen } = useLayout();
+    const { isMobileOrTablet, isDesktop } = useDeviceType();
+    const [isCenteredLayout, setIsCenteredLayout] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+    const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const prevPathnameRef = useRef(pathname);
+
+    // 마이페이지 여부 확인
+    const isMyPage = pathname?.startsWith('/mypage');
+
+    // [NEW] 홈페이지 여부 확인 (오버레이 레이아웃 적용 대상)
+    const isHomePage = pathname === '/';
+
+    // 페이지 이동 감지
+    useEffect(() => {
+        if (prevPathnameRef.current !== pathname) {
+            setSelectedRestaurant(null);
+            prevPathnameRef.current = pathname;
+        }
+    }, [pathname]);
+
+    const shouldShowCenteredLayoutButton = pathname !== '/' && !isMyPage;
+
+    const handleLogout = useCallback(async () => {
+        try {
+            await signOut();
+            queryClient.clear();
+            router.push('/');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }, [signOut, queryClient, router]);
+
+    // 성능 최적화: 핸들러 메모이제이션
+    const handleToggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
+    const handleOpenAuth = useCallback(() => setIsAuthModalOpen(true), []);
+    const handleProfileClick = useCallback(() => setIsProfileModalOpen(true), []);
+    const handleToggleCenteredLayout = useCallback(() => setIsCenteredLayout(!isCenteredLayout), [isCenteredLayout]);
+    const handleAnnouncementClick = useCallback((announcement: Announcement) => {
+        if (pathname === '/') {
+            window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcement }));
+        } else {
+            router.push(`/?panel=announcement&announcementId=${announcement.id}`);
+        }
+    }, [pathname, router]);
+
+    const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
+        queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+        setRefreshTrigger(prev => prev + 1);
+
+        if (updatedRestaurant) {
+            setSelectedRestaurant(updatedRestaurant);
+        }
+    };
+
+    const handleAdminEditRestaurant = (restaurant: Restaurant) => {
+        setSelectedRestaurant(restaurant);
+        setIsAdminModalOpen(true);
+    };
+
+    // [NEW] 데스크탑에서는 항상 오버레이 레이아웃 사용 (사이드바 완전 제거)
+    if (isDesktop) {
+        return <OverlayLayout>{children}</OverlayLayout>;
+    }
+
+    // 모바일/태블릿 레이아웃
+
+    return (
+        // h-screen 대신 CSS 변수(--full-height)로 모바일 브라우저 UI 고려
+        // dvh/svh 지원 브라우저에서는 동적 뷰포트, 미지원은 JS fallback
+        <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
+            {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
+            {user && <UserDataPrefetcher />}
+
+            {/* 사이드바 제거됨 */}
+
+            <div
+                className={cn(
+                    "flex-1 flex flex-col overflow-hidden transition-[margin] duration-300",
+                    // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
+                    "pb-[var(--mobile-bottom-nav-height)] md:pb-0"
+                )}
+                style={{ transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
+            >
+                <Header
+                    onToggleSidebar={handleToggleSidebar}
+                    isLoggedIn={!!user}
+                    isAuthLoading={isLoading}
+                    onOpenAuth={handleOpenAuth}
+                    onLogout={handleLogout}
+                    onProfileClick={handleProfileClick}
+                    isCenteredLayout={isCenteredLayout}
+                    onToggleCenteredLayout={shouldShowCenteredLayoutButton ? handleToggleCenteredLayout : undefined}
+                    isAdmin={isAdmin}
+                    onAnnouncementClick={handleAnnouncementClick}
+                    hideToggleSidebar={true}
+                />
+
+                <main className={cn(
+                    "flex-1 relative overflow-hidden",
+                    isCenteredLayout && shouldShowCenteredLayoutButton && "flex items-center justify-center"
+                )}>
+                    <div className={cn(
+                        "h-full w-full",
+                        isCenteredLayout && shouldShowCenteredLayoutButton && "max-w-7xl mx-auto"
+                    )}>
+                        {children}
+                    </div>
+                </main>
+            </div>
+
+            {/* 모바일/태블릿용 하단 네비게이션바 (1599px 이하) */}
+            <div className={cn(
+                // CSS 미디어 쿼리: 1600px 이상에서 숨김 (데스크탑)
+                "min-[1600px]:hidden",
+                // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
+                isDesktop && "hidden"
+            )}>
+                <MobileBottomNav />
+            </div>
+
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+            />
+
+            <ProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+            />
+
+            <AdminRestaurantModal
+                isOpen={isAdminModalOpen}
+                onClose={() => setIsAdminModalOpen(false)}
+                restaurant={selectedRestaurant}
+                onSuccess={handleAdminSuccess}
+            />
+
+            <NicknameSetupModal
+                isOpen={needsNicknameSetup}
+                onComplete={completeNicknameSetup}
+            />
+
+            <CombinedPopup />
+        </div>
+    );
+}
+
+import { LayoutProvider } from '@/contexts/LayoutContext';
+
+export function MainLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <LayoutProvider>
+            <MainLayoutContent>{children}</MainLayoutContent>
+        </LayoutProvider>
+    );
+}
