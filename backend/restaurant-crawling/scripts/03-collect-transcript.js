@@ -215,17 +215,85 @@ function parseVtt(content) {
 }
 
 /**
- * yt-dlp를 사용하여 자막 수집 (1차 시도)
+ * yt-dlp를 사용하여 자막 수집 (1차: 쿠키, 2차: 스텔스 모드)
  */
 async function fetchTranscriptYtDlp(videoId) {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     const tempPrefix = path.join(__dirname, `temp_${videoId}`);
-    // --write-auto-sub: 자동 생성 자막
-    // --sub-lang ko: 한국어
-    const cmd = `yt-dlp --write-auto-sub --write-sub --sub-lang ko --skip-download --convert-subs vtt --output "${tempPrefix}" "${url}"`;
+    const cookiesPath = path.resolve(__dirname, '../data/cookies.txt');
+
+    // ============================================================
+    // 1단계: 쿠키 기반 시도 (기존 방식)
+    // ============================================================
+    if (fs.existsSync(cookiesPath)) {
+        const result = await tryYtDlpWithOptions(videoId, url, tempPrefix, {
+            cookies: cookiesPath,
+            mode: 'cookies'
+        });
+        if (result) return result;
+        log('debug', `    → 쿠키 기반 실패, 스텔스 모드 시도...`);
+    }
+
+    // ============================================================
+    // 2단계: 스텔스 모드 (쿠키/세션 없이, IP 차단 우회 시도)
+    // ============================================================
+    const result = await tryYtDlpWithOptions(videoId, url, tempPrefix, {
+        cookies: null,
+        mode: 'stealth'
+    });
+    return result;
+}
+
+/**
+ * yt-dlp 실행 헬퍼 함수
+ * @param {string} videoId - 비디오 ID
+ * @param {string} url - YouTube URL
+ * @param {string} tempPrefix - 임시 파일 경로 프리픽스
+ * @param {object} options - 옵션 { cookies: string|null, mode: 'cookies'|'stealth' }
+ */
+async function tryYtDlpWithOptions(videoId, url, tempPrefix, options) {
+    const { cookies, mode } = options;
+
+    // 스텔스 모드에서 사용할 랜덤 User-Agent
+    const STEALTH_USER_AGENTS = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
+    ];
+
+    let cmdParts = ['yt-dlp'];
+
+    // 쿠키 모드: 쿠키 파일 사용
+    if (mode === 'cookies' && cookies) {
+        cmdParts.push(`--cookies "${cookies}"`);
+    }
+
+    // 스텔스 모드: 쿠키 없이, 세션 초기화, 랜덤 User-Agent
+    if (mode === 'stealth') {
+        const randomUA = STEALTH_USER_AGENTS[Math.floor(Math.random() * STEALTH_USER_AGENTS.length)];
+        cmdParts.push(
+            '--no-cache-dir',                    // 캐시 사용 안 함
+            `--user-agent "${randomUA}"`,        // 랜덤 User-Agent
+            '--extractor-args "youtube:player_client=web"',  // android 클라이언트 대신 web 사용
+            '--sleep-requests 1',                // 요청 간 1초 대기 (rate limit 방지)
+        );
+    }
+
+    // 공통 옵션: 자동 자막, 한국어, VTT 변환
+    cmdParts.push(
+        '--write-auto-sub',
+        '--write-sub',
+        '--sub-lang ko',
+        '--skip-download',
+        '--convert-subs vtt',
+        `--output "${tempPrefix}"`,
+        `"${url}"`
+    );
+
+    const cmd = cmdParts.join(' ');
 
     try {
-        // log('debug', `yt-dlp 실행: ${videoId}`);
         await execPromise(cmd);
 
         const dir = path.dirname(tempPrefix);
@@ -248,13 +316,19 @@ async function fetchTranscriptYtDlp(videoId) {
 
         return {
             transcript: segments,
-            language: 'ko' // yt-dlp로 한국어 요청했으므로 가정
+            language: 'ko', // yt-dlp로 한국어 요청했으므로 가정
+            source_mode: mode  // 어떤 모드로 성공했는지 기록
         };
 
     } catch (e) {
+        // 스텔스 모드에서 실패 시 에러 로그
+        if (mode === 'stealth') {
+            log('debug', `    → 스텔스 모드 실패: ${e.message?.slice(0, 100) || 'unknown'}`);
+        }
         return null;
     }
 }
+
 
 // 블랙리스트 디렉토리
 const NO_TRANSCRIPT_DIR = path.resolve(__dirname, '../../data/no_transcript_link');

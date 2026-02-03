@@ -329,6 +329,40 @@ function getKSTDate() {
     return new Date(utc + (9 * 60 * 60 * 1000));
 }
 
+/**
+ * 수요일 기반 히트맵 재수집 트리거 확인
+ * 
+ * YouTube 히트맵 생성 규칙 (관찰 기반):
+ * - 매주 화요일 중으로 히트맵이 생성/업데이트됨
+ * - 게시 후 7일 이상 경과한 영상만 히트맵 생성
+ * - 화요일 새벽에는 아직 생성되지 않을 수 있으므로, 수요일 새벽에 수집
+ * 
+ * @param {string} publishedAt - 영상 게시 날짜 (ISO string)
+ * @returns {boolean} - 오늘이 수요일이고, 영상이 7일 이상 경과했으면 true
+ */
+function shouldRecollectHeatmapToday(publishedAt) {
+    if (!publishedAt) return false;
+
+    const now = getKSTDate();
+    const dayOfWeek = now.getDay(); // 0=일, 1=월, 2=화, 3=수, ..., 6=토
+
+    // 수요일(3)이 아니면 false
+    if (dayOfWeek !== 3) {
+        return false;
+    }
+
+    // 게시 후 7일 경과 확인
+    const pubDate = new Date(publishedAt);
+    const diffMs = Math.abs(now - pubDate);
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 7) {
+        return false;
+    }
+
+    return true;
+}
+
 function getMetaInfo(channelName, videoId) {
     const metaPath = getMetaOutputPath(channelName, videoId);
     if (fs.existsSync(metaPath)) {
@@ -696,9 +730,15 @@ function parseHeatmap(html) {
 async function fetchAndSaveHeatmap(channel, videoId, url) {
     const outPath = getHeatmapOutputPath(channel, videoId);
 
+    // [신규] 화요일 기반 강제 재수집 트리거 확인
+    const heatmapMetaInfo = getMetaInfo(channel, videoId);
+    const publishedAt = heatmapMetaInfo?.published_at;
+    const isTuesdayRecollect = shouldRecollectHeatmapToday(publishedAt);
+
     // [수정] 이미 데이터가 존재하면 다시 수집하지 않고 읽어서 반환 (중복 저장 방지)
     // 단, recollect_id가 증가했거나 트리거 변수가 있다면 무시하고 재수집
-    if (fs.existsSync(outPath)) {
+    // [추가] 화요일이고 7+ 일 된 영상이면 재수집 (YouTube 히트맵 업데이트 주기)
+    if (fs.existsSync(outPath) && !isTuesdayRecollect) {
         try {
             const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
             if (lines.length > 0) {
@@ -729,6 +769,8 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         } catch (e) {
             log('warn', `기존 파일 읽기 실패 (재수집 진행): ${e.message}`);
         }
+    } else if (isTuesdayRecollect && fs.existsSync(outPath)) {
+        log('info', `[Tuesday] 화요일 히트맵 업데이트 트리거 - 재수집 진행 (${videoId})`);
     }
 
     // [Mod] 쿠키 없이 접근 (Public/Incognito Mode) - 최대 3회 재시도 (2차 쿠키 폴백 제거)
