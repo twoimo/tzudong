@@ -659,6 +659,7 @@ export function RestaurantDetailPanel({
                                                 src={getCategoryImagePath(categories[0] || '')}
                                                 alt={categories[0] || '카테고리'}
                                                 fill
+                                                sizes="32px"
                                                 className="object-contain"
                                             />
                                         </div>

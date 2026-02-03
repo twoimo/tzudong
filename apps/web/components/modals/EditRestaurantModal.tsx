@@ -220,7 +220,23 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             {isOpen && (
-                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                <DialogContent
+                    className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+                    onPointerDownOutside={(e) => {
+                        // Popover 내부 클릭 시 Dialog가 닫히지 않도록
+                        const target = e.target as HTMLElement;
+                        if (target.closest('[data-radix-popper-content-wrapper]')) {
+                            e.preventDefault();
+                        }
+                    }}
+                    onInteractOutside={(e) => {
+                        // Popover 내부 상호작용 시 Dialog가 닫히지 않도록
+                        const target = e.target as HTMLElement;
+                        if (target.closest('[data-radix-popper-content-wrapper]')) {
+                            e.preventDefault();
+                        }
+                    }}
+                >
                     <DialogHeader className="relative">
                         {/* 자동 저장 상태 표시 - 좌측 상단 */}
                         {lastSavedAt && (
@@ -299,13 +315,14 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                                     <Label htmlFor="category">
                                         카테고리 <span className="text-red-500">*</span>
                                     </Label>
-                                    <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                                    <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen} modal={true}>
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
                                                 role="combobox"
                                                 aria-expanded={isCategoryPopoverOpen}
                                                 className="w-full justify-between"
+                                                type="button"
                                             >
                                                 {editFormData.category.length > 0
                                                     ? `${editFormData.category.length}개 선택됨`
@@ -314,7 +331,14 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-full p-0" align="start">
+                                        <PopoverContent
+                                            className="w-full p-0 z-[200]"
+                                            align="start"
+                                            onInteractOutside={(e) => {
+                                                // Dialog 내부 클릭 시 Popover가 닫히지 않도록 방지
+                                                e.preventDefault();
+                                            }}
+                                        >
                                             <Command>
                                                 <CommandInput placeholder="카테고리 검색..." />
                                                 <CommandList>
