@@ -51,3 +51,11 @@ backend/restaurant-crawling/data/*/thumbnails
 
 # Supabase
 supabase/
+summary.md
+backend/.sync_trigger
+backend/restaurant-evaluation/temp/health_check_prompt.txt
+.gitignore
+backend/restaurant-evaluation/temp/health_check_response.json
+backend/restaurant-evaluation/temp/health_check_prompt.txt
+backend/.sync_trigger
+backend/restaurant-crawling/data/tzuyang/checked_cache.json
