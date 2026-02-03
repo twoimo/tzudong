@@ -1,14 +1,41 @@
 import { NextResponse } from 'next/server';
-import { analyzeReceiptWithCliFallback } from '../../../../lib/gemini-cli';
 import { createClient } from '@/lib/supabase/server';
-import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import sharp from 'sharp';
 
-// --- 설정 (Configuration) ---
-// OCI 서버 주소 (환경변수 필수)
-const OCI_API_URL = process.env.OCI_GEMINI_API_URL;
+// --- 설정 ---
 const GEMINI_API_KEY = process.env.GEMINI_OCR_YEON;
+
+// --- 이미지 최적화 (비용 절감) ---
+async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savings: string }> {
+    try {
+        const originalSize = buffer.length;
+        const metadata = await sharp(buffer).metadata();
+
+        // 너비 1024px 제한, JPEG 70% 품질로 압축
+        let optimized: Buffer;
+        if (metadata.width && metadata.width > 1024) {
+            optimized = await sharp(buffer)
+                .resize({ width: 1024 })
+                .jpeg({ quality: 70 })
+                .toBuffer();
+        } else {
+            optimized = await sharp(buffer)
+                .jpeg({ quality: 70 })
+                .toBuffer();
+        }
+
+        const newSize = optimized.length;
+        const savingsPercent = ((originalSize - newSize) / originalSize * 100).toFixed(0);
+        console.log(`[OCR] 이미지 압축: ${(originalSize / 1024).toFixed(0)}KB → ${(newSize / 1024).toFixed(0)}KB (${savingsPercent}% 절감)`);
+
+        return { optimized, savings: `${savingsPercent}%` };
+    } catch (e) {
+        console.warn('[OCR] 이미지 최적화 실패 (원본 사용):', e);
+        return { optimized: buffer, savings: '0%' };
+    }
+}
 
 const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
 
@@ -45,7 +72,7 @@ const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR
 ### 6. 리뷰 초안 작성 (3줄 정도, 풍성하게)
 - 영수증 내용을 바탕으로 **자연스러운 3줄 정도의 후기**를 작성하세요.
 - 포함 내용: 가게 분위기 추론(메뉴 기반), 맛 표현, 가성비 언급.
-- 줄바꿈 문자(\n)를 사용하여 문단을 나누세요.
+- 줄바꿈 문자(\\n)를 사용하여 문단을 나누세요.
 - 이모지 2~3개 포함.
 - 예시:
   "오늘 [가게명]에서 [메뉴1]랑 [메뉴2] 먹고 왔어요! 😋
@@ -61,7 +88,7 @@ const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR
   "time": "HH:MM",
   "total_amount": 15000,
   "category": "중식",
-  "review_draft": "홍콩반점에서 짜장면이랑 탕수육 먹고 왔어요! 😋\n양도 진짜 많고 소스도 달콤해서 너무 맛있게 먹었네요.\n총 15,000원 나왔는데 가성비 진짜 최고인 듯! 강추합니다. 👍",
+  "review_draft": "홍콩반점에서 짜장면이랑 탕수육 먹고 왔어요! 😋\\n양도 진짜 많고 소스도 달콤해서 너무 맛있게 먹었네요.\\n총 15,000원 나왔는데 가성비 진짜 최고인 듯! 강추합니다. 👍",
   "items": [
     { "name": "메뉴명", "price": 15000 }
   ],
@@ -77,9 +104,16 @@ const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR
 
 export async function POST(req: Request) {
     let buffer: Buffer | null = null;
-    let base64Image: string | null = null;
 
     try {
+        // API 키 확인
+        if (!GEMINI_API_KEY) {
+            return NextResponse.json(
+                { error: 'GEMINI_OCR_YEON 환경변수가 설정되지 않았습니다.' },
+                { status: 500 }
+            );
+        }
+
         const formData = await req.formData();
         const file = formData.get('image') as File;
 
@@ -87,44 +121,54 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: '이미지가 제공되지 않았습니다' }, { status: 400 });
         }
 
-        // 파일 형식이 이미지가 아닌 경우 처리
         if (!file.type.startsWith('image/')) {
             return NextResponse.json({ error: '유효하지 않은 파일 형식입니다' }, { status: 400 });
         }
 
         const arrayBuffer = await file.arrayBuffer();
         buffer = Buffer.from(arrayBuffer);
-        base64Image = buffer.toString('base64');
 
         // [보안] 1. 사용자 인증 확인
         const supabase = await createClient();
         let { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            // [폴백] 쿠키 인증 실패 시, 헤더 인증 시도 (Bearer Token)
             const authHeader = req.headers.get('Authorization');
             if (authHeader?.startsWith('Bearer ')) {
                 const token = authHeader.split(' ')[1];
                 const { data: { user: headerUser }, error: headerError } = await supabase.auth.getUser(token);
-
                 if (headerError || !headerUser) {
                     return NextResponse.json({ error: '로그인이 필요한 서비스입니다 (Token Invalid)' }, { status: 401 });
                 }
-                // 헤더 인증 성공 시 user 객체 덮어쓰기
                 user = headerUser;
             } else {
                 return NextResponse.json({ error: '로그인이 필요한 서비스입니다' }, { status: 401 });
             }
         }
 
-        // [보안] 2. 이미지 해시 계산 (중복 처리 확인용 - 현재는 로깅만)
+        // [비용 절감] 2. 이미지 해시 계산 (캐싱용)
         const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
         const imageHash = hashBuffer.toString('hex');
 
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
+        // [비용 절감] 3. 캐시 확인 - 동일 이미지 재사용
+        const { data: cachedResult } = await (supabase
+            .from('ocr_logs') as any)
+            .select('metadata')
+            .eq('image_hash', imageHash)
+            .eq('success', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
-        // [보안] 3. 일일 쿼터 확인
-        // 전략: 하루 5회 제한 (초과 시 429 에러 반환)
+        if (cachedResult?.metadata?.ocr_result) {
+            console.log('[OCR] 캐시 히트! API 호출 생략');
+            return NextResponse.json({
+                ...cachedResult.metadata.ocr_result,
+                cached: true
+            });
+        }
+
+        // [보안] 4. 일일 쿼터 확인 (하루 5회)
         const MAX_DAILY_QUOTA = 5;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -135,11 +179,8 @@ export async function POST(req: Request) {
             .eq('user_id', user.id)
             .gte('created_at', today.toISOString());
 
-        let useOciDirectly = false;
-
         if (countError) {
-            console.error("쿼터 확인 실패 (OCI로 진행):", countError);
-            useOciDirectly = true;
+            console.error("쿼터 확인 실패:", countError);
         } else if (count !== null && count >= MAX_DAILY_QUOTA) {
             return NextResponse.json(
                 { error: `일일 무료 분석 한도(${MAX_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.` },
@@ -147,66 +188,49 @@ export async function POST(req: Request) {
             );
         }
 
-        // 1. Google API 시도 (쿼터 내 && API 키 존재)
-        if (!useOciDirectly && GEMINI_API_KEY) {
-            try {
-                const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-                const generativeModel = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
-                const result = await generativeModel.generateContent([
-                    OCR_PROMPT,
-                    { inlineData: { mimeType: file.type, data: base64Image } },
-                ]);
-                const response = await result.response;
-                const text = response.text();
-                const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+        // [비용 절감] 5. 이미지 압축
+        const { optimized, savings } = await optimizeImage(buffer);
+        const base64Image = optimized.toString('base64');
 
-                if (!jsonMatch) throw new Error('OCR 파싱 실패');
+        // Gemini API 호출
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const generativeModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const result = await generativeModel.generateContent([
+            OCR_PROMPT,
+            { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+        ]);
+        const response = await result.response;
+        const text = response.text();
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
 
-                const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-
-                // 성공 로그
-                const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
-                    user_id: user.id,
-                    image_hash: imageHash,
-                    model_used: 'gemini-3-flash-preview', // Vercel API
-                    success: true,
-                    metadata: { file_size: file.size, store_found: !!data.store_name }
-                });
-                if (logError) console.error('OCR Log Insert Error (Google):', logError);
-
-                return NextResponse.json(data);
-
-            } catch (apiError: any) {
-                console.warn('Google API 실패, OCI 서버로 폴백 시도:', apiError.message);
-                // 에러 발생 시 아래 OCI 로직으로 진행
-            }
+        if (!jsonMatch) {
+            throw new Error('OCR 파싱 실패: JSON 형식을 찾을 수 없습니다.');
         }
 
-        // 2. OCI 서버 폴백 (Google API 실패 시)
-        // console.log('OCI OCR 요청 시작...');
-        const data = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
+        const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
 
-        // 성공 로그 (OCI)
+        // 성공 로그 (캐싱용 결과 포함)
         const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
             user_id: user.id,
             image_hash: imageHash,
-            model_used: 'oci-gemini-server',
+            model_used: 'gemini-2.0-flash',
             success: true,
             metadata: {
                 file_size: file.size,
-                fallback: true,
-                quota_exceeded: count !== null && count >= MAX_DAILY_QUOTA
+                compressed_size: optimized.length,
+                savings: savings,
+                store_found: !!data.store_name,
+                ocr_result: data  // 캐싱용 결과 저장
             }
         });
-        if (logError) console.error('OCR Log Insert Error (OCI):', logError);
+        if (logError) console.error('OCR Log Insert Error:', logError);
 
         return NextResponse.json(data);
 
-
     } catch (error: any) {
-        console.error('OCR 처리 오류 (OCI):', error.message);
+        console.error('OCR 처리 오류:', error.message);
 
-        // [보안] 실패 로그 기록
+        // 실패 로그 기록
         try {
             const supabase = await createClient();
             const { data: { user } } = await supabase.auth.getUser();
