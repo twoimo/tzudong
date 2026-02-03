@@ -1013,7 +1013,9 @@ async function downloadVideo(videoId, outputDir, quality) {
         ? `--js-runtimes "node:${nodePath}"`
         : '--js-runtimes "node:node"';
 
-    const cmd = `"${pythonPath}" -m yt_dlp ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
+    // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐
+    const cmd = `"${pythonPath}" -m yt_dlp --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
