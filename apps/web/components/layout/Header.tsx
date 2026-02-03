@@ -371,6 +371,18 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {/* 전통 문양 테두리 - 다크모드에서 숨김 */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border to-transparent dark:via-border" />
 
+      {/* 좌측: 로고 */}
+      <Link href="/" className="relative z-10 flex-shrink-0 flex items-center justify-center">
+        <NextImage
+          src="/logo.png"
+          alt="Tzudong Logo"
+          width={42}
+          height={42}
+          className="rounded-lg object-contain"
+          priority
+        />
+      </Link>
+
       {/* 좌측: 사이드바 토글 */}
       {!hideToggleSidebar && (
         <div className={cn(
