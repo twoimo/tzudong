@@ -65,7 +65,7 @@ strip_ansi() {
     sed 's/\x1b\[[0-9;]*m//g'
 }
 
-# [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
+# [Function] 데이터 커밋 함수 (main 브랜치에서 data 브랜치로 데이터만 푸시)
 sync_data_to_remote() {
     local STEP_NAME="$1"
     log "INFO" "------------------------------------------------------------"
@@ -77,7 +77,21 @@ sync_data_to_remote() {
         return 0
     fi
 
-    log "INFO" "변경 된 데이터를 커밋합니다."
+    log "INFO" "변경 된 데이터를 data 브랜치에 커밋합니다."
+
+    # 현재 브랜치 확인
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    log "INFO" "현재 브랜치: $CURRENT_BRANCH"
+
+    # 임시로 data 브랜치 체크아웃 (stash 변경사항)
+    git stash push -m "temp-sync-$STEP_NAME" -- backend/restaurant-crawling/data backend/restaurant-evaluation/data 2>&1 | tee -a "$LOG_FILE"
+
+    # data 브랜치로 전환
+    git fetch origin data --depth=1 2>&1 | tee -a "$LOG_FILE"
+    git checkout origin/data -B data 2>&1 | tee -a "$LOG_FILE"
+
+    # stash 복원 (데이터만)
+    git stash pop 2>&1 | tee -a "$LOG_FILE" || true
 
     # 데이터 파일 추가
     git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
@@ -93,34 +107,36 @@ sync_data_to_remote() {
 
     if git diff --staged --quiet; then
         log "INFO" "No changes to commit."
+        git checkout "$CURRENT_BRANCH" 2>&1 | tee -a "$LOG_FILE"
         return 0
     fi
 
-    log "INFO" "Committing changes..."
+    log "INFO" "Committing changes to data branch..."
     if ! git commit -q -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"; then
         log "ERROR" "Commit failed"
+        git checkout "$CURRENT_BRANCH" 2>&1 | tee -a "$LOG_FILE"
         return 1
     fi
 
-    # 원격 변경사항 동기화 (충돌 방지)
-    log "INFO" "원격 변경사항 확인 및 Rebase..."
-    if ! git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"; then
-        log "WARN" "Rebase 실패 - 강제 푸시 시도"
-        # Rebase 실패 시 강제 푸시 (로컬 데이터 우선)
+    # Push to data branch
+    log "INFO" "Pushing to remote data branch..."
+    if ! git push origin data 2>&1 | tee -a "$LOG_FILE"; then
+        log "WARN" "Push failed - trying force-with-lease..."
         if ! git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
             log "ERROR" "Failed to push to data branch"
-            return 1
-        fi
-    else
-        # Push
-        log "INFO" "Pushing to remote..."
-        if ! git push origin data 2>&1 | tee -a "$LOG_FILE"; then
-            log "ERROR" "Failed to push to data branch"
+            git checkout "$CURRENT_BRANCH" 2>&1 | tee -a "$LOG_FILE"
             return 1
         fi
     fi
 
     log "SUCCESS" "data 브랜치 업데이트 완료 ($STEP_NAME)"
+
+    # main 브랜치로 복귀
+    git checkout "$CURRENT_BRANCH" 2>&1 | tee -a "$LOG_FILE"
+    
+    # 데이터 디렉토리 복원 (data 브랜치에서 다시 가져옴)
+    git checkout origin/data -- backend/restaurant-crawling/data 2>&1 | tee -a "$LOG_FILE" || true
+    git checkout origin/data -- backend/restaurant-evaluation/data 2>&1 | tee -a "$LOG_FILE" || true
 }
 
 log "INFO" "============================================================"

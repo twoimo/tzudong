@@ -44,11 +44,23 @@ jobs:
           echo "[OK] Swap Created:"
           free -h
 
-      - name: Checkout repository
+      - name: Checkout repository (main branch for scripts)
         uses: actions/checkout@v4
         with:
-          ref: data
+          ref: main
           fetch-depth: 1
+
+      - name: Overlay data from data branch
+        run: |
+          # data 브랜치에서 데이터 디렉토리만 가져오기
+          git fetch origin data --depth=1
+          
+          # 데이터 폴더 체크아웃 (스크립트는 main에서 유지)
+          git checkout origin/data -- backend/restaurant-crawling/data || echo "No crawling data yet"
+          git checkout origin/data -- backend/restaurant-evaluation/data || echo "No evaluation data yet"
+          
+          echo "[OK] Data directories overlaid from data branch"
+          ls -la backend/restaurant-crawling/data/ || true
 
       - name: Cache Puppeteer
         uses: actions/cache@v3
