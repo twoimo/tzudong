@@ -525,26 +525,35 @@ export function RestaurantDetailPanel({
         }
     };
 
-    const getCategoryEmoji = (category: string) => {
-        const emojiMap: { [key: string]: string } = {
-            '고기': '🥩',
-            '치킨': '🍗',
-            '한식': '🍚',
-            '중식': '🥢',
-            '일식': '🍣',
-            '양식': '🍝',
-            '분식': '🥟',
-            '카페·디저트': '☕',
-            '아시안': '🍜',
-            '패스트푸드': '🍔',
-            '족발·보쌈': '🍖',
-            '돈까스·회': '🍱',
-            '피자': '🍕',
-            '찜·탕': '🥘',
-            '야식': '🌙',
-            '도시락': '🍱'
-        };
-        return emojiMap[category] || '⭐'; // 기본값은 별
+    /**
+     * 카테고리별 이미지 경로 매핑
+     */
+    const CATEGORY_IMAGES: Record<string, string> = {
+        '고기': '/images/maker-images/meat_bbq.png',
+        '치킨': '/images/maker-images/chicken.png',
+        '한식': '/images/maker-images/korean.png',
+        '중식': '/images/maker-images/chinese.png',
+        '일식': '/images/maker-images/cutlet_sashimi.png',
+        '양식': '/images/maker-images/western.png',
+        '분식': '/images/maker-images/snack_bar.png',
+        '카페·디저트': '/images/maker-images/cafe_dessert.png',
+        '아시안': '/images/maker-images/asian.png',
+        '패스트푸드': '/images/maker-images/fastfood.png',
+        '족발·보쌈': '/images/maker-images/pork_feet.png',
+        '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
+        '피자': '/images/maker-images/pizza.png',
+        '찜·탕': '/images/maker-images/stew.png',
+        '야식': '/images/maker-images/late_night.png',
+        '도시락': '/images/maker-images/lunch_box.png',
+    };
+
+    /**
+     * 카테고리에 해당하는 이미지 경로 반환
+     * @param category 카테고리명
+     * @returns 이미지 경로
+     */
+    const getCategoryImagePath = (category: string): string => {
+        return CATEGORY_IMAGES[category] || '/images/maker-images/korean.png';
     };
 
     return (
@@ -644,7 +653,15 @@ export function RestaurantDetailPanel({
                                         })()}
                                     </ScrollableTagContainer>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl shrink-0">{getCategoryEmoji(categories[0] || '')}</span>
+                                        {/* 카테고리 이미지 - 이모지 대신 이미지 표시 */}
+                                        <div className="relative w-8 h-8 shrink-0">
+                                            <Image
+                                                src={getCategoryImagePath(categories[0] || '')}
+                                                alt={categories[0] || '카테고리'}
+                                                fill
+                                                className="object-contain"
+                                            />
+                                        </div>
                                         <h2
                                             className="text-xl font-bold truncate"
                                             title={restaurant.name}

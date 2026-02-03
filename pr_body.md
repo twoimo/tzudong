@@ -1,10 +1,17 @@
 ## 개요
-GitHub Actions 실행 환경(Linux)에서 발생하는 `\r: command not found` 오류를 해결했습니다.
+OCR 비용 절감을 위한 로직 개선 및 맛집 상세 패널 UI 업데이트
 
 ## 변경 내용
-- **CRLF -> LF 변환**: `backend/run_daily.sh`, `07-gemini-crawling.sh`, `10-laaj-evaluation.sh` 파일의 개행 문자를 Windows 스타일(CRLF)에서 Unix 스타일(LF)로 강제 변환했습니다.
-- **.gitattributes 추가**: 향후 모든 `.sh` 파일이 강제로 LF로 처리되도록 설정하여 재발을 방지했습니다.
+- **OCR 비용 최적화**
+  - OCI 폴백 로직 제거 (GEMINI_OCR_YEON API 키 단독 사용)
+  - `sharp` 라이브러리를 이용한 이미지 압축 (1024px, JPEG 70%)
+  - 해시 기반 캐싱 도입 (동일 이미지 재분석 방지)
+  - 프롬프트 최적화 및 복원
+- **맛집 상세 패널 UI 개선**
+  - 카테고리 텍스트 이모지를 이미지 아이콘으로 변경 (`RestaurantDetailPanel.tsx`)
+- **기타**
+  - 불필요한 OCI 관련 스크립트 및 `gemini-cli.ts` 삭제
 
 ## 테스트
-- 로컬에서 변환 확인 완료.
-- GitHub Actions 재실행 시 정상 동작 예상.
+- 로컬 환경에서 빌드 및 OCR API 정상 동작 확인
+- 맛집 상세 패널에서 카테고리 이미지 표시 확인
