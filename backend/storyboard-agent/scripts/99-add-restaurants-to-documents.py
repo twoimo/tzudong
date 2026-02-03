@@ -122,10 +122,10 @@ def process_documents(video_restaurants: dict[str, list[dict]]):
         # 해당 video_id의 음식점 목록
         restaurants = video_restaurants.get(video_id, [])
 
-        # 음식점 이름 리스트 (approved_name 우선, 없으면 origin_name)
+        # 음식점 이름 리스트 (approved_name)
         restaurant_names = []
         for r in restaurants:
-            name = r.get("approved_name") or r.get("origin_name")
+            name = r.get("approved_name")
             if name and name not in restaurant_names:
                 restaurant_names.append(name)
 

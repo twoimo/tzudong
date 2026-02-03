@@ -19,6 +19,13 @@ import json
 import os
 import sys
 import re
+
+# 출력 버퍼링 비활성화 (즉시 출력) - 최상단 배치
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
+print("🚀 프로그램 초기화 중... (1/2)", flush=True)
+import subprocess
 import argparse
 from pathlib import Path
 from collections import defaultdict
@@ -26,12 +33,12 @@ from datetime import datetime
 from tqdm import tqdm
 from supabase import create_client, Client
 from dotenv import load_dotenv
+
+# 무거운 라이브러리는 메시지 출력 후 로딩
+print("🚀 라이브러리(Torch/BGE) 로딩 중... (2/2)", flush=True)
 from FlagEmbedding import BGEM3FlagModel
 import torch
 
-# 출력 버퍼링 비활성화 (즉시 출력)
-sys.stdout.reconfigure(line_buffering=True)
-sys.stderr.reconfigure(line_buffering=True)
 
 # .env 로드
 load_dotenv()
@@ -40,19 +47,19 @@ load_dotenv()
 EMBEDDING_MODEL = "BAAI/bge-m3"
 EMBEDDING_DIMENSION = 1024
 
-# Supabase 설정
+# Supabase 설정 (Lazy Load)
 SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
 
 # 경로 설정
 SCRIPT_DIR = Path(__file__).parent.resolve()
 INPUT_DIR = (
-    SCRIPT_DIR
-    / "../../restaurant-crawling/data/tzuyang/transcript-document-with-context"
+    SCRIPT_DIR / "../../restaurant-crawling/data/tzuyang/transcript-document-with-meta"
 )
 
 
-# BGE-M3 모델 로드 (전역 변수로 한 번만 로드)
+# 전역 변수 초기화 (즉시 로딩)
 print("🚀 BGE-M3 모델 로딩 중...", flush=True)
 
 device = "cpu"
@@ -80,28 +87,46 @@ def extract_video_id_from_youtube_link(youtube_link: str) -> str | None:
     return None
 
 
-def get_restaurants_by_video_id(supabase: Client) -> dict[str, list[str]]:
-    """Supabase에서 approved 음식점을 video_id별로 조회"""
-    print("📥 Supabase에서 음식점 조회 중...", flush=True)
+def fetch_data_from_git(branch: str, target_path: Path):
+    """지정된 브랜치에서 데이터 폴더를 체크아웃"""
+    print(f"📥 '{branch}' 브랜치에서 데이터 가져오는 중...", flush=True)
 
-    result = (
-        supabase.table("restaurants")
-        .select("youtube_link, origin_name, approved_name")
-        .eq("status", "approved")
-        .not_.is_("youtube_link", "null")
-        .execute()
-    )
+    # git root 찾기 (단순히 현재 스크립트의 상위 경로들을 탐색하거나, 실행 위치 가정)
+    # 여기서는 SCRIPT_DIR 기준으로 상대 경로를 계산해서 git 명령어를 실행합니다.
+    # target_path는 절대 경로이므로, git 명령어 실행 시에는 repo root 기준 상대 경로가 필요하거나
+    # git cwd를 설정해야 합니다.
 
-    video_restaurants = defaultdict(list)
-    for row in result.data:
-        video_id = extract_video_id_from_youtube_link(row.get("youtube_link"))
-        if video_id:
-            name = row.get("approved_name") or row.get("origin_name")
-            if name and name not in video_restaurants[video_id]:
-                video_restaurants[video_id].append(name)
+    try:
+        # 1. Repo Root 찾기 (git rev-parse --show-toplevel)
+        repo_root = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--show-toplevel"], stderr=subprocess.STDOUT
+            )
+            .decode()
+            .strip()
+        )
 
-    print(f"  {len(video_restaurants)}개 video_id에 음식점 매핑됨", flush=True)
-    return dict(video_restaurants)
+        # 2. target_path를 Repo Root 기준 상대 경로로 변환
+        rel_path = target_path.relative_to(repo_root)
+
+        # 3. git checkout 실행
+        subprocess.run(
+            ["git", "checkout", branch, "--", str(rel_path)],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
+        print(f"✅ 데이터 체크아웃 완료: {rel_path}", flush=True)
+
+    except subprocess.CalledProcessError as e:
+        print(
+            f"⚠️ 데이터 가져오기 실패: {e.output.decode() if e.output else str(e)}",
+            flush=True,
+        )
+        # 실패하더라도 일단 진행 (로컬 데이터 사용)하거나 종료할 수 있음.
+        # 여기서는 경고만 하고 진행.
+    except Exception as e:
+        print(f"⚠️ 데이터 가져오기 중 오류: {e}", flush=True)
 
 
 def get_existing_embeddings(supabase: Client) -> dict[tuple, dict]:
@@ -116,7 +141,7 @@ def get_existing_embeddings(supabase: Client) -> dict[tuple, dict]:
 
     while True:
         result = (
-            supabase.table("document_embeddings_bge")
+            supabase.table("transcript_embeddings_bge")
             .select("video_id, chunk_index, recollect_id")
             .range(offset, offset + batch_size - 1)
             .execute()
@@ -140,12 +165,13 @@ def get_existing_embeddings(supabase: Client) -> dict[tuple, dict]:
 def get_embeddings(texts: list[str]) -> list[list[float]]:
     """BGE-M3 모델로 임베딩 생성 (전역 모델 사용)"""
     # 전역 모델 사용
+
     bge_encoded = bge_model.encode(texts, return_dense=True)
     return [vec.tolist() for vec in bge_encoded["dense_vecs"]]
 
 
-def load_documents(video_restaurants: dict[str, list[str]]):
-    """문서 로드 및 음식점 정보 추가"""
+def load_documents():
+    """문서 로드 (이미 메타데이터에 음식점 정보 포함됨)"""
     print("📥 문서 로드 중...", flush=True)
 
     documents = []
@@ -156,9 +182,8 @@ def load_documents(video_restaurants: dict[str, list[str]]):
 
     input_files = list(INPUT_DIR.glob("*.jsonl"))
 
-    for input_file in tqdm(input_files, desc="파일 로드", file=sys.stdout):
+    for input_file in tqdm(input_files, desc="파일 로드"):
         video_id = input_file.stem
-        restaurants = video_restaurants.get(video_id, [])
 
         with open(input_file, "r", encoding="utf-8") as f:
             for line in f:
@@ -168,7 +193,6 @@ def load_documents(video_restaurants: dict[str, list[str]]):
                     if isinstance(docs, list):
                         for doc in docs:
                             metadata = doc.get("metadata", {})
-                            metadata["restaurants"] = restaurants
 
                             documents.append(
                                 {
@@ -181,7 +205,6 @@ def load_documents(video_restaurants: dict[str, list[str]]):
                             )
                     else:
                         metadata = docs.get("metadata", {})
-                        metadata["restaurants"] = restaurants
 
                         documents.append(
                             {
@@ -238,7 +261,6 @@ def update_metadata_only(supabase: Client, documents: list[dict]):
     for i in tqdm(
         range(0, len(documents), batch_size),
         desc="메타데이터 업데이트",
-        file=sys.stdout,
     ):
         batch = documents[i : i + batch_size]
 
@@ -251,6 +273,8 @@ def update_metadata_only(supabase: Client, documents: list[dict]):
                     }
                 ).eq("video_id", doc["video_id"]).eq(
                     "chunk_index", doc["chunk_index"]
+                ).eq(
+                    "recollect_id", doc["recollect_id"]
                 ).execute()
                 success += 1
             except Exception as e:
@@ -280,7 +304,6 @@ def embed_and_store(supabase: Client, documents: list[dict], batch_size: int = 5
         range(0, len(documents), batch_size),
         desc="임베딩",
         total=total_batches,
-        file=sys.stdout,
     ):
         batch = documents[i : i + batch_size]
 
@@ -365,9 +388,6 @@ def main():
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("✅ 연결 성공", flush=True)
 
-    # 2. 음식점 정보 조회 (매번 최신화)
-    video_restaurants = get_restaurants_by_video_id(supabase)
-
     # 3. 기존 임베딩 조회
     try:
         existing = get_existing_embeddings(supabase)
@@ -377,8 +397,11 @@ def main():
         )
         existing = {}
 
-    # 4. 문서 로드 (음식점 정보 포함)
-    documents = load_documents(video_restaurants)
+    # 3.5. 데이터 브랜치에서 데이터 가져오기 (코드 레벨에서 강제)
+    fetch_data_from_git("data", INPUT_DIR)
+
+    # 4. 문서 로드
+    documents = load_documents()
 
     if not documents:
         print("❌ 문서가 없습니다!", flush=True)
