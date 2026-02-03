@@ -126,7 +126,34 @@ sync_data_to_remote() {
 log "INFO" "============================================================"
 log "INFO" "일일 데이터 수집 파이프라인 시작"
 log "INFO" "============================================================"
-log "INFO" "현재 브랜치: $(git rev-parse --abbrev-ref HEAD)"
+# [Branch Check] 'data' 브랜치인지 확인
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+TARGET_BRANCH="data"
+
+log "INFO" "현재 브랜치 확인: $CURRENT_BRANCH"
+
+if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
+    log "WARN" "현재 브랜치가 '$TARGET_BRANCH'가 아닙니다. '$TARGET_BRANCH'로 전환을 시도합니다."
+    
+    # 최신 상태 가져오기
+    git fetch origin
+    
+    # 로컬에 타겟 브랜치가 존재하는지 확인
+    if git show-ref --verify --quiet refs/heads/$TARGET_BRANCH; then
+        git checkout $TARGET_BRANCH || { log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."; exit 1; }
+    else
+        # 로컬에 없으면 원격에서 가져와서 추적
+        git checkout -b $TARGET_BRANCH origin/$TARGET_BRANCH || { log "ERROR" "원격 브랜치 체크아웃 실패."; exit 1; }
+    fi
+    
+    log "SUCCESS" "브랜치 전환 완료: $TARGET_BRANCH"
+fi
+
+# 충돌 방지를 위해 최신 변경사항 Pull
+log "INFO" "'$TARGET_BRANCH' 브랜치 최신화 (Pull)..."
+git pull origin $TARGET_BRANCH || { log "WARN" "Pull 실패 (무시하고 진행)."; }
+
+log "INFO" "현재 작업 브랜치: $(git rev-parse --abbrev-ref HEAD)"
 
 # 1. URL 수집 (새로운 영상 탐색)
 echo "::group::[Step 1] URL Collection"
@@ -295,7 +322,7 @@ echo "| Step | Count | Status |" >> "$SUMMARY_MD"
 echo "|------|-------|--------|" >> "$SUMMARY_MD"
 
 if [ -f "$LOG_FILE" ]; then
-    # 1. URL
+    # 1. URL 수집 현황
     if grep -q "URL 수집 중" "$LOG_FILE"; then
         URL_LINE=$(grep "tzuyang: 신규" "$LOG_FILE" | tail -n 1 | strip_ansi)
         URL_CNT=$(echo "$URL_LINE" | sed 's/.*tzuyang: //')
@@ -305,7 +332,7 @@ if [ -f "$LOG_FILE" ]; then
         URL_LINE=""
     fi
 
-    # 2. Metadata
+    # 2. 메타데이터
     if grep -q "메타데이터 수집" "$LOG_FILE"; then
         META_LINE=$(grep "업데이트 [0-9]*개" "$LOG_FILE" | tail -n 1 | strip_ansi)
         META_CNT=$(echo "$META_LINE" | sed 's/.*완료: //' | tr -cd '0-9')
@@ -315,7 +342,7 @@ if [ -f "$LOG_FILE" ]; then
         META_CNT="0"
     fi
 
-    # 3. Transcript
+    # 3. 자막
     TRANSCRIPT_CNT=$(grep "성공 [0-9]*개" "$LOG_FILE" | grep "자막 수집 완료" -A 1 | tail -n 1 | strip_ansi | sed 's/.*성공 //;s/개.*//')
     if [ -n "$TRANSCRIPT_CNT" ]; then
         echo "| Transcripts | $TRANSCRIPT_CNT | Saved |" >> "$SUMMARY_MD"
@@ -324,7 +351,7 @@ if [ -f "$LOG_FILE" ]; then
         TRANSCRIPT_CNT="0"
     fi
 
-    # 3.1 Context Generation
+    # 3.1 문맥 생성
     CONTEXT_CNT=$(grep -c "Context generation for .* completed" "$LOG_FILE")
     if [ "$CONTEXT_CNT" -gt 0 ]; then
         echo "| Contexts | $CONTEXT_CNT | Generated |" >> "$SUMMARY_MD"
@@ -332,7 +359,7 @@ if [ -f "$LOG_FILE" ]; then
         echo "| Contexts | 0 | Skipped |" >> "$SUMMARY_MD"
     fi
 
-    # 4. Heatmaps
+    # 4. 히트맵
     HEATMAP_CNT=$(grep -c "Heatmap saved" "$LOG_FILE")
     if [ "$HEATMAP_CNT" -gt 0 ]; then
         echo "| Heatmaps | $HEATMAP_CNT | Saved |" >> "$SUMMARY_MD"
@@ -340,12 +367,12 @@ if [ -f "$LOG_FILE" ]; then
         echo "| Heatmaps | 0 | Skipped |" >> "$SUMMARY_MD"
     fi
 
-    # 4. Frames
+    # 4. 프레임
     FRAME_CNT=$(grep -c "Frames extracted" "$LOG_FILE")
     if [ -z "$FRAME_CNT" ]; then FRAME_CNT=0; fi
     echo "| Frames | $FRAME_CNT | Extracted |" >> "$SUMMARY_MD"
 
-    # GDrive & YouTube
+    # 구글 드라이브 & 유튜브
     GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE")
     YOUTUBE_CNT=$(grep -c "\[YouTube\] 다운로드 시도" "$LOG_FILE")
 
@@ -356,13 +383,13 @@ if [ -f "$LOG_FILE" ]; then
         echo "| YouTube DL | 0 | (Blocked) |" >> "$SUMMARY_MD"
     fi
 
-    # 5. Map URLs
+    # 5. 지도 URL
     MAP_CNT=$(grep -c "✅ 지도 URL 수집 완료" "$LOG_FILE")
     if [ "$MAP_CNT" -gt 0 ]; then
         echo "| Map Crawling | $MAP_CNT | Collected |" >> "$SUMMARY_MD"
     fi
 
-    # 6. Gemini
+    # 6. 재미나이
     if grep -q "Gemini 분석 완료" "$LOG_FILE"; then
         GEMINI_CALLS=$(grep "총 호출 수:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
         GEMINI_SUCCESS=$(grep "성공:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*: //')
@@ -372,31 +399,31 @@ if [ -f "$LOG_FILE" ]; then
         echo "| Gemini Analysis | - | Skipped |" >> "$SUMMARY_MD"
     fi
 
-    # 08. Target Selection
+    # 08. 평가 대상 선정
     if grep -q "대상 비디오:" "$LOG_FILE"; then
         TARGET_CNT=$(grep "대상 비디오:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*비디오: //;s/개.*//')
         echo "| Target Selection | $TARGET_CNT | Selected |" >> "$SUMMARY_MD"
     fi
 
-    # 09. Rule Evaluation
+    # 09. 규칙 기반 평가
     if grep -q "Rule 평가 완료!" "$LOG_FILE"; then
         RULE_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep -v "LAAJ" | tail -n 1 | strip_ansi | sed 's/.*: //')
         echo "| Rule Eval | $RULE_SUCCESS | Verified |" >> "$SUMMARY_MD"
     fi
 
-    # 10. LAAJ Evaluation
+    # 10. LAAJ 평가
     if grep -q "LAAJ 평가 완료" "$LOG_FILE"; then
         LAAJ_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep "LAAJ" -A 5 | tail -n 5 | grep "성공:" | strip_ansi | sed 's/.*: //')
         echo "| LAAJ Eval | $LAAJ_SUCCESS | Verified |" >> "$SUMMARY_MD"
     fi
 
-    # 11. Transform
+    # 11. 결과 변환
     if grep -q "변환 완료:" "$LOG_FILE"; then
         TRANS_CNT=$(grep "변환 완료:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.* 완료: //;s/개.*//')
         echo "| Transform | $TRANS_CNT | Processed |" >> "$SUMMARY_MD"
     fi
 
-    # 12. Supabase
+    # 12. Supabase 저장
     SUPA_INSERTED=$(grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*Insert): //' | tr -cd '0-9')
     if [ -n "$SUPA_INSERTED" ]; then
         SUPA_SKIPPED=$(grep "건너뜀 (중복):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*중복): //' | tr -cd '0-9')
@@ -414,14 +441,14 @@ echo "### Details" >> "$SUMMARY_MD"
 echo "<details><summary>Click to expand execution details</summary>" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
-# 1. New URLs List
+# 1. 신규 URL 목록
 if [ -f "$LOG_FILE" ] && [ "$URL_CNT" != "0" ] && [ "$URL_CNT" != "-" ]; then
     echo "**New URLs ($URL_CNT)**" >> "$SUMMARY_MD"
     grep "\[New URL\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[New URL\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
-# 2. Metadata Updates
+# 2. 메타데이터 업데이트
 if [ "$META_CNT" != "0" ] && [ "$META_CNT" != "-" ]; then
     echo "**📝 Metadata Updates ($META_CNT)**" >> "$SUMMARY_MD"
     if [ "$META_CNT" -le 20 ]; then
@@ -433,22 +460,22 @@ if [ "$META_CNT" != "0" ] && [ "$META_CNT" != "-" ]; then
     echo "" >> "$SUMMARY_MD"
 fi
 
-# 3. Transcripts
+# 3. 자막 저장 내역
 if [ "$TRANSCRIPT_CNT" != "0" ]; then
     echo "**💬 Transcripts Saved**" >> "$SUMMARY_MD"
     grep "\[Transcript Saved\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Transcript Saved\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
-# 4. Heatmaps
+# 4. 히트맵 처리
 if [ "$HEATMAP_CNT" -gt 0 ]; then
     echo "**🔥 Heatmaps Processed**" >> "$SUMMARY_MD"
     grep "\[Heatmap Saved\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Heatmap Saved\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
-# 5. Frames
-# Use [Frames Extracted] marker
+# 5. 프레임 추출
+# 로그 마커 [Frames Extracted] 사용
 FRAME_VIDEO_CNT=$(grep -c "\[Frames Extracted\]" "$LOG_FILE")
 if [ "$FRAME_VIDEO_CNT" -gt 0 ]; then
     echo "**🖼️ Frames Extracted (Videos: $FRAME_VIDEO_CNT)**" >> "$SUMMARY_MD"
@@ -456,7 +483,7 @@ if [ "$FRAME_VIDEO_CNT" -gt 0 ]; then
     echo "" >> "$SUMMARY_MD"
 fi
 
-# 6. Gemini
+# 6. 재미나이
 if [ -n "$GEMINI_SUCCESS_LINE" ]; then
     echo "**🧠 Gemini Analysis**" >> "$SUMMARY_MD"
     echo "- $GEMINI_SUCCESS_LINE" >> "$SUMMARY_MD"
