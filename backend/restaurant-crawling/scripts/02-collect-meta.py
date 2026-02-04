@@ -142,39 +142,73 @@ def check_thumbnail_exists(
     return any(thumb_dir.glob(pattern))
 
 
-def get_schedule_frequency(published_at_str: str) -> Optional[str]:
+
+def get_first_heatmap_date(channel_path: Path, video_id: str) -> Optional[datetime]:
     """
-    영상 age에 따른 수집 주기 결정 (KST 기준)
-    - D+0 ~ D+5: 수집 대기 (숙성기)
-    - D+5 ~ D+14: 매일 확인 (scheduled_daily) -> 최초 히트맵 포착을 위해 집중 모니터링
-    - D+14 ~ ∞ : 월 1회 (scheduled_monthly) -> 장기 변화 감지 (전수 검사)
+    히트맵 파일의 최초 생성일(수집일)을 확인
+    - 파일이 없으면 None 반환
+    """
+    heatmap_file = channel_path / "heatmap" / f"{video_id}.jsonl"
+    if not heatmap_file.exists():
+        return None
+    try:
+        # 윈도우: 생성 시간, 유닉스: 메타데이터 변경 시간 (보통 생성 시간으로 간주)
+        ctime = os.path.getctime(heatmap_file)
+        # 타임스탬프를 KST 시간대 객체로 변환
+        return datetime.fromtimestamp(ctime).astimezone(KST)
+    except OSError:
+        return None
+
+
+def get_schedule_frequency(published_at_str: str, channel_path: Path, video_id: str) -> Optional[str]:
+    """
+    영상 상태 및 히트맵 보유 여부에 따른 수집 주기 정밀 결정 (KST 기준)
+    
+    [정책]
+    1. D+0 ~ D+7: 수집 대기 (숙성기) - YouTube 히트맵 생성 대기
+    2. 히트맵 없음: 매일 확인 (scheduled_daily) - 최초 히트맵 포착 시도
+    3. 히트맵 있음:
+       - 첫 수집 후 14일 이내: 주 1회 (scheduled_weekly) - 초기 변화 감지
+       - 첫 수집 후 14일 경과: 월 1회 (scheduled_monthly) - 안정기 정기 점검
     """
     if not published_at_str:
-        return "scheduled_monthly"  # fallback
+        return "scheduled_monthly"  # 날짜 없으면 기본적으로 월간 체크
 
+    # 게시일 파싱
     pub_date = datetime.fromisoformat(
         published_at_str.replace("Z", "+00:00")
     ).astimezone(KST)
     now = datetime.now(KST)
 
-    # safe delta calculation
+    # 1. 영상 나이 계산 (게시 후 경과일)
     delta = now - pub_date
     days_diff = delta.days
 
     if days_diff < 0:
         return None
 
-    if days_diff < 5:
-        # 5일 미만은 대기 (숙성)
+    # [규칙 1] 게시 후 7일 미만은 무조건 대기 (히트맵 생성 전)
+    if days_diff < 7:
         return None
 
-    elif days_diff < 14:
-        # 5일 ~ 14일: 최초 히트맵 확보를 위해 매일 체크
+    # 2. 히트맵 보유 여부 확인
+    first_collection_date = get_first_heatmap_date(channel_path, video_id)
+
+    # [규칙 2] 7일 지났는데 히트맵이 없다 -> 매일 시도 (생성 즉시 잡기 위해)
+    if not first_collection_date:
         return "scheduled_daily"
 
-    else:
-        # 14일 이후: 월 1회 전수 검사 (변화 없으면 스킵됨)
-        return "scheduled_monthly"
+    # 3. 히트맵 보유 시: 첫 수집일로부터 경과일 계산
+    # (주의: days_diff는 영상 게시일 기준, 여기서는 수집 후 경과일 기준)
+    collection_delta = now - first_collection_date
+    days_since_collection = collection_delta.days
+
+    # [규칙 3] 첫 수집 후 2주(14일) 동안은 주간 단위로 변화 관찰
+    if days_since_collection < 14:
+        return "scheduled_weekly"
+
+    # [규칙 4] 그 이후(안정기)는 월간 단위 관리
+    return "scheduled_monthly"
 
 
 def check_schedule_condition(frequency: str, video_id: str) -> bool:
@@ -552,7 +586,7 @@ def collect_channel_meta(
                 schedule_reason = "new_video"
             else:
                 # 변경사항 없으면 스케줄 확인
-                frequency = get_schedule_frequency(current_meta.get("published_at"))
+                frequency = get_schedule_frequency(current_meta.get("published_at"), channel_path, vid)
 
                 # Viral은 스케줄 무시하고 수집 (detect_changes에서 이미 추가됨)
                 # [Removed] viral logic
