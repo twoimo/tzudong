@@ -87,6 +87,30 @@ def get_frame_paths(segment_path: Path) -> list[str]:
     return [str(f) for f in frame_files]
 
 
+def get_duration_from_meta(
+    meta_dir: Path, video_id: str, recollect_id: int
+) -> int | None:
+    """
+    메타 파일에서 해당 video_id와 recollect_id에 맞는 duration 조회
+    meta/{video_id}.jsonl에서 recollect_id가 일치하는 줄의 duration 반환
+    """
+    meta_file = meta_dir / f"{video_id}.jsonl"
+    if not meta_file.exists():
+        return None
+
+    try:
+        with open(meta_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    data = json.loads(line)
+                    if data.get("recollect_id") == recollect_id:
+                        return data.get("duration")
+    except Exception as e:
+        print(f"⚠️ 메타 파일 읽기 실패 {meta_file}: {e}")
+
+    return None
+
+
 def load_model(model_id: str, device: str = None):
     """
     LLaVA-NeXT-Video 모델 및 프로세서 로드
@@ -197,6 +221,7 @@ def process_video_frames(
     video_id: str,
     frames_dir: Path,
     output_dir: Path,
+    meta_dir: Path,
     model,
     processor,
     prompt: str,
@@ -242,6 +267,9 @@ def process_video_frames(
             if (recollect_id, rank) in existing_segments:
                 continue
 
+            # 메타에서 duration 조회
+            duration = get_duration_from_meta(meta_dir, video_id, recollect_id)
+
             tasks.append(
                 {
                     "video_id": video_id,
@@ -249,6 +277,7 @@ def process_video_frames(
                     "rank": rank,
                     "start_sec": segment_info["start_sec"],
                     "end_sec": segment_info["end_sec"],
+                    "duration": duration,
                     "folder": segment_folder,
                 }
             )
@@ -296,9 +325,10 @@ def process_video_frames(
                 result = {
                     "video_id": task["video_id"],
                     "recollect_id": task["recollect_id"],
-                    "rank": task["rank"],
                     "start_sec": task["start_sec"],
                     "end_sec": task["end_sec"],
+                    "duration": task["duration"],
+                    "rank": task["rank"],
                     "frames": frame_paths,
                     "caption": caption,
                 }
@@ -353,10 +383,14 @@ def main():
     data_dir = SCRIPT_DIR / f"../data/{args.youtuber}"
     frames_dir = data_dir / "frames"
     output_dir = data_dir / "frame-caption"
+    meta_dir = data_dir / "meta"
 
     if not frames_dir.exists():
         print(f"❌ Frames directory not found: {frames_dir}")
         return
+
+    if not meta_dir.exists():
+        print(f"⚠️ Meta directory not found: {meta_dir} (duration 조회 불가)")
 
     # 모델 로드
     model, processor = load_model(args.model, args.device)
@@ -387,6 +421,7 @@ def main():
             video_id=video_id,
             frames_dir=frames_dir,
             output_dir=output_dir,
+            meta_dir=meta_dir,
             model=model,
             processor=processor,
             prompt=args.prompt,
