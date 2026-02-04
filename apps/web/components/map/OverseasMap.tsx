@@ -95,7 +95,6 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 attributionControl: false,
                 fadeDuration: 0,
                 localIdeographFontFamily: 'sans-serif',
-                maxParallelImageRequests: 16,
             });
 
             mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
