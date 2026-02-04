@@ -586,7 +586,12 @@ def collect_channel_meta(
                 schedule_reason = "new_video"
             else:
                 # 변경사항 없으면 스케줄 확인
-                frequency = get_schedule_frequency(current_meta.get("published_at"), channel_path, vid)
+                # [수정] Shorts(3분 미만) 영상은 스케줄링 대상에서 영구 제외 (히트맵 수집 불가)
+                duration = current_meta.get("duration", 0)
+                if duration < 180:
+                    frequency = None
+                else:
+                    frequency = get_schedule_frequency(current_meta.get("published_at"), channel_path, vid)
 
                 # Viral은 스케줄 무시하고 수집 (detect_changes에서 이미 추가됨)
                 # [Removed] viral logic
