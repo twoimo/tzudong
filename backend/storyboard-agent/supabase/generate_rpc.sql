@@ -41,13 +41,47 @@ create or replace function get_video_captions_for_range (
   p_recollect_id int,
   p_start_sec int,
   p_end_sec int
-) returns setof video_frame_captions language sql stable as $$
+) returns setof video_frame_captions language plpgsql stable as $$
+declare
+  v_target_recollect_id int;
+  v_target_duration int;
+begin
+  -- 1. 요청받은 recollect_id에 해당하는 캡션 데이터가 있는지 확인
+  perform 1 from video_frame_captions
+  where video_id = p_video_id and recollect_id = p_recollect_id
+  limit 1;
+
+  if found then
+    v_target_recollect_id := p_recollect_id;
+  else
+    -- 2. 없다면, 해당 recollect_id(videos 테이블)의 duration을 확인
+    select duration into v_target_duration
+    from videos
+    where video_id = p_video_id and recollect_id = p_recollect_id;
+
+    -- 3. 같은 duration을 가진 것 중 가장 최신(큰) recollect_id 찾기
+    if v_target_duration is not null then
+      select max(recollect_id) into v_target_recollect_id
+      from videos
+      where video_id = p_video_id and duration = v_target_duration;
+    end if;
+
+    -- 4. 만약 videos에서도 못 찾았다면(duration 확인 불가), 캡션 테이블에서 가장 최신 ID 사용
+    if v_target_recollect_id is null then
+      select max(recollect_id) into v_target_recollect_id
+      from video_frame_captions
+      where video_id = p_video_id;
+    end if;
+  end if;
+
+  return query
   select *
   from video_frame_captions
   where video_id = p_video_id
-    and recollect_id = p_recollect_id
+    and recollect_id = v_target_recollect_id
     and (start_sec, end_sec) overlaps (p_start_sec, p_end_sec)
-  order by rank asc, start_sec asc;
+  order by rank asc;
+end;
 $$;
 
 
@@ -100,6 +134,16 @@ end;
 $$;
 
 
+create or replace function get_categories_by_restaurant_name_or_youtube_url (
+  p_restaurant_name text default null,
+  p_video_id text default null
+) returns text[] language sql stable as $$
+  select array_agg(distinct c)
+  from restaurants r, unnest(r.categories) as c
+  where r.status = 'approved'
+    and (p_restaurant_name is null or r.approved_name = p_restaurant_name)
+    and (p_video_id is null or substring(r.youtube_link from 'v=([^&]+)') = p_video_id);
+$$;
 
 
 
@@ -125,6 +169,8 @@ create or replace function search_restaurants_by_name (
     r.tzuyang_review
   from restaurants r
   where r.status = 'approved'
-    and (r.approved_name ilike '%' || keyword || '%' or r.origin_name ilike '%' || keyword || '%')
+    and (r.approved_name ilike '%' || keyword || '%')
   limit p_limit;
 $$;
+
+
