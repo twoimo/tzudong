@@ -49,6 +49,12 @@ backend/restaurant-crawling/data/*/video_cache
 backend/restaurant-crawling/data/*/temp_video
 backend/restaurant-crawling/data/*/thumbnails
 
+# CI/Fallback Generated Data
+backend/restaurant-crawling/data/frames/
+backend/restaurant-crawling/data/credentials.json
+backend/restaurant-crawling/data/cookies.txt
+backend/restaurant-crawling/data/cookies.json
+
 # Supabase
 supabase/
 summary.md

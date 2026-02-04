@@ -329,39 +329,7 @@ function getKSTDate() {
     return new Date(utc + (9 * 60 * 60 * 1000));
 }
 
-/**
- * 수요일 기반 히트맵 재수집 트리거 확인
- * 
- * YouTube 히트맵 생성 규칙 (관찰 기반):
- * - 매주 화요일 중으로 히트맵이 생성/업데이트됨
- * - 게시 후 7일 이상 경과한 영상만 히트맵 생성
- * - 화요일 새벽에는 아직 생성되지 않을 수 있으므로, 수요일 새벽에 수집
- * 
- * @param {string} publishedAt - 영상 게시 날짜 (ISO string)
- * @returns {boolean} - 오늘이 수요일이고, 영상이 7일 이상 경과했으면 true
- */
-function shouldRecollectHeatmapToday(publishedAt) {
-    if (!publishedAt) return false;
 
-    const now = getKSTDate();
-    const dayOfWeek = now.getDay(); // 0=일, 1=월, 2=화, 3=수, ..., 6=토
-
-    // 수요일(3)이 아니면 false
-    if (dayOfWeek !== 3) {
-        return false;
-    }
-
-    // 게시 후 7일 경과 확인
-    const pubDate = new Date(publishedAt);
-    const diffMs = Math.abs(now - pubDate);
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 7) {
-        return false;
-    }
-
-    return true;
-}
 
 function getMetaInfo(channelName, videoId) {
     const metaPath = getMetaOutputPath(channelName, videoId);
@@ -403,23 +371,16 @@ function shouldCollect(channelName, videoId, params) {
         return true;
     }
 
-    // 1. 필수 확인: 게시 후 5일 경과 여부
-    if (!publishedAt) {
-        return false;
+    // [Fix] diffDays 계산 (D+5 로직 사용 위해)
+    let diffDays = 0;
+    if (publishedAt) {
+        const pDate = new Date(publishedAt);
+        const now = getKSTDate();
+        const diffTime = now - pDate;
+        diffDays = diffTime / (1000 * 60 * 60 * 24);
     }
 
-    const pubDate = new Date(publishedAt);
-    const now = getKSTDate();
-    // diffTime을 ms 단위로 계산
-    const diffTime = Math.abs(now - pubDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // 올림 처리
-
-    if (diffDays < 5) {
-        // [중요] 5일 미만이라도 'new_video' 같은 즉시 수집 트리거가 있으면 수집해야 할 수도 있음.
-        // 하지만 04 스크립트 로직에 따르면 5일 미만은 무조건 false 입니다.
-        log('info', `[Skip] ${videoId}: 게시 후 5일 미만 (${diffDays}일)`);
-        return false;
-    }
+    // [제거됨] 5일 경과 조건 - 7일 조건(shouldRecollectHeatmapToday)으로 통합
 
     // [수정] 강제 수집 모드일 경우 기존 파일 확인 스킵
     if (ignoreExisting) {
@@ -730,15 +691,14 @@ function parseHeatmap(html) {
 async function fetchAndSaveHeatmap(channel, videoId, url) {
     const outPath = getHeatmapOutputPath(channel, videoId);
 
-    // [신규] 화요일 기반 강제 재수집 트리거 확인
-    const heatmapMetaInfo = getMetaInfo(channel, videoId);
-    const publishedAt = heatmapMetaInfo?.published_at;
-    const isTuesdayRecollect = shouldRecollectHeatmapToday(publishedAt);
+    // [추가] 스케줄 트리거 확인 (scheduled_daily, scheduled_monthly 등)
+    // 스케줄 트리거가 있다면 수요일이 아니어도 재수집해야 함 (예: 30일 경과 영상의 월간 수집)
+    const triggerCheckVars = getRecollectVars(channel, videoId);
+    const isScheduledTrigger = triggerCheckVars.some(v => v.startsWith('scheduled_'));
 
-    // [수정] 이미 데이터가 존재하면 다시 수집하지 않고 읽어서 반환 (중복 저장 방지)
-    // 단, recollect_id가 증가했거나 트리거 변수가 있다면 무시하고 재수집
-    // [추가] 화요일이고 7+ 일 된 영상이면 재수집 (YouTube 히트맵 업데이트 주기)
-    if (fs.existsSync(outPath) && !isTuesdayRecollect) {
+    // [수정] 이미 데이터가 존재하면 다음 조건들을 만족할 때만 재수집 스킵:
+    // 1. 스케줄 트리거가 없음 (!isScheduledTrigger)
+    if (fs.existsSync(outPath) && !isScheduledTrigger) {
         try {
             const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
             if (lines.length > 0) {
@@ -769,8 +729,6 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         } catch (e) {
             log('warn', `기존 파일 읽기 실패 (재수집 진행): ${e.message}`);
         }
-    } else if (isTuesdayRecollect && fs.existsSync(outPath)) {
-        log('info', `[Tuesday] 화요일 히트맵 업데이트 트리거 - 재수집 진행 (${videoId})`);
     }
 
     // [Mod] 쿠키 없이 접근 (Public/Incognito Mode) - 최대 3회 재시도 (2차 쿠키 폴백 제거)

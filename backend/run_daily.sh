@@ -89,6 +89,12 @@ sync_data_to_remote() {
     git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
     git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
 
+    # [Fix] CI 환경 등에서 생성된 루트 frames 폴더 추적 제외
+    git rm -r --cached backend/restaurant-crawling/data/frames 2>/dev/null || true
+    # [Security] 민감 정보 추적 제외
+    git rm --cached backend/restaurant-crawling/data/credentials.json 2>/dev/null || true
+    git rm --cached backend/restaurant-crawling/data/cookies.txt 2>/dev/null || true
+
     COMMIT_MSG="chore(data): update crawling data ($DATE) - $STEP_NAME"
 
     if git diff --staged --quiet; then
