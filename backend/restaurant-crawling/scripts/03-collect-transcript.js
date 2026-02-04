@@ -262,7 +262,25 @@ async function tryYtDlpWithOptions(videoId, url, tempPrefix, options) {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
     ];
 
-    let cmdParts = ['yt-dlp'];
+    // [수정] Python 모듈 사용 (봇 탐지 우회 - 04-extract-frames-with-heatmap.js 패턴 적용)
+    // 1. Python 모듈 사용 (최신 버전 보장)
+    // 2. Node.js 경로 명시 (n-challenge 해결 필수)
+    // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
+    let pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
+    if (!fs.existsSync(pythonPath)) {
+        pythonPath = "python3";
+    }
+
+    const nodePath = "C:\\Program Files\\nodejs\\node.exe";
+    const runtimesArg = process.platform === 'win32' && fs.existsSync(nodePath)
+        ? `--js-runtimes "node:${nodePath}"`
+        : '--js-runtimes "node:node"';
+
+    let cmdParts = [`"${pythonPath}" -m yt_dlp`];
+
+    // 봇 탐지 우회 옵션 (공통)
+    cmdParts.push(runtimesArg);
+    cmdParts.push('--remote-components ejs:github');
 
     // 쿠키 모드: 쿠키 파일 사용
     if (mode === 'cookies' && cookies) {
