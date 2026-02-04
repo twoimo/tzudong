@@ -407,7 +407,7 @@ def main():
         # 2. 메타데이터 (Shorts 및 비공개 필터링)
         meta_path = meta_dir / f"{video_id}.jsonl"
         
-        # [Mod] 메타데이터 없으면 스킵 (고아 파일)
+        # [Mod] 메타데이터 없으면 스킵 (메타데이터 누락 파일)
         if not meta_path.exists():
             # 메타데이터가 없다는 건, 수집 단계에서 걸러졌거나 식별되지 않은 파일
             # 실행 목록에 추가하지 않음
