@@ -179,9 +179,9 @@ log "INFO" "[Step 2.2] Meta Migrating to Supabase..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
-# 2.5. 고아 파일 사전 정리 (Auto-Healing Pre-check)
+# 2.5. 메타데이터 누락 파일 사전 정리 (Auto-Healing Pre-check)
 echo "::group::[Step 2.5] Orphan Cleanup"
-log "INFO" "[Step 2.5] 고아 파일 사전 정리..."
+log "INFO" "[Step 2.5] 메타데이터 누락 파일 사전 정리..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/99-cleanup-orphans.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 echo "::endgroup::"
 
