@@ -479,8 +479,7 @@ EOF
             GEMINI_START=$(date +%s)
             log_debug "Gemini 호출 시도 ${GEMINI_ATTEMPT}/3 (모델: $CURRENT_MODEL)"
             
-            # [수정] stdin으로 프롬프트 전달 (대용량 프롬프트 호환성)
-            if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+            if npx gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                 GEMINI_SUCCESS=true
                 GEMINI_END=$(date +%s)
                 GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
@@ -662,95 +661,6 @@ main() {
     
     log_info "시작 시간: $START_DATETIME"
     log_info "Gemini 모델: $CURRENT_MODEL (fallback: $FALLBACK_MODEL)"
-    
-    # ================================
-    # Gemini Health Check (사전 점검)
-    # ================================
-    log_info "🏥 Gemini Health Check (1+1=?) 수행 중..."
-    HEALTH_CHECK_PROMPT="$SCRIPT_DIR/../temp/health_check_prompt.txt"
-    HEALTH_CHECK_RESPONSE="$SCRIPT_DIR/../temp/health_check_response.json"
-    echo "1+1=?" > "$HEALTH_CHECK_PROMPT"
-    
-    HEALTH_CHECK_PASSED=false
-    
-    # 1. Node.js API 체크 (USE_OAUTH가 아닐 때만)
-    if [ "$USE_OAUTH" != "true" ] && [ -n "$NODE_EXE" ] && [ -n "$GEMINI_API_KEY" ]; then
-        log_debug "Node.js API 헬스체크 시도..."
-        
-        # 임시 API 스크립트 생성
-        GEMINI_API_SCRIPT="$SCRIPT_DIR/../temp/gemini_api_request.mjs"
-        cat << 'EOF' > "$GEMINI_API_SCRIPT"
-import fs from 'fs';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-async function main() {
-    const args = process.argv.slice(2);
-    if (args.length < 2) {
-        console.error('Usage: node gemini_api_request.js <prompt_file> <output_file>');
-        process.exit(1);
-    }
-
-    const promptFile = args[0];
-    const outputFile = args[1];
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-        console.error('Error: GEMINI_API_KEY environment variable not set.');
-        process.exit(1);
-    }
-
-    try {
-        const prompt = fs.readFileSync(promptFile, 'utf8');
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
-        const model = genAI.getGenerativeModel({ model: modelName });
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        fs.writeFileSync(outputFile, text);
-        process.exit(0);
-
-    } catch (error) {
-        console.error(`Gemini API Error: ${error.message}`);
-        process.exit(1);
-    }
-}
-
-main();
-EOF
-        
-        set +e
-        "$NODE_EXE" "$GEMINI_API_SCRIPT" "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE" > /dev/null 2>&1
-        EXIT_CODE=$?
-        set -e
-        
-        if [ $EXIT_CODE -eq 0 ]; then
-            HEALTH_CHECK_PASSED=true
-            log_success "Health Check 성공 (Node.js API)"
-        else
-            log_warning "Health Check 실패 (Node.js API) -> CLI Fallback 전환"
-            export USE_OAUTH=true  # Sticky Fallback 활성화
-        fi
-    fi
-    
-    # 2. Gemini CLI 체크 (Node 실패 또는 OAuth 모드일 때)
-    if [ "$HEALTH_CHECK_PASSED" = false ]; then
-        log_debug "Gemini CLI 헬스체크 시도..."
-        if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
-            HEALTH_CHECK_PASSED=true
-            log_success "Health Check 성공 (Gemini CLI)"
-        else
-            log_error "Health Check 실패 (Gemini CLI)"
-            log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 인증을 확인하세요."
-            rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
-            exit 1
-        fi
-    fi
-    
-    rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
-    log_info "모드: $(if [ "$USE_OAUTH" = "true" ]; then echo "Gemini CLI (OAuth/Sticky)"; else echo "Node.js API + CLI Fallback"; fi)"
     
     # 채널 목록
     local channels

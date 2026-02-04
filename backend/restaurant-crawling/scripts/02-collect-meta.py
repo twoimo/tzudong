@@ -211,46 +211,32 @@ def get_schedule_frequency(published_at_str: str, channel_path: Path, video_id: 
     return "scheduled_monthly"
 
 
-def check_schedule_condition(frequency: str, video_id: str, published_at_str: str = None) -> bool:
+def check_schedule_condition(frequency: str, video_id: str) -> bool:
     """
     frequency에 따라 오늘 수집해야 하는지 결정
-    
-    [게시일 기준 분산]
-    - scheduled_daily: 매일 수집
-    - scheduled_weekly: 게시 요일 == 오늘 요일 (예: 수요일 게시 → 매주 수요일 수집)
-    - scheduled_monthly: 게시 날짜 == 오늘 날짜 (예: 15일 게시 → 매월 15일 수집)
+    해싱을 사용하여 부하 분산
     """
     if not frequency:
-        return False
+        return False  # None이면 수집 안함
 
     if frequency == "scheduled_daily":
-        return True
-
-    # 게시일 필수 (없으면 수집 안함)
-    if not published_at_str:
-        return False
+        return True  # 매일
 
     today = datetime.now(KST).date()
-    pub_date = datetime.fromisoformat(
-        published_at_str.replace("Z", "+00:00")
-    ).astimezone(KST).date()
+    # video_id 해싱 -> 0~99
+    vid_hash = int(hashlib.md5(video_id.encode()).hexdigest(), 16) % 100
 
     if frequency == "scheduled_weekly":
-        # 게시 요일 == 오늘 요일
-        return pub_date.weekday() == today.weekday()
+        return (vid_hash % 7) == today.weekday()
+
+    if frequency == "scheduled_biweekly":
+        days_since_epoch = (today - datetime(2024, 1, 1).date()).days
+        return (days_since_epoch % 14) == (vid_hash % 14)
 
     if frequency == "scheduled_monthly":
-        # 게시 날짜(일) == 오늘 날짜(일)
-        pub_day = pub_date.day
-        today_day = today.day
-
-        # 말일 처리: 31일 게시 영상 → 2월에는 28일에 수집
-        import calendar
-        last_day_of_month = calendar.monthrange(today.year, today.month)[1]
-
-        if pub_day > last_day_of_month:
-            return today_day == last_day_of_month
-        return pub_day == today_day
+        days_since_epoch = (today - datetime(2024, 1, 1).date()).days
+        # 해시 충돌 분산 (30일 주기)
+        return (days_since_epoch % 30) == (vid_hash % 30)
 
     return False
 
@@ -600,19 +586,13 @@ def collect_channel_meta(
                 schedule_reason = "new_video"
             else:
                 # 변경사항 없으면 스케줄 확인
-                # [수정] Shorts(3분 미만) 영상은 스케줄링 대상에서 영구 제외 (히트맵 수집 불가)
-                duration = current_meta.get("duration", 0)
-                if duration < 180:
-                    frequency = None
-                else:
-                    frequency = get_schedule_frequency(current_meta.get("published_at"), channel_path, vid)
+                frequency = get_schedule_frequency(current_meta.get("published_at"), channel_path, vid)
 
                 # Viral은 스케줄 무시하고 수집 (detect_changes에서 이미 추가됨)
                 # [Removed] viral logic
 
                 if frequency:
-                    # [수정] 게시일 기반 스케줄링을 위해 published_at 전달
-                    if check_schedule_condition(frequency, vid, current_meta.get("published_at")):
+                    if check_schedule_condition(frequency, vid):
                         schedule_reason = frequency
 
                 # [수정] frequency가 None인 경우(D+5 미만 등)는 정기 수집 스케줄 없음.

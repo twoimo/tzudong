@@ -882,11 +882,31 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
     // [Fix] 변경 없으면 저장(ID동기화) 후 여기서 종료 -> 프레임 추출 스킵
     // [수정] 단, 프레임 파일이 실제로 없는 경우에는 히트맵 변경 여부와 관계없이 추출 진행
+    // [개선] shouldCollect()와 동일한 상세 체크 로직 사용 (일관성)
     if (!isHeatmapChanged) {
-        // 프레임 디렉토리 존재 여부 확인
         const recollectId = getMetaRecollectId(channel, videoId);
         const framesDir = getFramesOutputDir(channel, videoId, recollectId);
-        const hasFrames = fs.existsSync(framesDir) && fs.readdirSync(framesDir).length > 0;
+
+        // [일관성] shouldCollect()와 동일한 방식으로 프레임 존재 확인
+        // 단순히 폴더 존재가 아닌, 실제 설정별 데이터 존재 여부 확인
+        let hasFrames = false;
+        if (fs.existsSync(framesDir)) {
+            try {
+                const segDirs = fs.readdirSync(framesDir).filter(f => !f.startsWith('.'));
+                if (segDirs.length > 0) {
+                    // 첫 번째 세그먼트의 구조만 확인 (전체 확인은 비용이 큼)
+                    const firstSegDir = path.join(framesDir, segDirs[0]);
+                    // jpg/360p_1.0fps 같은 구조가 있는지 확인
+                    const extDirs = fs.existsSync(firstSegDir) ? fs.readdirSync(firstSegDir).filter(f => !f.startsWith('.')) : [];
+                    if (extDirs.length > 0) {
+                        const configDirs = fs.existsSync(path.join(firstSegDir, extDirs[0]))
+                            ? fs.readdirSync(path.join(firstSegDir, extDirs[0])).filter(f => !f.startsWith('.'))
+                            : [];
+                        hasFrames = configDirs.length > 0;
+                    }
+                }
+            } catch (e) { }
+        }
 
         if (hasFrames) {
             log('info', `[Skip] 히트맵 변경 없음 & 프레임 존재 -> 프레임 추출 단계 건너뜀`);
