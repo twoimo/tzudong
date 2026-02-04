@@ -371,7 +371,8 @@ function shouldCollect(channelName, videoId, params) {
         return true;
     }
 
-    // [Fix] diffDays 계산 (D+5 로직 사용 위해)
+    // [Fix] diffDays 계산 (D+7 로직 사용 위해)
+    // 메타 수집 스크립트(02)와 기준 통일 (숙성기 7일)
     let diffDays = 0;
     if (publishedAt) {
         const pDate = new Date(publishedAt);
@@ -478,19 +479,19 @@ function shouldCollect(channelName, videoId, params) {
         }
     }
 
-    // [수정] D+5 강제 수집 로직 추가
-    // 히트맵/프레임이 아예 없는 신규 영상이면, 스케줄 트리거가 없어도 D+5가 지났으면 수집해야 함
-    // (get_schedule_frequency에서 D+5 미만은 None을 반환하므로, 메타 수집 단계에서 걸러졌을 수 있음.
+    // [수정] D+7 강제 수집 로직 추가 (메타 수집 정책과 통일)
+    // 히트맵/프레임이 아예 없는 신규 영상이면, 스케줄 트리거가 없어도 D+7가 지났으면 수집해야 함
+    // (get_schedule_frequency에서 D+7 미만은 None을 반환하므로, 메타 수집 단계에서 걸러졌을 수 있음.
     // 하지만 여기까지 왔다는 건 메타가 있다는 뜻일 수도 있고, shouldCollect가 호출된 시점에서 판단)
 
     // 데이터 부재 확인
     const heatmapPath = getHeatmapOutputPath(channelName, videoId);
     const hasHeatmap = fs.existsSync(heatmapPath);
 
-    // D+5 경과 확인 (위에서 계산한 diffDays 사용)
-    if (diffDays >= 5) {
+    // D+7 경과 확인 (위에서 계산한 diffDays 사용)
+    if (diffDays >= 7) {
         if (!hasHeatmap) {
-            log('info', `[Force] ${videoId}: D+5 경과 & 히트맵 없음 -> 강제 수집 트리거 (Initial Collection)`);
+            log('info', `[Force] ${videoId}: D+7 경과 & 히트맵 없음 -> 강제 수집 트리거 (Initial Collection)`);
             return true;
         }
     }
