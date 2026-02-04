@@ -54,21 +54,24 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     selectedCountry,
     searchedRestaurant,
     selectedRestaurant,
+    refreshTrigger, // Used to trigger data refresh
     onRestaurantSelect,
     onMarkerClick,
     onMapReady,
 }) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
-    const markersRef = useRef<maplibregl.Marker[]>([]);
+    const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
     const [isMapLoaded, setIsMapLoaded] = useState(false);
 
+    // Filtered restaurants with optimization
     const restaurantsOptions = useMemo(() => ({
         category: filters.categories.length > 0 ? filters.categories : undefined,
         minReviews: filters.minReviews,
         region: selectedCountry as Region || undefined,
         enabled: !!selectedCountry,
-    }), [filters, selectedCountry]);
+        refreshTrigger, // Include refreshTrigger to ensure data revalidation
+    }), [filters, selectedCountry, refreshTrigger]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants } = useRestaurants(restaurantsOptions);
 
@@ -78,7 +81,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         return exists ? restaurants : [...restaurants, searchedRestaurant];
     }, [restaurants, searchedRestaurant]);
 
-    // MAP INITIALIZATION (Standard Style for CORS compliance)
+    // MAP INITIALIZATION
     useEffect(() => {
         if (map.current || !mapContainer.current) return;
 
@@ -89,7 +92,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         try {
             const mapInstance = new maplibregl.Map({
                 container: mapContainer.current,
-                style: 'https://tiles.openfreemap.org/styles/positron', // Back to official style for CORS
+                style: 'https://tiles.openfreemap.org/styles/positron',
                 center: [initialConfig.lng, initialConfig.lat],
                 zoom: initialConfig.zoom,
                 attributionControl: false,
@@ -106,7 +109,6 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             });
 
             mapInstance.on('error', (e) => {
-                // Silently ignore the common worker type errors as they don't break the map
                 const msg = e.error?.message || '';
                 if (msg.includes('Expected value') || msg.includes('null')) return;
                 console.error("Map Error:", e.error || e);
@@ -114,7 +116,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
             map.current = mapInstance;
         } catch (err) {
-            console.error("Critical Map Init Error:", err);
+            console.error("Map Init Error:", err);
         }
 
         return () => {
@@ -125,13 +127,9 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         };
     }, []);
 
-    // MOVING WITH ZOOM PERSISTENCE
     const moveToRestaurant = useCallback((restaurant: Restaurant) => {
         if (!map.current) return;
-
-        // Exact persistence as requested: Use current zoom
         const targetZoom = map.current.getZoom();
-
         map.current.flyTo({
             center: [Number(restaurant.lng), Number(restaurant.lat)],
             zoom: targetZoom,
@@ -152,49 +150,83 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         }
     }, [selectedCountry]);
 
-    // MARKER PERFORMANCE
+    // OPTIMIZED MARKER RENDERING
+    // Only re-create markers if the restaurant list changes.
+    // Update marker styles (selected state) independently.
     useEffect(() => {
         if (!map.current || !isMapLoaded) return;
 
-        markersRef.current.forEach(m => m.remove());
-        markersRef.current = [];
+        const currentMarkerIds = new Set(restaurantsToShow.map(r => r.id));
 
-        restaurantsToShow.forEach(restaurant => {
-            const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
-            const markerSize = isSelected ? 42 : 32;
-
-            const categories = restaurant.categories;
-            const cat = Array.isArray(categories) ? categories[0] : categories;
-            const imagePath = CATEGORY_ICON_MAP[cat] || DEFAULT_ICON;
-
-            const el = document.createElement('div');
-            el.className = `custom-marker ${isSelected ? 'selected' : ''}`;
-            el.style.width = `${markerSize}px`;
-            el.style.height = `${markerSize}px`;
-            el.style.cursor = 'pointer';
-            el.style.willChange = 'transform';
-
-            el.innerHTML = `
-                <div style="width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transform: ${isSelected ? 'scale(1.1)' : 'scale(1)'}; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-                    <img src="${imagePath}" style="width: 100%; height: 100%; object-fit: contain;" alt="${restaurant.name}" />
-                </div>
-            `;
-
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                onRestaurantSelect?.(restaurant);
-                onMarkerClick?.(restaurant);
-                moveToRestaurant(restaurant);
-            });
-
-            const marker = new maplibregl.Marker({ element: el })
-                .setLngLat([Number(restaurant.lng), Number(restaurant.lat)])
-                .addTo(map.current!);
-
-            markersRef.current.push(marker);
+        // 1. Remove markers that are no longer in the list
+        markersRef.current.forEach((marker, id) => {
+            if (!currentMarkerIds.has(id)) {
+                marker.remove();
+                markersRef.current.delete(id);
+            }
         });
 
-    }, [restaurantsToShow, isMapLoaded, selectedRestaurant, searchedRestaurant, moveToRestaurant]);
+        // 2. Add or update markers
+        restaurantsToShow.forEach(restaurant => {
+            if (!markersRef.current.has(restaurant.id)) {
+                const categories = restaurant.categories;
+                const cat = Array.isArray(categories) ? categories[0] : categories;
+                const imagePath = CATEGORY_ICON_MAP[cat] || DEFAULT_ICON;
+
+                const el = document.createElement('div');
+                el.id = `marker-${restaurant.id}`;
+                el.style.width = `32px`;
+                el.style.height = `32px`;
+                el.style.cursor = 'pointer';
+                el.style.willChange = 'transform';
+                el.innerHTML = `
+                    <div class="marker-container" style="width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                        <img src="${imagePath}" style="width: 100%; height: 100%; object-fit: contain;" alt="${restaurant.name}" />
+                    </div>
+                `;
+
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    onRestaurantSelect?.(restaurant);
+                    onMarkerClick?.(restaurant);
+                    moveToRestaurant(restaurant);
+                });
+
+                const marker = new maplibregl.Marker({ element: el })
+                    .setLngLat([Number(restaurant.lng), Number(restaurant.lat)])
+                    .addTo(map.current!);
+
+                markersRef.current.set(restaurant.id, marker);
+            }
+        });
+    }, [restaurantsToShow, isMapLoaded, moveToRestaurant, onRestaurantSelect, onMarkerClick]);
+
+    // Handle Selection State (Update existing markers without re-creating)
+    useEffect(() => {
+        if (!isMapLoaded) return;
+
+        const activeId = selectedRestaurant?.id || searchedRestaurant?.id;
+
+        markersRef.current.forEach((marker, id) => {
+            const el = marker.getElement();
+            const container = el.querySelector('.marker-container') as HTMLElement;
+            const isSelected = id === activeId;
+
+            if (container) {
+                if (isSelected) {
+                    el.style.width = '42px';
+                    el.style.height = '42px';
+                    el.classList.add('selected');
+                    container.style.transform = 'scale(1.1)';
+                } else {
+                    el.style.width = '32px';
+                    el.style.height = '32px';
+                    el.classList.remove('selected');
+                    container.style.transform = 'scale(1)';
+                }
+            }
+        });
+    }, [selectedRestaurant, searchedRestaurant, isMapLoaded]);
 
     return (
         <div className={`relative w-full h-full bg-[#f8f9fa] ${className}`}>
