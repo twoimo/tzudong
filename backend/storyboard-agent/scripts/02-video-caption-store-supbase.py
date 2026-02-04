@@ -105,6 +105,7 @@ def load_captions():
                         "recollect_id": data.get("recollect_id"),
                         "start_sec": data.get("start_sec"),
                         "end_sec": data.get("end_sec"),
+                        "duration": data.get("duration"),
                         "rank": data.get("rank"),
                         "raw_caption": data.get("raw_caption"),
                         "chronological_analysis": None,

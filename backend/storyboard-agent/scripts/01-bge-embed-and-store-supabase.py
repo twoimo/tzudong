@@ -162,12 +162,26 @@ def get_existing_embeddings(supabase: Client) -> dict[tuple, dict]:
     return existing
 
 
-def get_embeddings(texts: list[str]) -> list[list[float]]:
-    """BGE-M3 모델로 임베딩 생성 (전역 모델 사용)"""
-    # 전역 모델 사용
+def get_embeddings(texts: list[str]) -> tuple[list[list[float]], list[dict]]:
+    """
+    BGE-M3 모델로 Dense + Sparse 임베딩 생성
 
-    bge_encoded = bge_model.encode(texts, return_dense=True)
-    return [vec.tolist() for vec in bge_encoded["dense_vecs"]]
+    Returns:
+        (dense_vecs, sparse_vecs) 튜플
+        dense_vecs: 1024차원 벡터 리스트
+        sparse_vecs: {token_id: weight} 딕셔너리 리스트
+    """
+    bge_encoded = bge_model.encode(texts, return_dense=True, return_sparse=True)
+
+    dense_vecs = [vec.tolist() for vec in bge_encoded["dense_vecs"]]
+    sparse_vecs = []
+
+    for sparse in bge_encoded["lexical_weights"]:
+        # {token_id: weight} 형태로 변환 (JSON 직렬화 가능하게)
+        sparse_dict = {str(k): float(v) for k, v in sparse.items()}
+        sparse_vecs.append(sparse_dict)
+
+    return dense_vecs, sparse_vecs
 
 
 def load_documents():
@@ -266,7 +280,7 @@ def update_metadata_only(supabase: Client, documents: list[dict]):
 
         for doc in batch:
             try:
-                supabase.table("document_embeddings_bge").update(
+                supabase.table("transcript_embeddings_bge").update(
                     {
                         "metadata": doc["metadata"],
                         "updated_at": datetime.now().isoformat(),
@@ -308,26 +322,27 @@ def embed_and_store(supabase: Client, documents: list[dict], batch_size: int = 5
         batch = documents[i : i + batch_size]
 
         try:
-            # 1. 임베딩 생성
+            # 1. 임베딩 생성 (Dense + Sparse)
             texts = [doc["page_content"] for doc in batch]
-            embeddings = get_embeddings(texts)
+            dense_vecs, sparse_vecs = get_embeddings(texts)
 
             # 2. Supabase에 저장
             records = []
-            for doc, embedding in zip(batch, embeddings):
+            for doc, dense_emb, sparse_emb in zip(batch, dense_vecs, sparse_vecs):
                 records.append(
                     {
                         "video_id": doc["video_id"],
                         "chunk_index": doc["chunk_index"],
                         "recollect_id": doc["recollect_id"],
                         "page_content": doc["page_content"],
-                        "embedding": embedding,
+                        "embedding": dense_emb,
+                        "sparse_embedding": sparse_emb,  # Sparse 임베딩 추가
                         "metadata": doc["metadata"],
                     }
                 )
 
             # upsert로 중복 처리 (버전별 저장)
-            supabase.table("document_embeddings_bge").upsert(
+            supabase.table("transcript_embeddings_bge").upsert(
                 records, on_conflict="video_id,chunk_index,recollect_id"
             ).execute()
 
@@ -346,14 +361,16 @@ def verify_embeddings(supabase: Client):
 
     # 총 개수
     result = (
-        supabase.table("document_embeddings_bge").select("id", count="exact").execute()
+        supabase.table("transcript_embeddings_bge")
+        .select("id", count="exact")
+        .execute()
     )
     count = result.count
     print(f"  총 임베딩: {count}개", flush=True)
 
     # 샘플 데이터 확인
     sample = (
-        supabase.table("document_embeddings_bge")
+        supabase.table("transcript_embeddings_bge")
         .select("video_id, page_content, metadata")
         .limit(3)
         .execute()
