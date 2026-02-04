@@ -362,8 +362,8 @@ function shouldCollect(channelName, videoId, params) {
         // [추가] 180초(3분) 미만 영상은 Shorts로 간주하여 자동 수집 제외
         const duration = metaInfo.duration || 0;
         if (duration < 180) {
-            log('info', `[Skip] ${videoId}: 3분 미만 영상 (${duration}초)`);
-            return false;
+            // [수정] 개별 로그 → 호출부에서 집계하여 요약 출력
+            return { skip: true, reason: 'shorts', duration };
         }
     } else {
         // 메타 정보 없으면 수집 대상 (또는 정책에 따라 스킵 할 수도 있음)
@@ -881,9 +881,20 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     log('info', `[Heatmap Saved] ${videoId} (Points: ${formattedInteraction.length})`);
 
     // [Fix] 변경 없으면 저장(ID동기화) 후 여기서 종료 -> 프레임 추출 스킵
+    // [수정] 단, 프레임 파일이 실제로 없는 경우에는 히트맵 변경 여부와 관계없이 추출 진행
     if (!isHeatmapChanged) {
-        log('info', `[Skip] 히트맵 변경 없으므로 프레임 추출 단계 건너뜀`);
-        return null;
+        // 프레임 디렉토리 존재 여부 확인
+        const recollectId = getMetaRecollectId(channel, videoId);
+        const framesDir = getFramesOutputDir(channel, videoId, recollectId);
+        const hasFrames = fs.existsSync(framesDir) && fs.readdirSync(framesDir).length > 0;
+
+        if (hasFrames) {
+            log('info', `[Skip] 히트맵 변경 없음 & 프레임 존재 -> 프레임 추출 단계 건너뜀`);
+            return null;
+        } else {
+            log('info', `[Force] 히트맵 변경 없으나 프레임 누락 -> 프레임 추출 강제 진행`);
+            // 아래로 계속 진행하여 프레임 추출
+        }
     }
 
     // 반환값에 '재사용 가능 여부' 정보를 포함하면 좋겠지만, 
@@ -1494,6 +1505,7 @@ async function processBatch(params) {
 
     // 진행바 처럼 점찍기
     let skippedCount = 0;
+    let shortsCount = 0;  // [추가] Shorts 카운트
     let scanCount = 0;
     process.stdout.write('Scanning: ');
 
@@ -1508,21 +1520,27 @@ async function processBatch(params) {
             continue;
         }
 
-        // shouldCollect가 true인 것만 담기
-        // 주의: shouldCollect 내부 로깅이 너무 많으면 시끄러울 수 있으므로,
-        // 필요하다면 shouldCollect 호출 시 silent 옵션을 추가하거나 해야 하지만,
-        // 일단 현재 로직 그대로 사용 (중요 로그만 나오므로)
-        // 단, shouldCollect가 'info' 로그를 찍으므로 스캔 중에 로그가 섞일 수 있음.
-        // 여기서는 일단 진행
-        if (shouldCollect(channel, videoId, params)) {
+        // [수정] shouldCollect 반환값 처리 (true/false 또는 객체)
+        const result = shouldCollect(channel, videoId, params);
+
+        if (result === true) {
             pendingUrls.push(url);
+        } else if (result && result.skip && result.reason === 'shorts') {
+            // Shorts는 별도 카운트 (개별 로그 출력 안함)
+            shortsCount++;
+            skippedCount++;
         } else {
             skippedCount++;
         }
     }
     process.stdout.write('\n');
 
+    // [수정] Shorts 요약 로그 출력 (한 줄로)
+    if (shortsCount > 0) {
+        log('info', `[Skip] Shorts (3분 미만) ${shortsCount}개 건너뜀`);
+    }
     log('info', `✅ 스캔 완료: 총 ${urls.length}개 중 ${pendingUrls.length}개 처리 예정 (건너뜀: ${skippedCount}개)`);
+
 
     if (pendingUrls.length === 0) {
         log('info', `✨ 처리할 대상이 없습니다.`);

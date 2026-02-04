@@ -108,22 +108,40 @@ sync_data_to_remote() {
         return 1
     fi
 
+    # [Fix] Rebase 전 unstaged 변경사항 정리 (git rm --cached로 인한 문제 방지)
+    # 남아있는 변경사항이 있으면 stash로 임시 저장
+    if [ -n "$(git status --porcelain)" ]; then
+        log "INFO" "Stashing uncommitted changes before rebase..."
+        git stash push -q -m "auto-stash before rebase" 2>/dev/null || true
+        STASHED=true
+    else
+        STASHED=false
+    fi
+
     # 원격 변경사항 동기화 (충돌 방지)
     log "INFO" "원격 변경사항 확인 및 Rebase..."
-    if ! git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"; then
-        log "WARN" "Rebase 실패 - 강제 푸시 시도"
-        # Rebase 실패 시 강제 푸시 (로컬 데이터 우선)
-        if ! git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
-            log "ERROR" "Failed to push to data branch"
-            return 1
-        fi
-    else
+    if git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"; then
         # Push
         log "INFO" "Pushing to remote..."
         if ! git push origin data 2>&1 | tee -a "$LOG_FILE"; then
             log "ERROR" "Failed to push to data branch"
+            [ "$STASHED" = true ] && git stash pop -q 2>/dev/null || true
             return 1
         fi
+    else
+        log "WARN" "Rebase 실패 - 강제 푸시 시도"
+        git rebase --abort 2>/dev/null || true
+        # Rebase 실패 시 강제 푸시 (로컬 데이터 우선)
+        if ! git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
+            log "ERROR" "Failed to push to data branch"
+            [ "$STASHED" = true ] && git stash pop -q 2>/dev/null || true
+            return 1
+        fi
+    fi
+
+    # [Fix] Stash 복원
+    if [ "$STASHED" = true ]; then
+        git stash pop -q 2>/dev/null || true
     fi
 
     log "SUCCESS" "data 브랜치 업데이트 완료 ($STEP_NAME)"
