@@ -13,6 +13,7 @@ import { X } from 'lucide-react';
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
 const MapView = lazy(() => import("@/components/map/MapView"));
+const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
 
 interface HomeMapContainerProps {
     mapMode: 'domestic' | 'overseas';
@@ -304,7 +305,7 @@ function HomeMapContainerComponent({
                 </Suspense>
             ) : (
                 <Suspense fallback={<MapSkeleton />}>
-                    <MapView
+                    <OverseasMap
                         filters={filters}
                         selectedCountry={selectedCountry}
                         searchedRestaurant={searchedRestaurant}
