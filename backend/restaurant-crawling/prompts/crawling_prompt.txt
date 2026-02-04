@@ -71,7 +71,7 @@
       "lng": 경도 숫자 또는 null,
       "category": ["카테고리1", "카테고리2"],
       "reasoning_basis": "판단 근거",
-      "tzuyang_review": "유튜버 리뷰 요약 또는 null"
+      "youtuber_review": "유튜버 리뷰 요약 또는 null"
     }
   ]
 }
