@@ -101,14 +101,18 @@ export const REGIONS = [
 ] as const;
 
 export const GLOBAL_REGIONS = [
-    "미국",
-    "일본",
-    "대만",
-    "태국",
-    "인도네시아",
-    "튀르키예",
-    "헝가리",
-    "오스트레일리아"
+    "미국(LA)",
+    "미국(뉴욕)",
+    "일본(나고야)",
+    "일본(오사카)",
+    "일본(삿포로)",
+    "대만(타이베이)",
+    "태국(방콕)",
+    "인도네시아(자카르타)",
+    "인도네시아(발리)",
+    "튀르키예(이스탄불)",
+    "헝가리(부다페스트)",
+    "호주(시드니)"
 ] as const;
 
 export type Region = typeof REGIONS[number] | typeof GLOBAL_REGIONS[number];
