@@ -391,8 +391,8 @@ export default function FeedContent({
             !isOverlay && "bg-muted/30 overflow-y-auto"
         )} data-testid="feed-content-container">
             <div className={cn(
-                "w-full mx-auto bg-background flex flex-col h-full relative",
-                !isOverlay && "max-w-2xl md:border-x md:border-border md:shadow-sm"
+                "w-full mx-auto bg-background flex flex-col relative",
+                isOverlay ? "h-full" : "min-h-full md:border-x md:border-border md:shadow-sm max-w-2xl"
             )}>
                 {/* 헤더 */}
                 <div className="border-b border-border bg-background p-6 shrink-0">
@@ -460,7 +460,10 @@ export default function FeedContent({
 
                 {/* 피드 목록 */}
                 {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
-                <div className="flex-1 overflow-y-auto pb-[calc(var(--mobile-bottom-nav-height,60px)+2rem)] md:pb-8">
+                <div className={cn(
+                    "flex-1 pb-[calc(var(--mobile-bottom-nav-height,60px)+2rem)] md:pb-8",
+                    isOverlay && "overflow-y-auto"
+                )}>
                     {allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                             <p>아직 승인된 리뷰가 없습니다.</p>

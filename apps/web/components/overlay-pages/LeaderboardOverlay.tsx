@@ -42,9 +42,9 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
     if (isLoading) return <GlobalLoader message="랭킹 데이터를 불러오는 중..." />;
 
     return (
-        <div className="flex flex-col h-full bg-background">
+        <div className="flex flex-col bg-background min-h-full">
             {/* 헤더 - 모바일/태블릿 페이지와 동일 스타일 */}
-            <div className="border-b border-border bg-background p-6 shrink-0 rounded-t-2xl">
+            <div className="border-b border-border bg-background p-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
             </div>
 
             {/* 랭킹 목록 */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1">
                 <LeaderboardList
                     users={leaderboardData}
                     currentUserId={currentUser?.id}

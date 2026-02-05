@@ -58,7 +58,7 @@ export default function LeaderboardPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background">
+        <div className="flex flex-col min-h-full bg-background">
             {/* Header */}
             <div className="border-b border-border bg-background p-6">
                 <div className="flex items-center justify-between">
@@ -121,7 +121,7 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Compact List */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1">
                 <LeaderboardList
                     users={leaderboardData}
                     currentUserId={currentUser?.id}
