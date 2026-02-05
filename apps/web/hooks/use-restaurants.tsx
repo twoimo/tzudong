@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
+import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 
 type DBRestaurant = Tables<"restaurants">;
 
@@ -286,12 +287,29 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // 지역(Region) 필터 적용
             if (region) {
+                // @ts-ignore - Check if region exists in OVERSEAS_REGIONS (using dynamic check to avoid import loops if any)
+                // But better to import it.
+                // Dynamic import or check string format?
+                // Let's assume we imported OVERSEAS_REGIONS at top level.
+
                 if (region === "울릉도") {
                     // 울릉도는 주소에 '울릉'이 포함된 데이터 필터링
                     query = query.or(`road_address.ilike.%울릉%,jibun_address.ilike.%울릉%`);
                 } else if (region === "욕지도") {
                     // 욕지도는 주소에 '욕지'가 포함된 데이터 필터링
                     query = query.or(`road_address.ilike.%욕지%,jibun_address.ilike.%욕지%`);
+                } else if (region in OVERSEAS_REGIONS) {
+                    const config = OVERSEAS_REGIONS[region as keyof typeof OVERSEAS_REGIONS];
+                    const conditions: string[] = [];
+                    config.keywords.forEach((keyword: string) => {
+                        conditions.push(`road_address.ilike.%${keyword}%`);
+                        conditions.push(`jibun_address.ilike.%${keyword}%`);
+                        conditions.push(`english_address.ilike.%${keyword}%`);
+                    });
+
+                    if (conditions.length > 0) {
+                        query = query.or(conditions.join(','));
+                    }
                 } else {
                     // address_elements의 SIDO에서 지역 필터링
                     // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
