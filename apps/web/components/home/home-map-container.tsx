@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect } from 'react';
+import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -282,6 +282,16 @@ function HomeMapContainerComponent({
         }
     }, [onRequestEditRestaurant, panelRestaurant]);
 
+    const mapPadding = useMemo(() => {
+        if (!isPanelOpen) return undefined;
+        // Desktop: Right panel 400px
+        if (isDesktop) return { top: 0, bottom: 0, left: 0, right: 400 };
+        // Mobile: Bottom sheet covers ~65%. Center in top area.
+        // Using a moderate value (e.g., 50% of viewport) ensures marker is visible.
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+        return { top: 0, bottom: vh * 0.45, left: 0, right: 0 };
+    }, [isPanelOpen, isDesktop]);
+
     return (
         <div className="relative w-full h-full">
             {mapMode === 'domestic' ? (
@@ -316,6 +326,7 @@ function HomeMapContainerComponent({
                         onRequestEditRestaurant={onRequestEditRestaurant}
                         onMapReady={onMapReady}
                         onMarkerClick={onMarkerClick}
+                        mapPadding={mapPadding}
                     />
                 </Suspense>
             )}
