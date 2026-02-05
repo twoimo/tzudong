@@ -6,7 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { useRestaurants } from '@/hooks/use-restaurants';
-import { Loader2 } from 'lucide-react';
+import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
 
 interface OverseasMapProps {
     className?: string;
@@ -20,18 +20,10 @@ interface OverseasMapProps {
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;
     onMapReady?: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick?: (restaurant: Restaurant) => void;
+    mapPadding?: { top: number; bottom: number; left: number; right: number };
 }
 
-const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
-    "미국": { lat: 39.8283, lng: -98.5795, zoom: 4 },
-    "일본": { lat: 35.1815, lng: 136.9066, zoom: 6 },
-    "대만": { lat: 23.6978, lng: 120.9605, zoom: 7 },
-    "태국": { lat: 13.7563, lng: 100.5018, zoom: 6 },
-    "인도네시아": { lat: -2.5489, lng: 118.0149, zoom: 5 },
-    "튀르키예": { lat: 38.9637, lng: 35.2433, zoom: 6 },
-    "헝가리": { lat: 47.1625, lng: 19.5033, zoom: 7 },
-    "오스트레일리아": { lat: -25.2744, lng: 133.7751, zoom: 4 },
-};
+import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
     '고기': '/images/maker-images/meat_bbq.png',
@@ -48,6 +40,8 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
 
 const DEFAULT_ICON = '/images/maker-images/world_food.png';
 
+const DEFAULT_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
+
 const OverseasMap: React.FC<OverseasMapProps> = ({
     className,
     filters,
@@ -58,11 +52,18 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     onRestaurantSelect,
     onMarkerClick,
     onMapReady,
+    mapPadding = DEFAULT_PADDING,
 }) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
     const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+    const mapPaddingRef = useRef(mapPadding);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
+
+    // Update ref whenever prop changes
+    useEffect(() => {
+        mapPaddingRef.current = mapPadding;
+    }, [mapPadding]);
 
     // Filtered restaurants with optimization
     const restaurantsOptions = useMemo(() => ({
@@ -85,8 +86,8 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     useEffect(() => {
         if (map.current || !mapContainer.current) return;
 
-        const initialConfig = selectedCountry && COUNTRY_CENTERS[selectedCountry]
-            ? COUNTRY_CENTERS[selectedCountry]
+        const initialConfig = selectedCountry && OVERSEAS_REGIONS[selectedCountry]
+            ? OVERSEAS_REGIONS[selectedCountry].center
             : { lat: 20, lng: 0, zoom: 2 };
 
         try {
@@ -96,8 +97,8 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 center: [initialConfig.lng, initialConfig.lat],
                 zoom: initialConfig.zoom,
                 attributionControl: false,
-                fadeDuration: 0,
                 localIdeographFontFamily: 'sans-serif',
+                renderWorldCopies: true,
             });
 
             mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
@@ -130,11 +131,11 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     const moveToRestaurant = useCallback((restaurant: Restaurant) => {
         if (!map.current) return;
         const targetZoom = map.current.getZoom();
-        map.current.flyTo({
+
+        map.current.jumpTo({
             center: [Number(restaurant.lng), Number(restaurant.lat)],
             zoom: targetZoom,
-            essential: true,
-            duration: 800
+            padding: mapPaddingRef.current
         });
     }, []);
 
@@ -144,7 +145,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
     useEffect(() => {
         if (!map.current || !selectedCountry) return;
-        const config = COUNTRY_CENTERS[selectedCountry];
+        const config = OVERSEAS_REGIONS[selectedCountry]?.center;
         if (config) {
             map.current.flyTo({ center: [config.lng, config.lat], zoom: config.zoom });
         }
@@ -228,14 +229,20 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         });
     }, [selectedRestaurant, searchedRestaurant, isMapLoaded]);
 
+    // Re-center if mapPadding changes (e.g. panel opens) while a restaurant is selected
+    useEffect(() => {
+        if (selectedRestaurant && isMapLoaded) {
+            moveToRestaurant(selectedRestaurant);
+        }
+    }, [mapPadding, selectedRestaurant, isMapLoaded, moveToRestaurant]);
+
     return (
-        <div className={`relative w-full h-full bg-[#f8f9fa] ${className}`}>
+        <div className={`relative w-full h-full bg-[#E5E5E5] ${className}`}>
             <div ref={mapContainer} className="w-full h-full" />
 
             {(!isMapLoaded || isLoadingRestaurants) && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-10 border border-white/20">
-                    <Loader2 className="animate-spin w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-semibold text-gray-800">지도를 로딩 중입니다...</span>
+                <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm">
+                    <MapSkeleton />
                 </div>
             )}
         </div>

@@ -11,6 +11,7 @@ import RegionSelector from "@/components/region/RegionSelector";
 import RestaurantSearch from "@/components/search/RestaurantSearch";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import MobileControlOverlay from "@/components/home/MobileControlOverlay";
+import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
 
 interface HomeControlPanelProps {
     mapMode: 'domestic' | 'overseas';
@@ -132,17 +133,14 @@ const HomeControlPanelComponent = ({
                 ) : (
                     <Select value={selectedCountry || undefined} onValueChange={onCountryChange}>
                         <SelectTrigger className="w-48">
-                            <SelectValue placeholder="국가 선택" />
+                            <SelectValue placeholder="지역 선택" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="미국">미국 ({countryCounts["미국"] || 0}개)</SelectItem>
-                            <SelectItem value="일본">일본 ({countryCounts["일본"] || 0}개)</SelectItem>
-                            <SelectItem value="대만">대만 ({countryCounts["대만"] || 0}개)</SelectItem>
-                            <SelectItem value="태국">태국 ({countryCounts["태국"] || 0}개)</SelectItem>
-                            <SelectItem value="인도네시아">인도네시아 ({countryCounts["인도네시아"] || 0}개)</SelectItem>
-                            <SelectItem value="튀르키예">튀르키예 ({countryCounts["튀르키예"] || 0}개)</SelectItem>
-                            <SelectItem value="헝가리">헝가리 ({countryCounts["헝가리"] || 0}개)</SelectItem>
-                            <SelectItem value="오스트레일리아">오스트레일리아 ({countryCounts["오스트레일리아"] || 0}개)</SelectItem>
+                            {OVERSEAS_REGION_LIST.map((region) => (
+                                <SelectItem key={region} value={region}>
+                                    {region} ({countryCounts[region] || 0}개)
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 )}
