@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 
@@ -149,9 +150,9 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         }
     };
 
-    const handleMapReady = (moveFunction: (restaurant: Restaurant) => void) => {
+    const handleMapReady = useCallback((moveFunction: (restaurant: Restaurant) => void) => {
         setMoveToRestaurant(() => moveFunction);
-    };
+    }, [setMoveToRestaurant]);
 
 
 
