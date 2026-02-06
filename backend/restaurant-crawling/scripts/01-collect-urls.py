@@ -33,7 +33,7 @@ try:
     from googleapiclient.errors import HttpError
     from dotenv import load_dotenv
 except ImportError:
-    print("❌ 필수 패키지 설치 필요:")
+    print("[ERROR] 필수 패키지 설치 필요:")
     print("   pip install google-api-python-client python-dotenv")
     sys.exit(1)
 
@@ -282,7 +282,7 @@ def main():
     # API 키 확인
     api_key = get_api_key("youtube")
     if not api_key:
-        print("❌ YOUTUBE_API_KEY_BYEON 환경변수가 설정되지 않았습니다")
+        print("[ERROR] YOUTUBE_API_KEY_BYEON 환경변수가 설정되지 않았습니다")
         sys.exit(1)
 
     # 로거 초기화

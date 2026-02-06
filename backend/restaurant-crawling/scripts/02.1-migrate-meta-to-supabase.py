@@ -44,7 +44,7 @@ def get_supabase_client() -> Client:
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
     
     if not url or not key:
-        print("❌ Supabase 환경변수 (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) 가 설정되지 않았습니다.")
+        print("[ERROR] Supabase 환경변수 (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) 가 설정되지 않았습니다.")
         sys.exit(1)
         
     return create_client(url, key)
@@ -65,10 +65,10 @@ def migrate_meta(supabase: Client, channel: str, dry_run: bool = False):
     """메타 데이터 마이그레이션 (Upsert)"""
     meta_dir = DATA_DIR / channel / "meta"
     if not meta_dir.exists():
-        print(f"❌ 메타 디렉토리 없음: {meta_dir}")
+        print(f"[ERROR] 메타 디렉토리 없음: {meta_dir}")
         return 0
     
-    print(f"📂 메타 데이터 로드: {meta_dir}")
+    print(f"메타 데이터 로드: {meta_dir}")
     
     jsonl_files = list(meta_dir.glob("*.jsonl"))
     total = len(jsonl_files)
@@ -156,7 +156,7 @@ def migrate_meta(supabase: Client, channel: str, dry_run: bool = False):
                     supabase.table("videos").upsert(batch_data).execute()
                     total_upserted += len(batch_data)
                 except Exception as e:
-                    print(f"⚠️ 배치 업서트 실패 ({len(batch_data)}개): {e}")
+                    print(f"[WARN] 배치 업서트 실패 ({len(batch_data)}개): {e}")
             batch_data = []
             
     # 남은 데이터 처리
@@ -166,13 +166,13 @@ def migrate_meta(supabase: Client, channel: str, dry_run: bool = False):
                 supabase.table("videos").upsert(batch_data).execute()
                 total_upserted += len(batch_data)
             except Exception as e:
-                print(f"⚠️ 마지막 배치 업서트 실패: {e}")
+                print(f"[WARN] 마지막 배치 업서트 실패: {e}")
                 
-    print(f"✅ 총 {total_upserted}개 비디오 메타데이터 마이그레이션 완료")
+    print(f"[OK] 총 {total_upserted}개 비디오 메타데이터 마이그레이션 완료")
 
 def verify_data(supabase: Client, channel: str):
     """데이터 검증"""
-    print("\n🔍 데이터 검증...")
+    print("\n[SCAN] 데이터 검증...")
     try:
         # count() 메서드 사용시 head=True
         res = supabase.table("videos").select("id", count="exact", head=True).eq("channel_name", channel).execute()
@@ -183,7 +183,7 @@ def verify_data(supabase: Client, channel: str):
         print(f"  광고 포함 비디오: {res_ads.count}개")
         
     except Exception as e:
-        print(f"⚠️ 검증 쿼리 실패: {e}")
+        print(f"[WARN] 검증 쿼리 실패: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description="Supabase 메타 데이터 마이그레이션")
@@ -193,22 +193,22 @@ def main():
     args = parser.parse_args()
     
     print("=" * 50)
-    print("🚀 Supabase 메타 데이터 마이그레이션 (API)")
+    print("Supabase 메타 데이터 마이그레이션 (API)")
     print("=" * 50)
     
     try:
         supabase = get_supabase_client()
-        print("✅ Client 연결 성공\n")
+        print("[OK] Client 연결 성공\n")
         
         migrate_meta(supabase, args.channel, args.dry_run)
         
         if not args.dry_run:
             verify_data(supabase, args.channel)
             
-        print("\n🎉 완료!")
+        print("\n완료!")
         
     except Exception as e:
-        print(f"\n❌ 오류: {e}")
+        print(f"\n[ERROR] 오류: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

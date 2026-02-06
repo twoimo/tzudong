@@ -21,7 +21,7 @@ def migrate_laaj_results(data_path: Path):
     laaj_dir = data_path / "evaluation" / "laaj_results"
 
     if not laaj_dir.exists():
-        print(f"❌ laaj_results 폴더 없음: {laaj_dir}")
+        print(f"[ERROR] laaj_results 폴더 없음: {laaj_dir}")
         return
 
     files = list(laaj_dir.glob("*.jsonl"))
@@ -104,9 +104,9 @@ def migrate_laaj_results(data_path: Path):
                 print(f"  {updated}개 업데이트...")
 
         except Exception as e:
-            print(f"⚠️ 오류: {f.name} - {e}")
+            print(f"[WARN] 오류: {f.name} - {e}")
 
-    print(f"\n✅ 마이그레이션 완료!")
+    print(f"\n[OK] 마이그레이션 완료!")
     print(f"   업데이트: {updated}개")
 
 

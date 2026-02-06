@@ -586,9 +586,9 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
 
                     // [Fix] Cookie Mismatch or Auth Redirect Check
                     if (redirectUrl.includes('CookieMismatch') || redirectUrl.includes('accounts.google.com')) {
-                        log('warn', `⚠️ 인증 리다이렉트 감지: ${redirectUrl}`);
+                        log('warn', `[WARN] 인증 리다이렉트 감지: ${redirectUrl}`);
                         if (cookieHeader && cookieHeader.length > 0) {
-                            log('info', `🍪 유효하지 않은 쿠키 제거 후 재시도...`);
+                            log('info', `유효하지 않은 쿠키 제거 후 재시도...`);
                             // 쿠키 없이 현재 URL 다시 요청
                             resolve(fetchPage(url, '', 0, retryCount));
                             return;
@@ -753,14 +753,14 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
             // [Fix] 429/차단 관련 에러면 즉시 중단 (무리한 재시도 방지)
             if (e.message.includes('429') || e.message.includes('Block') || e.message.includes('SORRY_REDIRECT')) {
-                log('error', `🛑 429/차단 감지됨. 추가 재시도를 중단합니다.`);
+                log('error', `429/차단 감지됨. 추가 재시도를 중단합니다.`);
                 break;
             }
 
             // 마지막 시도가 아니면 대기 후 재시도
             if (attempt < MAX_RETRIES) {
                 const delay = attempt * 2000 + Math.random() * 1000; // 2s~, 4s~...
-                log('info', `⏳ ${Math.round(delay / 1000)}초 후 재시도...`);
+                log('info', `${Math.round(delay / 1000)}초 후 재시도...`);
                 await sleep(delay);
             }
         }
@@ -1520,7 +1520,7 @@ async function processBatch(params) {
     log('info', `총 ${urls.length}개 URL 발견`);
 
     // [Smart Filter] 처리 대상 영상 미리 선별
-    console.log(`\n🔍 [Smart Filter] 처리 대상을 선별 중입니다...`);
+    console.log(`\n[SCAN] [Smart Filter] 처리 대상을 선별 중입니다...`);
     const pendingUrls = [];
 
     // 진행바 처럼 점찍기
@@ -1559,11 +1559,11 @@ async function processBatch(params) {
     if (shortsCount > 0) {
         log('info', `[Skip] Shorts (3분 미만) ${shortsCount}개 건너뜀`);
     }
-    log('info', `✅ 스캔 완료: 총 ${urls.length}개 중 ${pendingUrls.length}개 처리 예정 (건너뜀: ${skippedCount}개)`);
+    log('info', `[OK] 스캔 완료: 총 ${urls.length}개 중 ${pendingUrls.length}개 처리 예정 (건너뜀: ${skippedCount}개)`);
 
 
     if (pendingUrls.length === 0) {
-        log('info', `✨ 처리할 대상이 없습니다.`);
+        log('info', `처리할 대상이 없습니다.`);
         return;
     }
 

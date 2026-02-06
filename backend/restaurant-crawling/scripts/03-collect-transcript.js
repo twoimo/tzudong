@@ -890,9 +890,9 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
         // 100개마다 3분 휴식 (rate limit 방지)
         if ((i + 1) % REST_INTERVAL === 0 && i < toCollect.length - 1) {
-            log('warning', `🛑 ${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`);
+            log('warning', `${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`);
             await new Promise(resolve => setTimeout(resolve, REST_DURATION));
-            log('success', `🚀 휴식 끝 - 수집 재개`);
+            log('success', `휴식 끝 - 수집 재개`);
         }
 
         // 영상별 딜레이 (마지막 제외)

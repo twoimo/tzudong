@@ -75,7 +75,7 @@ def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
             img = Image.open(f).convert("RGB")
             frames.append(img)
         except Exception as e:
-            print(f"⚠️ 프레임 로드 실패 {f}: {e}")
+            print(f"[WARN] 프레임 로드 실패 {f}: {e}")
     return frames
 
 
@@ -106,7 +106,7 @@ def get_duration_from_meta(
                     if data.get("recollect_id") == recollect_id:
                         return data.get("duration")
     except Exception as e:
-        print(f"⚠️ 메타 파일 읽기 실패 {meta_file}: {e}")
+        print(f"[WARN] 메타 파일 읽기 실패 {meta_file}: {e}")
 
     return None
 
@@ -119,8 +119,8 @@ def load_model(model_id: str, device: str = None):
     if device is None:
         device = get_device()
 
-    print(f"🚀 모델 로딩 중: {model_id}")
-    print(f"📱 디바이스: {device}")
+    print(f"모델 로딩 중: {model_id}")
+    print(f"디바이스: {device}")
 
     processor = LlavaNextVideoProcessor.from_pretrained(model_id)
 
@@ -147,7 +147,7 @@ def load_model(model_id: str, device: str = None):
             low_cpu_mem_usage=True,
         )
 
-    print(f"✅ 모델 로드 완료 ({device})")
+    print(f"[OK] 모델 로드 완료 ({device})")
     return model, processor
 
 
@@ -231,7 +231,7 @@ def process_video_frames(
     """
     video_frames_path = frames_dir / video_id
     if not video_frames_path.exists():
-        print(f"⚠️ 프레임 디렉토리 없음: {video_frames_path}")
+        print(f"[WARN] 프레임 디렉토리 없음: {video_frames_path}")
         return 0
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -290,7 +290,7 @@ def process_video_frames(
 
     processed_count = 0
 
-    print(f"🔄 작업 수집 완료: {len(tasks)}개 세그먼트 (병렬 처리 시작)", flush=True)
+    print(f"작업 수집 완료: {len(tasks)}개 세그먼트 (병렬 처리 시작)", flush=True)
 
     # 최대 1개 세그먼트만 미리 로딩 (메모리 절약을 위해 직렬 처리로 변경)
     # MPS OOM 방지를 위해 동시 실행 제한
@@ -308,18 +308,18 @@ def process_video_frames(
             try:
                 frames = future.result()
                 if not frames:
-                    print(f"⚠️ 프레임 없음: {task['folder']}")
+                    print(f"[WARN] 프레임 없음: {task['folder']}")
                     continue
 
                 frame_paths = get_frame_paths(task["folder"])
 
                 print(
-                    f"📸 처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frames)}장)"
+                    f"처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frames)}장)"
                 )
 
                 # GPU 추론 (메인 프로세스)
                 caption = generate_caption(model, processor, frames, prompt)
-                print(f"   💬 캡션: {caption[:100]}...")
+                print(f"   캡션: {caption[:100]}...")
 
                 # 저장
                 result = {
@@ -339,7 +339,7 @@ def process_video_frames(
                 processed_count += 1
 
             except Exception as e:
-                print(f"❌ 처리 실패 {task['folder']}: {e}")
+                print(f"[ERROR] 처리 실패 {task['folder']}: {e}")
 
     return processed_count
 
@@ -386,11 +386,11 @@ def main():
     meta_dir = data_dir / "meta"
 
     if not frames_dir.exists():
-        print(f"❌ Frames directory not found: {frames_dir}")
+        print(f"[ERROR] Frames directory not found: {frames_dir}")
         return
 
     if not meta_dir.exists():
-        print(f"⚠️ Meta directory not found: {meta_dir} (duration 조회 불가)")
+        print(f"[WARN] Meta directory not found: {meta_dir} (duration 조회 불가)")
 
     # 모델 로드
     model, processor = load_model(args.model, args.device)
@@ -399,7 +399,7 @@ def main():
     if args.video_id:
         video_ids = [args.video_id]
         if not (frames_dir / args.video_id).exists():
-            print(f"❌ Video directory not found: {frames_dir / args.video_id}")
+            print(f"[ERROR] Video directory not found: {frames_dir / args.video_id}")
             return
     else:
         video_ids = [
@@ -429,8 +429,8 @@ def main():
         total_processed += count
 
     print(f"\n{'='*60}")
-    print(f"✅ 완료: {total_processed}개 세그먼트 처리")
-    print(f"📁 저장 경로: {output_dir}")
+    print(f"[OK] 완료: {total_processed}개 세그먼트 처리")
+    print(f"저장 경로: {output_dir}")
 
 
 if __name__ == "__main__":

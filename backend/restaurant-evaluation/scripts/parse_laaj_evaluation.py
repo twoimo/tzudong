@@ -147,7 +147,7 @@ def main():
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(json.dumps(output_data, ensure_ascii=False) + "\n")
 
-    print(f"✅ LAAJ 결과 저장: {output_file}")
+    print(f"[OK] LAAJ 결과 저장: {output_file}")
     return 0
 
 

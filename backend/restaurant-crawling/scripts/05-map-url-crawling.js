@@ -707,22 +707,20 @@ ${placeNames.join('\n')}
     }
 
     // Gemini CLI 호출 (2차 - Fallback)
-    fs.writeFileSync(tempPromptPath, prompt);
-
+    // [Fix] Cross-platform: Node.js input 옵션으로 stdin 전달 (bash 의존 제거)
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const model = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
-            // --noblock 옵션 제거 (동기 실행 필요)
-            execSync(`gemini -p "$(cat "${tempPromptPath}")" -m ${model} --output-format json --yolo < /dev/null > "${tempResponsePath}"`, {
+            const cliResult = execSync(`gemini --model ${model} --output-format json --yolo`, {
+                input: prompt,
                 timeout: 120000,
                 encoding: 'utf-8',
-                shell: '/bin/bash'
             });
 
             // 응답 파싱
-            const responseText = fs.readFileSync(tempResponsePath, 'utf-8');
-            let parsed = parseGeminiResponse(responseText);
+            fs.writeFileSync(tempResponsePath, cliResult);
+            let parsed = parseGeminiResponse(cliResult);
             const validated = validateReviews(parsed, placeNames, VALID_CATEGORIES);
 
             log('success', `Gemini CLI 성공: 리뷰 ${validated.length}개 추출`);

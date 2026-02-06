@@ -45,11 +45,11 @@ else
     NC=''
 fi
 
-log_info() { echo -e "${BLUE}[$(date '+%H:%M:%S')] ℹ️  $1${NC}"; }
-log_success() { echo -e "${GREEN}[$(date '+%H:%M:%S')] ✅ $1${NC}"; }
-log_warning() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠️  $1${NC}"; }
-log_error() { echo -e "${RED}[$(date '+%H:%M:%S')] ❌ $1${NC}" >&2; }
-log_debug() { echo -e "${CYAN}[$(date '+%H:%M:%S')] 🔍 $1${NC}"; }
+log_info() { echo -e "${BLUE}[$(date '+%H:%M:%S')] [INFO] $1${NC}"; }
+log_success() { echo -e "${GREEN}[$(date '+%H:%M:%S')] [OK] $1${NC}"; }
+log_warning() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] [WARN] $1${NC}"; }
+log_error() { echo -e "${RED}[$(date '+%H:%M:%S')] [ERROR] $1${NC}" >&2; }
+log_debug() { echo -e "${CYAN}[$(date '+%H:%M:%S')] [DEBUG] $1${NC}"; }
 
 format_duration() {
     local seconds=$1
@@ -237,7 +237,7 @@ PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
 # ================================
 # Gemini Health Check (Pre-flight)
 # ================================
-log_info "🏥 Gemini Health Check (1+1=?) 수행 중..."
+log_info "Gemini Health Check (1+1=?) 수행 중..."
 HEALTH_CHECK_PROMPT="$TEMP_DIR/health_check_prompt.txt"
 HEALTH_CHECK_RESPONSE="$TEMP_DIR/health_check_response.json"
 echo "1+1=?" > "$HEALTH_CHECK_PROMPT"
@@ -464,7 +464,9 @@ $TRANSCRIPT
         else
             # Error logging
             log_error "Gemini CLI Error Output:"
-            cat "$TEMP_STDERR"
+            if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
+                cat "$TEMP_STDERR"
+            fi
             
             # Rate Limit 체크
             ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
@@ -541,7 +543,7 @@ $TRANSCRIPT
 done
 
 log_info "============================================================"
-log_info "🎉 LAAJ 평가 완료: $CHANNEL"
+log_info "LAAJ 평가 완료: $CHANNEL"
 log_info "성공: $SUCCESS / 실패: $FAILED / 스킵: $SKIPPED_EXISTS"
 log_info "Gemini 호출: $GEMINI_CALLS회 ($(format_duration $TOTAL_GEMINI_TIME))"
 log_info "============================================================"

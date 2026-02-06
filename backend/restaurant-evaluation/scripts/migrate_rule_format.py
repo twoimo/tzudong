@@ -14,7 +14,7 @@ def migrate_rule_results(data_path: Path):
     rule_dir = data_path / "evaluation" / "rule_results"
 
     if not rule_dir.exists():
-        print(f"❌ rule_results 폴더 없음: {rule_dir}")
+        print(f"[ERROR] rule_results 폴더 없음: {rule_dir}")
         return
 
     files = list(rule_dir.glob("*.jsonl"))
@@ -70,9 +70,9 @@ def migrate_rule_results(data_path: Path):
                 print(f"  {updated}개 업데이트...")
 
         except Exception as e:
-            print(f"⚠️ 오류: {f.name} - {e}")
+            print(f"[WARN] 오류: {f.name} - {e}")
 
-    print(f"\n✅ 마이그레이션 완료!")
+    print(f"\n[OK] 마이그레이션 완료!")
     print(f"   업데이트: {updated}개")
 
 
