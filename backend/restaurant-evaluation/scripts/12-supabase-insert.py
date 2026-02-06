@@ -88,8 +88,8 @@ def main():
     # 통계
     stats = {"total_records": 0, "inserted": 0, "skipped": 0, "errors": 0}
 
-    # 데이터 읽기 및 삽입
-    batch_size = 50
+    # [최적화] 배치 크기 증가 (Supabase API 오버헤드 감소)
+    batch_size = 100
     batch = []
 
     def process_and_upsert(batch_data):

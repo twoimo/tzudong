@@ -18,7 +18,7 @@ from typing import Optional, Dict, List, Any
 
 def read_jsonl(data_path: str) -> Optional[Dict[str, Any]]:
     """
-    JSONL 파일에서 가장 마지막(최신) 라인 읽기
+    JSONL 파일에서 가장 마지막(최신) 라인 읽기 (seek 기반, O(1) 메모리)
 
     Args:
         data_path: JSONL 파일 경로
@@ -27,12 +27,29 @@ def read_jsonl(data_path: str) -> Optional[Dict[str, Any]]:
         파싱된 JSON 딕셔너리 또는 None (실패 시)
     """
     try:
-        with open(data_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if lines:
-                return json.loads(lines[-1])
+        file_size = os.path.getsize(data_path)
+        if file_size == 0:
+            return None
+        with open(data_path, "rb") as f:
+            pos = file_size - 1
+            while pos > 0:
+                f.seek(pos)
+                char = f.read(1)
+                if char != b"\n" and char != b"\r":
+                    break
+                pos -= 1
+            while pos > 0:
+                pos -= 1
+                f.seek(pos)
+                if f.read(1) == b"\n":
+                    break
+            if pos > 0:
+                pos += 1
+            f.seek(pos)
+            last_line = f.readline().decode("utf-8").strip()
+            if last_line:
+                return json.loads(last_line)
     except Exception:
-        # 파일 읽기 실패 시 None 반환 (손상된 파일일 가능성)
         return None
     return None
 
