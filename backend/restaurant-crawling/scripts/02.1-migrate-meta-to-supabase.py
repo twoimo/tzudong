@@ -79,43 +79,43 @@ def migrate_meta(supabase: Client, channel: str, dry_run: bool = False):
     total_upserted = 0
     
     for idx, jsonl_file in enumerate(jsonl_files, 1):
-        if idx % 50 == 0:
+        if idx % 100 == 0:
             print(f"  처리 중: {idx}/{total}")
         
         video_id = jsonl_file.stem
         
-        with open(jsonl_file, "r", encoding="utf-8") as f:
-            lines = [line.strip() for line in f if line.strip()]
-        
-        if not lines:
-            continue
-        
-        # meta_history 수집
+        # [최적화] 스트리밍 읽기 - 전체 라인을 리스트에 담지 않고 순차 처리
         meta_history = []
         latest_record = None
         
-        for line in lines:
-            try:
-                record = json.loads(line)
-                latest_record = record
-                
-                stats = record.get("stats", {})
-                collected_at = record.get("collected_at")
-                
-                if collected_at and stats.get("view_count") is not None:
-                    history_entry = {
-                        "collected_at": collected_at,
-                        "view_count": stats.get("view_count"),
-                        "like_count": stats.get("like_count"),
-                        "comment_count": stats.get("comment_count"),
-                        "recollect_id": record.get("recollect_id", 0),
-                        "title": record.get("title"),
-                        "duration": record.get("duration"),
-                        "thumbnail_url": record.get("thumbnail_url")
-                    }
-                    meta_history.append(history_entry)
-            except json.JSONDecodeError:
-                continue
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        record = json.loads(stripped)
+                        latest_record = record
+                        
+                        rec_stats = record.get("stats", {})
+                        collected_at = record.get("collected_at")
+                        
+                        if collected_at and rec_stats.get("view_count") is not None:
+                            meta_history.append({
+                                "collected_at": collected_at,
+                                "view_count": rec_stats.get("view_count"),
+                                "like_count": rec_stats.get("like_count"),
+                                "comment_count": rec_stats.get("comment_count"),
+                                "recollect_id": record.get("recollect_id", 0),
+                                "title": record.get("title"),
+                                "duration": record.get("duration"),
+                                "thumbnail_url": record.get("thumbnail_url")
+                            })
+                    except json.JSONDecodeError:
+                        continue
+        except IOError:
+            continue
         
         if not latest_record:
             continue

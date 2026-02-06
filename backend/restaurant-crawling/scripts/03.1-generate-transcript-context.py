@@ -38,26 +38,47 @@ from utils.chunk_utils import create_chunks_with_overlap
 
 
 def read_jsonl(data_path: str) -> dict | None:
-    """JSONL 파일에서 가장 마지막(최신) 라인 읽기"""
+    """JSONL 파일에서 가장 마지막(최신) 라인 읽기 (seek 기반, O(1) 메모리)"""
     try:
-        with open(data_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if lines:
-                return json.loads(lines[-1])
+        file_size = os.path.getsize(data_path)
+        if file_size == 0:
+            return None
+        with open(data_path, "rb") as f:
+            pos = file_size - 1
+            while pos > 0:
+                f.seek(pos)
+                char = f.read(1)
+                if char != b"\n" and char != b"\r":
+                    break
+                pos -= 1
+            while pos > 0:
+                pos -= 1
+                f.seek(pos)
+                if f.read(1) == b"\n":
+                    break
+            if pos > 0:
+                pos += 1
+            f.seek(pos)
+            last_line = f.readline().decode("utf-8").strip()
+            if last_line:
+                return json.loads(last_line)
     except Exception as e:
         print(f"파일 읽기 오류 {data_path}: {e}")
     return None
 
 
 def get_matching_metadata(meta_path: str, recollect_id: int) -> dict | None:
-    """메타데이터 파일에서 recollect_id가 일치하는 것 중 가장 마지막(최신) 데이터를 반환"""
+    """메타데이터 파일에서 recollect_id가 일치하는 것 중 가장 마지막(최신) 데이터를 반환
+    (역순 탐색으로 최신 매칭을 먼저 찾아 조기 종료)"""
     try:
+        from collections import deque
         with open(meta_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            # recollect_id가 일치하는 라인들 필터링 (뒤에서부터)
+            # deque로 전체 라인 로드 (역순 탐색 필요하므로)
+            lines = deque(f)
             for line in reversed(lines):
-                if line.strip():
-                    meta = json.loads(line)
+                stripped = line.strip()
+                if stripped:
+                    meta = json.loads(stripped)
                     if meta.get("recollect_id") == recollect_id:
                         return meta
     except Exception as e:
@@ -66,18 +87,33 @@ def get_matching_metadata(meta_path: str, recollect_id: int) -> dict | None:
 
 
 def get_latest_doc_recollect_id(doc_path: str) -> int | None:
-    """기존 document 파일에서 최신 recollect_id 반환"""
+    """기존 document 파일에서 최신 recollect_id 반환 (seek 기반)"""
     if not os.path.exists(doc_path):
         return None
     try:
-        with open(doc_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if lines:
-                last_line = lines[-1].strip()
-                if last_line:
-                    last_docs = json.loads(last_line)
-                    if last_docs and len(last_docs) > 0:
-                        return last_docs[0].get("metadata", {}).get("recollect_id")
+        file_size = os.path.getsize(doc_path)
+        if file_size == 0:
+            return None
+        with open(doc_path, "rb") as f:
+            pos = file_size - 1
+            while pos > 0:
+                f.seek(pos)
+                if f.read(1) not in (b"\n", b"\r"):
+                    break
+                pos -= 1
+            while pos > 0:
+                pos -= 1
+                f.seek(pos)
+                if f.read(1) == b"\n":
+                    break
+            if pos > 0:
+                pos += 1
+            f.seek(pos)
+            last_line = f.readline().decode("utf-8").strip()
+            if last_line:
+                last_docs = json.loads(last_line)
+                if last_docs and len(last_docs) > 0:
+                    return last_docs[0].get("metadata", {}).get("recollect_id")
     except Exception as e:
         print(f"문서 파일 읽기 오류 {doc_path}: {e}")
     return None
