@@ -35,30 +35,11 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
     if not crawling_file.exists():
         return None
 
-    # [최적화] 마지막 줄만 효율적으로 읽기
-    data = None
-    try:
-        file_size = crawling_file.stat().st_size
-        if file_size == 0:
-            return None
-        with open(crawling_file, "rb") as f:
-            pos = file_size - 1
-            while pos > 0:
-                f.seek(pos)
-                if f.read(1) not in (b"\n", b"\r"):
-                    break
-                pos -= 1
-            while pos > 0:
-                pos -= 1
-                f.seek(pos)
-                if f.read(1) == b"\n":
-                    break
-            if pos > 0:
-                pos += 1
-            f.seek(pos)
-            data = json.loads(f.readline().decode("utf-8").strip())
-    except Exception:
-        return None
+    # 최신 줄 로드
+    with open(crawling_file, "r", encoding="utf-8") as f:
+        data = None
+        for line in f:
+            data = json.loads(line.strip())
 
     if not data:
         return None

@@ -26,44 +26,6 @@ const execPromise = util.promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// =============================================================================
-// 크로스플랫폼 실행 경로 자동 감지 (Windows/macOS/Linux)
-// =============================================================================
-function findPythonPath() {
-    const candidates = [
-        process.env.PYTHON_PATH,
-        // Windows Anaconda
-        process.platform === 'win32' ? path.join(process.env.USERPROFILE || '', 'anaconda3', 'python.exe') : null,
-        process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe') : null,
-        process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python311', 'python.exe') : null,
-        // macOS/Linux
-        '/usr/local/bin/python3',
-        '/usr/bin/python3',
-    ].filter(Boolean);
-
-    for (const p of candidates) {
-        try { if (fs.existsSync(p)) return p; } catch { }
-    }
-    return process.platform === 'win32' ? 'python' : 'python3';
-}
-
-function findNodePath() {
-    const candidates = [
-        process.env.NODE_PATH_OVERRIDE,
-        process.execPath, // 현재 실행 중인 Node.js
-        // Windows
-        process.platform === 'win32' ? 'C:\\Program Files\\nodejs\\node.exe' : null,
-        // macOS/Linux (Homebrew, nvm 등)
-        '/usr/local/bin/node',
-        '/usr/bin/node',
-    ].filter(Boolean);
-
-    for (const p of candidates) {
-        try { if (fs.existsSync(p)) return p; } catch { }
-    }
-    return null; // fallback: PATH에서 찾기
-}
-
 // .env 로드
 const envPath = path.resolve(__dirname, '../.env');
 if (fs.existsSync(envPath)) {
@@ -142,33 +104,14 @@ function loadVideoIdsFromTxt(dataPath) {
     return videoIds;
 }
 
-// [최적화] JSONL 파일의 마지막 줄을 효율적으로 읽기 (역방향 탐색)
+// JSONL 파일의 마지막 줄 (최신 데이터) 로드
 function getLatestData(filePath) {
     if (!fs.existsSync(filePath)) return null;
     try {
-        const stat = fs.statSync(filePath);
-        if (stat.size === 0) return null;
-
-        // 작은 파일은 그대로 읽기 (4KB 이하)
-        if (stat.size <= 4096) {
-            const lines = fs.readFileSync(filePath, 'utf-8').trim().split('\n');
-            if (lines.length > 0 && lines[lines.length - 1]) {
-                return JSON.parse(lines[lines.length - 1]);
-            }
-            return null;
+        const lines = fs.readFileSync(filePath, 'utf-8').trim().split('\n');
+        if (lines.length > 0 && lines[lines.length - 1]) {
+            return JSON.parse(lines[lines.length - 1]);
         }
-
-        // 큰 파일은 끝에서부터 읽기 (O(1) 메모리)
-        const fd = fs.openSync(filePath, 'r');
-        const readSize = Math.min(8192, stat.size); // 마지막 8KB만 읽기
-        const buffer = Buffer.alloc(readSize);
-        fs.readSync(fd, buffer, 0, readSize, stat.size - readSize);
-        fs.closeSync(fd);
-
-        const content = buffer.toString('utf-8');
-        const lines = content.trim().split('\n');
-        const lastLine = lines[lines.length - 1];
-        if (lastLine) return JSON.parse(lastLine);
     } catch { }
     return null;
 }
@@ -319,10 +262,17 @@ async function tryYtDlpWithOptions(videoId, url, tempPrefix, options) {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
     ];
 
-    // [최적화] 크로스플랫폼 Python/Node.js 경로 자동 감지
-    const pythonPath = findPythonPath();
-    const nodePath = findNodePath();
-    const runtimesArg = nodePath
+    // [수정] Python 모듈 사용 (봇 탐지 우회 - 04-extract-frames-with-heatmap.js 패턴 적용)
+    // 1. Python 모듈 사용 (최신 버전 보장)
+    // 2. Node.js 경로 명시 (n-challenge 해결 필수)
+    // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
+    let pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
+    if (!fs.existsSync(pythonPath)) {
+        pythonPath = "python3";
+    }
+
+    const nodePath = "C:\\Program Files\\nodejs\\node.exe";
+    const runtimesArg = process.platform === 'win32' && fs.existsSync(nodePath)
         ? `--js-runtimes "node:${nodePath}"`
         : '--js-runtimes "node:node"';
 
@@ -540,17 +490,6 @@ async function getTranscriptViaPuppeteer(videoId) {
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
                     '--disable-extensions',
-                    '--disable-background-networking',
-                    '--disable-background-timer-throttling',
-                    '--disable-default-apps',
-                    '--disable-hang-monitor',
-                    '--disable-popup-blocking',
-                    '--disable-prompt-on-repost',
-                    '--disable-sync',
-                    '--disable-translate',
-                    '--metrics-recording-only',
-                    '--no-first-run',
-                    '--js-flags=--max-old-space-size=256',
                 ]
             });
         }
