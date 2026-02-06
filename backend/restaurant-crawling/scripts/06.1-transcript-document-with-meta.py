@@ -69,38 +69,51 @@ def get_restaurants_by_video_id(supabase: Client) -> dict[str, list[str]]:
     """
     Supabase에서 approved 음식점을 video_id별로 그룹화하여 반환
     approved_name만 사용 (origin_name 제외)
+    [최적화] 페이지네이션으로 대용량 데이터 안전 처리 + set으로 중복 방지 O(1)
 
     Returns:
         {video_id: ["음식점명1", "음식점명2", ...]}
     """
     print("📥 Supabase에서 음식점 조회 중...")
 
-    # approved 상태인 음식점만 조회
-    result = (
-        supabase.table("restaurants")
-        .select("youtube_link, approved_name")
-        .eq("status", "approved")
-        .not_.is_("youtube_link", "null")
-        .not_.is_("approved_name", "null")
-        .execute()
-    )
+    # [최적화] 페이지네이션으로 1000건 제한 우회
+    all_rows = []
+    page_size = 1000
+    offset = 0
 
-    rows = result.data
-    print(f"  총 {len(rows)}개 approved 음식점 조회됨")
+    while True:
+        result = (
+            supabase.table("restaurants")
+            .select("youtube_link, approved_name")
+            .eq("status", "approved")
+            .not_.is_("youtube_link", "null")
+            .not_.is_("approved_name", "null")
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        rows = result.data
+        if not rows:
+            break
+        all_rows.extend(rows)
+        if len(rows) < page_size:
+            break
+        offset += page_size
 
-    # video_id별로 그룹화 (approved_name만)
-    video_restaurants = defaultdict(list)
+    print(f"  총 {len(all_rows)}개 approved 음식점 조회됨")
 
-    for row in rows:
+    # video_id별로 그룹화 (set으로 O(1) 중복 방지)
+    video_restaurants_set: dict[str, set[str]] = defaultdict(set)
+
+    for row in all_rows:
         video_id = extract_video_id_from_youtube_link(row["youtube_link"])
         approved_name = row.get("approved_name")
         if video_id and approved_name:
-            # 중복 방지
-            if approved_name not in video_restaurants[video_id]:
-                video_restaurants[video_id].append(approved_name)
+            video_restaurants_set[video_id].add(approved_name)
 
+    # set -> list 변환
+    video_restaurants = {vid: list(names) for vid, names in video_restaurants_set.items()}
     print(f"  {len(video_restaurants)}개 video_id에 음식점 매핑됨")
-    return dict(video_restaurants)
+    return video_restaurants
 
 
 # =============================================================================

@@ -56,6 +56,30 @@ KST = timezone(timedelta(hours=9))
 # 로그 디렉토리
 LOG_DIR = Path(__file__).parent.parent.parent / "log" / "restaurant-crawling"
 
+# =============================================================================
+# [성능 최적화] HTTP 세션 재사용 (연결 풀링)
+# - 썸네일 다운로드 시 TCP 연결을 재사용하여 핸드셰이크 오버헤드 제거
+# - 자동 재시도 및 Keep-Alive 지원
+# =============================================================================
+_http_session: Optional[requests.Session] = None
+
+
+def get_http_session() -> requests.Session:
+    """싱글턴 HTTP 세션 반환 (연결 풀링 + 자동 재시도)"""
+    global _http_session
+    if _http_session is None:
+        _http_session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=10,
+            pool_maxsize=20,
+            max_retries=requests.adapters.Retry(
+                total=2, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504]
+            ),
+        )
+        _http_session.mount("http://", adapter)
+        _http_session.mount("https://", adapter)
+    return _http_session
+
 
 def extract_video_id(url: str) -> Optional[str]:
     patterns = [
@@ -85,18 +109,44 @@ def parse_duration(duration: str) -> int:
     return total
 
 
-def get_latest_meta(channel_data_path: Path, video_id: str) -> Optional[Dict]:
-    meta_file = channel_data_path / "meta" / f"{video_id}.jsonl"
-    if not meta_file.exists():
+def read_last_jsonl_line(filepath: Path) -> Optional[Dict]:
+    """JSONL 파일의 마지막 줄을 효율적으로 읽기 (seek 기반, O(1) 메모리)"""
+    if not filepath.exists():
         return None
     try:
-        with open(meta_file, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if lines:
-                return json.loads(lines[-1].strip())
+        file_size = filepath.stat().st_size
+        if file_size == 0:
+            return None
+        with open(filepath, "rb") as f:
+            # 파일 끝에서 역방향으로 탐색하여 마지막 줄 찾기
+            pos = file_size - 1
+            # 끝의 줄바꿈 문자 건너뛰기
+            while pos > 0:
+                f.seek(pos)
+                char = f.read(1)
+                if char != b"\n" and char != b"\r":
+                    break
+                pos -= 1
+            # 역방향으로 이전 줄바꿈 찾기
+            while pos > 0:
+                pos -= 1
+                f.seek(pos)
+                if f.read(1) == b"\n":
+                    break
+            if pos > 0:
+                pos += 1  # 줄바꿈 다음부터 읽기
+            f.seek(pos)
+            last_line = f.readline().decode("utf-8").strip()
+            if last_line:
+                return json.loads(last_line)
     except Exception:
         pass
     return None
+
+
+def get_latest_meta(channel_data_path: Path, video_id: str) -> Optional[Dict]:
+    meta_file = channel_data_path / "meta" / f"{video_id}.jsonl"
+    return read_last_jsonl_line(meta_file)
 
 
 def load_checked_cache(channel_path: Path) -> Dict[str, str]:
@@ -122,9 +172,9 @@ def save_checked_cache(channel_path: Path, cache: Dict[str, str]):
 
 
 def get_image_hash(url: str) -> Optional[str]:
-    """썸네일 이미지의 MD5 해시 계산"""
+    """썸네일 이미지의 MD5 해시 계산 (세션 재사용으로 연결 풀링)"""
     try:
-        response = requests.get(url, timeout=5)
+        response = get_http_session().get(url, timeout=5)
         if response.status_code == 200:
             return hashlib.md5(response.content).hexdigest()
     except Exception:
@@ -244,13 +294,17 @@ def check_schedule_condition(frequency: str, video_id: str) -> bool:
 def get_meta_history(
     channel_path: Path, video_id: str, max_records: int = 7
 ) -> List[Dict]:
-    """JSONL 파일에서 최근 N개의 메타데이터 히스토리 로드"""
+    """JSONL 파일에서 최근 N개의 메타데이터 히스토리 로드 (테일 기반)"""
     meta_file = channel_path / "meta" / f"{video_id}.jsonl"
     if not meta_file.exists():
         return []
     try:
-        lines = meta_file.read_text().strip().split("\n")
-        return [json.loads(line) for line in lines[-max_records:] if line]
+        # deque로 마지막 N줄만 메모리에 유지 (대용량 파일에 효율적)
+        from collections import deque
+
+        with open(meta_file, "r", encoding="utf-8") as f:
+            last_lines = deque(f, maxlen=max_records)
+        return [json.loads(line.strip()) for line in last_lines if line.strip()]
     except Exception:
         return []
 
@@ -419,7 +473,7 @@ def save_thumbnail_file(
     thumb_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        resp = requests.get(url, timeout=10)
+        resp = get_http_session().get(url, timeout=10)
         if resp.status_code == 200:
             ext = url.split(".")[-1]
             if len(ext) > 4 or "?" in ext:
