@@ -63,6 +63,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [visibleBookmarkCount, setVisibleBookmarkCount] = useState(20); // [New] 북마크 무한 스크롤 상태
 
   // 공지사항 바텀시트 상태
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
@@ -558,7 +560,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 북마크 - 드롭다운 */}
         {isLoggedIn && shouldShowAuthUI && (
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={(open) => {
+            if (!open) {
+              // 닫힐 때 초기화 (300ms 지연) - 다시 열 때 스크롤 상단 등 UX 고려
+              setTimeout(() => setVisibleBookmarkCount(20), 300);
+            }
+          }}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground relative transition-colors">
                 <Bookmark className="h-5 w-5" />
@@ -587,38 +594,66 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   </div>
                 ) : (
                   <DropdownMenuGroup>
-                    {bookmarksData.slice(0, 5).map((bookmark) => (
+                    {bookmarksData.slice(0, visibleBookmarkCount).map((bookmark) => (
                       <DropdownMenuItem
                         key={bookmark.id}
-                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent"
+                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full"
                         onClick={() => {
-                          // 이미 홈페이지면 커스텀 이벤트 발생, 아니면 URL로 이동
+                          const restaurant = bookmark.restaurant;
+                          const isOverseas = restaurant.lat && restaurant.lng && (
+                            restaurant.lat < 33 || restaurant.lat > 39 ||
+                            restaurant.lng < 124 || restaurant.lng > 132
+                          );
+
                           if (pathname === '/') {
-                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', { detail: bookmark.restaurant_id }));
+                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', {
+                              detail: {
+                                id: bookmark.restaurant_id,
+                                mode: isOverseas ? 'overseas' : 'domestic'
+                              }
+                            }));
                           } else {
-                            router.push(`/?r=${bookmark.restaurant_id}`);
+                            const modeParam = isOverseas ? '&mode=overseas' : '';
+                            router.push(`/?r=${bookmark.restaurant_id}${modeParam}&z=13`);
                           }
                         }}
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {bookmark.restaurant.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                          <div className="flex items-center justify-between gap-2 w-full">
+                            <span className="text-sm font-medium text-foreground truncate block">
+                              {bookmark.restaurant.name}
+                            </span>
+                            {bookmark.restaurant.category?.[0] && (
+                              <Badge variant="secondary" className="text-[10px] shrink-0 h-5 px-1.5 font-normal">
+                                {bookmark.restaurant.category[0]}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground truncate block">
                             {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
-                          </p>
+                          </span>
                         </div>
-                        {bookmark.restaurant.category?.[0] && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0">
-                            {bookmark.restaurant.category[0]}
-                          </Badge>
-                        )}
                       </DropdownMenuItem>
                     ))}
-                    {bookmarksData.length > 5 && (
-                      <div className="p-2 text-center text-xs text-muted-foreground">
-                        +{bookmarksData.length - 5}개 더
-                      </div>
+                    {/* Infinite Scroll Sentinel */}
+                    {visibleBookmarkCount < bookmarksData.length && (
+                      <div
+                        className="h-4 w-full"
+                        ref={(el) => {
+                          if (el) {
+                            const observer = new IntersectionObserver(
+                              (entries) => {
+                                if (entries[0].isIntersecting) {
+                                  setVisibleBookmarkCount((prev) => Math.min(prev + 20, bookmarksData.length));
+                                }
+                              },
+                              { threshold: 0.5 }
+                            );
+                            observer.observe(el);
+                            return () => observer.disconnect();
+                          }
+                        }}
+                      />
                     )}
                   </DropdownMenuGroup>
                 )}

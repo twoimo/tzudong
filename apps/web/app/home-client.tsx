@@ -77,6 +77,7 @@ export default function HomeClient() {
     const { isDesktop } = useDeviceType();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
+    const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
     const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
 
     // 통합 패널 상태 관리
@@ -160,8 +161,29 @@ export default function HomeClient() {
                     const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
                     if (mergedRestaurant) {
+                        const zoomParam = searchParams.get('z');
+                        const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
+
+                        // [New] URL 파라미터 또는 좌표 기반 모드 설정
+                        const modeParam = searchParams.get('mode');
+                        let targetMode: 'domestic' | 'overseas' | null = modeParam === 'overseas' ? 'overseas' : (modeParam === 'domestic' ? 'domestic' : null);
+
+                        if (!targetMode && mergedRestaurant.lat && mergedRestaurant.lng) {
+                            // 좌표 기반 자동 감지
+                            const { lat, lng } = mergedRestaurant;
+                            if (lat < 33 || lat > 39 || lng < 124 || lng > 132) {
+                                targetMode = 'overseas';
+                            } else {
+                                targetMode = 'domestic';
+                            }
+                        }
+
+                        if (targetMode) {
+                            setMapMode(targetMode);
+                        }
+
                         setTimeout(() => {
-                            openDetailPanel(mergedRestaurant);
+                            openDetailPanel(mergedRestaurant, !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined);
                             // URL 정리
                             router.replace('/', { scroll: false });
                         }, 300);
@@ -310,7 +332,7 @@ export default function HomeClient() {
 
     // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
     // [OPTIMIZATION] useCallback으로 메모이제이션
-    const openDetailPanel = useCallback((restaurant: Restaurant) => {
+    const openDetailPanel = useCallback((restaurant: Restaurant, focusZoom?: number) => {
         // 먼저 다른 패널들 닫기
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
@@ -321,6 +343,13 @@ export default function HomeClient() {
         // [Fix] 마커 클릭 시 검색 상태 초기화 (스티키 현상 방지)
         // searchedRestaurant가 남아있으면 네이버 지도의 효과 등으로 인해 다시 검색된 맛집으로 되돌아갈 수 있음
         state.setSearchedRestaurant(null);
+
+        // [Fix] 줌 레벨 설정 (북마크 등에서 요청 시)
+        if (focusZoom) {
+            setMapFocusZoom(focusZoom);
+        } else {
+            setMapFocusZoom(null); // 일반 선택 시에는 줌 레벨 강제하지 않음
+        }
 
         state.setIsPanelOpen(true);
 
@@ -400,8 +429,15 @@ export default function HomeClient() {
 
         // 북마크에서 맛집 선택 시 처리 (홈페이지에서 깜빡임 방지)
         const handleSelectBookmarkRestaurant = async (e: Event) => {
-            const customEvent = e as CustomEvent<string>;
-            const restaurantId = customEvent.detail;
+            const customEvent = e as CustomEvent<{ id: string, mode: 'domestic' | 'overseas' } | string>;
+            // 하위 호환성 지원 (문자열인 경우)
+            const detail = customEvent.detail;
+            const restaurantId = typeof detail === 'string' ? detail : detail.id;
+            const mode = typeof detail === 'string' ? null : detail.mode;
+
+            if (mode) {
+                setMapMode(mode);
+            }
 
             try {
                 const { supabase } = await import('@/integrations/supabase/client');
@@ -415,6 +451,17 @@ export default function HomeClient() {
 
                 if (error || !targetRestaurant) return;
 
+                const tr = targetRestaurant as any;
+                // 모드 자동 감지 (이벤트에 모드가 없었을 경우)
+                if (!mode) {
+                    const isOverseasCoord = tr.lat && (tr.lat < 33 || tr.lat > 39 || tr.lng < 124 || tr.lng > 132);
+                    if (isOverseasCoord) {
+                        setMapMode('overseas');
+                    } else {
+                        setMapMode('domestic');
+                    }
+                }
+
                 const { data: sameNameRestaurants } = await supabase
                     .from('restaurants')
                     .select('*')
@@ -425,7 +472,7 @@ export default function HomeClient() {
                 const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
                 if (mergedRestaurant) {
-                    openDetailPanel(mergedRestaurant);
+                    openDetailPanel(mergedRestaurant, 13); // [Fix] 북마크 선택 시 줌 레벨 13 강제
                 }
             } catch (err) {
                 console.error('맛집 조회 실패:', err);
@@ -502,6 +549,7 @@ export default function HomeClient() {
             <HomeMapContainer
                 key={mapMountKey}
                 mapMode={mapMode}
+                mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                 filters={state.filters}
                 selectedRegion={state.selectedRegion}
                 selectedCountry={state.selectedCountry}

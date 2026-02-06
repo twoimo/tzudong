@@ -79,6 +79,7 @@ const isPointInSeoul = (lat: number, lng: number) => {
 };
 
 interface NaverMapViewProps {
+    mapFocusZoom?: number | null; // [New] 강제 줌 레벨
     filters: FilterState;
     selectedRegion: Region | null;
     searchedRestaurant: Restaurant | null;
@@ -390,6 +391,7 @@ const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: any): bo
 };
 
 const NaverMapView = memo(({
+    mapFocusZoom,
     filters,
     selectedRegion,
     searchedRestaurant,
@@ -801,20 +803,28 @@ const NaverMapView = memo(({
 
         const currentMapZoom = map.getZoom();
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLat = parseFloat(urlParams.get('lat') || '');
+        const urlLng = parseFloat(urlParams.get('lng') || '');
+        const urlZoom = parseFloat(urlParams.get('z') || '');
+
         if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
             targetLat = selectedRestaurant.lat;
             targetLng = selectedRestaurant.lng;
             isRestaurantSelected = true;
 
-            // [Fix] 마커 클릭 시 사용자 줌 레벨 유지 (기존 강제 확대 제거)
-            targetZoom = currentMapZoom;
-        } else {
-            // [Fix] URL 파라미터가 있으면 그대로 유지 (공유 URL 시나리오)
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlLat = parseFloat(urlParams.get('lat') || '');
-            const urlLng = parseFloat(urlParams.get('lng') || '');
-            const urlZoom = parseFloat(urlParams.get('z') || '');
+            if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
+                // URL에 좌표가 있으면 현재 상태 유지 (이동하지 않음)
+                return;
+            }
 
+            // [New] 줌 레벨 강제 (북마크 등에서 넘어온 경우)
+            if (mapFocusZoom) {
+                targetZoom = mapFocusZoom;
+            } else {
+                targetZoom = currentMapZoom; // 기본적으로는 현재 줌 유지
+            }
+        } else {
             if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
                 // URL에 좌표가 있으면 현재 상태 유지 (이동하지 않음)
                 return;
