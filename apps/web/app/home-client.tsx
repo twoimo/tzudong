@@ -606,11 +606,13 @@ export default function HomeClient() {
                 />
             )}
 
-            {/* 맛집 제보 모달 */}
-            <RestaurantSubmissionModal
-                isOpen={isSubmissionModalOpen}
-                onClose={() => setIsSubmissionModalOpen(false)}
-            />
+            {/* [PERF] 맛집 제보 모달 - 조건부 렌더링으로 TBT 개선 */}
+            {isSubmissionModalOpen && (
+                <RestaurantSubmissionModal
+                    isOpen={isSubmissionModalOpen}
+                    onClose={() => setIsSubmissionModalOpen(false)}
+                />
+            )}
 
             {/* 리뷰 작성 모달 */}
             {state.isReviewModalOpen && (

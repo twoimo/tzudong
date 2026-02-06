@@ -5,13 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
-
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
-import AuthModal from '@/components/auth/AuthModal';
-import { ProfileModal } from '@/components/profile/ProfileModal';
-import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
-import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
-import CombinedPopup from '@/components/layout/CombinedPopup';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLayout } from '@/contexts/LayoutContext';
 import { useDeviceType } from '@/hooks/useDeviceType';
@@ -19,12 +13,29 @@ import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
 
-// [OPTIMIZATION] Lazy load components
+// [PERF] 모달과 비핵심 컴포넌트를 동적 임포트로 코드 스플리팅
+// 이 컴포넌트들은 사용자 인터랙션 후에만 필요하므로 초기 번들에서 제외
+const AuthModal = dynamic(() => import('@/components/auth/AuthModal'), { ssr: false });
+const ProfileModal = dynamic(
+    () => import('@/components/profile/ProfileModal').then(mod => ({ default: mod.ProfileModal })),
+    { ssr: false }
+);
+const NicknameSetupModal = dynamic(
+    () => import('@/components/profile/NicknameSetupModal').then(mod => ({ default: mod.NicknameSetupModal })),
+    { ssr: false }
+);
+const AdminRestaurantModal = dynamic(
+    () => import('@/components/admin/AdminRestaurantModal').then(mod => ({ default: mod.AdminRestaurantModal })),
+    { ssr: false }
+);
+const CombinedPopup = dynamic(() => import('@/components/layout/CombinedPopup'), { ssr: false });
+
+// [PERF] Lazy load components
 const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPrefetcher'), {
     ssr: false,
 });
 
-// [NEW] 오버레이 레이아웃 지연 로딩
+// [PERF] 오버레이 레이아웃 지연 로딩
 const OverlayLayout = dynamic(() => import('@/components/layout/OverlayLayout'), {
     ssr: false,
 });
@@ -159,27 +170,36 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 <MobileBottomNav />
             </div>
 
-            <AuthModal
-                isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
-            />
+            {/* [PERF] 조건부 렌더링 - 모달이 닫혀있을 때 DOM 마운트 방지 (TBT 개선) */}
+            {isAuthModalOpen && (
+                <AuthModal
+                    isOpen={isAuthModalOpen}
+                    onClose={() => setIsAuthModalOpen(false)}
+                />
+            )}
 
-            <ProfileModal
-                isOpen={isProfileModalOpen}
-                onClose={() => setIsProfileModalOpen(false)}
-            />
+            {isProfileModalOpen && (
+                <ProfileModal
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                />
+            )}
 
-            <AdminRestaurantModal
-                isOpen={isAdminModalOpen}
-                onClose={() => setIsAdminModalOpen(false)}
-                restaurant={selectedRestaurant}
-                onSuccess={handleAdminSuccess}
-            />
+            {isAdminModalOpen && (
+                <AdminRestaurantModal
+                    isOpen={isAdminModalOpen}
+                    onClose={() => setIsAdminModalOpen(false)}
+                    restaurant={selectedRestaurant}
+                    onSuccess={handleAdminSuccess}
+                />
+            )}
 
-            <NicknameSetupModal
-                isOpen={needsNicknameSetup}
-                onComplete={completeNicknameSetup}
-            />
+            {needsNicknameSetup && (
+                <NicknameSetupModal
+                    isOpen={needsNicknameSetup}
+                    onComplete={completeNicknameSetup}
+                />
+            )}
 
             <CombinedPopup />
         </div>
