@@ -5,17 +5,6 @@ import { QueryProvider } from "./providers";
 import { AppProviders } from "./app-providers";
 import { MainLayout } from "@/components/layout/MainLayout";
 import "./globals.css";
-import Script from 'next/script';
-
-// [최적화] 네이버 지도 리소스 연결 최적화
-const PreconnectLinks = () => (
-    <>
-        <link rel="preconnect" href="https://openapi.map.naver.com" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://oapi.map.naver.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://openapi.map.naver.com" />
-        <link rel="dns-prefetch" href="https://oapi.map.naver.com" />
-    </>
-);
 
 // [최적화] next/font로 Google Fonts 로드 - CLS 제거, 성능 개선
 // 불필요한 폰트 제거로 초기 로딩 속도 개선 (약 200KB+ 감소)
@@ -24,6 +13,7 @@ const notoSerifKR = Noto_Serif_KR({
     display: 'swap',
     subsets: ['latin'],
     variable: '--font-noto-serif',
+    preload: true, // [PERF] 폰트 프리로드 명시
 });
 
 // 카카오톡 OG 이미지 표시를 위해 절대 URL 필요
@@ -83,16 +73,19 @@ export default function RootLayout({
             className={notoSerifKR.variable}
         >
             <head>
-                {/* Network Performance: Preconnect to external domains */}
-                <link rel="preconnect" href="https://ssl.pstatic.net" crossOrigin="anonymous" />
+                {/* [PERF] 네트워크 최적화: 핵심 외부 도메인 Preconnect (TCP+TLS 핸드쉐이크 선행) */}
+                {/* Supabase API - 데이터 페칭 핵심 */}
+                <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} crossOrigin="anonymous" />
+                {/* 네이버 지도 - 메인 기능 */}
                 <link rel="preconnect" href="https://oapi.map.naver.com" crossOrigin="anonymous" />
                 <link rel="preconnect" href="https://openapi.map.naver.com" crossOrigin="anonymous" />
-                <link rel="dns-prefetch" href="https://nrbe.pstatic.net" />
-                <link rel="dns-prefetch" href="https://kr-col-ext.nelo.navercorp.com" />
-                <link rel="dns-prefetch" href="https://openapi.map.naver.com" />
-                {/* [OPTIMIZATION] YouTube 썸네일 도메인 - LCP 개선 */}
+                <link rel="preconnect" href="https://ssl.pstatic.net" crossOrigin="anonymous" />
+                {/* YouTube 썸네일 - LCP 개선 */}
                 <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
+                {/* DNS Prefetch - 보조 도메인 (preconnect보다 가볍고 빠름) */}
+                <link rel="dns-prefetch" href="https://nrbe.pstatic.net" />
                 <link rel="dns-prefetch" href="https://i.ytimg.com" />
+                <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
             </head>
             <body className={notoSerifKR.className} suppressHydrationWarning>
                 {/* 초기 로딩 화면 - 순수 HTML, CSS로 제어 */}
@@ -114,60 +107,9 @@ export default function RootLayout({
                     </div>
                 </div>
 
+                {/* [PERF] 최소화된 인라인 스크립트 - 뷰포트 높이 계산 + 로딩 제거 */}
                 <script dangerouslySetInnerHTML={{
-                    __html: `
-                        (function() {
-                            // ==========================================
-                            // 모바일 뷰포트 높이 동적 계산 (JS Fallback)
-                            // dvh/svh 미지원 구형 브라우저용
-                            // ==========================================
-                            function setViewportHeight() {
-                                // [OPTIMIZATION] 100dvh 지원 시 강제 리플로우(offsetHeight 참조) 방지
-                                if (CSS.supports('height', '100dvh')) {
-                                    // dvh 지원 브라우저는 CSS에서 처리하므로 계산 건너뜀
-                                    // 단, --vh 변수가 필요한 다른 로직이 있다면 계산해야 함.
-                                    // 현재 코드베이스에서는 --full-height가 핵심이므로, --full-height만 100dvh로 설정해주면 됨.
-                                    // 하지만 JS 변수 의존성을 완전히 제거하기 위해 fallback만 남겨둠.
-                                    // 여기서는 초기 로딩 성능(32ms 리플로우) 절약을 위해 아무것도 하지 않음.
-                                    return;
-                                }
-
-                                // 1vh = window.innerHeight의 1%
-                                // 모바일 브라우저의 동적 UI(URL 바, 하단 네비)를 제외한 실제 가시 높이
-                                var vh = window.innerHeight * 0.01;
-                                document.documentElement.style.setProperty('--vh', vh + 'px');
-                                document.documentElement.style.setProperty('--full-height', (vh * 100) + 'px');
-                            }
-                            
-                            // 초기 설정
-                            setViewportHeight();
-                            
-                            // resize/orientationchange 이벤트에 debounce 적용
-                            var resizeTimeout;
-                            function onResize() {
-                                clearTimeout(resizeTimeout);
-                                resizeTimeout = setTimeout(setViewportHeight, 100);
-                            }
-                            
-                            window.addEventListener('resize', onResize);
-                            window.addEventListener('orientationchange', function() {
-                                // orientationchange 후 약간의 지연 필요 (브라우저 UI 재배치)
-                                setTimeout(setViewportHeight, 200);
-                            });
-                            
-                            // ==========================================
-                            // 초기 로딩 화면 제거
-                            // ==========================================
-                            var removed = false;
-                            function hide() {
-                                if (removed) return;
-                                removed = true;
-                                document.body.classList.add('loading-complete');
-                            }
-                            window.addEventListener('mapLoadingComplete', hide, { once: true });
-                            setTimeout(hide, 1000);
-                        })();
-                    `
+                    __html: `(function(){var d=document.documentElement,s=d.style;function v(){if(CSS.supports('height','100dvh'))return;var h=window.innerHeight*.01;s.setProperty('--vh',h+'px');s.setProperty('--full-height',h*100+'px')}v();var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(v,100)});window.addEventListener('orientationchange',function(){setTimeout(v,200)});var r=false;function hide(){if(r)return;r=true;document.body.classList.add('loading-complete')}window.addEventListener('mapLoadingComplete',hide,{once:true});setTimeout(hide,800)})();`
                 }} />
 
                 <QueryProvider>
