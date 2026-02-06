@@ -27,8 +27,8 @@ PROMPT_FILE="$SCRIPT_DIR/../prompts/crawling_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_result.py"
 GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
 
-echo "[$(date '+%H:%M:%S')] 📂 SCRIPT_DIR: $SCRIPT_DIR"
-echo "[$(date '+%H:%M:%S')] 📂 PROJECT_ROOT: $PROJECT_ROOT"
+echo "[$(date '+%H:%M:%S')] [INFO] SCRIPT_DIR: $SCRIPT_DIR"
+echo "[$(date '+%H:%M:%S')] [INFO] PROJECT_ROOT: $PROJECT_ROOT"
 
 # .env 파일 로드
 ENV_FILES=(
@@ -43,16 +43,16 @@ for env_file in "${ENV_FILES[@]}"; do
         source "$env_file"
         set +a
         ENV_LOADED=true
-        echo "[$(date '+%H:%M:%S')] ✅ .env 파일 로드: $env_file"
+        echo "[$(date '+%H:%M:%S')] [OK] .env 파일 로드: $env_file"
         break
     fi
 done
 
 if [ "$ENV_LOADED" = false ]; then
     if [ -n "$GEMINI_API_KEY" ]; then
-        echo "[$(date '+%H:%M:%S')] ℹ️  .env 파일은 없지만 GEMINI_API_KEY 환경변수가 존재합니다 (CI/CD 환경 예상)"
+        echo "[$(date '+%H:%M:%S')] [INFO] .env 파일은 없지만 GEMINI_API_KEY 환경변수가 존재합니다 (CI/CD 환경 예상)"
     else
-        echo "[$(date '+%H:%M:%S')] ⚠️ .env 파일을 찾지 못했습니다"
+        echo "[$(date '+%H:%M:%S')] [WARN] .env 파일을 찾지 못했습니다"
     fi
 fi
 
@@ -114,7 +114,7 @@ else
     if [ -f "/usr/bin/jq" ]; then
         JQ_EXE="/usr/bin/jq"
     else
-        echo "❌ jq 명령어를 찾을 수 없습니다."
+        echo "[ERROR] jq 명령어를 찾을 수 없습니다."
         exit 1
     fi
 fi
@@ -152,23 +152,23 @@ mkdir -p "$SCRIPT_DIR/../temp"
 # 로그 함수
 # ================================
 log_info() {
-    echo -e "${BLUE}[$(date '+%H:%M:%S')] ℹ️  $1${NC}"
+    echo -e "${BLUE}[$(date '+%H:%M:%S')] [INFO] $1${NC}"
 }
 
 log_success() {
-    echo -e "${GREEN}[$(date '+%H:%M:%S')] ✅ $1${NC}"
+    echo -e "${GREEN}[$(date '+%H:%M:%S')] [OK] $1${NC}"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠️  $1${NC}"
+    echo -e "${YELLOW}[$(date '+%H:%M:%S')] [WARN] $1${NC}"
 }
 
 log_error() {
-    echo -e "${RED}[$(date '+%H:%M:%S')] ❌ $1${NC}" >&2
+    echo -e "${RED}[$(date '+%H:%M:%S')] [ERROR] $1${NC}" >&2
 }
 
 log_debug() {
-    echo -e "${CYAN}[$(date '+%H:%M:%S')] 🔍 $1${NC}"
+    echo -e "${CYAN}[$(date '+%H:%M:%S')] [DEBUG] $1${NC}"
 }
 
 # 시간 포맷팅 함수
@@ -287,8 +287,12 @@ process_channel() {
         return 0
     fi
     
+    # [PERF] 프롬프트 템플릿 사전 캐싱 (루프 내 매번 파일 읽기 방지)
+    local PROMPT_TEMPLATE_CACHED
+    PROMPT_TEMPLATE_CACHED=$(cat "$PROMPT_FILE" | sed "s/{YOUTUBER_NAME}/$channel_name/g")
+    
     # [Smart Filter] 파이썬 스크립트로 처리 대상(Pending) URL만 가져오기
-    log_info "🔍 [Smart Filter] 처리 대상 영상 선별 중... (parse_result.py scan)"
+    log_info "[Smart Filter] 처리 대상 영상 선별 중... (parse_result.py scan)"
     
     # parse_result.py scan 실행
     # stderr는 화면에 나오고, stdout만 URLS 배열로 로드
@@ -298,11 +302,11 @@ process_channel() {
     local TOTAL=${#URLS[@]}
     
     if [ $TOTAL -eq 0 ]; then
-        log_success "✨ 처리할 대상이 없습니다 (모두 처리됨)"
+        log_success "처리할 대상이 없습니다 (모두 처리됨)"
         return 0
     fi
 
-    log_info "✅ 선별 완료: 총 $TOTAL 개 처리 예정"
+    log_info "선별 완료: 총 $TOTAL 개 처리 예정"
     
     # [Debug] URLS 배열 내용 확인
     declare -p URLS 2>/dev/null || true
@@ -412,8 +416,8 @@ process_channel() {
         
         log_info "[$INDEX/$TOTAL] 처리중: $TITLE"
         
-        # 프롬프트 생성 ({YOUTUBER_NAME}을 채널 이름으로 치환)
-        PROMPT_TEMPLATE=$(cat "$PROMPT_FILE" | sed "s/{YOUTUBER_NAME}/$channel_name/g")
+        # 프롬프트 생성 (사전 캐싱된 템플릿 사용)
+        PROMPT_TEMPLATE="$PROMPT_TEMPLATE_CACHED"
         
         # 자막 추가 (30000자 제한)
         TRANSCRIPT_TRUNCATED=$(echo "$TRANSCRIPT" | head -c 30000)
@@ -503,7 +507,7 @@ $TRANSCRIPT_TRUNCATED
             # 파서 실행 (최대 3회 시도)
             PARSE_SUCCESS=false
             for PARSE_ATTEMPT in 1 2 3; do
-                if $PYTHON_CMD "$PARSER_SCRIPT" parse "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
+                if $PYTHON_CMD "$PARSER_SCRIPT" parse "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$channel"; then
                     SUCCESS=$((SUCCESS + 1))
                     PARSE_SUCCESS=true
                     
@@ -555,9 +559,9 @@ $TRANSCRIPT_TRUNCATED
         # 임시 파일 정리
         rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
         
-        # Rate Limit 준수 (5 RPM = 12초 대기)
+        # [PERF] Rate Limit 준수 (기본 12s = 5 RPM, 환경변수로 오버라이드 가능)
         if [ $INDEX -lt $TOTAL ]; then
-            sleep 12
+            sleep "${GEMINI_RATE_LIMIT_DELAY:-12}"
         fi
     done
     
@@ -565,7 +569,7 @@ $TRANSCRIPT_TRUNCATED
     log_info "=========================================="
     log_success "채널 $channel 처리 완료"
     log_info "=========================================="
-    log_info "📊 처리 통계:"
+    log_info "처리 통계:"
     log_success "  성공: $SUCCESS"
     log_warning "  건너뜀 (이미 처리됨): $SKIPPED"
     log_warning "  건너뜀 (자막 없음): $NO_TRANSCRIPT"
@@ -573,7 +577,7 @@ $TRANSCRIPT_TRUNCATED
     log_error "  실패: $FAILED"
     log_info "  총 URL: $TOTAL"
     log_info ""
-    log_info "🤖 Gemini CLI 통계:"
+    log_info "Gemini CLI 통계:"
     log_info "  총 호출 수: $GEMINI_CALLS"
     log_info "  총 Gemini 시간: $(format_duration $TOTAL_GEMINI_TIME)"
     if [ $GEMINI_CALLS -gt 0 ]; then
@@ -581,10 +585,7 @@ $TRANSCRIPT_TRUNCATED
         log_info "  평균 Gemini 시간: $(format_duration $AVG_GEMINI)"
     fi
 
-    # 정돈: 임시 파일 삭제
-    if [ -f "$DELETED_IDS_FILE" ]; then
-        rm "$DELETED_IDS_FILE"
-    fi
+    # [Note] deleted_urls 필터링은 parse_result.py scan 단계에서 처리됨 (별도 임시 파일 불필요)
 }
 
 # ================================
@@ -656,7 +657,7 @@ main() {
     # ================================
     # Gemini Health Check (Pre-flight)
     # ================================
-    log_info "🏥 Gemini Health Check (1+1=?) 수행 중..."
+    log_info "Gemini Health Check (1+1=?) 수행 중..."
     HEALTH_CHECK_PROMPT="$SCRIPT_DIR/../temp/health_check_prompt.txt"
     HEALTH_CHECK_RESPONSE="$SCRIPT_DIR/../temp/health_check_response.json"
     echo "1+1=?" > "$HEALTH_CHECK_PROMPT"
@@ -709,13 +710,16 @@ main() {
         process_channel "$channel"
     done
     
+    # [PERF] temp 디렉토리 일괄 정리 (개별 rm 대신 한번에)
+    rm -rf "$SCRIPT_DIR/../temp"/*.txt "$SCRIPT_DIR/../temp"/*.json "$SCRIPT_DIR/../temp"/*.log 2>/dev/null || true
+    
     END_TIME=$(date +%s)
     END_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
     TOTAL_DURATION=$((END_TIME - START_TIME))
     
     log_info ""
     log_info "============================================================"
-    log_success "🎉 전체 파이프라인 완료"
+    log_success "전체 파이프라인 완료"
     log_info "============================================================"
     log_info "시작: $START_DATETIME"
     log_info "종료: $END_DATETIME"

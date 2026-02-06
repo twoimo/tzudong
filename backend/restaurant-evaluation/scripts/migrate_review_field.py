@@ -48,7 +48,7 @@ def migrate_folder(folder_path: Path, file_pattern: str = "*.jsonl") -> int:
 
             updated += 1
         except Exception as e:
-            print(f"⚠️ 오류: {f.name} - {e}")
+            print(f"[WARN] 오류: {f.name} - {e}")
 
     return updated
 
@@ -99,9 +99,9 @@ def main():
             print(f"transforms.jsonl: {trans_count}개 레코드 업데이트")
             total += trans_count
         except Exception as e:
-            print(f"⚠️ transforms.jsonl 오류: {e}")
+            print(f"[WARN] transforms.jsonl 오류: {e}")
 
-    print(f"\n✅ 총 {total}개 파일/레코드 업데이트 완료")
+    print(f"\n[OK] 총 {total}개 파일/레코드 업데이트 완료")
 
 
 if __name__ == "__main__":

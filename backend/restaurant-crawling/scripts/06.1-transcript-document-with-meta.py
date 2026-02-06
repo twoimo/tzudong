@@ -73,7 +73,7 @@ def get_restaurants_by_video_id(supabase: Client) -> dict[str, list[str]]:
     Returns:
         {video_id: ["음식점명1", "음식점명2", ...]}
     """
-    print("📥 Supabase에서 음식점 조회 중...")
+    print("Supabase에서 음식점 조회 중...")
 
     # approved 상태인 음식점만 조회
     result = (
@@ -139,7 +139,7 @@ def load_heatmap_by_recollect_id(heatmap_path: Path) -> dict[int, dict]:
 
         return heatmap_by_id
     except IOError as e:
-        print(f"⚠️ Heatmap 로드 실패 {heatmap_path.name}: {e}")
+        print(f"[WARN] Heatmap 로드 실패 {heatmap_path.name}: {e}")
         return {}
 
 
@@ -290,12 +290,12 @@ def process_documents(
     video_restaurants: dict[str, list[str]],
 ) -> dict:
     """문서에 음식점 정보 + Peak 메타데이터 추가"""
-    print("\n📝 문서 처리 중...")
+    print("\n문서 처리 중...")
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if not input_dir.exists():
-        print(f"❌ 입력 디렉토리 없음: {input_dir}")
+        print(f"[ERROR] 입력 디렉토리 없음: {input_dir}")
         return {}
 
     input_files = list(input_dir.glob("*.jsonl"))
@@ -461,7 +461,7 @@ def process_documents(
                         new_docs_to_write.append(docs)
 
         except IOError as e:
-            print(f"⚠️ 파일 읽기 실패 {input_file.name}: {e}")
+            print(f"[WARN] 파일 읽기 실패 {input_file.name}: {e}")
             continue
 
         # 새로운 문서가 있으면 append 모드로 저장
@@ -472,7 +472,7 @@ def process_documents(
                         f.write(json.dumps(doc, ensure_ascii=False) + "\n")
                 stats["processed_files"] += 1
             except IOError as e:
-                print(f"⚠️ 파일 저장 실패 {output_file.name}: {e}")
+                print(f"[WARN] 파일 저장 실패 {output_file.name}: {e}")
         elif not file_processed:
             stats["skipped_files"] += 1
 
@@ -481,7 +481,7 @@ def process_documents(
 
 def verify_output(output_dir: Path, sample_count: int = 3):
     """출력 결과 검증"""
-    print("\n🔍 결과 검증...")
+    print("\n[SCAN] 결과 검증...")
 
     sample_files = list(output_dir.glob("*.jsonl"))[:sample_count]
 
@@ -514,29 +514,29 @@ def main():
 
     # 1. Supabase 연결
     if not SUPABASE_URL or not SUPABASE_KEY:
-        print("❌ SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다")
+        print("[ERROR] SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다")
         print("CI/CD 모드: Supabase 미설정으로 인해 작업을 건너뜁니다.")
         return
 
-    print(f"\n🔌 Supabase 연결: {SUPABASE_URL}")
+    print(f"\nSupabase 연결: {SUPABASE_URL}")
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print("✅ 연결 성공")
+    print("[OK] 연결 성공")
 
     # 2. 음식점 조회
     video_restaurants = get_restaurants_by_video_id(supabase)
 
     # 3. 경로 설정
     input_dir, output_dir, heatmap_dir = get_paths(args.channel)
-    print(f"\n📂 입력: {input_dir}")
-    print(f"📂 출력: {output_dir}")
-    print(f"📂 Heatmap: {heatmap_dir}")
+    print(f"\n입력: {input_dir}")
+    print(f"출력: {output_dir}")
+    print(f"Heatmap: {heatmap_dir}")
 
     # 4. 문서 처리
     stats = process_documents(input_dir, output_dir, heatmap_dir, video_restaurants)
 
     # 5. 결과 출력
     print("\n" + "=" * 60)
-    print("📊 처리 결과:")
+    print("처리 결과:")
     print(f"   총 파일: {stats.get('total_files', 0)}개")
     print(f"   처리 완료: {stats.get('processed_files', 0)}개")
     print(f"   스킵 (이미 처리됨): {stats.get('skipped_files', 0)}개")
@@ -551,7 +551,7 @@ def main():
     # 6. 검증
     verify_output(output_dir)
 
-    print("\n✅ 완료!")
+    print("\n[OK] 완료!")
 
 
 if __name__ == "__main__":

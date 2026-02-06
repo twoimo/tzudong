@@ -126,7 +126,7 @@ def main():
     # crawling 폴더에서 video_id 수집
     crawling_dir = crawling_path / "crawling"
     if not crawling_dir.exists():
-        print(f"❌ crawling 폴더 없음: {crawling_dir}")
+        print(f"[ERROR] crawling 폴더 없음: {crawling_dir}")
         return
 
     video_ids = set()
@@ -153,7 +153,7 @@ def main():
         if selection_file.exists() or not_selection_file.exists():
             stats["skipped"] += 1
             if stats["skipped"] % 50 == 1:
-                print(f"⏭️ 이미 처리됨 (스킵 {stats['skipped']}개)")
+                print(f"이미 처리됨 (스킵 {stats['skipped']}개)")
             continue
 
         # 처리
@@ -183,10 +183,10 @@ def main():
 
         stats["processed"] += 1
         if stats["processed"] % 10 == 0:
-            print(f"✓ {stats['processed']}개 처리 완료...")
+            print(f"[OK] {stats['processed']}개 처리 완료...")
 
     print(f"\n{'='*50}")
-    print(f"✅ 평가 대상 선정 완료!")
+            print(f"[OK] 평가 대상 선정 완료!")
     print(f"   총 비디오: {stats['total']}개")
     print(f"   처리됨: {stats['processed']}개")
     print(f"   건너뜀: {stats['skipped']}개")
