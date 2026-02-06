@@ -10,6 +10,7 @@ import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
 
 interface OverseasMapProps {
     className?: string;
+    mapFocusZoom?: number | null; // [New] 강제 줌 레벨
     filters: FilterState;
     selectedCountry: string | null;
     searchedRestaurant: Restaurant | null;
@@ -44,6 +45,7 @@ const DEFAULT_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
 
 const OverseasMap: React.FC<OverseasMapProps> = ({
     className,
+    mapFocusZoom,
     filters,
     selectedCountry,
     searchedRestaurant,
@@ -130,14 +132,16 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
     const moveToRestaurant = useCallback((restaurant: Restaurant) => {
         if (!map.current) return;
-        const targetZoom = map.current.getZoom();
+
+        // [New] 강제 줌 레벨이 있으면 사용, 없으면 현재 줌 유지
+        const targetZoom = mapFocusZoom ?? map.current.getZoom();
 
         map.current.jumpTo({
             center: [Number(restaurant.lng), Number(restaurant.lat)],
             zoom: targetZoom,
             padding: mapPaddingRef.current
         });
-    }, []);
+    }, [mapFocusZoom]);
 
     useEffect(() => {
         if (onMapReady) onMapReady(moveToRestaurant);

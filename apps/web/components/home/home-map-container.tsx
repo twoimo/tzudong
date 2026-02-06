@@ -17,6 +17,7 @@ const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
 
 interface HomeMapContainerProps {
     mapMode: 'domestic' | 'overseas';
+    mapFocusZoom?: number | null; // [New] 줌 레벨 제어
     filters: FilterState;
     selectedRegion: Region | null;
     selectedCountry: string | null;
@@ -51,6 +52,7 @@ const SWIPE_VELOCITY_THRESHOLD = 0.5;
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
 function HomeMapContainerComponent({
     mapMode,
+    mapFocusZoom,
     filters,
     selectedRegion,
     selectedCountry,
@@ -297,6 +299,7 @@ function HomeMapContainerComponent({
             {mapMode === 'domestic' ? (
                 <Suspense fallback={<MapSkeleton />}>
                     <NaverMapView
+                        mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}
                         selectedRegion={selectedRegion}
                         searchedRestaurant={searchedRestaurant}
@@ -316,6 +319,7 @@ function HomeMapContainerComponent({
             ) : (
                 <Suspense fallback={<MapSkeleton />}>
                     <OverseasMap
+                        mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}
                         selectedCountry={selectedCountry}
                         searchedRestaurant={searchedRestaurant}

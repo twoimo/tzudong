@@ -322,63 +322,37 @@ export function RestaurantDetailPanel({
     const handleShareUrl = useCallback(async () => {
         if (!restaurant) return;
 
-        // 1. 원본 URL 생성 (z, lat, lng만 포함 - 네이버 지도 스타일)
+        // 1. URL 생성 (r=ID, z=15, mode=overseas)
+        // [Fast Copy] 단축 URL 제거하고 즉시 복사되도록 변경
         const url = new URL(window.location.origin);
-        url.searchParams.set('z', '15.00'); // 줌 레벨 15 유지
-        url.searchParams.set('lat', restaurant.lat?.toFixed(6) || '');
-        url.searchParams.set('lng', restaurant.lng?.toFixed(6) || '');
-        const longUrl = url.toString();
+        url.searchParams.set('r', restaurant.id);
+        url.searchParams.set('z', '15'); // 줌 레벨 15 설정
+
+        // 해외 맛집 판단 (좌표 기준)
+        const isOverseas = restaurant.lat && restaurant.lng && (
+            restaurant.lat < 33 || restaurant.lat > 39 ||
+            restaurant.lng < 124 || restaurant.lng > 132
+        );
+
+        if (isOverseas) {
+            url.searchParams.set('mode', 'overseas');
+        }
+
+        const shareUrl = url.toString();
 
         try {
-            // 2. 단축 URL 생성 시도
-            const response = await fetch('/api/shorten', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    targetUrl: longUrl,
-                    restaurantId: restaurant.id,
-                    restaurantName: restaurant.name
-                }),
-            });
-
-            let shareUrl = longUrl;
-
-            if (response.ok) {
-                const data = await response.json();
-                // API returns: { shortUrl, code, isExisting }
-                if (data.shortUrl) {
-                    shareUrl = data.shortUrl;
-                } else if (data.code) {
-                    // Fallback: construct from code
-                    shareUrl = `${window.location.origin}/s/${data.code}`;
-                }
-            }
-
-            // 3. 클립보드 복사
+            // 2. 클립보드 복사
             await navigator.clipboard.writeText(shareUrl);
             setIsShareCopied(true);
             setTimeout(() => setIsShareCopied(false), 2000);
             toast.success('공유 링크가 복사되었습니다');
         } catch (err) {
-            // [Fix] 클립보드 권한/포커스 문제 등으로 실패 시 console.error 대신 warn 사용 (불필요한 에러 오버레이 방지)
-            console.warn('URL 단축/복사 실패:', err);
+            console.warn('URL 복사 실패:', err);
 
-            // 실패 시 원본 URL이라도 복사 시도
-            try {
-                // 포커스 확인: 문서가 포커스되지 않은 경우 복사 시도 자체가 실패할 수 있음
-                if (!document.hasFocus()) {
-                    // 포커스가 없으면 그냥 토스트만 띄우거나 조용히 실패 (사용자 경험상 에러 팝업보다 나음)
-                    console.warn('문저 포커스 없음, 클립보드 쓰기 건너뜀');
-                } else {
-                    await navigator.clipboard.writeText(longUrl);
-                    setIsShareCopied(true);
-                    setTimeout(() => setIsShareCopied(false), 2000);
-                    toast.success('공유 링크가 복사되었습니다 (단축 실패)');
-                }
-            } catch (copyErr) {
-                console.warn('원본 링크 복사 실패:', copyErr);
+            // 포커스 문제 등으로 실패 시 처리
+            if (!document.hasFocus()) {
+                console.warn('문서 포커스 없음, 클립보드 쓰기 건너뜀');
+            } else {
                 toast.error('링크 복사에 실패했습니다');
             }
         }
