@@ -39,7 +39,7 @@ def load_processed_urls(file_path: str) -> Set[str]:
                 if 'youtube_link' in data:
                     urls.add(data['youtube_link'])
             except json.JSONDecodeError as e:
-                print(f"⚠️  JSON 파싱 오류 (라인 {line_num}): {e}")
+                print(f"[WARN]  JSON 파싱 오류 (라인 {line_num}): {e}")
                 continue
     
     return urls
@@ -89,7 +89,7 @@ def load_processed_restaurants(
                     restaurants.add(data[key])
                     
             except json.JSONDecodeError as e:
-                print(f"⚠️  JSON 파싱 오류 (라인 {line_num}): {e}")
+                print(f"[WARN]  JSON 파싱 오류 (라인 {line_num}): {e}")
                 continue
     
     return restaurants
@@ -126,7 +126,7 @@ def load_processed_unique_ids(file_path: str) -> Set[str]:
                 if 'unique_id' in data and data['unique_id']:
                     ids.add(data['unique_id'])
             except json.JSONDecodeError as e:
-                print(f"⚠️  JSON 파싱 오류 (라인 {line_num}): {e}")
+                print(f"[WARN]  JSON 파싱 오류 (라인 {line_num}): {e}")
                 continue
     
     return ids
@@ -312,7 +312,7 @@ def get_file_stats(file_path: str) -> Dict[str, Any]:
 
 if __name__ == '__main__':
     # 테스트 코드
-    print("🧪 중복 검사 유틸리티 함수 테스트\n")
+    print("중복 검사 유틸리티 함수 테스트\n")
     
     # 예시 파일 경로
     test_file = 'test_output.jsonl'
@@ -323,31 +323,31 @@ if __name__ == '__main__':
         {'youtube_link': 'https://youtube.com/watch?v=2', 'unique_id': 'id2', 'name': 'Restaurant 2'},
     ]
     
-    print(f"📝 테스트 파일 작성: {test_file}")
+    print(f"테스트 파일 작성: {test_file}")
     append_to_jsonl(test_file, test_data, create_dirs=False)
     
     # 통계 확인
     stats = get_file_stats(test_file)
-    print(f"\n📊 파일 통계:")
+    print(f"\n파일 통계:")
     print(f"   - 총 라인: {stats['total_lines']}")
     print(f"   - 유효 라인: {stats['valid_lines']}")
     print(f"   - 파일 크기: {stats['size_mb']:.4f}MB")
     
     # URL 로드
     urls = load_processed_urls(test_file)
-    print(f"\n🔗 처리된 URL: {len(urls)}개")
+    print(f"\n처리된 URL: {len(urls)}개")
     for url in urls:
         print(f"   - {url}")
     
     # unique_id 로드
     ids = load_processed_unique_ids(test_file)
-    print(f"\n🆔 처리된 unique_id: {len(ids)}개")
+    print(f"\n처리된 unique_id: {len(ids)}개")
     for uid in ids:
         print(f"   - {uid}")
     
     # 테스트 파일 삭제
     if os.path.exists(test_file):
         os.remove(test_file)
-        print(f"\n🗑️  테스트 파일 삭제: {test_file}")
+        print(f"\n테스트 파일 삭제: {test_file}")
     
-    print("\n✅ 테스트 완료!")
+    print("\n[OK] 테스트 완료!")

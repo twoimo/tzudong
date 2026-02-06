@@ -41,10 +41,10 @@ def migrate_documents(input_path: str, output_dir: str):
                 doc = json.loads(line)
                 documents.append(doc)
             except json.JSONDecodeError as e:
-                print(f"⚠️ JSON parse error at line {line_num}: {e}")
+                print(f"[WARN] JSON parse error at line {line_num}: {e}")
                 continue
 
-    print(f"📄 Read {len(documents)} documents from {input_path}")
+    print(f"Read {len(documents)} documents from {input_path}")
 
     # 2. video_id + recollect_id로 그룹화
     # key: (video_id, recollect_id) -> value: list of documents
@@ -56,13 +56,13 @@ def migrate_documents(input_path: str, output_dir: str):
         recollect_id = metadata.get("recollect_id", 0)
 
         if not video_id:
-            print(f"⚠️ Document without video_id: {doc}")
+            print(f"[WARN] Document without video_id: {doc}")
             continue
 
         grouped[(video_id, recollect_id)].append(doc)
 
-    print(f"📊 Found {len(set(k[0] for k in grouped.keys()))} unique video_ids")
-    print(f"📊 Found {len(grouped)} unique (video_id, recollect_id) groups")
+    print(f"Found {len(set(k[0] for k in grouped.keys()))} unique video_ids")
+    print(f"Found {len(grouped)} unique (video_id, recollect_id) groups")
 
     # 3. video_id별로 저장
     os.makedirs(output_dir, exist_ok=True)
@@ -96,10 +96,10 @@ def migrate_documents(input_path: str, output_dir: str):
                 f.write(json.dumps(ordered_docs, ensure_ascii=False) + "\n")
 
         print(
-            f"✅ {video_id}.jsonl: {sum(len(grouped[(video_id, r)]) for r in recollect_ids)} docs, {len(recollect_ids)} recollect_ids"
+            f"[OK] {video_id}.jsonl: {sum(len(grouped[(video_id, r)]) for r in recollect_ids)} docs, {len(recollect_ids)} recollect_ids"
         )
 
-    print(f"\n🎉 Migration complete! Files saved to {output_dir}")
+    print(f"\nMigration complete! Files saved to {output_dir}")
 
 
 def main():
@@ -133,7 +133,7 @@ def main():
 
     # 입력 파일 확인
     if not os.path.exists(args.input):
-        print(f"❌ Input file not found: {args.input}")
+        print(f"[ERROR] Input file not found: {args.input}")
         return
 
     migrate_documents(args.input, output_dir)

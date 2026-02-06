@@ -90,7 +90,7 @@ def parse_error_context(model: str, error_context: str, max_retries: int = 3) ->
     parse_error_chain = (
         parse_error_prompt | ChatOllama(model=model, temperature=0) | StrOutputParser()
     )
-    # print(f"❌ error_context: {error_context}")
+    # print(f"[ERROR] error_context: {error_context}")
     error_context_result = error_context  # 초기값
 
     for attempt in range(max_retries):
@@ -100,15 +100,15 @@ def parse_error_context(model: str, error_context: str, max_retries: int = 3) ->
 
         if is_valid_context(error_context_result):
             # print(
-            #     f"✅ parsed_context (시도 {attempt + 1}): {error_context_result}",
+            #     f"[OK] parsed_context (시도 {attempt + 1}): {error_context_result}",
             #     end="\n\n",
             # )
             return error_context_result
 
-        # print(f"  ⚠️ parse 재시도 {attempt + 1}/{max_retries}")
+        # print(f"  [WARN] parse 재시도 {attempt + 1}/{max_retries}")
 
     # 3회 실패 시 마지막 결과 반환
-    # print(f"❌ parse 최종 실패, 마지막 결과 사용")
+    # print(f"[ERROR] parse 최종 실패, 마지막 결과 사용")
     return error_context_result.strip()
 
 
@@ -133,21 +133,21 @@ def check_ollama_connection(base_url: str, model: str) -> bool:
     try:
         resp = requests.get(f"{base_url}/api/tags", timeout=5)
         if resp.status_code != 200:
-            print(f"❌ Ollama 서버 응답 오류 ({base_url}): {resp.status_code}")
+            print(f"[ERROR] Ollama 서버 응답 오류 ({base_url}): {resp.status_code}")
             return False
 
         models = resp.json().get("models", [])
         found = any(m.get("name") == model for m in models)
         if not found:
             print(
-                f"⚠️ 경고: 모델 '{model}'을 목록에서 찾을 수 없습니다. (Pull 필요할 수 있음)"
+                f"[WARN] 경고: 모델 '{model}'을 목록에서 찾을 수 없습니다. (Pull 필요할 수 있음)"
             )
 
-        print(f"✅ Ollama 연결 성공: {base_url}")
+        print(f"[OK] Ollama 연결 성공: {base_url}")
         return True
 
     except requests.exceptions.RequestException as e:
-        print(f"❌ Ollama 연결 실패 ({base_url}): {e}")
+        print(f"[ERROR] Ollama 연결 실패 ({base_url}): {e}")
         return False
 
 
@@ -177,7 +177,7 @@ def run_chain(
         )
         return result.strip()
     except Exception as e:
-        print(f"⚠️ LLM 호출 실패: {e}")
+        print(f"[WARN] LLM 호출 실패: {e}")
         return ""
 
 
@@ -229,7 +229,7 @@ def save_documents_for_video(
         f.write(json.dumps(docs_data, ensure_ascii=False) + "\n")
 
     print(
-        f"✅ {len(documents)}개 문서 저장 완료: {filepath} (recollect_id={recollect_id})"
+        f"[OK] {len(documents)}개 문서 저장 완료: {filepath} (recollect_id={recollect_id})"
     )
 
 
@@ -247,7 +247,7 @@ def process_video(
     recollect_id = transcript_data.get("recollect_id", 0)
 
     if not transcript:
-        print(f"⚠️ 자막 없음: {video_id}")
+        print(f"[WARN] 자막 없음: {video_id}")
         return
 
     full_transcript = "\n".join([str(seg.get("text", "") or "") for seg in transcript])
@@ -337,7 +337,7 @@ def main():
 
     # 연결 확인
     if not check_ollama_connection(ollama_host, args.model):
-        print("⛔ Ollama를 사용할 수 없어 스크립트를 종료합니다.")
+        print("Ollama를 사용할 수 없어 스크립트를 종료합니다.")
         print("CI/CD 모드: Ollama 미발견으로 인해 작업을 건너뜁니다.")
         return
 
@@ -360,11 +360,11 @@ def main():
     # 트랜스크립트 파일 목록 (정렬하여 순서 보장 - 디버깅 용이)
     transcript_paths = sorted(glob.glob(str(transcript_dir / "*.jsonl")))
 
-    print(f"📂 트랜스크립트 파일 {len(transcript_paths)}개 발견")
-    print(f"🤖 모델: {args.model} (Host: {ollama_host})")
-    print(f"📂 출력 경로: {output_dir}")
+    print(f"트랜스크립트 파일 {len(transcript_paths)}개 발견")
+    print(f"모델: {args.model} (Host: {ollama_host})")
+    print(f"출력 경로: {output_dir}")
     if args.max_videos > 0:
-        print(f"⏱️ 최대 처리 영상 수 제한: {args.max_videos}개")
+        print(f"최대 처리 영상 수 제한: {args.max_videos}개")
     print("=" * 60)
 
     processed_count = 0
@@ -372,7 +372,7 @@ def main():
     error_count = 0
 
     # [Smart Filter] 처리 대상 영상 미리 선별
-    print("🔍 [Smart Filter] 처리 대상을 선별 중입니다...", flush=True)
+    print("[SCAN] [Smart Filter] 처리 대상을 선별 중입니다...", flush=True)
     pending_paths = []
     
     # 0. 삭제된 영상 목록 로드 (deleted_urls.txt) - 1번 스크립트 연동
@@ -386,9 +386,9 @@ def main():
                     if parts and parts[0]:
                         vid = parts[0].split("v=")[-1]  # Extract ID from URL
                         deleted_ids.add(vid)
-            print(f"🗑️ 삭제된 영상 목록 로드: {len(deleted_ids)}개")
+            print(f"삭제된 영상 목록 로드: {len(deleted_ids)}개")
         except Exception as e:
-            print(f"⚠️ 삭제 목록 로드 실패: {e}")
+            print(f"[WARN] 삭제 목록 로드 실패: {e}")
 
     for data_path in tqdm(transcript_paths, desc="Scanning"):
         video_id = os.path.basename(data_path).split(".")[0]
@@ -450,18 +450,18 @@ def main():
         # 여기까지 오면 처리 대상
         pending_paths.append(data_path)
 
-    print(f"✅ 스캔 완료: 총 {len(transcript_paths)}개 중 {len(pending_paths)}개 처리 예정 (이미 완료/Shorts/비공개: {len(transcript_paths) - len(pending_paths)}개)")
+    print(f"[OK] 스캔 완료: 총 {len(transcript_paths)}개 중 {len(pending_paths)}개 처리 예정 (이미 완료/Shorts/비공개: {len(transcript_paths) - len(pending_paths)}개)")
     
     # [Info] 처리 예정 비디오 목록 출력
     if pending_paths:
-        print("\n📋 [처리 예정 비디오 목록]")
+        print("\n[처리 예정 비디오 목록]")
         for path_str in pending_paths:
              vid = os.path.basename(path_str).split(".")[0]
              print(f" - https://youtu.be/{vid} ({vid})")
     
     print("=" * 60)
 
-    print(f"🚀 총 {len(pending_paths)}개 영상 처리를 시작합니다.", flush=True)
+    print(f"총 {len(pending_paths)}개 영상 처리를 시작합니다.", flush=True)
 
     # pending_paths만 순회
     # [Improve] tqdm 객체 사용하여 동적 설명 업데이트
@@ -471,7 +471,7 @@ def main():
         pbar.set_description(f"Generating context ({video_id})")
         # 최대 처리 수 제한 체크
         if args.max_videos > 0 and processed_count >= args.max_videos:
-            print(f"🛑 최대 처리 한도({args.max_videos}개) 도달로 중단합니다.", flush=True)
+            print(f"최대 처리 한도({args.max_videos}개) 도달로 중단합니다.", flush=True)
             break
         
         # [CI-Log] 진행상황 강제 출력 (tqdm 버퍼링 문제 해결)
@@ -482,7 +482,7 @@ def main():
         # 트랜스크립트 읽기
         transcript_data = read_jsonl(data_path)
         if not transcript_data:
-            print(f"⚠️ 트랜스크립트 읽기 실패: {video_id}", flush=True)
+            print(f"[WARN] 트랜스크립트 읽기 실패: {video_id}", flush=True)
             error_count += 1
             continue
 
@@ -499,7 +499,7 @@ def main():
                 continue
             else:
                 print(
-                    f"\n🔄 업데이트 {video_id}: 새 recollect_id ({transcript_recollect_id} > {existing_recollect_id})",
+                    f"\n업데이트 {video_id}: 새 recollect_id ({transcript_recollect_id} > {existing_recollect_id})",
                     flush=True
                 )
 
@@ -508,7 +508,7 @@ def main():
         metadata = get_matching_metadata(str(meta_path), transcript_recollect_id)
         if not metadata:
             print(
-                f"\n⚠️ 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}",
+                f"\n[WARN] 메타데이터 없음: {video_id} (id={transcript_recollect_id}) -> https://youtu.be/{video_id}",
                 flush=True
             )
 
@@ -516,11 +516,11 @@ def main():
             try:
                 os.remove(data_path)
                 print(
-                    f"🗑️ [Auto-Correction] 고아 트랜스크립트 파일 삭제됨: {video_id} (재수집 대기)",
+                    f"[Auto-Correction] 고아 트랜스크립트 파일 삭제됨: {video_id} (재수집 대기)",
                     flush=True
                 )
             except Exception as e:
-                print(f"❌ 파일 삭제 실패: {e}", flush=True)
+                print(f"[ERROR] 파일 삭제 실패: {e}", flush=True)
 
             error_count += 1
             continue
@@ -533,7 +533,7 @@ def main():
         # [Filter] 듀레이션 필터링
         m_duration = metadata.get("duration", 0)
         if args.max_duration > 0 and m_duration > args.max_duration:
-            print(f"\n⏳ [Skip] 장편 영상 스킵 ({m_duration}초 > {args.max_duration}초): {video_id}", flush=True)
+            print(f"\n[Skip] 장편 영상 스킵 ({m_duration}초 > {args.max_duration}초): {video_id}", flush=True)
             skipped_count += 1
             continue
 
@@ -550,16 +550,16 @@ def main():
             )
             processed_count += 1
         except Exception as e:
-            print(f"\n❌ 처리 중 치명적 오류 {video_id}: {e}", flush=True)
+            print(f"\n[ERROR] 처리 중 치명적 오류 {video_id}: {e}", flush=True)
             error_count += 1
 
     print("\n" + "=" * 60, flush=True)
     print(
-        f"✅ 완료: 처리 {processed_count} / 스킵 {skipped_count} / 에러 {error_count}",
+        f"[OK] 완료: 처리 {processed_count} / 스킵 {skipped_count} / 에러 {error_count}",
         flush=True
     )
     print(
-        f"ℹ️ 총 소요된 트랜스크립트 파일: {processed_count + skipped_count + error_count} / 전체 {len(transcript_paths)}",
+        f"[INFO] 총 소요된 트랜스크립트 파일: {processed_count + skipped_count + error_count} / 전체 {len(transcript_paths)}",
         flush=True
     )
 

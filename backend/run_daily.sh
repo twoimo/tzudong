@@ -20,7 +20,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # 프로젝트 루트로 이동
-cd "$PROJECT_ROOT" || { echo "❌ 프로젝트 루트로 이동 실패: $PROJECT_ROOT"; exit 1; }
+cd "$PROJECT_ROOT" || { echo "[ERROR] 프로젝트 루트로 이동 실패: $PROJECT_ROOT"; exit 1; }
 
 # 환경 변수 로드 (Node, Python 경로 등)
 if [ -f "$HOME/.bashrc" ]; then
@@ -37,7 +37,7 @@ else
     if command -v python >/dev/null 2>&1; then
         PYTHON_CMD="python"
     else
-        echo "❌ Python을 찾을 수 없습니다."
+        echo "[ERROR] Python을 찾을 수 없습니다."
         exit 1
     fi
 fi
@@ -68,7 +68,7 @@ log() {
   local TIMESTAMP=$(date "+%H:%M:%S")
   
   case "$LEVEL" in
-    "INFO"|"WARN"|"ERROR"|"SUCCESS") ;;
+    "INFO"|"WARN"|"ERROR"|"OK") ;;
     *) LEVEL="INFO" ;;
   esac
   echo "[$TIMESTAMP] [$LEVEL] $MESSAGE" | tee -a "$LOG_FILE"
@@ -90,7 +90,7 @@ step_end() {
     local DURATION=$((STEP_END_TIME - STEP_START_TIME))
     local MINUTES=$((DURATION / 60))
     local SECONDS=$((DURATION % 60))
-    log "INFO" "⏱️ $STEP_NAME 완료: ${MINUTES}분 ${SECONDS}초"
+    log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
 }
 
 # [PERF] 파이프라인 경과 시간 확인 (타임아웃 보호)
@@ -99,8 +99,42 @@ check_timeout() {
     local ELAPSED=$(( $(date +%s) - PIPELINE_START ))
     local ELAPSED_MIN=$((ELAPSED / 60))
     if [ "$ELAPSED_MIN" -ge "$MAX_MINUTES" ]; then
-        log "WARN" "⚠️ 파이프라인 시간 제한 도달 (${ELAPSED_MIN}분/${MAX_MINUTES}분). 남은 단계 건너뜁니다."
+        log "WARN" "파이프라인 시간 제한 도달 (${ELAPSED_MIN}m/${MAX_MINUTES}m). 남은 단계 건너뜁니다."
         return 1
+    fi
+    return 0
+}
+
+# [PERF] 병렬 실행 유틸리티 - 두 작업을 동시에 실행하고 로그를 순차 출력
+# Usage: run_parallel "Label_A" "command_A" "Label_B" "command_B"
+run_parallel() {
+    local LABEL_A="$1" CMD_A="$2" LABEL_B="$3" CMD_B="$4"
+    local TEMP_LOG_A TEMP_LOG_B PID_A PID_B EXIT_A EXIT_B
+
+    TEMP_LOG_A=$(mktemp)
+    TEMP_LOG_B=$(mktemp)
+
+    eval "$CMD_A" > "$TEMP_LOG_A" 2>&1 &
+    PID_A=$!
+    eval "$CMD_B" > "$TEMP_LOG_B" 2>&1 &
+    PID_B=$!
+
+    wait $PID_A; EXIT_A=$?
+    wait $PID_B; EXIT_B=$?
+
+    # 로그 순서대로 출력 (섞임 방지)
+    log "INFO" "--- [$LABEL_A] ---"
+    cat "$TEMP_LOG_A" | tee -a "$LOG_FILE"
+    log "INFO" "--- [$LABEL_B] ---"
+    cat "$TEMP_LOG_B" | tee -a "$LOG_FILE"
+
+    rm -f "$TEMP_LOG_A" "$TEMP_LOG_B"
+
+    if [ $EXIT_A -ne 0 ]; then
+        log "WARN" "[$LABEL_A] 비정상 종료 (exit: $EXIT_A)"
+    fi
+    if [ $EXIT_B -ne 0 ]; then
+        log "WARN" "[$LABEL_B] 비정상 종료 (exit: $EXIT_B)"
     fi
     return 0
 }
@@ -112,7 +146,7 @@ sync_data_to_remote() {
     log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
 
     # 데이터 폴더 변경 감지 (Modified + Untracked)
-    if [ -z "$(git status --porcelain backend/restaurant-crawling/data/)" ] && [ -z "$(git status --porcelain backend/restaurant-evaluation/data/)" ]; then
+    if [ -z "$(git status --porcelain backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/)" ]; then
         log "INFO" "변경 된 데이터가 없습니다. (Skip)"
         return 0
     fi
@@ -164,7 +198,7 @@ sync_data_to_remote() {
         fi
     fi
 
-    log "SUCCESS" "data 브랜치 업데이트 완료 ($STEP_NAME)"
+    log "OK" "data 브랜치 업데이트 완료 ($STEP_NAME)"
 }
 
 # ============================================================
@@ -192,7 +226,7 @@ if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
         git checkout -b $TARGET_BRANCH origin/$TARGET_BRANCH || { log "ERROR" "원격 브랜치 체크아웃 실패."; exit 1; }
     fi
     
-    log "SUCCESS" "브랜치 전환 완료: $TARGET_BRANCH"
+    log "OK" "브랜치 전환 완료: $TARGET_BRANCH"
 fi
 
 # 충돌 방지를 위해 최신 변경사항 Pull
@@ -214,13 +248,13 @@ step_end "Step 1 (URL Collection)"
 echo "::endgroup::"
 
 # [PERF] 스마트 스킵 플래그 - 신규 URL이 없으면 고비용 단계 최적화
-NEW_URL_COUNT=$(grep -c "\[New URL\]" "$LOG_FILE" 2>/dev/null || echo "0")
+NEW_URL_COUNT=$(grep -c "\[New URL\]" "$LOG_FILE" 2>/dev/null || true)
 HAS_NEW_DATA=false
 if [ "$NEW_URL_COUNT" -gt 0 ]; then
     HAS_NEW_DATA=true
-    log "INFO" "🆕 신규 URL ${NEW_URL_COUNT}개 감지 → 전체 파이프라인 실행"
+    log "INFO" "신규 URL ${NEW_URL_COUNT}개 감지 -> 전체 파이프라인 실행"
 else
-    log "INFO" "📦 신규 URL 없음 → 스마트 모드 (변경분만 처리)"
+    log "INFO" "신규 URL 없음 -> 스마트 모드 (변경분만 처리)"
 fi
 
 # 2. 메타데이터 수집 & 스케줄링 (관제탑 역할)
@@ -231,20 +265,16 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzu
 step_end "Step 2 (Metadata)"
 echo "::endgroup::"
 
-# 2.1. 메타데이터 마이그레이션 (Supabase용)
-echo "::group::[Step 2.2] Meta Migration"
+# [PERF] 2.1 + 2.5 병렬 실행 (충돌 없음: 2.1은 Supabase 쓰기, 2.5는 orphan 삭제)
+echo "::group::[Step 2.1+2.5] Meta Migration + Orphan Cleanup (Parallel)"
 step_start
-log "INFO" "[Step 2.2] Meta Migrating to Supabase..."
-$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 2.2 (Migration)"
-echo "::endgroup::"
-
-# 2.5. 메타데이터 누락 파일 사전 정리 (Auto-Healing Pre-check)
-echo "::group::[Step 2.5] Orphan Cleanup"
-step_start
-log "INFO" "[Step 2.5] 메타데이터 누락 파일 사전 정리..."
-$PYTHON_CMD backend/restaurant-crawling/scripts/99-cleanup-orphans.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 2.5 (Cleanup)"
+log "INFO" "[Step 2.1+2.5] Meta Migration + Orphan Cleanup (병렬 실행)..."
+run_parallel \
+    "Step 2.1 Meta Migration" \
+    "$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang" \
+    "Step 2.5 Orphan Cleanup" \
+    "$PYTHON_CMD backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py --channel tzuyang"
+step_end "Step 2.1+2.5 (Migration+Cleanup)"
 echo "::endgroup::"
 
 # [PERF] Sync #1: 메타데이터/정리 완료 후 저장
@@ -254,17 +284,33 @@ sync_data_to_remote "Phase 1 (Meta/Cleanup)"
 # [Phase 2] 멀티모달 데이터 확보 (Multi-modal Processing)
 # ============================================================
 
-# 3. 자막 수집 (02번 단계의 트리거에 따름)
-echo "::group::[Step 3] Transcript Collection"
+# [PERF] Step 3 + Step 4 병렬 실행 (충돌 없음: 3은 transcript/, 4는 heatmap/+frames/)
+# Step 3 완료 후 Step 3.1 실행, Step 4는 백그라운드 유지
+echo "::group::[Step 3+4] Transcript + Frames (Parallel)"
 step_start
-log "INFO" "[Step 3] 자막 수집 중..."
-node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 3 (Transcript)"
+log "INFO" "[Step 3+4] 자막 수집 + 프레임 추출 (병렬 실행)..."
+
+TEMP_LOG_3=$(mktemp)
+TEMP_LOG_4=$(mktemp)
+
+# Step 3 (Transcript) + Step 4 (Frames) 동시 시작
+node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang > "$TEMP_LOG_3" 2>&1 &
+PID_3=$!
+node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache > "$TEMP_LOG_4" 2>&1 &
+PID_4=$!
+
+# Step 3 완료 대기 -> 로그 출력
+wait $PID_3; EXIT_3=$?
+log "INFO" "--- [Step 3 Transcript] ---"
+cat "$TEMP_LOG_3" | tee -a "$LOG_FILE"
+if [ $EXIT_3 -ne 0 ]; then
+    log "WARN" "[Step 3] Transcript 비정상 종료 (exit: $EXIT_3)"
+fi
+rm -f "$TEMP_LOG_3"
 echo "::endgroup::"
 
-# 3.1. 자막 문맥 생성 (Ollama 활용)
+# Step 3.1 실행 (Step 3 완료 필요, Step 4는 백그라운드 계속)
 echo "::group::[Step 3.1] Context Generation"
-step_start
 log "INFO" "[Step 3.1] 자막 문맥 생성 중..."
 # [Config] 실행 모드에 따른 배치 크기 제한
 if [ -z "$CI" ]; then
@@ -283,15 +329,19 @@ else
     fi
     $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
 fi
-step_end "Step 3.1 (Context)"
 echo "::endgroup::"
 
-# 4. 히트맵 및 프레임 수집 (02번 단계의 트리거에 따름)
-echo "::group::[Step 4] Heatmap & Frames"
-step_start
-log "INFO" "[Step 4] 히트맵 및 프레임 수집 중..."
-node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 4 (Frames)"
+# Step 4 완료 대기
+echo "::group::[Step 4] Heatmap & Frames (Awaiting)"
+wait $PID_4; EXIT_4=$?
+log "INFO" "--- [Step 4 Frames] ---"
+cat "$TEMP_LOG_4" | tee -a "$LOG_FILE"
+if [ $EXIT_4 -ne 0 ]; then
+    log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
+fi
+rm -f "$TEMP_LOG_4"
+
+step_end "Step 3+4 (Transcript+Frames+Context)"
 echo "::endgroup::"
 
 # [PERF] Sync #2: 자막/프레임 완료 후 저장 (Phase 2 통합 - 기존 3회 → 1회)
@@ -343,7 +393,7 @@ step_start
 log "INFO" "[Step 09] Rule Evaluation..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/09-rule-evaluation.py --channel tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-grep "✅ Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
+grep "Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 step_end "Step 09 (Rule Eval)"
 echo "::endgroup::"
 
@@ -362,7 +412,7 @@ log "INFO" "[Step 10] LAAJ Evaluation..."
 bash backend/restaurant-evaluation/scripts/10-laaj-evaluation.sh --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-grep "🎉 LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
+grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 step_end "Step 10 (LAAJ Eval)"
 echo "::endgroup::"
 
@@ -412,9 +462,9 @@ PIPELINE_END=$(date +%s)
 TOTAL_DURATION=$((PIPELINE_END - PIPELINE_START))
 TOTAL_MIN=$((TOTAL_DURATION / 60))
 TOTAL_SEC=$((TOTAL_DURATION % 60))
-log "SUCCESS" "============================================================"
-log "SUCCESS" "모든 단계가 완료되었습니다! (총 실행 시간: ${TOTAL_MIN}분 ${TOTAL_SEC}초)"
-log "SUCCESS" "============================================================"
+log "OK" "============================================================"
+log "OK" "모든 단계가 완료되었습니다! (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
+log "OK" "============================================================"
 
 # ============================================================
 # GitHub Actions Summary 생성
@@ -425,30 +475,30 @@ echo "## Daily Crawling Report ($DATE)" > "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
 # [PERF] 실행 시간 요약 (가장 먼저 표시)
-echo "### ⏱️ Execution Time" >> "$SUMMARY_MD"
+echo "### Execution Time" >> "$SUMMARY_MD"
 echo "| Metric | Value |" >> "$SUMMARY_MD"
 echo "|--------|-------|" >> "$SUMMARY_MD"
 echo "| Total Runtime | **${TOTAL_MIN}분 ${TOTAL_SEC}초** |" >> "$SUMMARY_MD"
 echo "| New Videos | ${NEW_URL_COUNT:-0} |" >> "$SUMMARY_MD"
 echo "| Mode | $([ "${HAS_NEW_DATA}" = "true" ] && echo "Full Pipeline" || echo "Smart (Delta Only)") |" >> "$SUMMARY_MD"
 if [ "${SKIP_PHASE3:-false}" = "true" ]; then
-    echo "| ⚠️ Note | Phase 3 skipped (timeout) |" >> "$SUMMARY_MD"
+    echo "| Note | Phase 3 skipped (timeout) |" >> "$SUMMARY_MD"
 fi
 echo "" >> "$SUMMARY_MD"
 
 # 스텝별 타이밍 로그 추출
-echo "### ⏱️ Step Timings" >> "$SUMMARY_MD"
+echo "### Step Timings" >> "$SUMMARY_MD"
 echo "| Step | Duration |" >> "$SUMMARY_MD"
 echo "|------|----------|" >> "$SUMMARY_MD"
-grep "⏱️" "$LOG_FILE" | strip_ansi | while IFS= read -r line; do
-    STEP_NAME=$(echo "$line" | sed 's/.*⏱️ //;s/ 완료:.*//')
-    STEP_TIME=$(echo "$line" | sed 's/.*완료: //')
+grep "\[TIMING\]" "$LOG_FILE" | strip_ansi | while IFS= read -r line; do
+    STEP_NAME=$(echo "$line" | sed 's/.*\[TIMING\] //;s/:.*//')
+    STEP_TIME=$(echo "$line" | sed 's/.*\[TIMING\] [^:]*: //')
     echo "| $STEP_NAME | $STEP_TIME |" >> "$SUMMARY_MD"
 done
 echo "" >> "$SUMMARY_MD"
 
 # 상세 처리 통계
-echo "### 📊 Process Statistics" >> "$SUMMARY_MD"
+echo "### Process Statistics" >> "$SUMMARY_MD"
 echo "| Step | Count | Status |" >> "$SUMMARY_MD"
 echo "|------|-------|--------|" >> "$SUMMARY_MD"
 
@@ -484,20 +534,20 @@ if [ -f "$LOG_FILE" ]; then
     fi
 
     # 3.1 문맥 생성
-    CONTEXT_CNT=$(grep -c "Context generation for .* completed" "$LOG_FILE" 2>/dev/null || echo "0")
+    CONTEXT_CNT=$(grep -c "Context generation for .* completed" "$LOG_FILE" 2>/dev/null || true)
     echo "| Contexts | $CONTEXT_CNT | Generated |" >> "$SUMMARY_MD"
 
     # 4. 히트맵
-    HEATMAP_CNT=$(grep -c "Heatmap saved" "$LOG_FILE" 2>/dev/null || echo "0")
+    HEATMAP_CNT=$(grep -c "Heatmap saved" "$LOG_FILE" 2>/dev/null || true)
     echo "| Heatmaps | $HEATMAP_CNT | Saved |" >> "$SUMMARY_MD"
 
     # 4. 프레임
-    FRAME_CNT=$(grep -c "Frames extracted" "$LOG_FILE" 2>/dev/null || echo "0")
+    FRAME_CNT=$(grep -c "Frames extracted" "$LOG_FILE" 2>/dev/null || true)
     echo "| Frames | $FRAME_CNT | Extracted |" >> "$SUMMARY_MD"
 
     # 구글 드라이브 & 유튜브
-    GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE" 2>/dev/null || echo "0")
-    YOUTUBE_CNT=$(grep -c "\[YouTube\] 다운로드 시도" "$LOG_FILE" 2>/dev/null || echo "0")
+    GDRIVE_CNT=$(grep -c "\[GDrive\] 영상 발견.*다운로드 시도" "$LOG_FILE" 2>/dev/null || true)
+    YOUTUBE_CNT=$(grep -c "\[YouTube\] 다운로드 시도" "$LOG_FILE" 2>/dev/null || true)
     echo "| GDrive Cache | $GDRIVE_CNT | Hits |" >> "$SUMMARY_MD"
     if [ "$YOUTUBE_CNT" -gt 0 ]; then
         echo "| YouTube DL | **$YOUTUBE_CNT** | Success |" >> "$SUMMARY_MD"
@@ -506,7 +556,7 @@ if [ -f "$LOG_FILE" ]; then
     fi
 
     # 5. 지도 URL
-    MAP_CNT=$(grep -c "✅ 지도 URL 수집 완료" "$LOG_FILE" 2>/dev/null || echo "0")
+    MAP_CNT=$(grep -c "지도 URL 수집 완료" "$LOG_FILE" 2>/dev/null || true)
     if [ "$MAP_CNT" -gt 0 ]; then
         echo "| Map Crawling | $MAP_CNT | Collected |" >> "$SUMMARY_MD"
     fi
@@ -554,7 +604,7 @@ if [ -f "$LOG_FILE" ]; then
         echo "| DB Insert | - | Skipped |" >> "$SUMMARY_MD"
     fi
 else
-    echo "⚠️ Log file not found at $LOG_FILE. Statistics unavailable." >> "$SUMMARY_MD"
+    echo "Log file not found at $LOG_FILE. Statistics unavailable." >> "$SUMMARY_MD"
 fi
 
 echo "" >> "$SUMMARY_MD"
@@ -572,7 +622,7 @@ fi
 
 # 2. 메타데이터 업데이트
 if [ "${META_CNT:-0}" != "0" ] && [ "${META_CNT:--}" != "-" ]; then
-    echo "**📝 Metadata Updates ($META_CNT)**" >> "$SUMMARY_MD"
+    echo "**Metadata Updates ($META_CNT)**" >> "$SUMMARY_MD"
     if [ "$META_CNT" -le 20 ]; then
         grep "\[Meta Updated\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Meta Updated\] /- /' >> "$SUMMARY_MD"
     else
@@ -584,47 +634,47 @@ fi
 
 # 3. 자막 저장 내역
 if [ "${TRANSCRIPT_CNT:-0}" != "0" ]; then
-    echo "**💬 Transcripts Saved**" >> "$SUMMARY_MD"
+    echo "**Transcripts Saved**" >> "$SUMMARY_MD"
     grep "\[Transcript Saved\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Transcript Saved\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
 # 4. 히트맵 처리
 if [ "${HEATMAP_CNT:-0}" -gt 0 ] 2>/dev/null; then
-    echo "**🔥 Heatmaps Processed**" >> "$SUMMARY_MD"
+    echo "**Heatmaps Processed**" >> "$SUMMARY_MD"
     grep "\[Heatmap Saved\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Heatmap Saved\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
 # 5. 프레임 추출
-FRAME_VIDEO_CNT=$(grep -c "\[Frames Extracted\]" "$LOG_FILE" 2>/dev/null || echo "0")
+FRAME_VIDEO_CNT=$(grep -c "\[Frames Extracted\]" "$LOG_FILE" 2>/dev/null || true)
 if [ "$FRAME_VIDEO_CNT" -gt 0 ]; then
-    echo "**🖼️ Frames Extracted (Videos: $FRAME_VIDEO_CNT)**" >> "$SUMMARY_MD"
+    echo "**Frames Extracted (Videos: $FRAME_VIDEO_CNT)**" >> "$SUMMARY_MD"
     grep "\[Frames Extracted\]" "$LOG_FILE" | strip_ansi | sed 's/.*\[Frames Extracted\] /- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
 # 6. 재미나이
 if [ -n "${GEMINI_SUCCESS_LINE:-}" ]; then
-    echo "**🧠 Gemini Analysis**" >> "$SUMMARY_MD"
+    echo "**Gemini Analysis**" >> "$SUMMARY_MD"
     echo "- $GEMINI_SUCCESS_LINE" >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
 if [ "${YOUTUBE_CNT:-0}" -gt 0 ] 2>/dev/null; then
-    echo "**📺 YouTube Downloads**" >> "$SUMMARY_MD"
+    echo "**YouTube Downloads**" >> "$SUMMARY_MD"
     grep "\[Cache\] 비디오 캐시 저장 완료" "$LOG_FILE" | strip_ansi | sed 's/^/- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
 if [ "${CONTEXT_CNT:-0}" -gt 0 ] 2>/dev/null; then
-    echo "**🧠 Context Generation**" >> "$SUMMARY_MD"
+    echo "**Context Generation**" >> "$SUMMARY_MD"
     grep "Context generation for" "$LOG_FILE" | strip_ansi | sed 's/^/- /' >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
 fi
 
 if [ -n "${SUPA_INSERTED:-}" ]; then
-    echo "**🗄️ Supabase Status**" >> "$SUMMARY_MD"
+    echo "**Supabase Status**" >> "$SUMMARY_MD"
     echo "- Inserted: $SUPA_INSERTED" >> "$SUMMARY_MD"
     echo "- Skipped: ${SUPA_SKIPPED:-0}" >> "$SUMMARY_MD"
     grep "오류:" "$LOG_FILE" | strip_ansi | sed 's/^/- /' >> "$SUMMARY_MD"
@@ -638,7 +688,7 @@ echo "" >> "$SUMMARY_MD"
 FAILED_DOWNLOADS=$(grep "비디오 파일 확보 실패" "$LOG_FILE" 2>/dev/null | head -n 10)
 
 if [ -n "$FAILED_DOWNLOADS" ]; then
-    echo "### ⚠️ Manual Action Required (Missing Videos)" >> "$SUMMARY_MD"
+    echo "### Manual Action Required (Missing Videos)" >> "$SUMMARY_MD"
     echo "> **Note**: 아래 영상들은 구글 드라이브에 없어 수집에 실패했습니다. 로컬에서 받아 드라이브에 올려주세요." >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
     echo "\`\`\`text" >> "$SUMMARY_MD"
@@ -654,29 +704,29 @@ if [ -n "$FAILED_DOWNLOADS" ]; then
     fi
     echo "\`\`\`" >> "$SUMMARY_MD"
 else
-    echo "### ✅ All Systems Go!" >> "$SUMMARY_MD"
+    echo "### All Systems Go" >> "$SUMMARY_MD"
     echo "모든 영상이 정상적으로 처리되었습니다." >> "$SUMMARY_MD"
 fi
 
 echo "" >> "$SUMMARY_MD"
 
-echo "### 🔍 Quick Links" >> "$SUMMARY_MD"
+echo "### Quick Links" >> "$SUMMARY_MD"
 echo "- **Log File**: \`backend/log/cron/daily_$DATE.log\`" >> "$SUMMARY_MD"
 echo "- **Data Branch**: [\`data\`](https://github.com/twoimo/tzudong/tree/data)" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
-echo "### 🏗️ Pipeline Architecture" >> "$SUMMARY_MD"
+echo "### Pipeline Architecture" >> "$SUMMARY_MD"
 echo "\`\`\`" >> "$SUMMARY_MD"
 cat <<'EOF' >> "$SUMMARY_MD"
 +----------------------------------------------------------------------------------------------------------+
-|                                    🚀 TZUDONG PIPELINE FLOW (Optimized)                                   |
+|                                    TZUDONG PIPELINE FLOW (Optimized)                                      |
 +----------------------------------------------------------------------------------------------------------+
 |                                                                                                          |
 |  [Phase 1: Collection]                                                                                   |
-|  [Step 1: URLs] → [Step 2: Meta] → [Step 2.1: Migr] → [Step 2.5: Clean] ══► [Git Sync #1]              |
+|  [Step 1: URLs] → [Step 2: Meta] → [Step 2.1+2.5: Migr+Clean (Parallel)] ══► [Git Sync #1]             |
 |                                                                                                          |
 |  [Phase 2: Multi-modal]                                                                                  |
-|  [Step 3: Transcript] → [Step 3.1: Context] → [Step 4: Frames] ══► [Git Sync #2]                        |
+|  [Step 3+4: Transcript+Frames (Parallel)] → [Step 3.1: Context] ══► [Git Sync #2]                       |
 |                                                                                                          |
 |  [Phase 3: AI Analysis]  ── (Timeout Check) ──                                                           |
 |  [Step 6.1: Enrich] → [Step 7: Gemini] → [Step 08: Target] → [Step 09: Rule] ══► [Git Sync #3]         |

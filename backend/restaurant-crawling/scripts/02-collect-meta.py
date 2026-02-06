@@ -40,7 +40,7 @@ try:
     from openai import OpenAI
     from dotenv import load_dotenv
 except ImportError:
-    print("❌ 필수 패키지 설치 필요:")
+    print("[ERROR] 필수 패키지 설치 필요:")
     print("   pip install google-api-python-client openai python-dotenv requests")
     sys.exit(1)
 
@@ -249,7 +249,7 @@ def get_meta_history(
     if not meta_file.exists():
         return []
     try:
-        lines = meta_file.read_text().strip().split("\n")
+        lines = meta_file.read_text(encoding="utf-8").strip().split("\n")
         return [json.loads(line) for line in lines[-max_records:] if line]
     except Exception:
         return []
@@ -447,7 +447,7 @@ def collect_channel_meta(
     deleted_path = channel_path / "deleted_urls.txt"
 
     if not urls_path.exists():
-        logger.warning(f"  ❌ URL 파일 없음: {urls_path}")
+        logger.warning(f"  [ERROR] URL 파일 없음: {urls_path}")
         return {}
 
     # 1. 수집 대상 비디오 ID 로드
@@ -476,9 +476,9 @@ def collect_channel_meta(
     original_count = len(video_ids)
     video_ids = [vid for vid in video_ids if vid not in deleted_ids]
     if len(video_ids) < original_count:
-        logger.warning(f"  ⚠️ 삭제된 영상 {original_count - len(video_ids)}개 필터링됨")
+        logger.warning(f"  [WARN] 삭제된 영상 {original_count - len(video_ids)}개 필터링됨")
 
-    logger.info(f"  🔍 수집 대상: {len(video_ids)}개")
+    logger.info(f"  [SCAN] 수집 대상: {len(video_ids)}개")
     if not video_ids:
         return {"processed": 0}
 
@@ -531,13 +531,13 @@ def collect_channel_meta(
     if skipped_today_count > 0:
         save_checked_cache(channel_path, checked_cache)
         logger.info(
-            f"  ⏭️ [Smart Skip] {skipped_today_count}개 영상은 오늘 이미 확인되어 건너뜁니다."
+            f"  [Smart Skip] {skipped_today_count}개 영상은 오늘 이미 확인되어 건너뜁니다."
         )
 
     video_ids = pending_ids
 
     if not video_ids:
-        logger.info("  ✨ 수집할 대상이 없습니다 (모두 최신 상태)")
+        logger.info("  수집할 대상이 없습니다 (모두 최신 상태)")
         return {"processed": 0, "success": success_count}
 
     # 배치 처리
@@ -621,7 +621,7 @@ def collect_channel_meta(
 
             # [수정] 변경사항 없이 스케줄링에 의한 수집인 경우, 하루 1회만 허용
             if not is_changed and is_scheduled and already_collected_today:
-                logger.debug(f"  ⏭️ 오늘 이미 수집됨 (스킵): {vid}")
+                logger.debug(f"  오늘 이미 수집됨 (스킵): {vid}")
                 continue
 
             # 5. 수집 확정 -> ID 계산
@@ -688,7 +688,7 @@ def main():
     openai_api_key = get_api_key("openai")
 
     if not youtube_api_key:
-        print("❌ YOUTUBE_API_KEY 누락됨")
+        print("[ERROR] YOUTUBE_API_KEY 누락됨")
         sys.exit(1)
 
     youtube = build("youtube", "v3", developerKey=youtube_api_key)

@@ -10,6 +10,7 @@ transforms.jsonl 데이터를 Supabase에 삽입합니다.
 import json
 import os
 import sys
+import time
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -18,7 +19,7 @@ from dotenv import load_dotenv
 try:
     from supabase import create_client, Client
 except ImportError:
-    print("❌ supabase 패키지가 설치되지 않았습니다.")
+    print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
     print("   pip install supabase 실행")
     sys.exit(1)
 
@@ -50,7 +51,7 @@ def main():
     env_path_backend = Path(__file__).parent.parent.parent / ".env"
     if env_path_backend.exists():
         load_dotenv(env_path_backend)
-        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] ✅ .env 로드: {env_path_backend}")
+        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드: {env_path_backend}")
 
     # Supabase 설정
     supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
@@ -59,10 +60,10 @@ def main():
     )
 
     if not supabase_url or not supabase_key:
-        print(f"❌ SUPABASE_URL 또는 SUPABASE_KEY 환경변수가 설정되지 않았습니다.")
+        print(f"[ERROR] SUPABASE_URL 또는 SUPABASE_KEY 환경변수가 설정되지 않았습니다.")
         sys.exit(1)
 
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] ✅ Supabase 설정 완료")
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] Supabase 설정 완료")
     print(f"   URL: {supabase_url}")
 
     # Supabase 클라이언트 생성
@@ -72,25 +73,27 @@ def main():
     input_file = evaluation_path / "evaluation" / "transforms.jsonl"
 
     if not input_file.exists():
-        print(f"⚠️ transforms 파일 없음: {input_file} (데이터 없음으로 간주)")
+        print(f"[WARN] transforms 파일 없음: {input_file} (데이터 없음으로 간주)")
         # 0건 처리로 종료
         print(f"\n{'='*50}")
-        print(f"✅ Supabase 삽입 완료! (SKIP)")
+        print(f"[OK] Supabase 삽입 완료! (SKIP)")
         print(f"   총 레코드: 0개")
         print(f"{'='*50}")
         return
 
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 📂 입력 파일: {input_file}")
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 입력 파일: {input_file}")
 
     # 기존 trace_id 조회 로직 제거 (배치 단위로 처리)
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 🚀 데이터 처리 시작 (기존 데이터 보존 로직 적용)...")
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 데이터 처리 시작 (기존 데이터 보존 로직 적용)...")
 
     # 통계
     stats = {"total_records": 0, "inserted": 0, "skipped": 0, "errors": 0}
 
-    # 데이터 읽기 및 삽입
-    batch_size = 50
+    # [PERF] 배치 크기 200으로 증가 (Supabase REST API 최대 1000행, 네트워크 라운드트립 4배 감소)
+    batch_size = 200
     batch = []
+    MAX_RETRIES = 2
+    RETRY_DELAY = 2
 
     def process_and_upsert(batch_data):
         if not batch_data:
@@ -106,7 +109,7 @@ def main():
             if response.data:
                 existing_map = {row["trace_id"]: row for row in response.data}
         except Exception as e:
-            print(f"⚠️ 기존 데이터 조회 실패 (Batch): {e}")
+            print(f"[WARN] 기존 데이터 조회 실패 (Batch): {e}")
 
         # 2. 데이터 병합 (기존 데이터 보존)
         final_batch = []
@@ -115,29 +118,28 @@ def main():
             existing = existing_map.get(tid)
             
             if existing:
-                # 기존 레코드가 존재하면, '새 데이터의 키'에 해당하는 '기존 DB 값'이 Not Null 인 경우
-                # 기존 값을 우선 사용하여 덮어쓰기 방지 (즉, DB값 유지)
                 for key in list(item.keys()):
                     db_val = existing.get(key)
-                    # 주의: DB 값이 None이 아니면 그걸 쓴다. (새 값이 있어도 DB값 우선? User: "기존에 있는 값 유지")
-                    # 만약 새 값으로 업데이트를 '원하는' 경우라면 이 로직은 방해가 될 수 있음.
-                    # 하지만 요청사항은 "NULL 변경되는 문제"를 막는 것. 
-                    # 안전하게: 새 값이 None이거나 빈 값일 때만 DB 값을 쓰는 게 아니라, 
-                    # "기존에 있는 값 유지" -> DB Priority.
                     if db_val is not None:
                         item[key] = db_val
             
             final_batch.append(item)
 
-        # 3. Upsert
+        # 3. [PERF] Upsert with retry (최대 2회 재시도, 2초 대기)
         if not dry_run:
-            try:
-                supabase.table("restaurants").upsert(final_batch, on_conflict="trace_id").execute()
-                stats["inserted"] += len(final_batch)
-                print(f"   {stats['inserted']}개 처리 완료 (Upsert/Merge)...")
-            except Exception as e:
-                print(f"⚠️ 배치 Upsert 오류: {e}")
-                stats["errors"] += len(final_batch)
+            for attempt in range(1, MAX_RETRIES + 2):
+                try:
+                    supabase.table("restaurants").upsert(final_batch, on_conflict="trace_id").execute()
+                    stats["inserted"] += len(final_batch)
+                    print(f"   {stats['inserted']}개 처리 완료 (Upsert/Merge)...")
+                    return
+                except Exception as e:
+                    if attempt <= MAX_RETRIES:
+                        print(f"[WARN] 배치 Upsert 실패 (시도 {attempt}/{MAX_RETRIES+1}): {e}")
+                        time.sleep(RETRY_DELAY)
+                    else:
+                        print(f"[ERROR] 배치 Upsert 최종 실패 ({MAX_RETRIES+1}회 시도 후): {e}")
+                        stats["errors"] += len(final_batch)
         else:
             stats["inserted"] += len(final_batch)
 
@@ -213,10 +215,11 @@ def main():
 
     # 결과 출력
     print(f"\n{'='*50}")
-    print(f"✅ Supabase 삽입 완료!")
+    print(f"[OK] Supabase 삽입 완료!")
     print(f"   총 레코드: {stats['total_records']}개")
-    print(f"   삽입됨: {stats['inserted']}개")
+    print(f"   성공 (Insert): {stats['inserted']}개")
     print(f"   건너뜀 (중복): {stats['skipped']}개")
+    print(f"   배치 크기: {batch_size}")
     if stats["errors"] > 0:
         print(f"   오류: {stats['errors']}개")
     if dry_run:
