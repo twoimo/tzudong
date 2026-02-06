@@ -38,38 +38,6 @@ const execPromise = util.promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// =============================================================================
-// 크로스플랫폼 실행 경로 자동 감지 (Windows/macOS/Linux)
-// =============================================================================
-function findPythonPath() {
-    const candidates = [
-        process.env.PYTHON_PATH,
-        process.platform === 'win32' ? path.join(process.env.USERPROFILE || '', 'anaconda3', 'python.exe') : null,
-        process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe') : null,
-        process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python311', 'python.exe') : null,
-        '/usr/local/bin/python3',
-        '/usr/bin/python3',
-    ].filter(Boolean);
-    for (const p of candidates) {
-        try { if (fs.existsSync(p)) return p; } catch { }
-    }
-    return process.platform === 'win32' ? 'python' : 'python3';
-}
-
-function findNodePath() {
-    const candidates = [
-        process.env.NODE_PATH_OVERRIDE,
-        process.execPath,
-        process.platform === 'win32' ? 'C:\\Program Files\\nodejs\\node.exe' : null,
-        '/usr/local/bin/node',
-        '/usr/bin/node',
-    ].filter(Boolean);
-    for (const p of candidates) {
-        try { if (fs.existsSync(p)) return p; } catch { }
-    }
-    return null;
-}
-
 // --- 환경 설정 ---
 const SCRIPT_DIR = __dirname;
 const BASE_DATA_DIR = path.resolve(SCRIPT_DIR, '../data');
@@ -976,9 +944,11 @@ async function downloadVideo(videoId, outputDir, quality) {
     // 포맷 유연성 확보: mp4 강제 제거 후 remux 사용 (n-challenge 해결 확률 높임)
     const format = `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`;
 
-    // [최적화] 크로스플랫폼 경로 자동 감지 + Output Template
-    const detectedPython = findPythonPath();
-    const detectedNode = findNodePath();
+    // 1. Python 모듈 사용 (최신 버전 보장)
+    // 2. Node.js 경로 명시 (n-challenge 해결 필수)
+    // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
+    // 4. Output Template: 확장자 자동 결정 (%(ext)s) - Merge 에러 방지
+    const nodePath = "C:\\Program Files\\nodejs\\node.exe";
     const outputFileTemplate = path.join(outputDir, `${videoId}.%(ext)s`);
 
     // [최적화] 캐시된 파일 확인
@@ -1019,16 +989,23 @@ async function downloadVideo(videoId, outputDir, quality) {
 
 
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
-    // [최적화] 크로스플랫폼 Python/Node.js 경로 자동 감지
-    const dlPythonPath = findPythonPath();
-    const dlNodePath = findNodePath();
-    const dlRuntimesArg = dlNodePath
-        ? `--js-runtimes "node:${dlNodePath}"`
+    // [수정] 시스템 python 대신 Anaconda python 명시적 사용 (yt-dlp 모듈 보유)
+    // [수정] GitHub Actions 등 환경에 따라 python 경로 유연화
+    let pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
+    if (!fs.existsSync(pythonPath)) {
+        // 윈도우가 아니거나 해당 경로 없으면 시스템 python 시도
+        pythonPath = "python3";
+    }
+
+    // Windows가 아닌 경우 nodePath 조정 필요할 수 있음
+    // Linux/Mac 환경에서는 PATH의 node를 사용하도록 설정
+    const runtimesArg = process.platform === 'win32'
+        ? `--js-runtimes "node:${nodePath}"`
         : '--js-runtimes "node:node"';
 
     // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
     // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐
-    const cmd = `"${dlPythonPath}" -m yt_dlp --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${dlRuntimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    const cmd = `"${pythonPath}" -m yt_dlp --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
