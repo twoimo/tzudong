@@ -1012,12 +1012,8 @@ https://www.youtube.com/watch?v=-qCYzNtjSYY
 https://www.youtube.com/watch?v=9EpgVDwUqp4
 https://www.youtube.com/watch?v=xZGiIBCygGc
 https://www.youtube.com/watch?v=_nTi6JIiV-Q
-<<<<<<< Updated upstream
-=======
 https://www.youtube.com/watch?v=PnBU-wczPHI
-
 https://www.youtube.com/watch?v=tHHPFZkwF4g
 https://www.youtube.com/watch?v=W2rczdVqpPU
->>>>>>> origin/data
 https://www.youtube.com/watch?v=hbJeJKuxG5Q
 https://www.youtube.com/watch?v=5kvyjueOvxE
