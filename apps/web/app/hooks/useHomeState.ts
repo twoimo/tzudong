@@ -123,7 +123,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         return counts;
     }, [globalRestaurants]);
 
-    return {
+    return useMemo(() => ({
         // States
         selectedRestaurant,
         setSelectedRestaurant,
@@ -161,5 +161,24 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         selectedCategories,
         setSelectedCategories,
         countryCounts,
-    };
+    }), [
+        selectedRestaurant,
+        refreshTrigger,
+        isAdminEditModalOpen,
+        adminRestaurantToEdit,
+        selectedRegion,
+        selectedCountry,
+        searchedRestaurant,
+        isEditModalOpen,
+        restaurantToEdit,
+        isReviewModalOpen,
+        isCategoryPopoverOpen,
+        moveToRestaurant,
+        isPanelOpen,
+        panelRestaurant,
+        editFormData,
+        filters,
+        selectedCategories,
+        countryCounts
+    ]);
 }

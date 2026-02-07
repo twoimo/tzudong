@@ -2050,8 +2050,13 @@ const NaverMapView = memo(({
                 scaleControl: false,
                 // 성능 최적화 및 UX 개선 옵션
                 background: '#f5f5f5', // [UX] 흰색보다 약간 회색으로 변경 (눈에 덜 띔)
-                tileSpare: 5, // [UX] 화면 밖 타일 미리 로딩 (줌아웃 시 흰색 배경 방지)
-                tileTransition: true, // [UX] 타일 로딩 시 페이드 효과
+                tileSpare: 1, // [PERF] 타일 미리 로딩 감소 (메모리/네트워크 절약)
+                tileTransition: false, // [PERF] 타일 페이드 효과 비활성화 (렌더링 부하 감소)
+                // [Fix] 줌/팬 동작 명시적 활성화
+                scrollWheel: true,
+                pinchZoom: true,
+                draggable: true,
+                keyboardShortcuts: true,
             });
 
             mapInstanceRef.current = map;
@@ -2143,12 +2148,13 @@ const NaverMapView = memo(({
         const debouncedUpdate = debounce(triggerMarkerUpdate, mapOptimization.mapUpdateDebounceMs);
 
         // 이벤트 리스너 등록
-        const dragEndListener = naver.maps.Event.addListener(map, 'dragend', debouncedUpdate);
-        const zoomChangedListener = naver.maps.Event.addListener(map, 'zoom_changed', debouncedUpdate);
+        // 이벤트 리스너 등록
+        // [Fix] dragend/zoom_changed 대신 idle 이벤트만 사용하여
+        // 지도가 완전히 멈춘 후에만 무거운 마커 업데이트 수행 (줌/팬 중 끊김 방지)
+        const idleListener = naver.maps.Event.addListener(map, 'idle', debouncedUpdate);
 
         return () => {
-            naver.maps.Event.removeListener(dragEndListener);
-            naver.maps.Event.removeListener(zoomChangedListener);
+            naver.maps.Event.removeListener(idleListener);
         };
     }, [displayRestaurants, searchedRestaurant, selectedRestaurant, isMapInitialized]);
 
@@ -2251,12 +2257,7 @@ const NaverMapView = memo(({
                 {/* 지도 컨테이너 - 모바일 터치 성능 최적화 */}
                 <div
                     ref={mapRef}
-                    className="w-full h-full touch-pan-y touch-pan-x transform-gpu"
-                    style={{
-                        willChange: 'transform',
-                        touchAction: 'pan-x pan-y',
-                        WebkitOverflowScrolling: 'touch' as any
-                    }}
+                    className="w-full h-full"
                 />
 
                 {/* 로딩 상태 표시 */}
@@ -2318,6 +2319,14 @@ const NaverMapView = memo(({
         );
     }
 
+    // [DEBUG] Render tracking
+    if (process.env.NODE_ENV === 'development') {
+        // console.log('[Performance] NaverMapView rendered', {
+        //     zoom: mapInstanceRef.current?.getZoom(),
+        //     restaurantsCount: displayRestaurants.length
+        // });
+    }
+
     // 단일 지도 모드에서는 Flexbox 레이아웃 적용 (고정 너비 패널)
     return (
         <div className="h-full flex relative overflow-hidden">
@@ -2334,12 +2343,7 @@ const NaverMapView = memo(({
                 <div
                     ref={mapRef}
                     data-testid="map-container"
-                    className="w-full h-full touch-pan-y touch-pan-x transform-gpu"
-                    style={{
-                        willChange: 'transform',
-                        touchAction: 'pan-x pan-y',
-                        WebkitOverflowScrolling: 'touch' as any
-                    }}
+                    className="w-full h-full"
                 />
 
                 {/* 로딩 상태 표시 */}
