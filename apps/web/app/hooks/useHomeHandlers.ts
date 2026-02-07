@@ -43,24 +43,24 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         setMoveToRestaurant,
     } = props;
 
-    const handleFilterChange = (newFilters: FilterState) => {
+    const handleFilterChange = useCallback((newFilters: FilterState) => {
         setFilters(newFilters);
-    };
+    }, [setFilters]);
 
-    const handleCategoryChange = (categories: string[]) => {
+    const handleCategoryChange = useCallback((categories: string[]) => {
         setSelectedCategories(categories);
         setFilters(prev => ({
             ...prev,
             categories: categories
         }));
-    };
+    }, [setSelectedCategories, setFilters]);
 
-    const handleAdminEditRestaurant = (restaurant: Restaurant) => {
+    const handleAdminEditRestaurant = useCallback((restaurant: Restaurant) => {
         setAdminRestaurantToEdit(restaurant);
         setIsAdminEditModalOpen(true);
-    };
+    }, [setAdminRestaurantToEdit, setIsAdminEditModalOpen]);
 
-    const handleRequestEditRestaurant = (restaurant: Restaurant) => {
+    const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
 
         const youtubeReviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[] = [];
@@ -95,51 +95,51 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
             youtube_reviews: youtubeReviews
         });
         setIsEditModalOpen(true);
-    };
+    }, [setRestaurantToEdit, setEditFormData, setIsEditModalOpen]);
 
-    const handleEditFormChange = (field: string, value: string | string[]) => {
+    const handleEditFormChange = useCallback((field: string, value: string | string[]) => {
         setEditFormData(prev => ({
             ...prev,
             [field]: value
         }));
-    };
+    }, [setEditFormData]);
 
-    const handleYoutubeReviewChange = (index: number, field: 'youtube_link' | 'tzuyang_review', value: string) => {
+    const handleYoutubeReviewChange = useCallback((index: number, field: 'youtube_link' | 'tzuyang_review', value: string) => {
         setEditFormData(prev => ({
             ...prev,
             youtube_reviews: prev.youtube_reviews.map((item, i) =>
                 i === index ? { ...item, [field]: value } : item
             )
         }));
-    };
+    }, [setEditFormData]);
 
-    const handleRegionChange = (region: Region | null) => {
+    const handleRegionChange = useCallback((region: Region | null) => {
         setSelectedRegion(region);
         setSearchedRestaurant(null);
-    };
+    }, [setSelectedRegion, setSearchedRestaurant]);
 
-    const handleCountryChange = (country: string) => {
+    const handleCountryChange = useCallback((country: string) => {
         setSelectedCountry(country);
         setIsPanelOpen(false);
         setPanelRestaurant(null);
         setSelectedRestaurant(null);
         setSearchedRestaurant(null);
-    };
+    }, [setSelectedCountry, setIsPanelOpen, setPanelRestaurant, setSelectedRestaurant, setSearchedRestaurant]);
 
-    const handleRestaurantSelect = (restaurant: Restaurant) => {
+    const handleRestaurantSelect = useCallback((restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
-    };
+    }, [setSelectedRestaurant]);
 
-    const handleRestaurantSearch = (restaurant: Restaurant) => {
+    const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
         setPanelRestaurant(restaurant);
         setIsPanelOpen(true);
-    };
+    }, [setSearchedRestaurant, setSelectedRestaurant, setPanelRestaurant, setIsPanelOpen]);
 
 
 
-    const switchToSingleMap = (region?: Region | null) => {
+    const switchToSingleMap = useCallback((region?: Region | null) => {
         if (region !== undefined) {
             setSelectedRegion(region);
             setSelectedRestaurant(null);
@@ -148,7 +148,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
             // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지도가 새 지역으로 이동할 수 있도록)
             window.dispatchEvent(new CustomEvent('resetUserMapMovement'));
         }
-    };
+    }, [setSelectedRegion, setSelectedRestaurant, setSearchedRestaurant]);
 
     const handleMapReady = useCallback((moveFunction: (restaurant: Restaurant) => void) => {
         setMoveToRestaurant(() => moveFunction);
@@ -156,12 +156,12 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
 
 
 
-    const handlePanelClose = () => {
+    const handlePanelClose = useCallback(() => {
         setIsPanelOpen(false);
         setPanelRestaurant(null);
         setSelectedRestaurant(null);
         setSearchedRestaurant(null);
-    };
+    }, [setIsPanelOpen, setPanelRestaurant, setSelectedRestaurant, setSearchedRestaurant]);
 
     return {
         handleFilterChange,
