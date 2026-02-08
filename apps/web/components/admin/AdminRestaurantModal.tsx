@@ -303,34 +303,37 @@ export function AdminRestaurantModal({
         return OVERSEAS_COUNTRIES.some(country => checkText.includes(country));
     };
 
-    // Google Geocoding API 호출 함수
-    const geocodeWithGoogle = async (address: string, limit: number = 3) => {
+    // Mapbox Geocoding API 호출 함수
+    const geocodeWithMapbox = async (query: string, limit: number = 3) => {
         try {
-            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-            if (!apiKey) throw new Error('Google Maps API key not found');
+            const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+            if (!accessToken) throw new Error('Mapbox Access Token not found');
 
             const response = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${accessToken}&limit=${limit}&language=ko`
             );
             const data = await response.json();
 
-            if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+            if (!data.features || data.features.length === 0) {
                 return [];
             }
 
-            return data.results.slice(0, limit).map((result: any) => {
-                const location = result.geometry.location;
+            return data.features.map((feature: any) => {
+                const [lng, lat] = feature.center;
                 return {
-                    road_address: result.formatted_address,
-                    jibun_address: '', // Google은 지번 주소 제공 안 함
-                    english_address: '', // Google은 별도 영어 주소 제공 안 함
-                    address_elements: result.address_components,
-                    x: String(location.lng),
-                    y: String(location.lat),
+                    road_address: feature.place_name,
+                    jibun_address: feature.place_name, // Mapbox는 구분 없음
+                    english_address: feature.place_name,
+                    address_elements: feature.context ? feature.context.reduce((acc: any, curr: any) => {
+                        acc[curr.id.split('.')[0]] = curr.text;
+                        return acc;
+                    }, {}) : {},
+                    x: String(lng),
+                    y: String(lat),
                 };
             });
         } catch (error) {
-            console.error('Google Geocoding 에러:', error);
+            console.error('Mapbox Geocoding 에러:', error);
             throw error;
         }
     };
@@ -410,8 +413,8 @@ export function AdminRestaurantModal({
         }
     };
 
-    // 재지오코딩 버튼 핸들러 - 구글
-    const handleGeocodeGoogle = async () => {
+    // 재지오코딩 버튼 핸들러 - Mapbox
+    const handleGeocodeMapbox = async () => {
         const trimmedAddress = formData.searchAddress.trim();
         const trimmedName = formData.name.trim();
 
@@ -425,19 +428,19 @@ export function AdminRestaurantModal({
             return;
         }
 
-        setIsGeocodingGoogle(true);
+        setIsGeocodingGoogle(true); // Reuse state variable or rename it in full refactor
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
         setIsGeocoded(false);
 
         try {
-            toast.info('Google Geocoding API로 검색 중...');
+            toast.info('Mapbox Geocoding API로 검색 중...');
 
             // 1. name + 전체 주소로 지오코딩
-            const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
+            const fullAddressResults = await geocodeWithMapbox(`${trimmedName} ${trimmedAddress}`, 3);
 
             // 2. 주소만으로 지오코딩
-            const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
+            const addressOnlyResults = await geocodeWithMapbox(trimmedAddress, 3);
 
             // 3. 합치고 중복 제거
             const allResults = [...fullAddressResults, ...addressOnlyResults];
@@ -450,8 +453,8 @@ export function AdminRestaurantModal({
                 toast.error('주소를 찾을 수 없습니다');
             }
         } catch (error) {
-            console.error('Google Geocoding error:', error);
-            toast.error('Google 지오코딩에 실패했습니다');
+            console.error('Mapbox Geocoding error:', error);
+            toast.error('Mapbox 지오코딩에 실패했습니다');
         } finally {
             setIsGeocodingGoogle(false);
         }
@@ -972,7 +975,7 @@ export function AdminRestaurantModal({
                                 </Button>
                                 <Button
                                     type="button"
-                                    onClick={handleGeocodeGoogle}
+                                    onClick={handleGeocodeMapbox}
                                     disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
                                     variant={isGeocodingGoogle ? "default" : "outline"}
                                     className="whitespace-nowrap"
@@ -983,7 +986,7 @@ export function AdminRestaurantModal({
                                             검색 중...
                                         </>
                                     ) : (
-                                        "Google 지오코딩"
+                                        "Mapbox 지오코딩"
                                     )}
                                 </Button>
                             </div>

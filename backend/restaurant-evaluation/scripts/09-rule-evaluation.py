@@ -57,6 +57,10 @@ HEADERS_NCP = {
     "X-NCP-APIGW-API-KEY": NCP_KEY,
 }
 
+# Mapbox 설정
+MAPBOX_ACCESS_TOKEN = os.getenv("MAPBOX_ACCESS_TOKEN", "")
+MAPBOX_GEOCODE_URL = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+
 # 유효한 카테고리 목록
 VALID_CATEGORIES = [
     "치킨",
@@ -81,6 +85,8 @@ naver_api_calls = 0
 ncp_api_calls = 0
 naver_api_errors = 0
 ncp_api_errors = 0
+mapbox_api_calls = 0
+mapbox_api_errors = 0
 
 # [PERF] Geocoding 결과 메모리 캐시 (동일 주소 반복 API 호출 방지)
 _geocode_jibun_cache: Dict[str, Optional[str]] = {}
@@ -252,6 +258,52 @@ def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
     return None
 
 
+def mapbox_geocode(query: str) -> Optional[Dict[str, Any]]:
+    """Mapbox Geocoding (Global)"""
+    global mapbox_api_calls, mapbox_api_errors
+
+    if not MAPBOX_ACCESS_TOKEN:
+        print("[ERROR] MAPBOX_ACCESS_TOKEN이 설정되지 않았습니다.")
+        return None
+
+    try:
+        mapbox_api_calls += 1
+        url = f"{MAPBOX_GEOCODE_URL}/{query}.json"
+        params = {
+            "access_token": MAPBOX_ACCESS_TOKEN,
+            "limit": 1,
+            "language": "ko,en",  # 한국어 우선, 영어 병기
+        }
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        j = r.json()
+        features = j.get("features", [])
+        
+        if not features:
+            return None
+
+        # 첫 번째 결과 사용
+        feat = features[0]
+        lng, lat = feat.get("center", [0, 0])
+        place_name = feat.get("place_name", "")
+        text = feat.get("text", "")
+        
+        # Naver 주소 포맷에 맞춤
+        return {
+            "roadAddress": place_name,
+            "jibunAddress": place_name,  # Mapbox는 구분 없음
+            "englishAddress": place_name, # 필요시 context 등 활용 가능하나 일단 place_name 사용
+            "addressElements": [],
+            "x": str(lng),
+            "y": str(lat),
+            "distance": 0.0
+        }
+    except Exception as e:
+        mapbox_api_errors += 1
+        print(f"[WARN] Mapbox Geocoding 실패: {query} - {e}")
+        return None
+
+
 # ========= 평가 로직 (기존 backup 그대로 + naver_name 추가) =========
 def evaluate_category_validity(
     restaurants: List[Dict[str, Any]],
@@ -283,14 +335,46 @@ def evaluate_category_validity(
     return results, evaluation_name_source
 
 
-def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
+def evaluate_one_restaurant(rec: Dict[str, Any], region: str = "kr") -> Dict[str, Any]:
     """
     음식점 위치 검증 (기존 backup 로직 그대로)
     + naver_name 추가
+    + region='global' 일 경우 Mapbox 사용
     """
     name = _norm_space(str(rec.get("origin_name", "")))
     origin_address_raw = _norm_space(str(rec.get("address", "")))
     origin_address = remove_floor_info(origin_address_raw)
+
+    # [Global Mode] Mapbox 사용
+    if region == "global":
+        # 검색 쿼리: 이름 + 주소
+        query = f"{name} {origin_address}"
+        mapbox_result = mapbox_geocode(query)
+        
+        # 이름만으로도 시도 (주소가 너무 구체적이라 실패할 경우 대비)
+        if not mapbox_result and name:
+             mapbox_result = mapbox_geocode(name)
+
+        if mapbox_result:
+            return {
+                "origin_name": name,
+                "naver_name": name, # Global은 origin_name 그대로 사용 (또는 Mapbox text)
+                "eval_value": True,
+                "origin_address": origin_address,
+                "naver_address": [mapbox_result],
+                "falseMessage": None,
+            }
+        else:
+            return {
+                "origin_name": name,
+                "naver_name": None,
+                "eval_value": False,
+                "origin_address": origin_address,
+                "naver_address": None,
+                "falseMessage": "Mapbox 검색 실패",
+            }
+
+    # [KR Mode] 기존 로직 (Naver + NCP)
 
     # [PERF] Naver Search 3건 동시 호출 (직렬 → 병렬)
     region = extract_region_from_address(origin_address)
@@ -441,7 +525,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
+def process_one_line(obj: Dict[str, Any], region: str = "kr") -> Dict[str, Any]:
     """하나의 selection 데이터 처리"""
     youtube_link = obj.get("youtube_link")
     channel_name = obj.get("channel_name")
@@ -468,7 +552,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
             continue
 
         try:
-            res = evaluate_one_restaurant(r)
+            res = evaluate_one_restaurant(r, region=region)
         except Exception as e:
             res = {
                 "origin_name": name,
@@ -504,12 +588,14 @@ def main():
     parser = argparse.ArgumentParser(description="Rule 기반 평가")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
     parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
+    parser.add_argument("--region", default="kr", choices=["kr", "global"], help="지역 (kr: 국내/네이버, global: 해외/Mapbox)")
     args = parser.parse_args()
 
     channel = args.channel
     evaluation_path = Path(args.evaluation_path)
+    region = args.region
 
-    print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Rule 평가 시작: {channel}")
+    print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Rule 평가 시작: {channel} (Region: {region})")
     print(f"평가 경로: {evaluation_path}")
 
     # 입출력 폴더
@@ -564,7 +650,7 @@ def main():
             continue
 
         # 처리
-        result = process_one_line(data)
+        result = process_one_line(data, region=region)
 
         # 저장
         with open(output_file, "w", encoding="utf-8") as f:
@@ -593,6 +679,7 @@ def main():
     print(f"   실패: {stats['fail_restaurants']}개")
     print(f"   네이버 API 호출: {naver_api_calls}회 (에러: {naver_api_errors})")
     print(f"   NCP API 호출: {ncp_api_calls}회 (에러: {ncp_api_errors})")
+    print(f"   Mapbox API 호출: {mapbox_api_calls}회 (에러: {mapbox_api_errors})")
     cache_total = len(_geocode_jibun_cache) + len(_geocode_addresses_cache)
     print(f"   Geocode 캐시 항목: {cache_total}개")
     print(f"{'='*50}")
