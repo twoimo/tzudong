@@ -186,7 +186,7 @@ def main():
             print(f"[OK] {stats['processed']}개 처리 완료...")
 
     print(f"\n{'='*50}")
-            print(f"[OK] 평가 대상 선정 완료!")
+    print(f"[OK] 평가 대상 선정 완료!")
     print(f"   총 비디오: {stats['total']}개")
     print(f"   처리됨: {stats['processed']}개")
     print(f"   건너뜀: {stats['skipped']}개")
