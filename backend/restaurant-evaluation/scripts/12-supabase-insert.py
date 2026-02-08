@@ -158,8 +158,13 @@ def main():
 
                 # 데이터 변환 (필요한 필드만)
                 # category → categories 배열로 변환
-                category = data.get("category")
-                categories = [category] if category else []
+                # categories(배열) 우선 확인, 없으면 category(단일) 확인
+                categories = data.get("categories")
+                if categories is None:
+                    category = data.get("category")
+                    categories = [category] if category else []
+                elif not isinstance(categories, list):
+                    categories = [categories]
 
                 # youtube_meta에서 publishedAt 추출하여 created_at으로 사용 (UI 표시용)
                 youtube_meta = data.get("youtube_meta")
