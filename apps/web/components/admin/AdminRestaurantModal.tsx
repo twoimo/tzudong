@@ -324,6 +324,11 @@ export function AdminRestaurantModal({
             const response = await fetch(url);
 
             if (!response.ok) {
+                // 422 Unprocessable Entity: 쿼리가 너무 길거나 형식이 잘못됨
+                if (response.status === 422) {
+                    console.warn('Mapbox API 422 Error (유효하지 않은 쿼리):', query);
+                    return [];
+                }
                 throw new Error(`Mapbox API 오류: ${response.status} ${response.statusText}`);
             }
 
