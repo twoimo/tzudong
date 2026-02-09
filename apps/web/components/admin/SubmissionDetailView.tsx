@@ -375,48 +375,26 @@ export function SubmissionDetailView({
 
         setGeocodingGoogle(true);
         try {
-            // 1. 액세스 토큰 가져오기
             const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-
-            // 토큰 디버깅용 (필요시 주석 해제)
-            // console.log('Mapbox Token:', accessToken ? 'Token exists' : 'Token missing');
-
-            if (!accessToken) {
-                throw new Error('Mapbox 액세스 토큰을 찾을 수 없습니다.');
-            }
+            if (!accessToken) throw new Error('Mapbox Access Token not found');
 
             const searchQuery = `${name} ${address}`;
-
-            // 2. Mapbox API 호출
-            // language=ko,en: 한국어 우선, 없으면 영어 (해외 주소 정확도 향상)
-            const encodedQuery = encodeURIComponent(searchQuery);
-            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${accessToken}&limit=3&language=ko,en`;
-
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`Mapbox API 오류: ${response.status} ${response.statusText}`);
-            }
-
+            const response = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${accessToken}&limit=3&language=ko`
+            );
             const data = await response.json();
 
             if (data.features && data.features.length > 0) {
-                // 3. 결과 매핑
                 const results: GeocodingResult[] = data.features.map((feature: any) => {
                     const [lng, lat] = feature.center;
-
-                    // Context에서 주소 구성 요소 추출
-                    const addressElements = feature.context ? feature.context.reduce((acc: any, curr: any) => {
-                        const type = curr.id.split('.')[0];
-                        acc[type] = curr.text;
-                        return acc;
-                    }, {}) : {};
-
                     return {
                         road_address: feature.place_name,
                         jibun_address: feature.place_name,
-                        english_address: feature.place_name_en || feature.place_name,
-                        address_elements: addressElements,
+                        english_address: feature.place_name,
+                        address_elements: feature.context ? feature.context.reduce((acc: any, curr: any) => {
+                            acc[curr.id.split('.')[0]] = curr.text;
+                            return acc;
+                        }, {}) : {},
                         x: String(lng),
                         y: String(lat),
                     };
