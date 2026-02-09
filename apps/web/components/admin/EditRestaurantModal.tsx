@@ -194,8 +194,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     }
   };
 
-  // 재지오코딩 - Mapbox
-  const handleReGeocodeMapbox = async () => {
+  // 재지오코딩 - 구글
+  const handleReGeocodeGoogle = async () => {
     const trimmedAddress = formData.address.trim();
     const trimmedName = formData.name.trim();
 
@@ -216,26 +216,21 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     }
 
     try {
-      setGeocodingGoogle(true); // 재사용하거나 이름 변경 고려 (여기서는 편의상 state 재사용 또는 새 state 추가)
-      // *일단 기존 geocodingGoogle state를 mapbox용으로 사용하거나, 새로 선언 필요. 
-      //  User code shows `const [geocodingGoogle, setGeocodingGoogle] = useState(false);` at line 86.
-      //  I should probably rename it to `geocodingMapbox` in a multi-replace or just add new state and remove old.
-      //  Let's add `geocodingMapbox` state in a separate chunk to be clean.
-
+      setGeocodingGoogle(true);
       setGeocodingError(null);
       setGeocodingResults([]);
       setSelectedGeocodingIndex(null);
 
 
       toast({
-        title: 'Mapbox Geocoding API로 검색 중...',
+        title: 'Google Geocoding API로 검색 중...',
       });
 
       // 1. name + 전체 주소로 지오코딩
-      const fullAddressResults = await geocodeWithMapbox(`${trimmedName} ${trimmedAddress}`, 3);
+      const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
 
       // 2. 주소만으로 지오코딩
-      const addressOnlyResults = await geocodeWithMapbox(trimmedAddress, 3);
+      const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
 
       // 3. 합치고 중복 제거
       const allResults = [...fullAddressResults, ...addressOnlyResults];
@@ -261,59 +256,15 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         setGeocodingError('주소를 찾을 수 없습니다.');
       }
     } catch (error: any) {
-      console.error('💥 Mapbox 지오코딩 에러:', error);
-      setGeocodingError(error.message || 'Mapbox 지오코딩에 실패했습니다');
+      console.error('💥 Google 지오코딩 에러:', error);
+      setGeocodingError(error.message || 'Google 지오코딩에 실패했습니다');
       toast({
         variant: 'destructive',
-        title: 'Mapbox 지오코딩 실패',
-        description: error.message || 'Mapbox 지오코딩에 실패했습니다',
+        title: 'Google 지오코딩 실패',
+        description: error.message || 'Google 지오코딩에 실패했습니다',
       });
     } finally {
       setGeocodingGoogle(false);
-    }
-  };
-
-  // ... (existing code)
-
-  // Mapbox Geocoding API 호출 함수
-  const geocodeWithMapbox = async (query: string, limit: number = 3): Promise<Array<{
-    road_address: string;
-    jibun_address: string;
-    english_address: string;
-    address_elements: Record<string, unknown>;
-    x: string;
-    y: string;
-  }>> => {
-    try {
-      const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-      if (!accessToken) throw new Error('Mapbox Access Token not found');
-
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${accessToken}&limit=${limit}&language=ko`
-      );
-      const data = await response.json();
-
-      if (!data.features || data.features.length === 0) {
-        return [];
-      }
-
-      return data.features.map((feature: any) => {
-        const [lng, lat] = feature.center;
-        return {
-          road_address: feature.place_name,
-          jibun_address: feature.place_name, // Mapbox는 구분 없음
-          english_address: feature.place_name,
-          address_elements: feature.context ? feature.context.reduce((acc: any, curr: any) => {
-            acc[curr.id.split('.')[0]] = curr.text;
-            return acc;
-          }, {}) : {},
-          x: String(lng),
-          y: String(lat),
-        };
-      });
-    } catch (error) {
-      console.error('Mapbox Geocoding 에러:', error);
-      throw error;
     }
   };
 
@@ -355,6 +306,45 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   const isOverseasAddress = (address: string, englishAddress?: string): boolean => {
     const checkText = `${address} ${englishAddress || ''}`;
     return OVERSEAS_COUNTRIES.some(country => checkText.includes(country));
+  };
+
+  // Google Geocoding API 호출 함수
+  const geocodeWithGoogle = async (address: string, limit: number = 3): Promise<Array<{
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: Record<string, unknown>;
+    x: string;
+    y: string;
+  }>> => {
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) throw new Error('Google Maps API key not found');
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+      );
+      const data = await response.json();
+
+      if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+        return [];
+      }
+
+      return data.results.slice(0, limit).map((result: any) => {
+        const location = result.geometry.location;
+        return {
+          road_address: result.formatted_address,
+          jibun_address: result.formatted_address,
+          english_address: result.formatted_address,
+          address_elements: result.address_components as Record<string, unknown>,
+          x: String(location.lng),
+          y: String(location.lat),
+        };
+      });
+    } catch (error) {
+      console.error('Google Geocoding 에러:', error);
+      throw error;
+    }
   };
 
   // 지오코딩 함수 (여러 개 결과 반환)
@@ -971,13 +961,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={handleReGeocodeMapbox}
+                  onClick={handleReGeocodeGoogle}
                   disabled={geocodingNaver || geocodingGoogle || !formData.address.trim()}
                   className="whitespace-nowrap"
                 >
                   {geocodingGoogle && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                   {!geocodingGoogle && <RefreshCw className="mr-1 h-3 w-3" />}
-                  Mapbox 지오코딩
+                  Google 지오코딩
                 </Button>
               </div>
             </div>
