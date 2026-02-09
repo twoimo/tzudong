@@ -41,7 +41,15 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
 
 const DEFAULT_ICON = '/images/maker-images/world_food.png';
 
+
+
 const DEFAULT_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
+
+// [Zoom Control] 줌 레벨 <-> 슬라이더 값(0-100) 매핑
+const MIN_ZOOM = 2;
+const MAX_ZOOM = 22;
+const mapZoomToSlider = (zoom: number) => Math.round(((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100);
+const sliderToMapZoom = (val: number) => MIN_ZOOM + (val / 100) * (MAX_ZOOM - MIN_ZOOM);
 
 const OverseasMap: React.FC<OverseasMapProps> = ({
     className,
@@ -61,6 +69,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
     const mapPaddingRef = useRef(mapPadding);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
+
 
     // Update ref whenever prop changes
     useEffect(() => {
@@ -92,6 +101,8 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             ? OVERSEAS_REGIONS[selectedCountry].center
             : { lat: 20, lng: 0, zoom: 2 };
 
+
+
         try {
             const mapInstance = new maplibregl.Map({
                 container: mapContainer.current,
@@ -101,9 +112,10 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 attributionControl: false,
                 localIdeographFontFamily: 'sans-serif',
                 renderWorldCopies: true,
+                scrollZoom: false, // [Modified] 커스텀 스크롤 핸들러 사용 (0.5 단위 제어)
             });
 
-            mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
+            // mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right'); // [Modified] 기본 컨트롤 제거 (커스텀 줌 컨트롤 사용)
             mapInstance.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
             mapInstance.on('load', () => {
@@ -122,7 +134,56 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             console.error("Map Init Error:", err);
         }
 
+        // [New] 커스텀 스크롤 휠 핸들러 (0.5 단위 줌 -> 1단위 슬라이더 줌)
+        // 연속 스크롤 시 목표 슬라이더 값 추적 변수
+        let targetSlider = mapZoomToSlider(initialConfig.zoom);
+        let lastWheelTime = 0;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (!map.current) return;
+            e.preventDefault();
+
+            const now = Date.now();
+            const timeDiff = now - lastWheelTime;
+            lastWheelTime = now;
+
+            const currentMapZoom = map.current.getZoom();
+            const currentSlider = mapZoomToSlider(currentMapZoom);
+
+            let baseSlider;
+
+            // 1. 기준 슬라이더 값 설정 (연속성 보장)
+            if (timeDiff < 400 && Math.abs(targetSlider - currentSlider) < 5) {
+                baseSlider = targetSlider;
+            } else {
+                baseSlider = currentSlider;
+            }
+
+            // 2. 새로운 목표 계산 (슬라이더 1단위)
+            const sliderStep = 1;
+            const nextSlider = e.deltaY > 0
+                ? Math.max(baseSlider - sliderStep, 0)
+                : Math.min(baseSlider + sliderStep, 100);
+
+            // 3. 적용
+            if (nextSlider !== targetSlider) {
+                targetSlider = nextSlider;
+
+                // [UX] 즉각적인 슬라이더 UI 갱신
+                const nextZoom = sliderToMapZoom(nextSlider);
+                // [UX] 깜빡임 방지를 위해 easeTo 사용 (200ms)
+                map.current.easeTo({ zoom: nextZoom, duration: 200 });
+            }
+        };
+
+        if (mapContainer.current) {
+            mapContainer.current.addEventListener('wheel', handleWheel, { passive: false });
+        }
+
         return () => {
+            if (mapContainer.current) {
+                mapContainer.current.removeEventListener('wheel', handleWheel);
+            }
             if (map.current) {
                 map.current.remove();
                 map.current = null;
@@ -249,6 +310,9 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                     <MapSkeleton />
                 </div>
             )}
+
+
+
         </div>
     );
 };
