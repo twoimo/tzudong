@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import { usePathname } from "next/navigation";
+
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { FilterState } from "@/components/filters/FilterPanel";
@@ -390,6 +391,12 @@ const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: any): bo
     return bounds.hasLatLng(latLng);
 };
 
+// [Zoom Control] 줌 레벨 <-> 슬라이더 값(0-100) 매핑
+const MIN_ZOOM = 6;
+const MAX_ZOOM = 18;
+const mapZoomToSlider = (zoom: number) => Math.round(((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100);
+const sliderToMapZoom = (val: number) => MIN_ZOOM + (val / 100) * (MAX_ZOOM - MIN_ZOOM);
+
 const NaverMapView = memo(({
     mapFocusZoom,
     filters,
@@ -462,6 +469,7 @@ const NaverMapView = memo(({
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [onlineUsersCount, setOnlineUsersCount] = useState(0);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
+
 
     // [Fix] 라우트 변경 감지 - 다른 페이지 갔다가 돌아왔을 때 지도 재초기화
     const pathname = usePathname();
@@ -2029,7 +2037,8 @@ const NaverMapView = memo(({
 
             // [Fix] URL에 줌/좌표가 있으면 그 값을 우선 사용 (공유 URL 지원)
             const hasValidUrlState = urlZoom && !isNaN(urlZoom) && !isNaN(urlLat) && !isNaN(urlLng);
-            const initialZoom = hasValidUrlState ? urlZoom : defaultZoom;
+            const initialZoom = hasValidUrlState ? urlZoom! : defaultZoom;
+
             const initialCenter = hasValidUrlState
                 ? new naver.maps.LatLng(urlLat, urlLng)
                 : new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
@@ -2050,10 +2059,10 @@ const NaverMapView = memo(({
                 scaleControl: false,
                 // 성능 최적화 및 UX 개선 옵션
                 background: '#f5f5f5', // [UX] 흰색보다 약간 회색으로 변경 (눈에 덜 띔)
-                tileSpare: 1, // [PERF] 타일 미리 로딩 감소 (메모리/네트워크 절약)
-                tileTransition: false, // [PERF] 타일 페이드 효과 비활성화 (렌더링 부하 감소)
+                tileSpare: 3, // [PERF] 타일 미리 로딩 감소 (메모리/네트워크 절약)
+                tileTransition: true, // [UX] 타일 깜빡임 방지를 위해 페이드 효과 활성화
                 // [Fix] 줌/팬 동작 명시적 활성화
-                scrollWheel: true,
+                scrollWheel: false, // [Modified] 커스텀 스크롤 핸들러 사용 (0.5 단위 제어)
                 pinchZoom: true,
                 draggable: true,
                 keyboardShortcuts: true,
@@ -2084,6 +2093,58 @@ const NaverMapView = memo(({
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
     }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // [New] 커스텀 스크롤 휠 핸들러 (0.5 단위 줌 -> 1단위 슬라이더 줌) - 별도 Effect로 분리
+    useEffect(() => {
+        if (!isMapInitialized || !mapRef.current || !mapInstanceRef.current) return;
+
+        const mapElement = mapRef.current;
+        const map = mapInstanceRef.current;
+
+        // 연속 스크롤 시 목표 줌 레벨 추적 변수 (Effect 클로저 내 유지)
+        let targetZoomLevel = map.getZoom();
+        let lastWheelTime = 0;
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+
+            const now = Date.now();
+            const timeDiff = now - lastWheelTime;
+            lastWheelTime = now;
+
+            const currentMapZoom = map.getZoom();
+
+            // 1. 기준 줌 설정 (연속성 보장)
+            let baseZoom;
+            // 400ms 이내이고, 오차가 크지 않으면 이전 목표값 유지
+            if (timeDiff < 400 && Math.abs(targetZoomLevel - currentMapZoom) < 1.5) {
+                baseZoom = targetZoomLevel;
+            } else {
+                baseZoom = currentMapZoom;
+            }
+
+            // 2. 새로운 목표 계산 (정수 1단위)
+            // deltaY > 0 : 줌 아웃(값 감소), deltaY < 0 : 줌 인(값 증가)
+            const zoomChange = e.deltaY > 0 ? -1 : 1;
+            const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(baseZoom) + zoomChange));
+
+            // 3. 적용 (변경이 있을 때만)
+            if (nextZoom !== targetZoomLevel) {
+                targetZoomLevel = nextZoom;
+
+                // [UX] 즉각적인 슬라이더 UI 갱신 (애니메이션 대기 없음)
+                // 줌 변경 시 부드럽게 이동 (깜빡임 방지)
+                map.setZoom(nextZoom, true);
+            }
+        };
+
+        // passive: false여야 preventDefault()가 동작함
+        mapElement.addEventListener('wheel', handleWheel, { passive: false });
+
+        return () => {
+            mapElement.removeEventListener('wheel', handleWheel);
+        };
+    }, [isMapInitialized]);
 
     // [성능 최적화] 지도 이동/줌 이벤트 리스너 - 가시영역 변경 시 마커 업데이트
     useEffect(() => {
@@ -2391,6 +2452,9 @@ const NaverMapView = memo(({
                         </span>
                     </div>
                 )}
+
+
+
             </div>
 
             {/* 레스토랑 상세 패널 - 외부 onMarkerClick이 없을 때만 렌더링 (외부 패널 관리가 아닌 경우에만) */}
