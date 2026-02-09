@@ -63,3 +63,4 @@ backend/restaurant-evaluation/temp/health_check_response.json
 backend/restaurant-evaluation/temp/health_check_prompt.txt
 backend/.sync_trigger
 backend/restaurant-crawling/data/tzuyang/checked_cache.json
+pr_body.md
