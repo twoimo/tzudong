@@ -1,15 +1,15 @@
+import { GlobalLoader } from "@/components/ui/global-loader";
+
 /**
- * [PERF] 유저 프로필 페이지 로딩 UI - 즉각적 페이지 전환
+ * [최적화] 유저 프로필 페이지 로딩 UI - GlobalLoader 통일
+ * UserProfilePanel 내부 로딩 상태와 동일한 메시지/스타일을 사용하여 
+ * 페이지 진입 시 이중 로딩(깜빡임) 현상을 방지합니다.
  */
 export default function UserProfileLoading() {
     return (
-        <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-                <div className="relative mx-auto mb-4 w-12 h-12">
-                    <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                </div>
-                <p className="text-sm text-muted-foreground">프로필을 불러오는 중...</p>
-            </div>
-        </div>
+        <GlobalLoader
+            message="프로필 불러오는 중..."
+            subMessage="사용자 정보를 확인하고 있습니다"
+        />
     );
 }
