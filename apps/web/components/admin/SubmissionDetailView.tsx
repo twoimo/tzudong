@@ -395,13 +395,6 @@ export function SubmissionDetailView({
             const response = await fetch(url);
 
             if (!response.ok) {
-                // 422 Unprocessable Entity: 쿼리가 너무 길거나 형식이 잘못됨
-                if (response.status === 422) {
-                    console.warn('Mapbox API 422 Error (유효하지 않은 쿼리):', searchQuery);
-                    toast.error('검색어가 너무 길거나 유효하지 않습니다 (Mapbox 422). 주소만 입력해보세요.');
-                    // 빈 결과로 처리하여 흐름 유지
-                    return;
-                }
                 throw new Error(`Mapbox API 오류: ${response.status} ${response.statusText}`);
             }
 
