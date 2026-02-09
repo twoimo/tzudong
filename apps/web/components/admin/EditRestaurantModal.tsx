@@ -326,7 +326,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       );
       const data = await response.json();
 
-      if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+      if (data.status !== 'OK') {
+        const errorMsg = data.error_message || data.status;
+        console.error('Google Geocoding API Error:', data.status, errorMsg);
+        throw new Error(`Google API 오류: ${data.status} (${errorMsg})`);
+      }
+
+      if (!data.results || data.results.length === 0) {
         return [];
       }
 
