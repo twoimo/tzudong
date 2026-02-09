@@ -1,7 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart3 } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -51,7 +51,6 @@ interface HeaderProps {
 const BANNER_ROTATION_INTERVAL = 5000;
 
 const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
-  const [isHanjiMode, setIsHanjiMode] = useState(false);
   const isHydrated = useHydration();
   const { isMobileOrTablet } = useDeviceType();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
@@ -262,23 +261,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     router.push('/admin/banners');
   }, [router]);
 
-  const toggleTheme = useCallback(() => {
-    // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
-    const root = document.documentElement;
 
-    // 모든 transition 비활성화
-    const style = document.createElement('style');
-    style.textContent = '* { transition: none !important; }';
-    document.head.appendChild(style);
-
-    setIsHanjiMode(!isHanjiMode);
-    root.classList.toggle("dark");
-
-    // 다음 프레임에서 transition 복구
-    requestAnimationFrame(() => {
-      document.head.removeChild(style);
-    });
-  }, [isHanjiMode]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -457,16 +440,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           <RankingWidget />
         </div>
 
-        {/* 한지 모드 토글 */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="hover:bg-accent text-foreground transition-colors"
-          title={isHanjiMode ? "밝은 모드" : "한지 모드"}
-        >
-          {isHanjiMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </Button>
+
 
         {/* 알림 */}
         {shouldShowAuthUI && (
