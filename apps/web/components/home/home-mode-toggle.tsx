@@ -12,10 +12,7 @@ interface HomeModeToggleProps {
 // [최적화] React.memo로 불필요한 리렌더링 방지
 // [권한 관리] 해외 모드는 관리자만 사용 가능
 const HomeModeToggle = memo(function HomeModeToggle({ mode, onModeChange, isAdmin = false }: HomeModeToggleProps) {
-    // 관리자가 아니면 토글 버튼 자체를 숨김 (국내만 사용)
-    if (!isAdmin) {
-        return null;
-    }
+
 
     return (
         <>
