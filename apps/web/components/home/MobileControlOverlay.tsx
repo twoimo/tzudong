@@ -373,8 +373,8 @@ function MobileControlOverlayComponent({
         <>
             {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
             <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
-                {/* 국내/해외 토글 버튼 - 관리자만 표시 */}
-                {isAdmin && onModeChange && (
+                {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
+                {onModeChange && (
                     <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[105px]">
                         <Button
                             variant="ghost"
@@ -408,7 +408,7 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('region')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 min-w-[105px] max-w-[140px] px-2',
+                        'hover:bg-secondary/80 w-[105px] px-2 h-8',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
@@ -417,7 +417,7 @@ function MobileControlOverlayComponent({
                             <MapPin className="h-4 w-4" />
                         </div>
                         <div className="flex-1 flex items-center justify-center min-w-0">
-                            <span className="text-sm truncate">{regionLabel}</span>
+                            <span className="text-xs truncate">{regionLabel}</span>
                         </div>
                     </div>
                 </Button>
@@ -429,7 +429,7 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('category')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 min-w-[105px] max-w-[140px] px-2',
+                        'hover:bg-secondary/80 w-[105px] px-2 h-8',
                         activeSheet === 'category' && 'ring-2 ring-primary',
                         selectedCategories.length > 0 && 'bg-primary/10'
                     )}
@@ -439,7 +439,7 @@ function MobileControlOverlayComponent({
                             <Filter className="h-4 w-4" />
                         </div>
                         <div className="flex-1 flex items-center justify-center min-w-0">
-                            <span className="text-sm truncate">{categoryLabel}</span>
+                            <span className="text-xs truncate">{categoryLabel}</span>
                         </div>
                     </div>
                 </Button>
