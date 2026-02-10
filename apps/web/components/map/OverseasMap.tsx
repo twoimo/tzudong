@@ -37,9 +37,15 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
     '카페·디저트': '/images/maker-images/cafe_dessert.png',
     '아시안': '/images/maker-images/asian.png',
     '패스트푸드': '/images/maker-images/fastfood.png',
+    '족발·보쌈': '/images/maker-images/pork_feet.png',
+    '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
+    '피자': '/images/maker-images/pizza.png',
+    '찜·탕': '/images/maker-images/stew.png',
+    '야식': '/images/maker-images/late_night.png',
+    '도시락': '/images/maker-images/lunch_box.png',
 };
 
-const DEFAULT_ICON = '/images/maker-images/world_food.png';
+const DEFAULT_ICON = '/images/maker-images/asian.png';
 
 
 
