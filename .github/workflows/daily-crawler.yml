@@ -9,7 +9,7 @@ on:
       max_videos:
         description: '자막 문맥 생성 개수 설정 (0=Unlimited, -1=Skip)'
         required: false
-        default: '1'
+        default: '-1'
         type: string
 
 permissions:
