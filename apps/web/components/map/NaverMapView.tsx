@@ -2460,7 +2460,7 @@ const NaverMapView = memo(({
             {/* 레스토랑 상세 패널 - 외부 onMarkerClick이 없을 때만 렌더링 (외부 패널 관리가 아닌 경우에만) */}
             {selectedRestaurant && !onMarkerClick && (
                 <div
-                    className={`h-full relative shadow-xl bg-background transition-[width] duration-300 ${internalPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
+                    className={`h-full relative shadow-xl bg-background transition-[width] duration-300 ${internalPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
                     style={{ overflow: 'visible', transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
                     onClick={(e) => {
                         // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
@@ -2468,7 +2468,7 @@ const NaverMapView = memo(({
                         onPanelClick?.('detail');
                     }}
                 >
-                    <div ref={detailPanelRef} className="h-full w-[400px] bg-background border-l border-border">
+                    <div ref={detailPanelRef} className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
                         <RestaurantDetailPanel
                             restaurant={selectedRestaurant}
                             onClose={() => setInternalPanelOpen(false)}

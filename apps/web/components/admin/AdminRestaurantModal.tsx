@@ -965,7 +965,6 @@ export function AdminRestaurantModal({
                                     onClick={handleGeocodeNaver}
                                     disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
                                     variant={isGeocodingNaver ? "default" : "outline"}
-                                    className="whitespace-nowrap"
                                 >
                                     {isGeocodingNaver ? (
                                         <>
@@ -981,7 +980,6 @@ export function AdminRestaurantModal({
                                     onClick={handleGeocodeGoogle}
                                     disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
                                     variant={isGeocodingGoogle ? "default" : "outline"}
-                                    className="whitespace-nowrap"
                                 >
                                     {isGeocodingGoogle ? (
                                         <>

@@ -214,7 +214,7 @@ export function DailyRecommendationPopup() {
             {/* 광고 팝업 스타일 */}
             <div className="absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 md:bottom-6 md:right-6 pointer-events-auto max-md:opacity-0 max-md:animate-[fadeIn_0.5s_ease-out_forwards] md:animate-in md:slide-in-from-bottom-4 md:duration-500">
                 <Card
-                    className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 bg-background font-serif"
+                    className="w-[min(320px,calc(100vw-2rem))] overflow-hidden shadow-2xl border-2 border-primary/30 bg-background font-serif"
                 >
                     {/* 오늘의 추천 배지 */}
                     <div className="absolute top-2 left-2 z-10">

@@ -18,10 +18,10 @@ export default function RightPanelWrapper({ isOpen, isCollapsed, children }: Rig
 
     return (
         <div
-            className={`fixed top-16 right-0 h-[calc(100vh-64px)] z-50 shadow-xl bg-background transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0' : 'w-[400px]'}`}
+            className={`fixed top-16 right-0 h-[calc(100vh-64px)] z-50 shadow-xl bg-background transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0' : 'w-[min(400px,calc(100vw-1rem))]'}`}
             style={{ overflow: 'visible' }}
         >
-            <div className="h-full w-[400px] bg-background border-l border-border">
+            <div className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
                 {children}
             </div>
         </div>

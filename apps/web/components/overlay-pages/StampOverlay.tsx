@@ -171,17 +171,17 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
     return (
         <div className="flex flex-col h-full overflow-hidden">
             {/* 헤더 */}
-            <div className="p-6 border-b border-border shrink-0 bg-background rounded-t-2xl">
+            <div className="p-4 sm:p-6 border-b border-border shrink-0 bg-background rounded-t-2xl">
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                            <Trophy className="h-6 w-6 text-primary" />
-                            쯔동여지도 도장
-                            <span className="text-sm font-normal text-muted-foreground">
+                    <div className="min-w-0">
+                        <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
+                            <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                            <span className="whitespace-nowrap">쯔동여지도 도장</span>
+                            <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap">
                                 ({filteredRestaurants.length.toLocaleString()}개)
                             </span>
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-xs xs:text-sm text-muted-foreground mt-1 whitespace-nowrap">
                             맛집을 찾아 도장을 찍어보세요!
                         </p>
                     </div>

@@ -244,18 +244,18 @@ const RestaurantSearch = ({
         variant="outline"
         size="sm"
         onClick={toggleSearchType}
-        className="flex items-center gap-2 flex-shrink-0 order-last ml-auto"
+        className="flex items-center gap-1.5 flex-shrink-0 order-last ml-auto px-2 md:px-3"
         title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
       >
         {searchType === 'name' ? (
           <>
             <MapPin className="h-4 w-4" />
-            <span className="hidden sm:inline">맛집명</span>
+            <span className="hidden md:inline">맛집명</span>
           </>
         ) : (
           <>
             <Video className="h-4 w-4" />
-            <span className="hidden sm:inline">유튜브</span>
+            <span className="hidden md:inline">유튜브</span>
           </>
         )}
       </Button>
@@ -267,7 +267,7 @@ const RestaurantSearch = ({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          className="pl-10 pr-10 w-full min-w-[250px]"
+          className="pl-10 pr-10 w-full min-w-0"
           inputMode="search"
           enterKeyHint="search"
           autoComplete="off"

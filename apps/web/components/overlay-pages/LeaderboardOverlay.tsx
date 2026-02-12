@@ -42,16 +42,16 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
         <div className="flex flex-col bg-background h-full">
             <ScrollArea className="h-full">
                 {/* 헤더 - 모바일/태블릿 페이지와 동일 스타일 */}
-                <div className="border-b border-border bg-background p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                                    <Trophy className="h-6 w-6 text-primary" />
-                                    쯔동여지도 랭킹
+                <div className="border-b border-border bg-background p-4 sm:p-6">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1 pr-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                    <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                                    <span className="whitespace-nowrap">쯔동여지도 랭킹</span>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted" title="랭킹 및 티어 산정 기준 보기">
+                                            <Button variant="ghost" size="icon" className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0" title="랭킹 및 티어 산정 기준 보기">
                                                 <Info className="h-4 w-4 text-muted-foreground" />
                                             </Button>
                                         </PopoverTrigger>
@@ -79,15 +79,15 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                                     </Popover>
                                 </h1>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-xs xs:text-sm text-muted-foreground whitespace-nowrap mt-1">
                                 맛집 리뷰를 작성하고 랭킹을 올려보세요!
                             </p>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 shrink-0">
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
-                                <TabsList>
-                                    <TabsTrigger value="all">전체</TabsTrigger>
-                                    <TabsTrigger value="monthly">월간</TabsTrigger>
+                                <TabsList className="h-8">
+                                    <TabsTrigger value="all" className="text-xs px-2 sm:px-3">전체</TabsTrigger>
+                                    <TabsTrigger value="monthly" className="text-xs px-2 sm:px-3">월간</TabsTrigger>
                                 </TabsList>
                             </Tabs>
 

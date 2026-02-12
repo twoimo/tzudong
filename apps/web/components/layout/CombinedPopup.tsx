@@ -320,7 +320,7 @@ const CombinedPopupComponent = () => {
         >
             <div
                 className={cn(
-                    "relative w-[320px] mx-auto rounded-lg overflow-hidden shadow-2xl",
+                    "relative w-[min(320px,calc(100vw-2rem))] mx-auto rounded-lg overflow-hidden shadow-2xl",
                     "animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
                 )}
                 style={{ backgroundColor: 'hsl(var(--background))' }}
