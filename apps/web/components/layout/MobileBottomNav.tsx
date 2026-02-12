@@ -62,9 +62,9 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
             queryFn: async () => {
                 const { data, error } = await supabase
                     .from("restaurants")
-                    .select("id, name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
+                    .select("id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
                     .eq("status", "approved")
-                    .order("name");
+                    .order("approved_name");
                 if (error) throw error;
                 return data || [];
             },
