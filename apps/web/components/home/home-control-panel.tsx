@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback, memo } from 'react';
 import { Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useDeviceType } from '@/hooks/useDeviceType';
 
 // [OPTIMIZATION] 사용자 요청으로 동시 로딩을 위해 lazy 제거 (번들 크기는 조금 커지지만 UX 개선)

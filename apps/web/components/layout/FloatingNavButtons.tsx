@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquare, Stamp, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,16 +34,36 @@ const ADMIN_ITEMS: NavItem[] = [];
 /**
  * 플로팅 네비게이션 버튼
  * - 모바일 스타일과 동일한 디자인
- * - 관리자 전용 버튼 포함
+ * - 국내/해외 토글 포함
  */
 function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelect, className }: FloatingNavButtonsProps) {
     const pathname = usePathname();
     const { isAdmin } = useAuth();
     const allItems = isAdmin ? [...USER_ITEMS, ...ADMIN_ITEMS] : USER_ITEMS;
 
+    // 국내/해외 모드 상태 (이벤트 기반 동기화)
+    const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
+
     const handlePanelClick = useCallback((panelId: OverlayPanelType) => {
         onPanelChange(activePanel === panelId ? null : panelId);
     }, [activePanel, onPanelChange]);
+
+    // 국내/해외 모드 변경 핸들러
+    const handleModeChange = useCallback((mode: 'domestic' | 'overseas') => {
+        setMapMode(mode);
+        window.dispatchEvent(new CustomEvent('changeMapMode', { detail: mode }));
+    }, []);
+
+    // mapMode 동기화 이벤트 수신
+    useEffect(() => {
+        const handleSyncMapMode = (e: Event) => {
+            const customEvent = e as CustomEvent<'domestic' | 'overseas'>;
+            setMapMode(customEvent.detail);
+        };
+
+        window.addEventListener('syncMapMode', handleSyncMapMode);
+        return () => window.removeEventListener('syncMapMode', handleSyncMapMode);
+    }, []);
 
 
     // [리뷰 공유] openFeedOverlay 이벤트 리스너
@@ -68,6 +88,32 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
 
     return (
         <div className={cn("fixed z-[92] flex flex-col items-start gap-2", className)}>
+            {/* 국내/해외 토글 - 모바일/태블릿과 동일한 디자인 */}
+            <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[105px]">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleModeChange('domestic')}
+                    className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'domestic'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+                        }`}
+                >
+                    국내
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleModeChange('overseas')}
+                    className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'overseas'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+                        }`}
+                >
+                    해외
+                </Button>
+            </div>
+
             {allItems.map((item) => {
                 const isActive = activePanel === item.id;
                 return (
