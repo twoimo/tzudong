@@ -375,7 +375,7 @@ function MobileControlOverlayComponent({
             <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
-                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[105px]">
+                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,28vw,105px)]">
                         <Button
                             variant="ghost"
                             size="sm"
@@ -408,7 +408,7 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('region')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[105px] px-2 h-8',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] px-2 h-8',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
@@ -429,7 +429,7 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('category')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[105px] px-2 h-8',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] px-2 h-8',
                         activeSheet === 'category' && 'ring-2 ring-primary',
                         selectedCategories.length > 0 && 'bg-primary/10'
                     )}

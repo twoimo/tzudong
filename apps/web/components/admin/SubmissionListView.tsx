@@ -1142,7 +1142,7 @@ export function SubmissionListView({
                                 <p>검수할 리뷰가 없습니다.</p>
                             </div>
                         ) : (
-                            <Table>
+                            <Table allowHorizontalScroll>
                                 <TableHeader className="sticky top-0 bg-background z-20">
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[140px]">
@@ -1332,7 +1332,7 @@ export function SubmissionListView({
                                 <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
                             </div>
                         ) : (
-                            <Table>
+                            <Table allowHorizontalScroll>
                                 <TableHeader className="sticky top-0 bg-background z-20">
                                     <TableRow className="hover:bg-transparent">
                                         <TableHead className="w-[200px] sticky left-0 bg-background z-10">

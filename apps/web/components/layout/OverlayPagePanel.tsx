@@ -220,7 +220,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                 {showUserProfile && (
                     <div className={cn(
                         "flex-shrink-0 bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
-                        "w-[400px]",
+                        "w-[min(400px,calc(100vw-1rem))]",
                         "rounded-2xl border border-border shadow-2xl overflow-hidden"
                     )}>
                         <UserProfilePanel
@@ -237,7 +237,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                 {showRestaurantDetail && (
                     <div className={cn(
                         "flex-shrink-0 bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
-                        "w-[400px]",
+                        "w-[min(400px,calc(100vw-1rem))]",
                         "rounded-2xl border border-border shadow-2xl overflow-hidden"
                     )}>
                         <RestaurantDetailPanel

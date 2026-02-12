@@ -89,7 +89,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
     return (
         <div className={cn("fixed z-[92] flex flex-col items-start gap-2", className)}>
             {/* 국내/해외 토글 - 모바일/태블릿과 동일한 디자인 */}
-            <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[105px]">
+            <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,22vw,120px)]">
                 <Button
                     variant="ghost"
                     size="sm"
@@ -124,7 +124,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                         onClick={() => handlePanelClick(item.id)}
                         className={cn(
                             'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                            'hover:bg-secondary/80 min-w-[105px] max-w-[140px] px-2',
+                            'hover:bg-secondary/80 w-[clamp(84px,22vw,120px)] px-2',
                             isActive && 'ring-2 ring-primary bg-primary/10',
                             item.adminOnly && 'border-orange-500/50'
                         )}

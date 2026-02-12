@@ -2,12 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-// 브레이크포인트 정의 (가로/세로 모드 고려)
 const BREAKPOINTS = {
-    mobilePortrait: 480,    // 모바일 세로: 480px 이하
-    mobileLandscape: 667,   // 모바일 가로 또는 작은 태블릿: 667px 이하
-    tabletPortrait: 834,    // 태블릿 세로: 834px 이하
-    tabletLandscape: 1024,  // 태블릿 가로: 1024px 이하
+    mobileMax: 767,
+    tabletMax: 1279,
 } as const;
 
 export interface DeviceType {
@@ -16,9 +13,10 @@ export interface DeviceType {
     isDesktop: boolean;
     isMobileOrTablet: boolean;
     isLandscape: boolean;
+    viewportClass: 'mobile' | 'tablet' | 'desktop';
+    isTouch: boolean;
 }
 
-// [OPTIMIZATION] debounce 함수 - 과도한 상태 업데이트 방지
 function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
     let timeoutId: ReturnType<typeof setTimeout>;
     return ((...args: any[]) => {
@@ -27,10 +25,6 @@ function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
     }) as T;
 }
 
-/**
- * 디바이스 타입을 감지하는 커스텀 훅
- * [OPTIMIZATION] debounce로 resize 이벤트 최적화, useCallback으로 메모이제이션
- */
 export function useDeviceType(): DeviceType {
     const [deviceType, setDeviceType] = useState<DeviceType>({
         isMobile: false,
@@ -38,30 +32,28 @@ export function useDeviceType(): DeviceType {
         isDesktop: true,
         isMobileOrTablet: false,
         isLandscape: false,
+        viewportClass: 'desktop',
+        isTouch: false,
     });
 
-    // [OPTIMIZATION] 계산 로직을 useCallback으로 메모이제이션
     const calculateDeviceType = useCallback(() => {
         const width = window.innerWidth;
         const height = window.innerHeight;
         const isLandscape = width > height;
 
-        // 터치 지원 여부 감지 (더 엄격한 검증)
-        // maxTouchPoints > 1로 실제 터치를 지원하는 디바이스만 감지
-        const isTouchDevice = navigator.maxTouchPoints > 1;
+        const isTouch =
+            window.matchMedia('(pointer: coarse)').matches ||
+            navigator.maxTouchPoints > 0;
 
-        // 모바일: 480px 이하 또는 가로모드에서 667x480 이하
-        const isMobile = width <= BREAKPOINTS.mobilePortrait ||
-            (isLandscape && width <= BREAKPOINTS.mobileLandscape && height <= BREAKPOINTS.mobilePortrait);
+        const isMobile = width <= BREAKPOINTS.mobileMax;
+        const isTablet = width > BREAKPOINTS.mobileMax && width <= BREAKPOINTS.tabletMax;
+        const isDesktop = width > BREAKPOINTS.tabletMax;
 
-        // 태블릿: 모바일이 아니면서 1366px 이하
-        // 터치 디바이스는 더 넓은 범위(1600px)까지 허용
-        const isTablet = !isMobile && (
-            (isTouchDevice && width < 1600) ||  // 터치 디바이스 + 1600px 미만
-            (!isTouchDevice && width <= 1366)    // 비터치 디바이스는 1366px 이하
-        );
-
-        const isDesktop = !isMobile && !isTablet;
+        const viewportClass: DeviceType['viewportClass'] = isMobile
+            ? 'mobile'
+            : isTablet
+                ? 'tablet'
+                : 'desktop';
 
         return {
             isMobile,
@@ -69,14 +61,14 @@ export function useDeviceType(): DeviceType {
             isDesktop,
             isMobileOrTablet: isMobile || isTablet,
             isLandscape,
+            viewportClass,
+            isTouch,
         };
     }, []);
 
     useEffect(() => {
-        // 초기 값 즉시 설정
         setDeviceType(calculateDeviceType());
 
-        // [OPTIMIZATION] 50ms debounce로 resize 이벤트 최적화
         const debouncedUpdate = debounce(() => {
             setDeviceType(calculateDeviceType());
         }, 50);
@@ -93,9 +85,6 @@ export function useDeviceType(): DeviceType {
     return deviceType;
 }
 
-/**
- * 기존 useIsMobile 훅과의 호환성을 위해 내보내기
- */
 export function useIsMobile(): boolean {
     const { isMobileOrTablet } = useDeviceType();
     return isMobileOrTablet;

@@ -128,7 +128,7 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="start">
+            <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-0" align="start">
                 <Command>
                     <CommandInput placeholder="카테고리 검색..." />
                     <CommandList>

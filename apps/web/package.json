@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "analyze": "set ANALYZE=true&& next build --webpack"
+    "analyze": "set ANALYZE=true&& next build --webpack",
+    "test:responsive": "playwright test tests/responsive-overflow.spec.ts"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

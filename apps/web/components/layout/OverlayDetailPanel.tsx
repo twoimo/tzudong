@@ -64,7 +64,7 @@ function OverlayDetailPanelComponent({
             {/* 상세 패널 */}
             <div
                 className={cn(
-                    "fixed top-16 right-0 h-[calc(100vh-64px)] w-[400px] z-[95]",
+                    "fixed top-16 right-0 h-[calc(100vh-64px)] w-[min(400px,calc(100vw-1rem))] z-[95]",
                     "bg-background border-l border-border shadow-2xl",
                     "transform transition-transform duration-300 ease-out",
                     isOpen ? "translate-x-0" : "translate-x-full"

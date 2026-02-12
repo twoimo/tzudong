@@ -192,6 +192,8 @@ All colors MUST be HSL.
     /* 모바일 브라우저 뷰포트 문제 해결 */
     height: 100%;
     height: var(--full-height, 100vh);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -359,6 +361,12 @@ div[style*="z-index"]>div>.custom-marker {
 .content-auto {
   content-visibility: auto;
   contain-intrinsic-size: auto 300px;
+}
+
+/* 반응형 텍스트 넘침 방지 유틸리티 */
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* [PERF] GPU 가속 레이어 프로모션 */

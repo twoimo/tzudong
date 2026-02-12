@@ -388,17 +388,17 @@ export default function FeedContent({
                 isOverlay ? "h-full" : "min-h-full md:border-x md:border-border md:shadow-sm max-w-2xl"
             )}>
                 {/* 헤더 */}
-                <div className="border-b border-border bg-background p-6 shrink-0">
+                <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                                <MessageSquareText className="h-6 w-6 text-primary" />
-                                쯔동여지도 리뷰
-                                <span className="text-sm font-normal text-muted-foreground">
+                        <div className="min-w-0">
+                            <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                <MessageSquareText className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                                <span className="whitespace-nowrap">쯔동여지도 리뷰</span>
+                                <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap">
                                     ({allReviews.length}개)
                                 </span>
                             </h1>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-xs xs:text-sm text-muted-foreground mt-1 whitespace-nowrap">
                                 {isLoggedIn
                                     ? "맛집 방문 후기를 공유해보세요!"
                                     : "로그인하여 리뷰를 작성해보세요!"
