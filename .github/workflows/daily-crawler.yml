@@ -223,7 +223,7 @@ jobs:
           # CI
           CI: true
           # [PERF] 자막 문맥 생성 배치 크기 (기본: 1, 메모리 보호)
-          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '1' }}
+          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '-1' }}
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
