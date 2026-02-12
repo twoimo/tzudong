@@ -11,7 +11,7 @@ import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
@@ -168,8 +168,6 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
         }));
     }, []);
 
-    if (isRestaurantsLoading) return <GlobalLoader message="맛집 데이터를 불러오는 중..." />;
-
     return (
         <div className="flex flex-col h-full overflow-hidden">
             {/* 헤더 */}
@@ -301,24 +299,28 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
 
             {/* 그리드 */}
             <div className="flex-1 overflow-y-auto p-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {displayedRestaurants.map((restaurant) => {
-                        const isVisited = userVisitedIds.has(restaurant.id);
-                        const currentIndex = cardThumbnailIndexes[restaurant.id] || 0;
-                        return (
-                            <StampCard
-                                key={restaurant.id}
-                                restaurant={restaurant}
-                                isVisited={isVisited}
-                                isUserStampsReady={isUserStampsReady}
-                                currentThumbnailIndex={currentIndex}
-                                onThumbnailChange={handleThumbnailChange}
-                                onClick={handleRestaurantClick}
-                                size="compact"
-                            />
-                        );
-                    })}
-                </div>
+                {isRestaurantsLoading ? (
+                    <StampGridSkeleton count={16} showHeader={false} />
+                ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {displayedRestaurants.map((restaurant) => {
+                            const isVisited = userVisitedIds.has(restaurant.id);
+                            const currentIndex = cardThumbnailIndexes[restaurant.id] || 0;
+                            return (
+                                <StampCard
+                                    key={restaurant.id}
+                                    restaurant={restaurant}
+                                    isVisited={isVisited}
+                                    isUserStampsReady={isUserStampsReady}
+                                    currentThumbnailIndex={currentIndex}
+                                    onThumbnailChange={handleThumbnailChange}
+                                    onClick={handleRestaurantClick}
+                                    size="compact"
+                                />
+                            );
+                        })}
+                    </div>
+                )}
 
                 <div ref={loadMoreRef} className="h-10 flex items-center justify-center mt-4">
                     {hasMoreToDisplay && <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />}
