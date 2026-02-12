@@ -475,7 +475,7 @@ export function SubmissionSlideView({
                     </Badge>
 
                     {/* 맛집명 */}
-                    <h2 className="text-sm font-semibold truncate max-w-[300px]">
+                    <h2 className="text-sm font-semibold line-clamp-2 max-w-full break-words">
                         {currentSubmission.restaurant_name}
                     </h2>
                 </div>

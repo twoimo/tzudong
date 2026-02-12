@@ -95,7 +95,7 @@ export function EvaluationSlideView({
                         </Button>
                     </div>
                     {getStatusBadge(currentRecord.status)}
-                    <h2 className="text-sm font-semibold truncate max-w-[400px]">
+                    <h2 className="text-sm font-semibold line-clamp-2 max-w-full break-words">
                         {currentRecord.restaurant_name || currentRecord.name}
                     </h2>
                 </div>

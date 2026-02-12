@@ -1,123 +1,193 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, type PlaywrightTestProject } from '@playwright/test';
 
-/**
- * .env 파일에서 환경 변수를 읽어옵니다.
- * https://github.com/motdotla/dotenv
- */
-// import dotenv from 'dotenv';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
+const RESPONSIVE_SPEC = /responsive-overflow\.spec\.ts/;
+const ADMIN_SETUP_SPEC = /tests[\\/]setup[\\/]admin\.setup\.ts/;
+const ADMIN_STORAGE_STATE = 'tests/.auth/admin.json';
 
-/**
- * 설정 가이드: https://playwright.dev/docs/test-configuration
- */
+type DeviceUse = {
+    viewport: { width: number; height: number };
+    userAgent: string;
+    deviceScaleFactor: number;
+    isMobile: boolean;
+    hasTouch: boolean;
+    storageState?: string;
+};
+
+function customDevice(
+    viewport: { width: number; height: number },
+    userAgent: string,
+    opts?: Partial<Pick<DeviceUse, 'deviceScaleFactor' | 'isMobile' | 'hasTouch'>>
+): DeviceUse {
+    return {
+        viewport,
+        userAgent,
+        deviceScaleFactor: opts?.deviceScaleFactor ?? 2,
+        isMobile: opts?.isMobile ?? viewport.width < 768,
+        hasTouch: opts?.hasTouch ?? true,
+    };
+}
+
+function toLandscape(use: DeviceUse): DeviceUse {
+    return {
+        ...use,
+        viewport: {
+            width: use.viewport.height,
+            height: use.viewport.width,
+        },
+    };
+}
+
+function withResponsiveOptions(name: string, use: DeviceUse): PlaywrightTestProject {
+    return {
+        name,
+        testMatch: RESPONSIVE_SPEC,
+        dependencies: ['admin-setup'],
+        use: {
+            ...use,
+            storageState: ADMIN_STORAGE_STATE,
+            trace: 'retain-on-failure',
+        },
+    };
+}
+
+const responsivePortraitDevices: Array<{ name: string; use: DeviceUse }> = [
+    { name: 'iPhone SE', use: { ...(devices['iPhone SE'] as DeviceUse) } },
+    { name: 'iPhone XR', use: { ...(devices['iPhone XR'] as DeviceUse) } },
+    { name: 'iPhone 12 Pro', use: { ...(devices['iPhone 12 Pro'] as DeviceUse) } },
+    { name: 'iPhone 14 Pro Max', use: { ...(devices['iPhone 14 Pro Max'] as DeviceUse) } },
+    { name: 'Pixel 7', use: { ...(devices['Pixel 7'] as DeviceUse) } },
+    {
+        name: 'Samsung Galaxy S8+',
+        use: customDevice(
+            { width: 360, height: 740 },
+            'Mozilla/5.0 (Linux; Android 9; SM-G955F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            { deviceScaleFactor: 4, isMobile: true, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Samsung Galaxy S20 Ultra',
+        use: customDevice(
+            { width: 412, height: 915 },
+            'Mozilla/5.0 (Linux; Android 13; SM-G988B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            { deviceScaleFactor: 3.5, isMobile: true, hasTouch: true }
+        ),
+    },
+    { name: 'iPad Mini', use: { ...(devices['iPad Mini'] as DeviceUse) } },
+    {
+        name: 'iPad Air',
+        use: customDevice(
+            { width: 820, height: 1180 },
+            'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            { deviceScaleFactor: 2, isMobile: false, hasTouch: true }
+        ),
+    },
+    {
+        name: 'iPad Pro',
+        use: customDevice(
+            { width: 1024, height: 1366 },
+            'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            { deviceScaleFactor: 2, isMobile: false, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Surface Pro 7',
+        use: customDevice(
+            { width: 912, height: 1368 },
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; Touch) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            { deviceScaleFactor: 1.5, isMobile: false, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Surface Duo',
+        use: customDevice(
+            { width: 540, height: 720 },
+            'Mozilla/5.0 (Linux; Android 11; Surface Duo) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            { deviceScaleFactor: 2.5, isMobile: true, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Galaxy Z Fold 5',
+        use: customDevice(
+            { width: 373, height: 841 },
+            'Mozilla/5.0 (Linux; Android 14; SM-F946B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            { deviceScaleFactor: 3, isMobile: true, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Asus Zenbook Fold',
+        use: customDevice(
+            { width: 853, height: 1280 },
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; Touch) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            { deviceScaleFactor: 2, isMobile: false, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Samsung Galaxy A51/71',
+        use: customDevice(
+            { width: 412, height: 914 },
+            'Mozilla/5.0 (Linux; Android 13; SM-A515F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            { deviceScaleFactor: 2.625, isMobile: true, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Nest Hub',
+        use: customDevice(
+            { width: 1024, height: 600 },
+            'Mozilla/5.0 (Linux; Android 12; Nest Hub) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            { deviceScaleFactor: 2, isMobile: false, hasTouch: true }
+        ),
+    },
+    {
+        name: 'Nest Hub Max',
+        use: customDevice(
+            { width: 1280, height: 800 },
+            'Mozilla/5.0 (Linux; Android 12; Nest Hub Max) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            { deviceScaleFactor: 2, isMobile: false, hasTouch: true }
+        ),
+    },
+    { name: 'iPhone X', use: { ...(devices['iPhone X'] as DeviceUse) } },
+];
+
+const responsiveProjects: PlaywrightTestProject[] = responsivePortraitDevices.flatMap(({ name, use }) => {
+    const portrait = withResponsiveOptions(name, use);
+    const landscape = withResponsiveOptions(`${name} Landscape`, toLandscape(use));
+    return [portrait, landscape];
+});
+
 export default defineConfig({
     testDir: './tests',
-    /* 모든 테스트 파일을 병렬로 실행 */
     fullyParallel: true,
-    /* 소스 코드에 test.only가 남아있을 경우 CI 빌드 실패 처리 */
     forbidOnly: !!process.env.CI,
-    /* CI 환경에서만 재시도 수행 */
     retries: process.env.CI ? 2 : 0,
-    /* CI 환경에서는 병렬 테스트 비활성화 (순차 실행) */
     workers: process.env.CI ? 1 : undefined,
-    /* 사용할 리포터 설정. https://playwright.dev/docs/test-reporters */
     reporter: 'html',
-    /* 모든 프로젝트에 공유되는 설정. https://playwright.dev/docs/api/class-testoptions */
     use: {
-        /* `await page.goto('/')` 같은 액션에서 사용할 기본 URL */
         baseURL: 'http://localhost:8080',
-
-        /* 테스트 실패 시 재시도할 때 트레이스 수집. https://playwright.dev/docs/trace-viewer */
         trace: 'on-first-retry',
     },
-
-    /* 주요 브라우저 및 기기 프로젝트 설정 */
     projects: [
-        // === 데스크탑 브라우저 ===
-        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-        { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-        { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-
-        // === 모바일 - iPhone ===
-        { name: 'iPhone SE', use: { ...devices['iPhone SE'] } },
-        { name: 'iPhone XR', use: { ...devices['iPhone XR'] } },
-        { name: 'iPhone 11', use: { ...devices['iPhone 11'] } },
-        { name: 'iPhone 12', use: { ...devices['iPhone 12'] } },
-        { name: 'iPhone 12 Pro', use: { ...devices['iPhone 12 Pro'] } },
-        { name: 'iPhone 12 Pro Max', use: { ...devices['iPhone 12 Pro Max'] } },
-        { name: 'iPhone 13', use: { ...devices['iPhone 13'] } },
-        { name: 'iPhone 13 Pro', use: { ...devices['iPhone 13 Pro'] } },
-        { name: 'iPhone 13 Pro Max', use: { ...devices['iPhone 13 Pro Max'] } },
-        { name: 'iPhone 14', use: { ...devices['iPhone 14'] } },
-        { name: 'iPhone 14 Pro', use: { ...devices['iPhone 14 Pro'] } },
-        { name: 'iPhone 14 Pro Max', use: { ...devices['iPhone 14 Pro Max'] } },
-
-        // === 모바일 - Android ===
-        { name: 'Pixel 3', use: { ...devices['Pixel 3'] } },
-        { name: 'Pixel 4', use: { ...devices['Pixel 4'] } },
-        { name: 'Pixel 5', use: { ...devices['Pixel 5'] } },
-        { name: 'Pixel 7', use: { ...devices['Pixel 7'] } },
-        { name: 'Moto G4', use: { ...devices['Moto G4'] } },
-        { name: 'Galaxy S5', use: { ...devices['Galaxy S5'] } },
-        { name: 'Galaxy S8', use: { ...devices['Galaxy S8'] } },
-        { name: 'Galaxy S9+', use: { ...devices['Galaxy S9+'] } },
-
-        // === 최신 Galaxy (커스텀 뷰포트) ===
         {
-            name: 'Galaxy S21',
-            use: {
-                viewport: { width: 360, height: 800 },
-                userAgent: 'Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-                deviceScaleFactor: 3,
-                isMobile: true,
-                hasTouch: true,
-            },
+            name: 'admin-setup',
+            testMatch: ADMIN_SETUP_SPEC,
+            use: { ...devices['Desktop Chrome'] },
         },
         {
-            name: 'Galaxy S22',
-            use: {
-                viewport: { width: 360, height: 780 },
-                userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-                deviceScaleFactor: 3,
-                isMobile: true,
-                hasTouch: true,
-            },
+            name: 'chromium',
+            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
+            use: { ...devices['Desktop Chrome'] },
         },
         {
-            name: 'Galaxy S23',
-            use: {
-                viewport: { width: 360, height: 780 },
-                userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-                deviceScaleFactor: 3,
-                isMobile: true,
-                hasTouch: true,
-            },
+            name: 'firefox',
+            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
+            use: { ...devices['Desktop Firefox'] },
         },
         {
-            name: 'Galaxy Z Fold 5',
-            use: {
-                viewport: { width: 373, height: 841 },
-                userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-F946B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-                deviceScaleFactor: 3,
-                isMobile: true,
-                hasTouch: true,
-            },
+            name: 'webkit',
+            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
+            use: { ...devices['Desktop Safari'] },
         },
-
-        // === 태블릿 - iPad ===
-        { name: 'iPad Mini', use: { ...devices['iPad Mini'] } },
-        { name: 'iPad', use: { ...devices['iPad (gen 7)'] } },
-        { name: 'iPad Pro 11', use: { ...devices['iPad Pro 11'] } },
-
-        // === 태블릿 - Android ===
-        { name: 'Galaxy Tab S4', use: { ...devices['Galaxy Tab S4'] } },
-
-        // === 기타 ===
-        { name: 'Kindle Fire HDX', use: { ...devices['Kindle Fire HDX'] } },
-        { name: 'Blackberry PlayBook', use: { ...devices['Blackberry PlayBook'] } },
+        ...responsiveProjects,
     ],
-
-    /* 테스트 시작 전 로컬 개발 서버 실행 */
     webServer: {
         command: 'bun run dev',
         url: 'http://localhost:8080',

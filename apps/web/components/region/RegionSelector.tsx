@@ -96,7 +96,7 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
 
   return (
     <Select value={selectedRegion || "all"} onValueChange={handleRegionChange}>
-      <SelectTrigger className={`w-[200px] ${className}`}>
+      <SelectTrigger className={`w-full min-w-0 sm:w-[200px] ${className}`}>
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="지역을 선택하세요" />

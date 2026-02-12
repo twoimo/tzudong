@@ -133,7 +133,7 @@ const HomeControlPanelComponent = ({
                     />
                 ) : (
                     <Select value={selectedCountry || undefined} onValueChange={onCountryChange}>
-                        <SelectTrigger className="w-48">
+                        <SelectTrigger className="w-[clamp(9.5rem,18vw,12.5rem)]">
                             <SelectValue placeholder="지역 선택" />
                         </SelectTrigger>
                         <SelectContent>
@@ -152,7 +152,7 @@ const HomeControlPanelComponent = ({
                     onCategoryChange={onCategoryChange}
                     selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
                     selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
-                    className="w-48"
+                    className="w-[clamp(9.5rem,18vw,12.5rem)]"
                 />
 
                 {/* [CSR] 검색 - 텍스트 입력 및 자동완성 */}

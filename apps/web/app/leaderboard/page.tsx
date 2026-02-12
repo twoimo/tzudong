@@ -15,21 +15,31 @@ import {
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { BREAKPOINTS } from "@/hooks/useDeviceType";
 
 export default function LeaderboardPage() {
+    const router = useRouter();
     const { user: currentUser } = useAuth();
     const [period, setPeriod] = useState<'all' | 'monthly'>('all');
     const { data: leaderboardData = [], isLoading } = useLeaderboard(period);
     const userItemRef = useRef<HTMLDivElement>(null);
-    const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
-        // [DESKTOP CHECK]
-        if (window.innerWidth > 1024) {
-            router.replace('/');
-        }
+
+        const redirectIfDesktop = () => {
+            if (window.innerWidth > BREAKPOINTS.tabletMax) {
+                router.replace('/');
+            }
+        };
+
+        redirectIfDesktop();
+        window.addEventListener('resize', redirectIfDesktop, { passive: true });
+
+        return () => {
+            window.removeEventListener('resize', redirectIfDesktop);
+        };
     }, [router]);
 
 
@@ -43,26 +53,25 @@ export default function LeaderboardPage() {
     }, [isLoading, currentUser, leaderboardData]);
 
     if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.innerWidth > 1024) return null;
+    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden relative">
             <ScrollArea className="h-full">
                 {/* Header */}
-                <div className="border-b border-border bg-background p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                                    <Trophy className="h-6 w-6 text-primary" />
-                                    쯔동여지도 랭킹
-                                    {/* Info Icon with Popover */}
+                <div className="border-b border-border bg-background p-4 sm:p-6">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1 pr-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                    <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                                    <span className="whitespace-nowrap">쯔동여지도 랭킹</span>
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-6 w-6 rounded-full hover:bg-muted"
+                                                className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0"
                                                 title="랭킹 및 티어 산정 기준 보기"
                                             >
                                                 <Info className="h-4 w-4 text-muted-foreground" />
@@ -92,15 +101,15 @@ export default function LeaderboardPage() {
                                     </Popover>
                                 </h1>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-xs xs:text-sm text-muted-foreground whitespace-nowrap mt-1">
                                 맛집 리뷰를 작성하고 랭킹을 올려보세요!
                             </p>
                         </div>
-                        <div>
+                        <div className="flex items-center gap-2 shrink-0">
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
                                 <TabsList className="h-8">
-                                    <TabsTrigger value="all" className="text-xs px-3">전체</TabsTrigger>
-                                    <TabsTrigger value="monthly" className="text-xs px-3">월간</TabsTrigger>
+                                    <TabsTrigger value="all" className="text-xs px-2 sm:px-3">전체</TabsTrigger>
+                                    <TabsTrigger value="monthly" className="text-xs px-2 sm:px-3">월간</TabsTrigger>
                                 </TabsList>
                             </Tabs>
                         </div>
