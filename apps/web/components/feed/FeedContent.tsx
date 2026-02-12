@@ -14,13 +14,20 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
 import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
 
+
+// [PERF] 모듈 레벨 포맷터 캐시 - 매 호출시 Intl.DateTimeFormat 재생성 방지
+const DATE_FORMATTER = new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+});
 
 // ========== Types ==========
 export interface FeedReview {
@@ -366,24 +373,10 @@ export default function FeedContent({
         router.push(`/?restaurant=${restaurantId}`);
     }, [router, isOverlay, onClose, onOpenRestaurantDetail]);
 
-    // 날짜 포맷
+    // [PERF] 날짜 포맷 - 모듈 레벨 formatter 캐시 사용
     const formatDate = useCallback((dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
+        return DATE_FORMATTER.format(new Date(dateString));
     }, []);
-
-    if (isLoading) {
-        return (
-            <GlobalLoader
-                message="리뷰 데이터를 불러오는 중..."
-                subMessage="팬들의 맛집 방문 후기를 확인하고 있습니다"
-            />
-        );
-    }
 
     return (
         <div className={cn(
@@ -464,7 +457,9 @@ export default function FeedContent({
                     "flex-1 pb-[calc(var(--mobile-bottom-nav-height,60px)+2rem)] md:pb-8",
                     isOverlay && "overflow-y-auto"
                 )}>
-                    {allReviews.length === 0 ? (
+                    {isLoading ? (
+                        <FeedSkeleton count={4} />
+                    ) : allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                             <p>아직 승인된 리뷰가 없습니다.</p>
                         </div>

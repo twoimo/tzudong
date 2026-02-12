@@ -27,7 +27,7 @@ import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -489,10 +489,7 @@ export default function GlobalMapPage() {
             ) : (
                 // 단일 지도 모드
                 <Suspense fallback={
-                    <GlobalLoader
-                        message="쯔동여지도 로딩 중..."
-                        subMessage="맛있는 발견을 준비하고 있습니다"
-                    />
+                    <MapSkeleton />
                 }>
                     <PanelGroup direction="horizontal" className="w-full h-full">
                         <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>

@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
@@ -843,14 +843,6 @@ export default function StampPage() {
     }, [filters.searchQuery]);
 
 
-    if (isRestaurantsLoading && !searchQuery) {
-        return (
-            <GlobalLoader
-                message="도장 데이터를 불러오는 중..."
-                subMessage="쯔양의 맛집 기록을 확인하고 있습니다"
-            />
-        );
-    }
 
     // [Check before render]
     if (!isMounted) return null;
@@ -1080,10 +1072,10 @@ export default function StampPage() {
                             </div>
                         </div>
 
-                        {/* 콘텐츠 영역 (Content Area) */}
-                        {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
                         <div className="flex-1 min-h-0 px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-height,60px)+1.5rem)] md:pb-6 bg-background">
-                            {viewMode === 'grid' ? (
+                            {(isRestaurantsLoading && !searchQuery) ? (
+                                <StampGridSkeleton count={16} showHeader={false} />
+                            ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
                                 <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                                     {displayedRestaurants.map((restaurant, index) => (
