@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
-import { LeaderboardUser } from '@/components/leaderboard/leaderboard-utils';
 import { Trophy, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from '@/contexts/AuthContext';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
-import { GlobalLoader } from '@/components/ui/global-loader';
+import { LeaderboardSkeleton } from '@/components/ui/skeleton-loaders';
 
 interface LeaderboardOverlayProps {
     onClose?: () => void;
@@ -29,7 +28,6 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
     const userItemRef = useRef<HTMLDivElement>(null);
 
     // 이미 useLeaderboard에서 qualityScore 기준으로 정렬됨
-    const myRank = currentUser ? leaderboardData.find((u: LeaderboardUser) => u.id === currentUser.id)?.rank : null;
 
     useEffect(() => {
         if (!isLoading && currentUser && leaderboardData.length > 0) {
@@ -39,8 +37,6 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
             return () => clearTimeout(timer);
         }
     }, [isLoading, currentUser, leaderboardData]);
-
-    if (isLoading) return <GlobalLoader message="랭킹 데이터를 불러오는 중..." />;
 
     return (
         <div className="flex flex-col bg-background h-full">
@@ -106,12 +102,16 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
 
                 {/* 랭킹 목록 */}
                 <div>
-                    <LeaderboardList
-                        users={leaderboardData}
-                        currentUserId={currentUser?.id}
-                        onOpenUserProfile={onOpenUserProfile}
-                        userItemRef={userItemRef}
-                    />
+                    {isLoading ? (
+                        <LeaderboardSkeleton count={8} showHeader={false} />
+                    ) : (
+                        <LeaderboardList
+                            users={leaderboardData}
+                            currentUserId={currentUser?.id}
+                            onOpenUserProfile={onOpenUserProfile}
+                            userItemRef={userItemRef}
+                        />
+                    )}
                 </div>
             </ScrollArea>
         </div>

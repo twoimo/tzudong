@@ -1,4 +1,4 @@
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 /**
  * [PERF] 루트 로딩 UI - 페이지 전환 시 즉각적 피드백 제공
@@ -17,11 +17,7 @@ export default function RootLoading() {
                 md:pt-16 md:pb-0"
             aria-label="페이지 로딩 중"
         >
-            <GlobalLoader
-                message="쯔동여지도 로딩 중..."
-                subMessage="맛있는 발견을 준비하고 있습니다"
-                className="h-auto flex-none"
-            />
+            <MapSkeleton />
         </div>
     );
 }
