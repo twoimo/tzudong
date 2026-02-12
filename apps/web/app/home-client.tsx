@@ -9,7 +9,6 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "sonner";
 import { Restaurant } from "@/types/restaurant";
 
-import HomeModeToggle from "../components/home/home-mode-toggle";
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
 // [OPTIMIZATION] 동적 임포트
@@ -105,8 +104,6 @@ export default function HomeClient() {
 
         return () => clearTimeout(timer);
     }, []);
-
-
 
 
     useEffect(() => {
@@ -269,6 +266,26 @@ export default function HomeClient() {
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
+
+    // [이벤트 기반] FloatingNavButtons에서 국내/해외 모드 변경 수신
+    useEffect(() => {
+        const handleChangeMapMode = (e: Event) => {
+            const mode = (e as CustomEvent<'domestic' | 'overseas'>).detail;
+            state.setIsPanelOpen(false);
+            state.setPanelRestaurant(null);
+            state.setSelectedRestaurant(null);
+            state.setSearchedRestaurant(null);
+            setMapMode(mode);
+        };
+
+        window.addEventListener('changeMapMode', handleChangeMapMode);
+        return () => window.removeEventListener('changeMapMode', handleChangeMapMode);
+    }, [state]);
+
+    // [이벤트 기반] mapMode 변경 시 FloatingNavButtons에 동기화
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('syncMapMode', { detail: mapMode }));
+    }, [mapMode]);
 
     // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
     // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
@@ -505,17 +522,7 @@ export default function HomeClient() {
                     isSidebarOpen={isSidebarOpen}
                 />
             )}
-            <HomeModeToggle
-                mode={mapMode}
-                onModeChange={(mode) => {
-                    state.setIsPanelOpen(false);
-                    state.setPanelRestaurant(null);
-                    state.setSelectedRestaurant(null);
-                    state.setSearchedRestaurant(null);
-                    setMapMode(mode);
-                }}
-                isAdmin={isAdmin}
-            />
+
 
             <HomeControlPanel
                 mapMode={mapMode}
