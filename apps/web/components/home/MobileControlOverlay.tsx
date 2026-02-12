@@ -17,6 +17,36 @@ const CATEGORIES = [
     "족발·보쌈", "돈까스·회", "아시안", "패스트푸드",
     "카페·디저트", "찜·탕", "야식", "도시락"
 ];
+const MIN_DRAG_HEIGHT = 5;
+const MAX_SHEET_HEIGHT = 90;
+const MIN_SHEET_HEIGHT = 20;
+const CLOSE_THRESHOLD = 15;
+const SWIPE_VELOCITY_THRESHOLD = 0.5;
+const CONTENT_TOP_EPSILON = 2;
+const CONTENT_DRAG_START_THRESHOLD = 6;
+
+const isVerticallyScrollable = (element: HTMLElement) => {
+    const style = window.getComputedStyle(element);
+    const overflowY = style.overflowY;
+    const allowsScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+    return allowsScroll && element.scrollHeight > element.clientHeight;
+};
+
+const findScrollableTouchTarget = (
+    target: EventTarget | null,
+    boundary: HTMLElement | null
+): HTMLElement | null => {
+    if (!(target instanceof HTMLElement)) return boundary;
+
+    let node: HTMLElement | null = target;
+    while (node && node !== boundary) {
+        if (isVerticallyScrollable(node)) return node;
+        node = node.parentElement;
+    }
+
+    if (boundary && isVerticallyScrollable(boundary)) return boundary;
+    return null;
+};
 
 // [OPTIMIZATION] RestaurantSearch만 lazy loading
 const RestaurantSearch = lazy(() => import('@/components/search/RestaurantSearch'));
@@ -79,6 +109,7 @@ function MobileControlOverlayComponent({
     // [OPTIMIZATION] ref로 실시간 드래그 상태 추적 (리렌더링 없이)
     const sheetRef = useRef<HTMLDivElement>(null);
     const handleRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
     const currentHeightRef = useRef(50); // 현재 드래그 중인 높이
     const startYRef = useRef(0);
     const startHeightRef = useRef(50);
@@ -87,6 +118,25 @@ function MobileControlOverlayComponent({
     const lastYRef = useRef(0);
     const lastTimeRef = useRef(0);
     const velocityRef = useRef(0);
+    const contentTouchStartYRef = useRef(0);
+    const isContentDraggingSheetRef = useRef(false);
+    const contentStartedAtTopRef = useRef(true);
+    const contentScrollTargetRef = useRef<HTMLElement | null>(null);
+
+    const getContentSnapPoints = useCallback(() => {
+        const midSnap = MIN_SHEET_HEIGHT + ((MAX_SHEET_HEIGHT - MIN_SHEET_HEIGHT) / 2);
+        return [MIN_SHEET_HEIGHT, midSnap, MAX_SHEET_HEIGHT];
+    }, []);
+
+    const getNextLowerSnapHeight = useCallback((currentHeight: number) => {
+        const snapPoints = getContentSnapPoints();
+        for (let i = snapPoints.length - 1; i >= 0; i -= 1) {
+            if (snapPoints[i] < currentHeight - 0.5) {
+                return snapPoints[i];
+            }
+        }
+        return snapPoints[0];
+    }, [getContentSnapPoints]);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
     const { data: restaurants = [] } = useQuery({
@@ -159,7 +209,7 @@ function MobileControlOverlayComponent({
 
         let newHeight = startHeightRef.current + deltaVh;
         // 최소 5%까지 드래그 가능 (닫기 영역), 최대 90%
-        newHeight = Math.max(5, Math.min(90, newHeight));
+        newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(MAX_SHEET_HEIGHT, newHeight));
 
         currentHeightRef.current = newHeight;
 
@@ -180,38 +230,88 @@ function MobileControlOverlayComponent({
     }, [handleDragMove]);
 
     // [OPTIMIZATION] 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
-    const handleDragEnd = useCallback(() => {
+    const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
         isDraggingRef.current = false;
         setIsDragging(false);
 
+        const currentHeight = currentHeightRef.current;
+
+        if (source === 'content') {
+            const targetHeight = getNextLowerSnapHeight(Math.max(currentHeight, MIN_SHEET_HEIGHT));
+            setSheetHeight(targetHeight);
+            currentHeightRef.current = targetHeight;
+            return;
+        }
+
         // 빠르게 아래로 스와이프 (velocity > 0.5px/ms) 하면 닫기
-        if (velocityRef.current > 0.5) {
+        if (velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
             handleClose();
             return;
         }
 
-        const currentHeight = currentHeightRef.current;
-
         // 닫기 임계값 (15% 이하시 닫기)
-        if (currentHeight <= 15) {
+        if (currentHeight <= CLOSE_THRESHOLD) {
             handleClose();
             return;
         }
 
         // 최소 높이 이하면 최소 높이로 조정 (20%)
-        if (currentHeight < 20) {
-            const minHeight = 20;
-            setSheetHeight(minHeight);
-            currentHeightRef.current = minHeight;
+        if (currentHeight < MIN_SHEET_HEIGHT) {
+            setSheetHeight(MIN_SHEET_HEIGHT);
+            currentHeightRef.current = MIN_SHEET_HEIGHT;
             if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(100% - ${minHeight}dvh))`;
+                sheetRef.current.style.transform = `translateY(calc(100% - ${MIN_SHEET_HEIGHT}dvh))`;
             }
         } else {
             // [Fix] 드래그 종료 시 현재 높이로 state 업데이트하여 위치 유지 (리렌더링 시 스냅백 방지)
             setSheetHeight(currentHeight);
         }
         // 스냅 없음 - 현재 위치 그대로 유지
-    }, [handleClose]);
+    }, [handleClose, getNextLowerSnapHeight]);
+
+    const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (activeSheet === 'search') return;
+        contentTouchStartYRef.current = e.touches[0].clientY;
+        isContentDraggingSheetRef.current = false;
+        const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
+        contentScrollTargetRef.current = scrollTarget;
+        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
+        contentStartedAtTopRef.current = scrollTop <= CONTENT_TOP_EPSILON;
+    }, [activeSheet]);
+
+    const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (activeSheet === 'search') return;
+
+        const currentY = e.touches[0].clientY;
+        const deltaY = currentY - contentTouchStartYRef.current;
+        const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
+        if (!contentScrollTargetRef.current) {
+            contentScrollTargetRef.current = scrollTarget;
+        }
+        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
+        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
+
+        if (!isContentDraggingSheetRef.current) {
+            if (!contentStartedAtTopRef.current) return;
+            if (!(isAtTop && deltaY > CONTENT_DRAG_START_THRESHOLD)) return;
+            handleDragStart(contentTouchStartYRef.current);
+            isContentDraggingSheetRef.current = true;
+        }
+
+        e.stopPropagation();
+        handleDragMove(currentY);
+    }, [activeSheet, handleDragStart, handleDragMove]);
+
+    const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isContentDraggingSheetRef.current) {
+            contentScrollTargetRef.current = null;
+            return;
+        }
+        e.stopPropagation();
+        isContentDraggingSheetRef.current = false;
+        contentScrollTargetRef.current = null;
+        handleDragEnd('content');
+    }, [handleDragEnd]);
 
     // [OPTIMIZATION] 지역별 맛집 수 계산 - 단일 패스로 최적화
     const regionCounts = useMemo(() => {
@@ -304,12 +404,16 @@ function MobileControlOverlayComponent({
                 e.preventDefault();
             }
         };
+        const handleTouchEnd = () => {
+            handleDragEnd('handle');
+        };
 
         // 터치 이벤트
         handleEl.addEventListener('touchstart', handleTouchStart as any, { passive: true });
         handleEl.addEventListener('touchmove', handleTouchMove as any, { passive: false });
         handleEl.addEventListener('touchmove', preventPullToRefresh, { passive: false });
-        handleEl.addEventListener('touchend', handleDragEnd as any, { passive: true });
+        handleEl.addEventListener('touchend', handleTouchEnd, { passive: true });
+        handleEl.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
         // 마우스 이벤트 (핸들에서 시작)
         handleEl.addEventListener('mousedown', handleMouseDown as any);
@@ -324,7 +428,7 @@ function MobileControlOverlayComponent({
 
         const handleWindowMouseUp = () => {
             if (isDraggingRef.current) {
-                handleDragEnd();
+                handleDragEnd('handle');
             }
         };
 
@@ -335,7 +439,8 @@ function MobileControlOverlayComponent({
             handleEl.removeEventListener('touchstart', handleTouchStart as any);
             handleEl.removeEventListener('touchmove', handleTouchMove as any);
             handleEl.removeEventListener('touchmove', preventPullToRefresh);
-            handleEl.removeEventListener('touchend', handleDragEnd as any);
+            handleEl.removeEventListener('touchend', handleTouchEnd);
+            handleEl.removeEventListener('touchcancel', handleTouchEnd);
             handleEl.removeEventListener('mousedown', handleMouseDown as any);
             window.removeEventListener('mousemove', handleWindowMouseMove);
             window.removeEventListener('mouseup', handleWindowMouseUp);
@@ -550,6 +655,7 @@ function MobileControlOverlayComponent({
 
                         {/* 컨텐츠 - 별도의 스크롤 컨테이너 */}
                         <div
+                            ref={contentRef}
                             className={cn(
                                 "flex-1",
                                 // 검색 시트일 때는 드롭다운이 보이도록 overflow visible
@@ -561,6 +667,10 @@ function MobileControlOverlayComponent({
                                     ? 'none' // 검색 시트는 높이 제한 없음 (컨텐츠만큼만)
                                     : `calc(${sheetHeight}dvh - 120px)`,
                             }}
+                            onTouchStart={handleContentTouchStart}
+                            onTouchMove={handleContentTouchMove}
+                            onTouchEnd={handleContentTouchEnd}
+                            onTouchCancel={handleContentTouchEnd}
                         >
                             <div className="p-4 pb-8">{/* 하단 패딩으로 스크롤 끝까지 가능 */}
                                 {activeSheet === 'region' && (
