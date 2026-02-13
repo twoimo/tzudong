@@ -23,7 +23,7 @@ const MIN_SHEET_HEIGHT = 20;
 const CLOSE_THRESHOLD = 15;
 const SWIPE_VELOCITY_THRESHOLD = 0.5;
 const CONTENT_TOP_EPSILON = 2;
-const CONTENT_DRAG_START_THRESHOLD = 14;
+const CONTENT_DRAG_START_THRESHOLD = 16;
 const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
 
 const isVerticallyScrollable = (element: HTMLElement) => {
@@ -122,7 +122,7 @@ function MobileControlOverlayComponent({
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
-    const contentStartBoundaryRef = useRef<'top' | 'bottom' | null>(null);
+    const contentStartBoundaryRef = useRef<'top' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
 
     const getContentSnapPoints = useCallback(() => {
@@ -276,12 +276,8 @@ function MobileControlOverlayComponent({
         const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
         contentScrollTargetRef.current = scrollTarget;
         const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const maxScrollTop = scrollTarget
-            ? Math.max(0, scrollTarget.scrollHeight - scrollTarget.clientHeight)
-            : Math.max(0, e.currentTarget.scrollHeight - e.currentTarget.clientHeight);
         const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
-        const isAtBottom = (maxScrollTop - scrollTop) <= CONTENT_TOP_EPSILON;
-        contentStartBoundaryRef.current = isAtTop ? 'top' : (isAtBottom ? 'bottom' : null);
+        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
     }, [activeSheet]);
 
     const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -299,7 +295,7 @@ function MobileControlOverlayComponent({
         }
 
         if (!isContentDraggingSheetRef.current) {
-            if (contentStartBoundaryRef.current === null) return;
+            if (contentStartBoundaryRef.current !== 'top') return;
             if (absDeltaY <= CONTENT_DRAG_START_THRESHOLD) return;
             if (absDeltaY <= absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
             handleDragStart(contentTouchStartYRef.current);
