@@ -28,6 +28,7 @@ import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { getBannerAnnouncements, getActiveAnnouncements, Announcement } from "@/types/announcement";
+import type { Notification } from "@/types/notification";
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmarks } from "@/hooks/use-bookmarks";
@@ -252,10 +253,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     if (pathname === '/') {
       window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
     } else {
-      // 홈으로 이동 후 패널 열기
-      window.location.href = '/';
+      // 전체 리로드 없이 홈으로 이동
+      router.prefetch('/');
+      router.push('/');
     }
-  }, [pathname]);
+  }, [pathname, router]);
 
   const handleAdminBannersClick = useCallback(() => {
     router.push('/admin/banners');
@@ -327,7 +329,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   const currentBanner = useMemo(() => bannerAnnouncements[currentBannerIndex], [bannerAnnouncements, currentBannerIndex]);
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
 
     // 리뷰 관련 알림인 경우 마이페이지 리뷰 목록으로 이동
