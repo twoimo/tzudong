@@ -1,0 +1,68 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+backend/bun.lock
+__pycache__/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+backend/log/
+daily_run.log
+run_*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.test
+backend/.env
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+*.desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Project Specific Data (Large files & Generated)
+backend/restaurant-crawling/data/*/frames
+backend/restaurant-crawling/data/*/video_cache
+backend/restaurant-crawling/data/*/temp_video
+backend/restaurant-crawling/data/*/thumbnails
+
+# CI/Fallback Generated Data
+backend/restaurant-crawling/data/frames/
+backend/restaurant-crawling/data/credentials.json
+
+# Supabase
+supabase/
+summary.md
+backend/.sync_trigger
+backend/restaurant-evaluation/temp/health_check_prompt.txt
+.gitignore
+backend/restaurant-evaluation/temp/health_check_response.json
+backend/restaurant-evaluation/temp/health_check_prompt.txt
+backend/.sync_trigger
+backend/restaurant-crawling/data/tzuyang/checked_cache.json
+pr_body_develop.md
+pr_body_main.md
+pr_body.md
