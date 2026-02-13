@@ -93,7 +93,7 @@ export function EvaluationSlideView({
     };
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden">
+        <div className="flex flex-col bg-background">
             {/* Top Navigation Bar - Compact */}
             <div className={cn("border-b bg-card shrink-0", isMobile ? "px-3 py-2" : "px-3 py-2 h-14")}>
                 <div className={cn("flex items-center justify-between gap-2", isMobile ? "" : "h-full")}>
@@ -152,8 +152,8 @@ export function EvaluationSlideView({
             </div>
 
             {/* Main Content Area - Split View using unified component */}
-            <div className={cn("flex-1", isMobile ? "overflow-y-auto" : "overflow-hidden")}>
-                <EvaluationDetailView record={currentRecord} autoHeight={isMobile} />
+            <div className="flex-1">
+                <EvaluationDetailView record={currentRecord} autoHeight />
             </div>
 
             {isMobile && (

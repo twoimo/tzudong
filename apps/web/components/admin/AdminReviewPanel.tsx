@@ -23,9 +23,14 @@ import {
     ChevronRight,
     ChevronLeft,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+    ADMIN_MODAL_ACTION,
+    ADMIN_MODAL_CONTENT_SM_FLEX,
+    ADMIN_MODAL_FOOTER_DIVIDER,
+} from "./admin-modal-styles";
 
 
 interface Review {
@@ -423,7 +428,6 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     </div>
                 ) : pendingReviews.length === 0 ? (
                     <Card className="p-6 text-center">
-                        <div className="text-3xl mb-2">✅</div>
                         <p className="text-sm text-muted-foreground">대기 중인 리뷰가 없습니다</p>
                     </Card>
                 ) : (
@@ -450,10 +454,10 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             {/* 리뷰 검토 모달 */}
             <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
-                <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+                <DialogContent className={ADMIN_MODAL_CONTENT_SM_FLEX}>
                     <DialogHeader>
                         <DialogTitle>
-                            {reviewAction === 'approve' ? '✅ 리뷰 승인' : '❌ 리뷰 거부'}
+                            {reviewAction === 'approve' ? '리뷰 승인' : '리뷰 거부'}
                         </DialogTitle>
                         <DialogDescription>
                             리뷰를 {reviewAction === 'approve' ? '승인' : '거부'}합니다
@@ -461,56 +465,58 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     </DialogHeader>
 
                     {selectedReview && (
-                        <div className="space-y-4 mt-4">
-                            <Card className="p-3 bg-muted/50">
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-semibold">{selectedReview.title}</h3>
-                                        {getStatusBadge(selectedReview.is_verified)}
+                        <>
+                            <div className="mt-4 space-y-4">
+                                <Card className="p-3 bg-muted/50">
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="font-semibold">{selectedReview.title}</h3>
+                                            {getStatusBadge(selectedReview.is_verified)}
+                                        </div>
+                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <Avatar className="h-4 w-4">
+                                                    <AvatarFallback className="text-[10px]">
+                                                        {selectedReview.profiles?.nickname?.[0] || '익'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                {selectedReview.profiles?.nickname || '익명'}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <MapPin className="h-3 w-3" />
+                                                {selectedReview.restaurants?.name}
+                                            </span>
+                                        </div>
+                                        <p className="text-muted-foreground line-clamp-3">{selectedReview.content}</p>
                                     </div>
-                                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                        <span className="flex items-center gap-1">
-                                            <Avatar className="h-4 w-4">
-                                                <AvatarFallback className="text-[10px]">
-                                                    {selectedReview.profiles?.nickname?.[0] || '익'}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            {selectedReview.profiles?.nickname || '익명'}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <MapPin className="h-3 w-3" />
-                                            {selectedReview.restaurants?.name}
-                                        </span>
-                                    </div>
-                                    <p className="text-muted-foreground line-clamp-3">{selectedReview.content}</p>
-                                </div>
-                            </Card>
+                                </Card>
 
-                            <div className="space-y-2">
-                                <Label>관리자 메모{reviewAction === 'reject' && ' (필수)'}</Label>
-                                <Textarea
-                                    value={adminNote}
-                                    onChange={(e) => setAdminNote(e.target.value)}
-                                    placeholder={reviewAction === 'approve' ? '승인 사유 (선택)' : '거부 사유를 입력해주세요'}
-                                    rows={3}
-                                />
+                                <div className="space-y-2">
+                                    <Label>관리자 메모{reviewAction === 'reject' && ' (필수)'}</Label>
+                                    <Textarea
+                                        value={adminNote}
+                                        onChange={(e) => setAdminNote(e.target.value)}
+                                        placeholder={reviewAction === 'approve' ? '승인 사유 (선택)' : '거부 사유를 입력해주세요'}
+                                        rows={3}
+                                    />
+                                </div>
                             </div>
 
-                            <div className="flex justify-end gap-2">
-                                <Button variant="outline" onClick={() => setIsReviewModalOpen(false)}>
+                            <DialogFooter className={ADMIN_MODAL_FOOTER_DIVIDER}>
+                                <Button variant="outline" onClick={() => setIsReviewModalOpen(false)} className={ADMIN_MODAL_ACTION}>
                                     취소
                                 </Button>
                                 <Button
                                     onClick={handleConfirmAction}
                                     disabled={approveMutation.isPending || rejectMutation.isPending}
-                                    className={reviewAction === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
+                                    className={`${ADMIN_MODAL_ACTION} ${reviewAction === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
                                 >
                                     {(approveMutation.isPending || rejectMutation.isPending) ? (
                                         <><Loader2 className="mr-1 h-4 w-4 animate-spin" />처리 중</>
                                     ) : reviewAction === 'approve' ? '승인' : '거부'}
                                 </Button>
-                            </div>
-                        </div>
+                            </DialogFooter>
+                        </>
                     )}
                 </DialogContent>
             </Dialog>

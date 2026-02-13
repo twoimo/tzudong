@@ -78,7 +78,7 @@ function BottomSheetComponent({
     const MIN_SHEET_HEIGHT = minHeight;
     const SWIPE_VELOCITY_THRESHOLD = 0.5;
     const CONTENT_TOP_EPSILON = 2;
-    const CONTENT_DRAG_START_THRESHOLD = 14;
+    const CONTENT_DRAG_START_THRESHOLD = 16;
     const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
 
     const isDraggingRef = useRef(false);
@@ -94,7 +94,7 @@ function BottomSheetComponent({
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
-    const contentStartBoundaryRef = useRef<'top' | 'bottom' | null>(null);
+    const contentStartBoundaryRef = useRef<'top' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
@@ -260,12 +260,8 @@ function BottomSheetComponent({
         const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
         contentScrollTargetRef.current = scrollTarget;
         const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const maxScrollTop = scrollTarget
-            ? Math.max(0, scrollTarget.scrollHeight - scrollTarget.clientHeight)
-            : Math.max(0, e.currentTarget.scrollHeight - e.currentTarget.clientHeight);
         const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
-        const isAtBottom = (maxScrollTop - scrollTop) <= CONTENT_TOP_EPSILON;
-        contentStartBoundaryRef.current = isAtTop ? 'top' : (isAtBottom ? 'bottom' : null);
+        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
     }, []);
 
     const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -282,7 +278,7 @@ function BottomSheetComponent({
 
         if (!isContentDraggingSheetRef.current) {
             const canStartContentDrag = (
-                contentStartBoundaryRef.current !== null &&
+                contentStartBoundaryRef.current === 'top' &&
                 absDeltaY > CONTENT_DRAG_START_THRESHOLD &&
                 absDeltaY > absDeltaX * CONTENT_VERTICAL_INTENT_RATIO
             );

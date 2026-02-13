@@ -37,6 +37,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  ADMIN_MODAL_ACTION,
+  ADMIN_MODAL_CONTENT_SM,
+  ADMIN_MODAL_FOOTER,
+  ADMIN_MODAL_SCROLL_BODY,
+} from '@/components/admin/admin-modal-styles';
 
 const PAGE_SIZE = 50; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
@@ -1950,14 +1956,14 @@ function AdminEvaluationPage() {
   return (
     <div
       ref={scrollContainerRef}
-      className="flex h-[100dvh] flex-col overflow-auto"
+      className="flex h-full flex-col overflow-auto"
       id="scroll-container"
     >
       {/* Header */}
-      <div className="border-b border-border bg-card px-4 py-4 sm:p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="border-b border-border bg-card px-3 py-3 sm:px-5 sm:py-4">
+        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <h1 className="flex items-center gap-2 bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl">
                 <ClipboardCheck className="h-6 w-6 text-primary" />
                 관리자 데이터 검수
@@ -1965,7 +1971,7 @@ function AdminEvaluationPage() {
 
 
             </div>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
               필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
             </p>
           </div>
@@ -1981,7 +1987,7 @@ function AdminEvaluationPage() {
                 <Button
                   variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="sm"
-                  className="h-8 gap-1 px-2 text-xs xl:w-8 xl:px-0"
+                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
                   onClick={() => {
                     setIsAlternateView(false);
                     setShowSubmissionView(false);
@@ -1996,7 +2002,7 @@ function AdminEvaluationPage() {
                 <Button
                   variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="sm"
-                  className="h-8 gap-1 px-2 text-xs xl:w-8 xl:px-0"
+                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
                   onClick={() => {
                     setIsAlternateView(true);
                     setShowSubmissionView(false);
@@ -2020,7 +2026,7 @@ function AdminEvaluationPage() {
                   }}
                   variant={showSubmissionView ? 'secondary' : 'ghost'}
                   size="sm"
-                  className="relative h-9 gap-1.5 px-2.5 text-xs xl:h-8 xl:w-8 xl:gap-1 xl:px-0"
+                  className="relative h-8 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:gap-1 xl:px-0"
                   title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
                   aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
                 >
@@ -2043,7 +2049,7 @@ function AdminEvaluationPage() {
                   disabled={transcriptStatus === 'loading'}
                   variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
                   size="sm"
-                  className="h-8 gap-1 px-2 text-xs xl:w-8 xl:px-0"
+                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
                   title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
                 >
                   {transcriptStatus === 'loading' ? (
@@ -2066,7 +2072,7 @@ function AdminEvaluationPage() {
         </div>
       </div>
 
-      <div className={`flex-1 flex flex-col ${isListView ? '' : 'overflow-hidden'}`}>
+      <div className="flex-1 flex flex-col">
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
@@ -2209,10 +2215,10 @@ function AdminEvaluationPage() {
 
       {/* 승인 확인 모달 */}
       <AlertDialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
           <AlertDialogHeader>
             <AlertDialogTitle>승인 확인</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-muted-foreground space-y-2">
+            <AlertDialogDescription className={`text-sm text-muted-foreground space-y-2 ${ADMIN_MODAL_SCROLL_BODY}`}>
               <span className="block">이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</span>
               {conflictingRestaurantInfo && (
                 <span className="block mt-3 p-3 bg-muted rounded-md">
@@ -2224,8 +2230,8 @@ function AdminEvaluationPage() {
               <span className="block mt-3 font-medium">승인하시겠습니까?</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
+          <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
+            <AlertDialogCancel disabled={loading} className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 if (!pendingApprovalRecord) return;
@@ -2248,6 +2254,7 @@ function AdminEvaluationPage() {
                 }
               }}
               disabled={loading}
+              className={ADMIN_MODAL_ACTION}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               승인

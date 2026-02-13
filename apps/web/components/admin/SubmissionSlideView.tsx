@@ -32,6 +32,13 @@ import {
     GeocodingResult,
     ItemDecision,
 } from './SubmissionDetailView';
+import {
+    ADMIN_MODAL_ACTION,
+    ADMIN_MODAL_CONTENT_SM,
+    ADMIN_MODAL_FOOTER,
+    ADMIN_MODAL_SCROLL_BODY,
+    ADMIN_MODAL_SCROLL_BODY_COMPACT,
+} from './admin-modal-styles';
 
 interface SubmissionSlideViewProps {
     submissions: SubmissionRecord[];
@@ -561,7 +568,7 @@ export function SubmissionSlideView({
 
             {/* 검증 실패 경고 모달 */}
             <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
-                <DialogContent>
+                <DialogContent className={ADMIN_MODAL_CONTENT_SM}>
                     <DialogHeader>
                         <DialogTitle className="text-amber-600 flex items-center gap-2">
                             <AlertCircle className="h-5 w-5" />
@@ -574,7 +581,7 @@ export function SubmissionSlideView({
                         </DialogDescription>
                     </DialogHeader>
                     
-                    <div className="py-4 space-y-4">
+                    <div className={`py-4 space-y-4 ${ADMIN_MODAL_SCROLL_BODY}`}>
                         <div className="bg-slate-50 p-3 rounded-md border text-sm">
                             <p className="font-semibold mb-1">입력된 정보:</p>
                             <p>이름: {editableData.name}</p>
@@ -601,17 +608,17 @@ export function SubmissionSlideView({
                         )}
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowWarningModal(false)}>
+                    <DialogFooter className={ADMIN_MODAL_FOOTER}>
+                        <Button variant="outline" onClick={() => setShowWarningModal(false)} className={ADMIN_MODAL_ACTION}>
                             취소 (수정하기)
                         </Button>
                         <Button 
-                            className="bg-amber-600 hover:bg-amber-700"
                             onClick={() => {
                                 setShowWarningModal(false);
                                 setVerificationDone(true); // 강제 승인 처리
                                 onApprove(currentSubmission!, approvalData, itemDecisions, forceApprove);
                             }}
+                            className={`${ADMIN_MODAL_ACTION} bg-amber-600 hover:bg-amber-700`}
                         >
                             무시하고 승인
                         </Button>
@@ -621,14 +628,14 @@ export function SubmissionSlideView({
 
             {/* 거부 사유 모달 */}
             <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
-                <DialogContent>
+                <DialogContent className={ADMIN_MODAL_CONTENT_SM}>
                     <DialogHeader>
                         <DialogTitle>제보 전체 거부</DialogTitle>
                         <DialogDescription>
                             거부 사유를 입력해주세요. 모든 항목이 거부됩니다.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <div className={`space-y-4 py-4 ${ADMIN_MODAL_SCROLL_BODY_COMPACT}`}>
                         <div className="space-y-2">
                             <Label htmlFor="rejection-reason">거부 사유</Label>
                             <Textarea
@@ -640,14 +647,15 @@ export function SubmissionSlideView({
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowRejectModal(false)}>
+                    <DialogFooter className={ADMIN_MODAL_FOOTER}>
+                        <Button variant="outline" onClick={() => setShowRejectModal(false)} className={ADMIN_MODAL_ACTION}>
                             취소
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={handleReject}
                             disabled={!rejectionReason.trim() || loading}
+                            className={ADMIN_MODAL_ACTION}
                         >
                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             전체 거부
