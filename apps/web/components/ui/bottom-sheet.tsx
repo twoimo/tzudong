@@ -78,7 +78,8 @@ function BottomSheetComponent({
     const MIN_SHEET_HEIGHT = minHeight;
     const SWIPE_VELOCITY_THRESHOLD = 0.5;
     const CONTENT_TOP_EPSILON = 2;
-    const CONTENT_DRAG_START_THRESHOLD = 6;
+    const CONTENT_DRAG_START_THRESHOLD = 14;
+    const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
 
     const isDraggingRef = useRef(false);
     const startYRef = useRef(0);
@@ -91,8 +92,9 @@ function BottomSheetComponent({
     const contentRef = useRef<HTMLDivElement>(null);
     const rafIdRef = useRef<number>(0);
     const contentTouchStartYRef = useRef(0);
+    const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
-    const contentStartedAtTopRef = useRef(true);
+    const contentStartBoundaryRef = useRef<'top' | 'bottom' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
@@ -108,14 +110,11 @@ function BottomSheetComponent({
         return [minSnap, midSnap, maxSnap];
     }, [MIN_SHEET_HEIGHT, getCurrentMaxHeight]);
 
-    const getNextLowerSnapHeight = useCallback((currentHeight: number) => {
+    const getNearestSnapHeight = useCallback((currentHeight: number) => {
         const snapPoints = getContentSnapPoints();
-        for (let i = snapPoints.length - 1; i >= 0; i -= 1) {
-            if (snapPoints[i] < currentHeight - 0.5) {
-                return snapPoints[i];
-            }
-        }
-        return snapPoints[0];
+        return snapPoints.reduce((closest, snap) =>
+            Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
+        , snapPoints[0]);
     }, [getContentSnapPoints]);
 
     // [PERFORMANCE] visualViewport resize 스로틀링 (16ms ≈ 60fps)
@@ -244,7 +243,7 @@ function BottomSheetComponent({
         // 현재 높이 기반 판단
         setSheetHeight(currentHeight => {
             if (source === 'content') {
-                return getNextLowerSnapHeight(Math.max(currentHeight, MIN_SHEET_HEIGHT));
+                return getNearestSnapHeight(currentHeight);
             }
             if (currentHeight <= closeThreshold) {
                 queueMicrotask(onClose);
@@ -252,32 +251,40 @@ function BottomSheetComponent({
             }
             return currentHeight < MIN_SHEET_HEIGHT ? MIN_SHEET_HEIGHT : currentHeight;
         });
-    }, [onClose, closeThreshold, MIN_SHEET_HEIGHT, getNextLowerSnapHeight]);
+    }, [onClose, closeThreshold, MIN_SHEET_HEIGHT, getNearestSnapHeight]);
 
     const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         contentTouchStartYRef.current = e.touches[0].clientY;
+        contentTouchStartXRef.current = e.touches[0].clientX;
         isContentDraggingSheetRef.current = false;
         const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
         contentScrollTargetRef.current = scrollTarget;
         const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        contentStartedAtTopRef.current = scrollTop <= CONTENT_TOP_EPSILON;
+        const maxScrollTop = scrollTarget
+            ? Math.max(0, scrollTarget.scrollHeight - scrollTarget.clientHeight)
+            : Math.max(0, e.currentTarget.scrollHeight - e.currentTarget.clientHeight);
+        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
+        const isAtBottom = (maxScrollTop - scrollTop) <= CONTENT_TOP_EPSILON;
+        contentStartBoundaryRef.current = isAtTop ? 'top' : (isAtBottom ? 'bottom' : null);
     }, []);
 
     const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
         const deltaY = currentY - contentTouchStartYRef.current;
+        const deltaX = currentX - contentTouchStartXRef.current;
+        const absDeltaY = Math.abs(deltaY);
+        const absDeltaX = Math.abs(deltaX);
         const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
         if (!contentScrollTargetRef.current) {
             contentScrollTargetRef.current = scrollTarget;
         }
-        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
 
         if (!isContentDraggingSheetRef.current) {
             const canStartContentDrag = (
-                contentStartedAtTopRef.current &&
-                isAtTop &&
-                deltaY > CONTENT_DRAG_START_THRESHOLD
+                contentStartBoundaryRef.current !== null &&
+                absDeltaY > CONTENT_DRAG_START_THRESHOLD &&
+                absDeltaY > absDeltaX * CONTENT_VERTICAL_INTENT_RATIO
             );
             if (!canStartContentDrag) return;
 
@@ -289,7 +296,7 @@ function BottomSheetComponent({
         handleDragMoveCore(currentY);
     }, [
         CONTENT_DRAG_START_THRESHOLD,
-        CONTENT_TOP_EPSILON,
+        CONTENT_VERTICAL_INTENT_RATIO,
         handleDragMoveCore,
         handleDragStartCore
     ]);
@@ -297,11 +304,13 @@ function BottomSheetComponent({
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         if (!isContentDraggingSheetRef.current) {
             contentScrollTargetRef.current = null;
+            contentStartBoundaryRef.current = null;
             return;
         }
         e.stopPropagation();
         isContentDraggingSheetRef.current = false;
         contentScrollTargetRef.current = null;
+        contentStartBoundaryRef.current = null;
         handleDragEnd('content');
     }, [handleDragEnd]);
 
