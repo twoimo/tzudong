@@ -23,7 +23,8 @@ const MIN_SHEET_HEIGHT = 20;
 const CLOSE_THRESHOLD = 15;
 const SWIPE_VELOCITY_THRESHOLD = 0.5;
 const CONTENT_TOP_EPSILON = 2;
-const CONTENT_DRAG_START_THRESHOLD = 6;
+const CONTENT_DRAG_START_THRESHOLD = 14;
+const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
 
 const isVerticallyScrollable = (element: HTMLElement) => {
     const style = window.getComputedStyle(element);
@@ -119,8 +120,9 @@ function MobileControlOverlayComponent({
     const lastTimeRef = useRef(0);
     const velocityRef = useRef(0);
     const contentTouchStartYRef = useRef(0);
+    const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
-    const contentStartedAtTopRef = useRef(true);
+    const contentStartBoundaryRef = useRef<'top' | 'bottom' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
 
     const getContentSnapPoints = useCallback(() => {
@@ -128,14 +130,11 @@ function MobileControlOverlayComponent({
         return [MIN_SHEET_HEIGHT, midSnap, MAX_SHEET_HEIGHT];
     }, []);
 
-    const getNextLowerSnapHeight = useCallback((currentHeight: number) => {
+    const getNearestSnapHeight = useCallback((currentHeight: number) => {
         const snapPoints = getContentSnapPoints();
-        for (let i = snapPoints.length - 1; i >= 0; i -= 1) {
-            if (snapPoints[i] < currentHeight - 0.5) {
-                return snapPoints[i];
-            }
-        }
-        return snapPoints[0];
+        return snapPoints.reduce((closest, snap) =>
+            Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
+        , snapPoints[0]);
     }, [getContentSnapPoints]);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
@@ -237,7 +236,7 @@ function MobileControlOverlayComponent({
         const currentHeight = currentHeightRef.current;
 
         if (source === 'content') {
-            const targetHeight = getNextLowerSnapHeight(Math.max(currentHeight, MIN_SHEET_HEIGHT));
+            const targetHeight = getNearestSnapHeight(currentHeight);
             setSheetHeight(targetHeight);
             currentHeightRef.current = targetHeight;
             return;
@@ -267,33 +266,42 @@ function MobileControlOverlayComponent({
             setSheetHeight(currentHeight);
         }
         // 스냅 없음 - 현재 위치 그대로 유지
-    }, [handleClose, getNextLowerSnapHeight]);
+    }, [handleClose, getNearestSnapHeight]);
 
     const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         if (activeSheet === 'search') return;
         contentTouchStartYRef.current = e.touches[0].clientY;
+        contentTouchStartXRef.current = e.touches[0].clientX;
         isContentDraggingSheetRef.current = false;
         const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
         contentScrollTargetRef.current = scrollTarget;
         const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        contentStartedAtTopRef.current = scrollTop <= CONTENT_TOP_EPSILON;
+        const maxScrollTop = scrollTarget
+            ? Math.max(0, scrollTarget.scrollHeight - scrollTarget.clientHeight)
+            : Math.max(0, e.currentTarget.scrollHeight - e.currentTarget.clientHeight);
+        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
+        const isAtBottom = (maxScrollTop - scrollTop) <= CONTENT_TOP_EPSILON;
+        contentStartBoundaryRef.current = isAtTop ? 'top' : (isAtBottom ? 'bottom' : null);
     }, [activeSheet]);
 
     const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         if (activeSheet === 'search') return;
 
         const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
         const deltaY = currentY - contentTouchStartYRef.current;
+        const deltaX = currentX - contentTouchStartXRef.current;
+        const absDeltaY = Math.abs(deltaY);
+        const absDeltaX = Math.abs(deltaX);
         const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
         if (!contentScrollTargetRef.current) {
             contentScrollTargetRef.current = scrollTarget;
         }
-        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
 
         if (!isContentDraggingSheetRef.current) {
-            if (!contentStartedAtTopRef.current) return;
-            if (!(isAtTop && deltaY > CONTENT_DRAG_START_THRESHOLD)) return;
+            if (contentStartBoundaryRef.current === null) return;
+            if (absDeltaY <= CONTENT_DRAG_START_THRESHOLD) return;
+            if (absDeltaY <= absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
             handleDragStart(contentTouchStartYRef.current);
             isContentDraggingSheetRef.current = true;
         }
@@ -305,11 +313,13 @@ function MobileControlOverlayComponent({
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         if (!isContentDraggingSheetRef.current) {
             contentScrollTargetRef.current = null;
+            contentStartBoundaryRef.current = null;
             return;
         }
         e.stopPropagation();
         isContentDraggingSheetRef.current = false;
         contentScrollTargetRef.current = null;
+        contentStartBoundaryRef.current = null;
         handleDragEnd('content');
     }, [handleDragEnd]);
 

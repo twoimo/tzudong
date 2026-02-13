@@ -429,7 +429,7 @@ function AdminEvaluationPage() {
     // 8. Status 필터는 위에서 이미 처리됨
 
     return filtered;
-  }, [allRecords, searchResults, selectedStatuses, evalFilters]);
+  }, [allRecords, searchResults, evalFilters]);
 
   // filteredRecords가 정의된 후에 useEffect 위치
   useEffect(() => {
@@ -439,29 +439,63 @@ function AdminEvaluationPage() {
     }
   }, [filteredRecords.length, currentSlideIndex]);
 
+  const hasMoreRef = useRef(hasMore);
+  const loadingMoreRef = useRef(loadingMore);
+  const filteredRecordsRef = useRef(filteredRecords);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
+
+  useEffect(() => {
+    filteredRecordsRef.current = filteredRecords;
+  }, [filteredRecords]);
+
   // 더 많은 레코드 로드
   const loadMoreRecords = useCallback(() => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMoreRef.current || !hasMoreRef.current) return;
 
+    loadingMoreRef.current = true;
     setLoadingMore(true);
-    setTimeout(() => {
-      const currentLength = displayedRecords.length;
-      const newRecords = filteredRecords.slice(currentLength, currentLength + PAGE_SIZE);
 
-      setDisplayedRecords(prev => [...prev, ...newRecords]);
-      setHasMore(currentLength + PAGE_SIZE < filteredRecords.length);
-      setLoadingMore(false);
+    setTimeout(() => {
+      setDisplayedRecords(prev => {
+        const currentLength = prev.length;
+        const source = filteredRecordsRef.current;
+        const newRecords = source.slice(currentLength, currentLength + PAGE_SIZE);
+        const nextHasMore = currentLength + newRecords.length < source.length;
+
+        hasMoreRef.current = nextHasMore;
+        loadingMoreRef.current = false;
+        setHasMore(nextHasMore);
+        setLoadingMore(false);
+
+        return [...prev, ...newRecords];
+      });
     }, 100);
-  }, [displayedRecords.length, filteredRecords, loadingMore, hasMore]);
+  }, []);
 
   // 필터링 결과가 변경될 때마다 표시할 레코드 초기화
   useEffect(() => {
+    const nextHasMore = filteredRecords.length > PAGE_SIZE;
+
     setDisplayedRecords(filteredRecords.slice(0, PAGE_SIZE));
-    setHasMore(filteredRecords.length > PAGE_SIZE);
+    setHasMore(nextHasMore);
+    hasMoreRef.current = nextHasMore;
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
   }, [filteredRecords]);
+
+  const isListView = !showSubmissionView && !isAlternateView;
 
   // 무한 스크롤 - Scroll Event 방식
   useEffect(() => {
+    if (!isListView) return;
+
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
 
@@ -470,14 +504,14 @@ function AdminEvaluationPage() {
       const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
 
       // 80% 이상 스크롤 시 다음 데이터 로드
-      if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
+      if (scrollPercentage > 0.8) {
         loadMoreRecords();
       }
     };
 
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
     return () => scrollContainer.removeEventListener('scroll', handleScroll, { passive: true } as any);
-  }, [hasMore, loadingMore, loadMoreRecords, displayedRecords.length, filteredRecords.length]);
+  }, [isListView, loadMoreRecords]);
 
   // 슬라이드 뷰에서 끝에 도달하면 추가 데이터 로드
   useEffect(() => {
@@ -1914,36 +1948,40 @@ function AdminEvaluationPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div
+      ref={scrollContainerRef}
+      className="flex h-[100dvh] flex-col overflow-auto"
+      id="scroll-container"
+    >
       {/* Header */}
-      <div className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-shrink-0">
+      <div className="border-b border-border bg-card px-4 py-4 sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+              <h1 className="flex items-center gap-2 bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl">
                 <ClipboardCheck className="h-6 w-6 text-primary" />
                 관리자 데이터 검수
               </h1>
 
 
             </div>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
             </p>
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          <div className="flex-1 flex justify-end">
+          <div className="w-full xl:flex xl:flex-1 xl:justify-end">
             <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 xl:gap-1">
                 <Button
                   variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 gap-1 px-2 text-xs xl:w-8 xl:px-0"
                   onClick={() => {
                     setIsAlternateView(false);
                     setShowSubmissionView(false);
@@ -1953,11 +1991,12 @@ function AdminEvaluationPage() {
                   title="리스트 뷰"
                 >
                   <LayoutList className="h-4 w-4" />
+                  <span className="xl:hidden">리스트</span>
                 </Button>
                 <Button
                   variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 gap-1 px-2 text-xs xl:w-8 xl:px-0"
                   onClick={() => {
                     setIsAlternateView(true);
                     setShowSubmissionView(false);
@@ -1967,6 +2006,7 @@ function AdminEvaluationPage() {
                   title="슬라이드 뷰"
                 >
                   <MonitorPlay className="h-4 w-4" />
+                  <span className="xl:hidden">슬라이드</span>
                 </Button>
                 {/* 사용자 제보 검수 버튼 */}
                 <Button
@@ -1979,15 +2019,22 @@ function AdminEvaluationPage() {
                     }
                   }}
                   variant={showSubmissionView ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8 relative"
+                  size="sm"
+                  className="relative h-9 gap-1.5 px-2.5 text-xs xl:h-8 xl:w-8 xl:gap-1 xl:px-0"
                   title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
+                  aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-4 w-4 shrink-0" />
+                  <span className="xl:hidden">제보</span>
                   {totalPendingCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {totalPendingCount > 9 ? '9+' : totalPendingCount}
-                    </span>
+                    <>
+                      <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white xl:hidden">
+                        {totalPendingCount > 99 ? '99+' : totalPendingCount}
+                      </span>
+                      <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white xl:flex">
+                        {totalPendingCount > 9 ? '9+' : totalPendingCount}
+                      </span>
+                    </>
                   )}
                 </Button>
                 {/* 자막 수집 버튼 (아이콘 only) */}
@@ -1995,8 +2042,8 @@ function AdminEvaluationPage() {
                   onClick={handleCollectTranscripts}
                   disabled={transcriptStatus === 'loading'}
                   variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 gap-1 px-2 text-xs xl:w-8 xl:px-0"
                   title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
                 >
                   {transcriptStatus === 'loading' ? (
@@ -2008,17 +2055,18 @@ function AdminEvaluationPage() {
                   ) : (
                     <FileText className="h-4 w-4" />
                   )}
+                  <span className="xl:hidden">자막</span>
                 </Button>
               </div>
 
               {/* 구분선 */}
-              <div className="h-6 w-px bg-border" />
+              <div className="hidden h-6 w-px bg-border sm:block" />
             </CategorySidebar>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col ${isListView ? '' : 'overflow-hidden'}`}>
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
@@ -2050,12 +2098,7 @@ function AdminEvaluationPage() {
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div
-              ref={scrollContainerRef}
-              className="flex-1 p-4 overflow-auto"
-              id="scroll-container"
-            >
+          <div className="flex flex-1 flex-col p-2 sm:p-4">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin" />
@@ -2099,7 +2142,6 @@ function AdminEvaluationPage() {
                   )}
                 </>
               )}
-            </div>
           </div>
         )}
       </div>
