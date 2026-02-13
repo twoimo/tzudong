@@ -9,6 +9,17 @@ export interface GoogleJsGeocodeCandidate {
 
 let googleMapsLoadPromise: Promise<void> | null = null;
 
+type GoogleMapsGeocoderResult = {
+  formatted_address?: string;
+  geometry: {
+    location: {
+      lat(): number;
+      lng(): number;
+    };
+  };
+  address_components?: unknown;
+};
+
 export async function ensureGoogleMapsLoaded(apiKey: string): Promise<void> {
   if (typeof window === 'undefined') {
     throw new Error('Google Maps는 브라우저에서만 로드할 수 있습니다');
@@ -39,7 +50,8 @@ export async function ensureGoogleMapsLoaded(apiKey: string): Promise<void> {
       reject(new Error('Google Maps 로딩 시간 초과'));
     }, 10000);
 
-    (window as any)[callbackName] = () => {
+    const callbackContainer = window as unknown as Record<string, unknown>;
+    callbackContainer[callbackName] = () => {
       window.clearTimeout(timeoutId);
       resolve();
     };
@@ -67,8 +79,8 @@ export async function geocodeWithGoogleMapsJs(address: string, apiKey: string, l
 
   const geocoder = new window.google.maps.Geocoder();
 
-  const results = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-    geocoder.geocode({ address }, (res, status) => {
+  const results = await new Promise<GoogleMapsGeocoderResult[]>((resolve, reject) => {
+    geocoder.geocode({ address }, (res: GoogleMapsGeocoderResult[] | null, status: string) => {
       if (status === 'OK') {
         resolve(res || []);
         return;
@@ -94,4 +106,3 @@ export async function geocodeWithGoogleMapsJs(address: string, apiKey: string, l
     };
   });
 }
-
