@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 
 const GOOGLE_GEOCODING_API_KEY =
   process.env.GOOGLE_GEOCODING_API_KEY ||
-  process.env.GOOGLE_MAPS_SERVER_API_KEY ||
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  process.env.GOOGLE_MAPS_SERVER_API_KEY;
 
 function mapGoogleStatusToHttp(status?: string): number {
   switch (status) {
@@ -31,7 +30,13 @@ export async function GET(request: Request) {
   }
 
   if (!GOOGLE_GEOCODING_API_KEY) {
-    return NextResponse.json({ error: 'Google Geocoding API key not configured' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Google Geocoding API key not configured',
+        hint: 'Set GOOGLE_GEOCODING_API_KEY (server key without HTTP referrer restrictions)',
+      },
+      { status: 500 }
+    );
   }
 
   const params = new URLSearchParams({

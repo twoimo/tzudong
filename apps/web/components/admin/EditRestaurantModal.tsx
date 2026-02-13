@@ -327,52 +327,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     y: string;
   }>> => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-    let lastError: unknown = null;
 
-    // 1) Server route (preferred when a server key is configured, avoids client blocks/CORS)
-    try {
-      const response = await fetch(
-        `/api/google-geocode?address=${encodeURIComponent(address)}&language=ko`
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorStatus = data?.status || 'UNKNOWN_ERROR';
-        const errorMsg = data?.error_message || data?.error || 'Google 지오코딩 요청 실패';
-        throw new Error(`Google API 오류: ${errorStatus} (${errorMsg})`);
-      }
-
-      if (data.status === 'ZERO_RESULTS' || !data.results || data.results.length === 0) {
-        return [];
-      }
-
-      if (data.status !== 'OK') {
-        const errorMsg = data.error_message || data.status;
-        throw new Error(`Google API 오류: ${data.status} (${errorMsg})`);
-      }
-
-      return data.results.slice(0, limit).map((result: any) => {
-        const location = result.geometry.location;
-        return {
-          road_address: result.formatted_address,
-          jibun_address: result.formatted_address,
-          english_address: result.formatted_address,
-          address_elements: result.address_components as Record<string, unknown>,
-          x: String(location.lng),
-          y: String(location.lat),
-        };
-      });
-    } catch (error) {
-      lastError = error;
-      console.warn('[Google Geocode] server route failed, fallback to JS Geocoder:', error);
-    }
-
-    // 2) Client-side Geocoder (works with referrer-restricted keys)
+    // Client-side Geocoder (works with HTTP referer restricted browser keys)
     try {
       return await geocodeWithGoogleMapsJs(address, apiKey, limit);
     } catch (error) {
       console.error('Google Geocoding 에러:', error);
-      throw (lastError || error) as any;
+      throw error as any;
     }
   };
 
