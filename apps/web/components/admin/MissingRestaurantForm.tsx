@@ -22,6 +22,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  ADMIN_MODAL_ACTION,
+  ADMIN_MODAL_CONTENT_MD_FLEX,
+  ADMIN_MODAL_CONTENT_SM,
+  ADMIN_MODAL_FOOTER,
+  ADMIN_MODAL_FOOTER_DIVIDER,
+  ADMIN_MODAL_SCROLL_BODY,
+} from './admin-modal-styles';
 
 const CATEGORY_OPTIONS = [
   '한식',
@@ -289,7 +297,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       const { error: insertError } = await (supabase
         .from('restaurants') as any)
         .insert({
-          name: trimmedName,
+          approved_name: trimmedName,
           road_address: geocodingData.road_address,
           jibun_address: geocodingData.jibun_address,
           english_address: geocodingData.english_address,
@@ -431,7 +439,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className={ADMIN_MODAL_CONTENT_MD_FLEX}>
           <DialogHeader>
             <DialogTitle>Missing 레스토랑 등록</DialogTitle>
             <DialogDescription>
@@ -590,16 +598,17 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className={ADMIN_MODAL_FOOTER_DIVIDER}>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={loading}
+                className={ADMIN_MODAL_ACTION}
               >
                 취소
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className={ADMIN_MODAL_ACTION}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 등록
               </Button>
@@ -610,10 +619,10 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
       {/* DB 충돌 경고 다이얼로그 */}
       <AlertDialog open={showConflictWarning} onOpenChange={setShowConflictWarning}>
-        <AlertDialogContent>
+        <AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
           <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ 오류 감지</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-4">
+            <AlertDialogTitle>오류 감지</AlertDialogTitle>
+            <AlertDialogDescription className={`space-y-4 ${ADMIN_MODAL_SCROLL_BODY}`}>
               <p className="font-semibold text-destructive">
                 음식점의 주소와 영상 링크(youtube_link)가 같지만, 음식점명이 다릅니다.
               </p>
@@ -621,7 +630,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
               {conflictData && conflictData.length > 0 && (
                 <div className="space-y-3">
                   <div className="border rounded-lg p-3 bg-muted">
-                    <p className="text-sm font-semibold mb-2">🆕 등록하려는 데이터:</p>
+                    <p className="text-sm font-semibold mb-2">등록하려는 데이터:</p>
                     <ul className="text-sm space-y-1 ml-4">
                       <li>• 음식점명: <span className="font-medium">{formData.name}</span></li>
                       <li>• 주소: <span className="font-medium">{formData.address}</span></li>
@@ -630,7 +639,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
                   </div>
 
                   <div className="border rounded-lg p-3 bg-destructive/10">
-                    <p className="text-sm font-semibold mb-2">🗄️ 기존 데이터베이스:</p>
+                    <p className="text-sm font-semibold mb-2">기존 데이터베이스:</p>
                     {conflictData.map((restaurant: any, idx: number) => (
                       <div key={idx} className="ml-4 mb-3">
                         <ul className="text-sm space-y-1">
@@ -650,9 +659,9 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleForceRegister} className="bg-destructive hover:bg-destructive/90">
+          <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
+            <AlertDialogCancel className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForceRegister} className={`${ADMIN_MODAL_ACTION} bg-destructive hover:bg-destructive/90`}>
               승인
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import {
+    ADMIN_MODAL_ACTION,
+    ADMIN_MODAL_CONTENT_MD_FLEX,
+    ADMIN_MODAL_CONTENT_SM,
+    ADMIN_MODAL_FOOTER,
+    ADMIN_MODAL_FOOTER_DIVIDER,
+    ADMIN_MODAL_SCROLL_BODY,
+} from "@/components/admin/admin-modal-styles";
 
 // 해외 국가 목록
 const OVERSEAS_COUNTRIES = [
@@ -314,7 +322,13 @@ export function AdminRestaurantModal({
             );
             const data = await response.json();
 
-            if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+            if (data.status !== 'OK') {
+                const errorMsg = data.error_message || data.status;
+                console.error('Google Geocoding API Error:', data.status, errorMsg);
+                throw new Error(`Google API 오류: ${data.status} (${errorMsg})`);
+            }
+
+            if (!data.results || data.results.length === 0) {
                 return [];
             }
 
@@ -550,7 +564,6 @@ export function AdminRestaurantModal({
             if (restaurant) {
                 // 공통 필드: 모든 레코드에 적용
                 const commonData = {
-                    name: formData.name.trim(),
                     approved_name: formData.name.trim(), // approved_name 동기화
                     road_address: formData.road_address.trim(),
                     jibun_address: formData.jibun_address.trim() || null,
@@ -722,7 +735,6 @@ export function AdminRestaurantModal({
             } else {
                 // 새 맛집 등록
                 const restaurantData = {
-                    name: formData.name.trim(),
                     approved_name: formData.name.trim(), // approved_name 동기화
                     road_address: formData.road_address.trim(),
                     jibun_address: formData.jibun_address.trim() || null,
@@ -786,14 +798,18 @@ export function AdminRestaurantModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+            <DialogContent className={ADMIN_MODAL_CONTENT_MD_FLEX}>
                 <DialogHeader>
                     <DialogTitle className="text-2xl">
-                        {restaurant ? "🏪 맛집 수정" : "🏪 맛집 등록"}
+                        {restaurant ? "맛집 수정" : "맛집 등록"}
                     </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {restaurant ? "맛집 정보를 수정합니다" : "새로운 맛집을 등록합니다"}
+                    </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="mt-4">
+                    <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="name">이름 *</Label>
@@ -958,7 +974,6 @@ export function AdminRestaurantModal({
                                     onClick={handleGeocodeNaver}
                                     disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
                                     variant={isGeocodingNaver ? "default" : "outline"}
-                                    className="whitespace-nowrap"
                                 >
                                     {isGeocodingNaver ? (
                                         <>
@@ -974,7 +989,6 @@ export function AdminRestaurantModal({
                                     onClick={handleGeocodeGoogle}
                                     disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
                                     variant={isGeocodingGoogle ? "default" : "outline"}
-                                    className="whitespace-nowrap"
                                 >
                                     {isGeocodingGoogle ? (
                                         <>
@@ -1152,30 +1166,32 @@ export function AdminRestaurantModal({
                             </div>
                         )}
                     </div>
+                    </div>
 
-                    <div className="flex gap-2">
+                    <DialogFooter className={ADMIN_MODAL_FOOTER_DIVIDER}>
                         {restaurant && (
                             <Button
                                 type="button"
                                 variant="destructive"
                                 onClick={() => setShowDeleteConfirm(true)}
                                 disabled={isSubmitting}
+                                className={`${ADMIN_MODAL_ACTION} mr-auto`}
                             >
                                 삭제
                             </Button>
                         )}
-                        <div className="flex-1" />
                         <Button
                             type="button"
                             variant="outline"
                             onClick={onClose}
                             disabled={isSubmitting}
+                            className={ADMIN_MODAL_ACTION}
                         >
                             취소
                         </Button>
                         <Button
                             type="submit"
-                            className="bg-gradient-primary hover:opacity-90"
+                            className={`${ADMIN_MODAL_ACTION} bg-gradient-primary hover:opacity-90`}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (
@@ -1189,16 +1205,16 @@ export function AdminRestaurantModal({
                                 "등록"
                             )}
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
             </DialogContent>
 
             {/* 삭제 확인 모달 */}
             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogContent>
+                <AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
                     <AlertDialogHeader>
                         <AlertDialogTitle>맛집 삭제 확인</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogDescription className={ADMIN_MODAL_SCROLL_BODY}>
                             정말로 이 맛집을 삭제하시겠습니까?
                             <br />
                             <br />
@@ -1215,11 +1231,11 @@ export function AdminRestaurantModal({
                             )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
+                        <AlertDialogCancel className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-destructive hover:bg-destructive/90"
+                            className={`${ADMIN_MODAL_ACTION} bg-destructive hover:bg-destructive/90`}
                         >
                             삭제
                         </AlertDialogAction>

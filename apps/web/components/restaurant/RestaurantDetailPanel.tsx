@@ -322,54 +322,37 @@ export function RestaurantDetailPanel({
     const handleShareUrl = useCallback(async () => {
         if (!restaurant) return;
 
-        // 1. 원본 URL 생성 (z, lat, lng만 포함 - 네이버 지도 스타일)
+        // 1. URL 생성 (r=ID, z=15, mode=overseas)
+        // [Fast Copy] 단축 URL 제거하고 즉시 복사되도록 변경
         const url = new URL(window.location.origin);
-        url.searchParams.set('z', '15.00'); // 줌 레벨 15 유지
-        url.searchParams.set('lat', restaurant.lat?.toFixed(6) || '');
-        url.searchParams.set('lng', restaurant.lng?.toFixed(6) || '');
-        const longUrl = url.toString();
+        url.searchParams.set('r', restaurant.id);
+        url.searchParams.set('z', '15'); // 줌 레벨 15 설정
+
+        // 해외 맛집 판단 (좌표 기준)
+        const isOverseas = restaurant.lat && restaurant.lng && (
+            restaurant.lat < 33 || restaurant.lat > 39 ||
+            restaurant.lng < 124 || restaurant.lng > 132
+        );
+
+        if (isOverseas) {
+            url.searchParams.set('mode', 'overseas');
+        }
+
+        const shareUrl = url.toString();
 
         try {
-            // 2. 단축 URL 생성 시도
-            const response = await fetch('/api/shorten', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    targetUrl: longUrl,
-                    restaurantId: restaurant.id,
-                    restaurantName: restaurant.name
-                }),
-            });
-
-            let shareUrl = longUrl;
-
-            if (response.ok) {
-                const data = await response.json();
-                // API returns: { shortUrl, code, isExisting }
-                if (data.shortUrl) {
-                    shareUrl = data.shortUrl;
-                } else if (data.code) {
-                    // Fallback: construct from code
-                    shareUrl = `${window.location.origin}/s/${data.code}`;
-                }
-            }
-
-            // 3. 클립보드 복사
+            // 2. 클립보드 복사
             await navigator.clipboard.writeText(shareUrl);
             setIsShareCopied(true);
             setTimeout(() => setIsShareCopied(false), 2000);
             toast.success('공유 링크가 복사되었습니다');
         } catch (err) {
-            console.error('URL 단축/복사 실패:', err);
-            // 실패 시 원본 URL이라도 복사 시도
-            try {
-                await navigator.clipboard.writeText(longUrl);
-                setIsShareCopied(true);
-                setTimeout(() => setIsShareCopied(false), 2000);
-                toast.success('공유 링크가 복사되었습니다 (단축 실패)');
-            } catch (copyErr) {
+            console.warn('URL 복사 실패:', err);
+
+            // 포커스 문제 등으로 실패 시 처리
+            if (!document.hasFocus()) {
+                console.warn('문서 포커스 없음, 클립보드 쓰기 건너뜀');
+            } else {
                 toast.error('링크 복사에 실패했습니다');
             }
         }
@@ -516,26 +499,35 @@ export function RestaurantDetailPanel({
         }
     };
 
-    const getCategoryEmoji = (category: string) => {
-        const emojiMap: { [key: string]: string } = {
-            '고기': '🥩',
-            '치킨': '🍗',
-            '한식': '🍚',
-            '중식': '🥢',
-            '일식': '🍣',
-            '양식': '🍝',
-            '분식': '🥟',
-            '카페·디저트': '☕',
-            '아시안': '🍜',
-            '패스트푸드': '🍔',
-            '족발·보쌈': '🍖',
-            '돈까스·회': '🍱',
-            '피자': '🍕',
-            '찜·탕': '🥘',
-            '야식': '🌙',
-            '도시락': '🍱'
-        };
-        return emojiMap[category] || '⭐'; // 기본값은 별
+    /**
+     * 카테고리별 이미지 경로 매핑
+     */
+    const CATEGORY_IMAGES: Record<string, string> = {
+        '고기': '/images/maker-images/meat_bbq.png',
+        '치킨': '/images/maker-images/chicken.png',
+        '한식': '/images/maker-images/korean.png',
+        '중식': '/images/maker-images/chinese.png',
+        '일식': '/images/maker-images/cutlet_sashimi.png',
+        '양식': '/images/maker-images/western.png',
+        '분식': '/images/maker-images/snack_bar.png',
+        '카페·디저트': '/images/maker-images/cafe_dessert.png',
+        '아시안': '/images/maker-images/asian.png',
+        '패스트푸드': '/images/maker-images/fastfood.png',
+        '족발·보쌈': '/images/maker-images/pork_feet.png',
+        '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
+        '피자': '/images/maker-images/pizza.png',
+        '찜·탕': '/images/maker-images/stew.png',
+        '야식': '/images/maker-images/late_night.png',
+        '도시락': '/images/maker-images/lunch_box.png',
+    };
+
+    /**
+     * 카테고리에 해당하는 이미지 경로 반환
+     * @param category 카테고리명
+     * @returns 이미지 경로
+     */
+    const getCategoryImagePath = (category: string): string => {
+        return CATEGORY_IMAGES[category] || '/images/maker-images/korean.png';
     };
 
     return (
@@ -635,7 +627,16 @@ export function RestaurantDetailPanel({
                                         })()}
                                     </ScrollableTagContainer>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl shrink-0">{getCategoryEmoji(categories[0] || '')}</span>
+                                        {/* 카테고리 이미지 - 이모지 대신 이미지 표시 */}
+                                        <div className="relative w-8 h-8 shrink-0">
+                                            <Image
+                                                src={getCategoryImagePath(categories[0] || '')}
+                                                alt={categories[0] || '카테고리'}
+                                                fill
+                                                sizes="32px"
+                                                className="object-contain"
+                                            />
+                                        </div>
                                         <h2
                                             className="text-xl font-bold truncate"
                                             title={restaurant.name}

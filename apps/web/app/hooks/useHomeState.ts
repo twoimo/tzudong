@@ -5,9 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 
-const GLOBAL_COUNTRIES = [
-    "미국", "일본", "대만", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
-];
+import { OVERSEAS_REGIONS, OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 
 export function useHomeState(mapMode: 'domestic' | 'overseas') {
     // 맛집 선택 및 모달
@@ -18,7 +16,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
 
     // 지도 모드 및 지역/국가
     const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
-    const [selectedCountry, setSelectedCountry] = useState<string | null>("튀르키예");
+    const [selectedCountry, setSelectedCountry] = useState<string | null>("헝가리(부다페스트)");
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
 
     // UI 모드
@@ -59,7 +57,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
             setSelectedRegion(null);
             setSelectedCategories([]);
         } else {
-            setSelectedCountry("튀르키예");
+            setSelectedCountry("헝가리(부다페스트)");
             setSelectedCategories([]);
         }
         setSearchedRestaurant(null);
@@ -94,16 +92,30 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         enabled: mapMode === 'overseas',
     });
 
-    // 국가별 맛집 수 계산
+
+    // 국가별 맛집 수 계산 (이제는 도시/지역별 계산)
     const countryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
+        OVERSEAS_REGION_LIST.forEach(region => { counts[region] = 0; });
 
         globalRestaurants.forEach((restaurant) => {
             const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
+            const lowerAddress = address.toLowerCase();
 
-            GLOBAL_COUNTRIES.forEach((country) => {
-                if (address.includes(country)) {
-                    counts[country] = (counts[country] || 0) + 1;
+            OVERSEAS_REGION_LIST.forEach((regionKey) => {
+                const config = OVERSEAS_REGIONS[regionKey];
+                // 해당 지역의 키워드 중 하나라도 포함되면 카운트
+                // 대소문자 구분 없이 검색
+                const isMatch = config.keywords.some(keyword =>
+                    lowerAddress.includes(keyword.toLowerCase())
+                );
+
+                // 또는 국가 이름 자체가 포함되어 있으면 (포괄적 검색) - but handled by specific keywords now
+                // 만약 국가 이름만 있고 도시 이름이 없는 경우를 대비해 국가 이름도 키워드에 포함할지 고려
+                // 현재는 정밀한 도시 매칭을 위해 키워드 기반으로만 카운트
+
+                if (isMatch) {
+                    counts[regionKey] = (counts[regionKey] || 0) + 1;
                 }
             });
         });
@@ -111,7 +123,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         return counts;
     }, [globalRestaurants]);
 
-    return {
+    return useMemo(() => ({
         // States
         selectedRestaurant,
         setSelectedRestaurant,
@@ -149,5 +161,24 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         selectedCategories,
         setSelectedCategories,
         countryCounts,
-    };
+    }), [
+        selectedRestaurant,
+        refreshTrigger,
+        isAdminEditModalOpen,
+        adminRestaurantToEdit,
+        selectedRegion,
+        selectedCountry,
+        searchedRestaurant,
+        isEditModalOpen,
+        restaurantToEdit,
+        isReviewModalOpen,
+        isCategoryPopoverOpen,
+        moveToRestaurant,
+        isPanelOpen,
+        panelRestaurant,
+        editFormData,
+        filters,
+        selectedCategories,
+        countryCounts
+    ]);
 }

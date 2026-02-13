@@ -9,6 +9,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        xs: "375px",
+      },
       fontFamily: {
         sans: ['"Noto Serif KR"', 'serif'], // Original used Serif for Sans
         serif: ['"Noto Serif KR"', 'serif'],

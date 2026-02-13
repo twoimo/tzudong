@@ -19,6 +19,8 @@ interface BookmarkWithRestaurant extends Bookmark {
         jibun_address: string | null;
         youtube_link: string | null;
         review_count: number;
+        lat: number | null;
+        lng: number | null;
     };
 }
 
@@ -41,6 +43,8 @@ interface RestaurantRow {
     jibun_address: string | null;
     youtube_link: string | null;
     review_count: number | null;
+    lat: number | null;
+    lng: number | null;
 }
 
 export function useBookmarks() {
@@ -69,7 +73,7 @@ export function useBookmarks() {
 
             const { data: restaurantsData, error: restaurantsError } = await supabase
                 .from('restaurants')
-                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count')
+                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count, lat, lng')
                 .in('id', restaurantIds)
                 .eq('status', 'approved');
 
@@ -97,7 +101,9 @@ export function useBookmarks() {
                             road_address: restaurant.road_address,
                             jibun_address: restaurant.jibun_address,
                             youtube_link: restaurant.youtube_link,
-                            review_count: restaurant.review_count || 0
+                            review_count: restaurant.review_count || 0,
+                            lat: restaurant.lat,
+                            lng: restaurant.lng
                         }
                     };
                 })
@@ -180,7 +186,7 @@ export function useToggleBookmark() {
             }
         },
         onSettled: (data, error, restaurantId) => {
-            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+            queryClient.invalidateQueries({ queryKey: ['user-bookmarks'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-count', restaurantId] });
         },
@@ -224,7 +230,7 @@ export function useToggleBookmark() {
             }
         },
         onSettled: (data, error, restaurantId) => {
-            queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+            queryClient.invalidateQueries({ queryKey: ['user-bookmarks'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-count', restaurantId] });
         },

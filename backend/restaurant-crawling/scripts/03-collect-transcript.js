@@ -13,11 +13,15 @@
  *   node 03-collect-transcript.js  # 모든 채널
  */
 
+import { exec } from 'child_process';
+import util from 'util';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 import yaml from 'js-yaml';
+
+const execPromise = util.promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -124,6 +128,226 @@ function getLatestTranscript(dataPath, videoId) {
     return getLatestData(transcriptFile);
 }
 
+// -----------------------------------------------------------------------------
+// VTT 파싱 및 yt-dlp 관련 함수
+// -----------------------------------------------------------------------------
+
+// VTT 시간을 초 단위로 변환
+function parseVttTime(timeStr) {
+    const parts = timeStr.trim().split(':');
+    let seconds = 0;
+    if (parts.length === 3) {
+        seconds = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+    } else if (parts.length === 2) {
+        seconds = parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+    }
+    return seconds;
+}
+
+// 텍스트 정제 (괄호, 대괄호 제거)
+function cleanText(text) {
+    let cleaned = text.replace(/&nbsp;/g, ' ');
+    cleaned = cleaned.replace(/\([^)]*\)/g, '');
+    cleaned = cleaned.replace(/\[[^\]]*\]/g, '');
+    return cleaned.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * VTT 컨텐츠 파싱
+ */
+function parseVtt(content) {
+    const segments = [];
+    const lines = content.replace(/\r\n/g, '\n').split('\n');
+    let currentSegment = null;
+
+    // "00:00:00.000 --> 00:00:05.000" 형식 매칭
+    const timeRegex = /((?:\d{2}:)?\d{2}:\d{2}\.\d{3})\s+-->\s+((?:\d{2}:)?\d{2}:\d{2}\.\d{3})/;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        if (line === 'WEBVTT') continue;
+        if (line.match(/^\d+$/)) continue;
+
+        const timeMatch = line.match(timeRegex);
+        if (timeMatch) {
+            if (currentSegment) {
+                currentSegment.text = currentSegment.text.replace(/<[^>]+>/g, '').trim();
+                if (currentSegment.text && (!segments.length || segments[segments.length - 1].text !== currentSegment.text)) {
+                    segments.push(currentSegment);
+                }
+            }
+            currentSegment = {
+                start: parseVttTime(timeMatch[1]),
+                duration: parseVttTime(timeMatch[2]) - parseVttTime(timeMatch[1]),
+                text: ''
+            };
+        } else if (currentSegment) {
+            currentSegment.text += (currentSegment.text ? ' ' : '') + line;
+        }
+    }
+
+    if (currentSegment) {
+        currentSegment.text = currentSegment.text.replace(/<[^>]+>/g, '').trim();
+        if (currentSegment.text) segments.push(currentSegment);
+    }
+
+    // 텍스트 정제 및 빈 세그먼트 필터링
+    const cleanedSegments = segments.map(s => {
+        s.text = cleanText(s.text);
+        return s;
+    }).filter(s => s.text.length > 0);
+
+    // 연속된 중복 텍스트 병합
+    const mergedSegments = [];
+    if (cleanedSegments.length > 0) {
+        let last = cleanedSegments[0];
+        for (let i = 1; i < cleanedSegments.length; i++) {
+            const curr = cleanedSegments[i];
+            if (curr.text === last.text) continue;
+            mergedSegments.push(last);
+            last = curr;
+        }
+        mergedSegments.push(last);
+    }
+
+    return mergedSegments;
+}
+
+/**
+ * yt-dlp를 사용하여 자막 수집 (1차: 쿠키, 2차: 스텔스 모드)
+ */
+async function fetchTranscriptYtDlp(videoId) {
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    const tempPrefix = path.join(__dirname, `temp_${videoId}`);
+    const cookiesPath = path.resolve(__dirname, '../data/cookies.txt');
+
+    // ============================================================
+    // 1단계: 쿠키 기반 시도 (기존 방식)
+    // ============================================================
+    if (fs.existsSync(cookiesPath)) {
+        const result = await tryYtDlpWithOptions(videoId, url, tempPrefix, {
+            cookies: cookiesPath,
+            mode: 'cookies'
+        });
+        if (result) return result;
+        log('debug', `    → 쿠키 기반 실패, 스텔스 모드 시도...`);
+    }
+
+    // ============================================================
+    // 2단계: 스텔스 모드 (쿠키/세션 없이, IP 차단 우회 시도)
+    // ============================================================
+    const result = await tryYtDlpWithOptions(videoId, url, tempPrefix, {
+        cookies: null,
+        mode: 'stealth'
+    });
+    return result;
+}
+
+/**
+ * yt-dlp 실행 헬퍼 함수
+ * @param {string} videoId - 비디오 ID
+ * @param {string} url - YouTube URL
+ * @param {string} tempPrefix - 임시 파일 경로 프리픽스
+ * @param {object} options - 옵션 { cookies: string|null, mode: 'cookies'|'stealth' }
+ */
+async function tryYtDlpWithOptions(videoId, url, tempPrefix, options) {
+    const { cookies, mode } = options;
+
+    // 스텔스 모드에서 사용할 랜덤 User-Agent
+    const STEALTH_USER_AGENTS = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
+    ];
+
+    // [수정] Python 모듈 사용 (봇 탐지 우회 - 04-extract-frames-with-heatmap.js 패턴 적용)
+    // 1. Python 모듈 사용 (최신 버전 보장)
+    // 2. Node.js 경로 명시 (n-challenge 해결 필수)
+    // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
+    let pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
+    if (!fs.existsSync(pythonPath)) {
+        pythonPath = "python3";
+    }
+
+    const nodePath = "C:\\Program Files\\nodejs\\node.exe";
+    const runtimesArg = process.platform === 'win32' && fs.existsSync(nodePath)
+        ? `--js-runtimes "node:${nodePath}"`
+        : '--js-runtimes "node:node"';
+
+    let cmdParts = [`"${pythonPath}" -m yt_dlp`];
+
+    // 봇 탐지 우회 옵션 (공통)
+    cmdParts.push(runtimesArg);
+    cmdParts.push('--remote-components ejs:github');
+
+    // 쿠키 모드: 쿠키 파일 사용
+    if (mode === 'cookies' && cookies) {
+        cmdParts.push(`--cookies "${cookies}"`);
+    }
+
+    // 스텔스 모드: 쿠키 없이, 세션 초기화, 랜덤 User-Agent
+    if (mode === 'stealth') {
+        const randomUA = STEALTH_USER_AGENTS[Math.floor(Math.random() * STEALTH_USER_AGENTS.length)];
+        cmdParts.push(
+            '--no-cache-dir',                    // 캐시 사용 안 함
+            `--user-agent "${randomUA}"`,        // 랜덤 User-Agent
+            '--extractor-args "youtube:player_client=web"',  // android 클라이언트 대신 web 사용
+            '--sleep-requests 1',                // 요청 간 1초 대기 (rate limit 방지)
+        );
+    }
+
+    // 공통 옵션: 자동 자막, 한국어, VTT 변환
+    cmdParts.push(
+        '--write-auto-sub',
+        '--write-sub',
+        '--sub-lang ko',
+        '--skip-download',
+        '--convert-subs vtt',
+        `--output "${tempPrefix}"`,
+        `"${url}"`
+    );
+
+    const cmd = cmdParts.join(' ');
+
+    try {
+        await execPromise(cmd);
+
+        const dir = path.dirname(tempPrefix);
+        const files = fs.readdirSync(dir);
+        // temp_{videoId}로 시작하고 .vtt로 끝나는 파일 찾기
+        const vttFile = files.find(f => f.startsWith(`temp_${videoId}`) && f.endsWith('.vtt'));
+
+        if (!vttFile) {
+            return null;
+        }
+
+        const vttPath = path.join(dir, vttFile);
+        const content = fs.readFileSync(vttPath, 'utf-8');
+        const segments = parseVtt(content);
+
+        // 정리에 실패해도 진행
+        try { fs.unlinkSync(vttPath); } catch (e) { }
+
+        if (segments.length === 0) return null;
+
+        return {
+            transcript: segments,
+            language: 'ko', // yt-dlp로 한국어 요청했으므로 가정
+            source_mode: mode  // 어떤 모드로 성공했는지 기록
+        };
+
+    } catch (e) {
+        // 스텔스 모드에서 실패 시 에러 로그
+        if (mode === 'stealth') {
+            log('debug', `    → 스텔스 모드 실패: ${e.message?.slice(0, 100) || 'unknown'}`);
+        }
+        return null;
+    }
+}
+
+
 // 블랙리스트 디렉토리
 const NO_TRANSCRIPT_DIR = path.resolve(__dirname, '../../data/no_transcript_link');
 const NO_TRANSCRIPT_PERMANENT = path.join(NO_TRANSCRIPT_DIR, 'no_transcript_permanent.json');
@@ -229,9 +453,9 @@ function getRandomDelay() {
 }
 
 /**
- * Puppeteer로 자막 수집
+ * Puppeteer로 자막 수집 (2차 폴백)
  */
-async function getTranscriptWithPuppeteer(videoId) {
+async function getTranscriptViaPuppeteer(videoId) {
     if (!puppeteerChecked) {
         puppeteerChecked = true;
         try {
@@ -509,6 +733,36 @@ async function collectFromTubeTranscript(page, videoId) {
 }
 
 /**
+ * 자막 수집 메인 함수 (yt-dlp -> Puppeteer)
+ */
+async function getTranscript(videoId) {
+    // 1. yt-dlp 시도 (빠름)
+    try {
+        const ytResult = await fetchTranscriptYtDlp(videoId);
+        if (ytResult) {
+            return {
+                source: 'yt-dlp',
+                ...ytResult
+            };
+        }
+    } catch (e) {
+        log('debug', `yt-dlp 실패: ${e.message}`);
+    }
+
+    // 2. Puppeteer 시도 (느림, 폴백)
+    log('info', `    → yt-dlp 실패, Puppeteer 시도...`);
+    const puppeteerResult = await getTranscriptViaPuppeteer(videoId);
+    if (puppeteerResult) {
+        return {
+            source: 'puppeteer',
+            ...puppeteerResult
+        };
+    }
+
+    return null;
+}
+
+/**
  * 채널 자막 수집 (recollect_id 기반)
  */
 async function collectChannelTranscripts(channelName, channelConfig) {
@@ -592,34 +846,40 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
     for (let i = 0; i < toCollect.length; i++) {
         const { videoId, recollectVars, metaRecollectId } = toCollect[i];
+
+        // Puppeteer 슬롯 확보 (yt-dlp만 쓸 수도 있지만, 폴백 때문에 미리 확보하거나 로직 분리 가능)
+        // 하지만 getTranscript 내부에서 폴백 시 Puppeteer를 쓰므로, 여기서 확보하는 것이 안전함.
+        // 다만 yt-dlp만 성공할 경우 낭비일 수 있으나, 복잡도 줄이기 위해 유지.
         await acquirePuppeteerSlot();
 
         try {
             log('info', `  [${i + 1}/${toCollect.length}] ${videoId} (${recollectVars.join(', ') || 'new'})`);
 
-            const result = await getTranscriptWithPuppeteer(videoId);
-
-            const outputData = {
-                youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
-                language: result ? result.language : null,
-                collected_at: getKSTISOString(),
-                transcript: result ? result.segments : [],
-                // recollect 정보
-                recollect_id: metaRecollectId,
-                recollect_vars: recollectVars,
-            };
-
-            const outputFile = path.join(transcriptDir, `${videoId}.jsonl`);
-            fs.appendFileSync(outputFile, JSON.stringify(outputData) + '\n', 'utf-8');
+            const result = await getTranscript(videoId);
 
             if (result) {
+                // 결과 저장
+                const outputData = {
+                    youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
+                    channel_name: channelName,
+                    language: result.language,
+                    collected_at: getKSTISOString(),
+                    transcript: result.transcript,
+                    recollect_id: metaRecollectId,
+                    recollect_vars: recollectVars,
+                    collector_source: result.source
+                };
+
+                const outputFile = path.join(transcriptDir, `${videoId}.jsonl`);
+                fs.appendFileSync(outputFile, JSON.stringify(outputData) + '\n', 'utf-8');
+
                 stats.success++;
-                log('success', `[Transcript Saved] ${videoId} (${result.segments.length} segments)`);
+                log('success', `[Success] ${videoId} (${result.transcript.length} lines) via ${result.source}`);
             } else {
                 stats.noTranscript++;
                 // 블랙리스트에 추가
                 updateNoTranscriptPermanent(`https://www.youtube.com/watch?v=${videoId}`);
-                log('debug', `    → 자막 없음`);
+                log('debug', `    → 자막 없음 (All failed)`);
             }
         } catch (error) {
             stats.failed++;
@@ -630,9 +890,9 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
         // 100개마다 3분 휴식 (rate limit 방지)
         if ((i + 1) % REST_INTERVAL === 0 && i < toCollect.length - 1) {
-            log('warning', `🛑 ${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`);
+            log('warning', `${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`);
             await new Promise(resolve => setTimeout(resolve, REST_DURATION));
-            log('success', `🚀 휴식 끝 - 수집 재개`);
+            log('success', `휴식 끝 - 수집 재개`);
         }
 
         // 영상별 딜레이 (마지막 제외)

@@ -24,6 +24,7 @@ import unicodedata
 import time
 import sys
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone, timedelta
@@ -80,6 +81,10 @@ naver_api_calls = 0
 ncp_api_calls = 0
 naver_api_errors = 0
 ncp_api_errors = 0
+
+# [PERF] Geocoding 결과 메모리 캐시 (동일 주소 반복 API 호출 방지)
+_geocode_jibun_cache: Dict[str, Optional[str]] = {}
+_geocode_addresses_cache: Dict[str, Optional[List[Dict[str, Any]]]] = {}
 
 
 # ========= 유틸 함수 (기존 backup 그대로) =========
@@ -175,7 +180,7 @@ def naver_local_search_one(query: str, display: int = 5) -> List[Dict[str, Any]]
             return results
         except Exception as e:
             naver_api_errors += 1
-            print(f"⚠️ 네이버 검색 실패 (시도 {attempt+1}/3): {query} - {e}")
+            print(f"[WARN] 네이버 검색 실패 (시도 {attempt+1}/3): {query} - {e}")
             if attempt < 2:
                 time.sleep(2**attempt)
             else:
@@ -183,15 +188,18 @@ def naver_local_search_one(query: str, display: int = 5) -> List[Dict[str, Any]]
 
 
 def ncp_geocode_to_jibun_address(query: str) -> Optional[str]:
-    """NCP 지오코딩 → 지번주소 반환"""
+    """NCP 지오코딩 → 지번주소 반환 (캐시 적용)"""
     global ncp_api_calls, ncp_api_errors
+    cache_key = _norm_space(query)
+    if cache_key in _geocode_jibun_cache:
+        return _geocode_jibun_cache[cache_key]
     for attempt in range(3):
         try:
             ncp_api_calls += 1
             r = requests.get(
                 GEOCODE_URL,
                 headers=HEADERS_NCP,
-                params={"query": _norm_space(query)},
+                params={"query": cache_key},
                 timeout=8,
             )
             r.raise_for_status()
@@ -200,38 +208,47 @@ def ncp_geocode_to_jibun_address(query: str) -> Optional[str]:
             if addresses:
                 addr = addresses[0].get("jibunAddress", "")
                 if addr:
-                    return _norm_space(addr)
+                    result = _norm_space(addr)
+                    _geocode_jibun_cache[cache_key] = result
+                    return result
             if attempt < 2:
                 time.sleep(1)
         except Exception as e:
             ncp_api_errors += 1
-            print(f"⚠️ 지오코딩 실패 (시도 {attempt+1}/3): {query} - {e}")
+            print(f"[WARN] 지오코딩 실패 (시도 {attempt+1}/3): {query} - {e}")
             if attempt < 2:
                 time.sleep(2**attempt)
+    _geocode_jibun_cache[cache_key] = None
     return None
 
 
 def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
-    """NCP 지오코딩 → 전체 주소 정보 반환"""
+    """NCP 지오코딩 → 전체 주소 정보 반환 (캐시 적용)"""
     global ncp_api_calls, ncp_api_errors
+    cache_key = _norm_space(addr)
+    if cache_key in _geocode_addresses_cache:
+        return _geocode_addresses_cache[cache_key]
     for attempt in range(3):
         try:
             ncp_api_calls += 1
             r = requests.get(
                 GEOCODE_URL,
                 headers=HEADERS_NCP,
-                params={"query": _norm_space(addr)},
+                params={"query": cache_key},
                 timeout=8,
             )
             r.raise_for_status()
             j = r.json()
             arr = j.get("addresses") if isinstance(j, dict) else None
-            return arr if isinstance(arr, list) else None
+            result = arr if isinstance(arr, list) else None
+            _geocode_addresses_cache[cache_key] = result
+            return result
         except Exception as e:
             ncp_api_errors += 1
-            print(f"⚠️ 주소 지오코딩 실패 (시도 {attempt+1}/3): {addr} - {e}")
+            print(f"[WARN] 주소 지오코딩 실패 (시도 {attempt+1}/3): {addr} - {e}")
             if attempt < 2:
                 time.sleep(2**attempt)
+    _geocode_addresses_cache[cache_key] = None
     return None
 
 
@@ -275,19 +292,22 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     origin_address_raw = _norm_space(str(rec.get("address", "")))
     origin_address = remove_floor_info(origin_address_raw)
 
-    # name 쿼리로 최대 5개 결과 받아오기
-    name_cands = naver_local_search_one(name, display=5)
-
-    # name + address 쿼리로 검색
-    name_addr_query = f"{name} {_norm_space(origin_address)}"
-    name_addr_cands = naver_local_search_one(name_addr_query, display=3)
-
-    # name + 지역 쿼리로 검색
+    # [PERF] Naver Search 3건 동시 호출 (직렬 → 병렬)
     region = extract_region_from_address(origin_address)
-    name_region_cands = []
-    if region:
-        name_region_query = f"{name} {region}"
-        name_region_cands = naver_local_search_one(name_region_query, display=5)
+    name_addr_query = f"{name} {_norm_space(origin_address)}"
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        future_name = executor.submit(naver_local_search_one, name, 5)
+        future_addr = executor.submit(naver_local_search_one, name_addr_query, 3)
+        future_region = (
+            executor.submit(naver_local_search_one, f"{name} {region}", 5)
+            if region
+            else None
+        )
+
+        name_cands = future_name.result()
+        name_addr_cands = future_addr.result()
+        name_region_cands = future_region.result() if future_region else []
 
     # origin_address를 NCP 지오코딩하여 지번주소 얻기
     geocoded_jibun = ncp_geocode_to_jibun_address(origin_address)
@@ -498,7 +518,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if not selection_dir.exists():
-        print(f"❌ selection 폴더 없음: {selection_dir}")
+        print(f"[ERROR] selection 폴더 없음: {selection_dir}")
         return
 
     # video_id 수집
@@ -526,7 +546,7 @@ def main():
         if output_file.exists():
             stats["skipped"] += 1
             if stats["skipped"] % 50 == 1:
-                print(f"⏭️ 이미 처리됨 (스킵 {stats['skipped']}개)")
+                print(f"이미 처리됨 (스킵 {stats['skipped']}개)")
             continue
 
         # 데이터 로드
@@ -561,10 +581,10 @@ def main():
 
         stats["processed"] += 1
         if stats["processed"] % 10 == 0:
-            print(f"✓ {stats['processed']}개 처리 완료...")
+            print(f"[OK] {stats['processed']}개 처리 완료...")
 
     print(f"\n{'='*50}")
-    print(f"✅ Rule 평가 완료!")
+    print(f"[OK] Rule 평가 완료!")
     print(f"   총 비디오: {stats['total']}개")
     print(f"   처리됨: {stats['processed']}개")
     print(f"   건너뜀: {stats['skipped']}개")
@@ -573,6 +593,8 @@ def main():
     print(f"   실패: {stats['fail_restaurants']}개")
     print(f"   네이버 API 호출: {naver_api_calls}회 (에러: {naver_api_errors})")
     print(f"   NCP API 호출: {ncp_api_calls}회 (에러: {ncp_api_errors})")
+    cache_total = len(_geocode_jibun_cache) + len(_geocode_addresses_cache)
+    print(f"   Geocode 캐시 항목: {cache_total}개")
     print(f"{'='*50}")
 
 

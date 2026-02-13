@@ -12,8 +12,8 @@ laaj_results, map_url_crawling 데이터를 최종 형식으로 변환합니다.
   - evaluation/transforms.jsonl (채널별로 각각)
 
 - trace_id = hash(youtube_link + (naver_name || name) + youtuber_review)
-- trace_id_name_source: "naver_name" or "original"
-- source_type: "geminiCLI" or "map_url_crawling"
+- trace_id_name_source: "naver_name" 또는 "original"
+- source_type: "geminiCLI" 또는 "map_url_crawling"
 """
 
 import json
@@ -27,6 +27,52 @@ from datetime import datetime, timezone, timedelta
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
+
+
+# [PERF] Meta 파일 사전 로딩 캐시 (비디오별 반복 파일 I/O 방지)
+def preload_meta_cache(meta_dir: Path) -> Dict[str, List[dict]]:
+    """모든 meta 파일의 JSONL 라인을 사전 로드"""
+    cache: Dict[str, List[dict]] = {}
+    if not meta_dir or not meta_dir.exists():
+        return cache
+    for f in meta_dir.glob("*.jsonl"):
+        lines = []
+        with open(f, "r", encoding="utf-8") as file:
+            for line in file:
+                try:
+                    lines.append(json.loads(line.strip()))
+                except Exception:
+                    pass
+        if lines:
+            cache[f.stem] = lines
+    return cache
+
+
+def _extract_youtube_meta(meta_obj: dict) -> dict:
+    """meta 객체에서 youtube_meta 필드 추출"""
+    return {
+        "title": meta_obj.get("title"),
+        "viewCount": meta_obj.get("viewCount") or meta_obj.get("view_count"),
+        "likeCount": meta_obj.get("likeCount") or meta_obj.get("like_count"),
+        "commentCount": meta_obj.get("commentCount") or meta_obj.get("comment_count"),
+        "publishedAt": meta_obj.get("publishedAt") or meta_obj.get("published_at"),
+        "is_shorts": meta_obj.get("is_shorts", False),
+        "duration": meta_obj.get("duration"),
+        "ads_info": meta_obj.get("ads_info") or {"is_ads": False, "what_ads": None},
+    }
+
+
+def get_youtube_meta_cached(
+    meta_cache: Dict[str, List[dict]], video_id: str, target_meta_id: int
+) -> Optional[dict]:
+    """메타 캐시에서 youtube_meta 추출 (recollect_id 매칭 -> 마지막 줄 fallback)"""
+    lines = meta_cache.get(video_id, [])
+    if not lines:
+        return None
+    for meta_obj in lines:
+        if meta_obj.get("recollect_id", 0) == target_meta_id:
+            return _extract_youtube_meta(meta_obj)
+    return _extract_youtube_meta(lines[-1])
 
 
 def generate_trace_id(youtube_link: str, name: str, review: str) -> str:
@@ -74,7 +120,7 @@ def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict
 def get_location_data(
     eval_results: dict, rest_name: str, is_missing_flag: bool, source_file_type: str
 ) -> dict:
-    """location_match_TF에서 위치 데이터 추출 (기존 backup 로직 그대로)"""
+    """location_match_TF에서 위치 데이터 추출 (기존 백업 로직 유지)"""
     loc_data = {
         "naver_name": None,  # ★ 추가
         "roadAddress": None,
@@ -135,11 +181,12 @@ def transform_json_object(
     original_data: dict,
     source_file_type: str,
     channel_name: str,
-    meta_dir: Path = None,
+    meta_cache: Dict[str, List[dict]] = None,
     video_id: str = None,
 ) -> List[dict]:
     """
-    하나의 원본 JSON 객체를 변환 (기존 backup 로직 그대로)
+    하나의 원본 JSON 객체를 변환 (기존 백업 로직 유지)
+    [PERF] meta_dir -> meta_cache 로 변경 (사전 로딩된 캐시 사용)
     """
     flattened_results = []
 
@@ -148,50 +195,14 @@ def transform_json_object(
     restaurants_list = original_data.get("restaurants", [])
     evaluation_targets = original_data.get("evaluation_target", {})
 
-    # recollect_version 기반으로 meta 파일에서 youtube_meta 조회
-    youtube_meta = None
+    # [PERF] recollect_version 기반으로 meta 캐시에서 youtube_meta 조회 (파일 I/O 제거)
     recollect_version = original_data.get("recollect_version", {})
     target_meta_id = recollect_version.get("meta", 0)
-
-    if meta_dir and video_id:
-        meta_file = meta_dir / f"{video_id}.jsonl"
-        if meta_file.exists():
-            with open(meta_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    try:
-                        meta_obj = json.loads(line.strip())
-                        if meta_obj.get("recollect_id", 0) == target_meta_id:
-                            youtube_meta = {
-                                "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("publishedAt"),
-                                "is_shorts": meta_obj.get("is_shorts", False),
-                                "duration": meta_obj.get("duration"),
-                                "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
-                            }
-                            break
-                    except:
-                        pass
-            # 못 찾으면 마지막 줄 사용
-            if not youtube_meta:
-                with open(meta_file, "r", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            meta_obj = json.loads(line.strip())
-                            youtube_meta = {
-                                "title": meta_obj.get("title"),
-                                "viewCount": meta_obj.get("viewCount"),
-                                "likeCount": meta_obj.get("likeCount"),
-                                "commentCount": meta_obj.get("commentCount"),
-                                "publishedAt": meta_obj.get("publishedAt"),
-                                "is_shorts": meta_obj.get("is_shorts", False),
-                                "duration": meta_obj.get("duration"),
-                                "ads_info": meta_obj.get("ads_info", {"is_ads": False, "what_ads": None}),
-                            }
-                        except:
-                            pass
+    youtube_meta = (
+        get_youtube_meta_cached(meta_cache, video_id, target_meta_id)
+        if meta_cache and video_id
+        else None
+    )
 
     # results 파일 처리
     if source_file_type == "results":
@@ -433,10 +444,11 @@ def transform_json_object(
 
 
 def transform_map_url_crawling_object(
-    original_data: dict, channel_name: str, meta_dir: Path
+    original_data: dict, channel_name: str, meta_cache: Dict[str, List[dict]] = None
 ) -> List[dict]:
     """
     map_url_crawling 데이터를 변환 (정육왕 전용, 평가 스킵)
+    [PERF] meta_dir -> meta_cache 로 변경 (사전 로딩된 캐시 사용)
     """
     flattened_results = []
 
@@ -444,51 +456,13 @@ def transform_map_url_crawling_object(
     recollect_version = original_data.get("recollect_version", {})
     restaurants_list = original_data.get("restaurants", [])
 
-    # recollect_version 기반 youtube_meta 조회
+    # [PERF] recollect_version 기반 meta 캐시에서 youtube_meta 조회
     youtube_meta = None
     if recollect_version.get("meta") is not None:
         video_id = youtube_link.split("v=")[-1].split("&")[0] if youtube_link else None
-        if video_id and meta_dir:
-            meta_file = meta_dir / f"{video_id}.jsonl"
-            if meta_file.exists():
-                with open(meta_file, "r", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            data = json.loads(line.strip())
-                            if data.get("recollect_id") == recollect_version.get(
-                                "meta"
-                            ):
-                                youtube_meta = {
-                                    "title": data.get("title"),
-                                    "viewCount": data.get("viewCount"),
-                                    "likeCount": data.get("likeCount"),
-                                    "commentCount": data.get("commentCount"),
-                                    "publishedAt": data.get("publishedAt"),
-                                    "is_shorts": data.get("is_shorts", False),
-                                    "duration": data.get("duration"),
-                                    "ads_info": data.get("ads_info", {"is_ads": False, "what_ads": None}),
-                                }
-                                break
-                        except:
-                            pass
-                # 해당 버전 못 찾으면 마지막 줄 사용
-                if not youtube_meta:
-                    with open(meta_file, "r", encoding="utf-8") as f:
-                        for line in f:
-                            try:
-                                data = json.loads(line.strip())
-                                youtube_meta = {
-                                    "title": data.get("title"),
-                                    "viewCount": data.get("viewCount"),
-                                    "likeCount": data.get("likeCount"),
-                                    "commentCount": data.get("commentCount"),
-                                    "publishedAt": data.get("publishedAt"),
-                                    "is_shorts": data.get("is_shorts", False),
-                                    "duration": data.get("duration"),
-                                    "ads_info": data.get("ads_info", {"is_ads": False, "what_ads": None}),
-                                }
-                            except:
-                                pass
+        if video_id and meta_cache:
+            target_meta_id = recollect_version.get("meta", 0)
+            youtube_meta = get_youtube_meta_cached(meta_cache, video_id, target_meta_id)
 
     for restaurant_data in restaurants_list:
         origin_name = restaurant_data.get("origin_name")  # 크롤링에서 받은 원본
@@ -565,6 +539,11 @@ def main():
     map_url_crawling_dir = crawling_path / "map_url_crawling"  # ← 정육왕 전용
     meta_dir = crawling_path / "meta"
 
+    # [PERF] Meta 파일 사전 로딩 (비디오별 반복 파일 I/O 방지)
+    print(f"Meta 캐시 로딩 중...")
+    meta_cache = preload_meta_cache(meta_dir)
+    print(f"Meta 캐시 완료: {len(meta_cache)}개 파일")
+
     # 출력 파일 (evaluation 경로)
     output_file = evaluation_path / "evaluation" / "transforms.jsonl"
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -584,6 +563,18 @@ def main():
 
     print(f"기존 trace_id: {len(existing_trace_ids)}개")
 
+    # [PERF] 배치 쓰기 버퍼 (레코드별 open/close 방지)
+    BATCH_SIZE = 100
+    write_buffer: List[str] = []
+
+    def flush_buffer():
+        """버퍼의 레코드를 파일에 배치로 기록"""
+        nonlocal write_buffer
+        if write_buffer:
+            with open(output_file, "a", encoding="utf-8") as out:
+                out.write("".join(write_buffer))
+            write_buffer = []
+
     # 통계
     stats = {
         "total_files": 0,
@@ -596,24 +587,25 @@ def main():
     if laaj_results_dir.exists():
         for f in laaj_results_dir.glob("*.jsonl"):
             stats["total_files"] += 1
-            video_id = f.stem  # video_id 추출
+            video_id = f.stem
             with open(f, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
                         transformed = transform_json_object(
-                            data, "results", channel, meta_dir, video_id
+                            data, "results", channel, meta_cache, video_id
                         )
 
                         for record in transformed:
                             stats["total_records"] += 1
                             if record["trace_id"] not in existing_trace_ids:
-                                with open(output_file, "a", encoding="utf-8") as out:
-                                    out.write(
-                                        json.dumps(record, ensure_ascii=False) + "\n"
-                                    )
+                                write_buffer.append(
+                                    json.dumps(record, ensure_ascii=False) + "\n"
+                                )
                                 existing_trace_ids.add(record["trace_id"])
                                 stats["new_records"] += 1
+                                if len(write_buffer) >= BATCH_SIZE:
+                                    flush_buffer()
                             else:
                                 stats["skipped_records"] += 1
                     except json.JSONDecodeError:
@@ -623,24 +615,25 @@ def main():
     if not_selection_dir.exists():
         for f in not_selection_dir.glob("*.jsonl"):
             stats["total_files"] += 1
-            video_id = f.stem  # video_id 추출
+            video_id = f.stem
             with open(f, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
                         transformed = transform_json_object(
-                            data, "notSelection", channel, meta_dir, video_id
+                            data, "notSelection", channel, meta_cache, video_id
                         )
 
                         for record in transformed:
                             stats["total_records"] += 1
                             if record["trace_id"] not in existing_trace_ids:
-                                with open(output_file, "a", encoding="utf-8") as out:
-                                    out.write(
-                                        json.dumps(record, ensure_ascii=False) + "\n"
-                                    )
+                                write_buffer.append(
+                                    json.dumps(record, ensure_ascii=False) + "\n"
+                                )
                                 existing_trace_ids.add(record["trace_id"])
                                 stats["new_records"] += 1
+                                if len(write_buffer) >= BATCH_SIZE:
+                                    flush_buffer()
                             else:
                                 stats["skipped_records"] += 1
                     except json.JSONDecodeError:
@@ -655,22 +648,26 @@ def main():
                     try:
                         data = json.loads(line.strip())
                         transformed = transform_map_url_crawling_object(
-                            data, channel, meta_dir
+                            data, channel, meta_cache
                         )
 
                         for record in transformed:
                             stats["total_records"] += 1
                             if record["trace_id"] not in existing_trace_ids:
-                                with open(output_file, "a", encoding="utf-8") as out:
-                                    out.write(
-                                        json.dumps(record, ensure_ascii=False) + "\n"
-                                    )
+                                write_buffer.append(
+                                    json.dumps(record, ensure_ascii=False) + "\n"
+                                )
                                 existing_trace_ids.add(record["trace_id"])
                                 stats["new_records"] += 1
+                                if len(write_buffer) >= BATCH_SIZE:
+                                    flush_buffer()
                             else:
                                 stats["skipped_records"] += 1
                     except json.JSONDecodeError:
                         continue
+
+    # [PERF] 남은 버퍼 최종 플러시
+    flush_buffer()
 
 
     # 결과 파일이 없으면 빈 파일 생성 (0건일 경우 대비)
@@ -678,7 +675,7 @@ def main():
         output_file.touch()
 
     print(f"\n{'='*50}")
-    print(f"✅ Transform 완료!")
+    print(f"[OK] Transform 완료!")
     print(f"   총 파일: {stats['total_files']}개")
     print(f"   총 레코드: {stats['total_records']}개")
     print(f"   새로 추가: {stats['new_records']}개")

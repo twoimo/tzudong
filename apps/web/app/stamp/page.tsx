@@ -30,12 +30,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
 import { useToast } from "@/hooks/use-toast";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPanel";
@@ -265,17 +265,26 @@ RestaurantRow.displayName = 'RestaurantRow';
 export default function StampPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const router = useRouter();
     // const { isMobileOrTablet, isDesktop } = useDeviceType(); // Hook check replaced
     const { isMobileOrTablet, isDesktop } = useDeviceType(); // Keep for logic usage later, but NOT for redirect
-    const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
-        // [DESKTOP CHECK]
-        if (window.innerWidth > 1024) {
-            router.replace('/');
-        }
+
+        const redirectIfDesktop = () => {
+            if (window.innerWidth > BREAKPOINTS.tabletMax) {
+                router.replace('/');
+            }
+        };
+
+        redirectIfDesktop();
+        window.addEventListener('resize', redirectIfDesktop, { passive: true });
+
+        return () => {
+            window.removeEventListener('resize', redirectIfDesktop);
+        };
     }, [router]);
 
 
@@ -843,18 +852,10 @@ export default function StampPage() {
     }, [filters.searchQuery]);
 
 
-    if (isRestaurantsLoading && !searchQuery) {
-        return (
-            <GlobalLoader
-                message="도장 데이터를 불러오는 중..."
-                subMessage="쯔양의 맛집 기록을 확인하고 있습니다"
-            />
-        );
-    }
 
     // [Check before render]
     if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.innerWidth > 1024) return null;
+    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     return (
         <>
@@ -864,19 +865,19 @@ export default function StampPage() {
                     {/* 스크롤 컨테이너 */}
                     <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                         {/* Header */}
-                        <div className="border-b border-border bg-background p-6 shrink-0">
+                        <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
                             <div className="flex items-center justify-between">
-                                <div>
-                                    <div className="flex items-center gap-3">
-                                        <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                                            <Trophy className="h-6 w-6 text-primary" />
-                                            쯔동여지도 도장
-                                            <span className="text-sm font-normal text-muted-foreground">
-                                                ({totalRestaurantCount.toLocaleString()}개)
-                                            </span>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-w-0">
+                                            <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                                            <span className="whitespace-nowrap">쯔동여지도 도장</span>
                                         </h1>
+                                        <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap shrink-0">
+                                            ({totalRestaurantCount.toLocaleString()}개)
+                                        </span>
                                     </div>
-                                    <p className="text-sm text-muted-foreground mt-1">
+                                    <p className="text-xs xs:text-sm text-muted-foreground mt-1 whitespace-nowrap">
                                         맛집을 찾아 도장을 찍어보세요!
                                     </p>
                                 </div>
@@ -1080,12 +1081,12 @@ export default function StampPage() {
                             </div>
                         </div>
 
-                        {/* 콘텐츠 영역 (Content Area) */}
-                        {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
-                        <div className="flex-1 min-h-0 px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-height,60px)+1.5rem)] md:pb-6 bg-background">
-                            {viewMode === 'grid' ? (
+                        <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-height,60px)+1.5rem)] md:pb-6 bg-background">
+                            {(isRestaurantsLoading && !searchQuery) ? (
+                                <StampGridSkeleton count={16} showHeader={false} />
+                            ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
-                                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
                                     {displayedRestaurants.map((restaurant, index) => (
                                         <RestaurantCard
                                             key={`${restaurant.id}-${index}`}
@@ -1110,7 +1111,7 @@ export default function StampPage() {
                             ) : (
                                 /* 리스트 뷰 (List View) */
                                 <div className="border rounded-lg">
-                                    <Table>
+                                    <Table allowHorizontalScroll>
                                         <TableHeader className="sticky top-0 bg-background z-20">
                                             <TableRow>
                                                 <TableHead className="w-[25%] min-w-[200px] cursor-pointer" onClick={() => handleSort("name")}>

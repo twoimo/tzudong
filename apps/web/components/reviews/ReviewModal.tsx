@@ -386,7 +386,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 const { data: restaurants, error } = await supabase
                     .from('restaurants')
                     .select('id, name:approved_name') // [수정] approved_name을 name으로 사용
-                    .eq('name', data.store_name) // 정확한 일치 우선 검색
+                    .eq('approved_name', data.store_name) // 정확한 일치 우선 검색
                     .limit(1) as any;
 
                 if (!error && restaurants && restaurants.length > 0) {

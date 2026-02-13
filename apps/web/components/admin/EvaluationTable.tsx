@@ -93,7 +93,7 @@ export function EvaluationTable({
 
   return (
     <div className="border rounded-lg overflow-auto max-h-[calc(100vh-300px)]">
-      <Table>
+      <Table allowHorizontalScroll>
         <TableHeader className="sticky top-0 bg-background z-10">
           <TableRow>
             <TableHead className="w-12"></TableHead>

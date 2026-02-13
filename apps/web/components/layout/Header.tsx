@@ -1,7 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart3 } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -27,11 +27,18 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
-import { getBannerAnnouncements, getActiveAnnouncements, Announcement } from "@/types/announcement";
+import { Announcement } from "@/types/announcement";
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmarks } from "@/hooks/use-bookmarks";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import {
+  useActiveAnnouncements,
+  useBannerAnnouncements,
+  useDeleteAnnouncement,
+  useToggleAnnouncementActive,
+  useToggleAnnouncementBanner,
+} from "@/hooks/use-announcements";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -51,24 +58,33 @@ interface HeaderProps {
 const BANNER_ROTATION_INTERVAL = 5000;
 
 const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
-  const [isHanjiMode, setIsHanjiMode] = useState(false);
   const isHydrated = useHydration();
   const { isMobileOrTablet } = useDeviceType();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
 
+  const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
+  const { data: activeAnnouncements = [] } = useActiveAnnouncements();
+  const deleteAnnouncement = useDeleteAnnouncement();
+  const toggleAnnouncementActive = useToggleAnnouncementActive();
+  const toggleAnnouncementBanner = useToggleAnnouncementBanner();
+  const isAnnouncementMutationPending =
+    deleteAnnouncement.isPending ||
+    toggleAnnouncementActive.isPending ||
+    toggleAnnouncementBanner.isPending;
+
   // 공지 배너 상태
-  const [bannerAnnouncements, setBannerAnnouncements] = useState<Announcement[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [visibleBookmarkCount, setVisibleBookmarkCount] = useState(20); // [New] 북마크 무한 스크롤 상태
 
   // 공지사항 바텀시트 상태
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [announcementViewMode, setAnnouncementViewMode] = useState<'list' | 'detail'>('list');
-  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
   const [announcementPage, setAnnouncementPage] = useState(1);
   const ANNOUNCEMENTS_PER_PAGE = 3;
 
@@ -90,8 +106,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     if (dismissed) {
       setIsBannerDismissed(true);
     }
-    setBannerAnnouncements(getBannerAnnouncements());
   }, []);
+
+  useEffect(() => {
+    if (bannerAnnouncements.length === 0) {
+      setCurrentBannerIndex(0);
+      return;
+    }
+    if (currentBannerIndex >= bannerAnnouncements.length) {
+      setCurrentBannerIndex(0);
+    }
+  }, [bannerAnnouncements.length, currentBannerIndex]);
 
   // 미처리 제보 건수 조회
   useEffect(() => {
@@ -172,10 +197,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
     if (currentAnnouncement) {
       if (isMobileOrTablet) {
-        // 모바일/태블릿: 바텀시트로 상세 뷰 표시
-        // 뒤로가기를 위해 전체 공지사항 리스트도 로드
-        const announcements = getActiveAnnouncements();
-        setAllAnnouncements(announcements);
         setAnnouncementPage(1);
         setSelectedAnnouncement(currentAnnouncement);
         setAnnouncementViewMode('detail');
@@ -191,46 +212,76 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   const handleAnnouncementListClick = useCallback(() => {
     if (isMobileOrTablet) {
-      // 모바일/태블릿: 바텀시트로 공지사항 리스트 표시
-      const announcements = getActiveAnnouncements();
-
-      setAllAnnouncements(announcements);
       setAnnouncementPage(1);
       setAnnouncementViewMode('list');
       setIsAnnouncementSheetOpen(true);
     } else {
-      // 데스크탑: 기존 우측 패널로 공지사항 열기
-      handleAdminAnnouncementsClick();
+      if (pathname === '/') {
+        window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
+      } else {
+        // SPA 이동으로 홈 진입 + 공지 패널 자동 오픈
+        router.push('/?panel=announcement');
+      }
     }
-  }, [isMobileOrTablet]);
+  }, [isMobileOrTablet, pathname, router]);
 
-  const handleDeleteAnnouncement = useCallback((id: string) => {
-    if (confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
-      setAllAnnouncements(prev => prev.filter(a => a.id !== id));
+  const handleDeleteAnnouncement = useCallback(async (id: string) => {
+    if (!confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      await deleteAnnouncement.mutateAsync(id);
+      if (selectedAnnouncement?.id === id) {
+        setSelectedAnnouncement(null);
+      }
       setAnnouncementViewMode('list');
-      // TODO: 실제 삭제 API 호출
+    } catch {
+      // mutation 훅에서 에러 토스트 처리
     }
-  }, []);
+  }, [deleteAnnouncement, selectedAnnouncement?.id]);
 
-  const handleToggleAnnouncementActive = useCallback((id: string) => {
-    setAllAnnouncements(prev =>
-      prev.map(a =>
-        a.id === id ? { ...a, isActive: !a.isActive } : a
-      )
-    );
-    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, isActive: !prev.isActive } : prev);
-    // TODO: 실제 상태 변경 API 호출
-  }, []);
+  const handleToggleAnnouncementActive = useCallback(async (id: string) => {
+    const target =
+      (selectedAnnouncement?.id === id ? selectedAnnouncement : null) ||
+      activeAnnouncements.find((announcement) => announcement.id === id);
+    if (!target) return;
 
-  const handleToggleAnnouncementBanner = useCallback((id: string) => {
-    setAllAnnouncements(prev =>
-      prev.map(a =>
-        a.id === id ? { ...a, showOnBanner: !a.showOnBanner } : a
-      )
-    );
-    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, showOnBanner: !prev.showOnBanner } : prev);
-    // TODO: 실제 배너 상태 변경 API 호출
-  }, []);
+    try {
+      await toggleAnnouncementActive.mutateAsync({
+        id,
+        isActive: !target.isActive,
+      });
+      if (selectedAnnouncement?.id === id) {
+        setSelectedAnnouncement((prev) =>
+          prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : prev
+        );
+      }
+    } catch {
+      // mutation 훅에서 에러 토스트 처리
+    }
+  }, [activeAnnouncements, selectedAnnouncement, toggleAnnouncementActive]);
+
+  const handleToggleAnnouncementBanner = useCallback(async (id: string) => {
+    const target =
+      (selectedAnnouncement?.id === id ? selectedAnnouncement : null) ||
+      activeAnnouncements.find((announcement) => announcement.id === id);
+    if (!target) return;
+
+    try {
+      await toggleAnnouncementBanner.mutateAsync({
+        id,
+        showOnBanner: !target.showOnBanner,
+      });
+      if (selectedAnnouncement?.id === id) {
+        setSelectedAnnouncement((prev) =>
+          prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : prev
+        );
+      }
+    } catch {
+      // mutation 훅에서 에러 토스트 처리
+    }
+  }, [activeAnnouncements, selectedAnnouncement, toggleAnnouncementBanner]);
 
   const handleMyPageClick = useCallback(() => {
     // 마이페이지 프로필 페이지로 이동
@@ -247,36 +298,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     router.push('/admin/evaluations?view=submissions&tab=reviews');
   }, [router]);
 
-  const handleAdminAnnouncementsClick = useCallback(() => {
-    if (pathname === '/') {
-      window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
-    } else {
-      // 홈으로 이동 후 패널 열기
-      window.location.href = '/';
-    }
-  }, [pathname]);
-
   const handleAdminBannersClick = useCallback(() => {
     router.push('/admin/banners');
   }, [router]);
 
-  const toggleTheme = useCallback(() => {
-    // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
-    const root = document.documentElement;
 
-    // 모든 transition 비활성화
-    const style = document.createElement('style');
-    style.textContent = '* { transition: none !important; }';
-    document.head.appendChild(style);
-
-    setIsHanjiMode(!isHanjiMode);
-    root.classList.toggle("dark");
-
-    // 다음 프레임에서 transition 복구
-    requestAnimationFrame(() => {
-      document.head.removeChild(style);
-    });
-  }, [isHanjiMode]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -371,6 +397,18 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {/* 전통 문양 테두리 - 다크모드에서 숨김 */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border to-transparent dark:via-border" />
 
+      {/* 좌측: 로고 */}
+      <Link href="/" className="relative z-10 flex-shrink-0 flex items-center justify-center">
+        <NextImage
+          src="/logo.png"
+          alt="Tzudong Logo"
+          width={32}
+          height={32}
+          className="rounded-lg object-contain"
+          priority
+        />
+      </Link>
+
       {/* 좌측: 사이드바 토글 */}
       {!hideToggleSidebar && (
         <div className={cn(
@@ -443,16 +481,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           <RankingWidget />
         </div>
 
-        {/* 한지 모드 토글 */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="hover:bg-accent text-foreground transition-colors"
-          title={isHanjiMode ? "밝은 모드" : "한지 모드"}
-        >
-          {isHanjiMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </Button>
+
 
         {/* 알림 */}
         {shouldShowAuthUI && (
@@ -546,7 +575,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 북마크 - 드롭다운 */}
         {isLoggedIn && shouldShowAuthUI && (
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={(open) => {
+            if (!open) {
+              // 닫힐 때 초기화 (300ms 지연) - 다시 열 때 스크롤 상단 등 UX 고려
+              setTimeout(() => setVisibleBookmarkCount(20), 300);
+            }
+          }}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground relative transition-colors">
                 <Bookmark className="h-5 w-5" />
@@ -575,38 +609,66 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   </div>
                 ) : (
                   <DropdownMenuGroup>
-                    {bookmarksData.slice(0, 5).map((bookmark) => (
+                    {bookmarksData.slice(0, visibleBookmarkCount).map((bookmark) => (
                       <DropdownMenuItem
                         key={bookmark.id}
-                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent"
+                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full"
                         onClick={() => {
-                          // 이미 홈페이지면 커스텀 이벤트 발생, 아니면 URL로 이동
+                          const restaurant = bookmark.restaurant;
+                          const isOverseas = restaurant.lat && restaurant.lng && (
+                            restaurant.lat < 33 || restaurant.lat > 39 ||
+                            restaurant.lng < 124 || restaurant.lng > 132
+                          );
+
                           if (pathname === '/') {
-                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', { detail: bookmark.restaurant_id }));
+                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', {
+                              detail: {
+                                id: bookmark.restaurant_id,
+                                mode: isOverseas ? 'overseas' : 'domestic'
+                              }
+                            }));
                           } else {
-                            router.push(`/?r=${bookmark.restaurant_id}`);
+                            const modeParam = isOverseas ? '&mode=overseas' : '';
+                            router.push(`/?r=${bookmark.restaurant_id}${modeParam}&z=13`);
                           }
                         }}
                       >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {bookmark.restaurant.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
+                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                          <div className="flex items-center justify-between gap-2 w-full">
+                            <span className="text-sm font-medium text-foreground truncate block">
+                              {bookmark.restaurant.name}
+                            </span>
+                            {bookmark.restaurant.category?.[0] && (
+                              <Badge variant="secondary" className="text-[10px] shrink-0 h-5 px-1.5 font-normal">
+                                {bookmark.restaurant.category[0]}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground truncate block">
                             {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
-                          </p>
+                          </span>
                         </div>
-                        {bookmark.restaurant.category?.[0] && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0">
-                            {bookmark.restaurant.category[0]}
-                          </Badge>
-                        )}
                       </DropdownMenuItem>
                     ))}
-                    {bookmarksData.length > 5 && (
-                      <div className="p-2 text-center text-xs text-muted-foreground">
-                        +{bookmarksData.length - 5}개 더
-                      </div>
+                    {/* Infinite Scroll Sentinel */}
+                    {visibleBookmarkCount < bookmarksData.length && (
+                      <div
+                        className="h-4 w-full"
+                        ref={(el) => {
+                          if (el) {
+                            const observer = new IntersectionObserver(
+                              (entries) => {
+                                if (entries[0].isIntersecting) {
+                                  setVisibleBookmarkCount((prev) => Math.min(prev + 20, bookmarksData.length));
+                                }
+                              },
+                              { threshold: 0.5 }
+                            );
+                            observer.observe(el);
+                            return () => observer.disconnect();
+                          }
+                        }}
+                      />
                     )}
                   </DropdownMenuGroup>
                 )}
@@ -769,10 +831,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     {(() => {
                       const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
                       const endIdx = startIdx + ANNOUNCEMENTS_PER_PAGE;
-                      const paginatedAnnouncements = allAnnouncements.slice(startIdx, endIdx);
-                      const totalPages = Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE);
+                      const paginatedAnnouncements = activeAnnouncements.slice(startIdx, endIdx);
 
-                      if (allAnnouncements.length === 0) {
+                      if (activeAnnouncements.length === 0) {
                         return (
                           <div className="text-center py-12 text-muted-foreground">
                             <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -809,7 +870,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 </ScrollArea>
 
                 {/* 페이지네이션 */}
-                {allAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
+                {activeAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
                   <div className="flex items-center justify-center gap-2 pt-3 border-t border-border">
                     <Button
                       variant="outline"
@@ -821,13 +882,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm text-foreground/80 px-2">
-                      {announcementPage} / {Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                      {announcementPage} / {Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
-                      disabled={announcementPage === Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                      onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
+                      disabled={announcementPage === Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
                       className="h-8"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -851,6 +912,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         variant="outline"
                         size="sm"
                         onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
+                        disabled={isAnnouncementMutationPending}
                         className="gap-1 text-xs"
                       >
                         {selectedAnnouncement.isActive ? (
@@ -869,6 +931,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         variant="outline"
                         size="sm"
                         onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
+                        disabled={isAnnouncementMutationPending}
                         className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
                       >
                         {selectedAnnouncement.showOnBanner ? (
@@ -887,6 +950,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
+                        disabled={isAnnouncementMutationPending}
                         className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"
                       >
                         <Trash2 className="h-3 w-3" />

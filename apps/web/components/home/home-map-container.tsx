@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect } from 'react';
+import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -13,9 +13,11 @@ import { X } from 'lucide-react';
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
 const MapView = lazy(() => import("@/components/map/MapView"));
+const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
 
 interface HomeMapContainerProps {
     mapMode: 'domestic' | 'overseas';
+    mapFocusZoom?: number | null; // [New] 줌 레벨 제어
     filters: FilterState;
     selectedRegion: Region | null;
     selectedCountry: string | null;
@@ -46,10 +48,37 @@ const MIN_DRAG_HEIGHT = 5;
 const MIN_SHEET_HEIGHT = 20;
 const CLOSE_THRESHOLD = 15;
 const SWIPE_VELOCITY_THRESHOLD = 0.5;
+const CONTENT_TOP_EPSILON = 2;
+const CONTENT_DRAG_START_THRESHOLD = 16;
+const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
+
+const isVerticallyScrollable = (element: HTMLElement) => {
+    const style = window.getComputedStyle(element);
+    const overflowY = style.overflowY;
+    const allowsScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+    return allowsScroll && element.scrollHeight > element.clientHeight;
+};
+
+const findScrollableTouchTarget = (
+    target: EventTarget | null,
+    boundary: HTMLElement | null
+): HTMLElement | null => {
+    if (!(target instanceof HTMLElement)) return boundary;
+
+    let node: HTMLElement | null = target;
+    while (node && node !== boundary) {
+        if (isVerticallyScrollable(node)) return node;
+        node = node.parentElement;
+    }
+
+    if (boundary && isVerticallyScrollable(boundary)) return boundary;
+    return null;
+};
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
 function HomeMapContainerComponent({
     mapMode,
+    mapFocusZoom,
     filters,
     selectedRegion,
     selectedCountry,
@@ -86,11 +115,35 @@ function HomeMapContainerComponent({
     const lastTimeRef = useRef(0);
     const velocityRef = useRef(0);
     const handleRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
     const rafIdRef = useRef<number>(0);
+    const contentTouchStartYRef = useRef(0);
+    const contentTouchStartXRef = useRef(0);
+    const isContentDraggingSheetRef = useRef(false);
+    const contentStartBoundaryRef = useRef<'top' | null>(null);
+    const contentScrollTargetRef = useRef<HTMLElement | null>(null);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
+
+    const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
+        return ((vh - HEADER_OFFSET) / vh) * 100;
+    }, []);
+
+    const getContentSnapPoints = useCallback(() => {
+        const minSnap = MIN_SHEET_HEIGHT;
+        const maxSnap = Math.max(minSnap, getCurrentMaxHeight());
+        const midSnap = minSnap + ((maxSnap - minSnap) / 2);
+        return [minSnap, midSnap, maxSnap];
+    }, [getCurrentMaxHeight]);
+
+    const getNearestSnapHeight = useCallback((currentHeight: number) => {
+        const snapPoints = getContentSnapPoints();
+        return snapPoints.reduce((closest, snap) =>
+            Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
+        , snapPoints[0]);
+    }, [getContentSnapPoints]);
 
     // [PERFORMANCE] visualViewport resize 스로틀링 (16ms ≈ 60fps)
     useEffect(() => {
@@ -107,8 +160,7 @@ function HomeMapContainerComponent({
                 // 드래그 중이 아닐 때만 상태 업데이트 (리렌더링 최소화)
                 if (!isDraggingRef.current) {
                     // maxHeight 초과 시에만 조정
-                    const maxHeight = ((viewport.height - HEADER_OFFSET) / viewport.height) * 100;
-                    setSheetHeight(prev => Math.min(prev, maxHeight));
+                    setSheetHeight(prev => Math.min(prev, getCurrentMaxHeight(viewport.height)));
                 }
                 throttleTimer = null;
             });
@@ -119,16 +171,14 @@ function HomeMapContainerComponent({
             viewport.removeEventListener('resize', handleResize);
             if (throttleTimer !== null) cancelAnimationFrame(throttleTimer);
         };
-    }, []);
+    }, [getCurrentMaxHeight]);
 
     // 패널이 열릴 때 최대 높이로 열기 (헤더 배제)
     useEffect(() => {
         if (isPanelOpen && isMobileOrTablet) {
-            const vh = viewportHeightRef.current;
-            const maxHeight = ((vh - HEADER_OFFSET) / vh) * 100;
-            setSheetHeight(maxHeight); // 최대 높이로 열기
+            setSheetHeight(getCurrentMaxHeight()); // 최대 높이로 열기
         }
-    }, [isPanelOpen, isMobileOrTablet]);
+    }, [isPanelOpen, isMobileOrTablet, getCurrentMaxHeight]);
 
     // [PERFORMANCE] 드래그 시작 공통 로직
     const handleDragStartCore = useCallback((clientY: number) => {
@@ -178,14 +228,14 @@ function HomeMapContainerComponent({
             const deltaY = startYRef.current - currentY;
             const vh = viewportHeightRef.current;
             const deltaPercent = (deltaY / vh) * 100;
-            const maxHeight = ((vh - HEADER_OFFSET) / vh) * 100;
+            const maxHeight = getCurrentMaxHeight(vh);
 
             let newHeight = startHeightRef.current + deltaPercent;
             newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(maxHeight, newHeight));
 
             setSheetHeight(newHeight);
         });
-    }, []);
+    }, [getCurrentMaxHeight]);
 
     // 터치 드래그 중
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -193,7 +243,7 @@ function HomeMapContainerComponent({
     }, [handleDragMoveCore]);
 
     // [PERFORMANCE] 드래그 종료 - 조건부 로직 최적화
-    const handleDragEnd = useCallback(() => {
+    const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
         isDraggingRef.current = false;
         setIsDragging(false);
 
@@ -204,13 +254,16 @@ function HomeMapContainerComponent({
         }
 
         // 빠른 스와이프로 닫기
-        if (velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
+        if (source === 'handle' && velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
             onPanelClose();
             return;
         }
 
         // 현재 높이 기반 판단 (클로저 문제 회피를 위해 직접 접근)
         setSheetHeight(currentHeight => {
+            if (source === 'content') {
+                return getNearestSnapHeight(currentHeight);
+            }
             if (currentHeight <= CLOSE_THRESHOLD) {
                 // 비동기로 닫기 처리 (상태 업데이트 후)
                 queueMicrotask(onPanelClose);
@@ -219,7 +272,55 @@ function HomeMapContainerComponent({
             // 최소 높이 보정
             return currentHeight < MIN_SHEET_HEIGHT ? MIN_SHEET_HEIGHT : currentHeight;
         });
-    }, [onPanelClose]);
+    }, [onPanelClose, getNearestSnapHeight]);
+
+    const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        contentTouchStartYRef.current = e.touches[0].clientY;
+        contentTouchStartXRef.current = e.touches[0].clientX;
+        isContentDraggingSheetRef.current = false;
+        const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
+        contentScrollTargetRef.current = scrollTarget;
+        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
+        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
+        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
+    }, []);
+
+    const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
+        const deltaY = currentY - contentTouchStartYRef.current;
+        const deltaX = currentX - contentTouchStartXRef.current;
+        const absDeltaY = Math.abs(deltaY);
+        const absDeltaX = Math.abs(deltaX);
+        const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
+        if (!contentScrollTargetRef.current) {
+            contentScrollTargetRef.current = scrollTarget;
+        }
+
+        if (!isContentDraggingSheetRef.current) {
+            if (contentStartBoundaryRef.current !== 'top') return;
+            if (absDeltaY <= CONTENT_DRAG_START_THRESHOLD) return;
+            if (absDeltaY <= absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
+            handleDragStartCore(contentTouchStartYRef.current);
+            isContentDraggingSheetRef.current = true;
+        }
+
+        e.stopPropagation();
+        handleDragMoveCore(currentY);
+    }, [handleDragMoveCore, handleDragStartCore]);
+
+    const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isContentDraggingSheetRef.current) {
+            contentScrollTargetRef.current = null;
+            contentStartBoundaryRef.current = null;
+            return;
+        }
+        e.stopPropagation();
+        isContentDraggingSheetRef.current = false;
+        contentScrollTargetRef.current = null;
+        contentStartBoundaryRef.current = null;
+        handleDragEnd('content');
+    }, [handleDragEnd]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
@@ -281,11 +382,22 @@ function HomeMapContainerComponent({
         }
     }, [onRequestEditRestaurant, panelRestaurant]);
 
+    const mapPadding = useMemo(() => {
+        if (!isPanelOpen) return undefined;
+        // Desktop: Right panel 400px
+        if (isDesktop) return { top: 0, bottom: 0, left: 0, right: 400 };
+        // Mobile: Bottom sheet covers ~65%. Center in top area.
+        // Using a moderate value (e.g., 50% of viewport) ensures marker is visible.
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+        return { top: 0, bottom: vh * 0.45, left: 0, right: 0 };
+    }, [isPanelOpen, isDesktop]);
+
     return (
         <div className="relative w-full h-full">
             {mapMode === 'domestic' ? (
                 <Suspense fallback={<MapSkeleton />}>
                     <NaverMapView
+                        mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}
                         selectedRegion={selectedRegion}
                         searchedRestaurant={searchedRestaurant}
@@ -304,7 +416,8 @@ function HomeMapContainerComponent({
                 </Suspense>
             ) : (
                 <Suspense fallback={<MapSkeleton />}>
-                    <MapView
+                    <OverseasMap
+                        mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}
                         selectedCountry={selectedCountry}
                         searchedRestaurant={searchedRestaurant}
@@ -315,6 +428,7 @@ function HomeMapContainerComponent({
                         onRequestEditRestaurant={onRequestEditRestaurant}
                         onMapReady={onMapReady}
                         onMarkerClick={onMarkerClick}
+                        mapPadding={mapPadding}
                     />
                 </Suspense>
             )}
@@ -329,7 +443,7 @@ function HomeMapContainerComponent({
                             {/* 상세 패널 */}
                             <div
                                 className={cn(
-                                    "fixed top-16 right-0 h-[calc(100vh-64px)] w-[400px] z-[95]",
+                                    "fixed top-16 right-0 h-[calc(100vh-64px)] w-[min(400px,calc(100vw-1rem))] z-[95]",
                                     "bg-background border-l border-border shadow-2xl",
                                     "transform transition-transform duration-300 ease-out",
                                     isPanelOpen ? "translate-x-0" : "translate-x-full"
@@ -397,7 +511,8 @@ function HomeMapContainerComponent({
                                     style={{ touchAction: 'none' }}
                                     onTouchStart={handleTouchStart}
                                     onTouchMove={handleTouchMove}
-                                    onTouchEnd={handleDragEnd}
+                                    onTouchEnd={() => handleDragEnd('handle')}
+                                    onTouchCancel={() => handleDragEnd('handle')}
                                     onMouseDown={handleMouseDown}
                                 >
                                     <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
@@ -412,7 +527,14 @@ function HomeMapContainerComponent({
                                 </Button>
 
                                 {/* 상세 패널 콘텐츠 */}
-                                <div className="flex-1 overflow-y-auto">
+                                <div
+                                    ref={contentRef}
+                                    className="flex-1 overflow-y-auto"
+                                    onTouchStart={handleContentTouchStart}
+                                    onTouchMove={handleContentTouchMove}
+                                    onTouchEnd={handleContentTouchEnd}
+                                    onTouchCancel={handleContentTouchEnd}
+                                >
                                     <RestaurantDetailPanel
                                         restaurant={panelRestaurant}
                                         onClose={onPanelClose}

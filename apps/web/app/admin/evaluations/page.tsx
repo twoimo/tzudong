@@ -37,6 +37,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  ADMIN_MODAL_ACTION,
+  ADMIN_MODAL_CONTENT_SM,
+  ADMIN_MODAL_FOOTER,
+  ADMIN_MODAL_SCROLL_BODY,
+} from '@/components/admin/admin-modal-styles';
 
 const PAGE_SIZE = 50; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
@@ -429,7 +435,7 @@ function AdminEvaluationPage() {
     // 8. Status 필터는 위에서 이미 처리됨
 
     return filtered;
-  }, [allRecords, searchResults, selectedStatuses, evalFilters]);
+  }, [allRecords, searchResults, evalFilters]);
 
   // filteredRecords가 정의된 후에 useEffect 위치
   useEffect(() => {
@@ -439,29 +445,63 @@ function AdminEvaluationPage() {
     }
   }, [filteredRecords.length, currentSlideIndex]);
 
+  const hasMoreRef = useRef(hasMore);
+  const loadingMoreRef = useRef(loadingMore);
+  const filteredRecordsRef = useRef(filteredRecords);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
+
+  useEffect(() => {
+    filteredRecordsRef.current = filteredRecords;
+  }, [filteredRecords]);
+
   // 더 많은 레코드 로드
   const loadMoreRecords = useCallback(() => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMoreRef.current || !hasMoreRef.current) return;
 
+    loadingMoreRef.current = true;
     setLoadingMore(true);
-    setTimeout(() => {
-      const currentLength = displayedRecords.length;
-      const newRecords = filteredRecords.slice(currentLength, currentLength + PAGE_SIZE);
 
-      setDisplayedRecords(prev => [...prev, ...newRecords]);
-      setHasMore(currentLength + PAGE_SIZE < filteredRecords.length);
-      setLoadingMore(false);
+    setTimeout(() => {
+      setDisplayedRecords(prev => {
+        const currentLength = prev.length;
+        const source = filteredRecordsRef.current;
+        const newRecords = source.slice(currentLength, currentLength + PAGE_SIZE);
+        const nextHasMore = currentLength + newRecords.length < source.length;
+
+        hasMoreRef.current = nextHasMore;
+        loadingMoreRef.current = false;
+        setHasMore(nextHasMore);
+        setLoadingMore(false);
+
+        return [...prev, ...newRecords];
+      });
     }, 100);
-  }, [displayedRecords.length, filteredRecords, loadingMore, hasMore]);
+  }, []);
 
   // 필터링 결과가 변경될 때마다 표시할 레코드 초기화
   useEffect(() => {
+    const nextHasMore = filteredRecords.length > PAGE_SIZE;
+
     setDisplayedRecords(filteredRecords.slice(0, PAGE_SIZE));
-    setHasMore(filteredRecords.length > PAGE_SIZE);
+    setHasMore(nextHasMore);
+    hasMoreRef.current = nextHasMore;
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
   }, [filteredRecords]);
+
+  const isListView = !showSubmissionView && !isAlternateView;
 
   // 무한 스크롤 - Scroll Event 방식
   useEffect(() => {
+    if (!isListView) return;
+
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
 
@@ -470,14 +510,14 @@ function AdminEvaluationPage() {
       const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
 
       // 80% 이상 스크롤 시 다음 데이터 로드
-      if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
+      if (scrollPercentage > 0.8) {
         loadMoreRecords();
       }
     };
 
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
     return () => scrollContainer.removeEventListener('scroll', handleScroll, { passive: true } as any);
-  }, [hasMore, loadingMore, loadMoreRecords, displayedRecords.length, filteredRecords.length]);
+  }, [isListView, loadMoreRecords]);
 
   // 슬라이드 뷰에서 끝에 도달하면 추가 데이터 로드
   useEffect(() => {
@@ -865,11 +905,11 @@ function AdminEvaluationPage() {
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
   const performApproval = async (record: EvaluationRecord) => {
-    // Naver Name Extraction logic
-    // 1. Try DB column first
+    // Naver Name 추출 로직
+    // 1. DB 컬럼(naver_name)을 최우선으로 사용
     let naverName: string | null = record.naver_name || null;
 
-    // 2. Fallback to evaluation_results extraction
+    // 2. naver_name이 없는 경우 evaluation_results에서 추출 시도 (Fallback)
     if (!naverName) {
       const locationMatch = (record.evaluation_results?.location_match_TF as any);
       if (locationMatch) {
@@ -881,8 +921,19 @@ function AdminEvaluationPage() {
       }
     }
 
+    // 3. 그래도 없으면 기존 이름 사용 (매우 드문 케이스)
+    if (!naverName) {
+      naverName = record.restaurant_name || record.name || '이름 없음';
+    }
+
+    console.log('🚀 승인 요청 시작:', {
+      id: record.id,
+      naverName,
+      original_status: record.status
+    });
+
     // status를 'approved'로 업데이트 및 approved_name 저장
-    const { error } = await supabase
+    const { data: updatedData, error } = await supabase
       .from('restaurants')
       // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
@@ -892,11 +943,22 @@ function AdminEvaluationPage() {
         db_error_details: null, // 에러 상세 초기화
         updated_at: new Date().toISOString(),
       })
-      .eq('id', record.id);
+      .eq('id', record.id)
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ DB 업데이트 에러:', error);
+      throw error;
+    }
 
-    // 상태 업데이트 (새로고침 없이)
+    console.log('✅ DB 업데이트 성공:', updatedData);
+
+    if ((updatedData as any)?.status !== 'approved') {
+      console.warn('⚠️ 업데이트 후 status가 approved가 아님:', (updatedData as any)?.status);
+    }
+
+    // 상태 업데이트 (새로고침 없이 UI 반영)
     updateRecordInState(record.id, {
       status: 'approved',
       approved_name: naverName,
@@ -907,7 +969,7 @@ function AdminEvaluationPage() {
 
     toast({
       title: '승인 완료',
-      description: `✅ "${record.restaurant_name || record.name}" 맛집이 승인되었습니다`,
+      description: `✅ "${naverName}" 맛집이 승인되었습니다`,
     });
   };
 
@@ -1336,7 +1398,7 @@ function AdminEvaluationPage() {
       // 레스토랑 이름 조회
       const { data: restaurant } = await supabase
         .from('restaurants')
-        .select('name, review_count')
+        .select('name:approved_name, review_count')
         .eq('id', typedReview.restaurant_id)
         .single();
 
@@ -1395,7 +1457,7 @@ function AdminEvaluationPage() {
       // 레스토랑 이름 조회
       const { data: restaurant } = await supabase
         .from('restaurants')
-        .select('name, review_count')
+        .select('name:approved_name, review_count')
         .eq('id', typedReview.restaurant_id)
         .single();
 
@@ -1892,36 +1954,40 @@ function AdminEvaluationPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div
+      ref={scrollContainerRef}
+      className="flex h-full flex-col overflow-auto"
+      id="scroll-container"
+    >
       {/* Header */}
-      <div className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+      <div className="border-b border-border bg-card px-3 py-3 sm:px-5 sm:py-4">
+        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="flex items-center gap-2 bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl">
                 <ClipboardCheck className="h-6 w-6 text-primary" />
                 관리자 데이터 검수
               </h1>
 
 
             </div>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
               필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
             </p>
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          <div className="flex-1 flex justify-end">
+          <div className="w-full xl:flex xl:flex-1 xl:justify-end">
             <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 xl:gap-1">
                 <Button
                   variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
                   onClick={() => {
                     setIsAlternateView(false);
                     setShowSubmissionView(false);
@@ -1931,11 +1997,12 @@ function AdminEvaluationPage() {
                   title="리스트 뷰"
                 >
                   <LayoutList className="h-4 w-4" />
+                  <span className="xl:hidden">리스트</span>
                 </Button>
                 <Button
                   variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
                   onClick={() => {
                     setIsAlternateView(true);
                     setShowSubmissionView(false);
@@ -1945,6 +2012,7 @@ function AdminEvaluationPage() {
                   title="슬라이드 뷰"
                 >
                   <MonitorPlay className="h-4 w-4" />
+                  <span className="xl:hidden">슬라이드</span>
                 </Button>
                 {/* 사용자 제보 검수 버튼 */}
                 <Button
@@ -1957,15 +2025,22 @@ function AdminEvaluationPage() {
                     }
                   }}
                   variant={showSubmissionView ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8 relative"
+                  size="sm"
+                  className="relative h-8 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:gap-1 xl:px-0"
                   title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
+                  aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-4 w-4 shrink-0" />
+                  <span className="xl:hidden">제보</span>
                   {totalPendingCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {totalPendingCount > 9 ? '9+' : totalPendingCount}
-                    </span>
+                    <>
+                      <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white xl:hidden">
+                        {totalPendingCount > 99 ? '99+' : totalPendingCount}
+                      </span>
+                      <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white xl:flex">
+                        {totalPendingCount > 9 ? '9+' : totalPendingCount}
+                      </span>
+                    </>
                   )}
                 </Button>
                 {/* 자막 수집 버튼 (아이콘 only) */}
@@ -1973,8 +2048,8 @@ function AdminEvaluationPage() {
                   onClick={handleCollectTranscripts}
                   disabled={transcriptStatus === 'loading'}
                   variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
                   title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
                 >
                   {transcriptStatus === 'loading' ? (
@@ -1986,17 +2061,18 @@ function AdminEvaluationPage() {
                   ) : (
                     <FileText className="h-4 w-4" />
                   )}
+                  <span className="xl:hidden">자막</span>
                 </Button>
               </div>
 
               {/* 구분선 */}
-              <div className="h-6 w-px bg-border" />
+              <div className="hidden h-6 w-px bg-border sm:block" />
             </CategorySidebar>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
@@ -2028,12 +2104,7 @@ function AdminEvaluationPage() {
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div
-              ref={scrollContainerRef}
-              className="flex-1 p-4 overflow-auto"
-              id="scroll-container"
-            >
+          <div className="flex flex-1 flex-col p-2 sm:p-4">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin" />
@@ -2077,7 +2148,6 @@ function AdminEvaluationPage() {
                   )}
                 </>
               )}
-            </div>
           </div>
         )}
       </div>
@@ -2145,25 +2215,23 @@ function AdminEvaluationPage() {
 
       {/* 승인 확인 모달 */}
       <AlertDialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
           <AlertDialogHeader>
             <AlertDialogTitle>승인 확인</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
-                {conflictingRestaurantInfo && (
-                  <div className="mt-3 p-3 bg-muted rounded-md">
-                    <p className="font-medium">기존 레스토랑:</p>
-                    <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
-                    <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
-                  </div>
-                )}
-                <p className="mt-3 font-medium">승인하시겠습니까?</p>
-              </div>
+            <AlertDialogDescription className={`text-sm text-muted-foreground space-y-2 ${ADMIN_MODAL_SCROLL_BODY}`}>
+              <span className="block">이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</span>
+              {conflictingRestaurantInfo && (
+                <span className="block mt-3 p-3 bg-muted rounded-md">
+                  <span className="block font-medium">기존 레스토랑:</span>
+                  <span className="block text-sm mt-1">이름: {conflictingRestaurantInfo.name}</span>
+                  <span className="block text-sm">주소: {conflictingRestaurantInfo.address}</span>
+                </span>
+              )}
+              <span className="block mt-3 font-medium">승인하시겠습니까?</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
+          <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
+            <AlertDialogCancel disabled={loading} className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 if (!pendingApprovalRecord) return;
@@ -2186,6 +2254,7 @@ function AdminEvaluationPage() {
                 }
               }}
               disabled={loading}
+              className={ADMIN_MODAL_ACTION}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               승인

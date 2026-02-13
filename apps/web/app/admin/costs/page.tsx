@@ -10,12 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Save, X, Plus, Trash2, ArrowLeft, Loader2 } from "lucide-react";
+import { Edit, Save, X, Plus, Trash2, ArrowLeft } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { CostsSkeleton } from "@/components/ui/skeleton-loaders";
 
 interface ServerCost {
     id: string;
@@ -119,8 +119,7 @@ function CostsManagementPage() {
     }, [formData, createMutation]);
     const handleDelete = useCallback((id: string) => { if (confirm("정말로 이 비용 항목을 삭제하시겠습니까?")) deleteMutation.mutate(id); }, [deleteMutation]);
 
-    if (authLoading || !user || !isAdmin) return <GlobalLoader />;
-    if (isLoading) return <GlobalLoader message="비용 데이터를 불러오는 중..." />;
+    if (authLoading || !user || !isAdmin) return <CostsSkeleton count={3} />;
 
     return (
         <div className="min-h-screen bg-[#fdfbf7] font-serif">
@@ -156,56 +155,62 @@ function CostsManagementPage() {
                     </Button>
                 </div>
 
-                {/* 비용 요약 카드 */}
-                <Card className="mb-6 p-6 bg-white border-stone-200 shadow-sm">
-                    <div className="flex flex-col items-center justify-center text-center">
-                        <p className="text-sm text-stone-500 mb-1">총 월 운영 비용</p>
-                        <p className="text-3xl font-bold text-green-700">{formatCurrency(totalMonthlyCost)}</p>
-                        <p className="text-xs text-stone-400 mt-2">{costs.length}개 항목 기준</p>
-                    </div>
-                </Card>
+                {isLoading ? (
+                    <CostsSkeleton count={5} />
+                ) : (
+                    <>
+                        {/* 비용 요약 카드 */}
+                        <Card className="mb-6 p-6 bg-white border-stone-200 shadow-sm">
+                            <div className="flex flex-col items-center justify-center text-center">
+                                <p className="text-sm text-stone-500 mb-1">총 월 운영 비용</p>
+                                <p className="text-3xl font-bold text-green-700">{formatCurrency(totalMonthlyCost)}</p>
+                                <p className="text-xs text-stone-400 mt-2">{costs.length}개 항목 기준</p>
+                            </div>
+                        </Card>
 
-                {/* 비용 목록 */}
-                <Card className="border-stone-200 overflow-hidden bg-white shadow-sm">
-                    <Table>
-                        <TableHeader className="bg-stone-50">
-                            <TableRow>
-                                <TableHead>항목명</TableHead>
-                                <TableHead className="text-right">월 비용</TableHead>
-                                <TableHead className="text-right">비율</TableHead>
-                                <TableHead className="hidden md:table-cell">설명</TableHead>
-                                <TableHead className="text-right">작업</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {costs.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
-                                        등록된 비용 항목이 없습니다
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                costs.map((cost) => {
-                                    const percentage = totalMonthlyCost > 0 ? ((cost.monthly_cost / totalMonthlyCost) * 100).toFixed(1) : "0.0";
-                                    return (
-                                        <TableRow key={cost.id} className="hover:bg-stone-50">
-                                            <TableCell className="font-medium">{cost.item_name}</TableCell>
-                                            <TableCell className="text-right font-bold">{formatCurrency(cost.monthly_cost)}</TableCell>
-                                            <TableCell className="text-right"><Badge variant="outline">{percentage}%</Badge></TableCell>
-                                            <TableCell className="hidden md:table-cell max-w-[200px]"><span className="text-sm text-stone-500 truncate block">{cost.description || "-"}</span></TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(cost)}><Edit className="h-4 w-4" /></Button>
-                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(cost.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                                </div>
+                        {/* 비용 목록 */}
+                        <Card className="border-stone-200 overflow-hidden bg-white shadow-sm">
+                            <Table>
+                                <TableHeader className="bg-stone-50">
+                                    <TableRow>
+                                        <TableHead>항목명</TableHead>
+                                        <TableHead className="text-right">월 비용</TableHead>
+                                        <TableHead className="text-right">비율</TableHead>
+                                        <TableHead className="hidden md:table-cell">설명</TableHead>
+                                        <TableHead className="text-right">작업</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {costs.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
+                                                등록된 비용 항목이 없습니다
                                             </TableCell>
                                         </TableRow>
-                                    );
-                                })
-                            )}
-                        </TableBody>
-                    </Table>
-                </Card>
+                                    ) : (
+                                        costs.map((cost) => {
+                                            const percentage = totalMonthlyCost > 0 ? ((cost.monthly_cost / totalMonthlyCost) * 100).toFixed(1) : "0.0";
+                                            return (
+                                                <TableRow key={cost.id} className="hover:bg-stone-50">
+                                                    <TableCell className="font-medium">{cost.item_name}</TableCell>
+                                                    <TableCell className="text-right font-bold">{formatCurrency(cost.monthly_cost)}</TableCell>
+                                                    <TableCell className="text-right"><Badge variant="outline">{percentage}%</Badge></TableCell>
+                                                    <TableCell className="hidden md:table-cell max-w-[200px]"><span className="text-sm text-stone-500 truncate block">{cost.description || "-"}</span></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(cost)}><Edit className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(cost.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </Card>
+                    </>
+                )}
             </div>
 
             {/* 수정 다이얼로그 */}
@@ -247,7 +252,7 @@ function CostsManagementPage() {
 
 export default function CostsPageWrapper() {
     return (
-        <Suspense fallback={<GlobalLoader />}>
+        <Suspense fallback={<CostsSkeleton count={5} />}>
             <CostsManagementPage />
         </Suspense>
     );

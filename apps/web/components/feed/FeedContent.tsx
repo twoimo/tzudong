@@ -14,13 +14,20 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
 import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
 
+
+// [PERF] 모듈 레벨 포맷터 캐시 - 매 호출시 Intl.DateTimeFormat 재생성 방지
+const DATE_FORMATTER = new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+});
 
 // ========== Types ==========
 export interface FeedReview {
@@ -366,24 +373,10 @@ export default function FeedContent({
         router.push(`/?restaurant=${restaurantId}`);
     }, [router, isOverlay, onClose, onOpenRestaurantDetail]);
 
-    // 날짜 포맷
+    // [PERF] 날짜 포맷 - 모듈 레벨 formatter 캐시 사용
     const formatDate = useCallback((dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
+        return DATE_FORMATTER.format(new Date(dateString));
     }, []);
-
-    if (isLoading) {
-        return (
-            <GlobalLoader
-                message="리뷰 데이터를 불러오는 중..."
-                subMessage="팬들의 맛집 방문 후기를 확인하고 있습니다"
-            />
-        );
-    }
 
     return (
         <div className={cn(
@@ -391,21 +384,21 @@ export default function FeedContent({
             !isOverlay && "bg-muted/30 overflow-y-auto"
         )} data-testid="feed-content-container">
             <div className={cn(
-                "w-full mx-auto bg-background flex flex-col h-full relative",
-                !isOverlay && "max-w-2xl md:border-x md:border-border md:shadow-sm"
+                "w-full mx-auto bg-background flex flex-col relative",
+                isOverlay ? "h-full" : "min-h-full md:border-x md:border-border md:shadow-sm max-w-2xl"
             )}>
                 {/* 헤더 */}
-                <div className="border-b border-border bg-background p-6 shrink-0">
+                <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                                <MessageSquareText className="h-6 w-6 text-primary" />
-                                쯔동여지도 리뷰
-                                <span className="text-sm font-normal text-muted-foreground">
+                        <div className="min-w-0">
+                            <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
+                                <MessageSquareText className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                                <span className="whitespace-nowrap">쯔동여지도 리뷰</span>
+                                <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap">
                                     ({allReviews.length}개)
                                 </span>
                             </h1>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-xs xs:text-sm text-muted-foreground mt-1 whitespace-nowrap">
                                 {isLoggedIn
                                     ? "맛집 방문 후기를 공유해보세요!"
                                     : "로그인하여 리뷰를 작성해보세요!"
@@ -460,8 +453,13 @@ export default function FeedContent({
 
                 {/* 피드 목록 */}
                 {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
-                <div className="flex-1 overflow-y-auto pb-[calc(var(--mobile-bottom-nav-height,60px)+2rem)] md:pb-8">
-                    {allReviews.length === 0 ? (
+                <div className={cn(
+                    "flex-1 pb-[calc(var(--mobile-bottom-nav-height,60px)+2rem)] md:pb-8",
+                    isOverlay && "overflow-y-auto"
+                )}>
+                    {isLoading ? (
+                        <FeedSkeleton count={4} />
+                    ) : allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                             <p>아직 승인된 리뷰가 없습니다.</p>
                         </div>

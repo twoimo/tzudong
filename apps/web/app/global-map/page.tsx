@@ -27,7 +27,7 @@ import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -398,8 +398,8 @@ export default function GlobalMapPage() {
     return (
         <>
             {/* 하단 컨트롤 패널 */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-                <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-[min(calc(100vw-1rem),72rem)] px-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_minmax(0,1fr)_auto] gap-2 lg:gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-2 lg:p-3 shadow-lg">
                     {/* 국가 선택 */}
                     <Select
                         value={selectedCountry || "튀르키예"}
@@ -407,7 +407,7 @@ export default function GlobalMapPage() {
                             setSelectedCountry(value as GlobalCountry);
                         }}
                     >
-                        <SelectTrigger className="w-48">
+                        <SelectTrigger className="w-full">
                             <div className="flex items-center gap-2">
                                 <MapPin className="h-4 w-4 text-muted-foreground" />
                                 <SelectValue placeholder="국가를 선택하세요" />
@@ -433,11 +433,11 @@ export default function GlobalMapPage() {
                         selectedCategories={filters.categories}
                         onCategoryChange={(categories) => setFilters(prev => ({ ...prev, categories }))}
                         selectedCountry={selectedCountry}
-                        className="w-48"
+                        className="w-full"
                     />
 
                     {/* 맛집 검색 */}
-                    <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
+                    <Suspense fallback={<div className="w-full h-10 bg-muted animate-pulse rounded sm:col-span-2 lg:col-span-1" />}>
                         <RestaurantSearch
                             onRestaurantSelect={handleRestaurantSelect}
                             onRestaurantSearch={handleRestaurantSearch}
@@ -451,7 +451,7 @@ export default function GlobalMapPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setIsGridMode(!isGridMode)}
-                        className="flex items-center gap-2"
+                        className="flex items-center justify-center gap-2 w-full sm:col-span-2 lg:col-span-1 lg:w-auto"
                     >
                         {isGridMode ? <Map className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
                     </Button>
@@ -489,10 +489,7 @@ export default function GlobalMapPage() {
             ) : (
                 // 단일 지도 모드
                 <Suspense fallback={
-                    <GlobalLoader
-                        message="쯔동여지도 로딩 중..."
-                        subMessage="맛있는 발견을 준비하고 있습니다"
-                    />
+                    <MapSkeleton />
                 }>
                     <PanelGroup direction="horizontal" className="w-full h-full">
                         <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>

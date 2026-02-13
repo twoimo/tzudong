@@ -38,7 +38,7 @@ def scan_pending(args: argparse.Namespace) -> None:
     urls_file = channel_dir / "urls.txt"
     
     if not urls_file.exists():
-        print(f"❌ URLs file not found: {urls_file}", file=sys.stderr)
+        print(f"[ERROR] URLs file not found: {urls_file}", file=sys.stderr)
         return
 
     # 1. URLs 로드
@@ -146,32 +146,32 @@ def parse_gemini_response(response_text: str) -> Optional[Dict[str, Any]]:
         data = json.loads(json_text)
         return data
     except json.JSONDecodeError as e:
-        print(f"❌ JSON 파싱 실패: {e}", file=sys.stderr)
+        print(f"[ERROR] JSON 파싱 실패: {e}", file=sys.stderr)
         return None
     except Exception as e:
-        print(f"❌ 예상치 못한 오류: {e}", file=sys.stderr)
+        print(f"[ERROR] 예상치 못한 오류: {e}", file=sys.stderr)
         return None
 
 
 def validate_restaurant_data(data: Dict[str, Any]) -> bool:
     """음식점 데이터 유효성 검증"""
     if not isinstance(data, dict):
-        print("❌ 최상위 객체가 dict가 아닙니다", file=sys.stderr)
+        print("[ERROR] 최상위 객체가 dict가 아닙니다", file=sys.stderr)
         return False
 
     if "restaurants" not in data:
-        print("❌ 'restaurants' 필드가 없습니다", file=sys.stderr)
+        print("[ERROR] 'restaurants' 필드가 없습니다", file=sys.stderr)
         return False
 
     if not isinstance(data["restaurants"], list):
-        print("❌ 'restaurants'가 배열이 아닙니다", file=sys.stderr)
+        print("[ERROR] 'restaurants'가 배열이 아닙니다", file=sys.stderr)
         return False
 
     required_fields = ["origin_name", "address", "category"]
     for idx, restaurant in enumerate(data["restaurants"]):
         for field in required_fields:
             if field not in restaurant:
-                print(f"❌ restaurants[{idx}]에 '{field}' 필드가 없습니다", file=sys.stderr)
+                print(f"[ERROR] restaurants[{idx}]에 '{field}' 필드가 없습니다", file=sys.stderr)
                 return False
     return True
 
@@ -201,7 +201,7 @@ def save_to_jsonl(
     with open(output_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    print(f"✅ 저장 완료: {len(restaurants)}개 음식점")
+    print(f"[OK] 저장 완료: {len(restaurants)}개 음식점")
 
 
 def parse_result(args: argparse.Namespace) -> None:
@@ -213,7 +213,7 @@ def parse_result(args: argparse.Namespace) -> None:
     output_file = Path(args.output_file)
 
     if not response_file.exists():
-        print(f"❌ 응답 파일 없음: {response_file}", file=sys.stderr)
+        print(f"[ERROR] 응답 파일 없음: {response_file}", file=sys.stderr)
         sys.exit(1)
 
     with open(response_file, "r", encoding="utf-8") as f:
@@ -235,9 +235,9 @@ def parse_result(args: argparse.Namespace) -> None:
             transcript_recollect_id=args.trans_id,
             channel_name=args.channel,
         )
-        print(f"✅ 완료: {youtube_url}")
+        print(f"[OK] 완료: {youtube_url}")
     except Exception as e:
-        print(f"❌ 저장 실패: {e}", file=sys.stderr)
+        print(f"[ERROR] 저장 실패: {e}", file=sys.stderr)
         sys.exit(1)
 
 

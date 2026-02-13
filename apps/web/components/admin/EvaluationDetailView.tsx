@@ -253,7 +253,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                 <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                     🍽️ 음식점 상세 정보
                 </h3>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                     {/* Row 1 */}
                     <div className="flex flex-col gap-0.5 min-w-0">
                         <span className="text-gray-500 text-xs font-medium">음식점명</span>
@@ -269,34 +269,36 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                     </div>
 
                     {/* Row 2 */}
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium">전화번호</span>
-                        <span className="text-gray-900 text-sm">{record.phone || '-'}</span>
-                    </div>
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
-                            좌표 (lat, lng)
-                        </span>
-                        <span className="font-mono text-xs text-gray-600">
-                            {record.lat ?? '-'}, {record.lng ?? '-'}
-                        </span>
-                    </div>
-
-                    {/* Row 3 - Full Width Address */}
-                    <div className="col-span-2 flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium">원본 주소</span>
-                        <span className="text-gray-900 text-sm break-all">{record.restaurant_info?.origin_address || '-'}</span>
-                    </div>
-
-                    {/* Row 4 - Naver Addresses */}
-                    <div className="col-span-2 grid grid-cols-1 gap-1 min-w-0">
-                        <div className="flex items-start gap-1.5 min-w-0">
-                            <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 도로명</Badge>
-                            <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.road_address || '-'}</span>
+                    <div className="flex flex-col gap-3 min-w-0">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-gray-500 text-xs font-medium">원본 주소</span>
+                            <span className="text-gray-900 text-sm break-all">{record.restaurant_info?.origin_address || '-'}</span>
                         </div>
-                        <div className="flex items-start gap-1.5 min-w-0">
-                            <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 지번</Badge>
-                            <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.jibun_address || '-'}</span>
+                        <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-start gap-1.5 min-w-0">
+                                <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 도로명</Badge>
+                                <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.road_address || '-'}</span>
+                            </div>
+                            <div className="flex items-start gap-1.5 min-w-0">
+                                <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 지번</Badge>
+                                <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.jibun_address || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-3 min-w-0">
+                        {record.phone && (
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="text-gray-500 text-xs font-medium">전화번호</span>
+                                <span className="text-gray-900 text-sm">{record.phone}</span>
+                            </div>
+                        )}
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
+                                좌표 (lat, lng)
+                            </span>
+                            <span className="font-mono text-xs text-gray-600">
+                                {record.lat ?? '-'}, {record.lng ?? '-'}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -329,9 +331,9 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     );
 
     return (
-        <div className={cn("flex", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
+        <div className={cn("flex flex-col lg:flex-row", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
             {/* 좌측: 비디오 플레이어 */}
-            <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
+            <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-b lg:border-b-0 lg:border-r", autoHeight ? "w-full lg:w-[40%]" : "w-full lg:w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
                     <div className="bg-white rounded-lg border p-3 shadow-sm">
                         <div className="bg-white rounded-lg border p-3 shadow-sm">
@@ -420,11 +422,11 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
             {/* 우측: 평가 및 상세 정보 */}
             {autoHeight ? (
-                <div className="w-[60%] h-auto border-l bg-accent/5">
+                <div className="h-auto w-full border-t bg-accent/5 lg:w-[60%] lg:border-l lg:border-t-0">
                     <RightContent />
                 </div>
             ) : (
-                <ScrollArea className="w-[50%] h-full border-l bg-accent/5">
+                <ScrollArea className="h-full w-full border-t bg-accent/5 lg:w-[50%] lg:border-l lg:border-t-0">
                     <RightContent />
                 </ScrollArea>
             )}

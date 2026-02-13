@@ -10,6 +10,7 @@ transforms.jsonl 데이터를 Supabase에 삽입합니다.
 import json
 import os
 import sys
+import time
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -18,7 +19,7 @@ from dotenv import load_dotenv
 try:
     from supabase import create_client, Client
 except ImportError:
-    print("❌ supabase 패키지가 설치되지 않았습니다.")
+    print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
     print("   pip install supabase 실행")
     sys.exit(1)
 
@@ -41,16 +42,16 @@ def main():
 
     # .env 로드
     # .env 로드 (backend/.env)
-    # 1. backend/restaurant-evaluation/.env (Legacy)
+    # 1. backend/restaurant-evaluation/.env (기존)
     env_path = Path(__file__).parent.parent / ".env"
     if env_path.exists():
         load_dotenv(env_path)
     
-    # 2. backend/.env (Standard)
+    # 2. backend/.env (표준)
     env_path_backend = Path(__file__).parent.parent.parent / ".env"
     if env_path_backend.exists():
         load_dotenv(env_path_backend)
-        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] ✅ .env 로드: {env_path_backend}")
+        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드: {env_path_backend}")
 
     # Supabase 설정
     supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
@@ -59,10 +60,10 @@ def main():
     )
 
     if not supabase_url or not supabase_key:
-        print(f"❌ SUPABASE_URL 또는 SUPABASE_KEY 환경변수가 설정되지 않았습니다.")
+        print(f"[ERROR] SUPABASE_URL 또는 SUPABASE_KEY 환경변수가 설정되지 않았습니다.")
         sys.exit(1)
 
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] ✅ Supabase 설정 완료")
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] Supabase 설정 완료")
     print(f"   URL: {supabase_url}")
 
     # Supabase 클라이언트 생성
@@ -72,54 +73,75 @@ def main():
     input_file = evaluation_path / "evaluation" / "transforms.jsonl"
 
     if not input_file.exists():
-        print(f"⚠️ transforms 파일 없음: {input_file} (데이터 없음으로 간주)")
+        print(f"[WARN] transforms 파일 없음: {input_file} (데이터 없음으로 간주)")
         # 0건 처리로 종료
         print(f"\n{'='*50}")
-        print(f"✅ Supabase 삽입 완료! (SKIP)")
+        print(f"[OK] Supabase 삽입 완료! (SKIP)")
         print(f"   총 레코드: 0개")
         print(f"{'='*50}")
         return
 
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 📂 입력 파일: {input_file}")
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 입력 파일: {input_file}")
 
-    # 기존 trace_id 조회
-    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 🔍 기존 데이터 조회 중...")
-
-    existing_ids = set()
-    try:
-        offset = 0
-        limit = 1000
-        while True:
-            response = (
-                supabase.table("restaurants")
-                .select("trace_id")
-                .eq("channel_name", channel)
-                .range(offset, offset + limit - 1)
-                .execute()
-            )
-            
-            if not response.data:
-                break
-                
-            batch_ids = {row["trace_id"] for row in response.data if row.get("trace_id")}
-            existing_ids.update(batch_ids)
-            
-            if len(response.data) < limit:
-                break
-                
-            offset += limit
-            print(f"   ...{len(existing_ids)}개 로드 중")
-
-        print(f"   기존 레코드: {len(existing_ids)}개 (전체 로드 완료)")
-    except Exception as e:
-        print(f"⚠️ 기존 데이터 조회 실패: {e}")
+    # 기존 trace_id 조회 로직 제거 (배치 단위로 처리)
+    print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] 데이터 처리 시작 (기존 데이터 보존 로직 적용)...")
 
     # 통계
     stats = {"total_records": 0, "inserted": 0, "skipped": 0, "errors": 0}
 
-    # 데이터 읽기 및 삽입
-    batch_size = 50
+    # [PERF] 배치 크기 200으로 증가 (Supabase REST API 최대 1000행, 네트워크 라운드트립 4배 감소)
+    batch_size = 200
     batch = []
+    MAX_RETRIES = 2
+    RETRY_DELAY = 2
+
+    def process_and_upsert(batch_data):
+        if not batch_data:
+            return
+
+        # 1. 배치 내 ID 추출
+        trace_ids = [item["trace_id"] for item in batch_data]
+        
+        existing_map = {}
+        try:
+            # 배치에 포함된 trace_id들의 기존 전체 데이터를 조회
+            response = supabase.table("restaurants").select("*").in_("trace_id", trace_ids).execute()
+            if response.data:
+                existing_map = {row["trace_id"]: row for row in response.data}
+        except Exception as e:
+            print(f"[WARN] 기존 데이터 조회 실패 (Batch): {e}")
+
+        # 2. 데이터 병합 (기존 데이터 보존)
+        final_batch = []
+        for item in batch_data:
+            tid = item["trace_id"]
+            existing = existing_map.get(tid)
+            
+            if existing:
+                for key in list(item.keys()):
+                    db_val = existing.get(key)
+                    if db_val is not None:
+                        item[key] = db_val
+            
+            final_batch.append(item)
+
+        # 3. [PERF] Upsert with retry (최대 2회 재시도, 2초 대기)
+        if not dry_run:
+            for attempt in range(1, MAX_RETRIES + 2):
+                try:
+                    supabase.table("restaurants").upsert(final_batch, on_conflict="trace_id").execute()
+                    stats["inserted"] += len(final_batch)
+                    print(f"   {stats['inserted']}개 처리 완료 (Upsert/Merge)...")
+                    return
+                except Exception as e:
+                    if attempt <= MAX_RETRIES:
+                        print(f"[WARN] 배치 Upsert 실패 (시도 {attempt}/{MAX_RETRIES+1}): {e}")
+                        time.sleep(RETRY_DELAY)
+                    else:
+                        print(f"[ERROR] 배치 Upsert 최종 실패 ({MAX_RETRIES+1}회 시도 후): {e}")
+                        stats["errors"] += len(final_batch)
+        else:
+            stats["inserted"] += len(final_batch)
 
     with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
@@ -136,8 +158,13 @@ def main():
 
                 # 데이터 변환 (필요한 필드만)
                 # category → categories 배열로 변환
-                category = data.get("category")
-                categories = [category] if category else []
+                # categories(배열) 우선 확인, 없으면 category(단일) 확인
+                categories = data.get("categories")
+                if categories is None:
+                    category = data.get("category")
+                    categories = [category] if category else []
+                elif not isinstance(categories, list):
+                    categories = [categories]
 
                 # youtube_meta에서 publishedAt 추출하여 created_at으로 사용 (UI 표시용)
                 youtube_meta = data.get("youtube_meta")
@@ -181,17 +208,7 @@ def main():
 
                 # 배치 삽입
                 if len(batch) >= batch_size:
-                    if not dry_run:
-                        try:
-                            # trace_id 기반 upsert
-                            supabase.table("restaurants").upsert(batch, on_conflict="trace_id").execute()
-                            stats["inserted"] += len(batch)
-                            print(f"   {stats['inserted']}개 처리 완료 (Upsert)...")
-                        except Exception as e:
-                            print(f"⚠️ 배치 Upsert 오류: {e}")
-                            stats["errors"] += len(batch)
-                    else:
-                        stats["inserted"] += len(batch)
+                    process_and_upsert(batch)
                     batch = []
 
             except json.JSONDecodeError:
@@ -199,22 +216,15 @@ def main():
 
     # 남은 배치 삽입
     if batch:
-        if not dry_run:
-            try:
-                supabase.table("restaurants").upsert(batch, on_conflict="trace_id").execute()
-                stats["inserted"] += len(batch)
-            except Exception as e:
-                print(f"⚠️ 마지막 배치 Upsert 오류: {e}")
-                stats["errors"] += len(batch)
-        else:
-            stats["inserted"] += len(batch)
+        process_and_upsert(batch)
 
     # 결과 출력
     print(f"\n{'='*50}")
-    print(f"✅ Supabase 삽입 완료!")
+    print(f"[OK] Supabase 삽입 완료!")
     print(f"   총 레코드: {stats['total_records']}개")
-    print(f"   삽입됨: {stats['inserted']}개")
+    print(f"   성공 (Insert): {stats['inserted']}개")
     print(f"   건너뜀 (중복): {stats['skipped']}개")
+    print(f"   배치 크기: {batch_size}")
     if stats["errors"] > 0:
         print(f"   오류: {stats['errors']}개")
     if dry_run:

@@ -7,6 +7,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvaluationRecord, DbConflictInfo } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ADMIN_MODAL_ACTION,
+  ADMIN_MODAL_CONTENT_LG_FLEX,
+  ADMIN_MODAL_FOOTER_DIVIDER,
+} from './admin-modal-styles';
 
 interface DbConflictResolutionPanelProps {
   record: EvaluationRecord | null;
@@ -166,8 +171,8 @@ export function DbConflictResolutionPanel({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className={ADMIN_MODAL_CONTENT_LG_FLEX}>
+        <DialogHeader className="border-b pb-3">
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-yellow-600" />
             데이터베이스 충돌 해결
@@ -177,142 +182,145 @@ export function DbConflictResolutionPanel({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 py-4">
-          {/* 기존 레스토랑 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                기존 레스토랑
-                <Badge variant="default">DB에 저장됨</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">레스토랑 이름</p>
-                <p className="text-base font-semibold">{existing.name}</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">주소</p>
-                <p className="text-sm">{existing.jibun_address}</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">전화번호</p>
-                <p className="text-sm">{existing.phone || '정보 없음'}</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">카테고리</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {existing.category.map((cat, idx) => (
-                    <Badge key={idx} variant="outline">{cat}</Badge>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  YouTube 링크 ({existing.youtube_links.length}개)
-                </p>
-                <div className="text-xs text-muted-foreground mt-1 max-h-20 overflow-y-auto">
-                  {existing.youtube_links.slice(0, 3).map((link, idx) => (
-                    <div key={idx} className="truncate">{link}</div>
-                  ))}
-                  {existing.youtube_links.length > 3 && (
-                    <div>... 외 {existing.youtube_links.length - 3}개</div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">등록일</p>
-                <p className="text-sm">
-                  {new Date(existing.created_at).toLocaleDateString('ko-KR')}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 새 레스토랑 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                새 레스토랑 데이터
-                <Badge variant="secondary">AI 추출</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">레스토랑 이름</p>
-                <p className="text-base font-semibold">{newInfo.name}</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">주소</p>
-                <p className="text-sm">
-                  {newInfo.naver_address_info?.jibun_address || newInfo.origin_address}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">전화번호</p>
-                <p className="text-sm">{newInfo.phone || '정보 없음'}</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">카테고리</p>
-                <Badge variant="outline">{newInfo.category}</Badge>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">YouTube 링크</p>
-                <a
-                  href={record.youtube_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline block truncate"
-                >
-                  {record.youtube_link}
-                </a>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">츄양 리뷰</p>
-                <p className="text-xs text-muted-foreground line-clamp-3 mt-1">
-                  {newInfo.tzuyang_review}
-                </p>
-              </div>
-
-              {record.youtube_meta && (
+        <div className="space-y-4 py-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* 기존 레스토랑 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  기존 레스토랑
+                  <Badge variant="default">DB에 저장됨</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">YouTube 메타</p>
-                  <p className="text-xs">
-                    {record.youtube_meta.title}
+                  <p className="text-sm font-medium text-muted-foreground">레스토랑 이름</p>
+                  <p className="text-base font-semibold">{existing.name}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">주소</p>
+                  <p className="text-sm">{existing.jibun_address}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">전화번호</p>
+                  <p className="text-sm">{existing.phone || '정보 없음'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">카테고리</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {existing.category.map((cat, idx) => (
+                      <Badge key={idx} variant="outline">{cat}</Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    YouTube 링크 ({existing.youtube_links.length}개)
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(record.youtube_meta.publishedAt).toLocaleDateString('ko-KR')}
+                  <div className="text-xs text-muted-foreground mt-1 max-h-20 overflow-y-auto">
+                    {existing.youtube_links.slice(0, 3).map((link, idx) => (
+                      <div key={idx} className="truncate">{link}</div>
+                    ))}
+                    {existing.youtube_links.length > 3 && (
+                      <div>... 외 {existing.youtube_links.length - 3}개</div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">등록일</p>
+                  <p className="text-sm">
+                    {new Date(existing.created_at).toLocaleDateString('ko-KR')}
                   </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* 새 레스토랑 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  새 레스토랑 데이터
+                  <Badge variant="secondary">AI 추출</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">레스토랑 이름</p>
+                  <p className="text-base font-semibold">{newInfo.name}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">주소</p>
+                  <p className="text-sm">
+                    {newInfo.naver_address_info?.jibun_address || newInfo.origin_address}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">전화번호</p>
+                  <p className="text-sm">{newInfo.phone || '정보 없음'}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">카테고리</p>
+                  <Badge variant="outline">{newInfo.category}</Badge>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">YouTube 링크</p>
+                  <a
+                    href={record.youtube_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline block truncate"
+                  >
+                    {record.youtube_link}
+                  </a>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">츄양 리뷰</p>
+                  <p className="text-xs text-muted-foreground line-clamp-3 mt-1">
+                    {newInfo.tzuyang_review}
+                  </p>
+                </div>
+
+                {record.youtube_meta && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">YouTube 메타</p>
+                    <p className="text-xs">
+                      {record.youtube_meta.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(record.youtube_meta.publishedAt).toLocaleDateString('ko-KR')}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+            <p className="text-sm font-medium mb-2">병합 결과 미리보기</p>
+            <ul className="text-sm space-y-1 text-muted-foreground">
+              <li>• 카테고리: {Array.from(new Set([...existing.category, newInfo.category])).join(', ')}</li>
+              <li>• YouTube 링크: {existing.youtube_links.length + 1}개 (기존 {existing.youtube_links.length} + 새로운 1)</li>
+              <li>• 츄양 리뷰: 새 리뷰 1개 추가</li>
+            </ul>
+          </div>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
-          <p className="text-sm font-medium mb-2">병합 결과 미리보기</p>
-          <ul className="text-sm space-y-1 text-muted-foreground">
-            <li>• 카테고리: {Array.from(new Set([...existing.category, newInfo.category])).join(', ')}</li>
-            <li>• YouTube 링크: {existing.youtube_links.length + 1}개 (기존 {existing.youtube_links.length} + 새로운 1)</li>
-            <li>• 츄양 리뷰: 새 리뷰 1개 추가</li>
-          </ul>
-        </div>
-
-        <DialogFooter className="gap-2">
+        <DialogFooter className={ADMIN_MODAL_FOOTER_DIVIDER}>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={loading}
+            className={ADMIN_MODAL_ACTION}
           >
             취소
           </Button>
@@ -321,6 +329,7 @@ export function DbConflictResolutionPanel({
             variant="secondary"
             onClick={handleHoldNew}
             disabled={loading}
+            className={ADMIN_MODAL_ACTION}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             새 데이터 보류
@@ -329,6 +338,7 @@ export function DbConflictResolutionPanel({
           <Button
             onClick={handleUpdateExisting}
             disabled={loading}
+            className={ADMIN_MODAL_ACTION}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             기존 레스토랑에 병합

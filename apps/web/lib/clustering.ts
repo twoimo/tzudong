@@ -207,16 +207,19 @@ export const getClusterCategories = (
     clusterId: number
 ): string[] => {
     const leaves = index.getLeaves(clusterId, Infinity);
-    const categories = new Set<string>();
+    const categoryCounts = new Map<string, number>();
 
     leaves.forEach((leaf) => {
         const category = leaf.properties.category;
         if (category) {
-            categories.add(category);
+            categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1);
         }
     });
 
-    return Array.from(categories);
+    return Array.from(categoryCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map((entry) => entry[0]);
 };
 
 /**
@@ -401,12 +404,12 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
     // 각 행정구역별로 맛집 그룹화
     const regionMap = new Map<string, {
         restaurantIds: string[];
-        categories: Set<string>;
+        categories: Map<string, number>;
     }>();
 
     // 모든 17개 행정구역 초기화
     for (const region of Object.keys(REGIONAL_CENTERS)) {
-        regionMap.set(region, { restaurantIds: [], categories: new Set() });
+        regionMap.set(region, { restaurantIds: [], categories: new Map() });
     }
 
     // 각 맛집을 행정구역에 할당
@@ -430,7 +433,8 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
                 ? restaurant.categories[0]
                 : (restaurant.category || '기타');
             if (category) {
-                group.categories.add(category as string);
+                const count = group.categories.get(category as string) || 0;
+                group.categories.set(category as string, count + 1);
             }
         }
     });
@@ -445,7 +449,10 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
                 center: REGIONAL_CENTERS[region],
                 count: group.restaurantIds.length,
                 restaurantIds: group.restaurantIds,
-                categories: Array.from(group.categories),
+                categories: Array.from(group.categories.entries())
+                    .sort((a, b) => b[1] - a[1]) // 빈도수 내림차순 정렬
+                    .slice(0, 3) // 상위 3개만 추출
+                    .map(entry => entry[0]),
             });
         }
     }
@@ -474,7 +481,7 @@ export interface SeoulDistrictClusterResult {
 export const getSeoulDistrictClusters = (restaurants: Restaurant[], minClusterSize: number = 1): SeoulDistrictClusterResult => {
     const districtMap = new Map<string, {
         restaurantIds: string[];
-        categories: Set<string>;
+        categories: Map<string, number>;
         positions: Array<{ lat: number; lng: number }>;
     }>();
 
@@ -483,7 +490,7 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[], minClusterSi
 
     // 25개 구 초기화
     for (const district of districtNames) {
-        districtMap.set(district, { restaurantIds: [], categories: new Set(), positions: [] });
+        districtMap.set(district, { restaurantIds: [], categories: new Map(), positions: [] });
     }
 
     restaurants.forEach((restaurant) => {
@@ -523,7 +530,8 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[], minClusterSi
                     ? restaurant.categories[0]
                     : (restaurant.category || '기타');
                 if (category) {
-                    group.categories.add(category as string);
+                    const count = group.categories.get(category as string) || 0;
+                    group.categories.set(category as string, count + 1);
                 }
             }
         }
@@ -543,7 +551,10 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[], minClusterSi
                 center: { lat: centerLat, lng: centerLng },
                 count: group.restaurantIds.length,
                 restaurantIds: group.restaurantIds,
-                categories: Array.from(group.categories),
+                categories: Array.from(group.categories.entries())
+                    .sort((a, b) => b[1] - a[1]) // 빈도수 내림차순 정렬
+                    .slice(0, 3) // 상위 3개만 추출
+                    .map(entry => entry[0]),
             });
         } else if (group.restaurantIds.length > 0) {
             // minClusterSize 미만: 개별 마커로 표시

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🍜 GeminiCLI 파이프라인 통합 로깅 모듈
+GeminiCLI 파이프라인 통합 로깅 모듈
 
 로그 레벨, 시간 측정, JSON 저장 기능을 제공합니다.
 모든 스크립트에서 import하여 사용합니다.
@@ -57,14 +57,14 @@ class Colors:
     GRAY = '\033[90m'
 
 
-# 로그 레벨별 색상 및 이모지
+# 로그 레벨별 색상 및 태그
 LOG_STYLES = {
-    LogLevel.DEBUG: (Colors.GRAY, "🔍"),
-    LogLevel.INFO: (Colors.OKBLUE, "ℹ️"),
-    LogLevel.SUCCESS: (Colors.OKGREEN, "✅"),
-    LogLevel.WARNING: (Colors.WARNING, "⚠️"),
-    LogLevel.ERROR: (Colors.FAIL, "❌"),
-    LogLevel.CRITICAL: (Colors.FAIL + Colors.BOLD, "🚨"),
+    LogLevel.DEBUG: (Colors.GRAY, "[DEBUG]"),
+    LogLevel.INFO: (Colors.OKBLUE, "[INFO]"),
+    LogLevel.SUCCESS: (Colors.OKGREEN, "[OK]"),
+    LogLevel.WARNING: (Colors.WARNING, "[WARN]"),
+    LogLevel.ERROR: (Colors.FAIL, "[ERROR]"),
+    LogLevel.CRITICAL: (Colors.FAIL + Colors.BOLD, "[CRITICAL]"),
 }
 
 
@@ -149,12 +149,12 @@ class PipelineLogger:
         
         # 시작 로그
         self._log(LogLevel.INFO, f"{'='*60}")
-        self._log(LogLevel.INFO, f"🚀 [{phase.upper()}] 파이프라인 시작")
-        self._log(LogLevel.INFO, f"⏰ 시작 시간: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        self._log(LogLevel.INFO, f"📁 로그 저장: {self.log_base_dir}")
-        self._log(LogLevel.INFO, f"   📄 text: {self.text_dir}")
-        self._log(LogLevel.INFO, f"   📊 structured: {self.structured_dir}")
-        self._log(LogLevel.INFO, f"   📋 report: {self.report_dir}")
+        self._log(LogLevel.INFO, f"[{phase.upper()}] 파이프라인 시작")
+        self._log(LogLevel.INFO, f"시작 시간: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self._log(LogLevel.INFO, f"로그 저장: {self.log_base_dir}")
+        self._log(LogLevel.INFO, f"  text: {self.text_dir}")
+        self._log(LogLevel.INFO, f"  structured: {self.structured_dir}")
+        self._log(LogLevel.INFO, f"  report: {self.report_dir}")
         self._log(LogLevel.INFO, f"{'='*60}")
     
     def _should_log(self, level: LogLevel) -> bool:
@@ -175,11 +175,11 @@ class PipelineLogger:
             return
         
         timestamp = datetime.now(KST)
-        color, emoji = LOG_STYLES.get(level, (Colors.ENDC, ""))
+        color, tag = LOG_STYLES.get(level, (Colors.ENDC, ""))
         
         # 터미널 출력
         time_str = timestamp.strftime("%H:%M:%S")
-        print(f"{Colors.GRAY}[{time_str}]{Colors.ENDC} {color}{emoji} {message}{Colors.ENDC}")
+        print(f"{Colors.GRAY}[{time_str}]{Colors.ENDC} {color}{tag} {message}{Colors.ENDC}")
         
         # 로그 엔트리 생성
         entry = {
@@ -268,12 +268,12 @@ class PipelineLogger:
     def timer(self, name: str):
         """시간 측정 컨텍스트 매니저"""
         start = time.time()
-        self.debug(f"⏱️ [{name}] 시작...")
+        self.debug(f"[{name}] 시작...")
         try:
             yield
         finally:
             elapsed = time.time() - start
-            self.debug(f"⏱️ [{name}] 완료: {elapsed:.2f}초")
+            self.debug(f"[{name}] 완료: {elapsed:.2f}초")
             
             # 타이머 통계 저장
             if name not in self.stats["timers"]:
@@ -338,9 +338,9 @@ class PipelineLogger:
     def start_stage(self):
         """스테이지 시작 로그"""
         self.info("=" * 60)
-        self.info(f"🚀 [{self.phase.upper()}] 파이프라인 시작")
-        self.info(f"⏰ 시작 시간: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        self.info(f"📁 로그 저장: {self.log_dir}")
+        self.info(f"[{self.phase.upper()}] 파이프라인 시작")
+        self.info(f"시작 시간: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.info(f"로그 저장: {self.log_dir}")
         self.info("=" * 60)
     
     def end_stage(self):
@@ -353,9 +353,9 @@ class PipelineLogger:
         self.stats["duration_formatted"] = self._format_duration(duration)
         
         self.info("=" * 60)
-        self.info(f"🏁 [{self.phase.upper()}] 파이프라인 종료")
-        self.info(f"⏰ 종료 시간: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        self.info(f"⏱️ 소요 시간: {self.stats['duration_formatted']}")
+        self.info(f"[{self.phase.upper()}] 파이프라인 종료")
+        self.info(f"종료 시간: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.info(f"소요 시간: {self.stats['duration_formatted']}")
         self.info("=" * 60)
     
     def get_summary(self) -> Dict:
@@ -399,7 +399,7 @@ class PipelineLogger:
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(summary, f, ensure_ascii=False, indent=2)
         
-        self.info(f"📝 JSON 로그 저장: {json_file}")
+        self.info(f"JSON 로그 저장: {json_file}")
 
     # === 요약 및 저장 ===
     
@@ -448,14 +448,14 @@ class PipelineLogger:
             self.stats["error_rate"] = round(self.stats["error_count"] / total * 100, 2)
         
         # 요약 출력
-        self.print_section(f"📊 [{self.phase.upper()}] 실행 결과 요약")
+        self.print_section(f"[{self.phase.upper()}] 실행 결과 요약")
         
-        print(f"\n⏰ 실행 시간")
+        print(f"\n[시간]")
         print(f"  시작: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"  종료: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"  소요: {Colors.OKCYAN}{self.stats['duration_formatted']}{Colors.ENDC}")
         
-        print(f"\n📈 처리 통계")
+        print(f"\n[통계]")
         print(f"  총 처리: {Colors.OKCYAN}{self.stats['total_processed']}{Colors.ENDC}개")
         print(f"  성공: {Colors.OKGREEN}{self.stats['success_count']}{Colors.ENDC}개", end="")
         if total > 0:
@@ -471,18 +471,18 @@ class PipelineLogger:
         
         # 커스텀 통계 출력
         if self.stats["custom_stats"]:
-            self.print_stats_table("📊 상세 통계", self.stats["custom_stats"])
+            self.print_stats_table("[상세 통계]", self.stats["custom_stats"])
         
         # 타이머 통계 출력
         if self.stats["timers"]:
-            print(f"\n⏱️ 시간 측정")
+            print(f"\n[시간 측정]")
             for name, timer in self.stats["timers"].items():
                 avg = timer.get("avg_seconds", 0)
                 print(f"  {name}: 평균 {avg:.2f}초 (총 {timer['count']}회)")
         
         # 에러 요약
         if self.stats["errors"]:
-            print(f"\n{Colors.FAIL}❌ 에러 목록 ({len(self.stats['errors'])}개){Colors.ENDC}")
+            print(f"\n{Colors.FAIL}[ERROR] 에러 목록 ({len(self.stats['errors'])}개){Colors.ENDC}")
             for i, err in enumerate(self.stats["errors"][:5], 1):
                 print(f"  {i}. {err['message']}")
             if len(self.stats["errors"]) > 5:
@@ -494,7 +494,7 @@ class PipelineLogger:
         if self.save_to_file:
             with open(self.summary_file, "w", encoding="utf-8") as f:
                 json.dump(self.stats, f, ensure_ascii=False, indent=2)
-            self.info(f"📁 요약 저장됨: {self.summary_file}")
+            self.info(f"요약 저장됨: {self.summary_file}")
         
         return self.stats
     

@@ -329,6 +329,8 @@ function getKSTDate() {
     return new Date(utc + (9 * 60 * 60 * 1000));
 }
 
+
+
 function getMetaInfo(channelName, videoId) {
     const metaPath = getMetaOutputPath(channelName, videoId);
     if (fs.existsSync(metaPath)) {
@@ -360,8 +362,8 @@ function shouldCollect(channelName, videoId, params) {
         // [추가] 180초(3분) 미만 영상은 Shorts로 간주하여 자동 수집 제외
         const duration = metaInfo.duration || 0;
         if (duration < 180) {
-            log('info', `[Skip] ${videoId}: 3분 미만 영상 (${duration}초)`);
-            return false;
+            // [수정] 개별 로그 → 호출부에서 집계하여 요약 출력
+            return { skip: true, reason: 'shorts', duration };
         }
     } else {
         // 메타 정보 없으면 수집 대상 (또는 정책에 따라 스킵 할 수도 있음)
@@ -369,23 +371,17 @@ function shouldCollect(channelName, videoId, params) {
         return true;
     }
 
-    // 1. 필수 확인: 게시 후 5일 경과 여부
-    if (!publishedAt) {
-        return false;
+    // [Fix] diffDays 계산 (D+7 로직 사용 위해)
+    // 메타 수집 스크립트(02)와 기준 통일 (숙성기 7일)
+    let diffDays = 0;
+    if (publishedAt) {
+        const pDate = new Date(publishedAt);
+        const now = getKSTDate();
+        const diffTime = now - pDate;
+        diffDays = diffTime / (1000 * 60 * 60 * 24);
     }
 
-    const pubDate = new Date(publishedAt);
-    const now = getKSTDate();
-    // diffTime을 ms 단위로 계산
-    const diffTime = Math.abs(now - pubDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // 올림 처리
-
-    if (diffDays < 5) {
-        // [중요] 5일 미만이라도 'new_video' 같은 즉시 수집 트리거가 있으면 수집해야 할 수도 있음.
-        // 하지만 04 스크립트 로직에 따르면 5일 미만은 무조건 false 입니다.
-        log('info', `[Skip] ${videoId}: 게시 후 5일 미만 (${diffDays}일)`);
-        return false;
-    }
+    // [제거됨] 5일 경과 조건 - 7일 조건(shouldRecollectHeatmapToday)으로 통합
 
     // [수정] 강제 수집 모드일 경우 기존 파일 확인 스킵
     if (ignoreExisting) {
@@ -483,19 +479,19 @@ function shouldCollect(channelName, videoId, params) {
         }
     }
 
-    // [수정] D+5 강제 수집 로직 추가
-    // 히트맵/프레임이 아예 없는 신규 영상이면, 스케줄 트리거가 없어도 D+5가 지났으면 수집해야 함
-    // (get_schedule_frequency에서 D+5 미만은 None을 반환하므로, 메타 수집 단계에서 걸러졌을 수 있음.
+    // [수정] D+7 강제 수집 로직 추가 (메타 수집 정책과 통일)
+    // 히트맵/프레임이 아예 없는 신규 영상이면, 스케줄 트리거가 없어도 D+7가 지났으면 수집해야 함
+    // (get_schedule_frequency에서 D+7 미만은 None을 반환하므로, 메타 수집 단계에서 걸러졌을 수 있음.
     // 하지만 여기까지 왔다는 건 메타가 있다는 뜻일 수도 있고, shouldCollect가 호출된 시점에서 판단)
 
     // 데이터 부재 확인
     const heatmapPath = getHeatmapOutputPath(channelName, videoId);
     const hasHeatmap = fs.existsSync(heatmapPath);
 
-    // D+5 경과 확인 (위에서 계산한 diffDays 사용)
-    if (diffDays >= 5) {
+    // D+7 경과 확인 (위에서 계산한 diffDays 사용)
+    if (diffDays >= 7) {
         if (!hasHeatmap) {
-            log('info', `[Force] ${videoId}: D+5 경과 & 히트맵 없음 -> 강제 수집 트리거 (Initial Collection)`);
+            log('info', `[Force] ${videoId}: D+7 경과 & 히트맵 없음 -> 강제 수집 트리거 (Initial Collection)`);
             return true;
         }
     }
@@ -590,9 +586,9 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
 
                     // [Fix] Cookie Mismatch or Auth Redirect Check
                     if (redirectUrl.includes('CookieMismatch') || redirectUrl.includes('accounts.google.com')) {
-                        log('warn', `⚠️ 인증 리다이렉트 감지: ${redirectUrl}`);
+                        log('warn', `[WARN] 인증 리다이렉트 감지: ${redirectUrl}`);
                         if (cookieHeader && cookieHeader.length > 0) {
-                            log('info', `🍪 유효하지 않은 쿠키 제거 후 재시도...`);
+                            log('info', `유효하지 않은 쿠키 제거 후 재시도...`);
                             // 쿠키 없이 현재 URL 다시 요청
                             resolve(fetchPage(url, '', 0, retryCount));
                             return;
@@ -696,9 +692,14 @@ function parseHeatmap(html) {
 async function fetchAndSaveHeatmap(channel, videoId, url) {
     const outPath = getHeatmapOutputPath(channel, videoId);
 
-    // [수정] 이미 데이터가 존재하면 다시 수집하지 않고 읽어서 반환 (중복 저장 방지)
-    // 단, recollect_id가 증가했거나 트리거 변수가 있다면 무시하고 재수집
-    if (fs.existsSync(outPath)) {
+    // [추가] 스케줄 트리거 확인 (scheduled_daily, scheduled_monthly 등)
+    // 스케줄 트리거가 있다면 수요일이 아니어도 재수집해야 함 (예: 30일 경과 영상의 월간 수집)
+    const triggerCheckVars = getRecollectVars(channel, videoId);
+    const isScheduledTrigger = triggerCheckVars.some(v => v.startsWith('scheduled_'));
+
+    // [수정] 이미 데이터가 존재하면 다음 조건들을 만족할 때만 재수집 스킵:
+    // 1. 스케줄 트리거가 없음 (!isScheduledTrigger)
+    if (fs.existsSync(outPath) && !isScheduledTrigger) {
         try {
             const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
             if (lines.length > 0) {
@@ -752,14 +753,14 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
             // [Fix] 429/차단 관련 에러면 즉시 중단 (무리한 재시도 방지)
             if (e.message.includes('429') || e.message.includes('Block') || e.message.includes('SORRY_REDIRECT')) {
-                log('error', `🛑 429/차단 감지됨. 추가 재시도를 중단합니다.`);
+                log('error', `429/차단 감지됨. 추가 재시도를 중단합니다.`);
                 break;
             }
 
             // 마지막 시도가 아니면 대기 후 재시도
             if (attempt < MAX_RETRIES) {
                 const delay = attempt * 2000 + Math.random() * 1000; // 2s~, 4s~...
-                log('info', `⏳ ${Math.round(delay / 1000)}초 후 재시도...`);
+                log('info', `${Math.round(delay / 1000)}초 후 재시도...`);
                 await sleep(delay);
             }
         }
@@ -821,8 +822,9 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
             isHeatmapChanged = true;
         } else {
             // 변경 없음
-            log('info', `[Skip] 히트맵 변경 없음 (허용오차 ±${TOLERANCE_SEC}s 이내) -> 수집 중단`);
-            return null; // Null을 리턴하여 다운로드/프레임 추출 단계로 가지 않게 함
+            log('info', `[Skip] 히트맵 변경 없음 (허용오차 ±${TOLERANCE_SEC}s 이내) -> ID 동기화 및 수집 중단`);
+            // [Fix] return null 제거 -> 아래 저장 로직을 태워서 Heatmap ID를 Meta ID와 동기화시킴
+            // 이렇게 해야 다음 실행 시 'ID 불일치'로 인한 중복 검사를 방지할 수 있음.
         }
     }
 
@@ -851,13 +853,20 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
     const duration = metaInfo ? metaInfo.duration : 0;
 
     // [중요] recollect_vars에 heatmap_changed 추가 (명시적)
+    // [Fix] 변경되었을 때만 추가
     let finalVars = getRecollectVars(channel, videoId);
-    if (!finalVars.includes('heatmap_changed')) {
-        finalVars.push('heatmap_changed');
+    if (isHeatmapChanged) {
+        if (!finalVars.includes('heatmap_changed')) {
+            finalVars.push('heatmap_changed');
+        }
+    } else {
+        // 변경 안됐으면 제거 (혹시 있다면)
+        finalVars = finalVars.filter(v => v !== 'heatmap_changed');
     }
 
     const saveData = {
         youtube_link: url,
+        channel_name: channel,
         video_id: videoId,
         duration: duration, // duration 필드 추가
         interaction_data: formattedInteraction,
@@ -870,6 +879,43 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
     fs.appendFileSync(outPath, JSON.stringify(saveData) + '\n', 'utf8');
     log('info', `[Heatmap Saved] ${videoId} (Points: ${formattedInteraction.length})`);
+
+    // [Fix] 변경 없으면 저장(ID동기화) 후 여기서 종료 -> 프레임 추출 스킵
+    // [수정] 단, 프레임 파일이 실제로 없는 경우에는 히트맵 변경 여부와 관계없이 추출 진행
+    // [개선] shouldCollect()와 동일한 상세 체크 로직 사용 (일관성)
+    if (!isHeatmapChanged) {
+        const recollectId = getMetaRecollectId(channel, videoId);
+        const framesDir = getFramesOutputDir(channel, videoId, recollectId);
+
+        // [일관성] shouldCollect()와 동일한 방식으로 프레임 존재 확인
+        // 단순히 폴더 존재가 아닌, 실제 설정별 데이터 존재 여부 확인
+        let hasFrames = false;
+        if (fs.existsSync(framesDir)) {
+            try {
+                const segDirs = fs.readdirSync(framesDir).filter(f => !f.startsWith('.'));
+                if (segDirs.length > 0) {
+                    // 첫 번째 세그먼트의 구조만 확인 (전체 확인은 비용이 큼)
+                    const firstSegDir = path.join(framesDir, segDirs[0]);
+                    // jpg/360p_1.0fps 같은 구조가 있는지 확인
+                    const extDirs = fs.existsSync(firstSegDir) ? fs.readdirSync(firstSegDir).filter(f => !f.startsWith('.')) : [];
+                    if (extDirs.length > 0) {
+                        const configDirs = fs.existsSync(path.join(firstSegDir, extDirs[0]))
+                            ? fs.readdirSync(path.join(firstSegDir, extDirs[0])).filter(f => !f.startsWith('.'))
+                            : [];
+                        hasFrames = configDirs.length > 0;
+                    }
+                }
+            } catch (e) { }
+        }
+
+        if (hasFrames) {
+            log('info', `[Skip] 히트맵 변경 없음 & 프레임 존재 -> 프레임 추출 단계 건너뜀`);
+            return null;
+        } else {
+            log('info', `[Force] 히트맵 변경 없으나 프레임 누락 -> 프레임 추출 강제 진행`);
+            // 아래로 계속 진행하여 프레임 추출
+        }
+    }
 
     // 반환값에 '재사용 가능 여부' 정보를 포함하면 좋겠지만, 
     // 기존 구조 유지를 위해 마커 리스트만 반환하고, 실제 부분 업데이트 로직은 extractFrames에서 수행
@@ -957,7 +1003,9 @@ async function downloadVideo(videoId, outputDir, quality) {
         ? `--js-runtimes "node:${nodePath}"`
         : '--js-runtimes "node:node"';
 
-    const cmd = `"${pythonPath}" -m yt_dlp ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
+    // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐
+    const cmd = `"${pythonPath}" -m yt_dlp --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -1472,11 +1520,12 @@ async function processBatch(params) {
     log('info', `총 ${urls.length}개 URL 발견`);
 
     // [Smart Filter] 처리 대상 영상 미리 선별
-    console.log(`\n🔍 [Smart Filter] 처리 대상을 선별 중입니다...`);
+    console.log(`\n[SCAN] [Smart Filter] 처리 대상을 선별 중입니다...`);
     const pendingUrls = [];
 
     // 진행바 처럼 점찍기
     let skippedCount = 0;
+    let shortsCount = 0;  // [추가] Shorts 카운트
     let scanCount = 0;
     process.stdout.write('Scanning: ');
 
@@ -1491,24 +1540,30 @@ async function processBatch(params) {
             continue;
         }
 
-        // shouldCollect가 true인 것만 담기
-        // 주의: shouldCollect 내부 로깅이 너무 많으면 시끄러울 수 있으므로,
-        // 필요하다면 shouldCollect 호출 시 silent 옵션을 추가하거나 해야 하지만,
-        // 일단 현재 로직 그대로 사용 (중요 로그만 나오므로)
-        // 단, shouldCollect가 'info' 로그를 찍으므로 스캔 중에 로그가 섞일 수 있음.
-        // 여기서는 일단 진행
-        if (shouldCollect(channel, videoId, params)) {
+        // [수정] shouldCollect 반환값 처리 (true/false 또는 객체)
+        const result = shouldCollect(channel, videoId, params);
+
+        if (result === true) {
             pendingUrls.push(url);
+        } else if (result && result.skip && result.reason === 'shorts') {
+            // Shorts는 별도 카운트 (개별 로그 출력 안함)
+            shortsCount++;
+            skippedCount++;
         } else {
             skippedCount++;
         }
     }
     process.stdout.write('\n');
 
-    log('info', `✅ 스캔 완료: 총 ${urls.length}개 중 ${pendingUrls.length}개 처리 예정 (건너뜀: ${skippedCount}개)`);
+    // [수정] Shorts 요약 로그 출력 (한 줄로)
+    if (shortsCount > 0) {
+        log('info', `[Skip] Shorts (3분 미만) ${shortsCount}개 건너뜀`);
+    }
+    log('info', `[OK] 스캔 완료: 총 ${urls.length}개 중 ${pendingUrls.length}개 처리 예정 (건너뜀: ${skippedCount}개)`);
+
 
     if (pendingUrls.length === 0) {
-        log('info', `✨ 처리할 대상이 없습니다.`);
+        log('info', `처리할 대상이 없습니다.`);
         return;
     }
 

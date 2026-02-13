@@ -25,9 +25,10 @@ CONFIG_NAME="${CHANNELS_CONFIG:-channels.yaml}"
 CONFIG_FILE="$PROJECT_ROOT/config/$CONFIG_NAME"
 PROMPT_FILE="$SCRIPT_DIR/../prompts/crawling_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_result.py"
+GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
 
-echo "[$(date '+%H:%M:%S')] 📂 SCRIPT_DIR: $SCRIPT_DIR"
-echo "[$(date '+%H:%M:%S')] 📂 PROJECT_ROOT: $PROJECT_ROOT"
+echo "[$(date '+%H:%M:%S')] [INFO] SCRIPT_DIR: $SCRIPT_DIR"
+echo "[$(date '+%H:%M:%S')] [INFO] PROJECT_ROOT: $PROJECT_ROOT"
 
 # .env 파일 로드
 ENV_FILES=(
@@ -42,16 +43,16 @@ for env_file in "${ENV_FILES[@]}"; do
         source "$env_file"
         set +a
         ENV_LOADED=true
-        echo "[$(date '+%H:%M:%S')] ✅ .env 파일 로드: $env_file"
+        echo "[$(date '+%H:%M:%S')] [OK] .env 파일 로드: $env_file"
         break
     fi
 done
 
 if [ "$ENV_LOADED" = false ]; then
     if [ -n "$GEMINI_API_KEY" ]; then
-        echo "[$(date '+%H:%M:%S')] ℹ️  .env 파일은 없지만 GEMINI_API_KEY 환경변수가 존재합니다 (CI/CD 환경 예상)"
+        echo "[$(date '+%H:%M:%S')] [INFO] .env 파일은 없지만 GEMINI_API_KEY 환경변수가 존재합니다 (CI/CD 환경 예상)"
     else
-        echo "[$(date '+%H:%M:%S')] ⚠️ .env 파일을 찾지 못했습니다"
+        echo "[$(date '+%H:%M:%S')] [WARN] .env 파일을 찾지 못했습니다"
     fi
 fi
 
@@ -65,12 +66,84 @@ export TZ="Asia/Seoul"
 PYTHON_CMD="${PYTHON_CMD:-python}"
 
 # 색상 코드
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+if [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    CYAN='\033[0;36m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    CYAN=''
+    NC=''
+fi
+
+# OS 감지
+OS_TYPE="$(uname -s)"
+case "${OS_TYPE}" in
+    Linux*)     OS_NAME=Linux;;
+    Darwin*)    OS_NAME=Mac;;
+    CYGWIN*|MINGW*|MSYS*) OS_NAME=Windows;;
+    *)          OS_NAME="UNKNOWN:${OS_TYPE}";;
+esac
+
+# 경로 정규화 (Windows의 경우 cygpath -m 사용)
+normalize_path() {
+    if [[ "$OS_NAME" == "Windows" ]] && command -v cygpath > /dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        echo "$1"
+    fi
+}
+
+# ================================
+# 명령어 감지
+# ================================
+
+# 1. JQ 감지
+if command -v jq &> /dev/null; then
+    JQ_EXE="jq"
+elif [ -f "$PROJECT_ROOT/bin/jq.exe" ]; then
+    JQ_EXE="$PROJECT_ROOT/bin/jq.exe"
+else
+    # CI/CD 환경이나 Git Bash 일부 환경을 위한 Fallback
+    if [ -f "/usr/bin/jq" ]; then
+        JQ_EXE="/usr/bin/jq"
+    else
+        echo "[ERROR] jq 명령어를 찾을 수 없습니다."
+        exit 1
+    fi
+fi
+
+# 2. Node 감지
+if command -v node &> /dev/null; then
+    NODE_EXE="node"
+elif [ -f "/c/Program Files/nodejs/node.exe" ]; then
+    NODE_EXE="/c/Program Files/nodejs/node.exe"
+elif [ -f "/mnt/c/Program Files/nodejs/node.exe" ]; then
+    NODE_EXE="/mnt/c/Program Files/nodejs/node.exe"
+else
+    NODE_EXE=""
+fi
+
+# 3. Python 감지
+if command -v python &> /dev/null; then
+    PYTHON_CMD="python"
+elif command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+else
+    echo "python 또는 python3 명령어를 찾을 수 없습니다."
+    exit 1
+fi
+
+# jq 래퍼 함수 (Windows 줄바꿈 처리)
+jq_wrapper() {
+    "$JQ_EXE" "$@" | tr -d '\r'
+}
 
 # mkdir temp
 mkdir -p "$SCRIPT_DIR/../temp"
@@ -79,23 +152,23 @@ mkdir -p "$SCRIPT_DIR/../temp"
 # 로그 함수
 # ================================
 log_info() {
-    echo -e "${BLUE}[$(date '+%H:%M:%S')] ℹ️  $1${NC}"
+    echo -e "${BLUE}[$(date '+%H:%M:%S')] [INFO] $1${NC}"
 }
 
 log_success() {
-    echo -e "${GREEN}[$(date '+%H:%M:%S')] ✅ $1${NC}"
+    echo -e "${GREEN}[$(date '+%H:%M:%S')] [OK] $1${NC}"
 }
 
 log_warning() {
-    echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠️  $1${NC}"
+    echo -e "${YELLOW}[$(date '+%H:%M:%S')] [WARN] $1${NC}"
 }
 
 log_error() {
-    echo -e "${RED}[$(date '+%H:%M:%S')] ❌ $1${NC}" >&2
+    echo -e "${RED}[$(date '+%H:%M:%S')] [ERROR] $1${NC}" >&2
 }
 
 log_debug() {
-    echo -e "${CYAN}[$(date '+%H:%M:%S')] 🔍 $1${NC}"
+    echo -e "${CYAN}[$(date '+%H:%M:%S')] [DEBUG] $1${NC}"
 }
 
 # 시간 포맷팅 함수
@@ -214,8 +287,12 @@ process_channel() {
         return 0
     fi
     
+    # [PERF] 프롬프트 템플릿 사전 캐싱 (루프 내 매번 파일 읽기 방지)
+    local PROMPT_TEMPLATE_CACHED
+    PROMPT_TEMPLATE_CACHED=$(cat "$PROMPT_FILE" | sed "s/{YOUTUBER_NAME}/$channel_name/g")
+    
     # [Smart Filter] 파이썬 스크립트로 처리 대상(Pending) URL만 가져오기
-    log_info "🔍 [Smart Filter] 처리 대상 영상 선별 중... (parse_result.py scan)"
+    log_info "[Smart Filter] 처리 대상 영상 선별 중... (parse_result.py scan)"
     
     # parse_result.py scan 실행
     # stderr는 화면에 나오고, stdout만 URLS 배열로 로드
@@ -225,11 +302,11 @@ process_channel() {
     local TOTAL=${#URLS[@]}
     
     if [ $TOTAL -eq 0 ]; then
-        log_success "✨ 처리할 대상이 없습니다 (모두 처리됨)"
+        log_success "처리할 대상이 없습니다 (모두 처리됨)"
         return 0
     fi
 
-    log_info "✅ 선별 완료: 총 $TOTAL 개 처리 예정"
+    log_info "선별 완료: 총 $TOTAL 개 처리 예정"
     
     # [Debug] URLS 배열 내용 확인
     declare -p URLS 2>/dev/null || true
@@ -315,17 +392,17 @@ process_channel() {
         
         # 메타데이터 최신 줄 로드
         META_DATA=$(get_latest_jsonl_data "$META_FILE")
-        TITLE=$(echo "$META_DATA" | jq -r '.title // ""' 2>/dev/null | head -c 100)
-        META_RECOLLECT_ID=$(echo "$META_DATA" | jq -r '.recollect_id // 0' 2>/dev/null)
+        TITLE=$(echo "$META_DATA" | "$JQ_EXE" -r '.title // ""' 2>/dev/null | head -c 100)
+        META_RECOLLECT_ID=$(echo "$META_DATA" | "$JQ_EXE" -r '.recollect_id // 0' 2>/dev/null)
         YOUTUBE_LINK="https://www.youtube.com/watch?v=$VIDEO_ID"
         
         # 자막 최신 줄 로드
         TRANSCRIPT_DATA=$(get_latest_jsonl_data "$TRANSCRIPT_FILE")
-        TRANSCRIPT_LANGUAGE=$(echo "$TRANSCRIPT_DATA" | jq -r '.language // "ko"' 2>/dev/null)
-        TRANSCRIPT_RECOLLECT_ID=$(echo "$TRANSCRIPT_DATA" | jq -r '.recollect_id // 0' 2>/dev/null)
+        TRANSCRIPT_LANGUAGE=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '.language // "ko"' 2>/dev/null)
+        TRANSCRIPT_RECOLLECT_ID=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '.recollect_id // 0' 2>/dev/null)
         
         # 자막을 [MM:SS] 형식으로 변환
-        TRANSCRIPT=$(echo "$TRANSCRIPT_DATA" | jq -r '
+        TRANSCRIPT=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '
             .transcript // [] | 
             map("[" + (if (.start | type) == "string" then .start else ((.start / 60 | floor | tostring | if length < 2 then "0" + . else . end)) + ":" + ((.start % 60 | floor | tostring | if length < 2 then "0" + . else . end)) end) + "] " + .text) | 
             join("\n")
@@ -339,8 +416,8 @@ process_channel() {
         
         log_info "[$INDEX/$TOTAL] 처리중: $TITLE"
         
-        # 프롬프트 생성 ({YOUTUBER_NAME}을 채널 이름으로 치환)
-        PROMPT_TEMPLATE=$(cat "$PROMPT_FILE" | sed "s/{YOUTUBER_NAME}/$channel_name/g")
+        # 프롬프트 생성 (사전 캐싱된 템플릿 사용)
+        PROMPT_TEMPLATE="$PROMPT_TEMPLATE_CACHED"
         
         # 자막 추가 (30000자 제한)
         TRANSCRIPT_TRUNCATED=$(echo "$TRANSCRIPT" | head -c 30000)
@@ -366,115 +443,71 @@ $TRANSCRIPT_TRUNCATED
         TEMP_STDERR="$SCRIPT_DIR/../temp/stderr_${VIDEO_ID}.log"
         echo "$PROMPT" > "$TEMP_PROMPT"
         
-        # 1차 시도: Google API (Node.js SDK)
+        # Gemini API 호출 (Node.js -> CLI Sticky Fallback)
         URL_START_TIME=$(date +%s)
+        GEMINI_START=$(date +%s)
         GEMINI_SUCCESS=false
         
-        GEMINI_API_SCRIPT="$SCRIPT_DIR/../temp/gemini_api_request.mjs"
-        
-        # Node.js 스크립트 동적 생성 (Inline)
-        cat << 'EOF' > "$GEMINI_API_SCRIPT"
-import fs from 'fs';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-async function main() {
-    const args = process.argv.slice(2);
-    if (args.length < 2) {
-        console.error('Usage: node gemini_api_request.js <prompt_file> <output_file>');
-        process.exit(1);
-    }
-
-    const promptFile = args[0];
-    const outputFile = args[1];
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-        console.error('Error: GEMINI_API_KEY environment variable not set.');
-        process.exit(1);
-    }
-
-    try {
-        const prompt = fs.readFileSync(promptFile, 'utf8');
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
-        const model = genAI.getGenerativeModel({ model: modelName });
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        fs.writeFileSync(outputFile, text);
-        process.exit(0);
-
-    } catch (error) {
-        console.error(`Gemini API Error: ${error.message}`);
-        process.exit(1);
-    }
-}
-
-main();
-EOF
-        GEMINI_START=$(date +%s)
-        if [ "$USE_OAUTH" = "true" ]; then
-            log_info "OAuth 모드: Node.js API 호출 건너뜀 (CLI 사용)"
-        else
-            log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
+        # 1. Node.js API 시도 (Sticky Fallback이 아닐 때만)
+        if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
+            log_debug "Node.js API 호출 시도..."
             
-            if node "$GEMINI_API_SCRIPT" "$TEMP_PROMPT" "$TEMP_RESPONSE"; then
+            WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
+            WIN_PROMPT=$(normalize_path "$TEMP_PROMPT")
+            WIN_RESPONSE=$(normalize_path "$TEMP_RESPONSE")
+            
+            set +e
+            "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE"
+            EXIT_CODE=$?
+            set -e
+            
+            if [ $EXIT_CODE -eq 0 ]; then
                 GEMINI_SUCCESS=true
-                GEMINI_END=$(date +%s)
-                GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
-                TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
-                GEMINI_CALLS=$((GEMINI_CALLS + 1))
-                log_debug "Gemini API 호출 성공"
+                log_debug "Node.js API 호출 성공"
             else
-                log_warning "Gemini API 호출 실패 (CLI Fallback 시도)"
+                log_warning "Node.js API 호출 실패 (Code: $EXIT_CODE) - Sticky Fallback 활성화 (이후 CLI 사용)"
+                FORCE_CLI_FALLBACK=true
             fi
         fi
 
-        # 2차 시도: Gemini CLI (API 실패 시)
+        # 2. Gemini CLI 시도 (Node 실패 또는 Sticky 모드일 때)
         if [ "$GEMINI_SUCCESS" = false ]; then
-        
-        for GEMINI_ATTEMPT in 1 2 3; do
-            GEMINI_START=$(date +%s)
-            log_debug "Gemini 호출 시도 ${GEMINI_ATTEMPT}/3 (모델: $CURRENT_MODEL)"
+            log_debug "Gemini CLI 호출 (모델: $CURRENT_MODEL)"
             
-            if npx gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+            if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                 GEMINI_SUCCESS=true
-                GEMINI_END=$(date +%s)
-                GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
-                TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
-                GEMINI_CALLS=$((GEMINI_CALLS + 1))
-                log_debug "Gemini CLI 응답 완료 (${GEMINI_DURATION}s)"
-                break
             else
-                GEMINI_END=$(date +%s)
-                GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
-                TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
-                GEMINI_CALLS=$((GEMINI_CALLS + 1))
+                # Error logging
+                log_error "Gemini CLI Error Output:"
+                if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
+                    cat "$TEMP_STDERR"
+                fi
                 
-                # Rate limit 에러 확인 후 fallback 모델로 전환
+                # Rate Limit 체크
                 ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
-                if [ -f "$ERROR_REPORT" ] && grep -q "exhausted your daily quota\|rate\|limit\|429" "$ERROR_REPORT" 2>/dev/null; then
+                if [ -f "$ERROR_REPORT" ] && grep -q "exhausted\|429" "$ERROR_REPORT" 2>/dev/null; then
                     if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
-                        log_warning "$PRIMARY_MODEL 할당량 소진 - $FALLBACK_MODEL 으로 전환"
+                        log_warning "할당량 소진 -> Fallback 모델($FALLBACK_MODEL) 전환"
                         CURRENT_MODEL="$FALLBACK_MODEL"
+                        sleep 10
+                        if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                            GEMINI_SUCCESS=true
+                        fi
                     fi
                 fi
-                
-                if [ $GEMINI_ATTEMPT -lt 3 ]; then
-                    log_warning "Gemini CLI 실패 (${GEMINI_ATTEMPT}차 시도) - 재시도 중..."
-                    sleep 12  # RPM 대기
-                fi
             fi
-        done
         fi
+        
+        GEMINI_END=$(date +%s)
+        GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+        TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+        GEMINI_CALLS=$((GEMINI_CALLS + 1))
         
         if [ "$GEMINI_SUCCESS" = true ]; then
             # 파서 실행 (최대 3회 시도)
             PARSE_SUCCESS=false
             for PARSE_ATTEMPT in 1 2 3; do
-                if $PYTHON_CMD "$PARSER_SCRIPT" parse "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
+                if $PYTHON_CMD "$PARSER_SCRIPT" parse "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$channel"; then
                     SUCCESS=$((SUCCESS + 1))
                     PARSE_SUCCESS=true
                     
@@ -484,20 +517,9 @@ EOF
                     break
                 else
                     if [ $PARSE_ATTEMPT -lt 3 ]; then
-                        log_warning "파서 실패 (${PARSE_ATTEMPT}차 시도) - Gemini 재호출 중..."
-                        sleep 12  # RPM 대기
-                        # Gemini CLI 재호출
-                        GEMINI_START=$(date +%s)
-                        if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
-                            GEMINI_END=$(date +%s)
-                            GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
-                            TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
-                            GEMINI_CALLS=$((GEMINI_CALLS + 1))
-                            log_debug "Gemini CLI 재시도 응답 완료 (${GEMINI_DURATION}s)"
-                        else
-                            log_error "Gemini CLI 재시도 실패"
-                            break
-                        fi
+                        log_warning "파싱 실패 (${PARSE_ATTEMPT}/3) - 재요청..."
+                        sleep 10
+                        gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
                     fi
                 fi
             done
@@ -508,7 +530,7 @@ EOF
                 echo "[$(date)] 파서 실패: $URL" >> "$error_log"
                 # 에러 JSONL 저장 (recollect_version 포함)
                 if [ ! -d "$errors_dir" ]; then mkdir -p "$errors_dir"; fi
-                jq -n \
+                "$JQ_EXE" -n \
                     --arg yl "$YOUTUBE_LINK" \
                     --arg vid "$VIDEO_ID" \
                     --arg err "파싱 실패 (3회 시도 후)" \
@@ -518,14 +540,14 @@ EOF
             fi
         else
             FAILED=$((FAILED + 1))
-            log_error "Gemini CLI 호출 실패 (3회 시도 후) ($FAILED/$TOTAL)"
-            echo "[$(date)] Gemini CLI 실패: $URL" >> "$error_log"
+            log_error "API/CLI 호출 모두 실패 ($FAILED/$TOTAL)"
+            echo "[$(date)] Gemini API/CLI 실패: $URL" >> "$error_log"
             # 에러 JSONL 저장 (recollect_version 포함)
             if [ ! -d "$errors_dir" ]; then mkdir -p "$errors_dir"; fi
-            jq -n \
+            "$JQ_EXE" -n \
                 --arg yl "$YOUTUBE_LINK" \
                 --arg vid "$VIDEO_ID" \
-                --arg err "Gemini CLI 호출 실패 (3회 시도 후)" \
+                --arg err "Gemini API/CLI 호출 실패" \
                 --arg meta "$META_RECOLLECT_ID" \
                 --arg trans "$TRANSCRIPT_RECOLLECT_ID" \
                 '{youtube_link: $yl, video_id: $vid, error: $err, recollect_version: {meta: ($meta | tonumber), transcript: ($trans | tonumber)}}' > "$ERROR_FILE"
@@ -535,11 +557,11 @@ EOF
         fi
         
         # 임시 파일 정리
-        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR" "$GEMINI_API_SCRIPT"
+        rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
         
-        # Rate Limit 준수 (5 RPM = 12초 대기)
+        # [PERF] Rate Limit 준수 (기본 12s = 5 RPM, 환경변수로 오버라이드 가능)
         if [ $INDEX -lt $TOTAL ]; then
-            sleep 12
+            sleep "${GEMINI_RATE_LIMIT_DELAY:-12}"
         fi
     done
     
@@ -547,7 +569,7 @@ EOF
     log_info "=========================================="
     log_success "채널 $channel 처리 완료"
     log_info "=========================================="
-    log_info "📊 처리 통계:"
+    log_info "처리 통계:"
     log_success "  성공: $SUCCESS"
     log_warning "  건너뜀 (이미 처리됨): $SKIPPED"
     log_warning "  건너뜀 (자막 없음): $NO_TRANSCRIPT"
@@ -555,7 +577,7 @@ EOF
     log_error "  실패: $FAILED"
     log_info "  총 URL: $TOTAL"
     log_info ""
-    log_info "🤖 Gemini CLI 통계:"
+    log_info "Gemini CLI 통계:"
     log_info "  총 호출 수: $GEMINI_CALLS"
     log_info "  총 Gemini 시간: $(format_duration $TOTAL_GEMINI_TIME)"
     if [ $GEMINI_CALLS -gt 0 ]; then
@@ -563,10 +585,7 @@ EOF
         log_info "  평균 Gemini 시간: $(format_duration $AVG_GEMINI)"
     fi
 
-    # 정돈: 임시 파일 삭제
-    if [ -f "$DELETED_IDS_FILE" ]; then
-        rm "$DELETED_IDS_FILE"
-    fi
+    # [Note] deleted_urls 필터링은 parse_result.py scan 단계에서 처리됨 (별도 임시 파일 불필요)
 }
 
 # ================================
@@ -600,27 +619,84 @@ main() {
     
     log_success "Gemini CLI 확인 완료"
     
-    # GEMINI_API_KEY 확인
+    # API Key 정리 (Windows 호환성)
+    if [ -n "$GEMINI_API_KEY" ]; then
+        GEMINI_API_KEY=$(echo "$GEMINI_API_KEY" | tr -d '\r')
+        export GEMINI_API_KEY
+    fi
+    
+    # OAuth 설정 체크
+    FORCE_CLI_FALLBACK=false
+    
     if [ -z "$GEMINI_API_KEY" ]; then
         if [ -n "$GEMINI_API_KEY_BYEON" ]; then
             export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
             log_success "GEMINI_API_KEY 설정 완료 (from GEMINI_API_KEY_BYEON)"
+        elif [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+            log_warning "GEMINI_API_KEY 없음. OAuth 모드(CLI)로 강제 전환합니다."
+            FORCE_CLI_FALLBACK=true
+        elif [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
+            log_info "GEMINI_CREDENTIALS_BASE64 감지됨 - 인증 파일 생성 중..."
+            mkdir -p "$HOME/.gemini"
+            echo "$GEMINI_CREDENTIALS_BASE64" | base64 -d > "$HOME/.gemini/oauth_creds.json"
+            FORCE_CLI_FALLBACK=true
         else
-            # [Add] OAuth Creds 체크
-            if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
-                log_warning "GEMINI_API_KEY 없음, 하지만 oauth_creds.json 발견됨. OAuth 모드로 진행합니다."
-                export USE_OAUTH=true
-            else
-                log_error "GEMINI_API_KEY 환경변수가 설정되지 않았습니다 (OAuth 파일도 없음)"
-                exit 1
-            fi
+            log_error "GEMINI_API_KEY 또는 OAuth 자격 증명이 없습니다."
+            exit 1
         fi
-    else
-        log_success "GEMINI_API_KEY 환경변수 확인 완료"
+    fi
+    
+    if [ -n "$USE_OAUTH" ] && [ "$USE_OAUTH" = "true" ]; then
+        FORCE_CLI_FALLBACK=true
     fi
     
     log_info "시작 시간: $START_DATETIME"
+    log_info "모드: $(if [ "$FORCE_CLI_FALLBACK" = true ]; then echo "Gemini CLI only"; else echo "Node.js API + Sticky Fallback"; fi)"
     log_info "Gemini 모델: $CURRENT_MODEL (fallback: $FALLBACK_MODEL)"
+    
+    # ================================
+    # Gemini Health Check (Pre-flight)
+    # ================================
+    log_info "Gemini Health Check (1+1=?) 수행 중..."
+    HEALTH_CHECK_PROMPT="$SCRIPT_DIR/../temp/health_check_prompt.txt"
+    HEALTH_CHECK_RESPONSE="$SCRIPT_DIR/../temp/health_check_response.json"
+    echo "1+1=?" > "$HEALTH_CHECK_PROMPT"
+    
+    HEALTH_CHECK_PASSED=false
+    
+    # 1. Node.js Check
+    if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
+        WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
+        WIN_PROMPT=$(normalize_path "$HEALTH_CHECK_PROMPT")
+        WIN_RESPONSE=$(normalize_path "$HEALTH_CHECK_RESPONSE")
+        
+        set +e
+        "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE" > /dev/null 2>&1
+        EXIT_CODE=$?
+        set -e
+        
+        if [ $EXIT_CODE -eq 0 ]; then
+            HEALTH_CHECK_PASSED=true
+            log_success "Health Check 성공 (Node.js API)"
+        else
+            log_warning "Health Check 실패 (Node.js API) -> Sticky Fallback 활성화"
+            FORCE_CLI_FALLBACK=true
+        fi
+    fi
+    
+    # 2. CLI Check (Fallback or Primary)
+    if [ "$HEALTH_CHECK_PASSED" = false ]; then
+        if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
+            HEALTH_CHECK_PASSED=true
+            log_success "Health Check 성공 (Gemini CLI)"
+        else
+            log_error "Health Check 실패 (Gemini CLI)"
+            log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
+            exit 1
+        fi
+    fi
+    
+    rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
     
     # 채널 목록
     local channels
@@ -634,13 +710,16 @@ main() {
         process_channel "$channel"
     done
     
+    # [PERF] temp 디렉토리 일괄 정리 (개별 rm 대신 한번에)
+    rm -rf "$SCRIPT_DIR/../temp"/*.txt "$SCRIPT_DIR/../temp"/*.json "$SCRIPT_DIR/../temp"/*.log 2>/dev/null || true
+    
     END_TIME=$(date +%s)
     END_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
     TOTAL_DURATION=$((END_TIME - START_TIME))
     
     log_info ""
     log_info "============================================================"
-    log_success "🎉 전체 파이프라인 완료"
+    log_success "전체 파이프라인 완료"
     log_info "============================================================"
     log_info "시작: $START_DATETIME"
     log_info "종료: $END_DATETIME"

@@ -75,7 +75,7 @@ def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
             img = Image.open(f).convert("RGB")
             frames.append(img)
         except Exception as e:
-            print(f"⚠️ 프레임 로드 실패 {f}: {e}")
+            print(f"[WARN] 프레임 로드 실패 {f}: {e}")
     return frames
 
 
@@ -87,6 +87,30 @@ def get_frame_paths(segment_path: Path) -> list[str]:
     return [str(f) for f in frame_files]
 
 
+def get_duration_from_meta(
+    meta_dir: Path, video_id: str, recollect_id: int
+) -> int | None:
+    """
+    메타 파일에서 해당 video_id와 recollect_id에 맞는 duration 조회
+    meta/{video_id}.jsonl에서 recollect_id가 일치하는 줄의 duration 반환
+    """
+    meta_file = meta_dir / f"{video_id}.jsonl"
+    if not meta_file.exists():
+        return None
+
+    try:
+        with open(meta_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    data = json.loads(line)
+                    if data.get("recollect_id") == recollect_id:
+                        return data.get("duration")
+    except Exception as e:
+        print(f"[WARN] 메타 파일 읽기 실패 {meta_file}: {e}")
+
+    return None
+
+
 def load_model(model_id: str, device: str = None):
     """
     LLaVA-NeXT-Video 모델 및 프로세서 로드
@@ -95,8 +119,8 @@ def load_model(model_id: str, device: str = None):
     if device is None:
         device = get_device()
 
-    print(f"🚀 모델 로딩 중: {model_id}")
-    print(f"📱 디바이스: {device}")
+    print(f"모델 로딩 중: {model_id}")
+    print(f"디바이스: {device}")
 
     processor = LlavaNextVideoProcessor.from_pretrained(model_id)
 
@@ -123,7 +147,7 @@ def load_model(model_id: str, device: str = None):
             low_cpu_mem_usage=True,
         )
 
-    print(f"✅ 모델 로드 완료 ({device})")
+    print(f"[OK] 모델 로드 완료 ({device})")
     return model, processor
 
 
@@ -197,6 +221,7 @@ def process_video_frames(
     video_id: str,
     frames_dir: Path,
     output_dir: Path,
+    meta_dir: Path,
     model,
     processor,
     prompt: str,
@@ -206,7 +231,7 @@ def process_video_frames(
     """
     video_frames_path = frames_dir / video_id
     if not video_frames_path.exists():
-        print(f"⚠️ 프레임 디렉토리 없음: {video_frames_path}")
+        print(f"[WARN] 프레임 디렉토리 없음: {video_frames_path}")
         return 0
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -242,6 +267,9 @@ def process_video_frames(
             if (recollect_id, rank) in existing_segments:
                 continue
 
+            # 메타에서 duration 조회
+            duration = get_duration_from_meta(meta_dir, video_id, recollect_id)
+
             tasks.append(
                 {
                     "video_id": video_id,
@@ -249,6 +277,7 @@ def process_video_frames(
                     "rank": rank,
                     "start_sec": segment_info["start_sec"],
                     "end_sec": segment_info["end_sec"],
+                    "duration": duration,
                     "folder": segment_folder,
                 }
             )
@@ -261,7 +290,7 @@ def process_video_frames(
 
     processed_count = 0
 
-    print(f"🔄 작업 수집 완료: {len(tasks)}개 세그먼트 (병렬 처리 시작)", flush=True)
+    print(f"작업 수집 완료: {len(tasks)}개 세그먼트 (병렬 처리 시작)", flush=True)
 
     # 최대 1개 세그먼트만 미리 로딩 (메모리 절약을 위해 직렬 처리로 변경)
     # MPS OOM 방지를 위해 동시 실행 제한
@@ -279,26 +308,27 @@ def process_video_frames(
             try:
                 frames = future.result()
                 if not frames:
-                    print(f"⚠️ 프레임 없음: {task['folder']}")
+                    print(f"[WARN] 프레임 없음: {task['folder']}")
                     continue
 
                 frame_paths = get_frame_paths(task["folder"])
 
                 print(
-                    f"📸 처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frames)}장)"
+                    f"처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frames)}장)"
                 )
 
                 # GPU 추론 (메인 프로세스)
                 caption = generate_caption(model, processor, frames, prompt)
-                print(f"   💬 캡션: {caption[:100]}...")
+                print(f"   캡션: {caption[:100]}...")
 
                 # 저장
                 result = {
                     "video_id": task["video_id"],
                     "recollect_id": task["recollect_id"],
-                    "rank": task["rank"],
                     "start_sec": task["start_sec"],
                     "end_sec": task["end_sec"],
+                    "duration": task["duration"],
+                    "rank": task["rank"],
                     "frames": frame_paths,
                     "caption": caption,
                 }
@@ -309,7 +339,7 @@ def process_video_frames(
                 processed_count += 1
 
             except Exception as e:
-                print(f"❌ 처리 실패 {task['folder']}: {e}")
+                print(f"[ERROR] 처리 실패 {task['folder']}: {e}")
 
     return processed_count
 
@@ -353,10 +383,14 @@ def main():
     data_dir = SCRIPT_DIR / f"../data/{args.youtuber}"
     frames_dir = data_dir / "frames"
     output_dir = data_dir / "frame-caption"
+    meta_dir = data_dir / "meta"
 
     if not frames_dir.exists():
-        print(f"❌ Frames directory not found: {frames_dir}")
+        print(f"[ERROR] Frames directory not found: {frames_dir}")
         return
+
+    if not meta_dir.exists():
+        print(f"[WARN] Meta directory not found: {meta_dir} (duration 조회 불가)")
 
     # 모델 로드
     model, processor = load_model(args.model, args.device)
@@ -365,7 +399,7 @@ def main():
     if args.video_id:
         video_ids = [args.video_id]
         if not (frames_dir / args.video_id).exists():
-            print(f"❌ Video directory not found: {frames_dir / args.video_id}")
+            print(f"[ERROR] Video directory not found: {frames_dir / args.video_id}")
             return
     else:
         video_ids = [
@@ -387,6 +421,7 @@ def main():
             video_id=video_id,
             frames_dir=frames_dir,
             output_dir=output_dir,
+            meta_dir=meta_dir,
             model=model,
             processor=processor,
             prompt=args.prompt,
@@ -394,8 +429,8 @@ def main():
         total_processed += count
 
     print(f"\n{'='*60}")
-    print(f"✅ 완료: {total_processed}개 세그먼트 처리")
-    print(f"📁 저장 경로: {output_dir}")
+    print(f"[OK] 완료: {total_processed}개 세그먼트 처리")
+    print(f"저장 경로: {output_dir}")
 
 
 if __name__ == "__main__":

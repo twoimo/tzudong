@@ -48,7 +48,7 @@ def migrate_folder(folder_path: Path) -> int:
 
             updated += 1
         except Exception as e:
-            print(f"⚠️ 오류: {f.name} - {e}")
+            print(f"[WARN] 오류: {f.name} - {e}")
 
     return updated
 
@@ -70,7 +70,7 @@ def main():
     laaj_count = migrate_folder(laaj_dir)
     print(f"laaj_results: {laaj_count}개 업데이트")
 
-    print(f"\n✅ 총 {rule_count + laaj_count}개 파일 업데이트 완료")
+    print(f"\n[OK] 총 {rule_count + laaj_count}개 파일 업데이트 완료")
 
 
 if __name__ == "__main__":

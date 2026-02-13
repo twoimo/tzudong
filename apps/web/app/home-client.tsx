@@ -9,7 +9,6 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "sonner";
 import { Restaurant } from "@/types/restaurant";
 
-import HomeModeToggle from "../components/home/home-mode-toggle";
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
 // [OPTIMIZATION] 동적 임포트
@@ -68,7 +67,7 @@ const ReviewModal = dynamic(
 
 
 
-import { Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
+import { Announcement } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
 export default function HomeClient() {
@@ -77,6 +76,7 @@ export default function HomeClient() {
     const { isDesktop } = useDeviceType();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
+    const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
     const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
 
     // 통합 패널 상태 관리
@@ -106,25 +106,57 @@ export default function HomeClient() {
     }, []);
 
 
-
-
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
         const restaurantId = searchParams.get('r') || searchParams.get('restaurant'); // 피드에서 restaurant 파라미터 사용
         const restaurantName = searchParams.get('q'); // 공유 URL에서 맛집 이름
 
-        if (panelParam === 'announcement' && announcementId) {
-            const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
-            if (announcement) {
-                // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
-                setTimeout(() => {
-                    setSelectedAnnouncement(announcement);
-                    openPanel('announcement');
+        if (panelParam === 'announcement') {
+            if (announcementId) {
+                (async () => {
+                    try {
+                        const { supabase } = await import('@/integrations/supabase/client');
+                        const { data, error } = await (supabase as any)
+                            .from('announcements')
+                            .select('id, title, content, is_active, show_on_banner, priority, created_at, updated_at')
+                            .eq('id', announcementId)
+                            .maybeSingle();
 
-                    // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
+                        if (error || !data) {
+                            return;
+                        }
+
+                        const announcement: Announcement = {
+                            id: data.id,
+                            title: data.title,
+                            content: data.content,
+                            isActive: data.is_active,
+                            showOnBanner: data.show_on_banner,
+                            priority: data.priority,
+                            createdAt: data.created_at,
+                            updatedAt: data.updated_at,
+                        };
+
+                        // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
+                        setTimeout(() => {
+                            setSelectedAnnouncement(announcement);
+                            openPanel('announcement');
+
+                            // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
+                            router.replace('/', { scroll: false });
+                        }, 500);
+                    } catch {
+                        // 공지 조회 실패 시 무시
+                    }
+                })();
+            } else {
+                // 공지 목록 오픈 (상세 ID 없이 panel만 전달된 경우)
+                setTimeout(() => {
+                    setSelectedAnnouncement(null);
+                    openPanel('announcement');
                     router.replace('/', { scroll: false });
-                }, 500);
+                }, 350);
             }
         }
 
@@ -152,7 +184,7 @@ export default function HomeClient() {
                     const { data: sameNameRestaurants } = await supabase
                         .from('restaurants')
                         .select('*')
-                        .eq('name', (targetRestaurant as any).name)
+                        .eq('approved_name', (targetRestaurant as any).name)
                         .eq('status', 'approved');
 
                     // 병합 로직 적용
@@ -160,8 +192,29 @@ export default function HomeClient() {
                     const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
                     if (mergedRestaurant) {
+                        const zoomParam = searchParams.get('z');
+                        const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
+
+                        // [New] URL 파라미터 또는 좌표 기반 모드 설정
+                        const modeParam = searchParams.get('mode');
+                        let targetMode: 'domestic' | 'overseas' | null = modeParam === 'overseas' ? 'overseas' : (modeParam === 'domestic' ? 'domestic' : null);
+
+                        if (!targetMode && mergedRestaurant.lat && mergedRestaurant.lng) {
+                            // 좌표 기반 자동 감지
+                            const { lat, lng } = mergedRestaurant;
+                            if (lat < 33 || lat > 39 || lng < 124 || lng > 132) {
+                                targetMode = 'overseas';
+                            } else {
+                                targetMode = 'domestic';
+                            }
+                        }
+
+                        if (targetMode) {
+                            setMapMode(targetMode);
+                        }
+
                         setTimeout(() => {
-                            openDetailPanel(mergedRestaurant);
+                            openDetailPanel(mergedRestaurant, !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined);
                             // URL 정리
                             router.replace('/', { scroll: false });
                         }, 300);
@@ -248,6 +301,26 @@ export default function HomeClient() {
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
 
+    // [이벤트 기반] FloatingNavButtons에서 국내/해외 모드 변경 수신
+    useEffect(() => {
+        const handleChangeMapMode = (e: Event) => {
+            const mode = (e as CustomEvent<'domestic' | 'overseas'>).detail;
+            state.setIsPanelOpen(false);
+            state.setPanelRestaurant(null);
+            state.setSelectedRestaurant(null);
+            state.setSearchedRestaurant(null);
+            setMapMode(mode);
+        };
+
+        window.addEventListener('changeMapMode', handleChangeMapMode);
+        return () => window.removeEventListener('changeMapMode', handleChangeMapMode);
+    }, [state]);
+
+    // [이벤트 기반] mapMode 변경 시 FloatingNavButtons에 동기화
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('syncMapMode', { detail: mapMode }));
+    }, [mapMode]);
+
     // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
     // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
     const openPanel = useCallback((panel: PanelType) => {
@@ -310,7 +383,7 @@ export default function HomeClient() {
 
     // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
     // [OPTIMIZATION] useCallback으로 메모이제이션
-    const openDetailPanel = useCallback((restaurant: Restaurant) => {
+    const openDetailPanel = useCallback((restaurant: Restaurant, focusZoom?: number) => {
         // 먼저 다른 패널들 닫기
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
@@ -321,6 +394,13 @@ export default function HomeClient() {
         // [Fix] 마커 클릭 시 검색 상태 초기화 (스티키 현상 방지)
         // searchedRestaurant가 남아있으면 네이버 지도의 효과 등으로 인해 다시 검색된 맛집으로 되돌아갈 수 있음
         state.setSearchedRestaurant(null);
+
+        // [Fix] 줌 레벨 설정 (북마크 등에서 요청 시)
+        if (focusZoom) {
+            setMapFocusZoom(focusZoom);
+        } else {
+            setMapFocusZoom(null); // 일반 선택 시에는 줌 레벨 강제하지 않음
+        }
 
         state.setIsPanelOpen(true);
 
@@ -400,8 +480,15 @@ export default function HomeClient() {
 
         // 북마크에서 맛집 선택 시 처리 (홈페이지에서 깜빡임 방지)
         const handleSelectBookmarkRestaurant = async (e: Event) => {
-            const customEvent = e as CustomEvent<string>;
-            const restaurantId = customEvent.detail;
+            const customEvent = e as CustomEvent<{ id: string, mode: 'domestic' | 'overseas' } | string>;
+            // 하위 호환성 지원 (문자열인 경우)
+            const detail = customEvent.detail;
+            const restaurantId = typeof detail === 'string' ? detail : detail.id;
+            const mode = typeof detail === 'string' ? null : detail.mode;
+
+            if (mode) {
+                setMapMode(mode);
+            }
 
             try {
                 const { supabase } = await import('@/integrations/supabase/client');
@@ -415,17 +502,28 @@ export default function HomeClient() {
 
                 if (error || !targetRestaurant) return;
 
+                const tr = targetRestaurant as any;
+                // 모드 자동 감지 (이벤트에 모드가 없었을 경우)
+                if (!mode) {
+                    const isOverseasCoord = tr.lat && (tr.lat < 33 || tr.lat > 39 || tr.lng < 124 || tr.lng > 132);
+                    if (isOverseasCoord) {
+                        setMapMode('overseas');
+                    } else {
+                        setMapMode('domestic');
+                    }
+                }
+
                 const { data: sameNameRestaurants } = await supabase
                     .from('restaurants')
                     .select('*')
-                    .eq('name', (targetRestaurant as any).name)
+                    .eq('approved_name', (targetRestaurant as any).name)
                     .eq('status', 'approved');
 
                 const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
                 const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
                 if (mergedRestaurant) {
-                    openDetailPanel(mergedRestaurant);
+                    openDetailPanel(mergedRestaurant, 13); // [Fix] 북마크 선택 시 줌 레벨 13 강제
                 }
             } catch (err) {
                 console.error('맛집 조회 실패:', err);
@@ -458,17 +556,7 @@ export default function HomeClient() {
                     isSidebarOpen={isSidebarOpen}
                 />
             )}
-            <HomeModeToggle
-                mode={mapMode}
-                onModeChange={(mode) => {
-                    state.setIsPanelOpen(false);
-                    state.setPanelRestaurant(null);
-                    state.setSelectedRestaurant(null);
-                    state.setSearchedRestaurant(null);
-                    setMapMode(mode);
-                }}
-                isAdmin={isAdmin}
-            />
+
 
             <HomeControlPanel
                 mapMode={mapMode}
@@ -502,6 +590,7 @@ export default function HomeClient() {
             <HomeMapContainer
                 key={mapMountKey}
                 mapMode={mapMode}
+                mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                 filters={state.filters}
                 selectedRegion={state.selectedRegion}
                 selectedCountry={state.selectedCountry}
@@ -558,11 +647,13 @@ export default function HomeClient() {
                 />
             )}
 
-            {/* 맛집 제보 모달 */}
-            <RestaurantSubmissionModal
-                isOpen={isSubmissionModalOpen}
-                onClose={() => setIsSubmissionModalOpen(false)}
-            />
+            {/* [PERF] 맛집 제보 모달 - 조건부 렌더링으로 TBT 개선 */}
+            {isSubmissionModalOpen && (
+                <RestaurantSubmissionModal
+                    isOpen={isSubmissionModalOpen}
+                    onClose={() => setIsSubmissionModalOpen(false)}
+                />
+            )}
 
             {/* 리뷰 작성 모달 */}
             {state.isReviewModalOpen && (
