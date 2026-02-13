@@ -713,6 +713,21 @@ export function SubmissionListView({
         "h-8 gap-1.5 px-2 text-[11px] xl:h-9 xl:min-w-[128px] xl:justify-center xl:px-3 xl:text-sm",
         isMobile && "justify-center gap-1"
     );
+    const listContainerClassName = "mx-2 rounded-lg border sm:mx-4";
+    const listBodyClassName = cn(
+        "space-y-2 p-2 xl:space-y-3 xl:p-3",
+        isMobile
+            ? "pb-[calc(var(--mobile-bottom-nav-height,76px)+env(safe-area-inset-bottom)+12px)]"
+            : "pb-6"
+    );
+    const listSearchInputClassName = "h-9 pl-8 pr-8 text-sm xl:h-9 xl:text-sm";
+    const listCardBaseClassName = "cursor-pointer rounded-lg border p-3 transition-colors hover:bg-muted/40 xl:p-3.5";
+    const listTitleClassName = "truncate text-sm font-semibold xl:text-[15px]";
+    const listSubTextClassName = "mt-1 line-clamp-2 text-xs text-muted-foreground xl:text-[13px]";
+    const listMetaClassName = "mt-2 flex items-center justify-between text-[11px] text-muted-foreground xl:text-xs";
+    const listActionButtonClassName = "h-8 px-2 text-xs xl:h-8 xl:px-2.5 xl:text-xs";
+    const listActionIconButtonClassName = "ml-auto h-8 w-8 p-0";
+    const listCategoryBadgeClassName = "px-1.5 py-0 text-[10px] xl:text-[11px]";
     const summaryBadgeBaseClassName = "px-2 py-0 text-[11px] leading-none tabular-nums xl:px-2.5 xl:text-sm";
     const summaryBadgeWithIconClassName = cn(summaryBadgeBaseClassName, "gap-1");
     const summaryLabelClassName = "text-[11px] text-muted-foreground xl:text-sm";
@@ -755,7 +770,7 @@ export function SubmissionListView({
 
         if (isPending) {
             return (
-                <Badge variant="secondary" className="gap-1 text-xs xl:text-sm">
+                <Badge variant="secondary" className="gap-1 text-xs">
                     <Clock className="h-3 w-3" /> 대기
                 </Badge>
             );
@@ -763,7 +778,7 @@ export function SubmissionListView({
 
         if (isApproved) {
             return (
-                <Badge className="gap-1 bg-green-500 text-xs xl:text-sm">
+                <Badge className="gap-1 bg-green-500 text-xs">
                     <CheckCircle2 className="h-3 w-3" /> 승인
                 </Badge>
             );
@@ -771,7 +786,7 @@ export function SubmissionListView({
 
         if (isRejected) {
             return (
-                <Badge variant="destructive" className="gap-1 text-xs xl:text-sm">
+                <Badge variant="destructive" className="gap-1 text-xs">
                     <XCircle className="h-3 w-3" /> 거부
                 </Badge>
             );
@@ -1266,7 +1281,7 @@ export function SubmissionListView({
 
                 {/* 테이블 또는 리뷰 목록 */}
                 {activeTab === 'reviews' ? (
-                    <div className="mx-2 rounded-lg border sm:mx-4">
+                    <div className={listContainerClassName}>
                         {reviewsLoading ? (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="w-8 h-8 animate-spin" />
@@ -1277,14 +1292,7 @@ export function SubmissionListView({
                                 <p>검수할 리뷰가 없습니다.</p>
                             </div>
                         ) : (
-                            <div
-                                className={cn(
-                                    "space-y-2 p-2",
-                                    isMobile
-                                        ? "pb-[calc(var(--mobile-bottom-nav-height,76px)+env(safe-area-inset-bottom)+12px)]"
-                                        : "space-y-3 p-4 pb-8"
-                                )}
-                            >
+                            <div className={listBodyClassName}>
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -1292,7 +1300,7 @@ export function SubmissionListView({
                                         placeholder="맛집명, 리뷰 내용 검색..."
                                         value={reviewSearchQuery}
                                         onChange={(e) => setReviewSearchQuery(e.target.value)}
-                                        className="h-9 pl-8 pr-8 text-sm xl:h-10 xl:text-base"
+                                        className={listSearchInputClassName}
                                     />
                                     {reviewSearchQuery && (
                                         <Button
@@ -1317,7 +1325,7 @@ export function SubmissionListView({
                                             <Card
                                                 key={review.id}
                                                 className={cn(
-                                                    "cursor-pointer p-3 transition-colors xl:p-4",
+                                                    listCardBaseClassName,
                                                     review.is_duplicate && "border-red-200 bg-red-50/80 dark:border-red-900/50 dark:bg-red-950/30",
                                                     !review.is_duplicate && isApproved && "border-green-200 bg-green-50/80 dark:border-green-900/50 dark:bg-green-950/30",
                                                     !review.is_duplicate && isRejected && "border-red-100 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20"
@@ -1328,26 +1336,26 @@ export function SubmissionListView({
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-1">
                                                             <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                                            <p className="truncate text-sm font-medium xl:text-base">{review.restaurants?.name || '알 수 없음'}</p>
+                                                            <p className={listTitleClassName}>{review.restaurants?.name || '알 수 없음'}</p>
                                                         </div>
-                                                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground xl:text-sm">
+                                                        <p className={listSubTextClassName}>
                                                             {review.content?.slice(0, 120) || '내용 없음'}
                                                         </p>
                                                     </div>
                                                     <div className="shrink-0">{renderReviewStatusBadge(review)}</div>
                                                 </div>
 
-                                                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground xl:text-sm">
+                                                <div className={listMetaClassName}>
                                                     <span>{new Date(review.visited_at).toLocaleDateString('ko-KR')}</span>
                                                     <span>{review.profiles?.nickname || '익명'}</span>
                                                 </div>
 
-                                                <div className="mt-2 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                                <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                                     {isPending && (
                                                         <>
                                                             <Button
                                                                 size="sm"
-                                                                className="h-8 bg-green-500 px-2 text-xs hover:bg-green-600 disabled:opacity-50 xl:h-9 xl:px-3 xl:text-sm"
+                                                                className={cn(listActionButtonClassName, "bg-green-500 hover:bg-green-600 disabled:opacity-50")}
                                                                 onClick={() => handleReviewAction('approve', review)}
                                                                 disabled={review.is_duplicate}
                                                                 title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
@@ -1357,7 +1365,7 @@ export function SubmissionListView({
                                                             <Button
                                                                 size="sm"
                                                                 variant="destructive"
-                                                                className="h-8 px-2 text-xs xl:h-9 xl:px-3 xl:text-sm"
+                                                                className={listActionButtonClassName}
                                                                 onClick={() => handleReviewAction('reject', review)}
                                                             >
                                                                 거부
@@ -1368,7 +1376,7 @@ export function SubmissionListView({
                                                         <Button
                                                             size="sm"
                                                             variant="destructive"
-                                                            className="h-8 px-2 text-xs xl:h-9 xl:px-3 xl:text-sm"
+                                                            className={listActionButtonClassName}
                                                             onClick={() => handleReviewAction('reject', review)}
                                                         >
                                                             취소
@@ -1377,7 +1385,7 @@ export function SubmissionListView({
                                                     {isRejected && (
                                                         <Button
                                                             size="sm"
-                                                            className="h-8 bg-green-500 px-2 text-xs hover:bg-green-600 disabled:opacity-50 xl:h-9 xl:px-3 xl:text-sm"
+                                                            className={cn(listActionButtonClassName, "bg-green-500 hover:bg-green-600 disabled:opacity-50")}
                                                             onClick={() => handleReviewAction('approve', review)}
                                                             disabled={review.is_duplicate}
                                                             title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
@@ -1388,7 +1396,7 @@ export function SubmissionListView({
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        className="ml-auto h-8 w-8 p-0"
+                                                        className={listActionIconButtonClassName}
                                                         onClick={() => handleDeleteReview(review)}
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
@@ -1402,21 +1410,14 @@ export function SubmissionListView({
                         )}
                     </div>
                 ) : (
-                    <div className="mx-2 rounded-lg border sm:mx-4">
+                    <div className={listContainerClassName}>
                         {filteredSubmissions.length === 0 && !searchQuery ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <AlertCircle className="w-10 h-10 mb-3" />
                                 <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
                             </div>
                         ) : (
-                            <div
-                                className={cn(
-                                    "space-y-2 p-2",
-                                    isMobile
-                                        ? "pb-[calc(var(--mobile-bottom-nav-height,76px)+env(safe-area-inset-bottom)+12px)]"
-                                        : "p-3 pb-6"
-                                )}
-                            >
+                            <div className={listBodyClassName}>
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -1424,7 +1425,7 @@ export function SubmissionListView({
                                         placeholder="맛집명, 주소, 제보자..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="h-9 pl-8 pr-8 text-sm"
+                                        className={listSearchInputClassName}
                                     />
                                     {searchQuery && (
                                         <Button
@@ -1449,27 +1450,27 @@ export function SubmissionListView({
                                         return (
                                             <Card
                                                 key={submission.id}
-                                                className="cursor-pointer p-3"
+                                                className={listCardBaseClassName}
                                                 onClick={() => openDetailModal(submission)}
                                             >
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
-                                                        <p className="truncate text-sm font-semibold">{submission.restaurant_name}</p>
-                                                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                                                        <p className={listTitleClassName}>{submission.restaurant_name}</p>
+                                                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground xl:text-[13px]">
                                                             {submission.restaurant_address || '-'}
                                                         </p>
                                                     </div>
                                                     <div className="shrink-0">{getStatusBadge(submission.status)}</div>
                                                 </div>
 
-                                                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                                                <div className={listMetaClassName}>
                                                     <span className="truncate pr-2">{submission.restaurant_phone || '전화번호 없음'}</span>
                                                     <span>{submission.profiles?.nickname || '익명'}</span>
                                                 </div>
 
                                                 <div className="mt-2 flex flex-wrap gap-1">
                                                     {submission.restaurant_categories?.slice(0, 3).map((cat, idx) => (
-                                                        <Badge key={idx} variant="outline" className="text-[10px] px-1">
+                                                        <Badge key={idx} variant="outline" className={listCategoryBadgeClassName}>
                                                             {cat}
                                                         </Badge>
                                                     ))}
@@ -1491,12 +1492,12 @@ export function SubmissionListView({
                                                     )}
                                                 </div>
 
-                                                <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                                     {isPending && (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            className="h-8 px-2 text-xs"
+                                                            className={listActionButtonClassName}
                                                             onClick={() => openDetailModal(submission)}
                                                         >
                                                             <Edit className="mr-1 h-3 w-3" />
@@ -1506,7 +1507,7 @@ export function SubmissionListView({
                                                     <Button
                                                         size="sm"
                                                         variant="destructive"
-                                                        className="ml-auto h-8 w-8 p-0"
+                                                        className={listActionIconButtonClassName}
                                                         onClick={(e) => handleDelete(submission, e)}
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />

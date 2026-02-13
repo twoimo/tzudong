@@ -31,7 +31,7 @@ import {
     ADMIN_MODAL_FOOTER,
     ADMIN_MODAL_FOOTER_DIVIDER,
     ADMIN_MODAL_SCROLL_BODY,
-} from "./admin-modal-styles";
+} from "@/components/admin/admin-modal-styles";
 
 // 해외 국가 목록
 const OVERSEAS_COUNTRIES = [
