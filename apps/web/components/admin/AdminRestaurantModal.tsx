@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 import {
     ADMIN_MODAL_ACTION,
     ADMIN_MODAL_CONTENT_MD_FLEX,
@@ -313,6 +314,10 @@ export function AdminRestaurantModal({
 
     // Google Geocoding API 호출 함수
     const geocodeWithGoogle = async (address: string, limit: number = 3) => {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+        let lastError: unknown = null;
+
+        // 1) Server route (preferred when a server key is configured, avoids client blocks/CORS)
         try {
             const response = await fetch(
                 `/api/google-geocode?address=${encodeURIComponent(address)}&language=ko`
@@ -322,7 +327,6 @@ export function AdminRestaurantModal({
             if (!response.ok) {
                 const errorStatus = data?.status || 'UNKNOWN_ERROR';
                 const errorMsg = data?.error_message || data?.error || 'Google 지오코딩 요청 실패';
-                console.error('Google Geocoding API Error:', errorStatus, errorMsg);
                 throw new Error(`Google API 오류: ${errorStatus} (${errorMsg})`);
             }
 
@@ -332,7 +336,6 @@ export function AdminRestaurantModal({
 
             if (data.status !== 'OK') {
                 const errorMsg = data.error_message || data.status;
-                console.error('Google Geocoding API Error:', data.status, errorMsg);
                 throw new Error(`Google API 오류: ${data.status} (${errorMsg})`);
             }
 
@@ -340,16 +343,24 @@ export function AdminRestaurantModal({
                 const location = result.geometry.location;
                 return {
                     road_address: result.formatted_address,
-                    jibun_address: '', // Google은 지번 주소 제공 안 함
-                    english_address: '', // Google은 별도 영어 주소 제공 안 함
+                    jibun_address: result.formatted_address,
+                    english_address: result.formatted_address,
                     address_elements: result.address_components,
                     x: String(location.lng),
                     y: String(location.lat),
                 };
             });
         } catch (error) {
+            lastError = error;
+            console.warn('[Google Geocode] server route failed, fallback to JS Geocoder:', error);
+        }
+
+        // 2) Client-side Geocoder (works with referrer-restricted keys)
+        try {
+            return await geocodeWithGoogleMapsJs(address, apiKey, limit);
+        } catch (error) {
             console.error('Google Geocoding 에러:', error);
-            throw error;
+            throw (lastError || error) as any;
         }
     };
 

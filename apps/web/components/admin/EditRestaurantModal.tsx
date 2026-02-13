@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -325,6 +326,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     x: string;
     y: string;
   }>> => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+    let lastError: unknown = null;
+
+    // 1) Server route (preferred when a server key is configured, avoids client blocks/CORS)
     try {
       const response = await fetch(
         `/api/google-geocode?address=${encodeURIComponent(address)}&language=ko`
@@ -334,7 +339,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       if (!response.ok) {
         const errorStatus = data?.status || 'UNKNOWN_ERROR';
         const errorMsg = data?.error_message || data?.error || 'Google 지오코딩 요청 실패';
-        console.error('Google Geocoding API Error:', errorStatus, errorMsg);
         throw new Error(`Google API 오류: ${errorStatus} (${errorMsg})`);
       }
 
@@ -344,7 +348,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       if (data.status !== 'OK') {
         const errorMsg = data.error_message || data.status;
-        console.error('Google Geocoding API Error:', data.status, errorMsg);
         throw new Error(`Google API 오류: ${data.status} (${errorMsg})`);
       }
 
@@ -360,8 +363,16 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         };
       });
     } catch (error) {
+      lastError = error;
+      console.warn('[Google Geocode] server route failed, fallback to JS Geocoder:', error);
+    }
+
+    // 2) Client-side Geocoder (works with referrer-restricted keys)
+    try {
+      return await geocodeWithGoogleMapsJs(address, apiKey, limit);
+    } catch (error) {
       console.error('Google Geocoding 에러:', error);
-      throw error;
+      throw (lastError || error) as any;
     }
   };
 
