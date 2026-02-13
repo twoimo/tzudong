@@ -53,12 +53,18 @@ export async function ensureGoogleMapsLoaded(apiKey: string): Promise<void> {
     const callbackContainer = window as unknown as Record<string, unknown>;
     callbackContainer[callbackName] = () => {
       window.clearTimeout(timeoutId);
-      resolve();
+      if (window.google?.maps?.Geocoder) {
+        resolve();
+        return;
+      }
+      reject(new Error('Google Maps 로드 실패 (Geocoder 미사용 가능 상태)'));
     };
 
     const script = document.createElement('script');
     script.async = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&v=weekly&callback=${callbackName}`;
+    // NOTE: 다른 화면(MapView 등)에서 places/marker 라이브러리를 기대하므로,
+    //       admin 지오코딩이 먼저 실행되어도 기능이 깨지지 않게 동일 라이브러리 포함.
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,marker&language=ko&loading=async&v=weekly&callback=${callbackName}`;
     script.addEventListener('error', () => {
       window.clearTimeout(timeoutId);
       reject(new Error('Google Maps 스크립트 로딩 실패'));
