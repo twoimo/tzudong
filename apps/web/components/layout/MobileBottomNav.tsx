@@ -4,9 +4,8 @@ import { memo, useCallback, useMemo, useRef, useEffect, useTransition } from 're
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, MessageSquareText, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { AUTH_NAV_ROUTES } from '@/components/layout/navigation-routes';
 
 interface NavItem {
     icon: typeof Home;
@@ -22,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
     { icon: Trophy, label: '랭킹', path: '/leaderboard' },
     { icon: User, label: 'MY', path: '/mypage/profile' },
 ];
+const MYPAGE_SUB_ROUTES = AUTH_NAV_ROUTES.filter((route) => route !== '/mypage/profile');
 
 interface MobileBottomNavProps {
     className?: string;
@@ -35,152 +35,45 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
     const pathname = usePathname();
     const router = useRouter();
     const navRef = useRef<HTMLElement>(null);
-    const queryClient = useQueryClient();
     const { user } = useAuth();
     const [, startTransition] = useTransition();
 
-    // [OPTIMIZATION] 마운트 시 모든 네비게이션 경로 prefetch
-    useEffect(() => {
-        NAV_ITEMS.forEach(item => {
-            router.prefetch(item.path);
-        });
-        // [최적화] 마이페이지 하위 경로도 prefetch
-        const mypagePaths = [
-            '/mypage/bookmarks',
-            '/mypage/reviews',
-            '/mypage/submissions/new',
-            '/mypage/submissions/edit',
-            '/mypage/submissions/recommend',
-        ];
-        mypagePaths.forEach(path => router.prefetch(path));
+    const prefetchRoute = useCallback((path: string) => {
+        try {
+            router.prefetch(path);
+        } catch {
+            // Prefetch failure should not block navigation.
+        }
     }, [router]);
 
-    // [최적화] 도장 페이지 데이터 프리페치
-    const prefetchStampData = useCallback(async () => {
-        await queryClient.prefetchQuery({
-            queryKey: ["restaurants", undefined, undefined, undefined, undefined],
-            queryFn: async () => {
-                const { data, error } = await supabase
-                    .from("restaurants")
-                    .select("id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
-                    .eq("status", "approved")
-                    .order("approved_name");
-                if (error) throw error;
-                return data || [];
-            },
-            staleTime: 5 * 60 * 1000,
-        });
+    // [PERF] 네비게이션 예상 경로를 미리 워밍
+    useEffect(() => {
+        NAV_ITEMS.forEach(({ path }) => prefetchRoute(path));
 
         if (user?.id) {
-            await queryClient.prefetchQuery({
-                queryKey: ['user-stamp-reviews', user.id],
-                queryFn: async () => {
-                    const { data, error } = await supabase
-                        .from('reviews')
-                        .select('restaurant_id, is_verified')
-                        .eq('user_id', user.id)
-                        .eq('is_verified', true);
-                    if (error) throw error;
-                    return data || [];
-                },
-            });
+            AUTH_NAV_ROUTES.forEach((path) => prefetchRoute(path));
         }
-    }, [queryClient, user?.id]);
+    }, [prefetchRoute, user?.id]);
 
-    // [최적화] 랭킹 페이지 데이터 프리페치
-    const prefetchLeaderboardData = useCallback(async () => {
-        await queryClient.prefetchQuery({
-            queryKey: ['leaderboard-all-users'],
-            queryFn: async () => {
-                try {
-                    const { data: profilesData, error: profilesError } = await supabase
-                        .from('profiles')
-                        .select('user_id, nickname')
-                        .not('nickname', 'is', null)
-                        .neq('nickname', '탈퇴한 사용자');
+    const handleNavIntent = useCallback((path: string, isActive: boolean) => {
+        if (isActive) {
+            return;
+        }
 
-                    if (profilesError) throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
-                    if (!profilesData || profilesData.length === 0) return [];
+        prefetchRoute(path);
 
-                    const userIds = profilesData.map((profile: any) => profile.user_id);
-                    const { data: allReviewsData } = await supabase
-                        .from('reviews')
-                        .select('id, user_id, is_verified')
-                        .in('user_id', userIds);
-
-                    let reviewIds: string[] = [];
-                    if (allReviewsData) {
-                        reviewIds = allReviewsData.map((review: any) => review.id);
-                    }
-
-                    const { data: likesData } = await supabase
-                        .from('review_likes')
-                        .select('review_id')
-                        .in('review_id', reviewIds);
-
-                    const reviewCountMap = new Map<string, number>();
-                    const verifiedReviewCountMap = new Map<string, number>();
-                    const totalLikesMap = new Map<string, number>();
-                    const reviewLikesMap = new Map<string, number>();
-
-                    if (likesData) {
-                        likesData.forEach((like: any) => {
-                            const current = reviewLikesMap.get(like.review_id) || 0;
-                            reviewLikesMap.set(like.review_id, current + 1);
-                        });
-                    }
-
-                    if (allReviewsData && allReviewsData.length > 0) {
-                        allReviewsData.forEach((review: any) => {
-                            const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
-                            reviewCountMap.set(review.user_id, currentReviewCount + 1);
-
-                            if (review.is_verified) {
-                                const currentVerifiedCount = verifiedReviewCountMap.get(review.user_id) || 0;
-                                verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
-                            }
-
-                            const reviewLikes = reviewLikesMap.get(review.id) || 0;
-                            const currentLikes = totalLikesMap.get(review.user_id) || 0;
-                            totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
-                        });
-                    }
-
-                    const users = profilesData.map((profile: any) => {
-                        const reviewCount = reviewCountMap.get(profile.user_id) || 0;
-                        const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
-                        const totalLikes = totalLikesMap.get(profile.user_id) || 0;
-
-                        return {
-                            id: profile.user_id,
-                            username: profile.nickname,
-                            reviewCount,
-                            verifiedReviewCount,
-                            totalLikes,
-                        };
-                    });
-
-                    return users
-                        .sort((a: any, b: any) => b.verifiedReviewCount - a.verifiedReviewCount)
-                        .map((user: any, index: number) => ({
-                            ...user,
-                            rank: index + 1,
-                        }));
-                } catch (error) {
-                    console.warn('리더보드 데이터 조회 중 오류 발생:', error);
-                    return [];
-                }
-            },
-            staleTime: 5 * 60 * 1000,
-        });
-    }, [queryClient]);
+        if (path === '/mypage/profile' && user?.id) {
+            MYPAGE_SUB_ROUTES.forEach((subPath) => prefetchRoute(subPath));
+        }
+    }, [prefetchRoute, user?.id]);
 
     // [OPTIMIZATION] startTransition으로 UI 블로킹 방지
     const handleNavClick = useCallback((path: string) => {
+        prefetchRoute(path);
         startTransition(() => {
             router.push(path);
         });
-    }, [router, startTransition]);
+    }, [prefetchRoute, router, startTransition]);
 
     // [OPTIMIZATION] 현재 경로에 따른 활성 상태 계산을 useMemo로 캐싱
     const activeStates = useMemo(() => {
@@ -243,19 +136,9 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
                         key={item.path}
                         data-testid={`bottom-nav-${item.path === '/' ? 'home' : item.path.replace('/', '').replace('/profile', '')}`}
                         onClick={() => handleNavClick(item.path)}
-                        onTouchStart={() => {
-                            // [성능 최적화] 터치 시작 시 해당 페이지 데이터 미리 로드
-                            if (!isActive) {
-                                if (item.path === "/stamp") {
-                                    prefetchStampData();
-                                } else if (item.path === "/leaderboard") {
-                                    prefetchLeaderboardData();
-                                } else if (item.path === "/mypage/profile") {
-                                    // 마이페이지 하위 경로 prefetch
-                                    ['/mypage/bookmarks', '/mypage/reviews', '/mypage/submissions/new'].forEach(p => router.prefetch(p));
-                                }
-                            }
-                        }}
+                        onTouchStart={() => handleNavIntent(item.path, isActive)}
+                        onMouseEnter={() => handleNavIntent(item.path, isActive)}
+                        onFocus={() => handleNavIntent(item.path, isActive)}
                         className={cn(
                             'flex flex-col items-center justify-center py-2.5 px-1',
                             'min-h-[60px]',
