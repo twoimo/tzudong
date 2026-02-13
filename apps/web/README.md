@@ -34,6 +34,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Google Maps (해외 지도)
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
+# Google Geocoding (선택: 없으면 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY fallback)
+# HTTP referrer 제한 키는 Geocoding REST에서 REQUEST_DENIED 발생 가능
+GOOGLE_GEOCODING_API_KEY=your_google_geocoding_server_key
 
 # Naver Maps (국내 지도)
 NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id

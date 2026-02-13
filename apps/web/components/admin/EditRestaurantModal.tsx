@@ -326,22 +326,26 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     y: string;
   }>> => {
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      if (!apiKey) throw new Error('Google Maps API key not found');
-
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+        `/api/google-geocode?address=${encodeURIComponent(address)}&language=ko`
       );
       const data = await response.json();
+
+      if (!response.ok) {
+        const errorStatus = data?.status || 'UNKNOWN_ERROR';
+        const errorMsg = data?.error_message || data?.error || 'Google 지오코딩 요청 실패';
+        console.error('Google Geocoding API Error:', errorStatus, errorMsg);
+        throw new Error(`Google API 오류: ${errorStatus} (${errorMsg})`);
+      }
+
+      if (data.status === 'ZERO_RESULTS' || !data.results || data.results.length === 0) {
+        return [];
+      }
 
       if (data.status !== 'OK') {
         const errorMsg = data.error_message || data.status;
         console.error('Google Geocoding API Error:', data.status, errorMsg);
         throw new Error(`Google API 오류: ${data.status} (${errorMsg})`);
-      }
-
-      if (!data.results || data.results.length === 0) {
-        return [];
       }
 
       return data.results.slice(0, limit).map((result: any) => {
