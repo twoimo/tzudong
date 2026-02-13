@@ -27,11 +27,18 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
-import { getBannerAnnouncements, getActiveAnnouncements, Announcement } from "@/types/announcement";
+import { Announcement } from "@/types/announcement";
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmarks } from "@/hooks/use-bookmarks";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import {
+  useActiveAnnouncements,
+  useBannerAnnouncements,
+  useDeleteAnnouncement,
+  useToggleAnnouncementActive,
+  useToggleAnnouncementBanner,
+} from "@/hooks/use-announcements";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -57,8 +64,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const pathname = usePathname();
   const router = useRouter();
 
+  const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
+  const { data: activeAnnouncements = [] } = useActiveAnnouncements();
+  const deleteAnnouncement = useDeleteAnnouncement();
+  const toggleAnnouncementActive = useToggleAnnouncementActive();
+  const toggleAnnouncementBanner = useToggleAnnouncementBanner();
+  const isAnnouncementMutationPending =
+    deleteAnnouncement.isPending ||
+    toggleAnnouncementActive.isPending ||
+    toggleAnnouncementBanner.isPending;
+
   // 공지 배너 상태
-  const [bannerAnnouncements, setBannerAnnouncements] = useState<Announcement[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
@@ -69,7 +85,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [announcementViewMode, setAnnouncementViewMode] = useState<'list' | 'detail'>('list');
-  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
   const [announcementPage, setAnnouncementPage] = useState(1);
   const ANNOUNCEMENTS_PER_PAGE = 3;
 
@@ -91,8 +106,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     if (dismissed) {
       setIsBannerDismissed(true);
     }
-    setBannerAnnouncements(getBannerAnnouncements());
   }, []);
+
+  useEffect(() => {
+    if (bannerAnnouncements.length === 0) {
+      setCurrentBannerIndex(0);
+      return;
+    }
+    if (currentBannerIndex >= bannerAnnouncements.length) {
+      setCurrentBannerIndex(0);
+    }
+  }, [bannerAnnouncements.length, currentBannerIndex]);
 
   // 미처리 제보 건수 조회
   useEffect(() => {
@@ -173,10 +197,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
     if (currentAnnouncement) {
       if (isMobileOrTablet) {
-        // 모바일/태블릿: 바텀시트로 상세 뷰 표시
-        // 뒤로가기를 위해 전체 공지사항 리스트도 로드
-        const announcements = getActiveAnnouncements();
-        setAllAnnouncements(announcements);
         setAnnouncementPage(1);
         setSelectedAnnouncement(currentAnnouncement);
         setAnnouncementViewMode('detail');
@@ -192,46 +212,76 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   const handleAnnouncementListClick = useCallback(() => {
     if (isMobileOrTablet) {
-      // 모바일/태블릿: 바텀시트로 공지사항 리스트 표시
-      const announcements = getActiveAnnouncements();
-
-      setAllAnnouncements(announcements);
       setAnnouncementPage(1);
       setAnnouncementViewMode('list');
       setIsAnnouncementSheetOpen(true);
     } else {
-      // 데스크탑: 기존 우측 패널로 공지사항 열기
-      handleAdminAnnouncementsClick();
+      if (pathname === '/') {
+        window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
+      } else {
+        // SPA 이동으로 홈 진입 + 공지 패널 자동 오픈
+        router.push('/?panel=announcement');
+      }
     }
-  }, [isMobileOrTablet]);
+  }, [isMobileOrTablet, pathname, router]);
 
-  const handleDeleteAnnouncement = useCallback((id: string) => {
-    if (confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
-      setAllAnnouncements(prev => prev.filter(a => a.id !== id));
+  const handleDeleteAnnouncement = useCallback(async (id: string) => {
+    if (!confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      await deleteAnnouncement.mutateAsync(id);
+      if (selectedAnnouncement?.id === id) {
+        setSelectedAnnouncement(null);
+      }
       setAnnouncementViewMode('list');
-      // TODO: 실제 삭제 API 호출
+    } catch {
+      // mutation 훅에서 에러 토스트 처리
     }
-  }, []);
+  }, [deleteAnnouncement, selectedAnnouncement?.id]);
 
-  const handleToggleAnnouncementActive = useCallback((id: string) => {
-    setAllAnnouncements(prev =>
-      prev.map(a =>
-        a.id === id ? { ...a, isActive: !a.isActive } : a
-      )
-    );
-    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, isActive: !prev.isActive } : prev);
-    // TODO: 실제 상태 변경 API 호출
-  }, []);
+  const handleToggleAnnouncementActive = useCallback(async (id: string) => {
+    const target =
+      (selectedAnnouncement?.id === id ? selectedAnnouncement : null) ||
+      activeAnnouncements.find((announcement) => announcement.id === id);
+    if (!target) return;
 
-  const handleToggleAnnouncementBanner = useCallback((id: string) => {
-    setAllAnnouncements(prev =>
-      prev.map(a =>
-        a.id === id ? { ...a, showOnBanner: !a.showOnBanner } : a
-      )
-    );
-    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, showOnBanner: !prev.showOnBanner } : prev);
-    // TODO: 실제 배너 상태 변경 API 호출
-  }, []);
+    try {
+      await toggleAnnouncementActive.mutateAsync({
+        id,
+        isActive: !target.isActive,
+      });
+      if (selectedAnnouncement?.id === id) {
+        setSelectedAnnouncement((prev) =>
+          prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : prev
+        );
+      }
+    } catch {
+      // mutation 훅에서 에러 토스트 처리
+    }
+  }, [activeAnnouncements, selectedAnnouncement, toggleAnnouncementActive]);
+
+  const handleToggleAnnouncementBanner = useCallback(async (id: string) => {
+    const target =
+      (selectedAnnouncement?.id === id ? selectedAnnouncement : null) ||
+      activeAnnouncements.find((announcement) => announcement.id === id);
+    if (!target) return;
+
+    try {
+      await toggleAnnouncementBanner.mutateAsync({
+        id,
+        showOnBanner: !target.showOnBanner,
+      });
+      if (selectedAnnouncement?.id === id) {
+        setSelectedAnnouncement((prev) =>
+          prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : prev
+        );
+      }
+    } catch {
+      // mutation 훅에서 에러 토스트 처리
+    }
+  }, [activeAnnouncements, selectedAnnouncement, toggleAnnouncementBanner]);
 
   const handleMyPageClick = useCallback(() => {
     // 마이페이지 프로필 페이지로 이동
@@ -247,15 +297,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     // /admin/evaluations 페이지로 이동하며 리뷰 검수 탭 활성화
     router.push('/admin/evaluations?view=submissions&tab=reviews');
   }, [router]);
-
-  const handleAdminAnnouncementsClick = useCallback(() => {
-    if (pathname === '/') {
-      window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
-    } else {
-      // 홈으로 이동 후 패널 열기
-      window.location.href = '/';
-    }
-  }, [pathname]);
 
   const handleAdminBannersClick = useCallback(() => {
     router.push('/admin/banners');
@@ -790,10 +831,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     {(() => {
                       const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
                       const endIdx = startIdx + ANNOUNCEMENTS_PER_PAGE;
-                      const paginatedAnnouncements = allAnnouncements.slice(startIdx, endIdx);
-                      const totalPages = Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE);
+                      const paginatedAnnouncements = activeAnnouncements.slice(startIdx, endIdx);
 
-                      if (allAnnouncements.length === 0) {
+                      if (activeAnnouncements.length === 0) {
                         return (
                           <div className="text-center py-12 text-muted-foreground">
                             <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -830,7 +870,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 </ScrollArea>
 
                 {/* 페이지네이션 */}
-                {allAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
+                {activeAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
                   <div className="flex items-center justify-center gap-2 pt-3 border-t border-border">
                     <Button
                       variant="outline"
@@ -842,13 +882,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <span className="text-sm text-foreground/80 px-2">
-                      {announcementPage} / {Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                      {announcementPage} / {Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
-                      disabled={announcementPage === Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                      onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
+                      disabled={announcementPage === Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
                       className="h-8"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -872,6 +912,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         variant="outline"
                         size="sm"
                         onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
+                        disabled={isAnnouncementMutationPending}
                         className="gap-1 text-xs"
                       >
                         {selectedAnnouncement.isActive ? (
@@ -890,6 +931,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         variant="outline"
                         size="sm"
                         onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
+                        disabled={isAnnouncementMutationPending}
                         className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
                       >
                         {selectedAnnouncement.showOnBanner ? (
@@ -908,6 +950,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
+                        disabled={isAnnouncementMutationPending}
                         className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"
                       >
                         <Trash2 className="h-3 w-3" />

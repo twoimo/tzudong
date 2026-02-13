@@ -67,7 +67,7 @@ const ReviewModal = dynamic(
 
 
 
-import { Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
+import { Announcement } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
 export default function HomeClient() {
@@ -112,17 +112,51 @@ export default function HomeClient() {
         const restaurantId = searchParams.get('r') || searchParams.get('restaurant'); // 피드에서 restaurant 파라미터 사용
         const restaurantName = searchParams.get('q'); // 공유 URL에서 맛집 이름
 
-        if (panelParam === 'announcement' && announcementId) {
-            const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
-            if (announcement) {
-                // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
-                setTimeout(() => {
-                    setSelectedAnnouncement(announcement);
-                    openPanel('announcement');
+        if (panelParam === 'announcement') {
+            if (announcementId) {
+                (async () => {
+                    try {
+                        const { supabase } = await import('@/integrations/supabase/client');
+                        const { data, error } = await (supabase as any)
+                            .from('announcements')
+                            .select('id, title, content, is_active, show_on_banner, priority, created_at, updated_at')
+                            .eq('id', announcementId)
+                            .maybeSingle();
 
-                    // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
+                        if (error || !data) {
+                            return;
+                        }
+
+                        const announcement: Announcement = {
+                            id: data.id,
+                            title: data.title,
+                            content: data.content,
+                            isActive: data.is_active,
+                            showOnBanner: data.show_on_banner,
+                            priority: data.priority,
+                            createdAt: data.created_at,
+                            updatedAt: data.updated_at,
+                        };
+
+                        // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
+                        setTimeout(() => {
+                            setSelectedAnnouncement(announcement);
+                            openPanel('announcement');
+
+                            // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
+                            router.replace('/', { scroll: false });
+                        }, 500);
+                    } catch {
+                        // 공지 조회 실패 시 무시
+                    }
+                })();
+            } else {
+                // 공지 목록 오픈 (상세 ID 없이 panel만 전달된 경우)
+                setTimeout(() => {
+                    setSelectedAnnouncement(null);
+                    openPanel('announcement');
                     router.replace('/', { scroll: false });
-                }, 500);
+                }, 350);
             }
         }
 

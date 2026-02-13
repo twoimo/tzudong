@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -10,9 +10,18 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { DUMMY_ANNOUNCEMENTS, Announcement, AnnouncementFormData, getActiveAnnouncements } from '@/types/announcement';
+import { Announcement, AnnouncementFormData } from '@/types/announcement';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import {
+    useActiveAnnouncements,
+    useAnnouncementsAdmin,
+    useCreateAnnouncement,
+    useDeleteAnnouncement,
+    useToggleAnnouncementActive,
+    useToggleAnnouncementBanner,
+    useUpdateAnnouncement,
+} from '@/hooks/use-announcements';
 
 interface AnnouncementPanelProps {
     isOpen: boolean;
@@ -31,10 +40,23 @@ export default function AnnouncementPanel({
     isAdmin = false,
     initialAnnouncement,
 }: AnnouncementPanelProps) {
-    // 관리자는 모든 공지사항, 사용자는 활성화된 것만
-    const [announcements, setAnnouncements] = useState<Announcement[]>(
-        isAdmin ? [...DUMMY_ANNOUNCEMENTS] : getActiveAnnouncements()
-    );
+    const { data: adminAnnouncements = [], isLoading: isAdminAnnouncementsLoading } = useAnnouncementsAdmin();
+    const { data: activeAnnouncements = [], isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements();
+    const createAnnouncement = useCreateAnnouncement();
+    const updateAnnouncement = useUpdateAnnouncement();
+    const deleteAnnouncement = useDeleteAnnouncement();
+    const toggleAnnouncementActive = useToggleAnnouncementActive();
+    const toggleAnnouncementBanner = useToggleAnnouncementBanner();
+
+    const announcements = isAdmin ? adminAnnouncements : activeAnnouncements;
+    const isAnnouncementsLoading = isAdmin ? isAdminAnnouncementsLoading : isActiveAnnouncementsLoading;
+    const isSubmitting = createAnnouncement.isPending || updateAnnouncement.isPending;
+    const isMutating =
+        isSubmitting ||
+        deleteAnnouncement.isPending ||
+        toggleAnnouncementActive.isPending ||
+        toggleAnnouncementBanner.isPending;
+
     const [viewMode, setViewMode] = useState<'list' | 'detail' | 'create' | 'edit'>('list');
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(
         initialAnnouncement || null
@@ -85,41 +107,59 @@ export default function AnnouncementPanel({
         setViewMode('edit');
     };
 
-    const handleDelete = (id: string) => {
-        if (confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
-            setAnnouncements(prev => prev.filter(a => a.id !== id));
-            toast.success('공지사항이 삭제되었습니다');
+    const handleDelete = async (id: string) => {
+        if (!confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
+            return;
+        }
+
+        try {
+            await deleteAnnouncement.mutateAsync(id);
+            if (selectedAnnouncement?.id === id) {
+                setSelectedAnnouncement(null);
+            }
             setViewMode('list');
+        } catch {
+            // mutation 훅에서 에러 토스트 처리
         }
     };
 
-    const handleToggleActive = (id: string) => {
-        setAnnouncements(prev =>
-            prev.map(a =>
-                a.id === id ? { ...a, isActive: !a.isActive, updatedAt: new Date().toISOString() } : a
-            )
-        );
-        // 상세보기 중인 공지사항도 업데이트
-        if (selectedAnnouncement?.id === id) {
-            setSelectedAnnouncement(prev => prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : null);
+    const handleToggleActive = async (id: string) => {
+        const target =
+            announcements.find((announcement) => announcement.id === id) ||
+            (selectedAnnouncement?.id === id ? selectedAnnouncement : null);
+        if (!target) return;
+
+        try {
+            await toggleAnnouncementActive.mutateAsync({ id, isActive: !target.isActive });
+            if (selectedAnnouncement?.id === id) {
+                setSelectedAnnouncement((prev) =>
+                    prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : null
+                );
+            }
+        } catch {
+            // mutation 훅에서 에러 토스트 처리
         }
-        toast.success('공지사항 상태가 변경되었습니다');
     };
 
-    const handleToggleBanner = (id: string) => {
-        setAnnouncements(prev =>
-            prev.map(a =>
-                a.id === id ? { ...a, showOnBanner: !a.showOnBanner, updatedAt: new Date().toISOString() } : a
-            )
-        );
-        // 상세보기 중인 공지사항도 업데이트
-        if (selectedAnnouncement?.id === id) {
-            setSelectedAnnouncement(prev => prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : null);
+    const handleToggleBanner = async (id: string) => {
+        const target =
+            announcements.find((announcement) => announcement.id === id) ||
+            (selectedAnnouncement?.id === id ? selectedAnnouncement : null);
+        if (!target) return;
+
+        try {
+            await toggleAnnouncementBanner.mutateAsync({ id, showOnBanner: !target.showOnBanner });
+            if (selectedAnnouncement?.id === id) {
+                setSelectedAnnouncement((prev) =>
+                    prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : null
+                );
+            }
+        } catch {
+            // mutation 훅에서 에러 토스트 처리
         }
-        toast.success('배너 노출 상태가 변경되었습니다');
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!formData.title.trim()) {
             toast.error('제목을 입력해주세요');
             return;
@@ -129,38 +169,21 @@ export default function AnnouncementPanel({
             return;
         }
 
-        const now = new Date().toISOString();
-
         if (viewMode === 'create') {
-            const newAnnouncement: Announcement = {
-                id: crypto.randomUUID(),
-                title: formData.title,
-                content: formData.content,
-                isActive: formData.isActive,
-                showOnBanner: formData.showOnBanner,
-                priority: formData.priority,
-                createdAt: now,
-                updatedAt: now,
-            };
-            setAnnouncements(prev => [newAnnouncement, ...prev]);
-            toast.success('공지사항이 작성되었습니다');
+            try {
+                await createAnnouncement.mutateAsync(formData);
+            } catch {
+                return;
+            }
         } else if (viewMode === 'edit' && selectedAnnouncement) {
-            setAnnouncements(prev =>
-                prev.map(a =>
-                    a.id === selectedAnnouncement.id
-                        ? {
-                            ...a,
-                            title: formData.title,
-                            content: formData.content,
-                            isActive: formData.isActive,
-                            showOnBanner: formData.showOnBanner,
-                            priority: formData.priority,
-                            updatedAt: now,
-                        }
-                        : a
-                )
-            );
-            toast.success('공지사항이 수정되었습니다');
+            try {
+                await updateAnnouncement.mutateAsync({
+                    id: selectedAnnouncement.id,
+                    data: formData,
+                });
+            } catch {
+                return;
+            }
         }
 
         resetForm();
@@ -182,15 +205,26 @@ export default function AnnouncementPanel({
         setViewMode('list');
     };
 
-    // 표시할 공지사항 (관리자: 우선순위 순, 사용자: 활성화된 것만)
-    const allDisplayAnnouncements = isAdmin
-        ? announcements.sort((a, b) => b.priority - a.priority)
-        : announcements.filter(a => a.isActive).sort((a, b) => b.priority - a.priority);
+    // 표시할 공지사항 (관리자: 전체, 사용자: 활성만)
+    const allDisplayAnnouncements = useMemo(() => {
+        const sorted = [...announcements].sort((a, b) => b.priority - a.priority);
+        return isAdmin ? sorted : sorted.filter((announcement) => announcement.isActive);
+    }, [announcements, isAdmin]);
 
     // 페이지네이션 계산
     const totalPages = Math.ceil(allDisplayAnnouncements.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const displayAnnouncements = allDisplayAnnouncements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+    useEffect(() => {
+        if (totalPages === 0) {
+            setCurrentPage(1);
+            return;
+        }
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
     return (
         <div className="h-full flex flex-col bg-background border-l border-border relative">
@@ -243,6 +277,7 @@ export default function AnnouncementPanel({
                             variant="outline"
                             size="sm"
                             onClick={handleCreate}
+                            disabled={isMutating}
                             className="gap-1"
                         >
                             <Plus className="h-4 w-4" />
@@ -265,7 +300,12 @@ export default function AnnouncementPanel({
                 {viewMode === 'list' && (
                     <ScrollArea className="h-full">
                         <div className="p-4 space-y-3">
-                            {displayAnnouncements.length === 0 ? (
+                            {isAnnouncementsLoading ? (
+                                <Card className="p-8 text-center">
+                                    <h3 className="text-lg font-semibold mb-2">공지사항을 불러오는 중입니다</h3>
+                                    <p className="text-sm text-muted-foreground">잠시만 기다려주세요.</p>
+                                </Card>
+                            ) : displayAnnouncements.length === 0 ? (
                                 <Card className="p-8 text-center">
                                     <div className="text-4xl mb-3">📢</div>
                                     <h3 className="text-lg font-semibold mb-2">공지사항이 없습니다</h3>
@@ -273,7 +313,7 @@ export default function AnnouncementPanel({
                                         {isAdmin ? '새 공지사항을 작성해보세요.' : '새로운 공지사항이 등록되면 여기에 표시됩니다.'}
                                     </p>
                                     {isAdmin && (
-                                        <Button onClick={handleCreate} className="gap-1">
+                                        <Button onClick={handleCreate} className="gap-1" disabled={isMutating}>
                                             <Plus className="h-4 w-4" />
                                             새 공지사항 작성
                                         </Button>
@@ -320,6 +360,7 @@ export default function AnnouncementPanel({
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleToggleActive(announcement.id)}
+                                                        disabled={isMutating}
                                                         className="gap-1 text-xs"
                                                     >
                                                         {announcement.isActive ? (
@@ -338,6 +379,7 @@ export default function AnnouncementPanel({
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleToggleBanner(announcement.id)}
+                                                        disabled={isMutating}
                                                         className={`gap-1 text-xs ${announcement.showOnBanner ? 'text-orange-600' : ''}`}
                                                     >
                                                         {announcement.showOnBanner ? (
@@ -356,6 +398,7 @@ export default function AnnouncementPanel({
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleEdit(announcement)}
+                                                        disabled={isMutating}
                                                         className="gap-1 text-xs"
                                                     >
                                                         <Edit2 className="h-3 w-3" />
@@ -365,6 +408,7 @@ export default function AnnouncementPanel({
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleDelete(announcement.id)}
+                                                        disabled={isMutating}
                                                         className="gap-1 text-xs text-destructive hover:text-destructive"
                                                     >
                                                         <Trash2 className="h-3 w-3" />
@@ -460,6 +504,7 @@ export default function AnnouncementPanel({
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleToggleActive(selectedAnnouncement.id)}
+                                                disabled={isMutating}
                                                 className="gap-1 text-xs"
                                             >
                                                 {selectedAnnouncement.isActive ? (
@@ -478,6 +523,7 @@ export default function AnnouncementPanel({
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleToggleBanner(selectedAnnouncement.id)}
+                                                disabled={isMutating}
                                                 className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
                                             >
                                                 {selectedAnnouncement.showOnBanner ? (
@@ -496,6 +542,7 @@ export default function AnnouncementPanel({
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleEdit(selectedAnnouncement)}
+                                                disabled={isMutating}
                                                 className="gap-1 text-xs"
                                             >
                                                 <Edit2 className="h-3 w-3" />
@@ -505,6 +552,7 @@ export default function AnnouncementPanel({
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleDelete(selectedAnnouncement.id)}
+                                                disabled={isMutating}
                                                 className="gap-1 text-xs text-destructive hover:text-destructive"
                                             >
                                                 <Trash2 className="h-3 w-3" />
@@ -594,15 +642,17 @@ export default function AnnouncementPanel({
                                 <Button
                                     variant="outline"
                                     onClick={handleCancel}
+                                    disabled={isSubmitting}
                                     className="flex-1"
                                 >
                                     취소
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
+                                    disabled={isSubmitting}
                                     className="flex-1 bg-red-800 hover:bg-red-900"
                                 >
-                                    {viewMode === 'create' ? '작성' : '저장'}
+                                    {isSubmitting ? '저장 중...' : viewMode === 'create' ? '작성' : '저장'}
                                 </Button>
                             </div>
                         </div>

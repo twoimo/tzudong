@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getBannerAnnouncements, Announcement } from '@/types/announcement';
+import { Announcement } from '@/types/announcement';
+import { useBannerAnnouncements } from '@/hooks/use-announcements';
 
 interface AnnouncementBannerProps {
     onAnnouncementClick: (announcement: Announcement) => void;
@@ -16,7 +17,7 @@ export default function AnnouncementBanner({
     onAnnouncementClick,
     rightPanelWidth = 0,
 }: AnnouncementBannerProps) {
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const { data: announcements = [] } = useBannerAnnouncements();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isVisible, setIsVisible] = useState(true);
     const [isDismissed, setIsDismissed] = useState(false);
@@ -28,11 +29,17 @@ export default function AnnouncementBanner({
         if (dismissed) {
             setIsDismissed(true);
         }
-
-        // 배너 공지사항 목록 가져오기
-        const bannerAnnouncements = getBannerAnnouncements();
-        setAnnouncements(bannerAnnouncements);
     }, []);
+
+    useEffect(() => {
+        if (announcements.length === 0) {
+            setCurrentIndex(0);
+            return;
+        }
+        if (currentIndex >= announcements.length) {
+            setCurrentIndex(0);
+        }
+    }, [announcements.length, currentIndex]);
 
     // 자동 순환
     useEffect(() => {
