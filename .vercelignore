@@ -1,0 +1,32 @@
+# Keep deploy payload small for Vercel CLI (avoid api-upload-free limits)
+.git/
+.github/
+.vscode/
+.agent/
+
+# Local build/output
+.next/
+.turbo/
+dist/
+
+# Local dependencies (Vercel installs during build)
+node_modules/
+
+# Monorepo explicit paths (Root Directory is apps/web)
+apps/web/node_modules/
+apps/web/.next/
+apps/web/playwright-report/
+apps/web/test-results/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Local env files
+.env
+.env.*
+
+# Backend/infra not needed for the Next.js web build
+backend/
+supabase/
+docs/

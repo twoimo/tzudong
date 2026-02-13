@@ -1,0 +1,11 @@
+# Vercel CLI deployment ignores (apps/web is the project Root Directory)
+node_modules/
+.next/
+.turbo/
+dist/
+
+playwright-report/
+test-results/
+
+.env
+.env.*

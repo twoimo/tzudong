@@ -375,14 +375,17 @@ export function SubmissionDetailView({
 
         setGeocodingGoogle(true);
         try {
-            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-            if (!apiKey) throw new Error('Google Maps API key not found');
-
             const searchQuery = `${name} ${address}`;
             const response = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}`
+                `/api/google-geocode?address=${encodeURIComponent(searchQuery)}&language=ko`
             );
             const data = await response.json();
+
+            if (!response.ok) {
+                const errorStatus = data?.status || 'UNKNOWN_ERROR';
+                const errorMsg = data?.error_message || data?.error || 'Google 지오코딩 요청 실패';
+                throw new Error(`Google API 오류: ${errorStatus} (${errorMsg})`);
+            }
 
             if (data.status === 'OK' && data.results.length > 0) {
                 const results: GeocodingResult[] = data.results.slice(0, 3).map((result: any) => ({
@@ -397,11 +400,15 @@ export function SubmissionDetailView({
                 setAddressChanged(false);
                 setInitialAddress(address);
                 toast.success(`${results.length}개의 주소 후보를 찾았습니다`);
-            } else {
+            } else if (data.status === 'ZERO_RESULTS') {
                 toast.error('주소를 찾을 수 없습니다');
+            } else {
+                const errorMsg = data?.error_message || data?.status || 'Google 지오코딩에 실패했습니다';
+                throw new Error(errorMsg);
             }
-        } catch (error) {
-            toast.error('Google 지오코딩에 실패했습니다');
+        } catch (error: any) {
+            console.error('Google Geocoding error:', error);
+            toast.error(error?.message || 'Google 지오코딩에 실패했습니다');
         } finally {
             setGeocodingGoogle(false);
         }
