@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -49,6 +49,15 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+    ADMIN_MODAL_ACTION,
+    ADMIN_MODAL_CONTENT_MD_FLEX,
+    ADMIN_MODAL_CONTENT_SM,
+    ADMIN_MODAL_FOOTER,
+    ADMIN_MODAL_FOOTER_DIVIDER,
+    ADMIN_MODAL_SCROLL_BODY,
+    ADMIN_MODAL_SCROLL_BODY_COMPACT,
+} from './admin-modal-styles';
 
 // Supabase Storage에서 리뷰 사진 public URL 생성
 function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
@@ -125,19 +134,21 @@ export interface Review {
 }
 
 // 리뷰 사진 아이템 컴포넌트 (로딩 스피너 포함)
-function ReviewPhotoItem({
-    src,
-    alt,
-    label,
-    labelVariant,
-    onClick,
-}: {
+interface ReviewPhotoItemProps {
     src: string;
     alt: string;
     label: string;
     labelVariant: 'receipt' | 'food';
     onClick: () => void;
-}) {
+}
+
+const ReviewPhotoItem = memo(function ReviewPhotoItem({
+    src,
+    alt,
+    label,
+    labelVariant,
+    onClick,
+}: ReviewPhotoItemProps) {
     const [isLoading, setIsLoading] = useState(true);
 
     // 영수증은 세로로 길게, 음식 사진은 정사각형에 가깝게
@@ -164,7 +175,10 @@ function ReviewPhotoItem({
                     isReceipt ? "h-48 max-w-64" : "h-32 max-w-48",
                     isLoading ? "opacity-0" : "opacity-100"
                 )}
+                loading="lazy"
+                decoding="async"
                 onLoad={() => setIsLoading(false)}
+                onError={() => setIsLoading(false)}
             />
             <Badge
                 variant={labelVariant === 'receipt' ? 'default' : 'secondary'}
@@ -177,7 +191,12 @@ function ReviewPhotoItem({
             </Badge>
         </div>
     );
-}
+}, (prev, next) =>
+    prev.src === next.src &&
+    prev.alt === next.alt &&
+    prev.label === next.label &&
+    prev.labelVariant === next.labelVariant
+);
 
 interface SubmissionListViewProps {
     submissions: SubmissionRecord[];
@@ -647,6 +666,64 @@ export function SubmissionListView({
         , [submissions]);
 
     const reviewPendingCount = useMemo(() => pendingReviews.length, [pendingReviews]);
+    const currentTabSummary = useMemo(() => {
+        if (activeTab === 'new') {
+            return {
+                label: '신규',
+                pending: newPendingCount,
+                approved: newApprovedCount,
+                rejected: newRejectedCount,
+                total: newSubmissions.length,
+            };
+        }
+
+        if (activeTab === 'edit') {
+            return {
+                label: '수정',
+                pending: editPendingCount,
+                approved: editApprovedCount,
+                rejected: editRejectedCount,
+                total: editSubmissions.length,
+            };
+        }
+
+        return {
+            label: '리뷰',
+            pending: pendingReviews.length,
+            approved: approvedReviews.length,
+            rejected: rejectedReviews.length,
+            total: reviews.length,
+        };
+    }, [
+        activeTab,
+        newPendingCount,
+        newApprovedCount,
+        newRejectedCount,
+        newSubmissions.length,
+        editPendingCount,
+        editApprovedCount,
+        editRejectedCount,
+        editSubmissions.length,
+        pendingReviews.length,
+        approvedReviews.length,
+        rejectedReviews.length,
+        reviews.length,
+    ]);
+    const tabTriggerClassName = cn(
+        "h-8 gap-1.5 px-2 text-[11px] xl:h-9 xl:min-w-[128px] xl:justify-center xl:px-3 xl:text-sm",
+        isMobile && "justify-center gap-1"
+    );
+    const summaryBadgeBaseClassName = "px-2 py-0 text-[11px] leading-none tabular-nums xl:px-2.5 xl:text-sm";
+    const summaryBadgeWithIconClassName = cn(summaryBadgeBaseClassName, "gap-1");
+    const summaryLabelClassName = "text-[11px] text-muted-foreground xl:text-sm";
+    const getTabCountBadgeVariant = (count: number) => (count > 0 ? "secondary" : "outline");
+    const getTabCountBadgeClassName = (count: number) =>
+        cn(
+            "ml-1 min-w-[20px] justify-center px-1.5 py-0 text-[11px] leading-none tabular-nums xl:text-sm",
+            count > 0 ? "bg-yellow-100 text-yellow-700" : "border-border bg-muted text-muted-foreground",
+            isMobile && "ml-0 min-w-[18px] px-1"
+        );
+
     const orderedReviews = useMemo(
         () => [...pendingReviews, ...approvedReviews, ...rejectedReviews],
         [pendingReviews, approvedReviews, rejectedReviews]
@@ -678,7 +755,7 @@ export function SubmissionListView({
 
         if (isPending) {
             return (
-                <Badge variant="secondary" className="text-xs gap-1">
+                <Badge variant="secondary" className="gap-1 text-xs xl:text-sm">
                     <Clock className="h-3 w-3" /> 대기
                 </Badge>
             );
@@ -686,7 +763,7 @@ export function SubmissionListView({
 
         if (isApproved) {
             return (
-                <Badge className="bg-green-500 text-xs gap-1">
+                <Badge className="gap-1 bg-green-500 text-xs xl:text-sm">
                     <CheckCircle2 className="h-3 w-3" /> 승인
                 </Badge>
             );
@@ -694,7 +771,7 @@ export function SubmissionListView({
 
         if (isRejected) {
             return (
-                <Badge variant="destructive" className="text-xs gap-1">
+                <Badge variant="destructive" className="gap-1 text-xs xl:text-sm">
                     <XCircle className="h-3 w-3" /> 거부
                 </Badge>
             );
@@ -1023,112 +1100,82 @@ export function SubmissionListView({
 
     return (
         <TooltipProvider>
-            <div className="flex h-full flex-col">
+            <div className="flex flex-col">
                 {/* 탭 헤더 */}
                 <div className="mx-2 mb-3 shrink-0 border-b pb-3 sm:mx-4">
                     <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                         {/* 왼쪽: 현재 탭 상태 카운트 */}
-                        <div className={cn("flex flex-wrap items-center gap-2 text-xs sm:text-sm", isMobile && "gap-1.5")}>
+                        <div className={cn("flex flex-wrap items-center gap-1.5", isMobile && "gap-1")}>
                             {isMobile ? (
                                 <>
-                                    {activeTab === 'new' && (
+                                    <Badge variant="secondary" className={summaryBadgeWithIconClassName}>
+                                        <Clock className="h-3 w-3" /> 대기 {currentTabSummary.pending}
+                                    </Badge>
+                                    <Badge variant="outline" className={summaryBadgeBaseClassName}>
+                                        전체 {currentTabSummary.total}
+                                    </Badge>
+                                    {activeTab === 'reviews' && ocrStatus && (
                                         <>
-                                            <Badge variant="secondary" className="text-xs gap-1">
-                                                <Clock className="h-3 w-3" /> 대기 {newPendingCount}
+                                            <Badge variant="outline" className={summaryBadgeBaseClassName}>OCR 대기 {ocrStatus.pending}</Badge>
+                                            <Badge variant="destructive" className={summaryBadgeWithIconClassName}>
+                                                <AlertTriangle className="h-3 w-3" />
+                                                중복 {ocrStatus.duplicate}
                                             </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                전체 {newSubmissions.length}
-                                            </Badge>
-                                        </>
-                                    )}
-                                    {activeTab === 'edit' && (
-                                        <>
-                                            <Badge variant="secondary" className="text-xs gap-1">
-                                                <Clock className="h-3 w-3" /> 대기 {editPendingCount}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                전체 {editSubmissions.length}
-                                            </Badge>
-                                        </>
-                                    )}
-                                    {activeTab === 'reviews' && (
-                                        <>
-                                            <Badge variant="secondary" className="text-xs gap-1">
-                                                <Clock className="h-3 w-3" /> 대기 {pendingReviews.length}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                전체 {reviews.length}
-                                            </Badge>
-                                            {ocrStatus && (
-                                                <Badge variant="outline" className="text-xs">
-                                                    OCR 대기 {ocrStatus.pending}
-                                                </Badge>
-                                            )}
                                         </>
                                     )}
                                 </>
                             ) : (
                                 <>
-                                    {activeTab === 'new' && (
+                                    <span className={summaryLabelClassName}>{currentTabSummary.label}:</span>
+                                    <Badge variant="secondary" className={summaryBadgeWithIconClassName}>
+                                        <Clock className="h-3 w-3" /> 대기 {currentTabSummary.pending}
+                                    </Badge>
+                                    <Badge className={cn(summaryBadgeWithIconClassName, "bg-green-500")}>
+                                        <CheckCircle2 className="h-3 w-3" /> 승인 {currentTabSummary.approved}
+                                    </Badge>
+                                    <Badge variant="destructive" className={summaryBadgeWithIconClassName}>
+                                        <XCircle className="h-3 w-3" /> 거부 {currentTabSummary.rejected}
+                                    </Badge>
+                                    <Badge variant="outline" className={summaryBadgeBaseClassName}>
+                                        전체 {currentTabSummary.total}
+                                    </Badge>
+                                    {activeTab === 'reviews' && ocrStatus && (
                                         <>
-                                            <span className="text-muted-foreground text-xs">신규:</span>
-                                            <Badge variant="secondary" className="text-xs gap-1">
-                                                <Clock className="h-3 w-3" /> 대기 {newPendingCount}
-                                            </Badge>
-                                            <Badge className="bg-green-500 text-xs gap-1">
-                                                <CheckCircle2 className="h-3 w-3" /> 승인 {newApprovedCount}
-                                            </Badge>
-                                            <Badge variant="destructive" className="text-xs gap-1">
-                                                <XCircle className="h-3 w-3" /> 거부 {newRejectedCount}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                전체 {newSubmissions.length}
-                                            </Badge>
-                                        </>
-                                    )}
-                                    {activeTab === 'edit' && (
-                                        <>
-                                            <span className="text-muted-foreground text-xs">수정:</span>
-                                            <Badge variant="secondary" className="text-xs gap-1">
-                                                <Clock className="h-3 w-3" /> 대기 {editPendingCount}
-                                            </Badge>
-                                            <Badge className="bg-green-500 text-xs gap-1">
-                                                <CheckCircle2 className="h-3 w-3" /> 승인 {editApprovedCount}
-                                            </Badge>
-                                            <Badge variant="destructive" className="text-xs gap-1">
-                                                <XCircle className="h-3 w-3" /> 거부 {editRejectedCount}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                전체 {editSubmissions.length}
+                                            <span className={cn("ml-2", summaryLabelClassName)}>OCR:</span>
+                                            <Badge variant="outline" className={summaryBadgeBaseClassName}>대기 {ocrStatus.pending}</Badge>
+                                            <Badge variant="destructive" className={summaryBadgeWithIconClassName}>
+                                                <AlertTriangle className="h-3 w-3" />
+                                                중복 {ocrStatus.duplicate}
                                             </Badge>
                                         </>
                                     )}
                                     {activeTab === 'reviews' && (
-                                        <>
-                                            <span className="text-muted-foreground text-xs">리뷰:</span>
-                                            <Badge variant="secondary" className="text-xs gap-1">
-                                                <Clock className="h-3 w-3" /> 대기 {pendingReviews.length}
-                                            </Badge>
-                                            <Badge className="bg-green-500 text-xs gap-1">
-                                                <CheckCircle2 className="h-3 w-3" /> 승인 {approvedReviews.length}
-                                            </Badge>
-                                            <Badge variant="destructive" className="text-xs gap-1">
-                                                <XCircle className="h-3 w-3" /> 거부 {rejectedReviews.length}
-                                            </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                전체 {reviews.length}
-                                            </Badge>
-                                            {ocrStatus && (
-                                                <>
-                                                    <span className="text-muted-foreground text-xs ml-2">OCR:</span>
-                                                    <Badge variant="outline" className="text-xs">대기 {ocrStatus.pending}</Badge>
-                                                    <Badge variant="destructive" className="text-xs gap-1">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        중복 {ocrStatus.duplicate}
-                                                    </Badge>
-                                                </>
-                                            )}
-                                        </>
+                                        <div className="ml-1 flex items-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleRunOcr}
+                                                disabled={isOcrRunning || (ocrStatus?.pending === 0)}
+                                                className="h-8 gap-1 text-xs xl:h-9 xl:px-3 xl:text-sm"
+                                            >
+                                                {isOcrRunning ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                    <ScanSearch className="h-3 w-3" />
+                                                )}
+                                                {isOcrRunning ? '처리중...' : 'OCR 실행'}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleResetAllOcr}
+                                                disabled={isOcrRunning}
+                                                className="h-8 gap-1 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 xl:h-9 xl:px-3 xl:text-sm dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30"
+                                            >
+                                                <RefreshCw className="h-3 w-3" />
+                                                전체 다시 실행
+                                            </Button>
+                                        </div>
                                     )}
                                 </>
                             )}
@@ -1140,55 +1187,58 @@ export function SubmissionListView({
                                     variant={activeTab === 'new' ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => setActiveTab('new')}
-                                    className={cn("gap-2", isMobile && "h-9 justify-center gap-1 px-2 text-xs")}
+                                    className={tabTriggerClassName}
                                 >
                                     <Youtube className="h-4 w-4" />
                                     <span>{isMobile ? '신규' : '신규 제보'}</span>
-                                    {newCount > 0 && (
-                                        <Badge variant="secondary" className={cn("ml-1 bg-yellow-100 text-yellow-700", isMobile && "ml-0 px-1 text-[10px]")}>
-                                            {newCount}
-                                        </Badge>
-                                    )}
+                                    <Badge
+                                        variant={getTabCountBadgeVariant(newCount)}
+                                        className={getTabCountBadgeClassName(newCount)}
+                                    >
+                                        {newCount}
+                                    </Badge>
                                 </Button>
                                 <Button
                                     variant={activeTab === 'edit' ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => setActiveTab('edit')}
-                                    className={cn("gap-2", isMobile && "h-9 justify-center gap-1 px-2 text-xs")}
+                                    className={tabTriggerClassName}
                                 >
                                     <Edit className="h-4 w-4" />
                                     <span>{isMobile ? '수정' : '수정 요청'}</span>
-                                    {editCount > 0 && (
-                                        <Badge variant="secondary" className={cn("ml-1 bg-yellow-100 text-yellow-700", isMobile && "ml-0 px-1 text-[10px]")}>
-                                            {editCount}
-                                        </Badge>
-                                    )}
+                                    <Badge
+                                        variant={getTabCountBadgeVariant(editCount)}
+                                        className={getTabCountBadgeClassName(editCount)}
+                                    >
+                                        {editCount}
+                                    </Badge>
                                 </Button>
                                 <Button
                                     variant={activeTab === 'reviews' ? 'default' : 'outline'}
                                     size="sm"
                                     onClick={() => setActiveTab('reviews')}
-                                    className={cn("gap-2", isMobile && "h-9 justify-center gap-1 px-2 text-xs")}
+                                    className={tabTriggerClassName}
                                 >
                                     <MessageSquare className="h-4 w-4" />
                                     <span>{isMobile ? '리뷰' : '리뷰 검수'}</span>
-                                    {reviewPendingCount > 0 && (
-                                        <Badge variant="secondary" className={cn("ml-1 bg-yellow-100 text-yellow-700", isMobile && "ml-0 px-1 text-[10px]")}>
-                                            {reviewPendingCount}
-                                        </Badge>
-                                    )}
+                                    <Badge
+                                        variant={getTabCountBadgeVariant(reviewPendingCount)}
+                                        className={getTabCountBadgeClassName(reviewPendingCount)}
+                                    >
+                                        {reviewPendingCount}
+                                    </Badge>
                                 </Button>
                             </div>
                         </div>
 
-                        {activeTab === 'reviews' && (
-                            <div className={cn("flex items-center gap-2", isMobile && "grid grid-cols-2 gap-1")}>
+                        {activeTab === 'reviews' && isMobile && (
+                            <div className="grid grid-cols-2 gap-1">
                                 <Button
                                     size="sm"
                                     variant="outline"
                                     onClick={handleRunOcr}
                                     disabled={isOcrRunning || (ocrStatus?.pending === 0)}
-                                    className={cn("gap-1 h-7 text-xs", isMobile && "h-8 justify-center")}
+                                    className="h-8 justify-center gap-1 text-[11px]"
                                 >
                                     {isOcrRunning ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -1203,8 +1253,7 @@ export function SubmissionListView({
                                     onClick={handleResetAllOcr}
                                     disabled={isOcrRunning}
                                     className={cn(
-                                        "gap-1 h-7 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30",
-                                        isMobile && "h-8 justify-center"
+                                        "h-8 justify-center gap-1 text-[11px] text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30"
                                     )}
                                 >
                                     <RefreshCw className="h-3 w-3" />
@@ -1217,7 +1266,7 @@ export function SubmissionListView({
 
                 {/* 테이블 또는 리뷰 목록 */}
                 {activeTab === 'reviews' ? (
-                    <div className="mx-2 flex-1 overflow-auto rounded-lg border sm:mx-4">
+                    <div className="mx-2 rounded-lg border sm:mx-4">
                         {reviewsLoading ? (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="w-8 h-8 animate-spin" />
@@ -1228,7 +1277,14 @@ export function SubmissionListView({
                                 <p>검수할 리뷰가 없습니다.</p>
                             </div>
                         ) : (
-                            <div className={cn("space-y-2 p-2", !isMobile && "p-3")}>
+                            <div
+                                className={cn(
+                                    "space-y-2 p-2",
+                                    isMobile
+                                        ? "pb-[calc(var(--mobile-bottom-nav-height,76px)+env(safe-area-inset-bottom)+12px)]"
+                                        : "space-y-3 p-4 pb-8"
+                                )}
+                            >
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -1236,7 +1292,7 @@ export function SubmissionListView({
                                         placeholder="맛집명, 리뷰 내용 검색..."
                                         value={reviewSearchQuery}
                                         onChange={(e) => setReviewSearchQuery(e.target.value)}
-                                        className="h-9 pl-8 pr-8 text-sm"
+                                        className="h-9 pl-8 pr-8 text-sm xl:h-10 xl:text-base"
                                     />
                                     {reviewSearchQuery && (
                                         <Button
@@ -1261,7 +1317,7 @@ export function SubmissionListView({
                                             <Card
                                                 key={review.id}
                                                 className={cn(
-                                                    "cursor-pointer p-3 transition-colors",
+                                                    "cursor-pointer p-3 transition-colors xl:p-4",
                                                     review.is_duplicate && "border-red-200 bg-red-50/80 dark:border-red-900/50 dark:bg-red-950/30",
                                                     !review.is_duplicate && isApproved && "border-green-200 bg-green-50/80 dark:border-green-900/50 dark:bg-green-950/30",
                                                     !review.is_duplicate && isRejected && "border-red-100 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20"
@@ -1272,16 +1328,16 @@ export function SubmissionListView({
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-1">
                                                             <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                                            <p className="truncate text-sm font-medium">{review.restaurants?.name || '알 수 없음'}</p>
+                                                            <p className="truncate text-sm font-medium xl:text-base">{review.restaurants?.name || '알 수 없음'}</p>
                                                         </div>
-                                                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground xl:text-sm">
                                                             {review.content?.slice(0, 120) || '내용 없음'}
                                                         </p>
                                                     </div>
                                                     <div className="shrink-0">{renderReviewStatusBadge(review)}</div>
                                                 </div>
 
-                                                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                                                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground xl:text-sm">
                                                     <span>{new Date(review.visited_at).toLocaleDateString('ko-KR')}</span>
                                                     <span>{review.profiles?.nickname || '익명'}</span>
                                                 </div>
@@ -1291,7 +1347,7 @@ export function SubmissionListView({
                                                         <>
                                                             <Button
                                                                 size="sm"
-                                                                className="h-8 bg-green-500 px-2 text-xs hover:bg-green-600 disabled:opacity-50"
+                                                                className="h-8 bg-green-500 px-2 text-xs hover:bg-green-600 disabled:opacity-50 xl:h-9 xl:px-3 xl:text-sm"
                                                                 onClick={() => handleReviewAction('approve', review)}
                                                                 disabled={review.is_duplicate}
                                                                 title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
@@ -1301,7 +1357,7 @@ export function SubmissionListView({
                                                             <Button
                                                                 size="sm"
                                                                 variant="destructive"
-                                                                className="h-8 px-2 text-xs"
+                                                                className="h-8 px-2 text-xs xl:h-9 xl:px-3 xl:text-sm"
                                                                 onClick={() => handleReviewAction('reject', review)}
                                                             >
                                                                 거부
@@ -1312,7 +1368,7 @@ export function SubmissionListView({
                                                         <Button
                                                             size="sm"
                                                             variant="destructive"
-                                                            className="h-8 px-2 text-xs"
+                                                            className="h-8 px-2 text-xs xl:h-9 xl:px-3 xl:text-sm"
                                                             onClick={() => handleReviewAction('reject', review)}
                                                         >
                                                             취소
@@ -1321,7 +1377,7 @@ export function SubmissionListView({
                                                     {isRejected && (
                                                         <Button
                                                             size="sm"
-                                                            className="h-8 bg-green-500 px-2 text-xs hover:bg-green-600 disabled:opacity-50"
+                                                            className="h-8 bg-green-500 px-2 text-xs hover:bg-green-600 disabled:opacity-50 xl:h-9 xl:px-3 xl:text-sm"
                                                             onClick={() => handleReviewAction('approve', review)}
                                                             disabled={review.is_duplicate}
                                                             title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
@@ -1346,14 +1402,21 @@ export function SubmissionListView({
                         )}
                     </div>
                 ) : (
-                    <div className="mx-2 flex-1 overflow-auto rounded-lg border sm:mx-4">
+                    <div className="mx-2 rounded-lg border sm:mx-4">
                         {filteredSubmissions.length === 0 && !searchQuery ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <AlertCircle className="w-10 h-10 mb-3" />
                                 <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
                             </div>
                         ) : (
-                            <div className={cn("space-y-2 p-2", !isMobile && "p-3")}>
+                            <div
+                                className={cn(
+                                    "space-y-2 p-2",
+                                    isMobile
+                                        ? "pb-[calc(var(--mobile-bottom-nav-height,76px)+env(safe-area-inset-bottom)+12px)]"
+                                        : "p-3 pb-6"
+                                )}
+                            >
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -1459,10 +1522,10 @@ export function SubmissionListView({
                 )}
                 {/* 상세/승인 모달 */}
                 <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`}>
                         {selectedSubmission && (
                             <>
-                                <DialogHeader className="shrink-0">
+                                <DialogHeader className="border-b pb-3">
                                     <div className="flex items-center gap-2">
                                         <DialogTitle className="text-lg font-semibold">
                                             {selectedSubmission.restaurant_name}
@@ -1477,53 +1540,79 @@ export function SubmissionListView({
                                     </DialogDescription>
                                 </DialogHeader>
 
-                                <div className="flex-1 overflow-auto -mx-6 px-6">
-                                    <SubmissionDetailView
-                                        submission={selectedSubmission}
-                                        approvalData={approvalData}
-                                        onApprovalDataChange={setApprovalData}
-                                        geocodingResults={geocodingResults}
-                                        onGeocodingResultsChange={setGeocodingResults}
-                                        selectedGeocodingIndex={selectedGeocodingIndex}
-                                        onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
-                                        itemDecisions={itemDecisions}
-                                        onItemDecisionsChange={setItemDecisions}
-                                        forceApprove={forceApprove}
-                                        onForceApproveChange={setForceApprove}
-                                        editableData={editableData}
-                                        onEditableDataChange={handleEditableDataChange}
-                                        naverSearchResults={naverSearchResults}
-                                        naverSearchLoading={naverSearchLoading}
-                                        onVerifyNaverSearch={handleNaverSearchAndVerify}
-                                        onGeocodingSelect={handleGeocodingSelect}
-                                    />
+                                <div className="min-h-0 flex-1 overflow-y-auto pt-4 pr-1">
+                                    <div className="space-y-3 pb-2">
+                                        <Card className="bg-muted/40 p-3">
+                                            <div className="grid grid-cols-1 gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+                                                <p className="truncate">
+                                                    <span className="font-medium text-foreground">주소:</span> {selectedSubmission.restaurant_address || '-'}
+                                                </p>
+                                                <p className="truncate">
+                                                    <span className="font-medium text-foreground">제보자:</span> {selectedSubmission.profiles?.nickname || '익명'}
+                                                </p>
+                                                <p className="truncate">
+                                                    <span className="font-medium text-foreground">연락처:</span> {selectedSubmission.restaurant_phone || '-'}
+                                                </p>
+                                                <p className="truncate">
+                                                    <span className="font-medium text-foreground">등록일:</span> {new Date(selectedSubmission.created_at).toLocaleDateString('ko-KR')}
+                                                </p>
+                                            </div>
+                                        </Card>
+
+                                        <div className="rounded-lg border bg-muted/20 p-2 sm:p-3">
+                                            <SubmissionDetailView
+                                                submission={selectedSubmission}
+                                                approvalData={approvalData}
+                                                onApprovalDataChange={setApprovalData}
+                                                geocodingResults={geocodingResults}
+                                                onGeocodingResultsChange={setGeocodingResults}
+                                                selectedGeocodingIndex={selectedGeocodingIndex}
+                                                onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
+                                                itemDecisions={itemDecisions}
+                                                onItemDecisionsChange={setItemDecisions}
+                                                forceApprove={forceApprove}
+                                                onForceApproveChange={setForceApprove}
+                                                editableData={editableData}
+                                                onEditableDataChange={handleEditableDataChange}
+                                                naverSearchResults={naverSearchResults}
+                                                naverSearchLoading={naverSearchLoading}
+                                                onVerifyNaverSearch={handleNaverSearchAndVerify}
+                                                onGeocodingSelect={handleGeocodingSelect}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* 푸터 */}
                                 {(selectedSubmission.status === 'pending' || selectedSubmission.status === 'partially_approved') && (
-                                    <DialogFooter className="shrink-0 pt-4 border-t">
+                                    <DialogFooter className={`${ADMIN_MODAL_FOOTER_DIVIDER} shrink-0 bg-background`}>
                                         <Button
                                             type="button"
                                             variant="outline"
+                                            size="sm"
                                             onClick={() => setIsDetailModalOpen(false)}
                                             disabled={loading}
+                                            className={ADMIN_MODAL_ACTION}
                                         >
                                             취소
                                         </Button>
                                         <Button
                                             type="button"
-                                            variant="outline"
+                                            size="sm"
+                                            variant="destructive"
                                             onClick={() => setShowRejectModal(true)}
                                             disabled={loading}
-                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                            className={ADMIN_MODAL_ACTION}
                                         >
                                             <XCircle className="w-4 h-4 mr-2" />
                                             전체 거부
                                         </Button>
                                         <Button
+                                            size="sm"
                                             onClick={handleApprove}
                                             disabled={loading || !canApprove}
                                             title={!canApprove ? '지오코딩 완료 및 선택된 항목의 메타데이터를 가져와주세요' : '승인'}
+                                            className={ADMIN_MODAL_ACTION}
                                         >
                                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                             승인
@@ -1537,7 +1626,7 @@ export function SubmissionListView({
 
                 {/* 검증 실패 경고 모달 */}
                 <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
-                    <DialogContent>
+                    <DialogContent className={ADMIN_MODAL_CONTENT_SM}>
                         <DialogHeader>
                             <DialogTitle className="text-amber-600 flex items-center gap-2">
                                 <AlertCircle className="h-5 w-5" />
@@ -1550,7 +1639,7 @@ export function SubmissionListView({
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="py-4 space-y-4">
+                        <div className={`py-4 space-y-4 ${ADMIN_MODAL_SCROLL_BODY}`}>
                             <div className="bg-slate-50 p-3 rounded-md border text-sm">
                                 <p className="font-semibold mb-1">입력된 정보:</p>
                                 <p>이름: {editableData.name}</p>
@@ -1577,18 +1666,18 @@ export function SubmissionListView({
                             )}
                         </div>
 
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setShowWarningModal(false)}>
+                        <DialogFooter className={ADMIN_MODAL_FOOTER}>
+                            <Button variant="outline" onClick={() => setShowWarningModal(false)} className={ADMIN_MODAL_ACTION}>
                                 취소 (수정하기)
                             </Button>
                             <Button
-                                className="bg-amber-600 hover:bg-amber-700"
                                 onClick={() => {
                                     setShowWarningModal(false);
                                     setVerificationDone(true); // 강제 승인 처리
                                     onApprove(selectedSubmission!, approvalData, itemDecisions, forceApprove, editableData);
                                     closeDetailModal();
                                 }}
+                                className={`${ADMIN_MODAL_ACTION} bg-amber-600 hover:bg-amber-700`}
                             >
                                 무시하고 승인
                             </Button>
@@ -1598,14 +1687,14 @@ export function SubmissionListView({
 
                 {/* 거부 모달 */}
                 <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
-                    <DialogContent>
+                    <DialogContent className={ADMIN_MODAL_CONTENT_SM}>
                         <DialogHeader>
                             <DialogTitle>제보 전체 거부</DialogTitle>
                             <DialogDescription>
                                 거부 사유를 입력해주세요. 모든 항목이 거부됩니다.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4 py-4">
+                        <div className={`space-y-4 py-4 ${ADMIN_MODAL_SCROLL_BODY_COMPACT}`}>
                             <div className="space-y-2">
                                 <Label htmlFor="rejection-reason">거부 사유</Label>
                                 <Textarea
@@ -1617,14 +1706,15 @@ export function SubmissionListView({
                                 />
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setShowRejectModal(false)}>
+                        <DialogFooter className={ADMIN_MODAL_FOOTER}>
+                            <Button variant="outline" onClick={() => setShowRejectModal(false)} className={ADMIN_MODAL_ACTION}>
                                 취소
                             </Button>
                             <Button
                                 variant="destructive"
                                 onClick={handleReject}
                                 disabled={!rejectionReason.trim() || loading}
+                                className={ADMIN_MODAL_ACTION}
                             >
                                 {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                 전체 거부
@@ -1635,10 +1725,10 @@ export function SubmissionListView({
 
                 {/* 리뷰 승인/거부 모달 */}
                 <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
-                    <DialogContent className="max-w-lg">
-                        <DialogHeader>
+                    <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`}>
+                        <DialogHeader className="shrink-0">
                             <DialogTitle>
-                                {reviewAction === 'approve' ? '✅ 리뷰 승인' : '❌ 리뷰 거부'}
+                                {reviewAction === 'approve' ? '리뷰 승인' : '리뷰 거부'}
                             </DialogTitle>
                             <DialogDescription>
                                 리뷰를 {reviewAction === 'approve' ? '승인' : '거부'}합니다
@@ -1646,7 +1736,9 @@ export function SubmissionListView({
                         </DialogHeader>
 
                         {selectedReview && (
-                            <div className="space-y-4 mt-4 max-h-[60vh] overflow-y-auto">
+                            <>
+                            <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                            <div className="space-y-4 pb-2">
                                 {/* 리뷰 기본 정보 */}
                                 <Card className="p-3 bg-muted/50">
                                     <div className="space-y-2 text-sm">
@@ -1687,7 +1779,7 @@ export function SubmissionListView({
 
                                 {/* 사진 (영수증 + 음식 사진 통합) */}
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium">📷 제출된 사진</Label>
+                                    <Label className="text-sm font-medium">제출된 사진</Label>
                                     {(!selectedReview.verification_photo && (!selectedReview.food_photos || selectedReview.food_photos.length === 0)) ? (
                                         <div className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
                                             제출된 사진이 없습니다
@@ -1699,7 +1791,7 @@ export function SubmissionListView({
                                                 <ReviewPhotoItem
                                                     src={getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at)}
                                                     alt="영수증"
-                                                    label="🧾 영수증"
+                                                    label="영수증"
                                                     labelVariant="receipt"
                                                     onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at), alt: '영수증' })}
                                                 />
@@ -1877,8 +1969,11 @@ export function SubmissionListView({
                                     />
                                 </div>
 
-                                <DialogFooter className="gap-2 sm:gap-0">
-                                    <Button variant="outline" onClick={() => setShowReviewModal(false)}>
+                            </div>
+                            </div>
+
+                            <DialogFooter className={`${ADMIN_MODAL_FOOTER_DIVIDER} sticky bottom-0 z-10 shrink-0 bg-background`}>
+                                    <Button variant="outline" onClick={() => setShowReviewModal(false)} className={ADMIN_MODAL_ACTION}>
                                         취소
                                     </Button>
                                     <Button
@@ -1892,6 +1987,7 @@ export function SubmissionListView({
                                             }
                                         }}
                                         disabled={!reviewAdminNote.trim()}
+                                        className={ADMIN_MODAL_ACTION}
                                     >
                                         거부
                                     </Button>
@@ -1901,19 +1997,19 @@ export function SubmissionListView({
                                             setTimeout(() => handleConfirmReviewAction(), 0);
                                         }}
                                         disabled={selectedReview?.is_duplicate}
-                                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50"
+                                        className={`${ADMIN_MODAL_ACTION} bg-green-500 hover:bg-green-600 disabled:opacity-50`}
                                     >
                                         {selectedReview?.is_duplicate ? '중복 - 승인불가' : '승인'}
                                     </Button>
-                                </DialogFooter>
-                            </div>
+                            </DialogFooter>
+                            </>
                         )}
                     </DialogContent>
                 </Dialog>
 
                 {/* 이미지 확대 모달 */}
                 <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-                    <DialogContent className="max-w-fit max-h-[90vh] p-0 border-none bg-transparent shadow-none [&>button]:hidden">
+                    <DialogContent className="w-[calc(100vw-2rem)] sm:w-auto max-w-[min(92vw,960px)] max-h-[90dvh] rounded-xl p-2 sm:p-3 [&>button]:hidden">
                         <DialogHeader className="sr-only">
                             <DialogTitle>{previewImage?.alt}</DialogTitle>
                         </DialogHeader>
@@ -1922,7 +2018,7 @@ export function SubmissionListView({
                                 <img
                                     src={previewImage.url}
                                     alt={previewImage.alt}
-                                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+                                    className="w-full max-h-[80dvh] object-contain rounded-lg"
                                 />
                                 <Button
                                     variant="secondary"

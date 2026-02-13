@@ -30,6 +30,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
+import {
+  ADMIN_MODAL_ACTION,
+  ADMIN_MODAL_CONTENT_MD_FLEX,
+  ADMIN_MODAL_CONTENT_SM,
+  ADMIN_MODAL_FOOTER,
+  ADMIN_MODAL_FOOTER_DIVIDER,
+  ADMIN_MODAL_SCROLL_BODY,
+} from './admin-modal-styles';
 
 // 해외 국가 목록
 const OVERSEAS_COUNTRIES = [
@@ -902,7 +910,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`}>
         <DialogHeader>
           <DialogTitle>보류 레스토랑 편집 및 승인</DialogTitle>
           <DialogDescription>
@@ -910,7 +918,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4 overflow-y-auto flex-1">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4 pr-1">
           {/* 유튜브 링크 편집 */}
           <div className="space-y-2">
             <Label htmlFor="edit-youtube-link">YouTube 링크</Label>
@@ -1074,7 +1082,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
               {selectedGeocodingIndex === null && (
                 <p className="text-sm text-muted-foreground text-center py-2">
-                  ⬆️ 위 옵션 중 하나를 클릭해서 선택해주세요
+                  위 옵션 중 하나를 클릭해서 선택해주세요
                 </p>
               )}
             </div>
@@ -1144,7 +1152,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                   )}
                   {record?.evaluation_results?.category_TF?.eval_basis && (
                     <p className="text-xs text-muted-foreground mt-2 italic">
-                      💡 {record.evaluation_results.category_TF.eval_basis}
+                      {record.evaluation_results.category_TF.eval_basis}
                     </p>
                   )}
                 </div>
@@ -1226,12 +1234,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className={`${ADMIN_MODAL_FOOTER_DIVIDER} shrink-0 bg-background`}>
           <Button
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
             disabled={loading}
+            className={ADMIN_MODAL_ACTION}
           >
             취소
           </Button>
@@ -1240,6 +1249,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
             variant="secondary"
             onClick={handleSave}
             disabled={loading}
+            className={ADMIN_MODAL_ACTION}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             저장
@@ -1247,6 +1257,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           <Button
             onClick={handleApprove}
             disabled={loading || geocodingResults.length === 0 || selectedGeocodingIndex === null}
+            className={ADMIN_MODAL_ACTION}
             title={
               geocodingResults.length === 0 || selectedGeocodingIndex === null
                 ? '지오코딩을 먼저 진행하고 주소를 선택해주세요'
@@ -1261,10 +1272,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       {/* 승인 확인 모달 */}
       <AlertDialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
           <AlertDialogHeader>
             <AlertDialogTitle>승인 확인</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
+            <AlertDialogDescription className={`space-y-2 ${ADMIN_MODAL_SCROLL_BODY}`}>
               <span className="block">이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</span>
               {conflictingRestaurantInfo && (
                 <span className="block mt-3 p-3 bg-muted rounded-md">
@@ -1276,8 +1287,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               <span className="block mt-3 font-medium">승인하시겠습니까?</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
+          <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
+            <AlertDialogCancel disabled={loading} className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 setShowApprovalConfirm(false);
@@ -1296,6 +1307,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                 }
               }}
               disabled={loading}
+              className={ADMIN_MODAL_ACTION}
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               승인
