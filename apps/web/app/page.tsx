@@ -15,7 +15,7 @@ export const metadata: Metadata = {
         siteName: '쯔동여지도',
         images: [
             {
-                url: '/og-image-1.png',
+                url: '/og-image-20260213.png',
                 width: 1200,
                 height: 630,
                 alt: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에!',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에!',
         description: '쯔양이 방문한 전국 및 해외 맛집을 지도에서 확인하세요',
-        images: ['/og-image-1.png'],
+        images: ['/og-image-20260213.png'],
     },
 };
 
