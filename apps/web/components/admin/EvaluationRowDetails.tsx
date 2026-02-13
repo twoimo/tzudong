@@ -136,7 +136,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="border p-4 rounded">
                 <h4 className="font-bold mb-2">🏢 기존 데이터베이스</h4>
                 <dl className="space-y-1 text-sm">

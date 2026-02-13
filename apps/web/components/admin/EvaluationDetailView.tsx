@@ -253,7 +253,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                 <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                     🍽️ 음식점 상세 정보
                 </h3>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                     {/* Row 1 */}
                     <div className="flex flex-col gap-0.5 min-w-0">
                         <span className="text-gray-500 text-xs font-medium">음식점명</span>
@@ -331,9 +331,9 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     );
 
     return (
-        <div className={cn("flex", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
+        <div className={cn("flex flex-col lg:flex-row", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
             {/* 좌측: 비디오 플레이어 */}
-            <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
+            <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-b lg:border-b-0 lg:border-r", autoHeight ? "w-full lg:w-[40%]" : "w-full lg:w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
                     <div className="bg-white rounded-lg border p-3 shadow-sm">
                         <div className="bg-white rounded-lg border p-3 shadow-sm">
@@ -422,11 +422,11 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
             {/* 우측: 평가 및 상세 정보 */}
             {autoHeight ? (
-                <div className="w-[60%] h-auto border-l bg-accent/5">
+                <div className="h-auto w-full border-t bg-accent/5 lg:w-[60%] lg:border-l lg:border-t-0">
                     <RightContent />
                 </div>
             ) : (
-                <ScrollArea className="w-[50%] h-full border-l bg-accent/5">
+                <ScrollArea className="h-full w-full border-t bg-accent/5 lg:w-[50%] lg:border-l lg:border-t-0">
                     <RightContent />
                 </ScrollArea>
             )}
