@@ -12,9 +12,8 @@ import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 export default function RootLoading() {
     return (
         <div
-            className="fixed inset-0 z-40 flex items-center justify-center bg-background
-                pt-14 pb-[var(--mobile-bottom-nav-height,60px)]
-                md:pt-16 md:pb-0"
+            className="hidden min-[1025px]:fixed min-[1025px]:inset-0 min-[1025px]:z-40 min-[1025px]:flex min-[1025px]:items-center min-[1025px]:justify-center min-[1025px]:bg-background
+                min-[1025px]:pt-16 min-[1025px]:pb-0"
             aria-label="페이지 로딩 중"
         >
             <MapSkeleton />
