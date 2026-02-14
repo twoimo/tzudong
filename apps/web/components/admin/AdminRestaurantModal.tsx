@@ -656,7 +656,8 @@ export function AdminRestaurantModal({
                         .from("restaurants") as any)
                         .insert({
                             ...commonData,
-                            unique_id: uniqueId,
+                            // DB 스키마 기준: restaurants는 trace_id가 unique key
+                            trace_id: uniqueId,
                             youtube_link: youtubeLink,
                             tzuyang_review: tzuyangReview,
                             youtube_meta: youtubeMeta,

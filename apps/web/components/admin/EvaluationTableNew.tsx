@@ -705,6 +705,151 @@ export function EvaluationTable({
   const currentStatusFilter = evalFilters.status ?? '';
   const shouldRenderMobile = isDesktopLayout === null ? true : !isDesktopLayout;
   const shouldRenderDesktop = isDesktopLayout === null ? true : isDesktopLayout;
+  const quickFilterSwipeStartXRef = useRef<number | null>(null);
+  const quickFilterSwipeEndXRef = useRef<number | null>(null);
+  const quickFilterSwipeStartYRef = useRef<number | null>(null);
+  const quickFilterSwipeEndYRef = useRef<number | null>(null);
+  const quickFilterSwipeLastHandledAtRef = useRef(0);
+  const quickFilterSwipeActiveRef = useRef(false);
+  const quickFilterSwipeInputRef = useRef<'pointer' | 'touch' | null>(null);
+  const quickFilterSwipePointerIdRef = useRef<number | null>(null);
+  const quickFilterSwipeDistance = 24;
+  const quickFilterCurrentIndex = useMemo(
+    () => MOBILE_STATUS_QUICK_FILTERS.findIndex((filter) => filter.value === currentStatusFilter),
+    [currentStatusFilter]
+  );
+
+  const handleMobileFilterTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current === 'pointer') return;
+    quickFilterSwipeInputRef.current = 'touch';
+    quickFilterSwipeActiveRef.current = true;
+    quickFilterSwipePointerIdRef.current = null;
+    quickFilterSwipeStartXRef.current = e.touches[0].clientX;
+    quickFilterSwipeStartYRef.current = e.touches[0].clientY;
+    quickFilterSwipeEndXRef.current = null;
+    quickFilterSwipeEndYRef.current = null;
+  }, []);
+
+  const handleMobileFilterTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'touch') return;
+    quickFilterSwipeEndXRef.current = e.touches[0].clientX;
+    quickFilterSwipeEndYRef.current = e.touches[0].clientY;
+  }, []);
+
+  const handleMobileFilterSwipeEndInternal = useCallback((): boolean => {
+    const startX = quickFilterSwipeStartXRef.current;
+    const endX = quickFilterSwipeEndXRef.current;
+    const startY = quickFilterSwipeStartYRef.current;
+    const endY = quickFilterSwipeEndYRef.current;
+
+    if (startX === null || endX === null || startY === null || endY === null) return false;
+
+    const distanceX = startX - endX;
+    const distanceY = startY - endY;
+    if (Math.abs(distanceX) < quickFilterSwipeDistance || Math.abs(distanceX) <= Math.abs(distanceY)) {
+      return false;
+    }
+
+    let nextIndex = quickFilterCurrentIndex;
+    if (distanceX > 0) {
+      nextIndex = Math.min(quickFilterCurrentIndex + 1, MOBILE_STATUS_QUICK_FILTERS.length - 1);
+    } else {
+      nextIndex = Math.max(quickFilterCurrentIndex - 1, 0);
+    }
+
+    if (nextIndex === -1) {
+      nextIndex = 0;
+    }
+
+    onFilterChange('status', MOBILE_STATUS_QUICK_FILTERS[nextIndex].value);
+    return true;
+  }, [quickFilterCurrentIndex, onFilterChange]);
+
+  const handleMobileFilterSwipeEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'touch') return;
+    if (Date.now() - quickFilterSwipeLastHandledAtRef.current < 250) {
+      quickFilterSwipeActiveRef.current = false;
+      quickFilterSwipeInputRef.current = null;
+      return;
+    }
+
+    const didSwipe = handleMobileFilterSwipeEndInternal();
+    if (didSwipe) {
+      quickFilterSwipeLastHandledAtRef.current = Date.now();
+      e.preventDefault();
+    }
+    quickFilterSwipeActiveRef.current = false;
+    quickFilterSwipeInputRef.current = null;
+  }, [handleMobileFilterSwipeEndInternal]);
+
+  const handleMobileFilterTouchCancel = useCallback(() => {
+    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'touch') return;
+    quickFilterSwipeActiveRef.current = false;
+    quickFilterSwipeInputRef.current = null;
+  }, []);
+
+  const handleMobileFilterPointerStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current === 'touch') return;
+    quickFilterSwipeInputRef.current = 'pointer';
+    quickFilterSwipeActiveRef.current = true;
+    quickFilterSwipePointerIdRef.current = e.pointerId;
+    quickFilterSwipeStartXRef.current = e.clientX;
+    quickFilterSwipeStartYRef.current = e.clientY;
+    quickFilterSwipeEndXRef.current = null;
+    quickFilterSwipeEndYRef.current = null;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // no-op
+    }
+  }, []);
+
+  const handleMobileFilterPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'pointer' || quickFilterSwipePointerIdRef.current !== e.pointerId) return;
+    quickFilterSwipeEndXRef.current = e.clientX;
+    quickFilterSwipeEndYRef.current = e.clientY;
+  }, []);
+
+  const handleMobileFilterPointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'pointer' || quickFilterSwipePointerIdRef.current !== e.pointerId) return;
+    if (Date.now() - quickFilterSwipeLastHandledAtRef.current < 250) {
+      quickFilterSwipeActiveRef.current = false;
+      quickFilterSwipeInputRef.current = null;
+      quickFilterSwipePointerIdRef.current = null;
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // no-op
+      }
+      return;
+    }
+
+    const didSwipe = handleMobileFilterSwipeEndInternal();
+    if (didSwipe) {
+      quickFilterSwipeLastHandledAtRef.current = Date.now();
+      e.preventDefault();
+    }
+    quickFilterSwipeActiveRef.current = false;
+    quickFilterSwipeInputRef.current = null;
+    quickFilterSwipePointerIdRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // no-op
+    }
+  }, [handleMobileFilterSwipeEndInternal]);
+
+  const handleMobileFilterPointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!quickFilterSwipeActiveRef.current || quickFilterSwipeInputRef.current !== 'pointer' || quickFilterSwipePointerIdRef.current !== e.pointerId) return;
+    quickFilterSwipeActiveRef.current = false;
+    quickFilterSwipeInputRef.current = null;
+    quickFilterSwipePointerIdRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // no-op
+    }
+  }, []);
 
   // 썸네일 로딩 상태와 URL을 통합 관리
   const [thumbnailData, setThumbnailData] = useState<Record<string, { state: 'loading' | 'loaded' | 'error'; url?: string }>>({});
@@ -1279,14 +1424,29 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
 
   return (
     <TooltipProvider>
-      <div className="space-y-3">
+      <div
+        className={cn(
+          shouldRenderMobile
+            ? "flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain space-y-3 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+12px)]"
+            : "space-y-3"
+        )}
+        style={shouldRenderMobile ? { touchAction: 'pan-y' } : undefined}
+        onTouchStart={shouldRenderMobile ? handleMobileFilterTouchStart : undefined}
+        onTouchMove={shouldRenderMobile ? handleMobileFilterTouchMove : undefined}
+        onTouchEnd={shouldRenderMobile ? handleMobileFilterSwipeEnd : undefined}
+        onPointerDown={shouldRenderMobile ? handleMobileFilterPointerStart : undefined}
+        onPointerMove={shouldRenderMobile ? handleMobileFilterPointerMove : undefined}
+        onPointerUp={shouldRenderMobile ? handleMobileFilterPointerEnd : undefined}
+        onPointerCancel={shouldRenderMobile ? handleMobileFilterPointerCancel : undefined}
+        onTouchCancel={shouldRenderMobile ? handleMobileFilterTouchCancel : undefined}
+      >
         {shouldRenderMobile && (
           <>
             {mobileControls}
             {records.length > 0 ? (
               mobileCards
             ) : (
-              <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground lg:hidden">
+              <div className="rounded-lg border bg-card text-center text-sm text-muted-foreground lg:hidden flex min-h-0 flex-1 items-center justify-center p-6">
                 표시할 데이터가 없습니다
               </div>
             )}

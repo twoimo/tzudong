@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +41,137 @@ export function EvaluationSlideView({
 }: EvaluationSlideViewProps) {
     const currentRecord = records[currentIndex];
     const isMobile = useIsMobile();
+    const slideSwipeStartXRef = useRef<number | null>(null);
+    const slideSwipeEndXRef = useRef<number | null>(null);
+    const slideSwipeStartYRef = useRef<number | null>(null);
+    const slideSwipeEndYRef = useRef<number | null>(null);
+    const slideSwipeLastHandledAtRef = useRef(0);
+    const slideSwipeInputRef = useRef<'pointer' | 'touch' | null>(null);
+    const slideSwipePointerIdRef = useRef<number | null>(null);
+    const isSlideSwipeActiveRef = useRef(false);
+    const SLIDE_SWIPE_DISTANCE = 24;
+
+    const handleSlideTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (isSlideSwipeActiveRef.current || slideSwipeInputRef.current === 'pointer') return;
+        slideSwipeInputRef.current = 'touch';
+        slideSwipePointerIdRef.current = null;
+        slideSwipeStartXRef.current = e.touches[0].clientX;
+        slideSwipeStartYRef.current = e.touches[0].clientY;
+        slideSwipeEndXRef.current = null;
+        slideSwipeEndYRef.current = null;
+        isSlideSwipeActiveRef.current = true;
+    }, []);
+
+    const handleSlideTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isSlideSwipeActiveRef.current || slideSwipeInputRef.current !== 'touch') return;
+        slideSwipeEndXRef.current = e.touches[0].clientX;
+        slideSwipeEndYRef.current = e.touches[0].clientY;
+    }, []);
+
+    const handleSlideSwipeEndInternal = useCallback((): boolean => {
+        const startX = slideSwipeStartXRef.current;
+        const endX = slideSwipeEndXRef.current;
+        const startY = slideSwipeStartYRef.current;
+        const endY = slideSwipeEndYRef.current;
+
+        if (startX === null || endX === null || startY === null || endY === null) return false;
+
+        const distanceX = startX - endX;
+        const distanceY = startY - endY;
+
+        if (Math.abs(distanceX) < SLIDE_SWIPE_DISTANCE || Math.abs(distanceX) <= Math.abs(distanceY)) {
+            return false;
+        }
+
+        const nextIndex = distanceX > 0 ? currentIndex + 1 : currentIndex - 1;
+
+        if (nextIndex >= 0 && nextIndex < records.length) {
+            onNavigate(nextIndex);
+            return true;
+        }
+
+        return false;
+    }, [currentIndex, records.length, onNavigate]);
+
+    const handleSlideSwipeEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isSlideSwipeActiveRef.current || slideSwipeInputRef.current !== 'touch' || slideSwipePointerIdRef.current !== null) return;
+        if (Date.now() - slideSwipeLastHandledAtRef.current < 250) {
+            isSlideSwipeActiveRef.current = false;
+            slideSwipeInputRef.current = null;
+            return;
+        }
+
+        const didSwipe = handleSlideSwipeEndInternal();
+        if (didSwipe) {
+            slideSwipeLastHandledAtRef.current = Date.now();
+            e.preventDefault();
+        }
+        isSlideSwipeActiveRef.current = false;
+        slideSwipeInputRef.current = null;
+    }, [handleSlideSwipeEndInternal]);
+
+    const handleSlidePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (isSlideSwipeActiveRef.current || slideSwipeInputRef.current === 'touch') return;
+        slideSwipeInputRef.current = 'pointer';
+        slideSwipePointerIdRef.current = e.pointerId;
+        isSlideSwipeActiveRef.current = true;
+        slideSwipeStartXRef.current = e.clientX;
+        slideSwipeStartYRef.current = e.clientY;
+        slideSwipeEndXRef.current = null;
+        slideSwipeEndYRef.current = null;
+        try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+            // no-op
+        }
+    }, []);
+
+    const handleSlidePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isSlideSwipeActiveRef.current || slideSwipeInputRef.current !== 'pointer' || slideSwipePointerIdRef.current !== e.pointerId) return;
+        slideSwipeEndXRef.current = e.clientX;
+        slideSwipeEndYRef.current = e.clientY;
+    }, []);
+
+    const handleSlidePointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isSlideSwipeActiveRef.current || slideSwipeInputRef.current !== 'pointer' || slideSwipePointerIdRef.current !== e.pointerId) return;
+        if (Date.now() - slideSwipeLastHandledAtRef.current < 250) {
+            isSlideSwipeActiveRef.current = false;
+            slideSwipeInputRef.current = null;
+            slideSwipePointerIdRef.current = null;
+            try {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+            } catch {
+                // no-op
+            }
+            return;
+        }
+
+        const didSwipe = handleSlideSwipeEndInternal();
+        if (didSwipe) {
+            slideSwipeLastHandledAtRef.current = Date.now();
+            e.preventDefault();
+        }
+        isSlideSwipeActiveRef.current = false;
+        slideSwipeInputRef.current = null;
+        slideSwipePointerIdRef.current = null;
+        try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {
+            // no-op
+        }
+    }, [handleSlideSwipeEndInternal]);
+
+    const handleSlideTouchCancel = useCallback(() => {
+        if (!isSlideSwipeActiveRef.current || slideSwipeInputRef.current !== 'touch') return;
+        isSlideSwipeActiveRef.current = false;
+        slideSwipeInputRef.current = null;
+    }, []);
+
+    const handleSlidePointerCancel = useCallback(() => {
+        isSlideSwipeActiveRef.current = false;
+        slideSwipeInputRef.current = null;
+        slideSwipePointerIdRef.current = null;
+    }, []);
 
     // 키보드 네비게이션
     useEffect(() => {
@@ -93,7 +224,18 @@ export function EvaluationSlideView({
     };
 
     return (
-        <div className="flex flex-col bg-background">
+        <div
+            className="flex flex-col bg-background"
+            style={{ touchAction: 'pan-y' }}
+            onTouchStart={handleSlideTouchStart}
+            onTouchMove={handleSlideTouchMove}
+            onTouchEnd={handleSlideSwipeEnd}
+            onTouchCancel={handleSlideTouchCancel}
+            onPointerDown={handleSlidePointerDown}
+            onPointerMove={handleSlidePointerMove}
+            onPointerUp={handleSlidePointerEnd}
+            onPointerCancel={handleSlidePointerCancel}
+        >
             {/* Top Navigation Bar - Compact */}
             <div className={cn("border-b bg-card shrink-0", isMobile ? "px-3 py-2" : "px-3 py-2 h-14")}>
                 <div className={cn("flex items-center justify-between gap-2", isMobile ? "" : "h-full")}>

@@ -134,7 +134,7 @@ test.describe('Responsive Overflow Guard', () => {
     test('admin routes should not overflow horizontally', async ({ page }) => {
         test.skip(!HAS_ADMIN_CREDS, 'E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD is required for admin route checks');
 
-        const adminRoutes = ['/admin/evaluations', '/admin/submissions', '/admin/insight', '/admin/costs', '/admin/banners'];
+        const adminRoutes = ['/admin/evaluations', '/admin/submissions', '/admin/costs', '/admin/banners', '/insights'];
         for (const route of adminRoutes) {
             await assertNoHorizontalOverflow(page, route);
         }

@@ -98,6 +98,7 @@ interface NaverMapViewProps {
     externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
     isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
     isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
+    onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
 }
 
 /**
@@ -415,6 +416,7 @@ const NaverMapView = memo(({
     externalPanelOpen,
     isPanelCollapsed = false,
     isPanelOpen: propIsPanelOpen,
+    onVisibleRestaurantsChange,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
@@ -1298,6 +1300,30 @@ const NaverMapView = memo(({
     const displayRestaurants = useMemo(() => {
         return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
     }, [isLoadingRestaurants, previousRestaurants, restaurants]);
+
+    const visibleRestaurantsForSwipe = useMemo(() => {
+        const restaurantsForSwipe = [...displayRestaurants];
+
+        if (searchedRestaurant) {
+            const alreadyExists = restaurantsForSwipe.some((restaurant) => restaurant.id === searchedRestaurant.id);
+            if (!alreadyExists) {
+                restaurantsForSwipe.push(searchedRestaurant);
+            }
+        }
+
+        const uniqueRestaurants = new Map<string, Restaurant>();
+        restaurantsForSwipe.forEach((restaurant) => {
+            uniqueRestaurants.set(restaurant.id, restaurant);
+        });
+
+        return [...uniqueRestaurants.values()];
+    }, [displayRestaurants, searchedRestaurant]);
+
+    useEffect(() => {
+        if (onVisibleRestaurantsChange) {
+            onVisibleRestaurantsChange(visibleRestaurantsForSwipe);
+        }
+    }, [visibleRestaurantsForSwipe, onVisibleRestaurantsChange]);
 
     // [Cluster] 클러스터 인덱스 생성 및 업데이트
     useEffect(() => {

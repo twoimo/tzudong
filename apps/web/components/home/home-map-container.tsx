@@ -39,6 +39,7 @@ interface HomeMapContainerProps {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     externalPanelOpen?: boolean; // 외부 패널이 열려있지 않을 때 NaverMap 내부 패널 닫기
     isPanelCollapsed?: boolean; // 패널 접기 상태
+    onSwipeableRestaurantsChange?: (restaurants: Restaurant[]) => void;
 }
 
 // ========== [PERFORMANCE] 상수 호이스팅 - 컴포넌트 외부로 이동하여 리렌더링 시 재선언 방지 ==========
@@ -51,6 +52,36 @@ const SWIPE_VELOCITY_THRESHOLD = 0.5;
 const CONTENT_TOP_EPSILON = 2;
 const CONTENT_DRAG_START_THRESHOLD = 16;
 const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
+const HORIZONTAL_SWIPE_THRESHOLD = 24;
+const HORIZONTAL_SWIPE_INTENT_RATIO = 1.0;
+const HORIZONTAL_SWIPE_FALLBACK_RATIO = 0.9;
+
+const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
+    if (a.id === b.id) return true;
+
+    if (a.mergedRestaurants?.some((restaurant) => restaurant.id === b.id)) return true;
+    if (b.mergedRestaurants?.some((restaurant) => restaurant.id === a.id)) return true;
+
+    if (a.name === b.name && a.lat && a.lng && b.lat && b.lng) {
+        const aLat = Number(a.lat);
+        const aLng = Number(a.lng);
+        const bLat = Number(b.lat);
+        const bLng = Number(b.lng);
+
+        if (
+            Number.isFinite(aLat) &&
+            Number.isFinite(aLng) &&
+            Number.isFinite(bLat) &&
+            Number.isFinite(bLng) &&
+            Math.abs(aLat - bLat) < 0.0001 &&
+            Math.abs(aLng - bLng) < 0.0001
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+};
 
 const isVerticallyScrollable = (element: HTMLElement) => {
     const style = window.getComputedStyle(element);
@@ -74,6 +105,9 @@ const findScrollableTouchTarget = (
     if (boundary && isVerticallyScrollable(boundary)) return boundary;
     return null;
 };
+
+const isDetailSwipeArea = (target: EventTarget | null) =>
+    target instanceof Element && target.closest('[data-restaurant-detail-swipe-area="content"]') !== null;
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
 function HomeMapContainerComponent({
@@ -100,6 +134,7 @@ function HomeMapContainerComponent({
     onPanelClick,
     externalPanelOpen,
     isPanelCollapsed,
+    onSwipeableRestaurantsChange,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
@@ -122,10 +157,12 @@ function HomeMapContainerComponent({
     const isContentDraggingSheetRef = useRef(false);
     const contentStartBoundaryRef = useRef<'top' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
+    const contentSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
+    const [swipeableRestaurants, setSwipeableRestaurants] = useState<Restaurant[]>([]);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return ((vh - HEADER_OFFSET) / vh) * 100;
@@ -179,6 +216,18 @@ function HomeMapContainerComponent({
             setSheetHeight(getCurrentMaxHeight()); // 최대 높이로 열기
         }
     }, [isPanelOpen, isMobileOrTablet, getCurrentMaxHeight]);
+
+    useEffect(() => {
+        if (!isPanelOpen || !isMobileOrTablet || !contentRef.current) return;
+
+        contentRef.current.scrollTop = 0;
+        const detailScrollArea = contentRef.current.querySelector<HTMLElement>(
+            "[data-restaurant-detail-swipe-area='content']"
+        );
+        if (detailScrollArea) {
+            detailScrollArea.scrollTop = 0;
+        }
+    }, [isPanelOpen, isMobileOrTablet, panelRestaurant?.id]);
 
     // [PERFORMANCE] 드래그 시작 공통 로직
     const handleDragStartCore = useCallback((clientY: number) => {
@@ -278,6 +327,7 @@ function HomeMapContainerComponent({
         contentTouchStartYRef.current = e.touches[0].clientY;
         contentTouchStartXRef.current = e.touches[0].clientX;
         isContentDraggingSheetRef.current = false;
+        contentSwipeDirectionRef.current = null;
         const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
         contentScrollTargetRef.current = scrollTarget;
         const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
@@ -286,6 +336,8 @@ function HomeMapContainerComponent({
     }, []);
 
     const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        const isDetailArea = isDetailSwipeArea(e.target);
+
         const currentY = e.touches[0].clientY;
         const currentX = e.touches[0].clientX;
         const deltaY = currentY - contentTouchStartYRef.current;
@@ -297,30 +349,144 @@ function HomeMapContainerComponent({
             contentScrollTargetRef.current = scrollTarget;
         }
 
-        if (!isContentDraggingSheetRef.current) {
+        if (!contentSwipeDirectionRef.current) {
+            if (
+                swipeableRestaurants.length > 1 &&
+                !isDetailArea &&
+                absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD &&
+                absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO
+            ) {
+                contentSwipeDirectionRef.current = 'horizontal';
+                return;
+            }
+
             if (contentStartBoundaryRef.current !== 'top') return;
             if (absDeltaY <= CONTENT_DRAG_START_THRESHOLD) return;
             if (absDeltaY <= absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
             handleDragStartCore(contentTouchStartYRef.current);
             isContentDraggingSheetRef.current = true;
+            contentSwipeDirectionRef.current = 'vertical';
+        }
+
+        if (contentSwipeDirectionRef.current === 'horizontal') {
+            return;
         }
 
         e.stopPropagation();
         handleDragMoveCore(currentY);
-    }, [handleDragMoveCore, handleDragStartCore]);
+    }, [handleDragMoveCore, handleDragStartCore, swipeableRestaurants.length]);
 
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (!isContentDraggingSheetRef.current) {
+        const isDetailArea = isDetailSwipeArea(e.target);
+
+        const currentTouch = e.changedTouches?.[0] ?? e.touches?.[0];
+
+        if (!currentTouch) {
             contentScrollTargetRef.current = null;
             contentStartBoundaryRef.current = null;
+            contentSwipeDirectionRef.current = null;
             return;
         }
+
+        const deltaX = currentTouch.clientX - contentTouchStartXRef.current;
+        const deltaY = currentTouch.clientY - contentTouchStartYRef.current;
+        const absDeltaX = Math.abs(deltaX);
+        const absDeltaY = Math.abs(deltaY);
+
+        const canSwipeHorizontal =
+            swipeableRestaurants.length > 1 &&
+            (absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO);
+        const canSwipeFallback =
+            swipeableRestaurants.length > 1 &&
+            (absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_FALLBACK_RATIO);
+
+        if (!isDetailArea && (contentSwipeDirectionRef.current === 'horizontal' || contentSwipeDirectionRef.current === null) &&
+            (canSwipeHorizontal || canSwipeFallback) &&
+            (deltaX !== 0)) {
+            const direction = deltaX < 0 ? 1 : -1;
+            const currentRestaurant = panelRestaurant || selectedRestaurant;
+            if (currentRestaurant) {
+                const currentIndex = swipeableRestaurants.findIndex((restaurant) =>
+                    isSameRestaurantForSwipe(restaurant, currentRestaurant)
+                );
+
+                if (currentIndex >= 0) {
+                    const nextIndex = currentIndex + direction;
+                    const nextRestaurant = swipeableRestaurants[nextIndex];
+                    if (nextRestaurant) {
+                        onRestaurantSelect(nextRestaurant);
+                    }
+                }
+            }
+        }
+
+        if (!isContentDraggingSheetRef.current || contentSwipeDirectionRef.current !== 'vertical') {
+            contentScrollTargetRef.current = null;
+            contentStartBoundaryRef.current = null;
+            contentSwipeDirectionRef.current = null;
+            return;
+        }
+
         e.stopPropagation();
         isContentDraggingSheetRef.current = false;
         contentScrollTargetRef.current = null;
         contentStartBoundaryRef.current = null;
+        contentSwipeDirectionRef.current = null;
         handleDragEnd('content');
-    }, [handleDragEnd]);
+    }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, swipeableRestaurants, handleDragEnd]);
+
+    const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
+        if (!restaurants.length) {
+            setSwipeableRestaurants([]);
+            return;
+        }
+
+        const uniqueRestaurants: Restaurant[] = [];
+        restaurants.forEach((restaurant) => {
+            const isDuplicate = uniqueRestaurants.some((existingRestaurant) =>
+                isSameRestaurantForSwipe(existingRestaurant, restaurant)
+            );
+
+            if (!isDuplicate) {
+                uniqueRestaurants.push(restaurant);
+            }
+        });
+
+        setSwipeableRestaurants(prev => {
+            if (
+                prev.length === uniqueRestaurants.length &&
+                prev.every((restaurant, index) => isSameRestaurantForSwipe(restaurant, uniqueRestaurants[index]!))
+            ) {
+                return prev;
+            }
+
+            return uniqueRestaurants;
+        });
+    }, []);
+
+    const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
+        if (swipeableRestaurants.length <= 1) return;
+
+        const currentRestaurant = panelRestaurant || selectedRestaurant;
+        if (!currentRestaurant) return;
+
+        const currentIndex = swipeableRestaurants.findIndex((restaurant) =>
+            isSameRestaurantForSwipe(restaurant, currentRestaurant)
+        );
+        if (currentIndex < 0) return;
+
+        const nextIndex = currentIndex + step;
+        const nextRestaurant = swipeableRestaurants[nextIndex];
+        if (!nextRestaurant) return;
+
+        onRestaurantSelect(nextRestaurant);
+    }, [onRestaurantSelect, panelRestaurant, selectedRestaurant, swipeableRestaurants]);
+
+    useEffect(() => {
+        if (onSwipeableRestaurantsChange) {
+            onSwipeableRestaurantsChange(swipeableRestaurants);
+        }
+    }, [onSwipeableRestaurantsChange, swipeableRestaurants]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
@@ -412,6 +578,7 @@ function HomeMapContainerComponent({
                         externalPanelOpen={externalPanelOpen}
                         isPanelCollapsed={isPanelCollapsed}
                         isPanelOpen={isPanelOpen}
+                        onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                     />
                 </Suspense>
             ) : (
@@ -429,6 +596,7 @@ function HomeMapContainerComponent({
                         onMapReady={onMapReady}
                         onMarkerClick={onMarkerClick}
                         mapPadding={mapPadding}
+                        onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                     />
                 </Suspense>
             )}
@@ -529,7 +697,8 @@ function HomeMapContainerComponent({
                                 {/* 상세 패널 콘텐츠 */}
                                 <div
                                     ref={contentRef}
-                                    className="flex-1 overflow-y-auto"
+                                    className="flex-1 overflow-hidden"
+                                    style={{ touchAction: 'pan-y' }}
                                     onTouchStart={handleContentTouchStart}
                                     onTouchMove={handleContentTouchMove}
                                     onTouchEnd={handleContentTouchEnd}
@@ -541,6 +710,8 @@ function HomeMapContainerComponent({
                                         onWriteReview={onReviewModalOpen}
                                         onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
                                         onRequestEditRestaurant={handleRequestEditRestaurant}
+                                        onSwipeLeft={() => handleSwipeToRestaurant(1)}
+                                        onSwipeRight={() => handleSwipeToRestaurant(-1)}
                                         onToggleCollapse={onTogglePanelCollapse}
                                         isPanelOpen={isPanelOpen}
                                         isMobile={true}

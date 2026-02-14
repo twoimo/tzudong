@@ -219,7 +219,7 @@ const DetailPanel = memo(({
                                     </div>
                                     {marker.submitterNickname && (
                                         <Badge variant="outline" className="text-xs font-normal">
-                                            by {marker.submitterNickname}
+                                            제보자: {marker.submitterNickname}
                                         </Badge>
                                     )}
                                 </h4>

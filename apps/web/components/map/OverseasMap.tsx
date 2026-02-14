@@ -22,6 +22,7 @@ interface OverseasMapProps {
     onMapReady?: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick?: (restaurant: Restaurant) => void;
     mapPadding?: { top: number; bottom: number; left: number; right: number };
+    onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
 }
 
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
@@ -69,6 +70,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     onMarkerClick,
     onMapReady,
     mapPadding = DEFAULT_PADDING,
+    onVisibleRestaurantsChange,
 }) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
@@ -98,6 +100,17 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         const exists = restaurants.some(r => r.id === searchedRestaurant.id);
         return exists ? restaurants : [...restaurants, searchedRestaurant];
     }, [restaurants, searchedRestaurant]);
+
+    useEffect(() => {
+        if (!onVisibleRestaurantsChange) return;
+
+        const uniqueRestaurants = new Map<string, Restaurant>();
+        restaurantsToShow.forEach((restaurant) => {
+            uniqueRestaurants.set(restaurant.id, restaurant);
+        });
+
+        onVisibleRestaurantsChange(Array.from(uniqueRestaurants.values()));
+    }, [restaurantsToShow, onVisibleRestaurantsChange]);
 
     // MAP INITIALIZATION
     useEffect(() => {

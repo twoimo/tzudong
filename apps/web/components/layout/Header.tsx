@@ -1,7 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart3 } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -705,6 +705,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <Megaphone className="mr-2 h-4 w-4" />
                 공지사항
               </DropdownMenuItem>
+              {!isAdmin && (
+                <DropdownMenuItem onClick={() => router.push('/insights')} className="text-foreground hover:bg-accent py-1.5">
+                  <BarChart2 className="mr-2 h-4 w-4" />
+                  인사이트
+                </DropdownMenuItem>
+              )}
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-border my-1" />
@@ -735,13 +741,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     배너관리
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border my-1" />
-                  <DropdownMenuItem onClick={() => router.push('/admin/insight')} className="text-foreground hover:bg-accent py-1.5">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    인사이트
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/admin/costs')} className="text-foreground hover:bg-accent py-1.5">
                     <DollarSign className="mr-2 h-4 w-4" />
                     서버비용
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/insights')} className="text-foreground hover:bg-accent py-1.5">
+                    <BarChart2 className="mr-2 h-4 w-4" />
+                    인사이트
                   </DropdownMenuItem>
                 </>
               )}

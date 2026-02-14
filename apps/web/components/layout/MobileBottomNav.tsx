@@ -111,13 +111,14 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
         <nav
             ref={navRef}
             data-testid="bottom-nav"
+            style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))` }}
             className={cn(
                 // 기본 스타일 및 고정 위치
                 'fixed bottom-0 left-0 right-0 z-50',
                 // 배경 및 테두리
                 'bg-background/95 backdrop-blur-md border-t border-border',
                 // 그리드 레이아웃
-                'grid grid-cols-5',
+                'grid',
                 // iOS safe area 지원
                 'pb-[env(safe-area-inset-bottom)]',
                 // 그림자
