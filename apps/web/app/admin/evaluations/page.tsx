@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
+import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '@/lib/dashboard/classifiers';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
 import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
@@ -26,6 +28,7 @@ import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle, 
 import { Button } from '@/components/ui/button';
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import {
   AlertDialog,
@@ -122,6 +125,27 @@ function AdminEvaluationPage() {
   const [showSubmissionView, setShowSubmissionView] = useState(false);
   const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'reviews'>('new');
 
+  // Deep-link 필터 (운영지표/이슈보드 -> 검수 화면 이동)
+  const deepLinkInitializedRef = useRef(false);
+  const [deepLinkFilter, setDeepLinkFilter] = useState<{
+    videoId?: string;
+    issue?: string;
+    reason?: string;
+  } | null>(null);
+
+  const clearDeepLinkFilter = useCallback(() => {
+    setDeepLinkFilter(null);
+    deepLinkInitializedRef.current = true;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('video_id');
+    params.delete('issue');
+    params.delete('reason');
+
+    const query = params.toString();
+    router.replace(query ? `/admin/evaluations?${query}` : '/admin/evaluations', { scroll: false });
+  }, [router, searchParams]);
+
   // URL 파라미터에 따라 초기 뷰 설정
   useEffect(() => {
     if (searchParams.get('view') === 'submissions') {
@@ -136,6 +160,24 @@ function AdminEvaluationPage() {
         setSubmissionInitialTab('new');
       }
     }
+  }, [searchParams]);
+
+  // URL 파라미터에 따라 Deep-link 필터 초기화
+  useEffect(() => {
+    if (deepLinkInitializedRef.current) return;
+
+    const videoId = searchParams.get('video_id')?.trim() || '';
+    const issue = searchParams.get('issue')?.trim() || '';
+    const reason = searchParams.get('reason')?.trim() || '';
+
+    if (!videoId && !issue && !reason) return;
+
+    deepLinkInitializedRef.current = true;
+    setDeepLinkFilter({
+      ...(videoId ? { videoId } : {}),
+      ...(issue ? { issue } : {}),
+      ...(reason ? { reason } : {}),
+    });
   }, [searchParams]);
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
   const [editingSubmission, setEditingSubmission] = useState<SubmissionRecord | null>(null);
@@ -434,8 +476,40 @@ function AdminEvaluationPage() {
 
     // 8. Status 필터는 위에서 이미 처리됨
 
+    // Deep-link 필터 (video_id/issue/reason)
+    if (deepLinkFilter?.videoId) {
+      filtered = filtered.filter((record) => (
+        extractVideoIdFromYoutubeLink(record.youtube_link) === deepLinkFilter.videoId
+      ));
+    }
+
+    if (deepLinkFilter?.issue === 'notSelection') {
+      filtered = filtered.filter((record) => record.is_not_selected === true);
+
+      if (deepLinkFilter.reason) {
+        filtered = filtered.filter((record) => (
+          toNotSelectionReason({
+            is_not_selected: record.is_not_selected,
+            is_missing: record.is_missing,
+            geocoding_false_stage: record.geocoding_false_stage,
+            geocoding_success: record.geocoding_success,
+          }) === deepLinkFilter.reason
+        ));
+      }
+    } else if (deepLinkFilter?.issue === 'ruleFalse') {
+      filtered = filtered.filter((record) => {
+        const message = getLocationMatchFalseMessage(record.evaluation_results);
+        if (!message) return false;
+        return deepLinkFilter.reason ? message === deepLinkFilter.reason : true;
+      });
+    } else if (deepLinkFilter?.issue === 'laajGap') {
+      filtered = filtered.filter((record) => (
+        hasRuleMetrics(record.evaluation_results) && !hasLaajMetrics(record.evaluation_results)
+      ));
+    }
+
     return filtered;
-  }, [allRecords, searchResults, evalFilters]);
+  }, [allRecords, searchResults, evalFilters, deepLinkFilter]);
 
   // filteredRecords가 정의된 후에 useEffect 위치
   useEffect(() => {
@@ -1246,12 +1320,13 @@ function AdminEvaluationPage() {
 
       console.log('[EDIT 제보 디버깅] item target_restaurant_ids:', itemTargetRestaurantIds);
 
-      let originalRestaurantsMap = new Map<string, any>();
-      if (itemTargetRestaurantIds.length > 0) {
-        const { data: originalData, error: originalError } = await supabase
-          .from('restaurants')
-          .select('id, unique_id, name, road_address, jibun_address, phone, categories, youtube_link, tzuyang_review, youtube_meta')
-          .in('id', itemTargetRestaurantIds);
+        let originalRestaurantsMap = new Map<string, any>();
+        if (itemTargetRestaurantIds.length > 0) {
+          const { data: originalData, error: originalError } = await supabase
+            .from('restaurants')
+            // restaurants 테이블은 trace_id / approved_name 이므로 alias로 호환 유지
+            .select('id, unique_id:trace_id, name:approved_name, road_address, jibun_address, phone, categories, youtube_link, tzuyang_review, youtube_meta')
+            .in('id', itemTargetRestaurantIds);
 
         console.log('[EDIT 제보 디버깅] originalData:', originalData, 'error:', originalError);
 
@@ -1968,9 +2043,35 @@ function AdminEvaluationPage() {
                 <ClipboardCheck className="h-6 w-6 text-primary" />
                 관리자 데이터 검수
               </h1>
-
-
             </div>
+            {deepLinkFilter && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">딥링크 필터:</span>
+                {deepLinkFilter.videoId && (
+                  <Badge variant="secondary" className="max-w-full truncate">
+                    video_id: {deepLinkFilter.videoId}
+                  </Badge>
+                )}
+                {deepLinkFilter.issue && (
+                  <Badge variant="outline" className="max-w-full truncate">
+                    issue: {deepLinkFilter.issue}
+                  </Badge>
+                )}
+                {deepLinkFilter.reason && (
+                  <Badge variant="outline" className="max-w-full truncate">
+                    reason: {deepLinkFilter.reason}
+                  </Badge>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={clearDeepLinkFilter}
+                >
+                  필터 해제
+                </Button>
+              </div>
+            )}
             <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
               필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
             </p>
@@ -2072,7 +2173,7 @@ function AdminEvaluationPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
@@ -2104,7 +2205,7 @@ function AdminEvaluationPage() {
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
-          <div className="flex flex-1 flex-col p-2 sm:p-4">
+          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-4">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin" />

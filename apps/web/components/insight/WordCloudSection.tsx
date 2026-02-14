@@ -1,15 +1,16 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
+import type { AdminInsightWordcloudResponse, AdminInsightWordcloudVideosResponse, InsightKeywordData, InsightVideoWithKeyword } from '@/types/insight';
+import { toKoreanKeywordLabel } from '@/lib/insight/keyword-label';
 import {
     Search,
-    X,
     Play,
     ExternalLink,
     TrendingUp,
@@ -17,258 +18,49 @@ import {
     Eye,
     Star
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import cloud from 'd3-cloud';
 
-// [TYPE] 키워드 데이터 타입
-interface KeywordData {
-    keyword: string;
-    count: number;
-    trend: 'up' | 'down' | 'stable';
-    category: string;
+// [TYPES] API 응답 타입 별칭 (기존 컴포넌트 시그니처 유지)
+type KeywordData = InsightKeywordData;
+type VideoWithKeyword = InsightVideoWithKeyword;
+
+const EMPTY_KEYWORDS: KeywordData[] = [];
+
+async function fetchWordcloudKeywords(): Promise<AdminInsightWordcloudResponse> {
+    const response = await fetch('/api/admin/insight/wordcloud');
+    if (!response.ok) {
+        throw new Error('워드클라우드 키워드 데이터를 가져오지 못했습니다');
+    }
+    return response.json() as Promise<AdminInsightWordcloudResponse>;
 }
 
-interface VideoWithKeyword {
-    videoId: string;
-    title: string;
-    publishedAt: string;
-    views: number;
-    thumbnail: string;
-    mentionContext: string;
-    review?: string;
+async function fetchWordcloudVideos(keyword: string): Promise<AdminInsightWordcloudVideosResponse> {
+    const params = new URLSearchParams({ keyword });
+    const response = await fetch(`/api/admin/insight/wordcloud?${params.toString()}`);
+    if (!response.ok) {
+        throw new Error('워드클라우드 영상 데이터를 가져오지 못했습니다');
+    }
+    return response.json() as Promise<AdminInsightWordcloudVideosResponse>;
 }
 
-// [MOCK] 키워드 데이터 - 실제로는 리뷰 데이터에서 추출
-const MOCK_KEYWORDS: KeywordData[] = [
-    { keyword: '삼겹살', count: 89, trend: 'up', category: '고기' },
-    { keyword: '냉면', count: 67, trend: 'stable', category: '면류' },
-    { keyword: '불고기', count: 62, trend: 'up', category: '고기' },
-    { keyword: '짬뽕', count: 55, trend: 'stable', category: '중식' },
-    { keyword: '횟집', count: 54, trend: 'up', category: '해산물' },
-    { keyword: '곱창', count: 48, trend: 'down', category: '고기' },
-    { keyword: '치킨', count: 45, trend: 'stable', category: '치킨' },
-    { keyword: '우동', count: 44, trend: 'stable', category: '일식' },
-    { keyword: '짜장면', count: 42, trend: 'up', category: '중식' },
-    { keyword: '쌀국수', count: 41, trend: 'up', category: '면류' },
-    { keyword: '닭갈비', count: 39, trend: 'up', category: '고기' },
-    { keyword: '돈까스', count: 38, trend: 'stable', category: '일식' },
-    { keyword: '회덮밥', count: 36, trend: 'stable', category: '해산물' },
-    { keyword: '떡볶이', count: 35, trend: 'up', category: '분식' },
-    { keyword: '김밥', count: 34, trend: 'stable', category: '분식' },
-    { keyword: '탕수육', count: 33, trend: 'up', category: '중식' },
-    { keyword: '순대', count: 32, trend: 'stable', category: '분식' },
-    { keyword: '오징어', count: 31, trend: 'stable', category: '해산물' },
-    { keyword: '갈비', count: 30, trend: 'down', category: '고기' },
-    { keyword: '육회', count: 29, trend: 'up', category: '고기' },
-    { keyword: '초밥', count: 28, trend: 'up', category: '일식' },
-    { keyword: '샤브샤브', count: 27, trend: 'stable', category: '일식' },
-    { keyword: '양꼬치', count: 26, trend: 'up', category: '고기' },
-    { keyword: '파스타', count: 25, trend: 'stable', category: '양식' },
-    { keyword: '타코', count: 24, trend: 'stable', category: '양식' },
-    { keyword: '햄버거', count: 23, trend: 'up', category: '패스트푸드' },
-    { keyword: '감자탕', count: 22, trend: 'stable', category: '한식' },
-    { keyword: '마라탕', count: 21, trend: 'up', category: '중식' },
-    { keyword: '설렁탕', count: 20, trend: 'stable', category: '한식' },
-    { keyword: '김치찌개', count: 19, trend: 'stable', category: '한식' },
-    { keyword: '순두부', count: 18, trend: 'up', category: '한식' },
-    { keyword: '부대찌개', count: 17, trend: 'down', category: '한식' },
-    { keyword: '닭발', count: 16, trend: 'stable', category: '고기' },
-    { keyword: '족발', count: 15, trend: 'stable', category: '고기' },
-    { keyword: '막창', count: 15, trend: 'up', category: '고기' },
-    { keyword: '보쌈', count: 14, trend: 'stable', category: '고기' },
-    { keyword: '조개구이', count: 14, trend: 'stable', category: '해산물' },
-    { keyword: '장어', count: 13, trend: 'up', category: '해산물' },
-    { keyword: '라멘', count: 12, trend: 'up', category: '일식' },
-    { keyword: '케밥', count: 11, trend: 'stable', category: '양식' },
-    { keyword: '스테이크', count: 10, trend: 'stable', category: '양식' },
-    { keyword: '오므라이스', count: 10, trend: 'stable', category: '양식' },
-    { keyword: '칼국수', count: 9, trend: 'stable', category: '면류' },
-    { keyword: '덮밥', count: 9, trend: 'stable', category: '일식' },
-    { keyword: '비빔밥', count: 8, trend: 'up', category: '한식' },
-    { keyword: '카레', count: 8, trend: 'up', category: '일식' },
-    { keyword: '국밥', count: 7, trend: 'stable', category: '한식' },
-    { keyword: '곱도리탕', count: 7, trend: 'stable', category: '한식' },
-    { keyword: '피자', count: 6, trend: 'stable', category: '양식' },
-    { keyword: '낙곱새', count: 6, trend: 'up', category: '해산물' },
-    { keyword: '대창', count: 5, trend: 'stable', category: '고기' },
-    { keyword: '갈비찜', count: 58, trend: 'up', category: '고기' },
-    { keyword: '아구찜', count: 47, trend: 'stable', category: '해산물' },
-    { keyword: '해물탕', count: 43, trend: 'up', category: '해산물' },
-    { keyword: '간장게장', count: 40, trend: 'up', category: '해산물' },
-    { keyword: '양념게장', count: 37, trend: 'stable', category: '해산물' },
-    { keyword: '물회', count: 35, trend: 'up', category: '해산물' },
-    { keyword: '전복죽', count: 32, trend: 'stable', category: '한식' },
-    { keyword: '홍합탕', count: 29, trend: 'stable', category: '해산물' },
-    { keyword: '꼼장어', count: 26, trend: 'up', category: '해산물' },
-    { keyword: '철판볶음', count: 24, trend: 'stable', category: '한식' },
-    { keyword: '제육볶음', count: 22, trend: 'up', category: '고기' },
-    { keyword: '낙지볶음', count: 20, trend: 'stable', category: '해산물' },
-    { keyword: '쭈꾸미', count: 18, trend: 'up', category: '해산물' },
-    { keyword: '골뱅이', count: 16, trend: 'stable', category: '해산물' },
-    { keyword: '백숙', count: 14, trend: 'stable', category: '한식' },
-    { keyword: '삼계탕', count: 12, trend: 'up', category: '한식' },
-    { keyword: '추어탕', count: 10, trend: 'stable', category: '한식' },
-    { keyword: '해장국', count: 9, trend: 'stable', category: '한식' },
-    { keyword: '순댓국', count: 8, trend: 'up', category: '한식' },
-    { keyword: '만두', count: 45, trend: 'stable', category: '분식' },
-    { keyword: '찐빵', count: 38, trend: 'up', category: '분식' },
-    { keyword: '호떡', count: 35, trend: 'stable', category: '분식' },
-    { keyword: '어묵', count: 30, trend: 'stable', category: '분식' },
-    { keyword: '튀김', count: 28, trend: 'up', category: '분식' },
-    { keyword: '군만두', count: 25, trend: 'stable', category: '분식' },
-    { keyword: '물만두', count: 22, trend: 'stable', category: '분식' },
-    { keyword: '볶음밥', count: 40, trend: 'up', category: '중식' },
-    { keyword: '유린기', count: 32, trend: 'stable', category: '중식' },
-    { keyword: '깐풍기', count: 28, trend: 'up', category: '중식' },
-    { keyword: '팔보채', count: 22, trend: 'stable', category: '중식' },
-    { keyword: '마파두부', count: 18, trend: 'up', category: '중식' },
-    { keyword: '양장피', count: 15, trend: 'stable', category: '중식' },
-    { keyword: '동파육', count: 12, trend: 'stable', category: '중식' },
-    { keyword: '소바', count: 25, trend: 'stable', category: '일식' },
-    { keyword: '덴뿌라', count: 20, trend: 'up', category: '일식' },
-    { keyword: '타코야키', count: 18, trend: 'stable', category: '일식' },
-    { keyword: '규동', count: 15, trend: 'up', category: '일식' },
-    { keyword: '가츠동', count: 12, trend: 'stable', category: '일식' },
-    { keyword: '오코노미야키', count: 10, trend: 'up', category: '일식' },
-    { keyword: '리조또', count: 22, trend: 'stable', category: '양식' },
-    { keyword: '뇨끼', count: 16, trend: 'up', category: '양식' },
-    { keyword: '라자냐', count: 14, trend: 'stable', category: '양식' },
-    { keyword: '샐러드', count: 11, trend: 'up', category: '양식' },
-    { keyword: '핫도그', count: 30, trend: 'stable', category: '패스트푸드' },
-    { keyword: '감자튀김', count: 25, trend: 'up', category: '패스트푸드' },
-    { keyword: '너겟', count: 18, trend: 'stable', category: '패스트푸드' },
-    { keyword: '버거킹', count: 15, trend: 'up', category: '패스트푸드' },
-    // 추가 키워드 5차
-    { keyword: '소고기', count: 85, trend: 'up', category: '고기' },
-    { keyword: '한우', count: 78, trend: 'up', category: '고기' },
-    { keyword: '등심', count: 65, trend: 'stable', category: '고기' },
-    { keyword: '안심', count: 60, trend: 'up', category: '고기' },
-    { keyword: '차돌박이', count: 52, trend: 'up', category: '고기' },
-    { keyword: '양념갈비', count: 46, trend: 'stable', category: '고기' },
-    { keyword: '생갈비', count: 42, trend: 'up', category: '고기' },
-    { keyword: 'LA갈비', count: 38, trend: 'stable', category: '고기' },
-    { keyword: '수육', count: 34, trend: 'up', category: '고기' },
-    { keyword: '항정살', count: 30, trend: 'up', category: '고기' },
-    { keyword: '가브리살', count: 26, trend: 'stable', category: '고기' },
-    { keyword: '토시살', count: 22, trend: 'up', category: '고기' },
-    { keyword: '꽃등심', count: 18, trend: 'stable', category: '고기' },
-    { keyword: '채끝', count: 14, trend: 'up', category: '고기' },
-    { keyword: '부채살', count: 10, trend: 'stable', category: '고기' },
-    // 추가 키워드 6차 - 해산물
-    { keyword: '광어', count: 50, trend: 'up', category: '해산물' },
-    { keyword: '우럭', count: 45, trend: 'stable', category: '해산물' },
-    { keyword: '도미', count: 40, trend: 'up', category: '해산물' },
-    { keyword: '방어', count: 35, trend: 'up', category: '해산물' },
-    { keyword: '연어', count: 32, trend: 'up', category: '해산물' },
-    { keyword: '참치', count: 28, trend: 'stable', category: '해산물' },
-    { keyword: '새우', count: 24, trend: 'up', category: '해산물' },
-    { keyword: '랍스터', count: 20, trend: 'stable', category: '해산물' },
-    { keyword: '바닷가재', count: 16, trend: 'up', category: '해산물' },
-    { keyword: '킹크랩', count: 12, trend: 'up', category: '해산물' },
-    { keyword: '대게', count: 48, trend: 'up', category: '해산물' },
-    { keyword: '꽃게', count: 36, trend: 'stable', category: '해산물' },
-    { keyword: '전복', count: 30, trend: 'up', category: '해산물' },
-    { keyword: '굴', count: 26, trend: 'stable', category: '해산물' },
-    { keyword: '홍어', count: 22, trend: 'up', category: '해산물' },
-    // 추가 키워드 7차 - 한식
-    { keyword: '된장찌개', count: 44, trend: 'stable', category: '한식' },
-    { keyword: '청국장', count: 36, trend: 'up', category: '한식' },
-    { keyword: '동태찌개', count: 32, trend: 'stable', category: '한식' },
-    { keyword: '알탕', count: 28, trend: 'up', category: '한식' },
-    { keyword: '육개장', count: 24, trend: 'stable', category: '한식' },
-    { keyword: '갈비탕', count: 20, trend: 'up', category: '한식' },
-    { keyword: '곰탕', count: 16, trend: 'stable', category: '한식' },
-    { keyword: '도가니탕', count: 12, trend: 'up', category: '한식' },
-    { keyword: '꼬리곰탕', count: 8, trend: 'stable', category: '한식' },
-    { keyword: '닭볶음탕', count: 38, trend: 'up', category: '한식' },
-    { keyword: '찜닭', count: 34, trend: 'stable', category: '한식' },
-    { keyword: '닭강정', count: 30, trend: 'up', category: '한식' },
-    { keyword: '양념치킨', count: 52, trend: 'up', category: '치킨' },
-    { keyword: '후라이드', count: 48, trend: 'stable', category: '치킨' },
-    { keyword: '간장치킨', count: 40, trend: 'up', category: '치킨' },
-    { keyword: '마늘치킨', count: 36, trend: 'stable', category: '치킨' },
-    { keyword: '파닭', count: 32, trend: 'up', category: '치킨' },
-    { keyword: '불닭', count: 28, trend: 'stable', category: '치킨' },
-    { keyword: '순살치킨', count: 24, trend: 'up', category: '치킨' },
-    { keyword: '반반치킨', count: 20, trend: 'stable', category: '치킨' },
-    // 추가 키워드 8차 - 기타
-    { keyword: '곱빼기', count: 15, trend: 'up', category: '한식' },
-    { keyword: '백반', count: 42, trend: 'stable', category: '한식' },
-    { keyword: '정식', count: 38, trend: 'up', category: '한식' },
-    { keyword: '한정식', count: 34, trend: 'stable', category: '한식' },
-    { keyword: '뷔페', count: 30, trend: 'up', category: '양식' },
-    { keyword: '브런치', count: 26, trend: 'stable', category: '양식' },
-    { keyword: '에그베네딕트', count: 22, trend: 'up', category: '양식' },
-    { keyword: '크로와상', count: 18, trend: 'stable', category: '양식' },
-    { keyword: '베이글', count: 14, trend: 'up', category: '양식' },
-    { keyword: '팬케이크', count: 10, trend: 'stable', category: '양식' },
-    { keyword: '와플', count: 8, trend: 'up', category: '양식' },
-    { keyword: '토스트', count: 6, trend: 'stable', category: '양식' },
-];
+function formatViewsKorean(views: number | null): string {
+    if (views == null) return '-';
+    if (views >= 10000) return `${(views / 10000).toFixed(1)}만 회`;
+    return `${views.toLocaleString()}회`;
+}
 
-// [MOCK] 키워드별 관련 영상 데이터
-const MOCK_VIDEOS_BY_KEYWORD: Record<string, VideoWithKeyword[]> = {
-    '삼겹살': [
-        {
-            videoId: 'v1',
-            title: '[쯔양] 서울 최고의 삼겹살 맛집 탐방',
-            publishedAt: '2025-12-01',
-            views: 1250000,
-            thumbnail: '',
-            mentionContext: '"이 삼겹살 진짜 맛있다! 껍데기도 바삭하고..."',
-            review: '삼겹살이 두툼하고 육즙이 살아있어요. 숯불에 구우면 특유의 향이 나서 더 맛있어요. 특히 목살 부분이 부드럽고 고소해서 강추!'
-        },
-        {
-            videoId: 'v2',
-            title: '[쯔양] 대전 문쪽 삼겹살 먹방',
-            publishedAt: '2025-11-15',
-            views: 980000,
-            thumbnail: '',
-            mentionContext: '"삼겹살에 소금 찍어서 먹으면 최고야"',
-            review: '문쪽 삼겹살 특유의 방식으로 구워주시는데, 겉바속촉 그 자체! 밥도둑이에요.'
-        },
-        {
-            videoId: 'v3',
-            title: '[쯔양] 제주 흑돼지 삼겹살 대결',
-            publishedAt: '2025-10-28',
-            views: 1450000,
-            thumbnail: '',
-            mentionContext: '"제주 흑돼지 삼겹살은 역시 다르네요"',
-            review: '제주 흑돼지는 일반 삼겹살보다 더 쫄깃하고 고소해요. 가격은 좀 있지만 그만한 가치가 있어요!'
-        },
-    ],
-    '냉면': [
-        {
-            videoId: 'v4',
-            title: '[쯔양] 평양냉면 맛집 투어',
-            publishedAt: '2025-11-20',
-            views: 890000,
-            thumbnail: '',
-            mentionContext: '"물냉면 육수가 정말 시원하고 깊은 맛이 나요"',
-            review: '육수가 맑고 담백해요. 면발이 쫄깃쫄깃하고 고명도 정갈하게 올라와 있어요. 진짜 냉면 맛집!'
-        },
-        {
-            videoId: 'v5',
-            title: '[쯔양] 여름에 먹는 비빔냉면',
-            publishedAt: '2025-08-10',
-            views: 1100000,
-            thumbnail: '',
-            mentionContext: '"냉면에 식초 듬뿍 넣으면 진짜 맛있어요"',
-            review: '비빔냉면 양념이 새콤달콤 매콤해서 입맛 돋워요. 계란 반개랑 같이 비벼먹으면 최고!'
-        },
-    ],
-    '횟집': [
-        {
-            videoId: 'v6',
-            title: '[쯔양] 부산 자갈치 횟집 탐방',
-            publishedAt: '2025-09-25',
-            views: 1320000,
-            thumbnail: '',
-            mentionContext: '"부산 횟집은 역시 신선도가 다르네요"',
-            review: '자갈치 시장에서 바로 잡은 광어, 우럭이 탱글탱글해요. 회 두께도 두껍고 신선해서 최고의 맛!'
-        },
-    ],
-};
+function buildYoutubeLinkWithTimestamp(link: string | null, timestampSec: number | null | undefined): string | null {
+    if (!link) return null;
+    if (typeof timestampSec !== 'number' || !Number.isFinite(timestampSec) || timestampSec <= 0) return link;
+
+    try {
+        const url = new URL(link);
+        url.searchParams.set('t', `${Math.floor(timestampSec)}s`);
+        return url.toString();
+    } catch {
+        return link;
+    }
+}
 
 // [COMPONENT] d3-cloud 기반 워드 클라우드
 interface WordCloudWord {
@@ -279,6 +71,7 @@ interface WordCloudWord {
     rotate?: number;
     font?: string;
     category: string;
+    label: string;
 }
 
 // 애니메이션용 인터페이스
@@ -290,11 +83,13 @@ interface AnimatedWord extends WordCloudWord {
 const RiceBowlWordCloud = memo(({
     keywords,
     selectedKeyword,
-    onKeywordClick
+    onKeywordClick,
+    getDisplayKeyword
 }: {
     keywords: KeywordData[];
     selectedKeyword: string | null;
     onKeywordClick: (keyword: string) => void;
+    getDisplayKeyword: (keyword: string) => string;
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [words, setWords] = useState<AnimatedWord[]>([]);
@@ -355,6 +150,7 @@ const RiceBowlWordCloud = memo(({
             text: k.keyword,
             size: minFontSize + ((k.count - minCount) / (maxCount - minCount || 1)) * (maxFontSize - minFontSize),
             category: k.category,
+            label: getDisplayKeyword(k.keyword),
         }));
 
         const layout = cloud<WordCloudWord>()
@@ -362,7 +158,7 @@ const RiceBowlWordCloud = memo(({
             .words(wordData)
             .padding(6)
             .rotate(() => 0)
-            .font('Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif')
+            .font('Pretendard, Noto Serif KR, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif')
             .fontSize((d: WordCloudWord) => d.size || 14)
             .spiral('archimedean')
             .on('end', (computedWords: WordCloudWord[]) => {
@@ -371,7 +167,7 @@ const RiceBowlWordCloud = memo(({
             });
 
         layout.start();
-    }, [keywords, dimensions]);
+    }, [getDisplayKeyword, keywords, dimensions]);
 
     // 준비되지 않았으면 로딩 표시
     if (!isReady || dimensions.width === 0) {
@@ -410,11 +206,11 @@ const RiceBowlWordCloud = memo(({
                                 onMouseEnter={() => setHoveredWord(word.text)}
                                 onMouseLeave={() => setHoveredWord(null)}
                                 style={{
-                                    fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                                    fontFamily: 'Pretendard, Noto Serif KR, "Apple SD Gothic Neo", "Malgun Gothic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                                     transition: 'font-size 0.15s ease-out, fill 0.15s ease-out',
                                 }}
                             >
-                                {word.text}
+                                {word.label}
                             </text>
                         );
                     })}
@@ -430,22 +226,46 @@ const VideoReviewCard = memo(({ video }: { video: VideoWithKeyword }) => (
     <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3">
         <div className="flex items-start gap-3">
             {/* 썸네일 플레이스홀더 */}
-            <div className="w-24 h-14 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                <Play className="h-5 w-5 text-muted-foreground" />
+            <div className="w-24 h-14 bg-muted rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {video.thumbnail ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                        src={video.thumbnail}
+                        alt="영상 썸네일"
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                    />
+                ) : (
+                    <Play className="h-5 w-5 text-muted-foreground" />
+                )}
             </div>
             <div className="flex-1 min-w-0">
                 <h4 className="font-medium text-sm line-clamp-2">{video.title}</h4>
                 <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
-                    <span>{video.publishedAt}</span>
+                    <span>{video.publishedAt ?? '-'}</span>
                     <span>•</span>
                     <Eye className="h-3 w-3" />
-                    <span>{(video.views / 10000).toFixed(1)}만 회</span>
+                    <span>{formatViewsKorean(video.views)}</span>
                 </div>
             </div>
-            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8">
-                <ExternalLink className="h-4 w-4" />
-            </Button>
+            {buildYoutubeLinkWithTimestamp(video.youtubeLink ?? null, video.timestampSec) ? (
+                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" asChild>
+                    <a
+                        href={buildYoutubeLinkWithTimestamp(video.youtubeLink ?? null, video.timestampSec) as string}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="유튜브에서 보기"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                    </a>
+                </Button>
+            ) : (
+                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" disabled aria-label="연결된 영상 링크 없음">
+                    <ExternalLink className="h-4 w-4" />
+                </Button>
+            )}
         </div>
 
         {/* 쯔양의 리뷰 */}
@@ -473,29 +293,57 @@ VideoReviewCard.displayName = 'VideoReviewCard';
 const WordCloudSectionComponent = () => {
     const [searchQuery, setSearchQuery] = useState('');
     // 기본으로 가장 많이 언급된 키워드 선택
-    const [selectedKeyword, setSelectedKeyword] = useState<string>('삼겹살');
+    const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
+
+    const {
+        data: keywordResponse,
+        isLoading: isKeywordsLoading,
+        error: keywordsError,
+    } = useQuery({
+        queryKey: ['admin-insight-wordcloud'],
+        queryFn: fetchWordcloudKeywords,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const keywords = keywordResponse?.keywords ?? EMPTY_KEYWORDS;
+    const getDisplayKeyword = useCallback((keyword: string) => toKoreanKeywordLabel(keyword), []);
+
+    useEffect(() => {
+        if (selectedKeyword) return;
+        if (keywords.length === 0) return;
+        setSelectedKeyword(keywords[0]?.keyword ?? null);
+    }, [keywords, selectedKeyword]);
+
+    const {
+        data: videosResponse,
+        isLoading: isVideosLoading,
+        error: videosError,
+    } = useQuery({
+        queryKey: ['admin-insight-wordcloud-videos', selectedKeyword],
+        queryFn: () => fetchWordcloudVideos(selectedKeyword as string),
+        enabled: Boolean(selectedKeyword),
+        staleTime: 1000 * 60 * 5,
+    });
 
     // [OPTIMIZATION] 필터링된 키워드 메모이제이션
     const filteredKeywords = useMemo(() => {
-        if (!searchQuery.trim()) return MOCK_KEYWORDS;
+        if (!searchQuery.trim()) return keywords;
 
         const query = searchQuery.toLowerCase();
-        return MOCK_KEYWORDS.filter(k =>
+        return keywords.filter(k =>
             k.keyword.toLowerCase().includes(query) ||
+            getDisplayKeyword(k.keyword).toLowerCase().includes(query) ||
             k.category.toLowerCase().includes(query)
         );
-    }, [searchQuery]);
+    }, [getDisplayKeyword, keywords, searchQuery]);
 
-    // [OPTIMIZATION] 선택된 키워드의 관련 영상 메모이제이션
-    const relatedVideos = useMemo(() => {
-        if (!selectedKeyword) return [];
-        return MOCK_VIDEOS_BY_KEYWORD[selectedKeyword] || [];
-    }, [selectedKeyword]);
+    const relatedVideos = videosResponse?.videos ?? [];
 
     // 선택된 키워드 정보
     const selectedKeywordData = useMemo(() => {
-        return MOCK_KEYWORDS.find(k => k.keyword === selectedKeyword);
-    }, [selectedKeyword]);
+        if (!selectedKeyword) return undefined;
+        return keywords.find(k => k.keyword === selectedKeyword);
+    }, [keywords, selectedKeyword]);
 
     // [OPTIMIZATION] 핸들러 메모이제이션
     const handleKeywordClick = useCallback((keyword: string) => {
@@ -510,10 +358,10 @@ const WordCloudSectionComponent = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="text-base flex items-center gap-2">
-                                리뷰 키워드 분석
+                                자막/캡셔닝 키워드 분석
                             </CardTitle>
                             <CardDescription className="text-xs mt-1">
-                                쯔양의 리뷰에서 가장 많이 언급된 음식 키워드입니다. 클릭하면 관련 영상을 확인할 수 있습니다.
+                                쯔양 영상의 자막/캡셔닝에서 추출한 키워드입니다. 클릭하면 관련 영상을 확인할 수 있습니다.
                             </CardDescription>
                         </div>
                         <div className="relative w-48">
@@ -528,11 +376,22 @@ const WordCloudSectionComponent = () => {
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 min-h-0 pt-0 overflow-hidden">
-                    <RiceBowlWordCloud
-                        keywords={filteredKeywords}
-                        selectedKeyword={selectedKeyword}
-                        onKeywordClick={handleKeywordClick}
-                    />
+                    {isKeywordsLoading ? (
+                        <div className="relative h-full w-full flex items-center justify-center">
+                            <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                        </div>
+                    ) : keywordsError ? (
+                        <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
+                            키워드 데이터를 불러오지 못했습니다.
+                        </div>
+                    ) : (
+                        <RiceBowlWordCloud
+                            keywords={filteredKeywords}
+                            selectedKeyword={selectedKeyword}
+                            onKeywordClick={handleKeywordClick}
+                            getDisplayKeyword={getDisplayKeyword}
+                        />
+                    )}
                 </CardContent>
             </Card>
 
@@ -544,7 +403,7 @@ const WordCloudSectionComponent = () => {
                             <CardTitle className="text-base flex items-center gap-2">
                                 {selectedKeyword && (
                                     <Badge variant="default" className="text-sm">
-                                        {selectedKeyword}
+                                        {getDisplayKeyword(selectedKeyword)}
                                     </Badge>
                                 )}
                                 관련 영상
@@ -552,7 +411,7 @@ const WordCloudSectionComponent = () => {
                             <CardDescription className="text-xs mt-1">
                                 {selectedKeywordData && (
                                     <>
-                                        {relatedVideos.length}개의 영상에서 {selectedKeywordData.count}회 언급됨
+                                        {isVideosLoading ? '불러오는 중...' : `${relatedVideos.length}개의 영상에서 ${selectedKeywordData.count}회 언급됨`}
                                         {selectedKeywordData.trend === 'up' && (
                                             <TrendingUp className="inline h-3 w-3 ml-1 text-green-500" />
                                         )}
@@ -564,7 +423,15 @@ const WordCloudSectionComponent = () => {
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full px-4 pb-4">
-                        {relatedVideos.length === 0 ? (
+                        {videosError ? (
+                            <div className="text-center py-12 text-muted-foreground text-sm">
+                                관련 영상을 불러오지 못했습니다.
+                            </div>
+                        ) : !selectedKeyword ? (
+                            <div className="text-center py-12 text-muted-foreground text-sm">
+                                키워드를 선택해 주세요.
+                            </div>
+                        ) : relatedVideos.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground text-sm">
                                 <div className="text-4xl mb-3">🔍</div>
                                 <p>키워드를 선택하면</p>

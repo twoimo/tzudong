@@ -289,6 +289,145 @@ export function SubmissionListView({
     const ocrPollingRef = useRef<NodeJS.Timeout | null>(null);
     const ocrRealtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const ocrCountdownRef = useRef<NodeJS.Timeout | null>(null);
+    const submissionTabSwipeStartXRef = useRef<number | null>(null);
+    const submissionTabSwipeEndXRef = useRef<number | null>(null);
+    const submissionTabSwipeStartYRef = useRef<number | null>(null);
+    const submissionTabSwipeEndYRef = useRef<number | null>(null);
+    const submissionTabSwipeLastHandledAtRef = useRef(0);
+    const submissionTabSwipePointerIdRef = useRef<number | null>(null);
+    const submissionTabSwipeInputRef = useRef<'pointer' | 'touch' | null>(null);
+    const isSubmissionTabSwipeActiveRef = useRef(false);
+
+    const TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
+    const SUBMISSION_TAB_SWIPE_DISTANCE = 24;
+
+    const handleSubmissionTabTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current === 'pointer') return;
+        submissionTabSwipeInputRef.current = 'touch';
+        submissionTabSwipePointerIdRef.current = null;
+        submissionTabSwipeStartXRef.current = e.touches[0].clientX;
+        submissionTabSwipeStartYRef.current = e.touches[0].clientY;
+        submissionTabSwipeEndXRef.current = null;
+        submissionTabSwipeEndYRef.current = null;
+        isSubmissionTabSwipeActiveRef.current = true;
+    }, []);
+
+    const handleSubmissionTabTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'touch') return;
+        submissionTabSwipeEndXRef.current = e.touches[0].clientX;
+        submissionTabSwipeEndYRef.current = e.touches[0].clientY;
+    }, []);
+
+    const handleSubmissionTabSwipeEndInternal = useCallback((): boolean => {
+        const startX = submissionTabSwipeStartXRef.current;
+        const endX = submissionTabSwipeEndXRef.current;
+        const startY = submissionTabSwipeStartYRef.current;
+        const endY = submissionTabSwipeEndYRef.current;
+
+        if (startX === null || endX === null || startY === null || endY === null) return false;
+
+        const distanceX = startX - endX;
+        const distanceY = startY - endY;
+
+        if (Math.abs(distanceX) < SUBMISSION_TAB_SWIPE_DISTANCE || Math.abs(distanceX) <= Math.abs(distanceY)) {
+            return false;
+        }
+
+        const currentIndex = TAB_ORDER.indexOf(activeTab);
+        if (currentIndex === -1) return false;
+
+        if (distanceX > 0 && currentIndex < TAB_ORDER.length - 1) {
+            setActiveTab(TAB_ORDER[currentIndex + 1]);
+            return true;
+        }
+
+        if (distanceX < 0 && currentIndex > 0) {
+            setActiveTab(TAB_ORDER[currentIndex - 1]);
+            return true;
+        }
+
+        return false;
+    }, [activeTab]);
+
+    const handleSubmissionTabPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current === 'touch') return;
+        submissionTabSwipeInputRef.current = 'pointer';
+        submissionTabSwipePointerIdRef.current = e.pointerId;
+        isSubmissionTabSwipeActiveRef.current = true;
+        submissionTabSwipeStartXRef.current = e.clientX;
+        submissionTabSwipeStartYRef.current = e.clientY;
+        submissionTabSwipeEndXRef.current = null;
+        submissionTabSwipeEndYRef.current = null;
+        try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+            // no-op
+        }
+    }, []);
+
+    const handleSubmissionTabPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'pointer' || submissionTabSwipePointerIdRef.current !== e.pointerId) return;
+        submissionTabSwipeEndXRef.current = e.clientX;
+        submissionTabSwipeEndYRef.current = e.clientY;
+    }, []);
+
+    const handleSubmissionTabPointerEnd = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'pointer' || submissionTabSwipePointerIdRef.current !== e.pointerId) return;
+        if (Date.now() - submissionTabSwipeLastHandledAtRef.current < 250) {
+            isSubmissionTabSwipeActiveRef.current = false;
+            submissionTabSwipeInputRef.current = null;
+            submissionTabSwipePointerIdRef.current = null;
+            try {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+            } catch {
+                // no-op
+            }
+            return;
+        }
+
+        const didSwipe = handleSubmissionTabSwipeEndInternal();
+        if (didSwipe) {
+            submissionTabSwipeLastHandledAtRef.current = Date.now();
+            e.preventDefault();
+        }
+        isSubmissionTabSwipeActiveRef.current = false;
+        submissionTabSwipeInputRef.current = null;
+        submissionTabSwipePointerIdRef.current = null;
+        try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch {
+            // no-op
+        }
+    }, [handleSubmissionTabSwipeEndInternal]);
+
+    const handleSubmissionTabSwipeEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'touch' || submissionTabSwipePointerIdRef.current !== null) return;
+        if (Date.now() - submissionTabSwipeLastHandledAtRef.current < 250) {
+            isSubmissionTabSwipeActiveRef.current = false;
+            submissionTabSwipeInputRef.current = null;
+            return;
+        }
+
+        const didSwipe = handleSubmissionTabSwipeEndInternal();
+        if (didSwipe) {
+            submissionTabSwipeLastHandledAtRef.current = Date.now();
+            e.preventDefault();
+        }
+        isSubmissionTabSwipeActiveRef.current = false;
+        submissionTabSwipeInputRef.current = null;
+    }, [handleSubmissionTabSwipeEndInternal]);
+
+    const handleSubmissionTabPointerCancel = useCallback(() => {
+        isSubmissionTabSwipeActiveRef.current = false;
+        submissionTabSwipeInputRef.current = null;
+        submissionTabSwipePointerIdRef.current = null;
+    }, []);
+
+    const handleSubmissionTabTouchCancel = useCallback(() => {
+        if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'touch') return;
+        isSubmissionTabSwipeActiveRef.current = false;
+        submissionTabSwipeInputRef.current = null;
+    }, []);
 
     // 이미지 확대 모달 상태
     const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
@@ -1197,7 +1336,18 @@ export function SubmissionListView({
                         </div>
                         {/* 오른쪽: 탭 버튼들 */}
                         <div className={cn("w-full overflow-x-auto pb-1 xl:w-auto xl:overflow-visible xl:pb-0", isMobile && "overflow-visible pb-0")}>
-                            <div className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-3 gap-1")}>
+                            <div
+                                className={cn("flex min-w-max items-center gap-2", isMobile && "grid min-w-0 grid-cols-3 gap-1")}
+                                style={isMobile ? { touchAction: 'pan-y' } : undefined}
+                                onPointerDown={isMobile ? handleSubmissionTabPointerDown : undefined}
+                                onPointerMove={isMobile ? handleSubmissionTabPointerMove : undefined}
+                                onPointerUp={isMobile ? handleSubmissionTabPointerEnd : undefined}
+                                onPointerCancel={isMobile ? handleSubmissionTabPointerCancel : undefined}
+                                onTouchStart={isMobile ? handleSubmissionTabTouchStart : undefined}
+                                onTouchMove={isMobile ? handleSubmissionTabTouchMove : undefined}
+                                onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
+                                onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
+                            >
                                 <Button
                                     variant={activeTab === 'new' ? 'default' : 'outline'}
                                     size="sm"
@@ -1281,7 +1431,18 @@ export function SubmissionListView({
 
                 {/* 테이블 또는 리뷰 목록 */}
                 {activeTab === 'reviews' ? (
-                    <div className={listContainerClassName}>
+                    <div
+                        className={listContainerClassName}
+                        style={isMobile ? { touchAction: 'pan-y' } : undefined}
+                        onPointerDown={isMobile ? handleSubmissionTabPointerDown : undefined}
+                        onPointerMove={isMobile ? handleSubmissionTabPointerMove : undefined}
+                        onPointerUp={isMobile ? handleSubmissionTabPointerEnd : undefined}
+                        onPointerCancel={isMobile ? handleSubmissionTabPointerCancel : undefined}
+                        onTouchStart={isMobile ? handleSubmissionTabTouchStart : undefined}
+                        onTouchMove={isMobile ? handleSubmissionTabTouchMove : undefined}
+                        onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
+                        onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
+                    >
                         {reviewsLoading ? (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="w-8 h-8 animate-spin" />
@@ -1410,7 +1571,18 @@ export function SubmissionListView({
                         )}
                     </div>
                 ) : (
-                    <div className={listContainerClassName}>
+                    <div
+                        className={listContainerClassName}
+                        style={isMobile ? { touchAction: 'pan-y' } : undefined}
+                        onPointerDown={isMobile ? handleSubmissionTabPointerDown : undefined}
+                        onPointerMove={isMobile ? handleSubmissionTabPointerMove : undefined}
+                        onPointerUp={isMobile ? handleSubmissionTabPointerEnd : undefined}
+                        onPointerCancel={isMobile ? handleSubmissionTabPointerCancel : undefined}
+                        onTouchStart={isMobile ? handleSubmissionTabTouchStart : undefined}
+                        onTouchMove={isMobile ? handleSubmissionTabTouchMove : undefined}
+                        onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
+                        onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
+                    >
                         {filteredSubmissions.length === 0 && !searchQuery ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <AlertCircle className="w-10 h-10 mb-3" />

@@ -7,6 +7,9 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/auth/require-admin';
+
+export const runtime = 'nodejs';
 
 // 환경 변수
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -17,6 +20,9 @@ const GITHUB_REPO = process.env.GITHUB_REPO!;
 
 export async function POST() {
     try {
+        const auth = await requireAdmin();
+        if (!auth.ok) return auth.response;
+
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
         // 1. 영수증 사진이 있는 리뷰 수 조회

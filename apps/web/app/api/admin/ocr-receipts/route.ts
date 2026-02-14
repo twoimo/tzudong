@@ -7,6 +7,9 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/auth/require-admin';
+
+export const runtime = 'nodejs';
 
 // 환경 변수
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -18,6 +21,9 @@ const GITHUB_REPO = process.env.GITHUB_REPO!;
 // POST: GitHub Actions 워크플로우 트리거
 export async function POST() {
     try {
+        const auth = await requireAdmin();
+        if (!auth.ok) return auth.response;
+
         if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
             return NextResponse.json(
                 { error: 'GitHub 환경 변수가 설정되지 않았습니다.' },
@@ -65,6 +71,9 @@ export async function POST() {
 // GET: OCR 처리 상태 조회
 export async function GET() {
     try {
+        const auth = await requireAdmin();
+        if (!auth.ok) return auth.response;
+
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
         const { count: pending } = await supabase

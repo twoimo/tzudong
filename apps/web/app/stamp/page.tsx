@@ -377,11 +377,15 @@ export default function StampPage() {
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
             try {
-                const { data: restaurants, error } = await (supabase as any).rpc('search_restaurants_by_name', {
-                    search_query: searchQuery.trim(),
-                    search_categories: null,
-                    max_results: 100
-                });
+                // NOTE: DB RPC(search_restaurants_by_name)가 스키마 드리프트로 실패할 수 있어
+                // restaurants 테이블을 직접 조회합니다. (approved_name -> name alias)
+                const { data: restaurants, error } = await supabase
+                    .from('restaurants')
+                    .select('id, name:approved_name, approved_name, road_address, jibun_address, english_address, phone, categories, youtube_link, tzuyang_review, youtube_meta, lat, lng, status, created_at, updated_at, review_count')
+                    .eq('status', 'approved')
+                    .ilike('approved_name', `%${searchQuery.trim()}%`)
+                    .order('review_count', { ascending: false })
+                    .limit(100);
                 if (error) throw error;
                 if (!restaurants || restaurants.length === 0) return [];
 
@@ -720,6 +724,37 @@ export default function StampPage() {
             setIsRightPanelVisible(true);
         }
     }, [isMobileOrTablet]);
+
+    const handleBottomSheetRestaurantSwipe = useCallback((direction: 'prev' | 'next') => {
+        const candidates = displayedRestaurants.length > 0 ? displayedRestaurants : filteredAndSortedRestaurants;
+        if (!selectedRestaurant || !isRightPanelVisible || candidates.length <= 1) return;
+
+        const currentIndex = candidates.findIndex((restaurant) => restaurant.id === selectedRestaurant.id);
+        if (currentIndex === -1) return;
+
+        let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+        if (nextIndex < 0) {
+            nextIndex = candidates.length - 1;
+        } else if (nextIndex >= candidates.length) {
+            nextIndex = 0;
+        }
+
+        const nextRestaurant = candidates[nextIndex];
+        if (!nextRestaurant) return;
+
+        setSelectedRestaurant(nextRestaurant);
+        setSelectedReview(null);
+        setCurrentPhotoIndex(0);
+        setIsRightPanelVisible(true);
+    }, [displayedRestaurants, filteredAndSortedRestaurants, isRightPanelVisible, selectedRestaurant]);
+
+    const handleBottomSheetSwipeLeft = useCallback(() => {
+        handleBottomSheetRestaurantSwipe('next');
+    }, [handleBottomSheetRestaurantSwipe]);
+
+    const handleBottomSheetSwipeRight = useCallback(() => {
+        handleBottomSheetRestaurantSwipe('prev');
+    }, [handleBottomSheetRestaurantSwipe]);
 
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
@@ -1198,6 +1233,8 @@ export default function StampPage() {
                     headerOffset={80}   // 헤더(64px) + 여백(16px) 공간 확보
                     bottomNavOffset={64} // 하단 네비게이션(56px) 공간 확보
                     disableContentScroll={true} // 내부 패널 스크롤 사용
+                    onSwipeLeft={handleBottomSheetSwipeLeft}
+                    onSwipeRight={handleBottomSheetSwipeRight}
                     showCloseButton={false}
                     className="p-0"
                 >

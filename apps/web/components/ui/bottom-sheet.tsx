@@ -19,6 +19,8 @@ interface BottomSheetProps {
     disableContentScroll?: boolean;
     headerOffset?: number;   // Pixels (e.g., 80px for header + spacing)
     bottomNavOffset?: number; // Pixels (e.g., 56px for bottom nav)
+    onSwipeLeft?: () => void;
+    onSwipeRight?: () => void;
 }
 
 const isVerticallyScrollable = (element: HTMLElement) => {
@@ -62,6 +64,8 @@ function BottomSheetComponent({
     disableContentScroll = false,
     headerOffset = 0,
     bottomNavOffset = 0,
+    onSwipeLeft,
+    onSwipeRight,
 }: BottomSheetProps) {
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(defaultHeight);
@@ -80,6 +84,8 @@ function BottomSheetComponent({
     const CONTENT_TOP_EPSILON = 2;
     const CONTENT_DRAG_START_THRESHOLD = 16;
     const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
+    const HORIZONTAL_SWIPE_THRESHOLD = 12;
+    const HORIZONTAL_SWIPE_INTENT_RATIO = 1.0;
 
     const isDraggingRef = useRef(false);
     const startYRef = useRef(0);
@@ -96,6 +102,10 @@ function BottomSheetComponent({
     const isContentDraggingSheetRef = useRef(false);
     const contentStartBoundaryRef = useRef<'top' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
+    const handleTouchStartXRef = useRef(0);
+    const handleSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
+    const contentSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
+    const sheetTouchSourceRef = useRef<'handle' | 'content' | null>(null);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return headerOffset > 0
@@ -175,17 +185,6 @@ function BottomSheetComponent({
         setIsDragging(true);
     }, [sheetHeight]);
 
-    // 터치 드래그 시작
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        handleDragStartCore(e.touches[0].clientY);
-    }, [handleDragStartCore]);
-
-    // 마우스 드래그 시작
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-        handleDragStartCore(e.clientY);
-    }, [handleDragStartCore]);
-
     // [PERFORMANCE] 드래그 중 공통 로직 - RAF 기반 최적화
     const handleDragMoveCore = useCallback((currentY: number) => {
         if (!isDraggingRef.current) return;
@@ -219,11 +218,7 @@ function BottomSheetComponent({
         });
     }, [getCurrentMaxHeight]);
 
-    // 터치 드래그 중
-    const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        handleDragMoveCore(e.touches[0].clientY);
-    }, [handleDragMoveCore]);
-
+    // 터치 드래그 시작
     // [PERFORMANCE] 드래그 종료
     const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
         isDraggingRef.current = false;
@@ -253,62 +248,175 @@ function BottomSheetComponent({
         });
     }, [onClose, closeThreshold, MIN_SHEET_HEIGHT, getNearestSnapHeight]);
 
-    const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        contentTouchStartYRef.current = e.touches[0].clientY;
-        contentTouchStartXRef.current = e.touches[0].clientX;
-        isContentDraggingSheetRef.current = false;
-        const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
-        contentScrollTargetRef.current = scrollTarget;
-        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
-        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        handleTouchStartXRef.current = e.touches[0].clientX;
+        startYRef.current = e.touches[0].clientY;
+        handleSwipeDirectionRef.current = null;
     }, []);
 
-    const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    // 마우스 드래그 시작
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        handleDragStartCore(e.clientY);
+    }, [handleDragStartCore]);
+
+    const handleSwipeTouchMove = useCallback((e: React.TouchEvent, isFromHandle = false) => {
         const currentY = e.touches[0].clientY;
         const currentX = e.touches[0].clientX;
-        const deltaY = currentY - contentTouchStartYRef.current;
-        const deltaX = currentX - contentTouchStartXRef.current;
+        const currentStartY = isFromHandle ? startYRef.current : contentTouchStartYRef.current;
+        const currentStartX = isFromHandle ? handleTouchStartXRef.current : contentTouchStartXRef.current;
+        const currentDirectionRef = isFromHandle ? handleSwipeDirectionRef : contentSwipeDirectionRef;
+        const deltaY = currentY - currentStartY;
+        const deltaX = currentX - currentStartX;
         const absDeltaY = Math.abs(deltaY);
         const absDeltaX = Math.abs(deltaX);
-        const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
-        if (!contentScrollTargetRef.current) {
-            contentScrollTargetRef.current = scrollTarget;
+
+        if (!currentDirectionRef.current) {
+            const isHorizontalSwipe = absDeltaX > absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO && absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD;
+            if (isHorizontalSwipe && (onSwipeLeft || onSwipeRight)) {
+                currentDirectionRef.current = 'horizontal';
+                return;
+            }
+
+            if (isFromHandle) {
+                if (absDeltaY <= 2) return;
+            } else {
+                const canStartContentDrag = (
+                    contentStartBoundaryRef.current === 'top' &&
+                    absDeltaY > CONTENT_DRAG_START_THRESHOLD &&
+                    absDeltaY > absDeltaX * CONTENT_VERTICAL_INTENT_RATIO
+                );
+                if (!canStartContentDrag) return;
+            }
+
+            handleDragStartCore(currentStartY);
+            currentDirectionRef.current = 'vertical';
+            if (!isFromHandle) {
+                isContentDraggingSheetRef.current = true;
+            }
         }
 
-        if (!isContentDraggingSheetRef.current) {
-            const canStartContentDrag = (
-                contentStartBoundaryRef.current === 'top' &&
-                absDeltaY > CONTENT_DRAG_START_THRESHOLD &&
-                absDeltaY > absDeltaX * CONTENT_VERTICAL_INTENT_RATIO
-            );
-            if (!canStartContentDrag) return;
-
-            handleDragStartCore(contentTouchStartYRef.current);
-            isContentDraggingSheetRef.current = true;
+        if (currentDirectionRef.current !== 'vertical') return;
+        if (!isFromHandle) {
+            e.stopPropagation();
         }
-
-        e.stopPropagation();
         handleDragMoveCore(currentY);
     }, [
         CONTENT_DRAG_START_THRESHOLD,
         CONTENT_VERTICAL_INTENT_RATIO,
+        HORIZONTAL_SWIPE_INTENT_RATIO,
+        HORIZONTAL_SWIPE_THRESHOLD,
         handleDragMoveCore,
-        handleDragStartCore
+        handleDragStartCore,
+        onSwipeLeft,
+        onSwipeRight,
     ]);
 
-    const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (!isContentDraggingSheetRef.current) {
+
+    const handleSwipeTouchEnd = useCallback((e: React.TouchEvent, isFromHandle = false) => {
+        const currentTouch = e.changedTouches?.[0] ?? e.touches?.[0];
+        if (!currentTouch) return;
+        const currentDirectionRef = isFromHandle ? handleSwipeDirectionRef : contentSwipeDirectionRef;
+        const currentStartY = isFromHandle ? startYRef.current : contentTouchStartYRef.current;
+        const currentStartX = isFromHandle ? handleTouchStartXRef.current : contentTouchStartXRef.current;
+        const direction = currentDirectionRef.current;
+
+        if (direction === 'horizontal') {
+            const deltaX = currentTouch.clientX - currentStartX;
+            const deltaY = currentTouch.clientY - currentStartY;
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+            const isValidSwipe = absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO;
+
+            if (isValidSwipe) {
+                if (deltaX < 0) {
+                    onSwipeLeft?.();
+                } else {
+                    onSwipeRight?.();
+                }
+            }
+        } else if (direction === null) {
+            const deltaX = currentTouch.clientX - currentStartX;
+            const deltaY = currentTouch.clientY - currentStartY;
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+            const isPossibleSwipe = absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * 0.9;
+
+            if (isPossibleSwipe) {
+                if (deltaX < 0) {
+                    onSwipeLeft?.();
+                } else {
+                    onSwipeRight?.();
+                }
+            }
+        }
+
+        if (direction === 'vertical') {
+            if (isFromHandle) {
+                handleDragEnd('handle');
+            } else {
+                handleDragEnd('content');
+            }
+        }
+
+        currentDirectionRef.current = null;
+        if (!isFromHandle) {
+            isContentDraggingSheetRef.current = false;
             contentScrollTargetRef.current = null;
             contentStartBoundaryRef.current = null;
-            return;
         }
-        e.stopPropagation();
+    }, [
+        HORIZONTAL_SWIPE_INTENT_RATIO,
+        HORIZONTAL_SWIPE_THRESHOLD,
+        handleDragEnd,
+        onSwipeLeft,
+        onSwipeRight,
+    ]);
+
+    const handleSheetTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+        const target = e.target;
+
+        handleSwipeDirectionRef.current = null;
+        contentSwipeDirectionRef.current = null;
         isContentDraggingSheetRef.current = false;
         contentScrollTargetRef.current = null;
         contentStartBoundaryRef.current = null;
-        handleDragEnd('content');
-    }, [handleDragEnd]);
+        sheetTouchSourceRef.current = null;
+
+        const isFromHandle = target instanceof Node && handleRef.current?.contains(target);
+
+        if (isFromHandle) {
+            handleTouchStart(e);
+            sheetTouchSourceRef.current = 'handle';
+            return;
+        }
+
+        contentTouchStartYRef.current = touch.clientY;
+        contentTouchStartXRef.current = touch.clientX;
+        const scrollTarget = findScrollableTouchTarget(target, contentRef.current);
+        contentScrollTargetRef.current = scrollTarget;
+        const scrollTop = scrollTarget
+            ? scrollTarget.scrollTop
+            : contentRef.current?.scrollTop ?? 0;
+        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
+        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
+        sheetTouchSourceRef.current = 'content';
+    }, [
+        CONTENT_TOP_EPSILON,
+        findScrollableTouchTarget,
+        handleTouchStart,
+    ]);
+
+    const handleSheetTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        handleSwipeTouchMove(e, sheetTouchSourceRef.current === 'handle');
+    }, [handleSwipeTouchMove]);
+
+    const handleSheetTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        handleSwipeTouchEnd(e, sheetTouchSourceRef.current === 'handle');
+        sheetTouchSourceRef.current = null;
+    }, [handleSwipeTouchEnd]);
 
     // [PERFORMANCE] 마우스 이벤트 - window에 등록 (드래그 중일 때만)
     useEffect(() => {
@@ -395,7 +503,11 @@ function BottomSheetComponent({
                     isDragging ? '' : 'transition-[height] duration-300',
                     className
                 )}
-                style={heightStyle}
+                style={{ ...heightStyle, touchAction: 'auto' }}
+                onTouchStartCapture={handleSheetTouchStart}
+                onTouchMoveCapture={handleSheetTouchMove}
+                onTouchEndCapture={handleSheetTouchEnd}
+                onTouchCancelCapture={handleSheetTouchEnd}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 핸들 바 */}
@@ -404,10 +516,6 @@ function BottomSheetComponent({
                         ref={handleRef}
                         className="flex-shrink-0 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none rounded-t-2xl"
                         style={{ touchAction: 'none' }}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={() => handleDragEnd('handle')}
-                        onTouchCancel={() => handleDragEnd('handle')}
                         onMouseDown={handleMouseDown}
                     >
                         <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
@@ -437,10 +545,6 @@ function BottomSheetComponent({
                         WebkitOverflowScrolling: 'touch',
                         paddingBottom: `calc(env(safe-area-inset-bottom) + ${bottomNavOffset}px)`
                     }}
-                    onTouchStart={handleContentTouchStart}
-                    onTouchMove={handleContentTouchMove}
-                    onTouchEnd={handleContentTouchEnd}
-                    onTouchCancel={handleContentTouchEnd}
                 >
                     {children}
                 </div>
@@ -451,3 +555,4 @@ function BottomSheetComponent({
 
 export const BottomSheet = memo(BottomSheetComponent);
 BottomSheet.displayName = 'BottomSheet';
+

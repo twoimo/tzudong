@@ -230,7 +230,8 @@ export async function checkDbConflict(params: {
     // 모든 승인된 음식점 검색 후 정규화된 주소로 필터링
     let query = supabase
       .from('restaurants')
-      .select('*')
+      // restaurants 테이블은 approved_name 이므로 alias로 name 호환 유지
+      .select('id, name:approved_name, jibun_address, youtube_link')
       .eq('status', 'approved'); // 승인된 것만 검사
 
     // 수정 시 본인 제외

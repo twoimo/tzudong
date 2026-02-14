@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
@@ -59,7 +59,11 @@ interface RestaurantDetailPanelProps {
     className?: string;
     onUserClick?: (userId: string) => void;
     onRestaurantClick?: (restaurant: Restaurant) => void;
+    onSwipeLeft?: () => void;
+    onSwipeRight?: () => void;
 }
+
+const RESTAURANT_DETAIL_SWIPE_HINT_KEY = 'restaurant-detail-swipe-hint-seen-v1';
 
 interface Review {
     id: string;
@@ -94,6 +98,8 @@ export function RestaurantDetailPanel({
     className,
     onUserClick,
     onRestaurantClick,
+    onSwipeLeft,
+    onSwipeRight,
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
@@ -115,6 +121,7 @@ export function RestaurantDetailPanel({
         isVerified: boolean;
         adminNote: string | null;
     } | null>(null);
+    const [showSwipeHint, setShowSwipeHint] = useState(false);
 
     // [실시간] 좋아요 실시간 반영
     useReviewLikesRealtime();
@@ -316,6 +323,129 @@ export function RestaurantDetailPanel({
         } catch (err) {
             console.error('주소 복사 실패:', err);
         }
+    }, []);
+
+    const RESTAURANT_DETAIL_SWIPE_THRESHOLD = 12;
+    const RESTAURANT_DETAIL_SWIPE_INTENT_RATIO = 1.0;
+
+    const contentSwipeStartXRef = useRef(0);
+    const contentSwipeStartYRef = useRef(0);
+    const contentSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
+    const isContentSwipingRef = useRef(false);
+
+    const hideSwipeHint = useCallback(() => {
+        setShowSwipeHint(false);
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem(RESTAURANT_DETAIL_SWIPE_HINT_KEY, '1');
+    }, []);
+
+    useEffect(() => {
+        if (!showSwipeHint) return;
+
+        const handleFirstTouch = () => {
+            hideSwipeHint();
+        };
+
+        window.addEventListener('touchstart', handleFirstTouch, { passive: true });
+        window.addEventListener('pointerdown', handleFirstTouch, { passive: true });
+
+        return () => {
+            window.removeEventListener('touchstart', handleFirstTouch);
+            window.removeEventListener('pointerdown', handleFirstTouch);
+        };
+    }, [showSwipeHint, hideSwipeHint]);
+
+    const handleContentSwipeStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        contentSwipeStartXRef.current = touch.clientX;
+        contentSwipeStartYRef.current = touch.clientY;
+        contentSwipeDirectionRef.current = null;
+        isContentSwipingRef.current = true;
+        hideSwipeHint();
+    }, []);
+
+    useEffect(() => {
+        if (!isMobile || !isPanelOpen || !(onSwipeLeft || onSwipeRight)) {
+            setShowSwipeHint(false);
+            return;
+        }
+
+        if (typeof window === 'undefined') return;
+
+        const isSeen = window.localStorage.getItem(RESTAURANT_DETAIL_SWIPE_HINT_KEY) === '1';
+        setShowSwipeHint(!isSeen);
+    }, [isMobile, isPanelOpen, onSwipeLeft, onSwipeRight]);
+
+    const handleContentSwipeMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isContentSwipingRef.current) return;
+
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        const deltaX = touch.clientX - contentSwipeStartXRef.current;
+        const deltaY = touch.clientY - contentSwipeStartYRef.current;
+        const absDeltaX = Math.abs(deltaX);
+        const absDeltaY = Math.abs(deltaY);
+
+        if (!contentSwipeDirectionRef.current) {
+            const isHorizontalSwipe = absDeltaX > absDeltaY * RESTAURANT_DETAIL_SWIPE_INTENT_RATIO && absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD;
+            if (isHorizontalSwipe && (onSwipeLeft || onSwipeRight)) {
+                contentSwipeDirectionRef.current = 'horizontal';
+                e.stopPropagation();
+                return;
+            }
+
+            if (absDeltaY > absDeltaX * 1.2 && absDeltaY > 2) {
+                contentSwipeDirectionRef.current = 'vertical';
+            }
+            return;
+        }
+
+        if (contentSwipeDirectionRef.current !== 'horizontal') return;
+        e.stopPropagation();
+    }, [onSwipeLeft, onSwipeRight]);
+
+    const handleContentSwipeEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!isContentSwipingRef.current) return;
+
+        const currentTouch = e.changedTouches?.[0] ?? e.touches?.[0];
+        if (!currentTouch) {
+            isContentSwipingRef.current = false;
+            contentSwipeDirectionRef.current = null;
+            return;
+        }
+
+        const deltaX = currentTouch.clientX - contentSwipeStartXRef.current;
+        const deltaY = currentTouch.clientY - contentSwipeStartYRef.current;
+        const absDeltaX = Math.abs(deltaX);
+        const absDeltaY = Math.abs(deltaY);
+        const direction = contentSwipeDirectionRef.current;
+
+        const isValidSwipe = absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * RESTAURANT_DETAIL_SWIPE_INTENT_RATIO;
+        const isPossibleSwipe = absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * 0.9;
+
+        if (direction === 'horizontal' || direction === null) {
+            if (isValidSwipe || isPossibleSwipe) {
+                if (deltaX < 0) {
+                    onSwipeLeft?.();
+                } else {
+                    onSwipeRight?.();
+                }
+                e.stopPropagation();
+            } else if (direction === 'horizontal') {
+                e.stopPropagation();
+            }
+        }
+
+        isContentSwipingRef.current = false;
+        contentSwipeDirectionRef.current = null;
+    }, [onSwipeLeft, onSwipeRight]);
+
+    const handleContentSwipeCancel = useCallback(() => {
+        isContentSwipingRef.current = false;
+        contentSwipeDirectionRef.current = null;
     }, []);
 
     // [핸들러] 공유하기 URL 복사 - useCallback으로 메모이제이션
@@ -532,6 +662,23 @@ export function RestaurantDetailPanel({
 
     return (
         <>
+            {isMobile && (onSwipeLeft || onSwipeRight) && showSwipeHint ? (
+                <div className="pointer-events-none fixed inset-0 z-[70]">
+                    <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="rounded-full border border-white/40 bg-black/40 px-3 py-2 text-xs text-white/90 backdrop-blur">
+                            좌우 스와이프 시 다음 맛집으로 이동
+                        </div>
+                    </div>
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center">
+                        <ChevronLeft className="h-6 w-6 text-white/90" />
+                    </div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center">
+                        <ChevronRight className="h-6 w-6 text-white/90" />
+                    </div>
+                </div>
+            ) : null}
+
             <div
                 data-testid="restaurant-detail-panel"
                 data-panel-type="restaurant-detail"
@@ -684,8 +831,16 @@ export function RestaurantDetailPanel({
                 </div>
 
                 {/* 내용 */}
-                <div className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                    <div className="p-4 space-y-4">
+                        <div
+	                        data-restaurant-detail-swipe-area="content"
+	                        className="relative flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+	                        style={{ touchAction: 'pan-y' }}
+	                        onTouchStart={handleContentSwipeStart}
+	                        onTouchMove={handleContentSwipeMove}
+                        onTouchEnd={handleContentSwipeEnd}
+                        onTouchCancel={handleContentSwipeCancel}
+                    >
+	                        <div className="p-4 space-y-4">
                         {viewMode === 'detail' ? (
                             <>
                                 {/* 연락처 정보 */}

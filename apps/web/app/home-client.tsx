@@ -414,6 +414,11 @@ export default function HomeClient() {
         // q 파라미터(공유 URL)는 유지
     }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setSearchedRestaurant, state.setIsPanelOpen, router]);
 
+    const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
+        state.setSelectedRestaurant(restaurant);
+        state.setPanelRestaurant(restaurant);
+    }, [state.setPanelRestaurant, state.setSelectedRestaurant]);
+
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({
         mapMode,
@@ -601,7 +606,7 @@ export default function HomeClient() {
                 isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
                 onAdminEditRestaurant={onAdminEditRestaurant}
                 onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
-                onRestaurantSelect={state.setSelectedRestaurant}
+                onRestaurantSelect={handleRestaurantSelectionSync}
 
                 onMapReady={handlers.handleMapReady}
                 onMarkerClick={openDetailPanel}

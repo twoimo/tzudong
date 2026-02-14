@@ -17,6 +17,9 @@ import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
 import sharp from 'sharp';
+import { requireAdmin } from '@/lib/auth/require-admin';
+
+export const runtime = 'nodejs';
 
 // 환경 변수
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -121,7 +124,7 @@ function runPythonPreprocess(inputPath: string, outputDir: string): Promise<Reco
             try {
                 const result = JSON.parse(stdout.trim());
                 resolve(result);
-            } catch (e) {
+            } catch {
                 reject(new Error(`Python 출력 파싱 실패: ${stdout}`));
             }
         });
@@ -178,7 +181,7 @@ function parseOCRResponse(responseText: string): Record<string, unknown> {
     try {
         const jsonStr = jsonMatch[1] || jsonMatch[0];
         return JSON.parse(jsonStr);
-    } catch (e) {
+    } catch {
         return { error: 'json_parse_error', confidence: 0 };
     }
 }
@@ -197,6 +200,9 @@ function cleanupTempDir(dirPath: string) {
 }
 
 export async function POST(request: Request) {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     const tempDir = path.join(os.tmpdir(), `ocr-${Date.now()}`);
 
     try {

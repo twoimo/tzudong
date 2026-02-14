@@ -54,7 +54,9 @@ backend/restaurant-crawling/data/frames/
 backend/restaurant-crawling/data/credentials.json
 
 # Supabase
-supabase/
+supabase/.temp/
+supabase/backup_db/
+supabase/.env*
 summary.md
 backend/.sync_trigger
 backend/restaurant-evaluation/temp/health_check_prompt.txt
@@ -66,3 +68,4 @@ backend/restaurant-crawling/data/tzuyang/checked_cache.json
 pr_body_develop.md
 pr_body_main.md
 pr_body.md
+.vercel
