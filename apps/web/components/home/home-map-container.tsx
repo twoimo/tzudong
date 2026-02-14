@@ -162,7 +162,17 @@ function HomeMapContainerComponent({
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
-    const [swipeableRestaurants, setSwipeableRestaurants] = useState<Restaurant[]>([]);
+    const [swipeableRestaurantsByMode, setSwipeableRestaurantsByMode] = useState<{
+        domestic: Restaurant[];
+        overseas: Restaurant[];
+    }>({
+        domestic: [],
+        overseas: [],
+    });
+    const activeSwipeableRestaurants = useMemo(
+        () => (mapMode === 'domestic' ? swipeableRestaurantsByMode.domestic : swipeableRestaurantsByMode.overseas),
+        [mapMode, swipeableRestaurantsByMode]
+    );
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return ((vh - HEADER_OFFSET) / vh) * 100;
@@ -351,7 +361,7 @@ function HomeMapContainerComponent({
 
         if (!contentSwipeDirectionRef.current) {
             if (
-                swipeableRestaurants.length > 1 &&
+                activeSwipeableRestaurants.length > 1 &&
                 !isDetailArea &&
                 absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD &&
                 absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO
@@ -374,7 +384,7 @@ function HomeMapContainerComponent({
 
         e.stopPropagation();
         handleDragMoveCore(currentY);
-    }, [handleDragMoveCore, handleDragStartCore, swipeableRestaurants.length]);
+    }, [handleDragMoveCore, handleDragStartCore, activeSwipeableRestaurants.length]);
 
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         const isDetailArea = isDetailSwipeArea(e.target);
@@ -394,10 +404,10 @@ function HomeMapContainerComponent({
         const absDeltaY = Math.abs(deltaY);
 
         const canSwipeHorizontal =
-            swipeableRestaurants.length > 1 &&
+            activeSwipeableRestaurants.length > 1 &&
             (absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO);
         const canSwipeFallback =
-            swipeableRestaurants.length > 1 &&
+            activeSwipeableRestaurants.length > 1 &&
             (absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_FALLBACK_RATIO);
 
         if (!isDetailArea && (contentSwipeDirectionRef.current === 'horizontal' || contentSwipeDirectionRef.current === null) &&
@@ -406,13 +416,13 @@ function HomeMapContainerComponent({
             const direction = deltaX < 0 ? 1 : -1;
             const currentRestaurant = panelRestaurant || selectedRestaurant;
             if (currentRestaurant) {
-                const currentIndex = swipeableRestaurants.findIndex((restaurant) =>
+                const currentIndex = activeSwipeableRestaurants.findIndex((restaurant) =>
                     isSameRestaurantForSwipe(restaurant, currentRestaurant)
                 );
 
                 if (currentIndex >= 0) {
                     const nextIndex = currentIndex + direction;
-                    const nextRestaurant = swipeableRestaurants[nextIndex];
+                    const nextRestaurant = activeSwipeableRestaurants[nextIndex];
                     if (nextRestaurant) {
                         onRestaurantSelect(nextRestaurant);
                     }
@@ -433,11 +443,15 @@ function HomeMapContainerComponent({
         contentStartBoundaryRef.current = null;
         contentSwipeDirectionRef.current = null;
         handleDragEnd('content');
-    }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, swipeableRestaurants, handleDragEnd]);
+    }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants, handleDragEnd]);
 
     const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
         if (!restaurants.length) {
-            setSwipeableRestaurants([]);
+            setSwipeableRestaurantsByMode((prev) =>
+                mapMode === 'domestic'
+                    ? (prev.domestic.length === 0 ? prev : { ...prev, domestic: [] })
+                    : (prev.overseas.length === 0 ? prev : { ...prev, overseas: [] })
+            );
             return;
         }
 
@@ -452,41 +466,45 @@ function HomeMapContainerComponent({
             }
         });
 
-        setSwipeableRestaurants(prev => {
+        setSwipeableRestaurantsByMode(prev => {
+            const prevRestaurants = mapMode === 'domestic' ? prev.domestic : prev.overseas;
+
             if (
-                prev.length === uniqueRestaurants.length &&
-                prev.every((restaurant, index) => isSameRestaurantForSwipe(restaurant, uniqueRestaurants[index]!))
+                prevRestaurants.length === uniqueRestaurants.length &&
+                prevRestaurants.every((restaurant, index) => isSameRestaurantForSwipe(restaurant, uniqueRestaurants[index]!))
             ) {
                 return prev;
             }
 
-            return uniqueRestaurants;
+            return mapMode === 'domestic'
+                ? { ...prev, domestic: uniqueRestaurants }
+                : { ...prev, overseas: uniqueRestaurants };
         });
-    }, []);
+    }, [mapMode]);
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
-        if (swipeableRestaurants.length <= 1) return;
+        if (activeSwipeableRestaurants.length <= 1) return;
 
         const currentRestaurant = panelRestaurant || selectedRestaurant;
         if (!currentRestaurant) return;
 
-        const currentIndex = swipeableRestaurants.findIndex((restaurant) =>
+        const currentIndex = activeSwipeableRestaurants.findIndex((restaurant) =>
             isSameRestaurantForSwipe(restaurant, currentRestaurant)
         );
         if (currentIndex < 0) return;
 
         const nextIndex = currentIndex + step;
-        const nextRestaurant = swipeableRestaurants[nextIndex];
+        const nextRestaurant = activeSwipeableRestaurants[nextIndex];
         if (!nextRestaurant) return;
 
         onRestaurantSelect(nextRestaurant);
-    }, [onRestaurantSelect, panelRestaurant, selectedRestaurant, swipeableRestaurants]);
+    }, [onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants]);
 
     useEffect(() => {
         if (onSwipeableRestaurantsChange) {
-            onSwipeableRestaurantsChange(swipeableRestaurants);
+            onSwipeableRestaurantsChange(activeSwipeableRestaurants);
         }
-    }, [onSwipeableRestaurantsChange, swipeableRestaurants]);
+    }, [onSwipeableRestaurantsChange, activeSwipeableRestaurants]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
