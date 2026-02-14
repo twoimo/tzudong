@@ -9,6 +9,7 @@ import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -55,6 +56,9 @@ const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
 const HORIZONTAL_SWIPE_THRESHOLD = 24;
 const HORIZONTAL_SWIPE_INTENT_RATIO = 1.0;
 const HORIZONTAL_SWIPE_FALLBACK_RATIO = 0.9;
+const OVERSEAS_KEYWORDS = Object.values(OVERSEAS_REGIONS).flatMap(config =>
+    config.keywords.map((keyword) => keyword.toLowerCase())
+);
 
 const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
     if (a.id === b.id) return true;
@@ -173,6 +177,37 @@ function HomeMapContainerComponent({
         () => (mapMode === 'domestic' ? swipeableRestaurantsByMode.domestic : swipeableRestaurantsByMode.overseas),
         [mapMode, swipeableRestaurantsByMode]
     );
+    const getRestaurantAddressText = useCallback((restaurant: Restaurant) => {
+        return `${restaurant.road_address || ''} ${restaurant.jibun_address || ''} ${restaurant.english_address || ''}`.toLowerCase();
+    }, []);
+
+    const getSelectedCountryKeywords = useMemo(() => {
+        if (!selectedCountry || !(selectedCountry in OVERSEAS_REGIONS)) {
+            return null;
+        }
+
+        return OVERSEAS_REGIONS[selectedCountry as keyof typeof OVERSEAS_REGIONS]
+            .keywords
+            .map((keyword) => keyword.toLowerCase());
+    }, [selectedCountry]);
+
+    const getRestaurantListByMode = useCallback((restaurants: Restaurant[]) => {
+        if (!restaurants.length) return [];
+
+        return restaurants.filter((restaurant) => {
+            const addressText = getRestaurantAddressText(restaurant);
+
+            if (mapMode === 'domestic') {
+                return !OVERSEAS_KEYWORDS.some((keyword) => addressText.includes(keyword));
+            }
+
+            if (getSelectedCountryKeywords?.length) {
+                return getSelectedCountryKeywords.some((keyword) => addressText.includes(keyword));
+            }
+
+            return OVERSEAS_KEYWORDS.some((keyword) => addressText.includes(keyword));
+        });
+    }, [getRestaurantAddressText, mapMode, getSelectedCountryKeywords]);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return ((vh - HEADER_OFFSET) / vh) * 100;
@@ -446,7 +481,9 @@ function HomeMapContainerComponent({
     }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants, handleDragEnd]);
 
     const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
-        if (!restaurants.length) {
+        const filteredRestaurants = getRestaurantListByMode(restaurants);
+
+        if (!filteredRestaurants.length) {
             setSwipeableRestaurantsByMode((prev) =>
                 mapMode === 'domestic'
                     ? (prev.domestic.length === 0 ? prev : { ...prev, domestic: [] })
@@ -456,7 +493,7 @@ function HomeMapContainerComponent({
         }
 
         const uniqueRestaurants: Restaurant[] = [];
-        restaurants.forEach((restaurant) => {
+        filteredRestaurants.forEach((restaurant) => {
             const isDuplicate = uniqueRestaurants.some((existingRestaurant) =>
                 isSameRestaurantForSwipe(existingRestaurant, restaurant)
             );
@@ -480,7 +517,7 @@ function HomeMapContainerComponent({
                 ? { ...prev, domestic: uniqueRestaurants }
                 : { ...prev, overseas: uniqueRestaurants };
         });
-    }, [mapMode]);
+    }, [mapMode, getRestaurantListByMode]);
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
         if (activeSwipeableRestaurants.length <= 1) return;
