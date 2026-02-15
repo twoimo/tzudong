@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -78,6 +77,7 @@ const formatDate = (dateString: string) => {
     day: "2-digit",
   });
 };
+const PAGE_SIZE = 15;
 
 // 상태 배지 컴포넌트 (Memoization)
 const ReviewStatusBadge = memo(({ review }: { review: MyReview }) => {
@@ -135,7 +135,7 @@ export default function ReviewsPage() {
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
-          .range(pageParam, pageParam + 19) // 페이지당 20개
+          .range(pageParam, pageParam + PAGE_SIZE - 1) // 페이지당 15개
           .returns<ReviewData[]>();
 
         if (reviewsError) {
@@ -178,7 +178,7 @@ export default function ReviewsPage() {
             : (review.category ? [review.category] : []),
         }));
 
-        const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
+        const nextCursor = reviewsData.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null;
         return { reviews, nextCursor };
       } catch (error) {
         console.error("리뷰 데이터 조회 중 오류:", error);
@@ -339,8 +339,7 @@ export default function ReviewsPage() {
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="h-[calc(100vh-250px)] min-[1600px]:h-[calc(100vh-170px)]">
-          <div className="space-y-4">
+        <div className="space-y-4">
             {filteredReviews.map((review, index) => (
               <Card
                 key={review.id}
@@ -485,7 +484,6 @@ export default function ReviewsPage() {
               </div>
             )}
           </div>
-        </ScrollArea>
       )}
 
       {/* Review Edit Modal */}

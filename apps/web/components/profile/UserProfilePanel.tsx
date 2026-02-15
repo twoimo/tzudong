@@ -1,11 +1,10 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import { useState, memo, useMemo, useCallback } from "react";
+import { useState, memo, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     ChevronLeft,
@@ -117,6 +116,8 @@ interface UserProfilePanelProps {
     onRestaurantClick?: (restaurant: any) => void;
 }
 
+const USER_PROFILE_PAGE_SIZE = 15;
+
 const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showBackButton = true, onUserClick, onRestaurantClick }: UserProfilePanelProps) {
     const router = useRouter();
     const { user } = useAuth();
@@ -130,6 +131,17 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
 
     const [activeTab, setActiveTab] = useState<'stamps' | 'reviews' | 'likers'>('stamps');
     const [thumbnailIndices, setThumbnailIndices] = useState<Record<string, number>>({});
+    const [visibleStampCount, setVisibleStampCount] = useState(15);
+    const [visibleReviewCount, setVisibleReviewCount] = useState(15);
+    const [visibleLikerCount, setVisibleLikerCount] = useState(15);
+
+    const stampTabRef = useRef<HTMLDivElement | null>(null);
+    const reviewTabRef = useRef<HTMLDivElement | null>(null);
+    const likerTabRef = useRef<HTMLDivElement | null>(null);
+
+    const stampLoadMoreRef = useRef<HTMLDivElement | null>(null);
+    const reviewLoadMoreRef = useRef<HTMLDivElement | null>(null);
+    const likerLoadMoreRef = useRef<HTMLDivElement | null>(null);
 
     // [최적화] useMemo로 랭킹 계산 메모이제이션
     const userRank = useMemo(() => {
@@ -158,6 +170,12 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     const handleTabChange = useCallback((value: string) => {
         setActiveTab(value as 'stamps' | 'reviews' | 'likers');
     }, []);
+
+    useEffect(() => {
+        setVisibleStampCount(USER_PROFILE_PAGE_SIZE);
+        setVisibleReviewCount(USER_PROFILE_PAGE_SIZE);
+        setVisibleLikerCount(USER_PROFILE_PAGE_SIZE);
+    }, [userId]);
 
     // [핸들러] 썸네일 변경
     const handleThumbnailChange = useCallback((id: string, index: number) => {
@@ -208,6 +226,69 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
             });
         }
     }, [user, reviews, queryClient, userId]);
+
+    useEffect(() => {
+        const root = stampTabRef.current;
+        const sentinel = stampLoadMoreRef.current;
+        if (!root || !sentinel || activeTab !== 'stamps' || stamps.length <= visibleStampCount) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                setVisibleStampCount((prev) => Math.min(prev + USER_PROFILE_PAGE_SIZE, stamps.length));
+            },
+            {
+                root,
+                rootMargin: '200px',
+                threshold: 0.1
+            }
+        );
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, stamps.length, visibleStampCount]);
+
+    useEffect(() => {
+        const root = reviewTabRef.current;
+        const sentinel = reviewLoadMoreRef.current;
+        if (!root || !sentinel || activeTab !== 'reviews' || reviews.length <= visibleReviewCount) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                setVisibleReviewCount((prev) => Math.min(prev + USER_PROFILE_PAGE_SIZE, reviews.length));
+            },
+            {
+                root,
+                rootMargin: '200px',
+                threshold: 0.1
+            }
+        );
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, reviews.length, visibleReviewCount]);
+
+    useEffect(() => {
+        const root = likerTabRef.current;
+        const sentinel = likerLoadMoreRef.current;
+        if (!root || !sentinel || activeTab !== 'likers' || likers.length <= visibleLikerCount) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                setVisibleLikerCount((prev) => Math.min(prev + USER_PROFILE_PAGE_SIZE, likers.length));
+            },
+            {
+                root,
+                rootMargin: '200px',
+                threshold: 0.1
+            }
+        );
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, likers.length, visibleLikerCount]);
 
 
     if (profileLoading) {
@@ -361,6 +442,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 <div className="flex-1 overflow-hidden bg-muted/10">
                     {/* 도장 탭 */}
                     <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
+                        <div ref={stampTabRef} className="h-full overflow-y-auto">
                         {stampsLoading ? (
                             <GlobalLoader message="도장 불러오는 중..." />
                         ) : stamps.length === 0 ? (
@@ -370,7 +452,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             />
                         ) : (
                             <div className="p-4 flex flex-col gap-3 pb-20">
-                                {stamps.map((stamp, index) => (
+                                {stamps.slice(0, visibleStampCount).map((stamp, index) => (
                                     <StampCard
                                         key={`stamp-${stamp.restaurant.id}-${index}`}
                                         restaurant={stamp.restaurant}
@@ -382,12 +464,15 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                         size="default"
                                     />
                                 ))}
+                                <div ref={stampLoadMoreRef} />
                             </div>
                         )}
+                        </div>
                     </TabsContent>
 
                     {/* 리뷰 탭 */}
                     <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
+                        <div ref={reviewTabRef} className="h-full overflow-y-auto">
                         {reviewsLoading ? (
                             <GlobalLoader message="리뷰 불러오는 중..." />
                         ) : reviews.length === 0 ? (
@@ -397,7 +482,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             />
                         ) : (
                             <div className="p-4 space-y-4 pb-20">
-                                {reviews.map((review, index) => (
+                                {reviews.slice(0, visibleReviewCount).map((review, index) => (
                                     <ReviewCard
                                         key={`review-${review.id}-${index}`}
                                         review={{
@@ -424,12 +509,15 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                         })}
                                     />
                                 ))}
+                                <div ref={reviewLoadMoreRef} />
                             </div>
                         )}
+                        </div>
                     </TabsContent>
 
                     {/* 좋아요 탭 */}
                     <TabsContent value="likers" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
+                        <div ref={likerTabRef} className="h-full overflow-y-auto">
                         {likersLoading ? (
                             <GlobalLoader message="좋아요 불러오는 중..." />
                         ) : likers.length === 0 ? (
@@ -438,18 +526,18 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                 message="아직 좋아요를 받지 않았습니다"
                             />
                         ) : (
-                            <ScrollArea className="h-full">
                                 <div className="divide-y divide-border">
-                                    {likers.map((liker, index) => (
+                                    {likers.slice(0, visibleLikerCount).map((liker, index) => (
                                         <LikerItem
                                             key={`liker-${liker.userId || 'unknown'}-${index}`}
                                             liker={liker}
                                             onUserClick={onUserClick}
                                         />
                                     ))}
+                                    <div ref={likerLoadMoreRef} />
                                 </div>
-                            </ScrollArea>
                         )}
+                        </div>
                     </TabsContent>
                 </div>
             </Tabs>
