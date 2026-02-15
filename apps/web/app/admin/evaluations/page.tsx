@@ -2232,6 +2232,9 @@ function AdminEvaluationPage() {
                       }));
                     }}
                     onResetFilters={() => setEvalFilters({})}
+                    onLoadMore={loadMoreRecords}
+                    hasMore={hasMore}
+                    isLoadingMore={loadingMore}
                   />
 
                   {/* 로딩 인디케이터 */}
