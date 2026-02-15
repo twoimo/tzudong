@@ -954,7 +954,6 @@ export function SubmissionListView({
 
         const hasMoreVisibleSubmissions = filteredSubmissions.length > visibleSubmissionCount;
         const shouldRequestNextSubmissionPage =
-            activeTab !== 'reviews' &&
             !hasMoreVisibleSubmissions &&
             hasNextSubmissionPage &&
             !!onLoadMoreSubmissions;
