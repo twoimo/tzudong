@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,11 @@ export interface StampCardProps {
     onClick: (restaurant: Restaurant) => void;
     /** 카드 크기 variant */
     size?: 'default' | 'compact';
+    guideLabel?: string;
+    guideTitle?: string;
+    guideDescription?: string;
+    onGuideClose?: () => void;
+    isGuideCard?: boolean;
 }
 
 /**
@@ -33,6 +38,11 @@ export const StampCard = memo(function StampCard({
     onThumbnailChange,
     onClick,
     size = 'default',
+    guideLabel,
+    guideTitle,
+    guideDescription,
+    onGuideClose,
+    isGuideCard = false,
 }: StampCardProps) {
     const showStamp = isUserStampsReady && isVisited;
     const youtubeLinks = (restaurant as any).mergedYoutubeLinks || (restaurant.youtube_link ? [restaurant.youtube_link] : []);
@@ -57,6 +67,11 @@ export const StampCard = memo(function StampCard({
     const stampSizeClass = isCompact
         ? "w-32 h-32 md:w-36 md:h-36"
         : "w-44 h-44 sm:w-52 sm:h-52";
+
+    const handleGuideClose = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onGuideClose?.();
+    };
 
     return (
         <Card
@@ -114,8 +129,39 @@ export const StampCard = memo(function StampCard({
                         )}
 
                         {/* 방문 완료 스탬프 */}
-                        {showStamp && (
-                            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                                {showStamp && (
+                                    <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+                                    {guideLabel && (
+                                    <span
+                                        className={cn(
+                                            "absolute top-2 left-2 z-10 leading-none rounded-full bg-black/65 text-white font-medium",
+                                            isCompact ? "text-[10px] px-2 py-1" : "text-xs px-2.5 py-1.5"
+                                        )}
+                                    >
+                                        {guideLabel}
+                                    </span>
+                                )}
+                                {isGuideCard && guideDescription && (
+                                    <p className={cn(
+                                        "absolute left-0 right-0 bottom-0 z-10 px-2 pb-2 pt-3 text-center bg-gradient-to-t from-black/80 via-black/55 to-transparent text-white/95 leading-snug pointer-events-none",
+                                        isCompact ? "text-[10px]" : "text-xs sm:text-sm"
+                                    )}>
+                                        {guideDescription}
+                                    </p>
+                                )}
+                                {onGuideClose && (
+                                    <button
+                                        type="button"
+                                        onClick={handleGuideClose}
+                                        className={cn(
+                                            "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white",
+                                            isCompact ? "w-5 h-5" : "w-6 h-6"
+                                        )}
+                                        aria-label="가이드 닫기"
+                                    >
+                                        <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} />
+                                    </button>
+                                )}
                                 <img
                                     src="/images/stamp-clear.png"
                                     alt="방문 완료"
@@ -137,7 +183,36 @@ export const StampCard = memo(function StampCard({
                     </div>
                 )}
             </div>
-            <div className={cn("p-3", isCompact && "p-2")}>
+            <div className={cn("p-2", isCompact ? "px-2 py-1.5" : "p-3")}>
+                {isGuideCard ? (
+                    <div className="flex items-center justify-between gap-2 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <p
+                                className={cn("font-medium leading-snug text-foreground truncate", isCompact ? "text-xs" : "text-sm")}
+                                title={guideTitle || restaurant.name}
+                            >
+                                {guideTitle || restaurant.name}
+                            </p>
+                            {category && (
+                                <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                        "font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60",
+                                        isCompact ? "text-[9px] px-1 h-4" : "text-[10px] px-1.5 h-5"
+                                    )}
+                                >
+                                    {category}
+                                </Badge>
+                            )}
+                        </div>
+                        <span className={cn(
+                            "text-muted-foreground whitespace-nowrap shrink-0",
+                            isCompact ? "text-[11px]" : "text-xs"
+                        )}>
+                            리뷰 {reviewCount}
+                        </span>
+                    </div>
+                ) : (
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                         <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurant.name}>
@@ -161,6 +236,7 @@ export const StampCard = memo(function StampCard({
                         </span>
                     )}
                 </div>
+                )}
             </div>
         </Card>
     );

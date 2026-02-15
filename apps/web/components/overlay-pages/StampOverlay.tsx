@@ -16,6 +16,17 @@ import { useRestaurants } from "@/hooks/use-restaurants";
 import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
 
+const STAMP_PAGE_SIZE = 16;
+const STAMP_GUIDE_DEMO_RESTAURANT = {
+    id: "guide-stamp-overlay-demo",
+    name: "명동 얼큰수제비",
+    category: ["분식"],
+    road_address: "서울특별시 중구",
+    youtube_link: "https://www.youtube.com/watch?v=8kE5Uq_YV08",
+    review_count: 17,
+} as unknown as Restaurant;
+const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 도장이 찍혀요.";
+
 interface StampOverlayProps {
     onClose?: () => void;
     onOpenRestaurantDetail?: (restaurant: Restaurant) => void;
@@ -27,9 +38,9 @@ interface StampOverlayProps {
  */
 export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampOverlayProps) {
     const { user } = useAuth();
-    const STAMP_PAGE_SIZE = 15;
     const [displayLimit, setDisplayLimit] = useState(STAMP_PAGE_SIZE);
     const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
+    const [showStampGuide, setShowStampGuide] = useState(false);
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
     const [filters, setFilters] = useState<StampFilterState>({
         searchQuery: "",
@@ -39,7 +50,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
     });
 
     // 사용자 도장 데이터
-    const { data: userReviewData = [], isLoading: isUserStampsLoading } = useQuery({
+    const { data: userReviewData = [], isLoading: isUserStampsLoading, isFetched: isUserStampsFetched } = useQuery({
         queryKey: ['user-stamp-reviews-overlay', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
@@ -55,7 +66,26 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
     });
 
     const userVisitedIds = useMemo(() => new Set(userReviewData.map(r => r.restaurant_id)), [userReviewData]);
-    const isUserStampsReady = !user?.id || !isUserStampsLoading;
+    const isUserStampsReady = !user?.id || isUserStampsFetched;
+    const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
+
+    const dismissStampGuide = useCallback(() => {
+        setShowStampGuide(false);
+    }, []);
+
+    useEffect(() => {
+        if (!user?.id) {
+            setShowStampGuide(true);
+            return;
+        }
+
+        if (isUserStampsLoading) {
+            setShowStampGuide(false);
+            return;
+        }
+
+        setShowStampGuide(userReviewData.length === 0);
+    }, [isUserStampsLoading, user?.id, userReviewData.length]);
 
     // 맛집 데이터
     const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading } = useRestaurants({ enabled: true });
@@ -111,7 +141,15 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
         return result;
     }, [allMergedRestaurants, filters, user, userVisitedIds]);
 
-    const displayedRestaurants = useMemo(() => filteredRestaurants.slice(0, displayLimit), [filteredRestaurants, displayLimit]);
+    const overlayGuideCount = showStampGuide ? 1 : 0;
+    const displayedRestaurants = useMemo(
+        () => filteredRestaurants.slice(0, Math.max(displayLimit - overlayGuideCount, 0)),
+        [filteredRestaurants, displayLimit, overlayGuideCount]
+    );
+    const displayedCards = useMemo(() => {
+        if (!showStampGuide) return displayedRestaurants;
+        return [STAMP_GUIDE_DEMO_RESTAURANT, ...displayedRestaurants];
+    }, [showStampGuide, displayedRestaurants]);
     const hasMoreToDisplay = displayLimit < filteredRestaurants.length;
 
     const activeFilterCount =
@@ -302,24 +340,34 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
             <div className="flex-1 overflow-y-auto p-4">
                 {isRestaurantsLoading ? (
                     <StampGridSkeleton count={16} showHeader={false} />
+                ) : shouldWaitForStampState ? (
+                    <StampGridSkeleton count={16} showHeader={false} />
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {displayedRestaurants.map((restaurant) => {
-                            const isVisited = userVisitedIds.has(restaurant.id);
-                            const currentIndex = cardThumbnailIndexes[restaurant.id] || 0;
-                            return (
-                                <StampCard
-                                    key={restaurant.id}
-                                    restaurant={restaurant}
-                                    isVisited={isVisited}
-                                    isUserStampsReady={isUserStampsReady}
-                                    currentThumbnailIndex={currentIndex}
-                                    onThumbnailChange={handleThumbnailChange}
-                                    onClick={handleRestaurantClick}
-                                    size="compact"
-                                />
-                            );
-                        })}
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {displayedCards.map((restaurant) => {
+                                const isGuideCard = restaurant.id === STAMP_GUIDE_DEMO_RESTAURANT.id;
+                                const isVisited = isGuideCard ? true : userVisitedIds.has(restaurant.id);
+                                const currentIndex = cardThumbnailIndexes[restaurant.id] || 0;
+                                return (
+                                    <StampCard
+                                        key={restaurant.id}
+                                        restaurant={restaurant}
+                                        isVisited={isVisited}
+                                        isUserStampsReady={isUserStampsReady}
+                                        currentThumbnailIndex={currentIndex}
+                                        onThumbnailChange={handleThumbnailChange}
+                                        onClick={isGuideCard ? () => {} : handleRestaurantClick}
+                                        size="compact"
+                                        guideLabel={isGuideCard ? "가이드" : undefined}
+                                        isGuideCard={isGuideCard}
+                                        guideTitle={isGuideCard ? restaurant.name : undefined}
+                                        guideDescription={isGuideCard ? STAMP_GUIDE_DESCRIPTION : undefined}
+                                        onGuideClose={isGuideCard ? dismissStampGuide : undefined}
+                                    />
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 

@@ -46,7 +46,6 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 type SortColumn = "name" | "category" | "fanVisits";
 type SortDirection = "asc" | "desc" | null;
 type ViewMode = "grid" | "list";
-const STAMP_PAGE_STAMP_GUIDE_KEY = 'stamp-page-stamp-guide-seen-v1';
 const STAMP_GUIDE_DEMO_RESTAURANT = {
     id: "guide-stamp-demo",
     name: "명동 얼큰수제비",
@@ -55,6 +54,7 @@ const STAMP_GUIDE_DEMO_RESTAURANT = {
     youtube_link: "https://www.youtube.com/watch?v=8kE5Uq_YV08",
     review_count: 17,
 } as Restaurant;
+const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 도장이 찍혀요.";
 
 // StampFilterState 및 UserReview는 stamp-utils에서 import
 
@@ -372,7 +372,8 @@ export default function StampPage() {
     }, [user?.id, userReviewData]);
 
     // 사용자 방문 데이터 준비 완료 상태 (비로그인 또는 로딩 완료)
-    const isUserStampsReady = !user?.id || !isUserStampsLoading;
+    const isUserStampsReady = !user?.id || isUserStampsFetched;
+    const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
 
     const isVisited = useCallback((restaurantId: string) => {
         return userReviews.has(restaurantId);
@@ -573,10 +574,17 @@ export default function StampPage() {
         setDisplayLimit(15);
     }, [filters, sortColumn, sortDirection, searchQuery]);
 
-    // 현재 표시할 맛집 목록 (displayLimit까지만)
+    const guideSlotCount = showStampGuide ? 1 : 0;
     const displayedRestaurants = useMemo(() => {
         return filteredAndSortedRestaurants.slice(0, displayLimit);
     }, [filteredAndSortedRestaurants, displayLimit]);
+    const displayedGridRestaurants = useMemo(() => {
+        return filteredAndSortedRestaurants.slice(0, Math.max(displayLimit - guideSlotCount, 0));
+    }, [filteredAndSortedRestaurants, displayLimit, guideSlotCount]);
+    const displayedCards = useMemo(() => {
+        if (!showStampGuide) return displayedGridRestaurants;
+        return [STAMP_GUIDE_DEMO_RESTAURANT, ...displayedGridRestaurants];
+    }, [showStampGuide, displayedGridRestaurants]);
 
     // 더 불러올 데이터가 있는지 확인
     const hasMoreToDisplay = displayLimit < filteredAndSortedRestaurants.length;
@@ -882,9 +890,6 @@ export default function StampPage() {
     }, []);
 
     const completeStampGuide = useCallback(() => {
-        if (typeof window !== 'undefined') {
-            window.localStorage.setItem(STAMP_PAGE_STAMP_GUIDE_KEY, '1');
-        }
         setShowStampGuide(false);
     }, []);
 
@@ -898,29 +903,18 @@ export default function StampPage() {
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        if (authLoading) {
-            setShowStampGuide(false);
-            return;
-        }
 
-        const isGuideSeen = window.localStorage.getItem(STAMP_PAGE_STAMP_GUIDE_KEY) === '1';
-
-        if (user?.id) {
-            if (isUserStampsLoading || isUserStampsFetching || !isUserStampsFetched) {
-                setShowStampGuide(false);
-                return;
-            }
-
-            setShowStampGuide(!isGuideSeen && userReviews.size === 0);
-            return;
-        }
-
-        if (!isGuideSeen) {
+        if (!user?.id) {
             setShowStampGuide(true);
             return;
         }
 
-        setShowStampGuide(false);
+        if (authLoading || isUserStampsLoading || isUserStampsFetching || !isUserStampsFetched) {
+            setShowStampGuide(false);
+            return;
+        }
+
+        setShowStampGuide(userReviews.size === 0);
     }, [authLoading, user?.id, userReviews.size, isUserStampsLoading, isUserStampsFetching, isUserStampsFetched]);
 
     // --- 헬퍼 함수 (Helpers) ---
@@ -1173,59 +1167,55 @@ export default function StampPage() {
                             </div>
                         </div>
 
-                            {showStampGuide ? (
-                            <div className="px-4 sm:px-6 py-3 border-b border-dashed border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/40">
-                                <div className="flex items-start justify-between gap-2">
-                                    <div>
-                                        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">도장 획득 가이드</p>
-                                        <p className="mt-1 text-xs text-amber-800 dark:text-amber-100/90">맛집 카드에 리뷰를 남기면 이처럼 도장이 찍혀요.</p>
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={dismissStampGuide}
-                                        className="h-8 px-2 text-xs text-amber-800 hover:bg-amber-100/80 dark:text-amber-100 dark:hover:bg-amber-900/60"
-                                    >
-                                        닫기
-                                    </Button>
-                                </div>
-                                <div className="mt-3 max-w-sm">
-                                    <StampCard
-                                        restaurant={STAMP_GUIDE_DEMO_RESTAURANT}
-                                        isVisited={true}
-                                        isUserStampsReady={true}
-                                        isSelected={false}
-                                        currentThumbnailIndex={0}
-                                        onThumbnailChange={handleGuideThumbnailChange}
-                                        onClick={() => { }}
-                                    />
-                                </div>
-                            </div>
-                        ) : null}
-
                         <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-height,60px)+1.5rem)] md:pb-6 bg-background">
                             {(isRestaurantsLoading && !searchQuery) ? (
                                 <StampGridSkeleton count={16} showHeader={false} />
+                            ) : shouldWaitForStampState ? (
+                                <StampGridSkeleton count={15} showHeader={false} />
                             ) : viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
-                                    {displayedRestaurants.map((restaurant, index) => (
-                                        <RestaurantCard
-                                            key={`${restaurant.id}-${index}`}
-                                            restaurant={restaurant}
-                                            visited={isVisited(restaurant.id)}
-                                            isUserStampsReady={isUserStampsReady}
-                                            isSelected={selectedRestaurant?.id === restaurant.id}
-                                            currentThumbnailIndex={cardThumbnailIndexes[restaurant.id] || 0}
-                                            onThumbnailChange={handleCardThumbnailChange}
-                                            onClick={handleRestaurantClick}
-                                        />
-                                    ))}
+                                    {displayedCards.map((restaurant) => {
+                                        const isGuideCard = restaurant.id === STAMP_GUIDE_DEMO_RESTAURANT.id;
+                                        if (isGuideCard) {
+                                            return (
+                                                <StampCard
+                                                    key={restaurant.id}
+                                                    restaurant={restaurant}
+                                                    isVisited={true}
+                                                    isUserStampsReady={true}
+                                                    currentThumbnailIndex={0}
+                                                    onThumbnailChange={handleGuideThumbnailChange}
+                                                    onClick={() => {}}
+                                                    size={isDesktop ? "compact" : "default"}
+                                                    guideLabel="가이드"
+                                                    isGuideCard={true}
+                                                    guideTitle={STAMP_GUIDE_DEMO_RESTAURANT.name}
+                                                    guideDescription={STAMP_GUIDE_DESCRIPTION}
+                                                    onGuideClose={dismissStampGuide}
+                                                />
+                                            );
+                                        }
+
+                                        const currentIndex = cardThumbnailIndexes[restaurant.id] || 0;
+                                        return (
+                                            <RestaurantCard
+                                                key={restaurant.id}
+                                                restaurant={restaurant}
+                                                visited={isVisited(restaurant.id)}
+                                                isUserStampsReady={isUserStampsReady}
+                                                isSelected={selectedRestaurant?.id === restaurant.id}
+                                                currentThumbnailIndex={currentIndex}
+                                                onThumbnailChange={handleCardThumbnailChange}
+                                                onClick={handleRestaurantClick}
+                                            />
+                                        );
+                                    })}
                                     {/* 무한 스크롤 트리거 및 로딩 표시 */}
                                     <div ref={loadMoreRef} className="col-span-full h-10 flex items-center justify-center">
                                         {hasMoreToDisplay && (
                                             <span className="text-sm text-muted-foreground">
-                                                더 불러오는 중... ({displayedRestaurants.length} / {filteredAndSortedRestaurants.length}개)
+                                                더 불러오는 중... ({displayedCards.length} / {filteredAndSortedRestaurants.length}개)
                                             </span>
                                         )}
                                     </div>
