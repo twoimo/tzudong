@@ -101,6 +101,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   // 성능 최적화: 조건부 렌더링 로직 메모이제이션
   const shouldShowAuthUI = useMemo(() => isHydrated && !isAuthLoading, [isHydrated, isAuthLoading]);
+  const shouldShowHeaderIcons = isLoggedIn && shouldShowAuthUI;
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
@@ -411,7 +412,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       </Link>
 
       {/* 좌측: 사이드바 토글 */}
-      {!hideToggleSidebar && (
+      {!hideToggleSidebar && shouldShowHeaderIcons && (
         <div className={cn(
           "flex items-center relative z-10 flex-shrink-0 transition-all duration-300",
           isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
@@ -477,7 +478,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {/* 랭킹 및 접속자 위젯 - 데스크탑에서만 표시 */}
         <div className={cn(
           "hidden md:flex",
-          isHydrated ? "opacity-100" : "opacity-0 pointer-events-none"
+          shouldShowHeaderIcons ? (isHydrated ? "opacity-100" : "opacity-0 pointer-events-none") : "hidden"
         )}>
           <RankingWidget />
         </div>
@@ -485,7 +486,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
 
         {/* 알림 */}
-        {shouldShowAuthUI && (
+        {shouldShowHeaderIcons && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground relative transition-colors">
@@ -575,7 +576,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         )}
 
         {/* 북마크 - 드롭다운 */}
-        {isLoggedIn && shouldShowAuthUI && (
+        {shouldShowHeaderIcons && (
           <DropdownMenu onOpenChange={(open) => {
             if (!open) {
               // 닫힐 때 초기화 (300ms 지연) - 다시 열 때 스크롤 상단 등 UX 고려
@@ -679,17 +680,19 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         )}
 
         {/* 전체화면 - 데스크탑에서만 표시 */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleFullscreen}
-          className="hidden md:flex hover:bg-accent text-foreground transition-colors"
-        >
-          <Maximize className="h-5 w-5" />
-        </Button>
+        {shouldShowHeaderIcons && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleFullscreen}
+            className="hidden md:flex hover:bg-accent text-foreground transition-colors"
+          >
+            <Maximize className="h-5 w-5" />
+          </Button>
+        )}
 
         {/* 로그인 상태 */}
-        {isLoggedIn && shouldShowAuthUI && (
+        {shouldShowHeaderIcons && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground transition-colors">
