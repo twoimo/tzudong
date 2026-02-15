@@ -51,6 +51,9 @@ interface EvaluationTableProps {
   };
   onFilterChange: (key: string, value: string) => void;
   onResetFilters: () => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
 const FILTER_TOOLTIPS = {
@@ -589,11 +592,17 @@ export function EvaluationTable({
   evalFilters,
   onFilterChange,
   onResetFilters,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
 }: EvaluationTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showMobileAdvancedFilters, setShowMobileAdvancedFilters] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
   const rowRefs = useRef<{ [key: string]: HTMLTableRowElement | null }>({});
+  const tableScrollContainerRef = useRef<HTMLDivElement>(null);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+  const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -705,6 +714,63 @@ export function EvaluationTable({
   const currentStatusFilter = evalFilters.status ?? '';
   const shouldRenderMobile = isDesktopLayout === null ? true : !isDesktopLayout;
   const shouldRenderDesktop = isDesktopLayout === null ? true : isDesktopLayout;
+  const handleLoadMore = useCallback(() => {
+    if (!onLoadMore || !hasMore || isLoadingMore) return;
+    onLoadMore();
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+
+    if (!onLoadMore || !hasMore || isLoadingMore || !sentinel) {
+      if (loadMoreObserverRef.current) {
+        loadMoreObserverRef.current.disconnect();
+        loadMoreObserverRef.current = null;
+      }
+      return;
+    }
+
+    if (loadMoreObserverRef.current) {
+      loadMoreObserverRef.current.disconnect();
+      loadMoreObserverRef.current = null;
+    }
+
+    const containerRoot = (() => {
+      let current: HTMLElement | null = sentinel.parentElement;
+
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const isOverflowing = style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflowY === 'overlay'
+          || style.overflow === 'auto' || style.overflow === 'scroll' || style.overflow === 'overlay';
+
+        if (isOverflowing && current.scrollHeight > current.clientHeight) {
+          return current;
+        }
+
+        current = current.parentElement;
+      }
+
+      return null;
+    })();
+
+    loadMoreObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { root: containerRoot, rootMargin: '200px 0px 0px 0px', threshold: 0.01 }
+    );
+
+    loadMoreObserverRef.current.observe(sentinel);
+
+    return () => {
+      if (loadMoreObserverRef.current) {
+        loadMoreObserverRef.current.disconnect();
+        loadMoreObserverRef.current = null;
+      }
+    };
+  }, [handleLoadMore, hasMore, isLoadingMore, shouldRenderMobile, onLoadMore]);
   const quickFilterSwipeStartXRef = useRef<number | null>(null);
   const quickFilterSwipeEndXRef = useRef<number | null>(null);
   const quickFilterSwipeStartYRef = useRef<number | null>(null);
@@ -1111,9 +1177,12 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
     </div>
   );
 
+  const loadMoreSentinel = hasMore && onLoadMore ? <div ref={loadMoreSentinelRef} className="h-8" /> : null;
+
   const mobileCards = (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
-      {records.map((record) => {
+    <>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
+        {records.map((record) => {
         const videoId = getYoutubeVideoId(record.youtube_link);
         const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
         const isExpanded = expandedId === record.id;
@@ -1160,15 +1229,15 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
           { label: '카테고리 정합', value: categoryMatch },
         ];
 
-        return (
-          <div
-            key={record.id}
-            className={cn(
-              "rounded-lg border bg-card p-3",
-              getMobileCardTone(record.status),
-              isExpanded && "shadow-sm"
-            )}
-          >
+          return (
+            <div
+              key={record.id}
+              className={cn(
+                "rounded-lg border bg-card p-3",
+                getMobileCardTone(record.status),
+                isExpanded && "shadow-sm"
+              )}
+            >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-sm font-semibold">
@@ -1417,14 +1486,16 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               </div>
             )}
           </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </>
   );
 
   return (
     <TooltipProvider>
       <div
+        ref={tableScrollContainerRef}
         className={cn(
           shouldRenderMobile
             ? "flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain space-y-3 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+12px)]"
@@ -1675,6 +1746,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
         <div className="h-8" /> {/* 마지막 레코드가 잘리지 않도록 충분한 하단 여백 */}
           </div>
         )}
+        {loadMoreSentinel}
       </div>
     </TooltipProvider>
   );

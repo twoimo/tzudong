@@ -203,6 +203,9 @@ interface SubmissionListViewProps {
     onApprove: (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean, editableData: { name: string; address: string; phone: string; categories: string[] }) => void;
     onReject: (submission: SubmissionRecord, reason: string) => void;
     onDelete: (submission: SubmissionRecord) => void;
+    hasNextSubmissionPage?: boolean;
+    isFetchingNextSubmissionPage?: boolean;
+    onLoadMoreSubmissions?: () => void;
     onRefresh?: () => void;
     loading?: boolean;
     // 리뷰 관련 props
@@ -221,6 +224,9 @@ export function SubmissionListView({
     onReject,
     onDelete,
     loading = false,
+    hasNextSubmissionPage = false,
+    isFetchingNextSubmissionPage = false,
+    onLoadMoreSubmissions,
     // 리뷰 관련 props
     reviews = [],
     onApproveReview,
@@ -300,6 +306,7 @@ export function SubmissionListView({
     const isSubmissionTabSwipeActiveRef = useRef(false);
     const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
     const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
+    const wasFetchingNextSubmissionPageRef = useRef(false);
     const isLoadingMoreRef = useRef(false);
 
     const [visibleNewCount, setVisibleNewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
@@ -326,6 +333,34 @@ export function SubmissionListView({
         if (!isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current !== 'touch') return;
         submissionTabSwipeEndXRef.current = e.touches[0].clientX;
         submissionTabSwipeEndYRef.current = e.touches[0].clientY;
+    }, []);
+
+    const resetVisibleCountByTab = useCallback((tab: 'new' | 'edit' | 'reviews') => {
+        if (tab === 'new') {
+            setVisibleNewCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        if (tab === 'edit') {
+            setVisibleEditCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        setVisibleReviewCount(SUBMISSION_LIST_PAGE_SIZE);
+    }, []);
+
+    const setActiveTabWithReset = useCallback((tab: 'new' | 'edit' | 'reviews') => {
+        setActiveTab(tab);
+        resetVisibleCountByTab(tab);
+    }, [resetVisibleCountByTab]);
+
+    const increaseSubmissionVisibleCount = useCallback((tab: 'new' | 'edit') => {
+        if (tab === 'new') {
+            setVisibleNewCount((prev) => prev + SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        setVisibleEditCount((prev) => prev + SUBMISSION_LIST_PAGE_SIZE);
     }, []);
 
     const handleSubmissionTabSwipeEndInternal = useCallback((): boolean => {
@@ -897,29 +932,12 @@ export function SubmissionListView({
     const displayedSubmissions = useMemo(() => filteredSubmissions.slice(0, visibleSubmissionCount), [filteredSubmissions, visibleSubmissionCount]);
     const displayedReviews = useMemo(() => orderedReviews.slice(0, visibleReviewCount), [orderedReviews, visibleReviewCount]);
 
-    const hasMoreSubmissions = filteredSubmissions.length > visibleSubmissionCount;
+    const hasMoreSubmissions = filteredSubmissions.length > visibleSubmissionCount || hasNextSubmissionPage;
     const hasMoreReviews = orderedReviews.length > visibleReviewCount;
     const hasMoreCards = activeTab === 'reviews' ? hasMoreReviews : hasMoreSubmissions;
-    const isCurrentListLoading = activeTab === 'reviews' ? reviewsLoading : loading;
-
-    const resetVisibleCountByTab = useCallback((tab: 'new' | 'edit' | 'reviews') => {
-        if (tab === 'new') {
-            setVisibleNewCount(SUBMISSION_LIST_PAGE_SIZE);
-            return;
-        }
-
-        if (tab === 'edit') {
-            setVisibleEditCount(SUBMISSION_LIST_PAGE_SIZE);
-            return;
-        }
-
-        setVisibleReviewCount(SUBMISSION_LIST_PAGE_SIZE);
-    }, []);
-
-    const setActiveTabWithReset = useCallback((tab: 'new' | 'edit' | 'reviews') => {
-        setActiveTab(tab);
-        resetVisibleCountByTab(tab);
-    }, [resetVisibleCountByTab]);
+    const isCurrentListLoading = activeTab === 'reviews'
+        ? reviewsLoading
+        : loading || isFetchingNextSubmissionPage;
 
     const handleLoadMoreCards = useCallback(() => {
         if (!hasMoreCards || isCurrentListLoading || isLoadingMoreRef.current) return;
@@ -931,6 +949,19 @@ export function SubmissionListView({
             requestAnimationFrame(() => {
                 isLoadingMoreRef.current = false;
             });
+            return;
+        }
+
+        const hasMoreVisibleSubmissions = filteredSubmissions.length > visibleSubmissionCount;
+        const shouldRequestNextSubmissionPage =
+            activeTab !== 'reviews' &&
+            !hasMoreVisibleSubmissions &&
+            hasNextSubmissionPage &&
+            !!onLoadMoreSubmissions;
+
+        if (shouldRequestNextSubmissionPage) {
+            increaseSubmissionVisibleCount(activeTab);
+            onLoadMoreSubmissions();
             return;
         }
 
@@ -946,7 +977,25 @@ export function SubmissionListView({
         requestAnimationFrame(() => {
             isLoadingMoreRef.current = false;
         });
-    }, [activeTab, hasMoreCards, isCurrentListLoading, orderedReviews.length, filteredSubmissions.length]);
+    }, [
+        activeTab,
+        hasMoreCards,
+        isCurrentListLoading,
+        orderedReviews.length,
+        filteredSubmissions.length,
+        visibleSubmissionCount,
+        hasNextSubmissionPage,
+        onLoadMoreSubmissions,
+        increaseSubmissionVisibleCount,
+    ]);
+
+    useEffect(() => {
+        if (wasFetchingNextSubmissionPageRef.current && !isFetchingNextSubmissionPage) {
+            isLoadingMoreRef.current = false;
+        }
+
+        wasFetchingNextSubmissionPageRef.current = isFetchingNextSubmissionPage;
+    }, [isFetchingNextSubmissionPage]);
 
     // 탭/검색 변경 시 노출 개수 초기화
     useEffect(() => {
@@ -980,13 +1029,31 @@ export function SubmissionListView({
             loadMoreObserverRef.current = null;
         }
 
+        const containerRoot = (() => {
+            let current: HTMLElement | null = sentinel.parentElement;
+
+            while (current) {
+                const style = window.getComputedStyle(current);
+                const isOverflowing = style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflowY === 'overlay'
+                    || style.overflow === 'auto' || style.overflow === 'scroll' || style.overflow === 'overlay';
+
+                if (isOverflowing && current.scrollHeight > current.clientHeight) {
+                    return current;
+                }
+
+                current = current.parentElement;
+            }
+
+            return null;
+        })();
+
         loadMoreObserverRef.current = new IntersectionObserver(
             (entries) => {
                 if (entries[0]?.isIntersecting && hasMoreCards && !isCurrentListLoading) {
                     handleLoadMoreCards();
                 }
             },
-            { root: null, rootMargin: '200px 0px 0px 0px', threshold: 0.01 }
+            { root: containerRoot, rootMargin: '200px 0px 0px 0px', threshold: 0.01 }
         );
 
         loadMoreObserverRef.current.observe(sentinel);

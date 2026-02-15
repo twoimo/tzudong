@@ -350,6 +350,13 @@ export default function AdminSubmissionsPage() {
                     onDelete={handleDelete}
                     onRefresh={() => refetch()}
                     loading={approveMutation.isPending || rejectMutation.isPending || deleteMutation.isPending}
+                    hasNextSubmissionPage={Boolean(hasNextPage)}
+                    isFetchingNextSubmissionPage={isFetchingNextPage}
+                    onLoadMoreSubmissions={() => {
+                        if (!isFetchingNextPage && hasNextPage) {
+                            fetchNextPage();
+                        }
+                    }}
                 />
             )}
 
