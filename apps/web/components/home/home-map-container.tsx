@@ -83,6 +83,17 @@ const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
     return false;
 };
 
+const isOverseasRestaurantForMapMode = (restaurant: Restaurant) => {
+    if (!restaurant.lat || !restaurant.lng) return false;
+
+    const lat = Number(restaurant.lat);
+    const lng = Number(restaurant.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+    return lat < 33 || lat > 39 || lng < 124 || lng > 132;
+};
+
 const isVerticallyScrollable = (element: HTMLElement) => {
     const style = window.getComputedStyle(element);
     const overflowY = style.overflowY;
@@ -457,8 +468,11 @@ function HomeMapContainerComponent({
     }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants, activeSwipeableRestaurantsKey, handleDragEnd]);
 
     const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[], mode: 'domestic' | 'overseas') => {
+        const scopedRestaurants = restaurants.filter((restaurant) =>
+            mode === 'domestic' ? !isOverseasRestaurantForMapMode(restaurant) : isOverseasRestaurantForMapMode(restaurant)
+        );
         const dedupedRestaurants: Restaurant[] = [];
-        const nextRestaurants = [...restaurants];
+        const nextRestaurants = [...scopedRestaurants];
 
         for (const restaurant of nextRestaurants) {
             const isDuplicate = dedupedRestaurants.some((existingRestaurant) =>
