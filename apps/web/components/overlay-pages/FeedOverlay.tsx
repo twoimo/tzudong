@@ -10,6 +10,7 @@ interface FeedOverlayProps {
     initialReviewId?: string | null;
     onOpenRestaurantDetail?: (restaurant: any) => void;
     onOpenUserProfile?: (userId: string) => void;
+    onOpenAuth?: () => void;
 }
 
 /**
@@ -24,6 +25,7 @@ export default function FeedOverlay({
     initialReviewId,
     onOpenRestaurantDetail,
     onOpenUserProfile,
+    onOpenAuth,
 }: FeedOverlayProps) {
     return (
         <FeedContent
@@ -35,6 +37,7 @@ export default function FeedOverlay({
             initialReviewId={initialReviewId}
             onOpenRestaurantDetail={onOpenRestaurantDetail}
             onOpenUserProfile={onOpenUserProfile}
+            onOpenAuth={onOpenAuth}
         />
     );
 }
