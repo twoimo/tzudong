@@ -173,6 +173,10 @@ function HomeMapContainerComponent({
         () => (mapMode === 'domestic' ? swipeableRestaurantsByMode.domestic : swipeableRestaurantsByMode.overseas),
         [mapMode, swipeableRestaurantsByMode]
     );
+    const activeSwipeableRestaurantsKey = useMemo(
+        () => activeSwipeableRestaurants.map((restaurant) => restaurant.id).join('|'),
+        [activeSwipeableRestaurants]
+    );
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return ((vh - HEADER_OFFSET) / vh) * 100;
@@ -226,6 +230,13 @@ function HomeMapContainerComponent({
             setSheetHeight(getCurrentMaxHeight()); // 최대 높이로 열기
         }
     }, [isPanelOpen, isMobileOrTablet, getCurrentMaxHeight]);
+
+    useEffect(() => {
+        setSwipeableRestaurantsByMode((prev) => ({
+            ...prev,
+            [mapMode]: [],
+        }));
+    }, [mapMode]);
 
     useEffect(() => {
         if (!isPanelOpen || !isMobileOrTablet || !contentRef.current) return;
@@ -384,7 +395,7 @@ function HomeMapContainerComponent({
 
         e.stopPropagation();
         handleDragMoveCore(currentY);
-    }, [handleDragMoveCore, handleDragStartCore, activeSwipeableRestaurants.length]);
+    }, [handleDragMoveCore, handleDragStartCore, activeSwipeableRestaurants, activeSwipeableRestaurantsKey]);
 
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         const isDetailArea = isDetailSwipeArea(e.target);
@@ -443,44 +454,45 @@ function HomeMapContainerComponent({
         contentStartBoundaryRef.current = null;
         contentSwipeDirectionRef.current = null;
         handleDragEnd('content');
-    }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants, handleDragEnd]);
+    }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants, activeSwipeableRestaurantsKey, handleDragEnd]);
 
-    const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
-        if (!restaurants.length) {
-            setSwipeableRestaurantsByMode((prev) =>
-                mapMode === 'domestic'
-                    ? (prev.domestic.length === 0 ? prev : { ...prev, domestic: [] })
-                    : (prev.overseas.length === 0 ? prev : { ...prev, overseas: [] })
-            );
-            return;
-        }
+    const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[], mode: 'domestic' | 'overseas') => {
+        const dedupedRestaurants: Restaurant[] = [];
+        const nextRestaurants = [...restaurants];
 
-        const uniqueRestaurants: Restaurant[] = [];
-        restaurants.forEach((restaurant) => {
-            const isDuplicate = uniqueRestaurants.some((existingRestaurant) =>
+        for (const restaurant of nextRestaurants) {
+            const isDuplicate = dedupedRestaurants.some((existingRestaurant) =>
                 isSameRestaurantForSwipe(existingRestaurant, restaurant)
             );
 
             if (!isDuplicate) {
-                uniqueRestaurants.push(restaurant);
+                dedupedRestaurants.push(restaurant);
             }
-        });
+        }
 
-        setSwipeableRestaurantsByMode(prev => {
-            const prevRestaurants = mapMode === 'domestic' ? prev.domestic : prev.overseas;
+        setSwipeableRestaurantsByMode((prev) => {
+            const prevRestaurants = mode === 'domestic' ? prev.domestic : prev.overseas;
 
             if (
-                prevRestaurants.length === uniqueRestaurants.length &&
-                prevRestaurants.every((restaurant, index) => isSameRestaurantForSwipe(restaurant, uniqueRestaurants[index]!))
+                prevRestaurants.length === dedupedRestaurants.length &&
+                prevRestaurants.every((restaurant, index) => isSameRestaurantForSwipe(restaurant, dedupedRestaurants[index] ?? restaurant))
             ) {
                 return prev;
             }
 
-            return mapMode === 'domestic'
-                ? { ...prev, domestic: uniqueRestaurants }
-                : { ...prev, overseas: uniqueRestaurants };
+            return mode === 'domestic'
+                ? { ...prev, domestic: dedupedRestaurants }
+                : { ...prev, overseas: dedupedRestaurants };
         });
-    }, [mapMode]);
+    }, []);
+
+    const updateDomesticSwipeableRestaurants = useCallback((restaurants: Restaurant[]) => {
+        handleSwipeableRestaurantsChange(restaurants, 'domestic');
+    }, [handleSwipeableRestaurantsChange]);
+
+    const updateOverseasSwipeableRestaurants = useCallback((restaurants: Restaurant[]) => {
+        handleSwipeableRestaurantsChange(restaurants, 'overseas');
+    }, [handleSwipeableRestaurantsChange]);
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
         if (activeSwipeableRestaurants.length <= 1) return;
@@ -498,7 +510,7 @@ function HomeMapContainerComponent({
         if (!nextRestaurant) return;
 
         onRestaurantSelect(nextRestaurant);
-    }, [onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants]);
+    }, [onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurantsKey, activeSwipeableRestaurants]);
 
     useEffect(() => {
         if (onSwipeableRestaurantsChange) {
@@ -596,7 +608,7 @@ function HomeMapContainerComponent({
                         externalPanelOpen={externalPanelOpen}
                         isPanelCollapsed={isPanelCollapsed}
                         isPanelOpen={isPanelOpen}
-                        onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
+                        onVisibleRestaurantsChange={updateDomesticSwipeableRestaurants}
                     />
                 </Suspense>
             ) : (
@@ -614,7 +626,7 @@ function HomeMapContainerComponent({
                         onMapReady={onMapReady}
                         onMarkerClick={onMarkerClick}
                         mapPadding={mapPadding}
-                        onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
+                        onVisibleRestaurantsChange={updateOverseasSwipeableRestaurants}
                     />
                 </Suspense>
             )}
