@@ -176,7 +176,7 @@ export function RestaurantDetailPanel({
         };
     }, [restaurant]);
 
-    // [데이터 조회] 리뷰 무한 스크롤 (성능 최적화: 10개씩 페이징)
+    // [데이터 조회] 리뷰 무한 스크롤 (성능 최적화: 15개씩 페이징)
     const {
         data: reviewsInfiniteData,
         fetchNextPage,
@@ -188,6 +188,7 @@ export function RestaurantDetailPanel({
         queryFn: async ({ pageParam = 0 }) => {
             try {
                 if (!restaurant) return { reviews: [], nextCursor: null };
+                const REVIEW_PAGE_SIZE = 15;
 
                 // 0. 모든 관련 레코드 ID 수집
                 const allIds = [restaurant.id];
@@ -203,7 +204,7 @@ export function RestaurantDetailPanel({
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false })
-                    .range(pageParam, pageParam + 9); // 10개씩 조회
+                    .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1)); // 15개씩 조회
 
                 if (reviewsError) throw reviewsError;
                 if (!reviewsPageData || reviewsPageData.length === 0) {
@@ -270,7 +271,7 @@ export function RestaurantDetailPanel({
                     };
                 }) as Review[];
 
-                const nextCursor = reviewsPageData.length === 10 ? pageParam + 10 : null;
+                const nextCursor = reviewsPageData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { reviews, nextCursor };
             } catch (error) {
                 console.error('❌ 리뷰 데이터 조회 중 오류:', error);
@@ -296,6 +297,15 @@ export function RestaurantDetailPanel({
     // [총 리뷰 수]
     const totalReviewCount = (restaurant as any).verified_review_count ?? safeReviewsData.length;
 
+    // [무한 스크롤 감시] 리뷰 목록 추가 로드
+    const loadMoreReviewsRef = useRef<HTMLDivElement>(null);
+
+    const handleLoadMoreReviews = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
     // [초기화] 초기 로드 시 likedReviews 상태 초기화
     useEffect(() => {
         if (safeReviewsData.length > 0) {
@@ -305,6 +315,23 @@ export function RestaurantDetailPanel({
             setLikedReviews(new Set(likedReviewIds));
         }
     }, [safeReviewsData]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    handleLoadMoreReviews();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreReviewsRef.current) {
+            observer.observe(loadMoreReviewsRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [handleLoadMoreReviews]);
 
     // [핸들러] 전체 리뷰 보기
     const handleViewAllReviews = useCallback(() => {
@@ -1166,17 +1193,13 @@ export function RestaurantDetailPanel({
                                             />
                                         ))}
 
-                                        {/* 더 보기 버튼 */}
-                                        {hasNextPage && (
-                                            <Button
-                                                variant="outline"
-                                                className="w-full mt-4"
-                                                onClick={() => fetchNextPage()}
-                                                disabled={isFetchingNextPage}
-                                            >
-                                                {isFetchingNextPage ? '불러오는 중...' : '리뷰 더 보기'}
-                                            </Button>
-                                        )}
+                                        <div ref={loadMoreReviewsRef} className="h-10 flex items-center justify-center">
+                                            {hasNextPage && (
+                                                <span className="text-sm text-muted-foreground">
+                                                    {isFetchingNextPage ? '리뷰를 더 불러오는 중...' : '스크롤하면 더 불러옵니다'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

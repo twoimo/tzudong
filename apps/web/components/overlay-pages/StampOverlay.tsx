@@ -27,7 +27,8 @@ interface StampOverlayProps {
  */
 export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampOverlayProps) {
     const { user } = useAuth();
-    const [displayLimit, setDisplayLimit] = useState(20);
+    const STAMP_PAGE_SIZE = 15;
+    const [displayLimit, setDisplayLimit] = useState(STAMP_PAGE_SIZE);
     const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
     const [filters, setFilters] = useState<StampFilterState>({
@@ -122,7 +123,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
     // 무한 스크롤
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreRestaurants = useCallback(() => {
-        if (hasMoreToDisplay) setDisplayLimit(prev => prev + 20);
+        if (hasMoreToDisplay) setDisplayLimit(prev => prev + STAMP_PAGE_SIZE);
     }, [hasMoreToDisplay]);
 
     useEffect(() => {
@@ -135,7 +136,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
     }, [loadMoreRestaurants]);
 
     useEffect(() => {
-        setDisplayLimit(20);
+        setDisplayLimit(STAMP_PAGE_SIZE);
     }, [filters]);
 
     const handleRestaurantClick = useCallback((restaurant: Restaurant) => {

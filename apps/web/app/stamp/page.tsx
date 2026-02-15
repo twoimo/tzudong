@@ -422,13 +422,15 @@ export default function StampPage() {
     } = useInfiniteQuery({
         queryKey: ['restaurants-stamp'],
         queryFn: async ({ pageParam = 0 }) => {
+            const STAMP_PAGE_SIZE = 15;
+
             try {
                 const { data: restaurants, error } = await supabase
                     .from('restaurants')
                     .select('*')
                     .eq('status', 'approved')
                     .order('review_count', { ascending: false })
-                    .range(pageParam, pageParam + 49);
+                    .range(pageParam, pageParam + (STAMP_PAGE_SIZE - 1));
 
                 if (error) throw error;
                 if (!restaurants || restaurants.length === 0) return { restaurants: [], nextCursor: null };
@@ -453,7 +455,7 @@ export default function StampPage() {
                     verified_review_count: verifiedCountMap.get(r.id) || 0
                 }));
 
-                const nextCursor = restaurants.length === 50 ? pageParam + 50 : null;
+                const nextCursor = restaurants.length === STAMP_PAGE_SIZE ? pageParam + STAMP_PAGE_SIZE : null;
                 return { restaurants: restaurantsWithCount, nextCursor };
             } catch (error) {
                 console.error('맛집 데이터 조회 중 오류:', error);
@@ -551,12 +553,12 @@ export default function StampPage() {
         return result;
     }, [allMergedRestaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
-    // --- 클라이언트 측 페이지네이션: 20개씩 표시 (성능 최적화: 렌더링 부하 감소) ---
-    const [displayLimit, setDisplayLimit] = useState(20);
+    // --- 클라이언트 측 페이지네이션: 15개씩 표시 (성능 최적화: 렌더링 부하 감소) ---
+    const [displayLimit, setDisplayLimit] = useState(15);
 
     // 필터 변경 시 표시 개수 리셋
     useEffect(() => {
-        setDisplayLimit(20);
+        setDisplayLimit(15);
     }, [filters, sortColumn, sortDirection, searchQuery]);
 
     // 현재 표시할 맛집 목록 (displayLimit까지만)
@@ -573,7 +575,7 @@ export default function StampPage() {
 
     const loadMoreRestaurants = useCallback(() => {
         if (hasMoreToDisplay) {
-            setDisplayLimit(prev => prev + 20);
+            setDisplayLimit(prev => prev + 15);
         }
     }, [hasMoreToDisplay]);
 
@@ -602,6 +604,7 @@ export default function StampPage() {
         queryKey: ['restaurant-reviews', selectedRestaurant?.id],
         queryFn: async ({ pageParam = 0 }) => {
             if (!selectedRestaurant?.id) return { reviews: [], nextCursor: null };
+            const REVIEW_PAGE_SIZE = 15;
 
             try {
                 const { data: reviewsData, error } = await supabase
@@ -611,7 +614,7 @@ export default function StampPage() {
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false })
-                    .range(pageParam, pageParam + 19) as any;
+                    .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1)) as any;
 
                 if (error) throw error;
                 if (!reviewsData || reviewsData.length === 0) return { reviews: [], nextCursor: null };
@@ -665,7 +668,7 @@ export default function StampPage() {
                     };
                 }) as Review[];
 
-                const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
+                const nextCursor = reviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { reviews, nextCursor };
             } catch (error) {
                 console.error('리뷰 데이터 조회 중 오류:', error);
