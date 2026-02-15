@@ -64,6 +64,8 @@ interface FeedContentProps {
     onOpenRestaurantDetail?: (restaurant: any) => void;
     /** 유저 프로필 모달 열기 핸들러 (오버레이용) */
     onOpenUserProfile?: (userId: string) => void;
+    /** 로그인 모달 열기 */
+    onOpenAuth?: () => void;
 }
 
 
@@ -77,6 +79,7 @@ export default function FeedContent({
     initialReviewId,
     onOpenRestaurantDetail,
     onOpenUserProfile,
+    onOpenAuth,
 }: FeedContentProps) {
 
     const { user } = useAuth();
@@ -160,6 +163,11 @@ export default function FeedContent({
     // 리뷰 작성 핸들러
     const handleWriteReview = useCallback(() => {
         if (!user) {
+            if (onOpenAuth) {
+                onOpenAuth();
+                return;
+            }
+
             toast({
                 title: '로그인이 필요합니다',
                 description: '리뷰를 작성하려면 로그인이 필요합니다.',
@@ -172,7 +180,7 @@ export default function FeedContent({
         } else {
             setIsReviewModalOpen(true);
         }
-    }, [user, onOpenReviewModal]);
+    }, [user, onOpenReviewModal, onOpenAuth]);
 
     // 리뷰 피드 데이터 조회 (무한 스크롤)
     const {
@@ -516,7 +524,7 @@ export default function FeedContent({
                 </div>
 
                 {/* 플로팅 리뷰 작성 버튼 */}
-                {isLoggedIn && !hideFloatingButton && (() => {
+                {!hideFloatingButton && (() => {
                     const FloatingButton = (
                         <Button
                             onClick={handleWriteReview}

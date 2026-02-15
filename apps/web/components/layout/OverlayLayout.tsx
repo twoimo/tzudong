@@ -166,6 +166,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
                     activePanel={activeOverlayPanel}
                     onClose={handleCloseOverlayPanel}
                     initialReviewId={targetReviewId}
+                    onOpenAuth={handleOpenAuth}
                 />
 
             </main>

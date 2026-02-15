@@ -28,6 +28,7 @@ interface OverlayPagePanelProps {
     activePanel: OverlayPanelType;
     onClose: () => void;
     initialReviewId?: string | null;
+    onOpenAuth?: () => void;
 }
 
 /**
@@ -36,7 +37,7 @@ interface OverlayPagePanelProps {
  * - 피드 패널에서 리뷰 작성 시 나란히 표시
  * - 모바일에서는 Dialog로, 데스크탑에서는 inline으로 표시
  */
-function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: OverlayPagePanelProps) {
+function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOpenAuth }: OverlayPagePanelProps) {
     const queryClient = useQueryClient();
     const [isReviewPanelOpen, setIsReviewPanelOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -178,6 +179,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                             initialReviewId={initialReviewId}
                             onOpenRestaurantDetail={handleOpenRestaurantDetail}
                             onOpenUserProfile={handleOpenUserProfile}
+                            onOpenAuth={onOpenAuth}
                         />
                     )}
                     {activePanel === 'stamp' && (
