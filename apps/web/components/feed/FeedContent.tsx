@@ -192,12 +192,14 @@ export default function FeedContent({
     } = useInfiniteQuery({
         queryKey: [queryKey, user?.id],
         queryFn: async ({ pageParam = 0 }) => {
+            const REVIEW_PAGE_SIZE = 15;
+
             const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
                 .select('*')
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false })
-                .range(pageParam, pageParam + 19) as any;
+                .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1)) as any;
 
             if (reviewsError || !reviewsData || reviewsData.length === 0) {
                 return { reviews: [], nextCursor: null };
@@ -264,7 +266,7 @@ export default function FeedContent({
                 };
             });
 
-            const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
+            const nextCursor = reviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
             return { reviews, nextCursor };
         },
         getNextPageParam: (lastPage) => lastPage?.nextCursor,

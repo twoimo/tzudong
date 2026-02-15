@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,9 +8,7 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
-  Loader2,
   ExternalLink,
   Youtube,
   Clock,
@@ -62,7 +61,7 @@ interface Submission {
   } | null;
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
 export default function EditSubmissionsPage() {
   const { user } = useAuth();
@@ -150,6 +149,30 @@ export default function EditSubmissionsPage() {
   });
 
   const submissions = submissionsData?.pages.flatMap((page) => page.data) || [];
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const getStatusBadge = (status: SubmissionStatus) => {
     switch (status) {
@@ -329,24 +352,14 @@ export default function EditSubmissionsPage() {
       ) : (
         <div className="space-y-4">
           {submissions.map(renderSubmissionCard)}
-          {hasNextPage && (
-            <div className="flex justify-center pt-4">
-              <Button
-                variant="outline"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    로딩 중...
-                  </>
-                ) : (
-                  "더 보기"
-                )}
-              </Button>
-            </div>
-          )}
+          <div ref={loadMoreRef} className="pt-4 flex justify-center">
+            {isFetchingNextPage && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                더 불러오는 중...
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { Trophy, Info } from "lucide-react";
@@ -20,9 +20,12 @@ import { BREAKPOINTS } from "@/hooks/useDeviceType";
 export default function LeaderboardPage() {
     const router = useRouter();
     const { user: currentUser } = useAuth();
+    const LEADERBOARD_PAGE_SIZE = 15;
     const [period, setPeriod] = useState<'all' | 'monthly'>('all');
     const { data: leaderboardData = [], isLoading } = useLeaderboard(period);
     const userItemRef = useRef<HTMLDivElement>(null);
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+    const [displayLimit, setDisplayLimit] = useState(LEADERBOARD_PAGE_SIZE);
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -42,6 +45,39 @@ export default function LeaderboardPage() {
         };
     }, [router]);
 
+    const displayedUsers = useMemo(
+        () => leaderboardData.slice(0, displayLimit),
+        [leaderboardData, displayLimit]
+    );
+
+    const hasMoreToDisplay = displayLimit < leaderboardData.length;
+
+    const loadMoreUsers = useCallback(() => {
+        if (hasMoreToDisplay) {
+            setDisplayLimit(prev => prev + LEADERBOARD_PAGE_SIZE);
+        }
+    }, [hasMoreToDisplay]);
+
+    useEffect(() => {
+        setDisplayLimit(LEADERBOARD_PAGE_SIZE);
+    }, [period]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreUsers();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreUsers]);
 
     useEffect(() => {
         if (!isLoading && currentUser && leaderboardData.length > 0) {
@@ -122,11 +158,18 @@ export default function LeaderboardPage() {
                         <LeaderboardSkeleton count={8} showHeader={false} />
                     ) : (
                         <LeaderboardList
-                            users={leaderboardData}
+                            users={displayedUsers}
                             currentUserId={currentUser?.id}
                             userItemRef={userItemRef}
                         />
                     )}
+                    <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
+                        {hasMoreToDisplay && (
+                            <span className="text-sm text-muted-foreground">
+                                더 불러오는 중... ({displayedUsers.length} / {leaderboardData.length}명)
+                            </span>
+                        )}
+                    </div>
                 </div>
             </ScrollArea>
         </div>
