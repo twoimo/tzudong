@@ -47,7 +47,7 @@ import {
   ADMIN_MODAL_SCROLL_BODY,
 } from '@/components/admin/admin-modal-styles';
 
-const PAGE_SIZE = 50; // 한 번에 로드할 레코드 수
+const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
 
 // Suspense 래퍼 컴포넌트

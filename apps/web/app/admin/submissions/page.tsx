@@ -18,7 +18,7 @@ import {
     ItemDecision,
 } from "@/components/admin/SubmissionDetailView";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 10;
 
 export default function AdminSubmissionsPage() {
     const { user, isAdmin } = useAuth();

@@ -232,6 +232,7 @@ export function SubmissionListView({
     // 탭 상태 (초기 탭 지정 가능)
     const [activeTab, setActiveTab] = useState<'new' | 'edit' | 'reviews'>(initialTab);
     const isMobile = useIsMobile();
+    const SUBMISSION_LIST_PAGE_SIZE = 10;
 
     // 검색어
     const [searchQuery, setSearchQuery] = useState('');
@@ -297,6 +298,15 @@ export function SubmissionListView({
     const submissionTabSwipePointerIdRef = useRef<number | null>(null);
     const submissionTabSwipeInputRef = useRef<'pointer' | 'touch' | null>(null);
     const isSubmissionTabSwipeActiveRef = useRef(false);
+    const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+    const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
+    const isLoadingMoreRef = useRef(false);
+
+    const [visibleNewCount, setVisibleNewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
+    const [visibleEditCount, setVisibleEditCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
+    const [visibleReviewCount, setVisibleReviewCount] = useState(SUBMISSION_LIST_PAGE_SIZE);
+
+    const handleClearSubmissionSearch = useCallback(() => setSearchQuery(''), []);
 
     const TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
     const SUBMISSION_TAB_SWIPE_DISTANCE = 24;
@@ -337,17 +347,17 @@ export function SubmissionListView({
         if (currentIndex === -1) return false;
 
         if (distanceX > 0 && currentIndex < TAB_ORDER.length - 1) {
-            setActiveTab(TAB_ORDER[currentIndex + 1]);
+            setActiveTabWithReset(TAB_ORDER[currentIndex + 1]);
             return true;
         }
 
         if (distanceX < 0 && currentIndex > 0) {
-            setActiveTab(TAB_ORDER[currentIndex - 1]);
+            setActiveTabWithReset(TAB_ORDER[currentIndex - 1]);
             return true;
         }
 
         return false;
-    }, [activeTab]);
+    }, [activeTab, setActiveTabWithReset]);
 
     const handleSubmissionTabPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         if (isSubmissionTabSwipeActiveRef.current || submissionTabSwipeInputRef.current === 'touch') return;
@@ -883,6 +893,111 @@ export function SubmissionListView({
         [pendingReviews, approvedReviews, rejectedReviews]
     );
 
+    const visibleSubmissionCount = useMemo(() => (activeTab === 'new' ? visibleNewCount : visibleEditCount), [activeTab, visibleEditCount, visibleNewCount]);
+    const displayedSubmissions = useMemo(() => filteredSubmissions.slice(0, visibleSubmissionCount), [filteredSubmissions, visibleSubmissionCount]);
+    const displayedReviews = useMemo(() => orderedReviews.slice(0, visibleReviewCount), [orderedReviews, visibleReviewCount]);
+
+    const hasMoreSubmissions = filteredSubmissions.length > visibleSubmissionCount;
+    const hasMoreReviews = orderedReviews.length > visibleReviewCount;
+    const hasMoreCards = activeTab === 'reviews' ? hasMoreReviews : hasMoreSubmissions;
+    const isCurrentListLoading = activeTab === 'reviews' ? reviewsLoading : loading;
+
+    const resetVisibleCountByTab = useCallback((tab: 'new' | 'edit' | 'reviews') => {
+        if (tab === 'new') {
+            setVisibleNewCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        if (tab === 'edit') {
+            setVisibleEditCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        setVisibleReviewCount(SUBMISSION_LIST_PAGE_SIZE);
+    }, []);
+
+    const setActiveTabWithReset = useCallback((tab: 'new' | 'edit' | 'reviews') => {
+        setActiveTab(tab);
+        resetVisibleCountByTab(tab);
+    }, [resetVisibleCountByTab]);
+
+    const handleLoadMoreCards = useCallback(() => {
+        if (!hasMoreCards || isCurrentListLoading || isLoadingMoreRef.current) return;
+
+        isLoadingMoreRef.current = true;
+
+        if (activeTab === 'reviews') {
+            setVisibleReviewCount((prev) => Math.min(prev + SUBMISSION_LIST_PAGE_SIZE, orderedReviews.length));
+            requestAnimationFrame(() => {
+                isLoadingMoreRef.current = false;
+            });
+            return;
+        }
+
+        if (activeTab === 'new') {
+            setVisibleNewCount((prev) => Math.min(prev + SUBMISSION_LIST_PAGE_SIZE, filteredSubmissions.length));
+            requestAnimationFrame(() => {
+                isLoadingMoreRef.current = false;
+            });
+            return;
+        }
+
+        setVisibleEditCount((prev) => Math.min(prev + SUBMISSION_LIST_PAGE_SIZE, filteredSubmissions.length));
+        requestAnimationFrame(() => {
+            isLoadingMoreRef.current = false;
+        });
+    }, [activeTab, hasMoreCards, isCurrentListLoading, orderedReviews.length, filteredSubmissions.length]);
+
+    // 탭/검색 변경 시 노출 개수 초기화
+    useEffect(() => {
+        if (activeTab === 'new') {
+            setVisibleNewCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        if (activeTab === 'edit') {
+            setVisibleEditCount(SUBMISSION_LIST_PAGE_SIZE);
+            return;
+        }
+
+        setVisibleReviewCount(SUBMISSION_LIST_PAGE_SIZE);
+    }, [activeTab, searchQuery, reviewSearchQuery]);
+
+    useEffect(() => {
+        const sentinel = loadMoreSentinelRef.current;
+        if (!sentinel) return;
+
+        if (!hasMoreCards || isCurrentListLoading) {
+            if (loadMoreObserverRef.current) {
+                loadMoreObserverRef.current.disconnect();
+                loadMoreObserverRef.current = null;
+            }
+            return;
+        }
+
+        if (loadMoreObserverRef.current) {
+            loadMoreObserverRef.current.disconnect();
+            loadMoreObserverRef.current = null;
+        }
+
+        loadMoreObserverRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting && hasMoreCards && !isCurrentListLoading) {
+                    handleLoadMoreCards();
+                }
+            },
+            { root: null, rootMargin: '200px 0px 0px 0px', threshold: 0.01 }
+        );
+
+        loadMoreObserverRef.current.observe(sentinel);
+
+        return () => {
+            if (loadMoreObserverRef.current) {
+                loadMoreObserverRef.current.disconnect();
+                loadMoreObserverRef.current = null;
+            }
+        };
+    }, [handleLoadMoreCards, hasMoreCards, isCurrentListLoading]);
     // 상태 뱃지
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -1351,7 +1466,7 @@ export function SubmissionListView({
                                 <Button
                                     variant={activeTab === 'new' ? 'default' : 'outline'}
                                     size="sm"
-                                    onClick={() => setActiveTab('new')}
+                                    onClick={() => setActiveTabWithReset('new')}
                                     className={tabTriggerClassName}
                                 >
                                     <Youtube className="h-4 w-4" />
@@ -1366,7 +1481,7 @@ export function SubmissionListView({
                                 <Button
                                     variant={activeTab === 'edit' ? 'default' : 'outline'}
                                     size="sm"
-                                    onClick={() => setActiveTab('edit')}
+                                    onClick={() => setActiveTabWithReset('edit')}
                                     className={tabTriggerClassName}
                                 >
                                     <Edit className="h-4 w-4" />
@@ -1381,7 +1496,7 @@ export function SubmissionListView({
                                 <Button
                                     variant={activeTab === 'reviews' ? 'default' : 'outline'}
                                     size="sm"
-                                    onClick={() => setActiveTab('reviews')}
+                                    onClick={() => setActiveTabWithReset('reviews')}
                                     className={tabTriggerClassName}
                                 >
                                     <MessageSquare className="h-4 w-4" />
@@ -1480,7 +1595,7 @@ export function SubmissionListView({
                                         검색 결과가 없습니다
                                     </div>
                                 ) : (
-                                    orderedReviews.map((review) => {
+                                    displayedReviews.map((review) => {
                                         const { isPending, isApproved, isRejected } = getReviewFlags(review);
                                         return (
                                             <Card
@@ -1567,6 +1682,7 @@ export function SubmissionListView({
                                         );
                                     })
                                 )}
+                                <div ref={loadMoreSentinelRef} className="h-8" />
                             </div>
                         )}
                     </div>
@@ -1604,7 +1720,7 @@ export function SubmissionListView({
                                             variant="ghost"
                                             size="sm"
                                             className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
-                                            onClick={() => setSearchQuery('')}
+                                            onClick={handleClearSubmissionSearch}
                                         >
                                             <X className="h-3 w-3" />
                                         </Button>
@@ -1616,7 +1732,7 @@ export function SubmissionListView({
                                         검색 결과가 없습니다
                                     </div>
                                 ) : (
-                                    filteredSubmissions.map((submission) => {
+                                    displayedSubmissions.map((submission) => {
                                         const isPending = submission.status === 'pending' || submission.status === 'partially_approved';
 
                                         return (
@@ -1689,6 +1805,7 @@ export function SubmissionListView({
                                         );
                                     })
                                 )}
+                                <div ref={loadMoreSentinelRef} className="h-8" />
                             </div>
                         )}
                     </div>
