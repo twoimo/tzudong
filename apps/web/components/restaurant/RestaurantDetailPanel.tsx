@@ -123,6 +123,10 @@ export function RestaurantDetailPanel({
     } | null>(null);
     const [showSwipeHint, setShowSwipeHint] = useState(false);
 
+    const handleBookmarkRequireAuth = useCallback(() => {
+        setIsAuthModalOpen(true);
+    }, []);
+
     // [실시간] 좋아요 실시간 반영
     useReviewLikesRealtime();
 
@@ -813,7 +817,10 @@ export function RestaurantDetailPanel({
                             )}
                             {/* 북마크 버튼 - 모든 사용자에게 표시 */}
                             {viewMode === 'detail' && (
-                                <BookmarkButton restaurantId={restaurant.id} />
+                                <BookmarkButton
+                                    restaurantId={restaurant.id}
+                                    onRequireAuth={handleBookmarkRequireAuth}
+                                />
                             )}
                             {isAdmin && onEditRestaurant && viewMode === 'detail' && (
                                 <Button

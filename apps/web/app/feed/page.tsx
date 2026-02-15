@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import FeedContent from '@/components/feed/FeedContent';
-import { Suspense } from 'react';
 import { BREAKPOINTS } from '@/hooks/useDeviceType';
+import AuthModal from '@/components/auth/AuthModal';
 
 function FeedPageContent() {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -33,7 +34,16 @@ function FeedPageContent() {
 
     return (
         <div className="h-full w-full bg-background overflow-hidden" data-testid="feed-page-container">
-            <FeedContent variant="page" />
+            <FeedContent
+                variant="page"
+                onOpenAuth={() => setIsAuthModalOpen(true)}
+            />
+            {isAuthModalOpen && (
+                <AuthModal
+                    isOpen={isAuthModalOpen}
+                    onClose={() => setIsAuthModalOpen(false)}
+                />
+            )}
         </div>
     );
 }
