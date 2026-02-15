@@ -170,6 +170,7 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
                     </button>
                 );
             })}
+
         </nav>
     );
 }

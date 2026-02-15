@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,15 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 type SortColumn = "name" | "category" | "fanVisits";
 type SortDirection = "asc" | "desc" | null;
 type ViewMode = "grid" | "list";
+const STAMP_PAGE_STAMP_GUIDE_KEY = 'stamp-page-stamp-guide-seen-v1';
+const STAMP_GUIDE_DEMO_RESTAURANT = {
+    id: "guide-stamp-demo",
+    name: "명동 얼큰수제비",
+    category: ["분식"],
+    road_address: "서울특별시 중구",
+    youtube_link: "https://www.youtube.com/watch?v=8kE5Uq_YV08",
+    review_count: 17,
+} as Restaurant;
 
 // StampFilterState 및 UserReview는 stamp-utils에서 import
 
@@ -263,7 +272,7 @@ const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: Restau
 RestaurantRow.displayName = 'RestaurantRow';
 
 export default function StampPage() {
-    const { user } = useAuth();
+    const { user, isLoading: authLoading } = useAuth();
     const queryClient = useQueryClient();
     const router = useRouter();
     // const { isMobileOrTablet, isDesktop } = useDeviceType(); // Hook check replaced
@@ -312,6 +321,7 @@ export default function StampPage() {
 
     // 리뷰 모달 상태
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [showStampGuide, setShowStampGuide] = useState(false);
     const [editingReview, setEditingReview] = useState<{
         id: string;
         restaurantId: string;
@@ -328,14 +338,16 @@ export default function StampPage() {
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
 
-    // 사용자 도장 데이터 상태
-    const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
-
     // 카드별 썸네일 인덱스 상태 (병합된 맛집의 여러 썸네일 중 현재 표시 중인 인덱스)
     const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
 
     // --- 데이터 패칭: 사용자 도장 정보 ---
-    const { data: userReviewData = [], isLoading: isUserStampsLoading } = useQuery({
+    const {
+        data: userReviewData = [],
+        isLoading: isUserStampsLoading,
+        isFetching: isUserStampsFetching,
+        isFetched: isUserStampsFetched,
+    } = useQuery({
         queryKey: ['user-stamp-reviews', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
@@ -350,17 +362,17 @@ export default function StampPage() {
         enabled: !!user?.id,
     });
 
+    // 사용자 도장 데이터 상태
+    const userReviews = useMemo(() => {
+        if (!user?.id || userReviewData.length === 0) {
+            return new Set<string>();
+        }
+
+        return new Set(userReviewData.map(review => review.restaurant_id));
+    }, [user?.id, userReviewData]);
+
     // 사용자 방문 데이터 준비 완료 상태 (비로그인 또는 로딩 완료)
     const isUserStampsReady = !user?.id || !isUserStampsLoading;
-
-    useEffect(() => {
-        if (userReviewData.length > 0) {
-            const reviewedRestaurantIds = new Set(
-                userReviewData.map(review => review.restaurant_id)
-            );
-            setUserReviews(reviewedRestaurantIds);
-        }
-    }, [userReviewData]);
 
     const isVisited = useCallback((restaurantId: string) => {
         return userReviews.has(restaurantId);
@@ -869,6 +881,48 @@ export default function StampPage() {
         setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }));
     }, []);
 
+    const completeStampGuide = useCallback(() => {
+        if (typeof window !== 'undefined') {
+            window.localStorage.setItem(STAMP_PAGE_STAMP_GUIDE_KEY, '1');
+        }
+        setShowStampGuide(false);
+    }, []);
+
+    const dismissStampGuide = useCallback(() => {
+        setShowStampGuide(false);
+    }, []);
+
+    const handleGuideThumbnailChange = useCallback((_id: string, _index: number) => {
+        return;
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (authLoading) {
+            setShowStampGuide(false);
+            return;
+        }
+
+        const isGuideSeen = window.localStorage.getItem(STAMP_PAGE_STAMP_GUIDE_KEY) === '1';
+
+        if (user?.id) {
+            if (isUserStampsLoading || isUserStampsFetching || !isUserStampsFetched) {
+                setShowStampGuide(false);
+                return;
+            }
+
+            setShowStampGuide(!isGuideSeen && userReviews.size === 0);
+            return;
+        }
+
+        if (!isGuideSeen) {
+            setShowStampGuide(true);
+            return;
+        }
+
+        setShowStampGuide(false);
+    }, [authLoading, user?.id, userReviews.size, isUserStampsLoading, isUserStampsFetching, isUserStampsFetched]);
+
     // --- 헬퍼 함수 (Helpers) ---
     const getSortIcon = useCallback((column: SortColumn) => {
         if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4" />;
@@ -1119,6 +1173,36 @@ export default function StampPage() {
                             </div>
                         </div>
 
+                            {showStampGuide ? (
+                            <div className="px-4 sm:px-6 py-3 border-b border-dashed border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/40">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">도장 획득 가이드</p>
+                                        <p className="mt-1 text-xs text-amber-800 dark:text-amber-100/90">맛집 카드에 리뷰를 남기면 이처럼 도장이 찍혀요.</p>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={dismissStampGuide}
+                                        className="h-8 px-2 text-xs text-amber-800 hover:bg-amber-100/80 dark:text-amber-100 dark:hover:bg-amber-900/60"
+                                    >
+                                        닫기
+                                    </Button>
+                                </div>
+                                <div className="mt-3 max-w-sm">
+                                    <StampCard
+                                        restaurant={STAMP_GUIDE_DEMO_RESTAURANT}
+                                        isVisited={true}
+                                        isUserStampsReady={true}
+                                        isSelected={false}
+                                        currentThumbnailIndex={0}
+                                        onThumbnailChange={handleGuideThumbnailChange}
+                                        onClick={() => { }}
+                                    />
+                                </div>
+                            </div>
+                        ) : null}
+
                         <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-height,60px)+1.5rem)] md:pb-6 bg-background">
                             {(isRestaurantsLoading && !searchQuery) ? (
                                 <StampGridSkeleton count={16} showHeader={false} />
@@ -1260,6 +1344,7 @@ export default function StampPage() {
                 onSuccess={() => {
                     queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
                     queryClient.invalidateQueries({ queryKey: ['user-stamp-reviews', user?.id] });
+                    completeStampGuide();
                 }}
             />
 
