@@ -599,10 +599,10 @@ export default function InsightsClient() {
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(() =>
-        typeof window === 'undefined' ? 1200 : Math.max(320, Math.floor(window.innerWidth - 64)),
+        typeof window === 'undefined' ? 960 : Math.max(320, Math.floor(window.innerWidth - 48)),
     );
     const [chartHeight, setChartHeight] = useState(() =>
-        typeof window === 'undefined' ? 640 : Math.max(240, Math.floor(window.innerHeight * 0.6)),
+        typeof window === 'undefined' ? 420 : Math.max(220, Math.floor(window.innerHeight * 0.52)),
     );
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
     const tooltipRafRef = useRef<number | null>(null);
@@ -637,9 +637,8 @@ export default function InsightsClient() {
     const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
 
     useEffect(() => {
-        const container = chartContainerRef.current;
         const chartArea = chartAreaRef.current;
-        if (!container || !chartArea) return undefined;
+        if (!chartArea) return undefined;
 
         const updateLayout = () => {
             const nextWidth = Math.max(320, Math.floor(chartArea.clientWidth));
@@ -663,7 +662,6 @@ export default function InsightsClient() {
             observer = new ResizeObserver(() => {
                 scheduleUpdateLayout();
             });
-            observer.observe(container);
             observer.observe(chartArea);
         }
         if (typeof window !== 'undefined') {
@@ -960,13 +958,14 @@ export default function InsightsClient() {
 
     return (
         <div className="flex h-full min-h-0 flex-col bg-background">
-            <div className="p-4 md:p-6 h-full flex-1 min-h-0">
+            <div className="p-2 md:p-4 h-full flex-1 min-h-0">
                 <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
-                    <div className="p-3 md:p-4 border-b border-border">
-                        <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                            <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">전체 {selectedCount.toLocaleString()}개</p>
+                    <div className="border-b border-border p-2 md:p-3">
+                        <div className="overflow-x-auto pb-2">
+                            <div className="inline-flex items-start gap-2 md:gap-3 min-w-max">
+                            <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
 
-                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
                                 <span className="text-[11px] text-muted-foreground">모드</span>
                                 <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                     {VIEW_MODE_OPTIONS.map((option) => (
@@ -975,7 +974,7 @@ export default function InsightsClient() {
                                             size="sm"
                                             variant={viewMode === option.value ? 'default' : 'ghost'}
                                             onClick={() => setViewMode(option.value)}
-                                            className="rounded-none h-8 px-3"
+                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                         >
                                             {option.label}
                                         </Button>
@@ -983,7 +982,7 @@ export default function InsightsClient() {
                                 </div>
                             </div>
 
-                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
                                 <span className="text-[11px] text-muted-foreground">지표</span>
                                 <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                     {METRIC_OPTIONS.map((option) => (
@@ -992,7 +991,7 @@ export default function InsightsClient() {
                                             size="sm"
                                             variant={metricMode === option.value ? 'default' : 'ghost'}
                                             onClick={() => setMetricMode(option.value)}
-                                            className="rounded-none h-8 px-3"
+                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                         >
                                             {option.label}
                                         </Button>
@@ -1000,7 +999,7 @@ export default function InsightsClient() {
                                 </div>
                             </div>
 
-                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
                                 <span className="text-[11px] text-muted-foreground">기준</span>
                                 <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                     {periodOptionsForView.map((option) => (
@@ -1009,7 +1008,7 @@ export default function InsightsClient() {
                                             size="sm"
                                             variant={period === option.value ? 'default' : 'ghost'}
                                             onClick={() => setPeriod(option.value)}
-                                            className="rounded-none h-8 px-3"
+                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                         >
                                             {option.label}
                                         </Button>
@@ -1017,14 +1016,14 @@ export default function InsightsClient() {
                                 </div>
                             </div>
 
-                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
                                 <span className="text-[11px] text-muted-foreground">클러스터</span>
                                 <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                     <Button
                                         size="sm"
                                         variant={clusterStep === null ? 'default' : 'ghost'}
                                         onClick={() => setClusterStep(null)}
-                                        className="rounded-none h-8 px-3"
+                                        className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                     >
                                         전체
                                     </Button>
@@ -1034,7 +1033,7 @@ export default function InsightsClient() {
                                             size="sm"
                                             variant={clusterStep === step ? 'default' : 'ghost'}
                                             onClick={() => setClusterStep(step)}
-                                            className="rounded-none h-8 px-3"
+                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                         >
                                             {formatClusterValueByMode(metricMode, step)}
                                         </Button>
@@ -1044,12 +1043,12 @@ export default function InsightsClient() {
 
                             <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
                                 <span className="text-[11px] text-muted-foreground">색상</span>
-                                <div className="inline-flex overflow-hidden rounded-md border border-border">
+                                <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
                                     <div
                                         className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
                                         style={{
                                             background: TREEMAP_COLORS[0],
-                                            minWidth: 50,
+                                            minWidth: 42,
                                             textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                         }}
                                     >
@@ -1059,7 +1058,7 @@ export default function InsightsClient() {
                                         className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
                                         style={{
                                             background: TREEMAP_COLORS[1],
-                                            minWidth: 50,
+                                            minWidth: 42,
                                             textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                         }}
                                     >
@@ -1069,7 +1068,7 @@ export default function InsightsClient() {
                                         className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
                                         style={{
                                             background: TREEMAP_COLORS[2],
-                                            minWidth: 50,
+                                            minWidth: 42,
                                             textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                         }}
                                     >
@@ -1079,7 +1078,7 @@ export default function InsightsClient() {
                                         className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
                                         style={{
                                             background: TREEMAP_COLORS[3],
-                                            minWidth: 50,
+                                            minWidth: 42,
                                             textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                         }}
                                     >
@@ -1087,18 +1086,17 @@ export default function InsightsClient() {
                                     </div>
                                 </div>
                             </div>
+                            </div>
                         </div>
                     </div>
 
-                    <CardContent ref={chartAreaRef} className="p-0 flex-1 min-h-0 overflow-hidden">
+                    <CardContent
+                        ref={chartAreaRef}
+                        className="h-full p-0 flex-1 min-h-0 overflow-hidden"
+                    >
                         <div
                             ref={chartContainerRef}
-                            className="relative w-full h-full"
-                            style={{
-                                position: 'relative',
-                                width: '100%',
-                                height: `${chartHeight}px`,
-                            }}
+                            className="relative h-full w-full"
                         >
                             {safeTreeData.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
