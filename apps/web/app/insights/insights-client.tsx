@@ -597,7 +597,6 @@ export default function InsightsClient() {
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
     const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
-    const chartAreaRef = useRef<HTMLDivElement>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(() =>
         typeof window === 'undefined' ? 1200 : Math.max(320, Math.floor(window.innerWidth - 64)),
@@ -638,14 +637,15 @@ export default function InsightsClient() {
 
     useEffect(() => {
         const container = chartContainerRef.current;
-        const chartArea = chartAreaRef.current;
-        if (!container || !chartArea) return undefined;
+        if (!container) return undefined;
 
         const updateLayout = () => {
             const nextWidth = Math.max(320, Math.floor(container.clientWidth));
             setChartWidth((prev) => (prev === nextWidth ? prev : nextWidth));
 
-            const nextHeight = Math.max(240, Math.floor(chartArea.clientHeight));
+            const rect = container.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const nextHeight = Math.max(220, Math.floor(viewportHeight - rect.top - 12));
             setChartHeight((prev) => (prev === nextHeight ? prev : nextHeight));
         };
 
@@ -662,7 +662,6 @@ export default function InsightsClient() {
                 scheduleUpdateWidth();
             });
             observer.observe(container);
-            observer.observe(chartArea);
         }
         if (typeof window !== 'undefined') {
             window.addEventListener('resize', scheduleUpdateWidth);
@@ -957,7 +956,7 @@ export default function InsightsClient() {
     }
 
     return (
-        <div className="flex h-full min-h-[100svh] flex-col bg-background overflow-y-auto">
+        <div className="flex h-full min-h-0 flex-col bg-background">
             <div className="p-4 md:p-6 h-full flex-1 min-h-0">
                 <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
                     <div className="p-3 md:p-4 border-b border-border">
@@ -1088,10 +1087,7 @@ export default function InsightsClient() {
                         </div>
                     </div>
 
-                    <CardContent
-                        ref={chartAreaRef}
-                        className="p-0 flex-1 min-h-0"
-                    >
+                    <CardContent className="p-0 flex-1 min-h-0">
                         <div
                             ref={chartContainerRef}
                             className="relative w-full h-full"
