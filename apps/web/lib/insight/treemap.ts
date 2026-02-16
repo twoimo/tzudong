@@ -8,7 +8,7 @@ type CacheEntry<T> = {
     value: T;
 } | null;
 
-export type InsightTreemapPeriod = '1D' | '1W' | '1M' | 'ALL';
+export type InsightTreemapPeriod = '1W' | '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | '10Y' | 'ALL';
 
 export type InsightTreemapVideoRow = {
     id: string;
@@ -93,9 +93,14 @@ const VIDEO_CATEGORY_BY_NAME: Record<string, string> = {
 
 const periodToDays: Record<InsightTreemapPeriod, number | null> = {
     ALL: null,
-    '1D': 1,
     '1W': 7,
     '1M': 30,
+    '3M': 91,
+    '6M': 182,
+    '1Y': 365,
+    '3Y': 1095,
+    '5Y': 1825,
+    '10Y': 3650,
 };
 
 let videoCache: CacheEntry<VideoDbRow[]> = null;
@@ -195,9 +200,14 @@ function normalizeCategory(value: string | null): string {
 
 export function parseTreemapPeriod(value: string | null): InsightTreemapPeriod {
     const normalized = value?.trim().toUpperCase() ?? '';
-    if (normalized === '1D') return '1D';
     if (normalized === '1W') return '1W';
     if (normalized === '1M') return '1M';
+    if (normalized === '3M') return '3M';
+    if (normalized === '6M') return '6M';
+    if (normalized === '1Y') return '1Y';
+    if (normalized === '3Y') return '3Y';
+    if (normalized === '5Y') return '5Y';
+    if (normalized === '10Y') return '10Y';
     return 'ALL';
 }
 
