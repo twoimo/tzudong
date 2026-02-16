@@ -79,6 +79,7 @@ type TreemapTileInteraction = (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivE
 
 type TreemapCellRenderInput = {
     leaf: TreemapLeafNode;
+    index: number;
     x: number;
     y: number;
     width: number;
@@ -101,6 +102,8 @@ type TreemapTilesProps = {
 
 const TREEMAP_TEXT_CACHE_LIMIT = 3_000;
 const treemapTextFitCache = new Map<string, { text: string; fontSize: number }>();
+const numberFormatter = new Intl.NumberFormat('ko-KR');
+const TREEMAP_LAYOUT_SIZE_QUANTIZATION = 2;
 
 const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
 
@@ -147,6 +150,10 @@ const INITIAL_CHART_SIZE = {
     tablet: { width: 640, height: 420 },
     desktop: { width: 960, height: 520 },
 };
+const treemapGenerator = treemap<TreemapNode | TreemapRootNode>()
+    .paddingInner(2)
+    .round(true)
+    .tile(treemapResquarify);
 
 function getInitialChartDimensions(isMobile: boolean, isTablet: boolean): { width: number; height: number } {
     if (typeof window === 'undefined') {
@@ -219,7 +226,7 @@ function formatShortNumber(value: number): string {
         return `${v}k`;
     }
 
-    return value.toLocaleString();
+    return numberFormatter.format(Math.trunc(value));
 }
 
 function formatDurationText(totalSeconds: number): string {
@@ -243,9 +250,9 @@ function formatMetricText(mode: MetricMode, value: number): string {
 function formatTooltipMetric(mode: 'views' | 'likes' | 'comments' | 'duration', value: number): string {
     if (mode === 'duration') return formatDurationText(value);
     if (mode === 'likes' || mode === 'comments') {
-        return `${Math.round(value).toLocaleString()}개`;
+        return `${numberFormatter.format(Math.round(value))}개`;
     }
-    return `${Math.round(value).toLocaleString()}개`;
+    return `${numberFormatter.format(Math.round(value))}개`;
 }
 
 function formatPercent(value: number): string {
@@ -552,16 +559,25 @@ function fitMetricTextToCellWidthCached(
     maxFontPx: number,
     minFontPx: number,
 ): { text: string; fontSize: number } {
-    const key = `${text}|${Math.round(width)}|${Math.round(height)}|${maxFontPx}|${minFontPx}`;
+    const normalizedWidth = Math.max(1, Math.round(width / TREEMAP_LAYOUT_SIZE_QUANTIZATION) * TREEMAP_LAYOUT_SIZE_QUANTIZATION);
+    const normalizedHeight = Math.max(1, Math.round(height / TREEMAP_LAYOUT_SIZE_QUANTIZATION) * TREEMAP_LAYOUT_SIZE_QUANTIZATION);
+    const normalizedMaxFont = Math.max(1, Math.round(maxFontPx));
+    const normalizedMinFont = Math.max(1, Math.round(minFontPx));
+    const key = `${text}|${normalizedWidth}|${normalizedHeight}|${normalizedMaxFont}|${normalizedMinFont}`;
     const cached = treemapTextFitCache.get(key);
     if (cached) {
+        treemapTextFitCache.delete(key);
+        treemapTextFitCache.set(key, cached);
         return cached;
     }
 
     const result = fitMetricTextToCellWidth(text, width, height, maxFontPx, minFontPx);
 
     if (treemapTextFitCache.size >= TREEMAP_TEXT_CACHE_LIMIT) {
-        treemapTextFitCache.clear();
+        const oldestKey = treemapTextFitCache.keys().next().value;
+        if (oldestKey !== undefined) {
+            treemapTextFitCache.delete(oldestKey);
+        }
     }
 
     treemapTextFitCache.set(key, result);
@@ -647,42 +663,38 @@ function buildTreemapLayout(
     const hierarchyRoot = hierarchy<TreemapNode | TreemapRootNode>(source, (entry) =>
         isLeafNode(entry) ? undefined : entry.children,
     );
+    const root = hierarchyRoot.sum((entry) => (isLeafNode(entry) ? Math.max(entry.value, 0.25) : 0));
+    const laidOut = treemapGenerator.size([width, height])(root) as HierarchyRectangularNode<TreemapNode | TreemapRootNode>;
 
-    const root = hierarchyRoot.sum((entry) => {
-        if (isLeafNode(entry)) {
-            return Math.max(entry.value, 0.25);
+    const outputs: TreemapCellLayout[] = [];
+    const descendants = laidOut.descendants();
+
+    for (let i = 0; i < descendants.length; i += 1) {
+        const entry = descendants[i];
+
+        if (entry.depth === 0 || !isLeafNode(entry.data)) {
+            continue;
         }
-        return 0;
-    });
 
-    const layoutGenerator = treemap<TreemapNode | TreemapRootNode>()
-        .size([width, height])
-        .paddingInner(2)
-        .round(true)
-        .tile(treemapResquarify);
+        const x0 = entry.x0;
+        const x1 = entry.x1;
+        const y0 = entry.y0;
+        const y1 = entry.y1;
 
-    const laidOut = layoutGenerator(root) as HierarchyRectangularNode<TreemapNode | TreemapRootNode>;
+        if (x1 <= x0 || y1 <= y0) {
+            continue;
+        }
 
-    const leafEntries = laidOut
-        .descendants()
-        .filter((entry) => entry.depth > 0 && isLeafNode(entry.data));
+        outputs.push({
+            node: entry.data,
+            x0,
+            y0,
+            x1,
+            y1,
+        });
+    }
 
-    return leafEntries
-        .map((entry): TreemapCellLayout | null => {
-            if (!isLeafNode(entry.data)) {
-                return null;
-            }
-
-            return {
-                node: entry.data,
-                x0: entry.x0,
-                y0: entry.y0,
-                x1: entry.x1,
-                y1: entry.y1,
-            };
-        })
-        .filter((entry): entry is TreemapCellLayout => !!entry)
-        .filter((entry) => entry.x1 > entry.x0 && entry.y1 > entry.y0);
+    return outputs;
 }
 
 const TreemapTiles = memo(function TreemapTiles({
@@ -692,7 +704,7 @@ const TreemapTiles = memo(function TreemapTiles({
     onCellLeave,
 }: TreemapTilesProps) {
     const renderedTiles = useMemo<TreemapCellRenderInput[]>(() => {
-        return cells.map((cell) => {
+        return cells.map((cell, index) => {
             const leaf = cell.node;
             const width = Math.max(0, cell.x1 - cell.x0);
             const height = Math.max(0, cell.y1 - cell.y0);
@@ -749,6 +761,7 @@ const TreemapTiles = memo(function TreemapTiles({
             const canShowEllipsis = width >= 12 && height >= 12;
 
             return {
+                index,
                 leaf,
                 x: Math.trunc(cell.x0),
                 y: Math.trunc(cell.y0),
@@ -765,6 +778,34 @@ const TreemapTiles = memo(function TreemapTiles({
         });
     }, [cells]);
 
+    const handleTileEnter = useCallback(
+        (event: MouseEvent<HTMLDivElement>) => {
+            const rawIndex = event.currentTarget.getAttribute('data-treemap-index');
+            const tileIndex = rawIndex ? Number(rawIndex) : -1;
+
+            if (tileIndex < 0 || !Number.isInteger(tileIndex) || tileIndex >= renderedTiles.length) {
+                return;
+            }
+
+            onCellEnter(renderedTiles[tileIndex].leaf, event);
+        },
+        [onCellEnter, renderedTiles],
+    );
+
+    const handleTileMove = useCallback(
+        (event: MouseEvent<HTMLDivElement>) => {
+            const rawIndex = event.currentTarget.getAttribute('data-treemap-index');
+            const tileIndex = rawIndex ? Number(rawIndex) : -1;
+
+            if (tileIndex < 0 || !Number.isInteger(tileIndex) || tileIndex >= renderedTiles.length) {
+                return;
+            }
+
+            onCellMove(renderedTiles[tileIndex].leaf, event);
+        },
+        [onCellMove, renderedTiles],
+    );
+
     if (renderedTiles.length === 0) {
         return null;
     }
@@ -773,19 +814,22 @@ const TreemapTiles = memo(function TreemapTiles({
         <div className="relative h-full w-full">
             {renderedTiles.map((tile) => (
                 <div
-                    key={`${tile.leaf.id}-${tile.x}-${tile.y}-${tile.leaf.value}`}
+                    key={`${tile.index}-${tile.leaf.id}-${tile.x}-${tile.y}`}
                     className="absolute flex items-center justify-center border border-white/30"
                     style={{
-                        left: tile.x,
-                        top: tile.y,
+                        transform: `translate3d(${tile.x}px, ${tile.y}px, 0px)`,
+                        left: 0,
+                        top: 0,
                         width: tile.width,
                         height: tile.height,
                         backgroundColor: tile.leaf.color,
                         overflow: 'hidden',
                         boxSizing: 'border-box',
+                        willChange: 'transform',
                     }}
-                    onMouseEnter={(event) => onCellEnter(tile.leaf, event)}
-                    onMouseMove={(event) => onCellMove(tile.leaf, event)}
+                    data-treemap-index={tile.index}
+                    onMouseEnter={handleTileEnter}
+                    onMouseMove={handleTileMove}
                     onMouseLeave={onCellLeave}
                 >
                     {tile.canShowBoth ? (
@@ -914,26 +958,33 @@ export default function InsightsClient() {
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(1, chartWidth), [chartWidth]);
 
-    const leafRowsWithMetric = useMemo(
-        () =>
-            rawRows.map((row) => ({
+    const leafRows = useMemo(() => {
+        if (rawRows.length === 0) return [];
+
+        const rawLeafRows: {
+            row: InsightTreemapVideoRow;
+            metricRaw: number;
+            previousMetricRaw: number | null;
+        }[] = [];
+
+        for (let i = 0; i < rawRows.length; i += 1) {
+            const row = rawRows[i];
+            rawLeafRows.push({
                 row,
                 metricRaw: getMetricValue(row, metricMode),
                 previousMetricRaw: getPreviousMetricValue(row, metricMode),
-            })),
-        [rawRows, metricMode],
-    );
-
-    const leafRows = useMemo(() => {
-        if (leafRowsWithMetric.length === 0) return [] as TreemapLeafNode[];
+            });
+        }
 
         const isChangeMode = viewMode === 'change';
-        const totalMetric = leafRowsWithMetric.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0);
+        const totalMetric = rawLeafRows.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0);
 
-        return leafRowsWithMetric
+        return rawLeafRows
             .map<TreemapLeafNode>((item) => {
                 const metricRaw = Math.max(item.metricRaw, 0);
-                const percent = isChangeMode ? calculateChangePercent(metricRaw, item.previousMetricRaw) : (totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0);
+                const percent = isChangeMode
+                    ? calculateChangePercent(metricRaw, item.previousMetricRaw)
+                    : (totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0);
                 const percentText = isChangeMode ? formatNonNegativePercent(percent) : formatPercent(percent);
                 return {
                     id: item.row.id,
@@ -955,7 +1006,7 @@ export default function InsightsClient() {
                 };
             })
             .sort((a, b) => b.metricRaw - a.metricRaw);
-    }, [leafRowsWithMetric, metricMode, viewMode]);
+    }, [rawRows, metricMode, viewMode]);
 
     const chartConstraints = useMemo(
         () => (isMobile
@@ -966,19 +1017,36 @@ export default function InsightsClient() {
         [isMobile, isTablet],
     );
 
-    const applyChartLayout = useCallback(() => {
-        if (typeof window === 'undefined' || !chartAreaRef.current) {
+    const applyChartLayout = useCallback((width?: number, height?: number) => {
+        if (!chartAreaRef.current) {
             return;
         }
-        const nextRect = chartAreaRef.current.getBoundingClientRect();
-        const nextWidth = Math.max(chartConstraints.minWidth, Math.max(1, Math.floor(nextRect.width)));
-        const nextHeight = Math.max(chartConstraints.minHeight, Math.max(1, Math.floor(nextRect.height)));
+        const shouldMeasure = width == null || height == null;
+        let nextWidth = width;
+        let nextHeight = height;
 
-        setChartSize((prev) => (prev.width === nextWidth && prev.height === nextHeight ? prev : { width: nextWidth, height: nextHeight }));
+        if (shouldMeasure) {
+            const nextRect = chartAreaRef.current.getBoundingClientRect();
+            if (width == null) {
+                nextWidth = nextRect.width;
+            }
+            if (height == null) {
+                nextHeight = nextRect.height;
+            }
+        }
+
+        const resolvedWidth = Math.max(chartConstraints.minWidth, Math.max(1, Math.floor(nextWidth ?? 1)));
+        const resolvedHeight = Math.max(chartConstraints.minHeight, Math.max(1, Math.floor(nextHeight ?? 1)));
+
+        setChartSize((prev) =>
+            prev.width === resolvedWidth && prev.height === resolvedHeight
+                ? prev
+                : { width: resolvedWidth, height: resolvedHeight },
+        );
     }, [chartConstraints]);
 
-    const scheduleUpdateLayout = useCallback(() => {
-        if (typeof window === 'undefined' || !chartAreaRef.current) {
+    const scheduleUpdateLayout = useCallback((width?: number, height?: number) => {
+        if (typeof window === 'undefined') {
             return;
         }
 
@@ -988,7 +1056,7 @@ export default function InsightsClient() {
 
         layoutRafRef.current = window.requestAnimationFrame(() => {
             layoutRafRef.current = null;
-            applyChartLayout();
+            applyChartLayout(width, height);
         });
     }, [applyChartLayout]);
 
@@ -1001,18 +1069,18 @@ export default function InsightsClient() {
 
         let observer: ResizeObserver | null = null;
         if (typeof ResizeObserver !== 'undefined') {
-            observer = new ResizeObserver(() => {
-                scheduleUpdateLayout();
+            observer = new ResizeObserver((entries) => {
+                const entry = entries[0];
+                if (!entry) return;
+                scheduleUpdateLayout(entry.contentRect.width, entry.contentRect.height);
             });
             observer.observe(chartArea);
-            observer.observe(document.documentElement);
         }
 
         const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
         if (typeof window !== 'undefined') {
             window.addEventListener('resize', scheduleUpdateLayout, { passive: true });
             window.addEventListener('orientationchange', scheduleUpdateLayout, { passive: true });
-            window.addEventListener('scroll', scheduleUpdateLayout, { passive: true });
         }
         if (viewport) {
             viewport.addEventListener('resize', scheduleUpdateLayout, { passive: true });
@@ -1026,7 +1094,6 @@ export default function InsightsClient() {
             if (typeof window !== 'undefined') {
                 window.removeEventListener('resize', scheduleUpdateLayout);
                 window.removeEventListener('orientationchange', scheduleUpdateLayout);
-                window.removeEventListener('scroll', scheduleUpdateLayout);
             }
             if (viewport) {
                 viewport.removeEventListener('resize', scheduleUpdateLayout);
