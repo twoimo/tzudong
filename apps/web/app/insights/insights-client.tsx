@@ -1,6 +1,15 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import {
+    memo,
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+    type MouseEvent,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
@@ -131,11 +140,34 @@ const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
     duration: [30, 60, 120, 180, 300, 600],
 };
 
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
 const INITIAL_CHART_SIZE = {
     mobile: { width: 360, height: 320 },
     tablet: { width: 640, height: 420 },
     desktop: { width: 960, height: 520 },
 };
+
+function getInitialChartDimensions(isMobile: boolean, isTablet: boolean): { width: number; height: number } {
+    if (typeof window === 'undefined') {
+        if (isMobile) return INITIAL_CHART_SIZE.mobile;
+        if (isTablet) return INITIAL_CHART_SIZE.tablet;
+        return INITIAL_CHART_SIZE.desktop;
+    }
+
+    const viewportWidth = Math.max(1, Math.floor(window.innerWidth));
+    const viewportHeight = Math.max(1, Math.floor(window.innerHeight));
+    const widthPadding = isMobile ? 16 : isTablet ? 24 : 32;
+    const heightReserve = isMobile ? 240 : isTablet ? 280 : 320;
+
+    const width = Math.max(isMobile ? 280 : 360, viewportWidth - widthPadding);
+    const height = Math.max(isMobile ? 220 : 300, viewportHeight - heightReserve);
+
+    return {
+        width,
+        height,
+    };
+}
 
 let measureCanvasContext: CanvasRenderingContext2D | null = null;
 
@@ -839,9 +871,7 @@ export default function InsightsClient() {
     const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
     const initialChartSize = useMemo(() => {
-        if (isMobile) return INITIAL_CHART_SIZE.mobile;
-        if (isTablet) return INITIAL_CHART_SIZE.tablet;
-        return INITIAL_CHART_SIZE.desktop;
+        return getInitialChartDimensions(isMobile, isTablet);
     }, [isMobile, isTablet]);
 
     const [chartSize, setChartSize] = useState<ChartDimensions>(initialChartSize);
@@ -936,43 +966,37 @@ export default function InsightsClient() {
         [isMobile, isTablet],
     );
 
-    useEffect(() => {
+    const applyChartLayout = useCallback(() => {
+        if (typeof window === 'undefined' || !chartAreaRef.current) {
+            return;
+        }
+        const nextRect = chartAreaRef.current.getBoundingClientRect();
+        const nextWidth = Math.max(chartConstraints.minWidth, Math.max(1, Math.floor(nextRect.width)));
+        const nextHeight = Math.max(chartConstraints.minHeight, Math.max(1, Math.floor(nextRect.height)));
+
+        setChartSize((prev) => (prev.width === nextWidth && prev.height === nextHeight ? prev : { width: nextWidth, height: nextHeight }));
+    }, [chartConstraints]);
+
+    const scheduleUpdateLayout = useCallback(() => {
+        if (typeof window === 'undefined' || !chartAreaRef.current) {
+            return;
+        }
+
+        if (layoutRafRef.current !== null) {
+            return;
+        }
+
+        layoutRafRef.current = window.requestAnimationFrame(() => {
+            layoutRafRef.current = null;
+            applyChartLayout();
+        });
+    }, [applyChartLayout]);
+
+    useIsoLayoutEffect(() => {
         const chartArea = chartAreaRef.current;
         if (!chartArea) return undefined;
 
-        const updateLayout = () => {
-            if (typeof window === 'undefined') return;
-
-            const nextRect = chartArea.getBoundingClientRect();
-            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-            const nextWidth = Math.max(
-                chartConstraints.minWidth,
-                Math.floor(nextRect.width),
-            );
-            const nextHeight = Math.max(
-                1,
-                Math.min(
-                    Math.floor(nextRect.height),
-                    Math.max(1, Math.floor(viewportHeight)),
-                ),
-            );
-
-            setChartSize((prev) => (prev.width === nextWidth && prev.height === nextHeight ? prev : { width: nextWidth, height: nextHeight }));
-        };
-
-        const scheduleUpdateLayout = () => {
-            if (typeof window === 'undefined') return;
-
-            if (layoutRafRef.current !== null) {
-                window.cancelAnimationFrame(layoutRafRef.current);
-            }
-
-            layoutRafRef.current = window.requestAnimationFrame(() => {
-                layoutRafRef.current = null;
-                updateLayout();
-            });
-        };
-
+        applyChartLayout();
         scheduleUpdateLayout();
 
         let observer: ResizeObserver | null = null;
@@ -981,17 +1005,20 @@ export default function InsightsClient() {
                 scheduleUpdateLayout();
             });
             observer.observe(chartArea);
+            observer.observe(document.documentElement);
         }
-        const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
 
+        const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
         if (typeof window !== 'undefined') {
-            window.addEventListener('resize', scheduleUpdateLayout);
-            window.addEventListener('orientationchange', scheduleUpdateLayout);
+            window.addEventListener('resize', scheduleUpdateLayout, { passive: true });
+            window.addEventListener('orientationchange', scheduleUpdateLayout, { passive: true });
+            window.addEventListener('scroll', scheduleUpdateLayout, { passive: true });
         }
         if (viewport) {
-            viewport.addEventListener('resize', scheduleUpdateLayout);
-            viewport.addEventListener('scroll', scheduleUpdateLayout);
+            viewport.addEventListener('resize', scheduleUpdateLayout, { passive: true });
+            viewport.addEventListener('scroll', scheduleUpdateLayout, { passive: true });
         }
+
         return () => {
             if (observer) {
                 observer.disconnect();
@@ -999,6 +1026,7 @@ export default function InsightsClient() {
             if (typeof window !== 'undefined') {
                 window.removeEventListener('resize', scheduleUpdateLayout);
                 window.removeEventListener('orientationchange', scheduleUpdateLayout);
+                window.removeEventListener('scroll', scheduleUpdateLayout);
             }
             if (viewport) {
                 viewport.removeEventListener('resize', scheduleUpdateLayout);
@@ -1009,16 +1037,16 @@ export default function InsightsClient() {
                 layoutRafRef.current = null;
             }
         };
-    }, [chartConstraints]);
+    }, [chartConstraints, scheduleUpdateLayout]);
 
     useEffect(() => {
         setChartSize((prev) => {
-            const nextWidth = Math.max(initialChartSize.width, chartConstraints.minWidth);
-            const nextHeight = initialChartSize.height;
+            const nextWidth = Math.max(prev.width, chartConstraints.minWidth);
+            const nextHeight = Math.max(prev.height, chartConstraints.minHeight);
             if (prev.width === nextWidth && prev.height === nextHeight) return prev;
             return { width: nextWidth, height: nextHeight };
         });
-    }, [chartConstraints.minWidth, initialChartSize.width, initialChartSize.height]);
+    }, [chartConstraints]);
 
     const setTooltipThrottled = useCallback((next: TreemapTooltipState | null) => {
         if (typeof window === 'undefined') {
@@ -1233,6 +1261,7 @@ export default function InsightsClient() {
 
     const isLoading = isAuthLoading || treemapQuery.isLoading;
     const canRender = Boolean(treemapQuery.data);
+    const isInitialLoading = isLoading && !canRender;
 
     const handleCellEnter = useCallback(
         (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => {
@@ -1263,17 +1292,6 @@ export default function InsightsClient() {
         return (
             <div className="flex h-full items-center justify-center">
                 <div className="flex items-center gap-2 text-muted-foreground">사용자 권한을 확인하는 중입니다.</div>
-            </div>
-        );
-    }
-
-    if (isLoading && !canRender) {
-        return (
-            <div className="flex h-full items-center justify-center">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    인사이트를 불러오는 중입니다.
-                </div>
             </div>
         );
     }
@@ -1448,10 +1466,17 @@ export default function InsightsClient() {
                     <CardContent
                         ref={chartAreaRef}
                         className="p-0 flex-1 min-h-0 overflow-hidden"
-                        style={{ minHeight: 0, minWidth: 0 }}
+                        style={{ minHeight: 0, minWidth: 0, height: '100%', width: '100%' }}
                     >
                         <div className="relative h-full w-full">
-                            {safeTreeData.length === 0 ? (
+                            {isInitialLoading ? (
+                                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        인사이트를 불러오는 중입니다.
+                                    </div>
+                                </div>
+                            ) : safeTreeData.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
                             ) : (
                                 <TreemapTiles

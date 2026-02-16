@@ -108,9 +108,67 @@ export default function RootLayout({
                 </div>
 
                 {/* [PERF] 최소화된 인라인 스크립트 - 뷰포트 높이 계산 + 로딩 제거 */}
-                <script dangerouslySetInnerHTML={{
-                    __html: `(function(){var d=document.documentElement,s=d.style;function v(){if(CSS.supports('height','100dvh'))return;var h=window.innerHeight*.01;s.setProperty('--vh',h+'px');s.setProperty('--full-height',h*100+'px')}v();var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(v,100)});window.addEventListener('orientationchange',function(){setTimeout(v,200)});var r=false;function hide(){if(r)return;r=true;document.body.classList.add('loading-complete')}window.addEventListener('mapLoadingComplete',hide,{once:true});setTimeout(hide,800)})();`
-                }} />
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `
+(function () {
+    var root = document.documentElement;
+    var styles = root.style;
+    var viewport = window.visualViewport;
+    var rafId = 0;
+    var lastToken = '';
+
+    function parseNavOffset() {
+        return Math.max(
+            0,
+            Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mobile-bottom-nav-height')) || 0),
+        );
+    }
+
+    function commitVariables() {
+        var viewHeight = viewport && viewport.height ? viewport.height : window.innerHeight;
+        var navOffset = parseNavOffset();
+        var fullHeight = Math.max(1, Math.round(viewHeight - navOffset));
+        var token = viewHeight + '-' + navOffset + '-' + fullHeight;
+
+        if (lastToken === token) return;
+        lastToken = token;
+
+        styles.setProperty('--vh', (viewHeight * 0.01) + 'px');
+        styles.setProperty('--full-height', fullHeight + 'px');
+    }
+
+    function scheduleUpdate() {
+        if (rafId) return;
+        rafId = requestAnimationFrame(function () {
+            rafId = 0;
+            commitVariables();
+        });
+    }
+
+    scheduleUpdate();
+    window.addEventListener('load', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate, { passive: true });
+    window.addEventListener('orientationchange', scheduleUpdate, { passive: true });
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+
+    if (viewport) {
+        viewport.addEventListener('resize', scheduleUpdate, { passive: true });
+        viewport.addEventListener('scroll', scheduleUpdate, { passive: true });
+    }
+
+    window.addEventListener('mapLoadingComplete', function () {
+        document.body.classList.add('loading-complete');
+    }, { once: true });
+
+    window.addEventListener('pageshow', function (event) {
+        if (!event.persisted) return;
+        scheduleUpdate();
+    }, { passive: true });
+})();
+`,
+                    }}
+                />
 
                 <QueryProvider>
                     <AppProviders>
