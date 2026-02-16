@@ -618,6 +618,10 @@ export default function InsightsClient() {
             return PERIOD_OPTIONS.filter((option) => option.value !== 'ALL');
         }
 
+        if (viewMode === 'all') {
+            return PERIOD_OPTIONS.filter((option) => option.value !== '1D' && option.value !== '1W');
+        }
+
         return PERIOD_OPTIONS;
     }, [viewMode]);
 
