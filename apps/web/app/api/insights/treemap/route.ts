@@ -1,6 +1,11 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 
-import { getInsightTreemapData, parseTreemapPeriod, type InsightTreemapPeriod } from '@/lib/insight/treemap';
+import {
+    getInsightTreemapData,
+    parseTreemapMetricMode,
+    parseTreemapPeriod,
+    type InsightTreemapPeriod,
+} from '@/lib/insight/treemap';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +18,8 @@ export async function GET(request: NextRequest) {
         const period = normalizePeriod(request.nextUrl.searchParams.get('period'));
         const viewMode = request.nextUrl.searchParams.get('viewMode');
         const filterByPeriod = viewMode !== 'change';
-        const data = await getInsightTreemapData(period, { filterByPeriod });
+        const metricMode = parseTreemapMetricMode(request.nextUrl.searchParams.get('metricMode'));
+        const data = await getInsightTreemapData(period, { filterByPeriod, metricMode });
         return NextResponse.json(data);
     } catch (error) {
         console.error('[insights/treemap] failed:', error);

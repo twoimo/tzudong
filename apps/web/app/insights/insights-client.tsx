@@ -96,10 +96,11 @@ const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
 
 let measureCanvasContext: CanvasRenderingContext2D | null = null;
 
-async function fetchTreemapData(viewMode: ViewMode, period: InsightTreemapPeriod): Promise<InsightTreemapResponse> {
+async function fetchTreemapData(viewMode: ViewMode, period: InsightTreemapPeriod, metricMode: MetricMode): Promise<InsightTreemapResponse> {
     const params = new URLSearchParams({
         period,
         viewMode,
+        metricMode,
     });
     const response = await fetch(`/api/insights/treemap?${params.toString()}`);
     if (!response.ok) {
@@ -601,10 +602,32 @@ export default function InsightsClient() {
     const tooltipRafRef = useRef<number | null>(null);
 
     const treemapQuery = useQuery({
-        queryKey: ['insight-treemap', viewMode, period],
-        queryFn: () => fetchTreemapData(viewMode, period),
+        queryKey: ['insight-treemap', viewMode, period, metricMode],
+        queryFn: () => fetchTreemapData(viewMode, period, metricMode),
         staleTime: 1000 * 60 * 5,
     });
+
+    const periodOptionsForView = useMemo(() => {
+        if (viewMode !== 'change') {
+            return PERIOD_OPTIONS;
+        }
+
+        const availablePeriods = new Set(treemapQuery.data?.availablePeriods ?? []);
+        return PERIOD_OPTIONS.filter((option) => {
+            if (option.value === 'ALL') return true;
+            return availablePeriods.has(option.value);
+        });
+    }, [treemapQuery.data?.availablePeriods, viewMode]);
+
+    useEffect(() => {
+        if (viewMode !== 'change') return;
+
+        const hasCurrent = periodOptionsForView.some((option) => option.value === period);
+        if (!hasCurrent) {
+            const next = periodOptionsForView.find((option) => option.value !== 'ALL')?.value ?? 'ALL';
+            setPeriod(next);
+        }
+    }, [periodOptionsForView, viewMode, period]);
 
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
@@ -863,7 +886,7 @@ export default function InsightsClient() {
                             </div>
 
                             <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                {PERIOD_OPTIONS.map((option) => (
+                                {periodOptionsForView.map((option) => (
                                     <Button
                                         key={option.value}
                                         size="sm"

@@ -30,6 +30,7 @@ export type InsightTreemapResponse = {
     period: InsightTreemapPeriod;
     totalVideos: number;
     videos: InsightTreemapVideoRow[];
+    availablePeriods?: InsightTreemapPeriod[];
 };
 
 type VideoDbRow = {
@@ -54,9 +55,12 @@ type MetricHistoryPoint = {
 
 type TreemapRequestOptions = {
     filterByPeriod?: boolean;
+    metricMode?: TreemapMetric;
 };
 
 type TreemapMetric = 'views' | 'likes' | 'comments' | 'duration';
+
+const CHANGE_PERIOD_OPTIONS: Exclude<InsightTreemapPeriod, 'ALL'>[] = ['1D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', '10Y'];
 
 const VIDEO_CATEGORY_BY_CODE: Record<string, string> = {
     '1': '영화/애니메이션',
@@ -236,6 +240,14 @@ function parseMetaHistory(raw: unknown): MetricHistoryPoint[] {
         .sort((a, b) => a.collectedAt - b.collectedAt);
 }
 
+export function parseTreemapMetricMode(value: string | null): TreemapMetric {
+    const normalized = value?.trim().toLowerCase() ?? '';
+    if (normalized === 'likes') return 'likes';
+    if (normalized === 'comments') return 'comments';
+    if (normalized === 'duration') return 'duration';
+    return 'views';
+}
+
 function getPreviousMetricFromHistory(
     history: MetricHistoryPoint[],
     metric: TreemapMetric,
@@ -268,6 +280,37 @@ function getPreviousMetricFromHistory(
     }
 
     return nearestBefore ?? nearestAfter;
+}
+
+function getLatestMetricValueFromHistory(history: MetricHistoryPoint[], metric: TreemapMetric): number | null {
+    const lastPoint = history.at(-1);
+    if (!lastPoint) return null;
+
+    if (metric === 'views') return lastPoint.views;
+    if (metric === 'likes') return lastPoint.likes;
+    if (metric === 'comments') return lastPoint.comments;
+    return lastPoint.duration;
+}
+
+function getAvailablePeriods(
+    rowsWithHistory: Array<{ history: MetricHistoryPoint[]; row: VideoDbRow }>,
+    metricMode: TreemapMetric,
+): InsightTreemapPeriod[] {
+    const available: InsightTreemapPeriod[] = [];
+    const isValueValid = (value: number | null): boolean => Number.isFinite(value as number) && (value as number) > 0;
+
+    for (const period of CHANGE_PERIOD_OPTIONS) {
+        const hasAny = rowsWithHistory.some(({ history }) => {
+            const previous = getPreviousMetricFromHistory(history, metricMode, period);
+            return isValueValid(previous);
+        });
+
+        if (hasAny) {
+            available.push(period);
+        }
+    }
+
+    return available;
 }
 
 function normalizeTitle(title: string | null): string {
@@ -411,21 +454,28 @@ export async function getInsightTreemapData(
     period: InsightTreemapPeriod,
     options: TreemapRequestOptions = {},
 ): Promise<InsightTreemapResponse> {
-    const { filterByPeriod = true } = options;
+    const { filterByPeriod = true, metricMode = 'views' } = options;
     const rows = await cacheOrFetchVideos();
     const targetRows = filterByPeriod ? filterRowsByPeriod(rows, period) : rows;
+    const rowsWithHistory = rows.map((row) => ({
+        row,
+        history: parseMetaHistory(row.meta_history),
+    }));
+    const availablePeriods = getAvailablePeriods(rowsWithHistory, metricMode);
+
+    const targetHistory = new Map<string, MetricHistoryPoint[]>(rowsWithHistory.map((entry) => [entry.row.id, entry.history]));
 
     const videos: InsightTreemapVideoRow[] = targetRows.map((row) => {
-        const history = parseMetaHistory(row.meta_history);
+        const history = targetHistory.get(row.id) ?? [];
 
         return {
             id: row.id,
             title: normalizeTitle(row.title),
             publishedAt: row.published_at,
             category: normalizeCategory(row.category),
-            viewCount: toNonNegativeNumber(row.view_count),
-            likeCount: toNonNegativeNumber(row.like_count),
-            commentCount: toNonNegativeNumber(row.comment_count),
+            viewCount: getLatestMetricValueFromHistory(history, 'views') ?? toNonNegativeNumber(row.view_count),
+            likeCount: getLatestMetricValueFromHistory(history, 'likes') ?? toNonNegativeNumber(row.like_count),
+            commentCount: getLatestMetricValueFromHistory(history, 'comments') ?? toNonNegativeNumber(row.comment_count),
             duration: parseDurationToSeconds(row.duration),
             previousViewCount: getPreviousMetricFromHistory(history, 'views', period),
             previousLikeCount: getPreviousMetricFromHistory(history, 'likes', period),
@@ -439,5 +489,6 @@ export async function getInsightTreemapData(
         period,
         totalVideos: videos.length,
         videos,
+        availablePeriods,
     };
 }
