@@ -90,8 +90,6 @@ const PERIOD_OPTIONS: PeriodOption[] = [
     { value: '1Y', label: '1Y' },
 ];
 
-const CHANGE_PERIOD_ORDER: InsightTreemapPeriod[] = ['1D', '1W', '2W', '1M', '3M', '6M', '1Y'];
-
 const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
     views: [100_000, 300_000, 500_000, 1_000_000, 2_000_000, 5_000_000],
     likes: [50, 100, 300, 500, 1_000],
@@ -615,33 +613,7 @@ export default function InsightsClient() {
         staleTime: 1000 * 60 * 5,
     });
 
-    const changeAvailablePeriods = useMemo(() => {
-        const available = new Set(treemapQuery.data?.availablePeriods ?? []);
-        const options = PERIOD_OPTIONS.filter((option) => option.value === 'ALL' || available.has(option.value));
-        if (options.length <= 1) return PERIOD_OPTIONS;
-
-        const ordered = [options.find((option) => option.value === 'ALL')].filter((option): option is PeriodOption => !!option);
-        for (const periodValue of CHANGE_PERIOD_ORDER) {
-            const option = PERIOD_OPTIONS.find((candidate) => candidate.value === periodValue);
-            if (option && options.some((availableOption) => availableOption.value === periodValue)) {
-                ordered.push(option);
-            }
-        }
-
-        return ordered.length > 1 ? ordered : PERIOD_OPTIONS;
-    }, [treemapQuery.data?.availablePeriods]);
-
-    const periodOptionsForView = viewMode === 'change' ? changeAvailablePeriods : PERIOD_OPTIONS;
-    const currentPeriodSupported = useMemo(
-        () => periodOptionsForView.some((option) => option.value === period),
-        [periodOptionsForView, period],
-    );
-
-    useEffect(() => {
-        if (!currentPeriodSupported) {
-            setPeriod(periodOptionsForView[0]?.value ?? 'ALL');
-        }
-    }, [currentPeriodSupported, periodOptionsForView]);
+    const periodOptionsForView = useMemo(() => PERIOD_OPTIONS, []);
 
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
