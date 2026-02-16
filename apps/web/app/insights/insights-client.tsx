@@ -686,6 +686,7 @@ export default function InsightsClient() {
         if (leafRows.length === 0) return [];
 
         if (viewMode === 'all') return leafRows;
+        const total = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
 
         if (viewMode === 'category') {
             const grouped = new Map<string, TreemapLeafNode[]>();
