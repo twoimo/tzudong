@@ -131,11 +131,28 @@ const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
     duration: [30, 60, 120, 180, 300, 600],
 };
 
-const INITIAL_CHART_SIZE = {
-    mobile: { width: 360, height: 320 },
-    tablet: { width: 640, height: 420 },
-    desktop: { width: 960, height: 520 },
-};
+/**
+ * Samsung Internet / iPhone Safari 대응:
+ * 정적 초기값 대신 현재 뷰포트에서 실제 사용 가능한 크기를 계산한다.
+ * 헤더(~56px), 컨트롤 패널(~80px), 하단 네비게이션(~60px), 여백(~16px) 등을 빼서 근사치를 구한다.
+ */
+function getInitialChartSize(isMobile: boolean, isTablet: boolean): ChartDimensions {
+    if (typeof window === 'undefined') {
+        if (isMobile) return { width: 360, height: 280 };
+        if (isTablet) return { width: 640, height: 380 };
+        return { width: 960, height: 480 };
+    }
+
+    const vw = window.innerWidth;
+    // dvh 대응: visualViewport이 있으면 사용 (Samsung Internet/Safari에서 주소창 제외된 높이)
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    // 사용 불가 영역 추정: 헤더 56px + 컨트롤 패널 ~90px + 하단 네비 60px(모바일만) + 패딩 16px
+    const chromeHeight = isMobile ? 222 : isTablet ? 162 : 132;
+    const availableHeight = Math.max(200, Math.floor(vh - chromeHeight));
+    const width = Math.max(280, Math.floor(vw - (isMobile ? 16 : isTablet ? 32 : 64)));
+
+    return { width, height: availableHeight };
+}
 
 let measureCanvasContext: CanvasRenderingContext2D | null = null;
 
@@ -839,12 +856,10 @@ export default function InsightsClient() {
     const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
     const initialChartSize = useMemo(() => {
-        if (isMobile) return INITIAL_CHART_SIZE.mobile;
-        if (isTablet) return INITIAL_CHART_SIZE.tablet;
-        return INITIAL_CHART_SIZE.desktop;
+        return getInitialChartSize(isMobile, isTablet);
     }, [isMobile, isTablet]);
 
-    const [chartSize, setChartSize] = useState<ChartDimensions>(initialChartSize);
+    const [chartSize, setChartSize] = useState<ChartDimensions>(() => getInitialChartSize(isMobile, isTablet));
     const chartWidth = chartSize.width;
     const chartHeight = chartSize.height;
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
@@ -940,24 +955,45 @@ export default function InsightsClient() {
         const chartArea = chartAreaRef.current;
         if (!chartArea) return undefined;
 
+        /**
+         * Samsung Internet / iPhone Safari 대응 핵심 로직:
+         *
+         * 1) getBoundingClientRect()으로 요소의 실제 렌더링 크기를 측정
+         * 2) 높이가 0이거나 비정상이면 뷰포트에서 요소의 top 좌표를 빼서 남은 공간을 계산
+         *    → Safari에서 flex 레이아웃이 아직 해결되지 않은 경우 대비
+         * 3) visualViewport.height를 상한으로 사용해 주소창/하단바 영역 침범 방지
+         */
         const updateLayout = () => {
             if (typeof window === 'undefined') return;
 
             const nextRect = chartArea.getBoundingClientRect();
-            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            const vvHeight = window.visualViewport?.height ?? window.innerHeight;
+            const vvWidth = window.visualViewport?.width ?? window.innerWidth;
+
             const nextWidth = Math.max(
                 chartConstraints.minWidth,
-                Math.floor(nextRect.width),
-            );
-            const nextHeight = Math.max(
-                1,
-                Math.min(
-                    Math.floor(nextRect.height),
-                    Math.max(1, Math.floor(viewportHeight)),
-                ),
+                Math.floor(nextRect.width > 0 ? nextRect.width : vvWidth),
             );
 
-            setChartSize((prev) => (prev.width === nextWidth && prev.height === nextHeight ? prev : { width: nextWidth, height: nextHeight }));
+            // 높이 계산: rect.height가 유효하면 사용, 아니면 viewport에서 요소 상단까지의 거리를 빼서 산출
+            let measuredHeight = Math.floor(nextRect.height);
+            if (measuredHeight <= 0 || measuredHeight > vvHeight) {
+                // fallback: 뷰포트 높이에서 요소의 top 오프셋을 빼면 남은 공간
+                measuredHeight = Math.floor(vvHeight - Math.max(0, nextRect.top));
+            }
+
+            // 삼성 인터넷: 하단 네비게이션 바가 visualViewport에 반영 안 되는 경우 대비
+            // vvHeight를 넘지 않도록 클램프
+            const nextHeight = Math.max(
+                chartConstraints.minHeight,
+                Math.min(measuredHeight, Math.floor(vvHeight)),
+            );
+
+            setChartSize((prev) => (
+                prev.width === nextWidth && prev.height === nextHeight
+                    ? prev
+                    : { width: nextWidth, height: nextHeight }
+            ));
         };
 
         const scheduleUpdateLayout = () => {
@@ -973,7 +1009,11 @@ export default function InsightsClient() {
             });
         };
 
+        // 즉시 1회 + 지연 재측정 (Samsung Internet에서 레이아웃 안정화 지연 대응)
         scheduleUpdateLayout();
+        const delayedTimer = window.setTimeout(() => {
+            scheduleUpdateLayout();
+        }, 300);
 
         let observer: ResizeObserver | null = null;
         if (typeof ResizeObserver !== 'undefined') {
@@ -993,6 +1033,7 @@ export default function InsightsClient() {
             viewport.addEventListener('scroll', scheduleUpdateLayout);
         }
         return () => {
+            window.clearTimeout(delayedTimer);
             if (observer) {
                 observer.disconnect();
             }
@@ -1312,7 +1353,7 @@ export default function InsightsClient() {
     }
 
     return (
-        <div className="flex min-h-0 h-full flex-col bg-background">
+        <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">
             <div className="p-2 md:p-4 flex-1 min-h-0 overflow-hidden">
                 <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
                     <div className="border-b border-border p-2 md:p-3">
@@ -1320,127 +1361,127 @@ export default function InsightsClient() {
                             <div className="flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3 min-w-max">
                                 <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
 
-                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                <span className="text-[11px] text-muted-foreground">모드</span>
-                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                    {VIEW_MODE_OPTIONS.map((option) => (
-                                        <Button
-                                            key={option.value}
-                                            size="sm"
-                                            variant={viewMode === option.value ? 'default' : 'ghost'}
-                                            onClick={() => setViewMode(option.value)}
-                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
-                                        >
-                                            {option.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                <span className="text-[11px] text-muted-foreground">지표</span>
-                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                    {METRIC_OPTIONS.map((option) => (
-                                        <Button
-                                            key={option.value}
-                                            size="sm"
-                                            variant={metricMode === option.value ? 'default' : 'ghost'}
-                                            onClick={() => setMetricMode(option.value)}
-                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
-                                        >
-                                            {option.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                <span className="text-[11px] text-muted-foreground">기준</span>
-                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                    {periodOptionsForView.map((option) => (
-                                        <Button
-                                            key={option.value}
-                                            size="sm"
-                                            variant={period === option.value ? 'default' : 'ghost'}
-                                            onClick={() => setPeriod(option.value)}
-                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
-                                        >
-                                            {option.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
-                                <span className="text-[11px] text-muted-foreground">클러스터</span>
-                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                    <Button
-                                        size="sm"
-                                        variant={clusterStep === null ? 'default' : 'ghost'}
-                                        onClick={() => setClusterStep(null)}
-                                        className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
-                                    >
-                                        전체
-                                    </Button>
-                                    {clusterStepOptions.map((step) => (
-                                        <Button
-                                            key={step}
-                                            size="sm"
-                                            variant={clusterStep === step ? 'default' : 'ghost'}
-                                            onClick={() => setClusterStep(step)}
-                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
-                                        >
-                                            {formatClusterValueByMode(metricMode, step)}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0 self-center order-99">
-                                <span className="text-[11px] text-muted-foreground">색상</span>
-                                <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
-                                    <div
-                                        className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
-                                        style={{
-                                            background: TREEMAP_COLORS[0],
-                                            minWidth: 42,
-                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
-                                        }}
-                                    >
-                                        0%
-                                    </div>
-                                    <div
-                                        className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
-                                        style={{
-                                            background: TREEMAP_COLORS[1],
-                                            minWidth: 42,
-                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
-                                        }}
-                                    >
-                                        +1%
-                                    </div>
-                                    <div
-                                        className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
-                                        style={{
-                                            background: TREEMAP_COLORS[2],
-                                            minWidth: 42,
-                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
-                                        }}
-                                    >
-                                        +2%
-                                    </div>
-                                    <div
-                                        className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
-                                        style={{
-                                            background: TREEMAP_COLORS[3],
-                                            minWidth: 42,
-                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
-                                        }}
-                                    >
-                                        +3%
+                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                    <span className="text-[11px] text-muted-foreground">모드</span>
+                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                        {VIEW_MODE_OPTIONS.map((option) => (
+                                            <Button
+                                                key={option.value}
+                                                size="sm"
+                                                variant={viewMode === option.value ? 'default' : 'ghost'}
+                                                onClick={() => setViewMode(option.value)}
+                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                            >
+                                                {option.label}
+                                            </Button>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
+
+                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                    <span className="text-[11px] text-muted-foreground">지표</span>
+                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                        {METRIC_OPTIONS.map((option) => (
+                                            <Button
+                                                key={option.value}
+                                                size="sm"
+                                                variant={metricMode === option.value ? 'default' : 'ghost'}
+                                                onClick={() => setMetricMode(option.value)}
+                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                            >
+                                                {option.label}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                    <span className="text-[11px] text-muted-foreground">기준</span>
+                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                        {periodOptionsForView.map((option) => (
+                                            <Button
+                                                key={option.value}
+                                                size="sm"
+                                                variant={period === option.value ? 'default' : 'ghost'}
+                                                onClick={() => setPeriod(option.value)}
+                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                            >
+                                                {option.label}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
+                                    <span className="text-[11px] text-muted-foreground">클러스터</span>
+                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                        <Button
+                                            size="sm"
+                                            variant={clusterStep === null ? 'default' : 'ghost'}
+                                            onClick={() => setClusterStep(null)}
+                                            className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                        >
+                                            전체
+                                        </Button>
+                                        {clusterStepOptions.map((step) => (
+                                            <Button
+                                                key={step}
+                                                size="sm"
+                                                variant={clusterStep === step ? 'default' : 'ghost'}
+                                                onClick={() => setClusterStep(step)}
+                                                className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
+                                            >
+                                                {formatClusterValueByMode(metricMode, step)}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0 self-center order-99">
+                                    <span className="text-[11px] text-muted-foreground">색상</span>
+                                    <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
+                                        <div
+                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            style={{
+                                                background: TREEMAP_COLORS[0],
+                                                minWidth: 42,
+                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                            }}
+                                        >
+                                            0%
+                                        </div>
+                                        <div
+                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            style={{
+                                                background: TREEMAP_COLORS[1],
+                                                minWidth: 42,
+                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                            }}
+                                        >
+                                            +1%
+                                        </div>
+                                        <div
+                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            style={{
+                                                background: TREEMAP_COLORS[2],
+                                                minWidth: 42,
+                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                            }}
+                                        >
+                                            +2%
+                                        </div>
+                                        <div
+                                            className="flex items-center justify-center h-6 px-2 text-2xs text-white font-normal"
+                                            style={{
+                                                background: TREEMAP_COLORS[3],
+                                                minWidth: 42,
+                                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                            }}
+                                        >
+                                            +3%
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
