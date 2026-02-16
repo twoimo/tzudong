@@ -597,12 +597,14 @@ export default function InsightsClient() {
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
     const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
+    const controlRowRef = useRef<HTMLDivElement>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
+    const rootRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(() =>
         typeof window === 'undefined' ? 1200 : Math.max(320, Math.floor(window.innerWidth - 64)),
     );
     const [chartHeight, setChartHeight] = useState(() =>
-        typeof window === 'undefined' ? 760 : Math.max(320, Math.floor(window.innerHeight - 320)),
+        typeof window === 'undefined' ? 760 : Math.max(320, Math.floor(window.innerHeight * 0.65)),
     );
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
     const tooltipRafRef = useRef<number | null>(null);
@@ -637,15 +639,25 @@ export default function InsightsClient() {
 
     useEffect(() => {
         const container = chartContainerRef.current;
+        const root = rootRef.current;
         if (!container) return undefined;
 
         const updateLayout = () => {
             const nextWidth = Math.max(320, Math.floor(container.clientWidth));
             setChartWidth((prev) => (prev === nextWidth ? prev : nextWidth));
 
-            const rect = container.getBoundingClientRect();
-            const nextHeight = Math.max(320, Math.floor(window.innerHeight - rect.top - 24));
-            setChartHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+            if (!root) {
+                return;
+            }
+
+            const rootRect = root.getBoundingClientRect();
+            const controlHeight = Math.ceil(controlRowRef.current?.offsetHeight ?? 0);
+            const available = Math.floor(window.innerHeight - rootRect.top - controlHeight - 24);
+            const minHeight = Math.max(320, Math.floor(window.innerHeight * 0.45));
+            setChartHeight((prev) => {
+                const next = Math.max(minHeight, available);
+                return prev === next ? prev : next;
+            });
         };
 
         const scheduleUpdateWidth = () => {
@@ -955,11 +967,11 @@ export default function InsightsClient() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto">
-            <div className="p-4 md:p-6 flex-1">
+        <div ref={rootRef} className="flex min-h-[100svh] flex-col bg-background overflow-y-auto">
+            <div className="p-4 md:p-6">
                 <Card className="overflow-hidden border border-border">
                     <div className="p-3 md:p-4 border-b border-border">
-                        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        <div ref={controlRowRef} className="flex flex-wrap items-center gap-2 md:gap-3">
                             <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">전체 {selectedCount.toLocaleString()}개</p>
 
                             <div className="inline-flex items-center gap-1 sm:gap-2">
@@ -1086,9 +1098,10 @@ export default function InsightsClient() {
                         </div>
                     </div>
 
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 h-full">
                         <div
                             ref={chartContainerRef}
+                            className="relative w-full h-full"
                             style={{
                                 position: 'relative',
                                 width: '100%',
