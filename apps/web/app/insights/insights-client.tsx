@@ -767,8 +767,6 @@ export default function InsightsClient() {
             grouped.set(index, bucket);
         }
 
-        const total = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
-
         const clusters = [...grouped.entries()]
             .sort((a, b) => a[0] - b[0])
             .map(([index, children]) => {
