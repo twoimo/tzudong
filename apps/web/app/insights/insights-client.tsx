@@ -64,7 +64,6 @@ const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
 const VIEW_MODE_OPTIONS: { value: ViewMode; label: string }[] = [
     { value: 'all', label: '비율' },
     { value: 'change', label: '증감률' },
-    { value: 'category', label: '카테고리' },
 ];
 
 const METRIC_OPTIONS: { value: MetricMode; label: string }[] = [
@@ -74,17 +73,21 @@ const METRIC_OPTIONS: { value: MetricMode; label: string }[] = [
     { value: 'duration', label: '영상 길이' },
 ];
 
-const PERIOD_OPTIONS: { value: InsightTreemapPeriod; label: string }[] = [
+type PeriodOption = {
+    value: InsightTreemapPeriod;
+    label: string;
+    disabled?: boolean;
+};
+
+const PERIOD_OPTIONS: PeriodOption[] = [
     { value: 'ALL', label: '전체' },
     { value: '1D', label: '1D' },
     { value: '1W', label: '1W' },
+    { value: '2W', label: '2W' },
     { value: '1M', label: '1M' },
     { value: '3M', label: '3M' },
     { value: '6M', label: '6M' },
     { value: '1Y', label: '1Y' },
-    { value: '3Y', label: '3Y' },
-    { value: '5Y', label: '5Y' },
-    { value: '10Y', label: '10Y' },
 ];
 
 const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
@@ -188,13 +191,12 @@ function getPeriodLabel(period: InsightTreemapPeriod): string {
     if (period === 'ALL') return '전체';
     if (period === '1D') return '전일';
     if (period === '1W') return '전주';
+    if (period === '2W') return '2주전';
     if (period === '1M') return '전월';
     if (period === '3M') return '3개월전';
     if (period === '6M') return '6개월전';
     if (period === '1Y') return '1년전';
-    if (period === '3Y') return '3년전';
-    if (period === '5Y') return '5년전';
-    return '10년전';
+    return '1년전';
 }
 
 function formatNonNegativePercent(value: number): string {
@@ -598,6 +600,9 @@ export default function InsightsClient() {
     const [chartWidth, setChartWidth] = useState(() =>
         typeof window === 'undefined' ? 1200 : Math.max(320, Math.floor(window.innerWidth - 64)),
     );
+    const [chartHeight, setChartHeight] = useState(() =>
+        typeof window === 'undefined' ? 760 : Math.max(320, Math.floor(window.innerHeight - 320)),
+    );
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
     const tooltipRafRef = useRef<number | null>(null);
 
@@ -607,52 +612,27 @@ export default function InsightsClient() {
         staleTime: 1000 * 60 * 5,
     });
 
-    const periodOptionsForView = useMemo(() => {
-        if (viewMode !== 'change') {
-            return PERIOD_OPTIONS;
-        }
-
-        const availablePeriods = new Set(treemapQuery.data?.availablePeriods ?? []);
-        return PERIOD_OPTIONS.filter((option) => {
-            if (option.value === 'ALL') return true;
-            return availablePeriods.has(option.value);
-        });
-    }, [treemapQuery.data?.availablePeriods, viewMode]);
-
-    useEffect(() => {
-        if (viewMode !== 'change') return;
-
-        const hasCurrent = periodOptionsForView.some((option) => option.value === period);
-        if (!hasCurrent) {
-            const next = periodOptionsForView.find((option) => option.value !== 'ALL')?.value ?? 'ALL';
-            setPeriod(next);
-        }
-    }, [periodOptionsForView, viewMode, period]);
+    const periodOptionsForView = useMemo(() => PERIOD_OPTIONS, []);
 
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
-
-    const chartHeight = useMemo(() => {
-        const leafCount = Math.max(rawRows.length, 1);
-        const targetTileArea = 3_200;
-        const baseHeight = Math.round((leafCount * targetTileArea) / renderWidth);
-        const widthBoost = Math.max(0.9, Math.min(1.25, renderWidth / 900));
-        const scaledHeight = Math.round(baseHeight * widthBoost);
-        return Math.max(520, Math.min(3600, scaledHeight));
-    }, [rawRows.length, renderWidth]);
 
     useEffect(() => {
         const container = chartContainerRef.current;
         if (!container) return undefined;
 
-        const updateWidth = () => {
+        const updateLayout = () => {
             const nextWidth = Math.max(320, Math.floor(container.clientWidth));
             setChartWidth((prev) => (prev === nextWidth ? prev : nextWidth));
+
+            const rect = container.getBoundingClientRect();
+            const nextHeight = Math.max(320, Math.floor(window.innerHeight - rect.top - 24));
+            setChartHeight((prev) => (prev === nextHeight ? prev : nextHeight));
         };
 
         const scheduleUpdateWidth = () => {
             if (typeof window === 'undefined') return;
-            window.requestAnimationFrame(updateWidth);
+            window.requestAnimationFrame(updateLayout);
         };
 
         scheduleUpdateWidth();

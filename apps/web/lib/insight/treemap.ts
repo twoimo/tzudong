@@ -8,7 +8,7 @@ type CacheEntry<T> = {
     value: T;
 } | null;
 
-export type InsightTreemapPeriod = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | '10Y' | 'ALL';
+export type InsightTreemapPeriod = '1D' | '1W' | '2W' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
 export type InsightTreemapVideoRow = {
     id: string;
@@ -60,7 +60,7 @@ type TreemapRequestOptions = {
 
 type TreemapMetric = 'views' | 'likes' | 'comments' | 'duration';
 
-const CHANGE_PERIOD_OPTIONS: Exclude<InsightTreemapPeriod, 'ALL'>[] = ['1D', '1W', '1M', '3M', '6M', '1Y', '3Y', '5Y', '10Y'];
+const CHANGE_PERIOD_OPTIONS: Exclude<InsightTreemapPeriod, 'ALL'>[] = ['1D', '1W', '2W', '1M', '3M', '6M', '1Y'];
 
 const VIDEO_CATEGORY_BY_CODE: Record<string, string> = {
     '1': '영화/애니메이션',
@@ -118,13 +118,17 @@ const periodToDays: Record<InsightTreemapPeriod, number | null> = {
     ALL: null,
     '1D': 1,
     '1W': 7,
+    '2W': 14,
     '1M': 30,
     '3M': 91,
     '6M': 182,
     '1Y': 365,
-    '3Y': 1095,
-    '5Y': 1825,
-    '10Y': 3650,
+};
+
+type PeriodCoverage = {
+    period: Exclude<InsightTreemapPeriod, 'ALL'>;
+    count: number;
+    ratio: number;
 };
 
 let videoCache: CacheEntry<VideoDbRow[]> = null;
@@ -199,13 +203,39 @@ function parseHistoryTimestamp(raw: unknown): number | null {
 }
 
 function parseMetaHistory(raw: unknown): MetricHistoryPoint[] {
-    if (!Array.isArray(raw) || raw.length === 0) {
+    const resolved = (() => {
+        if (typeof raw === 'string') {
+            try {
+                const parsed = JSON.parse(raw);
+                return parsed;
+            } catch {
+                return raw;
+            }
+        }
+
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+            const record = raw as Record<string, unknown>;
+            if (Array.isArray(record.history)) {
+                return record.history;
+            }
+            if (Array.isArray(record.points)) {
+                return record.points;
+            }
+            if (Array.isArray(record.data)) {
+                return record.data;
+            }
+        }
+
+        return raw;
+    })();
+
+    if (!Array.isArray(resolved) || resolved.length === 0) {
         return [];
     }
 
     const points: MetricHistoryPoint[] = [];
 
-    for (const row of raw) {
+    for (const row of resolved) {
         if (!row || typeof row !== 'object' || Array.isArray(row)) {
             continue;
         }
@@ -259,7 +289,6 @@ function getPreviousMetricFromHistory(
 
     const targetTs = Date.now() - days * 24 * 60 * 60 * 1000;
     let nearestBefore: number | null = null;
-    let nearestAfter: number | null = null;
 
     for (const point of history) {
         const value = metric === 'views'
@@ -274,12 +303,10 @@ function getPreviousMetricFromHistory(
 
         if (point.collectedAt <= targetTs) {
             nearestBefore = value;
-        } else if (nearestAfter === null) {
-            nearestAfter = value;
         }
     }
 
-    return nearestBefore ?? nearestAfter;
+    return nearestBefore;
 }
 
 function getLatestMetricValueFromHistory(history: MetricHistoryPoint[], metric: TreemapMetric): number | null {
@@ -296,21 +323,49 @@ function getAvailablePeriods(
     rowsWithHistory: Array<{ history: MetricHistoryPoint[]; row: VideoDbRow }>,
     metricMode: TreemapMetric,
 ): InsightTreemapPeriod[] {
-    const available: InsightTreemapPeriod[] = [];
-    const isValueValid = (value: number | null): boolean => Number.isFinite(value as number) && (value as number) > 0;
-
-    for (const period of CHANGE_PERIOD_OPTIONS) {
-        const hasAny = rowsWithHistory.some(({ history }) => {
-            const previous = getPreviousMetricFromHistory(history, metricMode, period);
-            return isValueValid(previous);
-        });
-
-        if (hasAny) {
-            available.push(period);
-        }
+    if (rowsWithHistory.length === 0) {
+        return [];
     }
 
-    return available;
+    const isValidForVideo = (history: MetricHistoryPoint[], period: Exclude<InsightTreemapPeriod, 'ALL'>) => {
+        const previous = getPreviousMetricFromHistory(history, metricMode, period);
+        return Number.isFinite(previous as number);
+    };
+
+    const totals = rowsWithHistory.length;
+    const coverages: PeriodCoverage[] = CHANGE_PERIOD_OPTIONS.map((period) => {
+        let count = 0;
+
+        for (const row of rowsWithHistory) {
+            if (isValidForVideo(row.history, period)) {
+                count += 1;
+            }
+        }
+
+        return {
+            period,
+            count,
+            ratio: count / totals,
+        };
+    });
+
+    const thresholds: number[] = [1, 0.92, 0.85, 0.75, 0.65, 0.5, 0.3];
+    const ordered = [...coverages].sort((a, b) => {
+        const aIndex = CHANGE_PERIOD_OPTIONS.indexOf(a.period);
+        const bIndex = CHANGE_PERIOD_OPTIONS.indexOf(b.period);
+        return aIndex - bIndex;
+    });
+
+    const ranked = thresholds
+        .map((threshold) => ordered.filter((item) => item.count > 0 && item.ratio >= threshold))
+        .find((items) => items.length >= 2);
+
+    const chosen = ranked ?? ordered.filter((item) => item.count > 0);
+    const maxPeriods = 7;
+
+    return chosen
+        .slice(0, maxPeriods)
+        .map((item) => item.period);
 }
 
 function normalizeTitle(title: string | null): string {
@@ -361,13 +416,12 @@ export function parseTreemapPeriod(value: string | null): InsightTreemapPeriod {
     const normalized = value?.trim().toUpperCase() ?? '';
     if (normalized === '1D') return '1D';
     if (normalized === '1W') return '1W';
+    if (normalized === '2W') return '2W';
+    if (/^(?:[4-9]|[1-9]\d+)W$/.test(normalized)) return '1M';
     if (normalized === '1M') return '1M';
     if (normalized === '3M') return '3M';
     if (normalized === '6M') return '6M';
     if (normalized === '1Y') return '1Y';
-    if (normalized === '3Y') return '3Y';
-    if (normalized === '5Y') return '5Y';
-    if (normalized === '10Y') return '10Y';
     return 'ALL';
 }
 
