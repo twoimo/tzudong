@@ -1018,7 +1018,7 @@ export default function InsightsClient() {
                                         onClick={() => setClusterStep(null)}
                                         className="rounded-none h-8 px-3"
                                     >
-                                        클러스터링
+                                        전체
                                     </Button>
                                     {clusterStepOptions.map((step) => (
                                         <Button
