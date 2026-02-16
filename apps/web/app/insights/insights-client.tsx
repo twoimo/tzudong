@@ -613,7 +613,20 @@ export default function InsightsClient() {
         staleTime: 1000 * 60 * 5,
     });
 
-    const periodOptionsForView = useMemo(() => PERIOD_OPTIONS, []);
+    const periodOptionsForView = useMemo(() => {
+        if (viewMode === 'change') {
+            return PERIOD_OPTIONS.filter((option) => option.value !== 'ALL');
+        }
+
+        return PERIOD_OPTIONS;
+    }, [viewMode]);
+
+    useEffect(() => {
+        const hasCurrentPeriod = periodOptionsForView.some((option) => option.value === period);
+        if (!hasCurrentPeriod) {
+            setPeriod(periodOptionsForView[0]?.value ?? '1D');
+        }
+    }, [periodOptionsForView, period]);
 
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
