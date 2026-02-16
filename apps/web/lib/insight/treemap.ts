@@ -8,7 +8,7 @@ type CacheEntry<T> = {
     value: T;
 } | null;
 
-export type InsightTreemapPeriod = '1W' | '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | '10Y' | 'ALL';
+export type InsightTreemapPeriod = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | '10Y' | 'ALL';
 
 export type InsightTreemapVideoRow = {
     id: string;
@@ -19,6 +19,10 @@ export type InsightTreemapVideoRow = {
     likeCount: number;
     commentCount: number;
     duration: number;
+    previousViewCount: number | null;
+    previousLikeCount: number | null;
+    previousCommentCount: number | null;
+    previousDuration: number | null;
 };
 
 export type InsightTreemapResponse = {
@@ -37,7 +41,22 @@ type VideoDbRow = {
     like_count: number | string | null;
     comment_count: number | string | null;
     category: string | null;
+    meta_history: unknown;
 };
+
+type MetricHistoryPoint = {
+    collectedAt: number;
+    views: number | null;
+    likes: number | null;
+    comments: number | null;
+    duration: number | null;
+};
+
+type TreemapRequestOptions = {
+    filterByPeriod?: boolean;
+};
+
+type TreemapMetric = 'views' | 'likes' | 'comments' | 'duration';
 
 const VIDEO_CATEGORY_BY_CODE: Record<string, string> = {
     '1': '영화/애니메이션',
@@ -93,6 +112,7 @@ const VIDEO_CATEGORY_BY_NAME: Record<string, string> = {
 
 const periodToDays: Record<InsightTreemapPeriod, number | null> = {
     ALL: null,
+    '1D': 1,
     '1W': 7,
     '1M': 30,
     '3M': 91,
@@ -154,6 +174,102 @@ function parseDurationToSeconds(value: unknown): number {
     return 0;
 }
 
+function parseHistoryTimestamp(raw: unknown): number | null {
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+        if (raw > 0 && raw < 10_000_000_000) {
+            return Math.trunc(raw * 1000);
+        }
+
+        return Math.trunc(raw);
+    }
+
+    if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+
+        const parsed = Date.parse(trimmed);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+}
+
+function parseMetaHistory(raw: unknown): MetricHistoryPoint[] {
+    if (!Array.isArray(raw) || raw.length === 0) {
+        return [];
+    }
+
+    const points: MetricHistoryPoint[] = [];
+
+    for (const row of raw) {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) {
+            continue;
+        }
+
+        const record = row as Record<string, unknown>;
+        const collectedAtRaw =
+            (record.collected_at as unknown) ??
+            (record.collectedAt as unknown) ??
+            (record.timestamp as unknown) ??
+            (record.date as unknown) ??
+            (record.collected_at_ts as unknown) ??
+            (record.collectedAtTs as unknown);
+
+        const collectedAt = parseHistoryTimestamp(collectedAtRaw);
+        if (!Number.isFinite(collectedAt)) {
+            continue;
+        }
+
+        points.push({
+            collectedAt,
+            views: toNonNegativeNumber(record.view_count ?? record.views ?? record.viewCount),
+            likes: toNonNegativeNumber(record.like_count ?? record.likes ?? record.likeCount),
+            comments: toNonNegativeNumber(record.comment_count ?? record.comments ?? record.commentCount),
+            duration: parseDurationToSeconds(
+                (record.duration as unknown) ?? (record.video_duration as unknown) ?? (record.length as unknown),
+            ),
+        });
+    }
+
+    return points
+        .filter((point) => Number.isFinite(point.collectedAt))
+        .sort((a, b) => a.collectedAt - b.collectedAt);
+}
+
+function getPreviousMetricFromHistory(
+    history: MetricHistoryPoint[],
+    metric: TreemapMetric,
+    period: InsightTreemapPeriod,
+): number | null {
+    const days = periodToDays[period];
+    if (!days) return null;
+    if (history.length === 0) return null;
+
+    const targetTs = Date.now() - days * 24 * 60 * 60 * 1000;
+    let nearestBefore: number | null = null;
+    let nearestAfter: number | null = null;
+
+    for (const point of history) {
+        const value = metric === 'views'
+            ? point.views
+            : metric === 'likes'
+                ? point.likes
+                : metric === 'comments'
+                    ? point.comments
+                    : point.duration;
+
+        if (value == null) continue;
+
+        if (point.collectedAt <= targetTs) {
+            nearestBefore = value;
+        } else if (nearestAfter === null) {
+            nearestAfter = value;
+        }
+    }
+
+    return nearestBefore ?? nearestAfter;
+}
+
 function normalizeTitle(title: string | null): string {
     return title?.trim() || 'Untitled';
 }
@@ -200,6 +316,7 @@ function normalizeCategory(value: string | null): string {
 
 export function parseTreemapPeriod(value: string | null): InsightTreemapPeriod {
     const normalized = value?.trim().toUpperCase() ?? '';
+    if (normalized === '1D') return '1D';
     if (normalized === '1W') return '1W';
     if (normalized === '1M') return '1M';
     if (normalized === '3M') return '3M';
@@ -232,7 +349,7 @@ async function fetchVideosFromSupabase(): Promise<VideoDbRow[]> {
 
         const { data, error } = await supabase
             .from('videos')
-            .select('id,title,published_at,duration,view_count,like_count,comment_count,category')
+            .select('id,title,published_at,duration,view_count,like_count,comment_count,category,meta_history')
             .order('published_at', { ascending: false, nullsFirst: false })
             .range(from, to);
 
@@ -270,7 +387,7 @@ function cacheOrFetchVideos(): Promise<VideoDbRow[]> {
     });
 }
 
-function filterByPeriod(rows: VideoDbRow[], period: InsightTreemapPeriod): VideoDbRow[] {
+function filterRowsByPeriod(rows: VideoDbRow[], period: InsightTreemapPeriod): VideoDbRow[] {
     const cutoff = getPeriodCutoff(period);
     if (!cutoff) return rows;
 
@@ -290,20 +407,32 @@ export function getTreemapMetricValue(
     return Math.floor(toNonNegativeNumber(row.duration));
 }
 
-export async function getInsightTreemapData(period: InsightTreemapPeriod): Promise<InsightTreemapResponse> {
+export async function getInsightTreemapData(
+    period: InsightTreemapPeriod,
+    options: TreemapRequestOptions = {},
+): Promise<InsightTreemapResponse> {
+    const { filterByPeriod = true } = options;
     const rows = await cacheOrFetchVideos();
-    const targetRows = filterByPeriod(rows, period);
+    const targetRows = filterByPeriod ? filterRowsByPeriod(rows, period) : rows;
 
-    const videos: InsightTreemapVideoRow[] = targetRows.map((row) => ({
-        id: row.id,
-        title: normalizeTitle(row.title),
-        publishedAt: row.published_at,
-        category: normalizeCategory(row.category),
-        viewCount: toNonNegativeNumber(row.view_count),
-        likeCount: toNonNegativeNumber(row.like_count),
-        commentCount: toNonNegativeNumber(row.comment_count),
-        duration: parseDurationToSeconds(row.duration),
-    }));
+    const videos: InsightTreemapVideoRow[] = targetRows.map((row) => {
+        const history = parseMetaHistory(row.meta_history);
+
+        return {
+            id: row.id,
+            title: normalizeTitle(row.title),
+            publishedAt: row.published_at,
+            category: normalizeCategory(row.category),
+            viewCount: toNonNegativeNumber(row.view_count),
+            likeCount: toNonNegativeNumber(row.like_count),
+            commentCount: toNonNegativeNumber(row.comment_count),
+            duration: parseDurationToSeconds(row.duration),
+            previousViewCount: getPreviousMetricFromHistory(history, 'views', period),
+            previousLikeCount: getPreviousMetricFromHistory(history, 'likes', period),
+            previousCommentCount: getPreviousMetricFromHistory(history, 'comments', period),
+            previousDuration: getPreviousMetricFromHistory(history, 'duration', period),
+        };
+    });
 
     return {
         asOf: new Date().toISOString(),

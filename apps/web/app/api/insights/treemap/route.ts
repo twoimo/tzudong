@@ -11,7 +11,9 @@ function normalizePeriod(value: string | null): InsightTreemapPeriod {
 export async function GET(request: NextRequest) {
     try {
         const period = normalizePeriod(request.nextUrl.searchParams.get('period'));
-        const data = await getInsightTreemapData(period);
+        const viewMode = request.nextUrl.searchParams.get('viewMode');
+        const filterByPeriod = viewMode !== 'change';
+        const data = await getInsightTreemapData(period, { filterByPeriod });
         return NextResponse.json(data);
     } catch (error) {
         console.error('[insights/treemap] failed:', error);

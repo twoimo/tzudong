@@ -5,13 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/insight/treemap';
 import AdminInsightsClient from '@/app/admin/insight/insight-client';
 
-type ViewMode = 'all' | 'cluster' | 'category';
+type ViewMode = 'all' | 'category' | 'change';
 type MetricMode = 'views' | 'likes' | 'comments' | 'duration';
 
 type TreemapLeafNode = {
@@ -26,6 +25,7 @@ type TreemapLeafNode = {
     publishedAt: string | null;
     value: number;
     metricRaw: number;
+    previousMetricRaw: number | null;
     metricText: string;
     percent: number;
     percentText: string;
@@ -62,8 +62,8 @@ type TreemapTooltipState = {
 const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
 
 const VIEW_MODE_OPTIONS: { value: ViewMode; label: string }[] = [
-    { value: 'all', label: '전체' },
-    { value: 'cluster', label: '클러스터링' },
+    { value: 'all', label: '비율' },
+    { value: 'change', label: '증감률' },
     { value: 'category', label: '카테고리' },
 ];
 
@@ -76,6 +76,7 @@ const METRIC_OPTIONS: { value: MetricMode; label: string }[] = [
 
 const PERIOD_OPTIONS: { value: InsightTreemapPeriod; label: string }[] = [
     { value: 'ALL', label: '전체' },
+    { value: '1D', label: '1D' },
     { value: '1W', label: '1W' },
     { value: '1M', label: '1M' },
     { value: '3M', label: '3M' },
@@ -95,8 +96,12 @@ const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
 
 let measureCanvasContext: CanvasRenderingContext2D | null = null;
 
-async function fetchTreemapData(period: InsightTreemapPeriod): Promise<InsightTreemapResponse> {
-    const response = await fetch(`/api/insights/treemap?period=${period}`);
+async function fetchTreemapData(viewMode: ViewMode, period: InsightTreemapPeriod): Promise<InsightTreemapResponse> {
+    const params = new URLSearchParams({
+        period,
+        viewMode,
+    });
+    const response = await fetch(`/api/insights/treemap?${params.toString()}`);
     if (!response.ok) {
         const message = await response.text();
         throw new Error(message || `요청 실패: ${response.status}`);
@@ -109,6 +114,21 @@ function getMetricValue(row: InsightTreemapVideoRow, mode: MetricMode): number {
     if (mode === 'likes') return row.likeCount;
     if (mode === 'comments') return row.commentCount;
     return row.duration;
+}
+
+function getPreviousMetricValue(row: InsightTreemapVideoRow, mode: MetricMode): number | null {
+    if (mode === 'views') return row.previousViewCount;
+    if (mode === 'likes') return row.previousLikeCount;
+    if (mode === 'comments') return row.previousCommentCount;
+    return row.previousDuration;
+}
+
+function calculateChangePercent(current: number, previous: number | null): number {
+    if (!Number.isFinite(current) || previous == null || previous <= 0) {
+        return 0;
+    }
+
+    return ((current - previous) / previous) * 100;
 }
 
 function formatShortNumber(value: number): string {
@@ -154,6 +174,31 @@ function formatTooltipMetric(mode: 'views' | 'likes' | 'comments' | 'duration', 
 
 function formatPercent(value: number): string {
     return `${value.toFixed(2)}%`;
+}
+
+function getMetricLabel(mode: MetricMode): string {
+    if (mode === 'views') return '조회수';
+    if (mode === 'likes') return '좋아요';
+    if (mode === 'comments') return '댓글수';
+    return '영상 길이';
+}
+
+function getPeriodLabel(period: InsightTreemapPeriod): string {
+    if (period === 'ALL') return '전체';
+    if (period === '1D') return '전일';
+    if (period === '1W') return '전주';
+    if (period === '1M') return '전월';
+    if (period === '3M') return '3개월전';
+    if (period === '6M') return '6개월전';
+    if (period === '1Y') return '1년전';
+    if (period === '3Y') return '3년전';
+    if (period === '5Y') return '5년전';
+    return '10년전';
+}
+
+function formatNonNegativePercent(value: number): string {
+    if (!Number.isFinite(value)) return '0%';
+    return `${Math.max(0, value).toFixed(2)}%`;
 }
 
 function getColorByPercent(percent: number): string {
@@ -352,7 +397,7 @@ function canTextFitInWidth(text: string, fontPx: number, width: number): boolean
     const availableWidth = Math.floor(width);
 
     if (typeof window === 'undefined' || typeof document === 'undefined') {
-        const estimateChars = Math.max(1, Math.floor(availableWidth / Math.max(fontPx * 0.7, 1)));
+        const estimateChars = Math.max(1, Math.floor((availableWidth * 0.94) / Math.max(fontPx * 0.7, 1)));
         return text.length <= estimateChars;
     }
 
@@ -362,50 +407,67 @@ function canTextFitInWidth(text: string, fontPx: number, width: number): boolean
     }
 
     if (!measureCanvasContext) {
-        const estimateChars = Math.max(1, Math.floor(availableWidth / Math.max(fontPx * 0.7, 1)));
+        const estimateChars = Math.max(1, Math.floor((availableWidth * 0.94) / Math.max(fontPx * 0.7, 1)));
         return text.length <= estimateChars;
     }
 
+    const safeAvailableWidth = Math.max(2, Math.floor(availableWidth * 0.94));
     measureCanvasContext.font = `${Math.ceil(fontPx)}px system-ui, -apple-system, Segoe UI, sans-serif`;
-    return measureCanvasContext.measureText(text).width <= Math.max(2, availableWidth);
+    return measureCanvasContext.measureText(text).width <= safeAvailableWidth;
 }
 
 function fitMetricTextToCellWidth(
     text: string,
     width: number,
+    height: number,
     maxFontPx: number,
     minFontPx: number,
 ): { text: string; fontSize: number } {
     if (!text) return { text: '', fontSize: minFontPx };
 
-    const safeWidth = Math.max(0, width - 8);
-    const maxFont = Math.max(minFontPx, Math.floor(maxFontPx));
+    const safeWidth = Math.max(1, width - 8);
+    const safeHeight = Math.max(1, height - 4);
+    const maxFontByHeight = Math.max(1, Math.floor(safeHeight * 0.92));
+    const minFont = Math.max(1, Math.min(minFontPx, maxFontByHeight));
+    const maxFont = Math.max(minFont, Math.min(maxFontPx, maxFontByHeight));
 
-    for (let fontSize = maxFont; fontSize >= minFontPx; fontSize -= 1) {
+    if (!canTextFitInWidth('.', Math.max(1, minFont), safeWidth) || safeHeight < 2 || safeWidth < 4) {
+        return { text: '', fontSize: minFont };
+    }
+
+    for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 1) {
         if (canTextFitInWidth(text, fontSize, safeWidth)) {
             return { text, fontSize };
         }
     }
 
-    if (safeWidth <= 2) {
-        return { text: '...', fontSize: minFontPx };
+    if (safeWidth <= 3 || safeHeight <= 2) {
+        return { text: '', fontSize: minFont };
     }
 
-    const avgCharWidth = Math.max(5, Math.floor(minFontPx * 0.58));
+    const avgCharWidth = Math.max(5, Math.floor(minFont * 0.58));
     const maxChars = Math.max(1, Math.floor(safeWidth / avgCharWidth));
-    if (text.length <= maxChars) {
-        return { text, fontSize: minFontPx };
+
+    if (text.length <= maxChars && canTextFitInWidth(text, minFont, safeWidth)) {
+        return { text, fontSize: minFont };
     }
+
+    const fallbackEllipsis = canTextFitInWidth('...', minFont, safeWidth) ? '...' : '';
 
     if (maxChars === 1) {
-        return { text: text.slice(0, 1), fontSize: minFontPx };
+        const single = text.slice(0, 1);
+        return canTextFitInWidth(single, minFont, safeWidth)
+            ? { text: single, fontSize: minFont }
+            : { text: fallbackEllipsis, fontSize: minFont };
     }
 
     if (maxChars === 2) {
-        return { text: `${text[0]}…`, fontSize: minFontPx };
+        const short = `${text[0]}…`;
+        return canTextFitInWidth(short, minFont, safeWidth) ? { text: short, fontSize: minFont } : { text: fallbackEllipsis, fontSize: minFont };
     }
 
-    return { text: `${text.slice(0, maxChars - 1)}…`, fontSize: minFontPx };
+    const fallback = `${text.slice(0, maxChars - 1)}…`;
+    return canTextFitInWidth(fallback, minFont, safeWidth) ? { text: fallback, fontSize: minFont } : { text: fallbackEllipsis, fontSize: minFont };
 }
 
 function areCutsSame(a: number[], b: number[]): boolean {
@@ -531,7 +593,6 @@ export default function InsightsClient() {
     const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
-    const [clusterCutsInput, setClusterCutsInput] = useState('');
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(() =>
         typeof window === 'undefined' ? 1200 : Math.max(320, Math.floor(window.innerWidth - 64)),
@@ -540,8 +601,8 @@ export default function InsightsClient() {
     const tooltipRafRef = useRef<number | null>(null);
 
     const treemapQuery = useQuery({
-        queryKey: ['insight-treemap', period],
-        queryFn: () => fetchTreemapData(period),
+        queryKey: ['insight-treemap', viewMode, period],
+        queryFn: () => fetchTreemapData(viewMode, period),
         staleTime: 1000 * 60 * 5,
     });
 
@@ -550,9 +611,11 @@ export default function InsightsClient() {
 
     const chartHeight = useMemo(() => {
         const leafCount = Math.max(rawRows.length, 1);
-        const widthScale = Math.max(0.6, Math.min(1.45, renderWidth / 1024));
-        const baseHeight = Math.round((Math.sqrt(leafCount) * 58 + 260) * widthScale);
-        return Math.max(520, Math.min(2500, baseHeight));
+        const targetTileArea = 3_200;
+        const baseHeight = Math.round((leafCount * targetTileArea) / renderWidth);
+        const widthBoost = Math.max(0.9, Math.min(1.25, renderWidth / 900));
+        const scaledHeight = Math.round(baseHeight * widthBoost);
+        return Math.max(520, Math.min(3600, scaledHeight));
     }, [rawRows.length, renderWidth]);
 
     useEffect(() => {
@@ -629,14 +692,16 @@ export default function InsightsClient() {
         const rows = rawRows.map((row) => ({
             row,
             metricRaw: getMetricValue(row, metricMode),
+            previousMetricRaw: getPreviousMetricValue(row, metricMode),
         }));
-
+        const isChangeMode = viewMode === 'change';
         const totalMetric = rows.reduce((acc, item) => acc + item.metricRaw, 0);
 
         return rows
             .map<TreemapLeafNode>((item) => {
                 const metricRaw = Math.max(item.metricRaw, 0);
-                const percent = totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0;
+                const percent = isChangeMode ? calculateChangePercent(metricRaw, item.previousMetricRaw) : (totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0);
+                const percentText = isChangeMode ? formatNonNegativePercent(percent) : formatPercent(percent);
                 return {
                     id: item.row.id,
                     name: item.row.title,
@@ -649,48 +714,20 @@ export default function InsightsClient() {
                     publishedAt: item.row.publishedAt,
                     value: Math.max(metricRaw, 0.25),
                     metricRaw,
+                    previousMetricRaw: item.previousMetricRaw,
                     metricText: formatMetricText(metricMode, metricRaw),
                     percent,
-                    percentText: formatPercent(percent),
+                    percentText,
                     color: getColorByPercent(percent),
                 };
             })
             .sort((a, b) => b.metricRaw - a.metricRaw);
-    }, [rawRows, metricMode]);
-
-    const metricValues = leafRows.map((item) => item.metricRaw);
-    const stepClusterPresets = useMemo(() => buildClusterPresetSteps(metricValues, metricMode), [metricValues, metricMode]);
-
-    const fallbackStep = useMemo(() => {
-        if (stepClusterPresets.length > 0) return stepClusterPresets[0].step;
-
-        const positiveValues = metricValues.filter((value) => value > 0).sort((a, b) => a - b);
-        if (positiveValues.length === 0) return 0;
-        const max = positiveValues[positiveValues.length - 1];
-        return Math.max(1, Math.floor(max / 5));
-    }, [stepClusterPresets, metricValues]);
-
-    const selectedStep = useMemo(() => {
-        const parsed = getClusterStepValue(clusterCutsInput, metricMode);
-        return parsed ?? fallbackStep;
-    }, [clusterCutsInput, metricMode, fallbackStep]);
-
-    const clusterCuts = useMemo(() => buildStepCutsFromValue(metricValues, selectedStep), [metricValues, selectedStep]);
-
-    useEffect(() => {
-        if (viewMode !== 'cluster') return;
-
-        const nextInput = formatClusterStepInput(metricMode, selectedStep);
-        setClusterCutsInput((prev) => {
-            if (prev === nextInput) return prev;
-            return nextInput;
-        });
-    }, [selectedStep, metricMode, viewMode]);
+    }, [rawRows, metricMode, viewMode]);
 
     const treeData = useMemo<TreemapNode[]>(() => {
         if (leafRows.length === 0) return [];
 
-        if (viewMode === 'all') return leafRows;
+        if (viewMode === 'all' || viewMode === 'change') return leafRows;
         const total = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
 
         if (viewMode === 'category') {
@@ -714,49 +751,8 @@ export default function InsightsClient() {
                 });
         }
 
-        const grouped = new Map<number, TreemapLeafNode[]>();
-        for (const item of leafRows) {
-            const index = getClusterIndex(item.metricRaw, clusterCuts);
-            const bucket = grouped.get(index) ?? [];
-            bucket.push(item);
-            grouped.set(index, bucket);
-        }
-
-        const clusters = [...grouped.entries()]
-            .sort((a, b) => a[0] - b[0])
-            .map(([index, children]) => {
-                const sum = children.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0);
-                const bucketCount = children.length;
-                const bucketPercent = total > 0 ? (sum / total) * 100 : 0;
-                const label = clusterLabel(metricMode, clusterCuts, index);
-                const metricText = `${formatMetricText(metricMode, sum)} (${bucketCount.toLocaleString()}개)`;
-                const bucketViewSum = children.reduce((acc, item) => acc + Math.max(item.viewCount, 0), 0);
-                const bucketLikeSum = children.reduce((acc, item) => acc + Math.max(item.likeCount, 0), 0);
-                const bucketCommentSum = children.reduce((acc, item) => acc + Math.max(item.commentCount, 0), 0);
-                const bucketDurationSum = children.reduce((acc, item) => acc + Math.max(item.duration, 0), 0);
-
-                return {
-                    id: `cluster-${metricMode}-${index}-${label}`,
-                    name: `${label} (${bucketCount.toLocaleString()}개)`,
-                    title: label,
-                    category: `클러스터 (${bucketCount.toLocaleString()}개)`,
-                    viewCount: bucketViewSum,
-                    likeCount: bucketLikeSum,
-                    commentCount: bucketCommentSum,
-                    duration: bucketDurationSum,
-                    publishedAt: null,
-                    value: Math.max(sum, 0.25),
-                    metricRaw: Math.max(sum, 0),
-                    metricText,
-                    percent: bucketPercent,
-                    percentText: formatPercent(bucketPercent),
-                    color: getColorByPercent(bucketPercent),
-                    children: undefined,
-                };
-            });
-
-        return clusters;
-    }, [leafRows, viewMode, metricMode, clusterCuts]);
+        return leafRows;
+    }, [leafRows, viewMode, metricMode]);
 
     const safeTreeData = useMemo<TreemapNode[]>(() => {
         const normalized = treeData
@@ -787,7 +783,6 @@ export default function InsightsClient() {
         setViewMode('all');
         setMetricMode('views');
         setPeriod('ALL');
-        setClusterCutsInput('');
         treemapQuery.refetch();
     };
 
@@ -881,30 +876,6 @@ export default function InsightsClient() {
                                 ))}
                             </div>
 
-                            {viewMode === 'cluster' ? (
-                                <div className="inline-flex flex-wrap items-center gap-2">
-                                    <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                        {stepClusterPresets.map((preset) => (
-                                            <Button
-                                                key={`${metricMode}-${preset.step}`}
-                                                size="sm"
-                                                variant={areCutsSame(clusterCuts, preset.cuts) ? 'default' : 'ghost'}
-                                                onClick={() => setClusterCutsInput(preset.input)}
-                                                className="rounded-none h-8 px-3"
-                                            >
-                                                {preset.label}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                    <Input
-                                        className="h-8 min-w-[96px] w-[108px] max-w-[124px] text-sm"
-                                        value={clusterCutsInput}
-                                        onChange={(e) => setClusterCutsInput(e.target.value)}
-                                        placeholder={getClusterInputPlaceholder(metricMode)}
-                                    />
-                                </div>
-                            ) : null}
-
                             <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
                                 <span className="text-[11px] text-muted-foreground">색상</span>
                                 <div className="inline-flex overflow-hidden rounded-md border border-border">
@@ -970,18 +941,34 @@ export default function InsightsClient() {
                                         const leaf = cell.node;
                                         const width = Math.max(0, cell.x1 - cell.x0);
                                         const height = Math.max(0, cell.y1 - cell.y0);
-                                        const canShowBoth = width >= 52 && height >= 34;
-                                        const canShowOneLine = width >= 20 && height >= 14;
+                                        const tileArea = Math.max(1, width * height);
+                                        const shortSide = Math.max(1, Math.min(width, height));
+                                        const tileInnerHeight = Math.max(6, height - 6);
+                                        const tileBaseSize = Math.sqrt(tileArea);
+                                        const metricFont = Math.max(10, Math.min(54, Math.floor(tileBaseSize * 0.19)));
+                                        const percentFont = Math.max(8, Math.min(24, Math.floor(metricFont * 0.6)));
+                                        const miniFont = Math.max(8, Math.min(20, Math.floor(metricFont * 0.86)));
                                         const canShowEllipsis = width >= 12 && height >= 12;
-                                        const shortSide = Math.max(0, Math.min(width, height));
-                                        const metricFont = Math.max(10, Math.min(24, shortSide * 0.25));
-                                        const percentFont = Math.max(8, Math.min(14, shortSide * 0.17));
-                                        const miniFont = Math.max(9, Math.min(14, shortSide * 0.45));
+                                        const metricLineHeight = Math.max(9, Math.floor(Math.max(12, tileInnerHeight) * 0.68));
+                                        const percentLineHeight = Math.max(8, Math.floor(Math.max(12, tileInnerHeight) * 0.3));
 
-                                        const metricDisplay = fitMetricTextToCellWidth(leaf.metricText, width, metricFont, Math.max(7, miniFont - 2));
-                                        const fallbackDisplay = fitMetricTextToCellWidth(leaf.metricText, width, miniFont, 7);
+                                        const metricDisplay = fitMetricTextToCellWidth(leaf.metricText, width, metricLineHeight, metricFont, miniFont);
+                                        const fallbackDisplay = fitMetricTextToCellWidth(
+                                            leaf.metricText,
+                                            width,
+                                            Math.max(7, Math.floor(Math.max(12, tileInnerHeight) * 0.95)),
+                                            miniFont,
+                                            Math.max(6, Math.min(12, shortSide * 0.4)),
+                                        );
+                                        const percentDisplay = fitMetricTextToCellWidth(leaf.percentText, width, percentLineHeight, percentFont, 7);
 
-                                        const percentCanFit = canTextFitInWidth(leaf.percentText, percentFont, width - 10);
+                                        const bothLineContentHeight = metricDisplay.fontSize + percentDisplay.fontSize + 4;
+                                        const canShowBoth =
+                                            width >= 24 &&
+                                            tileArea >= 220 &&
+                                            bothLineContentHeight <= Math.max(10, tileInnerHeight - 2);
+                                        const canShowOneLine =
+                                            width >= 14 && tileArea >= 150 && fallbackDisplay.fontSize <= Math.max(10, tileInnerHeight - 2);
 
                                         return (
                                             <div
@@ -1024,17 +1011,23 @@ export default function InsightsClient() {
                                                     >
                                                         <span
                                                             title={leaf.metricText}
-                                                            className="w-full text-center overflow-hidden whitespace-nowrap leading-tight font-semibold"
-                                                            style={{ fontSize: `${metricDisplay.fontSize}px` }}
+                                                            className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight font-semibold"
+                                                            style={{
+                                                                fontSize: `${metricDisplay.fontSize}px`,
+                                                                lineHeight: 1,
+                                                            }}
                                                         >
                                                             {metricDisplay.text}
                                                         </span>
                                                         <span
                                                             title={leaf.percentText}
-                                                            className="w-full text-center overflow-hidden whitespace-nowrap leading-tight"
-                                                            style={{ fontSize: `${percentFont}px` }}
+                                                            className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight"
+                                                            style={{
+                                                                fontSize: `${percentDisplay.fontSize}px`,
+                                                                lineHeight: 1,
+                                                            }}
                                                         >
-                                                            {percentCanFit ? leaf.percentText : '...'}
+                                                            {percentDisplay.text}
                                                         </span>
                                                     </div>
                                                 ) : canShowOneLine ? (
@@ -1046,8 +1039,11 @@ export default function InsightsClient() {
                                                         }}
                                                     >
                                                         <span
-                                                        className="w-full overflow-hidden whitespace-nowrap font-semibold leading-tight"
-                                                            style={{ fontSize: `${fallbackDisplay.fontSize}px` }}
+                                                            className="w-full truncate overflow-hidden whitespace-nowrap font-semibold leading-tight"
+                                                            style={{
+                                                                fontSize: `${fallbackDisplay.fontSize}px`,
+                                                                lineHeight: 1,
+                                                            }}
                                                         >
                                                             {fallbackDisplay.text}
                                                         </span>
@@ -1082,7 +1078,16 @@ export default function InsightsClient() {
                                     <p>좋아요: {formatTooltipMetric('likes', tooltip.leaf.likeCount)}</p>
                                     <p>댓글수: {formatTooltipMetric('comments', tooltip.leaf.commentCount)}</p>
                                     <p>영상 길이: {formatTooltipMetric('duration', tooltip.leaf.duration)}</p>
-                                    <p>전체 기준: {tooltip.leaf.percentText}</p>
+                                    <p>
+                                        {viewMode === 'change'
+                                            ? `${getPeriodLabel(period)} 증감률: ${tooltip.leaf.percentText}`
+                                            : `비율: ${tooltip.leaf.percentText}`}
+                                    </p>
+                                    {viewMode === 'change' ? (
+                                        <p>
+                                            이전 {getMetricLabel(metricMode)}: {formatTooltipMetric(metricMode, tooltip.leaf.previousMetricRaw ?? tooltip.leaf.metricRaw)}
+                                        </p>
+                                    ) : null}
                                 </div>
                             ) : null}
                         </div>
