@@ -137,7 +137,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 className={cn(
                     "flex-1 flex flex-col overflow-hidden transition-[margin] duration-300",
                     // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
-                    "pb-[var(--mobile-bottom-nav-height)] md:pb-0"
+                    "pb-[var(--mobile-bottom-nav-height)]"
                 )}
                 style={{ transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
             >

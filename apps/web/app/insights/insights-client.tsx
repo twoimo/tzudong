@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -58,6 +59,38 @@ type TreemapTooltipState = {
     y: number;
     leaf: TreemapLeafNode;
 };
+
+type ChartDimensions = {
+    width: number;
+    height: number;
+};
+
+type TreemapTileInteraction = (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => void;
+
+type TreemapCellRenderInput = {
+    leaf: TreemapLeafNode;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    metricText: string;
+    metricFontSize: number;
+    percentText: string;
+    percentFontSize: number;
+    canShowBoth: boolean;
+    canShowOneLine: boolean;
+    canShowEllipsis: boolean;
+};
+
+type TreemapTilesProps = {
+    cells: TreemapCellLayout[];
+    onCellEnter: TreemapTileInteraction;
+    onCellMove: TreemapTileInteraction;
+    onCellLeave: () => void;
+};
+
+const TREEMAP_TEXT_CACHE_LIMIT = 3_000;
+const treemapTextFitCache = new Map<string, { text: string; fontSize: number }>();
 
 const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
 
@@ -473,6 +506,29 @@ function fitMetricTextToCellWidth(
     return canTextFitInWidth(fallback, minFont, safeWidth) ? { text: fallback, fontSize: minFont } : { text: fallbackEllipsis, fontSize: minFont };
 }
 
+function fitMetricTextToCellWidthCached(
+    text: string,
+    width: number,
+    height: number,
+    maxFontPx: number,
+    minFontPx: number,
+): { text: string; fontSize: number } {
+    const key = `${text}|${Math.round(width)}|${Math.round(height)}|${maxFontPx}|${minFontPx}`;
+    const cached = treemapTextFitCache.get(key);
+    if (cached) {
+        return cached;
+    }
+
+    const result = fitMetricTextToCellWidth(text, width, height, maxFontPx, minFontPx);
+
+    if (treemapTextFitCache.size >= TREEMAP_TEXT_CACHE_LIMIT) {
+        treemapTextFitCache.clear();
+    }
+
+    treemapTextFitCache.set(key, result);
+    return result;
+}
+
 function areCutsSame(a: number[], b: number[]): boolean {
     if (a.length !== b.length) return false;
 
@@ -531,8 +587,8 @@ function normalizeTreemapNode(node: TreemapNode): TreemapNode | null {
 
     if (!Number.isFinite(node.value) || node.value <= 0) return null;
 
-        return node;
-    }
+    return node;
+}
 
 function isLeafNode(node: TreemapNode | TreemapRootNode): node is TreemapLeafNode {
     return !('children' in node);
@@ -590,28 +646,210 @@ function buildTreemapLayout(
         .filter((entry) => entry.x1 > entry.x0 && entry.y1 > entry.y0);
 }
 
+const TreemapTiles = memo(function TreemapTiles({
+    cells,
+    onCellEnter,
+    onCellMove,
+    onCellLeave,
+}: TreemapTilesProps) {
+    const renderedTiles = useMemo<TreemapCellRenderInput[]>(() => {
+        return cells.map((cell) => {
+            const leaf = cell.node;
+            const width = Math.max(0, cell.x1 - cell.x0);
+            const height = Math.max(0, cell.y1 - cell.y0);
+            const tileArea = Math.max(1, width * height);
+            const tileInnerHeight = Math.max(6, height - 6);
+            const tileBaseSize = Math.sqrt(tileArea);
+            const metricFont = Math.max(10, Math.min(54, Math.floor(tileBaseSize * 0.19)));
+            const percentFont = Math.max(8, Math.min(24, Math.floor(metricFont * 0.6)));
+            const miniFont = Math.max(8, Math.min(20, Math.floor(metricFont * 0.86)));
+            const tinyFont = Math.max(8, Math.floor(Math.min(width, height) * 0.38));
+
+            if (width < 16 || height < 16) {
+                return {
+                    leaf,
+                    x: Math.trunc(cell.x0),
+                    y: Math.trunc(cell.y0),
+                    width: Math.trunc(width),
+                    height: Math.trunc(height),
+                    metricText: '...',
+                    metricFontSize: tinyFont,
+                    percentText: leaf.percentText,
+                    percentFontSize: 0,
+                    canShowBoth: false,
+                    canShowOneLine: false,
+                    canShowEllipsis: true,
+                };
+            }
+
+            const metricDisplay = fitMetricTextToCellWidthCached(
+                leaf.metricText,
+                width,
+                Math.max(12, tileInnerHeight),
+                metricFont,
+                miniFont,
+            );
+            const fallbackDisplay = fitMetricTextToCellWidthCached(
+                leaf.metricText,
+                width,
+                Math.max(12, tileInnerHeight),
+                miniFont,
+                Math.max(6, Math.min(12, Math.max(1, Math.floor(Math.min(width, height) * 0.4)))),
+            );
+            const percentDisplay = fitMetricTextToCellWidthCached(
+                leaf.percentText,
+                width,
+                Math.max(6, Math.floor(Math.max(12, tileInnerHeight) * 0.3)),
+                percentFont,
+                7,
+            );
+
+            const bothLineContentHeight = metricDisplay.fontSize + percentDisplay.fontSize + 4;
+            const canShowBoth = width >= 24 && tileArea >= 220 && bothLineContentHeight <= Math.max(10, tileInnerHeight - 2);
+            const canShowOneLine = width >= 14 && tileArea >= 150 && fallbackDisplay.fontSize <= Math.max(10, tileInnerHeight - 2);
+            const canShowEllipsis = width >= 12 && height >= 12;
+
+            return {
+                leaf,
+                x: Math.trunc(cell.x0),
+                y: Math.trunc(cell.y0),
+                width: Math.trunc(width),
+                height: Math.trunc(height),
+                metricText: canShowBoth ? leaf.metricText : fallbackDisplay.text,
+                metricFontSize: canShowBoth ? metricDisplay.fontSize : fallbackDisplay.fontSize,
+                percentText: percentDisplay.text,
+                percentFontSize: percentDisplay.fontSize,
+                canShowBoth,
+                canShowOneLine: canShowOneLine && !canShowBoth,
+                canShowEllipsis,
+            };
+        });
+    }, [cells]);
+
+    if (renderedTiles.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="relative h-full w-full">
+            {renderedTiles.map((tile) => (
+                <div
+                    key={`${tile.leaf.id}-${tile.x}-${tile.y}-${tile.leaf.value}`}
+                    className="absolute flex items-center justify-center border border-white/30"
+                    style={{
+                        left: tile.x,
+                        top: tile.y,
+                        width: tile.width,
+                        height: tile.height,
+                        backgroundColor: tile.leaf.color,
+                        overflow: 'hidden',
+                        boxSizing: 'border-box',
+                    }}
+                    onMouseEnter={(event) => onCellEnter(tile.leaf, event)}
+                    onMouseMove={(event) => onCellMove(tile.leaf, event)}
+                    onMouseLeave={onCellLeave}
+                >
+                    {tile.canShowBoth ? (
+                        <div
+                            className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center"
+                            style={{
+                                color: '#ffffff',
+                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                            }}
+                        >
+                            <span
+                                title={tile.leaf.metricText}
+                                className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight font-semibold"
+                                style={{
+                                    fontSize: `${tile.metricFontSize}px`,
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {tile.metricText}
+                            </span>
+                            <span
+                                title={tile.percentText}
+                                className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight"
+                                style={{
+                                    fontSize: `${tile.percentFontSize}px`,
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {tile.percentText}
+                            </span>
+                        </div>
+                    ) : tile.canShowOneLine ? (
+                        <div
+                            className="flex h-full w-full items-center justify-center px-1 text-center"
+                            style={{
+                                color: '#ffffff',
+                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                            }}
+                        >
+                            <span
+                                className="w-full truncate overflow-hidden whitespace-nowrap font-semibold leading-tight"
+                                style={{
+                                    fontSize: `${tile.metricFontSize}px`,
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {tile.metricText}
+                            </span>
+                        </div>
+                    ) : tile.canShowEllipsis ? (
+                        <div
+                            className="flex h-full w-full items-center justify-center px-1 text-center"
+                            style={{
+                                color: '#ffffff',
+                                textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                fontSize: `${tile.metricFontSize}px`,
+                                lineHeight: 1,
+                                fontWeight: 700,
+                            }}
+                        >
+                            {tile.metricText}
+                        </div>
+                    ) : null}
+                </div>
+            ))}
+        </div>
+    );
+});
+
 export default function InsightsClient() {
-    const { isLoading: isAuthLoading, isAdmin } = useAuth();
+    const router = useRouter();
+    const { isLoading: isAuthLoading, isAdmin, user } = useAuth();
+
+    useEffect(() => {
+        if (!isAuthLoading && !user) {
+            router.replace('/');
+        }
+    }, [isAuthLoading, user, router]);
 
     const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
     const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
-    const chartContainerRef = useRef<HTMLDivElement>(null);
-    const [chartWidth, setChartWidth] = useState(() =>
-        typeof window === 'undefined' ? 960 : Math.max(320, Math.floor(window.innerWidth - 48)),
+    const [chartSize, setChartSize] = useState<ChartDimensions>(() =>
+        typeof window === 'undefined'
+            ? { width: 960, height: 420 }
+            : { width: Math.max(320, Math.floor(window.innerWidth - 48)), height: Math.max(220, Math.floor(window.innerHeight * 0.52)) },
     );
-    const [chartHeight, setChartHeight] = useState(() =>
-        typeof window === 'undefined' ? 420 : Math.max(220, Math.floor(window.innerHeight * 0.52)),
-    );
+    const chartWidth = chartSize.width;
+    const chartHeight = chartSize.height;
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
+    const tooltipStateRef = useRef<TreemapTooltipState | null>(null);
     const tooltipRafRef = useRef<number | null>(null);
+    const layoutRafRef = useRef<number | null>(null);
     const chartAreaRef = useRef<HTMLDivElement>(null);
 
     const treemapQuery = useQuery({
         queryKey: ['insight-treemap', viewMode, period, metricMode],
         queryFn: () => fetchTreemapData(viewMode, period, metricMode),
+        enabled: !isAuthLoading && !!user,
         staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 20,
+        placeholderData: (previousData) => previousData,
     });
 
     const periodOptionsForView = useMemo(() => {
@@ -636,91 +874,23 @@ export default function InsightsClient() {
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
 
-    useEffect(() => {
-        const chartArea = chartAreaRef.current;
-        if (!chartArea) return undefined;
-
-        const updateLayout = () => {
-            const nextWidth = Math.max(320, Math.floor(chartArea.clientWidth));
-            const nextHeight = Math.max(220, Math.floor(chartArea.clientHeight));
-            setChartWidth((prev) => (prev === nextWidth ? prev : nextWidth));
-            setChartHeight((prev) => (prev === nextHeight ? prev : nextHeight));
-        };
-
-        const scheduleUpdateLayout = () => {
-            if (typeof window === 'undefined') return;
-            window.requestAnimationFrame(() => {
-                updateLayout();
-                window.requestAnimationFrame(updateLayout);
-            });
-        };
-
-        scheduleUpdateLayout();
-
-        let observer: ResizeObserver | null = null;
-        if (typeof ResizeObserver !== 'undefined') {
-            observer = new ResizeObserver(() => {
-                scheduleUpdateLayout();
-            });
-            observer.observe(chartArea);
-        }
-        if (typeof window !== 'undefined') {
-            window.addEventListener('resize', scheduleUpdateLayout);
-        }
-        return () => {
-            if (observer) {
-                observer.disconnect();
-            }
-            if (typeof window !== 'undefined') {
-                window.removeEventListener('resize', scheduleUpdateLayout);
-            }
-        };
-    }, []);
-
-    const setTooltipThrottled = useCallback((next: TreemapTooltipState | null) => {
-        if (typeof window === 'undefined') {
-            setTooltip(next);
-            return;
-        }
-
-        if (next === null) {
-            if (tooltipRafRef.current !== null) {
-                window.cancelAnimationFrame(tooltipRafRef.current);
-                tooltipRafRef.current = null;
-            }
-            setTooltip(null);
-            return;
-        }
-
-        if (tooltipRafRef.current !== null) {
-            return;
-        }
-
-        tooltipRafRef.current = window.requestAnimationFrame(() => {
-            tooltipRafRef.current = null;
-            setTooltip(next);
-        });
-    }, []);
-
-    useEffect(() => {
-        return () => {
-            if (tooltipRafRef.current !== null && typeof window !== 'undefined') {
-                window.cancelAnimationFrame(tooltipRafRef.current);
-                tooltipRafRef.current = null;
-            }
-        };
-    }, []);
+    const leafRowsWithMetric = useMemo(
+        () =>
+            rawRows.map((row) => ({
+                row,
+                metricRaw: getMetricValue(row, metricMode),
+                previousMetricRaw: getPreviousMetricValue(row, metricMode),
+            })),
+        [rawRows, metricMode],
+    );
 
     const leafRows = useMemo(() => {
-        const rows = rawRows.map((row) => ({
-            row,
-            metricRaw: getMetricValue(row, metricMode),
-            previousMetricRaw: getPreviousMetricValue(row, metricMode),
-        }));
-        const isChangeMode = viewMode === 'change';
-        const totalMetric = rows.reduce((acc, item) => acc + item.metricRaw, 0);
+        if (leafRowsWithMetric.length === 0) return [] as TreemapLeafNode[];
 
-        return rows
+        const isChangeMode = viewMode === 'change';
+        const totalMetric = leafRowsWithMetric.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0);
+
+        return leafRowsWithMetric
             .map<TreemapLeafNode>((item) => {
                 const metricRaw = Math.max(item.metricRaw, 0);
                 const percent = isChangeMode ? calculateChangePercent(metricRaw, item.previousMetricRaw) : (totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0);
@@ -745,13 +915,109 @@ export default function InsightsClient() {
                 };
             })
             .sort((a, b) => b.metricRaw - a.metricRaw);
-    }, [rawRows, metricMode, viewMode]);
+    }, [leafRowsWithMetric, metricMode, viewMode]);
+
+    useEffect(() => {
+        const chartArea = chartAreaRef.current;
+        if (!chartArea) return undefined;
+
+        const updateLayout = () => {
+            const nextWidth = Math.max(320, Math.floor(chartArea.clientWidth));
+            const nextHeight = Math.max(220, Math.floor(chartArea.clientHeight));
+            setChartSize((prev) => (prev.width === nextWidth && prev.height === nextHeight ? prev : { width: nextWidth, height: nextHeight }));
+        };
+
+        const scheduleUpdateLayout = () => {
+            if (typeof window === 'undefined') return;
+
+            if (layoutRafRef.current !== null) {
+                window.cancelAnimationFrame(layoutRafRef.current);
+            }
+
+            layoutRafRef.current = window.requestAnimationFrame(() => {
+                layoutRafRef.current = null;
+                updateLayout();
+            });
+        };
+
+        scheduleUpdateLayout();
+
+        let observer: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== 'undefined') {
+            observer = new ResizeObserver(() => {
+                scheduleUpdateLayout();
+            });
+            observer.observe(chartArea);
+        }
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', scheduleUpdateLayout);
+        }
+        return () => {
+            if (observer) {
+                observer.disconnect();
+            }
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('resize', scheduleUpdateLayout);
+            }
+            if (layoutRafRef.current !== null) {
+                window.cancelAnimationFrame(layoutRafRef.current);
+                layoutRafRef.current = null;
+            }
+        };
+    }, []);
+
+    const setTooltipThrottled = useCallback((next: TreemapTooltipState | null) => {
+        if (typeof window === 'undefined') {
+            tooltipStateRef.current = next;
+            setTooltip(next);
+            return;
+        }
+
+        if (next === null) {
+            if (tooltipRafRef.current !== null) {
+                window.cancelAnimationFrame(tooltipRafRef.current);
+                tooltipRafRef.current = null;
+            }
+            tooltipStateRef.current = null;
+            setTooltip(null);
+            return;
+        }
+
+        const prev = tooltipStateRef.current;
+        if (prev && prev.leaf.id === next.leaf.id) {
+            const dx = Math.abs(prev.x - next.x);
+            const dy = Math.abs(prev.y - next.y);
+            if (dx <= 24 && dy <= 16) {
+                return;
+            }
+        }
+
+        tooltipStateRef.current = next;
+
+        if (tooltipRafRef.current !== null) {
+            return;
+        }
+
+        tooltipRafRef.current = window.requestAnimationFrame(() => {
+            tooltipRafRef.current = null;
+            setTooltip(next);
+        });
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (tooltipRafRef.current !== null && typeof window !== 'undefined') {
+                window.cancelAnimationFrame(tooltipRafRef.current);
+                tooltipRafRef.current = null;
+            }
+        };
+    }, []);
 
     const clusterStepOptions = useMemo(() => {
         if (leafRows.length === 0) return [];
 
         const values = leafRows.map((row) => row.metricRaw);
-        const dynamic = buildDynamicStepPresets(values, metricMode).map((item) => item.step);
+        const dynamic = buildDynamicStepPresets(values, metricMode);
         const candidates = new Set<number>();
 
         CLUSTER_PRESET_STEPS[metricMode].forEach((step) => {
@@ -771,6 +1037,8 @@ export default function InsightsClient() {
             .slice(0, 7);
     }, [leafRows, metricMode]);
 
+    const leafTotalMetric = useMemo(() => leafRows.reduce((acc, item) => acc + item.metricRaw, 0), [leafRows]);
+
     useEffect(() => {
         if (clusterStep === null) return;
         if (!clusterStepOptions.includes(clusterStep)) {
@@ -783,8 +1051,9 @@ export default function InsightsClient() {
 
         if (clusterStep !== null && clusterStep > 0) {
             const isChangeMode = viewMode === 'change';
-            const cuts = buildStepBasedCuts(leafRows.map((row) => row.metricRaw), clusterStep);
-            const totalMetric = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
+            const values = leafRows.map((row) => row.metricRaw);
+            const cuts = buildStepBasedCuts(values, clusterStep);
+            const totalMetric = Math.max(leafTotalMetric, 0);
             const buckets = new Map<
                 number,
                 {
@@ -857,27 +1126,29 @@ export default function InsightsClient() {
         }
 
         if (viewMode === 'all' || viewMode === 'change') return leafRows;
-        const total = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
 
         if (viewMode === 'category') {
-            const grouped = new Map<string, TreemapLeafNode[]>();
+            const grouped = new Map<
+                string,
+                {
+                    children: TreemapLeafNode[];
+                    totalMetric: number;
+                }
+            >();
             for (const item of leafRows) {
-                const bucket = grouped.get(item.category) ?? [];
-                bucket.push(item);
+                const bucket = grouped.get(item.category) ?? { children: [], totalMetric: 0 };
+                bucket.children.push(item);
+                bucket.totalMetric += item.metricRaw;
                 grouped.set(item.category, bucket);
             }
 
             return [...grouped.entries()]
-                .map(([name, children]) => ({
+                .map(([name, group]) => ({
                     name,
-                    value: Math.max(children.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0), 0.25),
-                    children: [...children].sort((a, b) => b.metricRaw - a.metricRaw),
+                    value: Math.max(group.totalMetric, 0.25),
+                    children: [...group.children].sort((a, b) => b.metricRaw - a.metricRaw),
                 }))
-                .sort((a, b) => {
-                    const aSum = a.children.reduce((acc, item) => acc + item.metricRaw, 0);
-                    const bSum = b.children.reduce((acc, item) => acc + item.metricRaw, 0);
-                    return bSum - aSum;
-                });
+                .sort((a, b) => b.value - a.value);
         }
 
         return leafRows;
@@ -907,6 +1178,24 @@ export default function InsightsClient() {
     const selectedCount = treemapQuery.data?.totalVideos ?? 0;
 
     const isLoading = isAuthLoading || treemapQuery.isLoading;
+    const canRender = Boolean(treemapQuery.data);
+
+    const handleCellEnter = useCallback(
+        (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => {
+            setTooltipThrottled({
+                leaf,
+                x: event.clientX + 12,
+                y: event.clientY + 12,
+            });
+        },
+        [setTooltipThrottled],
+    );
+
+    const handleCellMove = handleCellEnter;
+
+    const handleCellLeave = useCallback(() => {
+        setTooltipThrottled(null);
+    }, [setTooltipThrottled]);
 
     const handleResetFilters = () => {
         setViewMode('all');
@@ -924,7 +1213,7 @@ export default function InsightsClient() {
         );
     }
 
-    if (isLoading) {
+    if (isLoading && !canRender) {
         return (
             <div className="flex h-full items-center justify-center">
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -962,8 +1251,8 @@ export default function InsightsClient() {
                 <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
                     <div className="border-b border-border p-2 md:p-3">
                         <div className="overflow-x-auto pb-2">
-                            <div className="inline-flex items-start gap-2 md:gap-3 min-w-max">
-                            <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
+                            <div className="flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3 min-w-max">
+                                <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
 
                             <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
                                 <span className="text-[11px] text-muted-foreground">모드</span>
@@ -1041,7 +1330,7 @@ export default function InsightsClient() {
                                 </div>
                             </div>
 
-                            <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
+                            <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0 self-center order-99">
                                 <span className="text-[11px] text-muted-foreground">색상</span>
                                 <div className="inline-flex overflow-hidden rounded-md border border-border shrink-0">
                                     <div
@@ -1094,143 +1383,16 @@ export default function InsightsClient() {
                         ref={chartAreaRef}
                         className="h-full p-0 flex-1 min-h-0 overflow-hidden"
                     >
-                        <div
-                            ref={chartContainerRef}
-                            className="relative h-full w-full"
-                        >
+                        <div className="relative h-full w-full">
                             {safeTreeData.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
                             ) : (
-                                <div className="relative h-full w-full">
-                                    {treemapCells.map((cell) => {
-                                        const leaf = cell.node;
-                                        const width = Math.max(0, cell.x1 - cell.x0);
-                                        const height = Math.max(0, cell.y1 - cell.y0);
-                                        const tileArea = Math.max(1, width * height);
-                                        const shortSide = Math.max(1, Math.min(width, height));
-                                        const tileInnerHeight = Math.max(6, height - 6);
-                                        const tileBaseSize = Math.sqrt(tileArea);
-                                        const metricFont = Math.max(10, Math.min(54, Math.floor(tileBaseSize * 0.19)));
-                                        const percentFont = Math.max(8, Math.min(24, Math.floor(metricFont * 0.6)));
-                                        const miniFont = Math.max(8, Math.min(20, Math.floor(metricFont * 0.86)));
-                                        const canShowEllipsis = width >= 12 && height >= 12;
-                                        const metricLineHeight = Math.max(9, Math.floor(Math.max(12, tileInnerHeight) * 0.68));
-                                        const percentLineHeight = Math.max(8, Math.floor(Math.max(12, tileInnerHeight) * 0.3));
-
-                                        const metricDisplay = fitMetricTextToCellWidth(leaf.metricText, width, metricLineHeight, metricFont, miniFont);
-                                        const fallbackDisplay = fitMetricTextToCellWidth(
-                                            leaf.metricText,
-                                            width,
-                                            Math.max(7, Math.floor(Math.max(12, tileInnerHeight) * 0.95)),
-                                            miniFont,
-                                            Math.max(6, Math.min(12, shortSide * 0.4)),
-                                        );
-                                        const percentDisplay = fitMetricTextToCellWidth(leaf.percentText, width, percentLineHeight, percentFont, 7);
-
-                                        const bothLineContentHeight = metricDisplay.fontSize + percentDisplay.fontSize + 4;
-                                        const canShowBoth =
-                                            width >= 24 &&
-                                            tileArea >= 220 &&
-                                            bothLineContentHeight <= Math.max(10, tileInnerHeight - 2);
-                                        const canShowOneLine =
-                                            width >= 14 && tileArea >= 150 && fallbackDisplay.fontSize <= Math.max(10, tileInnerHeight - 2);
-
-                                        return (
-                                            <div
-                                                key={`${leaf.id}-${leaf.title}-${leaf.value}-${cell.x0}-${cell.y0}`}
-                                                className="absolute flex items-center justify-center border border-white/30"
-                                                style={{
-                                                    left: cell.x0,
-                                                    top: cell.y0,
-                                                    width,
-                                                    height,
-                                                    backgroundColor: leaf.color,
-                                                    overflow: 'hidden',
-                                                    boxSizing: 'border-box',
-                                                }}
-                                                onMouseEnter={(event) => {
-                                                    setTooltipThrottled({
-                                                        leaf,
-                                                        x: event.clientX + 12,
-                                                        y: event.clientY + 12,
-                                                    });
-                                                }}
-                                                onMouseMove={(event) => {
-                                                    setTooltipThrottled({
-                                                        leaf,
-                                                        x: event.clientX + 12,
-                                                        y: event.clientY + 12,
-                                                    });
-                                                }}
-                                                onMouseLeave={() => {
-                                                    setTooltipThrottled(null);
-                                                }}
-                                                    >
-                                                {canShowBoth ? (
-                                                    <div
-                                                        className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center"
-                                                        style={{
-                                                            color: '#ffffff',
-                                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
-                                                        }}
-                                                    >
-                                                        <span
-                                                            title={leaf.metricText}
-                                                            className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight font-semibold"
-                                                            style={{
-                                                                fontSize: `${metricDisplay.fontSize}px`,
-                                                                lineHeight: 1,
-                                                            }}
-                                                        >
-                                                            {metricDisplay.text}
-                                                        </span>
-                                                        <span
-                                                            title={leaf.percentText}
-                                                            className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight"
-                                                            style={{
-                                                                fontSize: `${percentDisplay.fontSize}px`,
-                                                                lineHeight: 1,
-                                                            }}
-                                                        >
-                                                            {percentDisplay.text}
-                                                        </span>
-                                                    </div>
-                                                ) : canShowOneLine ? (
-                                                    <div
-                                                        className="flex h-full w-full items-center justify-center px-1 text-center"
-                                                        style={{
-                                                            color: '#ffffff',
-                                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
-                                                        }}
-                                                    >
-                                                        <span
-                                                            className="w-full truncate overflow-hidden whitespace-nowrap font-semibold leading-tight"
-                                                            style={{
-                                                                fontSize: `${fallbackDisplay.fontSize}px`,
-                                                                lineHeight: 1,
-                                                            }}
-                                                        >
-                                                            {fallbackDisplay.text}
-                                                        </span>
-                                                    </div>
-                                                ) : canShowEllipsis ? (
-                                                    <div
-                                                        className="flex h-full w-full items-center justify-center px-1 text-center"
-                                                        style={{
-                                                            color: '#ffffff',
-                                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
-                                                            fontSize: `${fallbackDisplay.fontSize}px`,
-                                                            lineHeight: 1,
-                                                            fontWeight: 700,
-                                                        }}
-                                                    >
-                                                        {fallbackDisplay.text}
-                                                    </div>
-                                                ) : null}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                <TreemapTiles
+                                    cells={treemapCells}
+                                    onCellEnter={handleCellEnter}
+                                    onCellMove={handleCellMove}
+                                    onCellLeave={handleCellLeave}
+                                />
                             )}
                             {tooltip ? (
                                 <div
