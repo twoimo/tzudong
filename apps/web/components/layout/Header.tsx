@@ -103,6 +103,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const shouldShowAuthUI = useMemo(() => isHydrated && !isAuthLoading, [isHydrated, isAuthLoading]);
   const shouldShowHeaderIcons = isLoggedIn && shouldShowAuthUI;
 
+  const handleInsightMenuClick = useCallback(() => {
+    if (isLoggedIn) {
+      router.push('/insights');
+    }
+  }, [isLoggedIn, router]);
+
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
     if (dismissed) {
@@ -709,7 +715,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 공지사항
               </DropdownMenuItem>
               {!isAdmin && (
-                <DropdownMenuItem onClick={() => router.push('/insights')} className="text-foreground hover:bg-accent py-1.5">
+                <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
                   <BarChart2 className="mr-2 h-4 w-4" />
                   인사이트
                 </DropdownMenuItem>
@@ -748,7 +754,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     <DollarSign className="mr-2 h-4 w-4" />
                     서버비용
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/insights')} className="text-foreground hover:bg-accent py-1.5">
+                  <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
                     <BarChart2 className="mr-2 h-4 w-4" />
                     인사이트
                   </DropdownMenuItem>

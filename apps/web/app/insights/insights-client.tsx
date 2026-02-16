@@ -10,6 +10,7 @@ import { RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/insight/treemap';
 import AdminInsightsClient from '@/app/admin/insight/insight-client';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 type ViewMode = 'all' | 'category' | 'change';
 type MetricMode = 'views' | 'likes' | 'comments' | 'duration';
@@ -128,6 +129,12 @@ const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
     likes: [50, 100, 300, 500, 1_000],
     comments: [50, 100, 300, 500, 1_000],
     duration: [30, 60, 120, 180, 300, 600],
+};
+
+const INITIAL_CHART_SIZE = {
+    mobile: { width: 360, height: 320 },
+    tablet: { width: 640, height: 420 },
+    desktop: { width: 960, height: 520 },
 };
 
 let measureCanvasContext: CanvasRenderingContext2D | null = null;
@@ -819,6 +826,7 @@ const TreemapTiles = memo(function TreemapTiles({
 export default function InsightsClient() {
     const router = useRouter();
     const { isLoading: isAuthLoading, isAdmin, user } = useAuth();
+    const { isMobile, isTablet } = useDeviceType();
 
     useEffect(() => {
         if (!isAuthLoading && !user) {
@@ -830,11 +838,13 @@ export default function InsightsClient() {
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
     const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
-    const [chartSize, setChartSize] = useState<ChartDimensions>(() =>
-        typeof window === 'undefined'
-            ? { width: 960, height: 420 }
-            : { width: Math.max(320, Math.floor(window.innerWidth - 48)), height: Math.max(220, Math.floor(window.innerHeight * 0.52)) },
-    );
+    const initialChartSize = useMemo(() => {
+        if (isMobile) return INITIAL_CHART_SIZE.mobile;
+        if (isTablet) return INITIAL_CHART_SIZE.tablet;
+        return INITIAL_CHART_SIZE.desktop;
+    }, [isMobile, isTablet]);
+
+    const [chartSize, setChartSize] = useState<ChartDimensions>(initialChartSize);
     const chartWidth = chartSize.width;
     const chartHeight = chartSize.height;
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
@@ -872,7 +882,7 @@ export default function InsightsClient() {
     }, [periodOptionsForView, period]);
 
     const rawRows = treemapQuery.data?.videos ?? [];
-    const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
+    const renderWidth = useMemo(() => Math.max(1, chartWidth), [chartWidth]);
 
     const leafRowsWithMetric = useMemo(
         () =>
@@ -917,13 +927,32 @@ export default function InsightsClient() {
             .sort((a, b) => b.metricRaw - a.metricRaw);
     }, [leafRowsWithMetric, metricMode, viewMode]);
 
+    const chartConstraints = useMemo(
+        () => (isMobile
+            ? { minWidth: 280, minHeight: 220 }
+            : isTablet
+                ? { minWidth: 360, minHeight: 300 }
+                : { minWidth: 420, minHeight: 360 }),
+        [isMobile, isTablet],
+    );
+
     useEffect(() => {
         const chartArea = chartAreaRef.current;
         if (!chartArea) return undefined;
 
         const updateLayout = () => {
-            const nextWidth = Math.max(320, Math.floor(chartArea.clientWidth));
-            const nextHeight = Math.max(220, Math.floor(chartArea.clientHeight));
+            if (typeof window === 'undefined') return;
+
+            const nextRect = chartArea.getBoundingClientRect();
+            const nextWidth = Math.max(
+                chartConstraints.minWidth,
+                Math.floor(nextRect.width),
+            );
+            const nextHeight = Math.max(
+                chartConstraints.minHeight,
+                Math.floor(nextRect.height),
+            );
+
             setChartSize((prev) => (prev.width === nextWidth && prev.height === nextHeight ? prev : { width: nextWidth, height: nextHeight }));
         };
 
@@ -964,7 +993,16 @@ export default function InsightsClient() {
                 layoutRafRef.current = null;
             }
         };
-    }, []);
+    }, [chartConstraints]);
+
+    useEffect(() => {
+        setChartSize((prev) => {
+            const nextWidth = Math.max(initialChartSize.width, chartConstraints.minWidth);
+            const nextHeight = Math.max(initialChartSize.height, chartConstraints.minHeight);
+            if (prev.width === nextWidth && prev.height === nextHeight) return prev;
+            return { width: nextWidth, height: nextHeight };
+        });
+    }, [chartConstraints.minWidth, chartConstraints.minHeight, initialChartSize.width, initialChartSize.height]);
 
     const setTooltipThrottled = useCallback((next: TreemapTooltipState | null) => {
         if (typeof window === 'undefined') {
@@ -1226,17 +1264,29 @@ export default function InsightsClient() {
 
     if (treemapQuery.isError || !treemapQuery.data) {
         return (
-            <div className="flex h-full items-center justify-center p-6">
-                <Card className="w-full max-w-xl">
-                    <CardContent className="space-y-4 pt-6">
-                        <p className="text-sm text-muted-foreground">트리맵 데이터를 불러오지 못했습니다.</p>
-                        <div className="flex items-center justify-end">
-                            <Button variant="secondary" onClick={handleResetFilters}>
-                                다시 조회
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="flex h-full min-h-0 items-center justify-center p-6">
+                <div className="text-center max-w-md w-full px-4">
+                    <div className="text-4xl mb-4">⚠️</div>
+                    <h2 className="text-xl font-bold text-foreground mb-2">문제가 발생했습니다</h2>
+                    <p className="text-sm text-muted-foreground mb-6">일시적인 오류가 발생했습니다. 다시 시도해 주세요.</p>
+                    <div className="flex gap-3 justify-center flex-wrap">
+                        <Button
+                            onClick={handleResetFilters}
+                            className="h-10 px-4 py-2"
+                        >
+                            다시 시도
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-4 py-2"
+                            onClick={() => {
+                                router.replace('/');
+                            }}
+                        >
+                            홈으로 이동
+                        </Button>
+                    </div>
+                </div>
             </div>
         );
     }
