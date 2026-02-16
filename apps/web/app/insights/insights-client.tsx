@@ -944,13 +944,17 @@ export default function InsightsClient() {
             if (typeof window === 'undefined') return;
 
             const nextRect = chartArea.getBoundingClientRect();
+            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
             const nextWidth = Math.max(
                 chartConstraints.minWidth,
                 Math.floor(nextRect.width),
             );
             const nextHeight = Math.max(
-                chartConstraints.minHeight,
-                Math.floor(nextRect.height),
+                1,
+                Math.min(
+                    Math.floor(nextRect.height),
+                    Math.max(1, Math.floor(viewportHeight)),
+                ),
             );
 
             setChartSize((prev) => (prev.width === nextWidth && prev.height === nextHeight ? prev : { width: nextWidth, height: nextHeight }));
@@ -978,8 +982,15 @@ export default function InsightsClient() {
             });
             observer.observe(chartArea);
         }
+        const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
+
         if (typeof window !== 'undefined') {
             window.addEventListener('resize', scheduleUpdateLayout);
+            window.addEventListener('orientationchange', scheduleUpdateLayout);
+        }
+        if (viewport) {
+            viewport.addEventListener('resize', scheduleUpdateLayout);
+            viewport.addEventListener('scroll', scheduleUpdateLayout);
         }
         return () => {
             if (observer) {
@@ -987,6 +998,11 @@ export default function InsightsClient() {
             }
             if (typeof window !== 'undefined') {
                 window.removeEventListener('resize', scheduleUpdateLayout);
+                window.removeEventListener('orientationchange', scheduleUpdateLayout);
+            }
+            if (viewport) {
+                viewport.removeEventListener('resize', scheduleUpdateLayout);
+                viewport.removeEventListener('scroll', scheduleUpdateLayout);
             }
             if (layoutRafRef.current !== null) {
                 window.cancelAnimationFrame(layoutRafRef.current);
@@ -998,11 +1014,11 @@ export default function InsightsClient() {
     useEffect(() => {
         setChartSize((prev) => {
             const nextWidth = Math.max(initialChartSize.width, chartConstraints.minWidth);
-            const nextHeight = Math.max(initialChartSize.height, chartConstraints.minHeight);
+            const nextHeight = initialChartSize.height;
             if (prev.width === nextWidth && prev.height === nextHeight) return prev;
             return { width: nextWidth, height: nextHeight };
         });
-    }, [chartConstraints.minWidth, chartConstraints.minHeight, initialChartSize.width, initialChartSize.height]);
+    }, [chartConstraints.minWidth, initialChartSize.width, initialChartSize.height]);
 
     const setTooltipThrottled = useCallback((next: TreemapTooltipState | null) => {
         if (typeof window === 'undefined') {
@@ -1264,7 +1280,7 @@ export default function InsightsClient() {
 
     if (treemapQuery.isError || !treemapQuery.data) {
         return (
-            <div className="flex h-full min-h-0 items-center justify-center p-6">
+            <div className="flex min-h-0 items-center justify-center p-6 h-full">
                 <div className="text-center max-w-md w-full px-4">
                     <div className="text-4xl mb-4">⚠️</div>
                     <h2 className="text-xl font-bold text-foreground mb-2">문제가 발생했습니다</h2>
@@ -1296,8 +1312,8 @@ export default function InsightsClient() {
     }
 
     return (
-        <div className="flex h-full min-h-0 flex-col bg-background">
-            <div className="p-2 md:p-4 h-full flex-1 min-h-0">
+        <div className="flex min-h-0 h-full flex-col bg-background">
+            <div className="p-2 md:p-4 flex-1 min-h-0 overflow-hidden">
                 <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
                     <div className="border-b border-border p-2 md:p-3">
                         <div className="overflow-x-auto pb-2">
@@ -1431,7 +1447,8 @@ export default function InsightsClient() {
 
                     <CardContent
                         ref={chartAreaRef}
-                        className="h-full p-0 flex-1 min-h-0 overflow-hidden"
+                        className="p-0 flex-1 min-h-0 overflow-hidden"
+                        style={{ minHeight: 0, minWidth: 0 }}
                     >
                         <div className="relative h-full w-full">
                             {safeTreeData.length === 0 ? (
