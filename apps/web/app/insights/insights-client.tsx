@@ -90,6 +90,8 @@ const PERIOD_OPTIONS: PeriodOption[] = [
     { value: '1Y', label: '1Y' },
 ];
 
+const CHANGE_PERIOD_ORDER: InsightTreemapPeriod[] = ['1D', '1W', '2W', '1M', '3M', '6M', '1Y'];
+
 const CLUSTER_PRESET_STEPS: Record<MetricMode, number[]> = {
     views: [100_000, 300_000, 500_000, 1_000_000, 2_000_000, 5_000_000],
     likes: [50, 100, 300, 500, 1_000],
@@ -595,6 +597,7 @@ export default function InsightsClient() {
 
     const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
+    const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(() =>
@@ -612,7 +615,33 @@ export default function InsightsClient() {
         staleTime: 1000 * 60 * 5,
     });
 
-    const periodOptionsForView = useMemo(() => PERIOD_OPTIONS, []);
+    const changeAvailablePeriods = useMemo(() => {
+        const available = new Set(treemapQuery.data?.availablePeriods ?? []);
+        const options = PERIOD_OPTIONS.filter((option) => option.value === 'ALL' || available.has(option.value));
+        if (options.length <= 1) return PERIOD_OPTIONS;
+
+        const ordered = [options.find((option) => option.value === 'ALL')].filter((option): option is PeriodOption => !!option);
+        for (const periodValue of CHANGE_PERIOD_ORDER) {
+            const option = PERIOD_OPTIONS.find((candidate) => candidate.value === periodValue);
+            if (option && options.some((availableOption) => availableOption.value === periodValue)) {
+                ordered.push(option);
+            }
+        }
+
+        return ordered.length > 1 ? ordered : PERIOD_OPTIONS;
+    }, [treemapQuery.data?.availablePeriods]);
+
+    const periodOptionsForView = viewMode === 'change' ? changeAvailablePeriods : PERIOD_OPTIONS;
+    const currentPeriodSupported = useMemo(
+        () => periodOptionsForView.some((option) => option.value === period),
+        [periodOptionsForView, period],
+    );
+
+    useEffect(() => {
+        if (!currentPeriodSupported) {
+            setPeriod(periodOptionsForView[0]?.value ?? 'ALL');
+        }
+    }, [currentPeriodSupported, periodOptionsForView]);
 
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(320, chartWidth), [chartWidth]);
@@ -727,8 +756,114 @@ export default function InsightsClient() {
             .sort((a, b) => b.metricRaw - a.metricRaw);
     }, [rawRows, metricMode, viewMode]);
 
+    const clusterStepOptions = useMemo(() => {
+        if (leafRows.length === 0) return [];
+
+        const values = leafRows.map((row) => row.metricRaw);
+        const dynamic = buildDynamicStepPresets(values, metricMode).map((item) => item.step);
+        const candidates = new Set<number>();
+
+        CLUSTER_PRESET_STEPS[metricMode].forEach((step) => {
+            if (step > 0) candidates.add(Math.floor(step));
+        });
+
+        dynamic.forEach((step) => {
+            if (step > 0) candidates.add(Math.floor(step));
+        });
+
+        return [...candidates]
+            .sort((a, b) => a - b)
+            .filter((step, index, all) => {
+                if (index === 0) return true;
+                return step > all[index - 1];
+            })
+            .slice(0, 7);
+    }, [leafRows, metricMode]);
+
+    useEffect(() => {
+        if (clusterStep === null) return;
+        if (!clusterStepOptions.includes(clusterStep)) {
+            setClusterStep(null);
+        }
+    }, [clusterStep, clusterStepOptions]);
+
     const treeData = useMemo<TreemapNode[]>(() => {
         if (leafRows.length === 0) return [];
+
+        if (clusterStep !== null && clusterStep > 0) {
+            const isChangeMode = viewMode === 'change';
+            const cuts = buildStepBasedCuts(leafRows.map((row) => row.metricRaw), clusterStep);
+            const totalMetric = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
+            const buckets = new Map<
+                number,
+                {
+                    metricRaw: number;
+                    previousMetricRaw: number | null;
+                    viewCount: number;
+                    likeCount: number;
+                    commentCount: number;
+                    duration: number;
+                    hasPrevious: boolean;
+                }
+            >();
+
+            for (const row of leafRows) {
+                const index = getClusterIndex(row.metricRaw, cuts);
+                const current = buckets.get(index);
+                const next = current ?? {
+                    metricRaw: 0,
+                    previousMetricRaw: null,
+                    viewCount: 0,
+                    likeCount: 0,
+                    commentCount: 0,
+                    duration: 0,
+                    hasPrevious: false,
+                };
+
+                next.metricRaw += row.metricRaw;
+                next.viewCount += row.viewCount;
+                next.likeCount += row.likeCount;
+                next.commentCount += row.commentCount;
+                next.duration += row.duration;
+
+                if (row.previousMetricRaw != null && row.previousMetricRaw > 0) {
+                    next.previousMetricRaw = (next.previousMetricRaw ?? 0) + row.previousMetricRaw;
+                    next.hasPrevious = true;
+                }
+
+                buckets.set(index, next);
+            }
+
+            return [...buckets.entries()]
+                .map(([index, bucket]) => {
+                    const label = clusterLabel(metricMode, cuts, index);
+                    const metricRaw = Math.max(bucket.metricRaw, 0);
+                    const percent = isChangeMode
+                        ? calculateChangePercent(metricRaw, bucket.hasPrevious ? bucket.previousMetricRaw : null)
+                        : (totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0);
+                    const percentText = isChangeMode ? formatNonNegativePercent(percent) : formatPercent(percent);
+
+                    return {
+                        id: `cluster-${clusterStep}-${metricMode}-${index}`,
+                        name: label,
+                        title: label,
+                        category: '클러스터',
+                        viewCount: Math.round(bucket.viewCount),
+                        likeCount: Math.round(bucket.likeCount),
+                        commentCount: Math.round(bucket.commentCount),
+                        duration: Math.round(bucket.duration),
+                        publishedAt: null,
+                        value: Math.max(metricRaw, 0.25),
+                        metricRaw,
+                        previousMetricRaw: bucket.hasPrevious ? bucket.previousMetricRaw : null,
+                        metricText: formatMetricText(metricMode, metricRaw),
+                        percent,
+                        percentText,
+                        color: getColorByPercent(percent),
+                    };
+                })
+                .sort((a, b) => b.metricRaw - a.metricRaw);
+        }
 
         if (viewMode === 'all' || viewMode === 'change') return leafRows;
         const total = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
@@ -755,7 +890,7 @@ export default function InsightsClient() {
         }
 
         return leafRows;
-    }, [leafRows, viewMode, metricMode]);
+    }, [leafRows, viewMode, metricMode, clusterStep]);
 
     const safeTreeData = useMemo<TreemapNode[]>(() => {
         const normalized = treeData
@@ -786,6 +921,7 @@ export default function InsightsClient() {
         setViewMode('all');
         setMetricMode('views');
         setPeriod('ALL');
+        setClusterStep(null);
         treemapQuery.refetch();
     };
 
@@ -875,6 +1011,28 @@ export default function InsightsClient() {
                                         className="rounded-none h-8 px-3"
                                     >
                                         {option.label}
+                                    </Button>
+                                ))}
+                            </div>
+
+                            <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                <Button
+                                    size="sm"
+                                    variant={clusterStep === null ? 'default' : 'ghost'}
+                                    onClick={() => setClusterStep(null)}
+                                    className="rounded-none h-8 px-3"
+                                >
+                                    클러스터링
+                                </Button>
+                                {clusterStepOptions.map((step) => (
+                                    <Button
+                                        key={step}
+                                        size="sm"
+                                        variant={clusterStep === step ? 'default' : 'ghost'}
+                                        onClick={() => setClusterStep(step)}
+                                        className="rounded-none h-8 px-3"
+                                    >
+                                        {formatClusterValueByMode(metricMode, step)}
                                     </Button>
                                 ))}
                             </div>
