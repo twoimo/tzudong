@@ -945,68 +945,80 @@ export default function InsightsClient() {
                         <div className="flex flex-wrap items-center gap-2 md:gap-3">
                             <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">전체 {selectedCount.toLocaleString()}개</p>
 
-                            <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                {VIEW_MODE_OPTIONS.map((option) => (
-                                    <Button
-                                        key={option.value}
-                                        size="sm"
-                                        variant={viewMode === option.value ? 'default' : 'ghost'}
-                                        onClick={() => setViewMode(option.value)}
-                                        className="rounded-none h-8 px-3"
-                                    >
-                                        {option.label}
-                                    </Button>
-                                ))}
+                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                                <span className="text-[11px] text-muted-foreground">모드</span>
+                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                    {VIEW_MODE_OPTIONS.map((option) => (
+                                        <Button
+                                            key={option.value}
+                                            size="sm"
+                                            variant={viewMode === option.value ? 'default' : 'ghost'}
+                                            onClick={() => setViewMode(option.value)}
+                                            className="rounded-none h-8 px-3"
+                                        >
+                                            {option.label}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                {METRIC_OPTIONS.map((option) => (
-                                    <Button
-                                        key={option.value}
-                                        size="sm"
-                                        variant={metricMode === option.value ? 'default' : 'ghost'}
-                                        onClick={() => setMetricMode(option.value)}
-                                        className="rounded-none h-8 px-3"
-                                    >
-                                        {option.label}
-                                    </Button>
-                                ))}
+                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                                <span className="text-[11px] text-muted-foreground">지표</span>
+                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                    {METRIC_OPTIONS.map((option) => (
+                                        <Button
+                                            key={option.value}
+                                            size="sm"
+                                            variant={metricMode === option.value ? 'default' : 'ghost'}
+                                            onClick={() => setMetricMode(option.value)}
+                                            className="rounded-none h-8 px-3"
+                                        >
+                                            {option.label}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                {periodOptionsForView.map((option) => (
-                                    <Button
-                                        key={option.value}
-                                        size="sm"
-                                        variant={period === option.value ? 'default' : 'ghost'}
-                                        onClick={() => setPeriod(option.value)}
-                                        className="rounded-none h-8 px-3"
-                                    >
-                                        {option.label}
-                                    </Button>
-                                ))}
+                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                                <span className="text-[11px] text-muted-foreground">기준</span>
+                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                    {periodOptionsForView.map((option) => (
+                                        <Button
+                                            key={option.value}
+                                            size="sm"
+                                            variant={period === option.value ? 'default' : 'ghost'}
+                                            onClick={() => setPeriod(option.value)}
+                                            className="rounded-none h-8 px-3"
+                                        >
+                                            {option.label}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
-                                <Button
-                                    size="sm"
-                                    variant={clusterStep === null ? 'default' : 'ghost'}
-                                    onClick={() => setClusterStep(null)}
-                                    className="rounded-none h-8 px-3"
-                                >
-                                    클러스터링
-                                </Button>
-                                {clusterStepOptions.map((step) => (
+                            <div className="inline-flex items-center gap-1 sm:gap-2">
+                                <span className="text-[11px] text-muted-foreground">클러스터</span>
+                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
                                     <Button
-                                        key={step}
                                         size="sm"
-                                        variant={clusterStep === step ? 'default' : 'ghost'}
-                                        onClick={() => setClusterStep(step)}
+                                        variant={clusterStep === null ? 'default' : 'ghost'}
+                                        onClick={() => setClusterStep(null)}
                                         className="rounded-none h-8 px-3"
                                     >
-                                        {formatClusterValueByMode(metricMode, step)}
+                                        클러스터링
                                     </Button>
-                                ))}
+                                    {clusterStepOptions.map((step) => (
+                                        <Button
+                                            key={step}
+                                            size="sm"
+                                            variant={clusterStep === step ? 'default' : 'ghost'}
+                                            onClick={() => setClusterStep(step)}
+                                            className="rounded-none h-8 px-3"
+                                        >
+                                            {formatClusterValueByMode(metricMode, step)}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
 
                             <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
