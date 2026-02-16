@@ -597,14 +597,13 @@ export default function InsightsClient() {
     const [metricMode, setMetricMode] = useState<MetricMode>('views');
     const [clusterStep, setClusterStep] = useState<number | null>(null);
     const [period, setPeriod] = useState<InsightTreemapPeriod>('ALL');
-    const controlRowRef = useRef<HTMLDivElement>(null);
+    const chartAreaRef = useRef<HTMLDivElement>(null);
     const chartContainerRef = useRef<HTMLDivElement>(null);
-    const rootRef = useRef<HTMLDivElement>(null);
     const [chartWidth, setChartWidth] = useState(() =>
         typeof window === 'undefined' ? 1200 : Math.max(320, Math.floor(window.innerWidth - 64)),
     );
     const [chartHeight, setChartHeight] = useState(() =>
-        typeof window === 'undefined' ? 760 : Math.max(320, Math.floor(window.innerHeight * 0.65)),
+        typeof window === 'undefined' ? 640 : Math.max(240, Math.floor(window.innerHeight * 0.6)),
     );
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
     const tooltipRafRef = useRef<number | null>(null);
@@ -639,25 +638,15 @@ export default function InsightsClient() {
 
     useEffect(() => {
         const container = chartContainerRef.current;
-        const root = rootRef.current;
-        if (!container) return undefined;
+        const chartArea = chartAreaRef.current;
+        if (!container || !chartArea) return undefined;
 
         const updateLayout = () => {
             const nextWidth = Math.max(320, Math.floor(container.clientWidth));
             setChartWidth((prev) => (prev === nextWidth ? prev : nextWidth));
 
-            if (!root) {
-                return;
-            }
-
-            const rootRect = root.getBoundingClientRect();
-            const controlHeight = Math.ceil(controlRowRef.current?.offsetHeight ?? 0);
-            const available = Math.floor(window.innerHeight - rootRect.top - controlHeight - 24);
-            const minHeight = Math.max(320, Math.floor(window.innerHeight * 0.45));
-            setChartHeight((prev) => {
-                const next = Math.max(minHeight, available);
-                return prev === next ? prev : next;
-            });
+            const nextHeight = Math.max(240, Math.floor(chartArea.clientHeight));
+            setChartHeight((prev) => (prev === nextHeight ? prev : nextHeight));
         };
 
         const scheduleUpdateWidth = () => {
@@ -673,6 +662,7 @@ export default function InsightsClient() {
                 scheduleUpdateWidth();
             });
             observer.observe(container);
+            observer.observe(chartArea);
         }
         if (typeof window !== 'undefined') {
             window.addEventListener('resize', scheduleUpdateWidth);
@@ -967,11 +957,11 @@ export default function InsightsClient() {
     }
 
     return (
-        <div ref={rootRef} className="flex min-h-[100svh] flex-col bg-background overflow-y-auto">
-            <div className="p-4 md:p-6">
-                <Card className="overflow-hidden border border-border">
+        <div className="flex h-full min-h-[100svh] flex-col bg-background overflow-y-auto">
+            <div className="p-4 md:p-6 h-full flex-1 min-h-0">
+                <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
                     <div className="p-3 md:p-4 border-b border-border">
-                        <div ref={controlRowRef} className="flex flex-wrap items-center gap-2 md:gap-3">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3">
                             <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap">전체 {selectedCount.toLocaleString()}개</p>
 
                             <div className="inline-flex items-center gap-1 sm:gap-2">
@@ -1098,7 +1088,10 @@ export default function InsightsClient() {
                         </div>
                     </div>
 
-                    <CardContent className="p-0 h-full">
+                    <CardContent
+                        ref={chartAreaRef}
+                        className="p-0 flex-1 min-h-0"
+                    >
                         <div
                             ref={chartContainerRef}
                             className="relative w-full h-full"
