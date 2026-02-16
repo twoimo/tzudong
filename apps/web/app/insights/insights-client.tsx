@@ -606,6 +606,7 @@ export default function InsightsClient() {
     );
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
     const tooltipRafRef = useRef<number | null>(null);
+    const chartAreaRef = useRef<HTMLDivElement>(null);
 
     const treemapQuery = useQuery({
         queryKey: ['insight-treemap', viewMode, period, metricMode],
@@ -637,41 +638,43 @@ export default function InsightsClient() {
 
     useEffect(() => {
         const container = chartContainerRef.current;
-        if (!container) return undefined;
+        const chartArea = chartAreaRef.current;
+        if (!container || !chartArea) return undefined;
 
         const updateLayout = () => {
-            const nextWidth = Math.max(320, Math.floor(container.clientWidth));
+            const nextWidth = Math.max(320, Math.floor(chartArea.clientWidth));
+            const nextHeight = Math.max(220, Math.floor(chartArea.clientHeight));
             setChartWidth((prev) => (prev === nextWidth ? prev : nextWidth));
-
-            const rect = container.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const nextHeight = Math.max(220, Math.floor(viewportHeight - rect.top - 12));
             setChartHeight((prev) => (prev === nextHeight ? prev : nextHeight));
         };
 
-        const scheduleUpdateWidth = () => {
+        const scheduleUpdateLayout = () => {
             if (typeof window === 'undefined') return;
-            window.requestAnimationFrame(updateLayout);
+            window.requestAnimationFrame(() => {
+                updateLayout();
+                window.requestAnimationFrame(updateLayout);
+            });
         };
 
-        scheduleUpdateWidth();
+        scheduleUpdateLayout();
 
         let observer: ResizeObserver | null = null;
         if (typeof ResizeObserver !== 'undefined') {
             observer = new ResizeObserver(() => {
-                scheduleUpdateWidth();
+                scheduleUpdateLayout();
             });
             observer.observe(container);
+            observer.observe(chartArea);
         }
         if (typeof window !== 'undefined') {
-            window.addEventListener('resize', scheduleUpdateWidth);
+            window.addEventListener('resize', scheduleUpdateLayout);
         }
         return () => {
             if (observer) {
                 observer.disconnect();
             }
             if (typeof window !== 'undefined') {
-                window.removeEventListener('resize', scheduleUpdateWidth);
+                window.removeEventListener('resize', scheduleUpdateLayout);
             }
         };
     }, []);
@@ -1087,7 +1090,7 @@ export default function InsightsClient() {
                         </div>
                     </div>
 
-                    <CardContent className="p-0 flex-1 min-h-0">
+                    <CardContent ref={chartAreaRef} className="p-0 flex-1 min-h-0 overflow-hidden">
                         <div
                             ref={chartContainerRef}
                             className="relative w-full h-full"
