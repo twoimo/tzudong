@@ -26,6 +26,7 @@ type TreemapLeafNode = {
     publishedAt: string | null;
     value: number;
     metricRaw: number;
+    previousMetric?: number;
     metricText: string;
     percent: number;
     percentText: string;
@@ -37,6 +38,8 @@ type TreemapGroupNode = {
     name: string;
     children: TreemapLeafNode[];
     value: number;
+    metricRaw: number;
+    previousMetric?: number;
 };
 
 type TreemapNode = TreemapLeafNode | TreemapGroupNode;
@@ -137,6 +140,28 @@ function formatDurationText(totalSeconds: number): string {
 function formatMetricText(mode: MetricMode, value: number): string {
     if (mode === 'duration') return formatDurationText(value);
     return formatShortNumber(value);
+}
+
+function shouldShowTrendPercent(period: InsightTreemapPeriod, metricMode: MetricMode): boolean {
+    return period !== 'ALL' && metricMode === 'views';
+}
+
+function computePercentChange(current: number, previous: number): number {
+    if (!Number.isFinite(current) || !Number.isFinite(previous) || previous <= 0) return 0;
+    return ((current - previous) / previous) * 100;
+}
+
+function formatSignedPercent(value: number): string {
+    if (!Number.isFinite(value)) return '0.00%';
+    const sign = value > 0 ? '+' : '';
+    return `${sign}${value.toFixed(2)}%`;
+}
+
+function formatPercentValue(period: InsightTreemapPeriod, metricMode: MetricMode, value: number): string {
+    if (shouldShowTrendPercent(period, metricMode)) {
+        return formatSignedPercent(value);
+    }
+    return formatPercent(value);
 }
 
 function formatTooltipMetric(mode: 'views' | 'likes' | 'comments' | 'duration', value: number): string {
@@ -450,12 +475,15 @@ function normalizeTreemapNode(node: TreemapNode): TreemapNode | null {
         if (children.length === 0) return null;
 
         const nodeValue = children.reduce((acc, child) => acc + getNodeValue(child), 0);
+        const prevValue = children.reduce((acc, child) => acc + (child.previousMetric ?? child.metricRaw), 0);
         if (!Number.isFinite(nodeValue) || nodeValue <= 0) return null;
 
         return {
             name: node.name,
             children,
             value: nodeValue,
+            metricRaw: nodeValue,
+            previousMetric: prevValue,
         };
     }
 
@@ -627,11 +655,17 @@ export default function InsightsClient() {
         }));
 
         const totalMetric = rows.reduce((acc, item) => acc + item.metricRaw, 0);
+        const useTrendPercent = shouldShowTrendPercent(period, metricMode);
 
         return rows
             .map<TreemapLeafNode>((item) => {
                 const metricRaw = Math.max(item.metricRaw, 0);
-                const percent = totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0;
+                const previousMetric = item.row.previousViewCount;
+                const percent = useTrendPercent
+                    ? computePercentChange(metricRaw, previousMetric)
+                    : totalMetric > 0
+                        ? (metricRaw / totalMetric) * 100
+                        : 0;
                 return {
                     id: item.row.id,
                     name: item.row.title,
@@ -644,14 +678,15 @@ export default function InsightsClient() {
                     publishedAt: item.row.publishedAt,
                     value: Math.max(metricRaw, 0.25),
                     metricRaw,
+                    previousMetric,
                     metricText: formatMetricText(metricMode, metricRaw),
                     percent,
-                    percentText: formatPercent(percent),
+                    percentText: formatPercentValue(period, metricMode, percent),
                     color: getColorByPercent(percent),
                 };
             })
             .sort((a, b) => b.metricRaw - a.metricRaw);
-    }, [rawRows, metricMode]);
+    }, [rawRows, metricMode, period]);
 
     const metricValues = leafRows.map((item) => item.metricRaw);
     const stepClusterPresets = useMemo(() => buildClusterPresetSteps(metricValues, metricMode), [metricValues, metricMode]);
@@ -686,6 +721,8 @@ export default function InsightsClient() {
         if (leafRows.length === 0) return [];
 
         if (viewMode === 'all') return leafRows;
+        const useTrendPercent = shouldShowTrendPercent(period, metricMode);
+        const total = Math.max(leafRows.reduce((acc, item) => acc + item.metricRaw, 0), 0);
 
         if (viewMode === 'category') {
             const grouped = new Map<string, TreemapLeafNode[]>();
@@ -696,16 +733,30 @@ export default function InsightsClient() {
             }
 
             return [...grouped.entries()]
-                .map(([name, children]) => ({
-                    name,
-                    value: Math.max(children.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0), 0.25),
-                    children: [...children].sort((a, b) => b.metricRaw - a.metricRaw),
-                }))
-                .sort((a, b) => {
-                    const aSum = a.children.reduce((acc, item) => acc + item.metricRaw, 0);
-                    const bSum = b.children.reduce((acc, item) => acc + item.metricRaw, 0);
-                    return bSum - aSum;
-                });
+                .map(([name, children]) => {
+                    const sum = children.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0);
+                    const prevSum = useTrendPercent
+                        ? children.reduce((acc, item) => acc + Math.max(item.previousMetric ?? item.metricRaw, 0), 0)
+                        : sum;
+                    const bucketPercent = useTrendPercent
+                        ? computePercentChange(sum, prevSum)
+                        : total > 0
+                            ? (sum / total) * 100
+                            : 0;
+
+                    return {
+                        name,
+                        value: Math.max(sum, 0.25),
+                        metricRaw: Math.max(sum, 0),
+                        previousMetric: useTrendPercent ? prevSum : undefined,
+                        metricText: `${name} (${children.length.toLocaleString()}개)`,
+                        percent: bucketPercent,
+                        percentText: formatPercentValue(period, metricMode, bucketPercent),
+                        color: getColorByPercent(bucketPercent),
+                        children: [...children].sort((a, b) => b.metricRaw - a.metricRaw),
+                    };
+                })
+                .sort((a, b) => b.metricRaw - a.metricRaw);
         }
 
         const grouped = new Map<number, TreemapLeafNode[]>();
@@ -723,7 +774,14 @@ export default function InsightsClient() {
             .map(([index, children]) => {
                 const sum = children.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0);
                 const bucketCount = children.length;
-                const bucketPercent = total > 0 ? (sum / total) * 100 : 0;
+                const prevSum = useTrendPercent
+                    ? children.reduce((acc, item) => acc + Math.max(item.previousMetric ?? item.metricRaw, 0), 0)
+                    : sum;
+                const bucketPercent = useTrendPercent
+                    ? computePercentChange(sum, prevSum)
+                    : total > 0
+                        ? (sum / total) * 100
+                        : 0;
                 const label = clusterLabel(metricMode, clusterCuts, index);
                 const metricText = `${formatMetricText(metricMode, sum)} (${bucketCount.toLocaleString()}개)`;
                 const bucketViewSum = children.reduce((acc, item) => acc + Math.max(item.viewCount, 0), 0);
@@ -743,16 +801,17 @@ export default function InsightsClient() {
                     publishedAt: null,
                     value: Math.max(sum, 0.25),
                     metricRaw: Math.max(sum, 0),
+                    previousMetric: useTrendPercent ? prevSum : undefined,
                     metricText,
                     percent: bucketPercent,
-                    percentText: formatPercent(bucketPercent),
+                    percentText: formatPercentValue(period, metricMode, bucketPercent),
                     color: getColorByPercent(bucketPercent),
                     children: undefined,
                 };
             });
 
         return clusters;
-    }, [leafRows, viewMode, metricMode, clusterCuts]);
+    }, [leafRows, viewMode, metricMode, period, clusterCuts]);
 
     const safeTreeData = useMemo<TreemapNode[]>(() => {
         const normalized = treeData
@@ -776,6 +835,10 @@ export default function InsightsClient() {
     }, [safeTreeData, renderWidth, chartHeight]);
 
     const selectedCount = treemapQuery.data?.totalVideos ?? 0;
+    const showTrendPercent = shouldShowTrendPercent(period, metricMode);
+    const tooltipPercentLabel = showTrendPercent
+        ? `${period} 대비 조회수 변화`
+        : '전체 기준';
 
     const isLoading = isAuthLoading || treemapQuery.isLoading;
 
@@ -1078,7 +1141,7 @@ export default function InsightsClient() {
                                     <p>좋아요: {formatTooltipMetric('likes', tooltip.leaf.likeCount)}</p>
                                     <p>댓글수: {formatTooltipMetric('comments', tooltip.leaf.commentCount)}</p>
                                     <p>영상 길이: {formatTooltipMetric('duration', tooltip.leaf.duration)}</p>
-                                    <p>전체 기준: {tooltip.leaf.percentText}</p>
+                                    <p>{tooltipPercentLabel}: {tooltip.leaf.percentText}</p>
                                 </div>
                             ) : null}
                         </div>

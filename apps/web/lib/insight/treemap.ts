@@ -16,6 +16,7 @@ export type InsightTreemapVideoRow = {
     publishedAt: string | null;
     category: string;
     viewCount: number;
+    previousViewCount: number;
     likeCount: number;
     commentCount: number;
     duration: number;
@@ -32,6 +33,7 @@ type VideoDbRow = {
     id: string;
     title: string | null;
     published_at: string | null;
+    meta_history: unknown;
     duration: number | string | null;
     view_count: number | string | null;
     like_count: number | string | null;
@@ -211,6 +213,75 @@ function getPeriodCutoff(period: InsightTreemapPeriod): Date | null {
     return date;
 }
 
+function getPeriodShiftDays(period: InsightTreemapPeriod): number {
+    const days = periodToDays[period];
+    return days ?? 0;
+}
+
+function getComparisonTargetTs(period: InsightTreemapPeriod, now: Date): number | null {
+    const days = getPeriodShiftDays(period);
+    if (!days) return null;
+
+    const target = new Date(now.getTime());
+    target.setDate(target.getDate() - days);
+    target.setHours(0, 0, 0, 0);
+    return target.getTime();
+}
+
+function parseHistoryEntries(history: unknown): Array<{ ts: number; value: number }> {
+    if (!Array.isArray(history) || history.length === 0) {
+        return [];
+    }
+
+    const points: Array<{ ts: number; value: number }> = [];
+
+    for (const item of history) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+
+        const record = item as Record<string, unknown>;
+        const rawTs = typeof record.collected_at === 'string'
+            ? record.collected_at
+            : typeof record.collectedAt === 'string'
+                ? record.collectedAt
+                : null;
+
+        if (!rawTs) continue;
+
+        const ts = Date.parse(rawTs);
+        if (!Number.isFinite(ts)) continue;
+
+        const rawValue = (() => {
+            const candidates = [record.view_count, record.viewCount, record.views, record.value, record.count];
+            for (const candidate of candidates) {
+                const parsed = toNonNegativeNumber(candidate);
+                if (parsed >= 0) return parsed;
+            }
+            return null;
+        })();
+
+        if (rawValue == null) continue;
+        points.push({ ts, value: rawValue });
+    }
+
+    if (points.length === 0) return [];
+    points.sort((a, b) => a.ts - b.ts);
+    return points;
+}
+
+function getHistoryValueAtOrBefore(history: unknown, targetTs: number, fallback: number): number {
+    const points = parseHistoryEntries(history);
+    if (points.length === 0) return fallback;
+
+    for (let i = points.length - 1; i >= 0; i -= 1) {
+        const point = points[i];
+        if (point.ts <= targetTs) {
+            return point.value;
+        }
+    }
+
+    return points[0]?.value ?? fallback;
+}
+
 async function fetchVideosFromSupabase(): Promise<VideoDbRow[]> {
     const supabase = createSupabaseServiceRoleClient();
     const rows: VideoDbRow[] = [];
@@ -222,7 +293,7 @@ async function fetchVideosFromSupabase(): Promise<VideoDbRow[]> {
 
         const { data, error } = await supabase
             .from('videos')
-            .select('id,title,published_at,duration,view_count,like_count,comment_count,category')
+            .select('id,title,published_at,duration,meta_history,view_count,like_count,comment_count,category')
             .order('published_at', { ascending: false, nullsFirst: false })
             .range(from, to);
 
@@ -283,6 +354,10 @@ export function getTreemapMetricValue(
 export async function getInsightTreemapData(period: InsightTreemapPeriod): Promise<InsightTreemapResponse> {
     const rows = await cacheOrFetchVideos();
     const targetRows = filterByPeriod(rows, period);
+    const now = new Date();
+    const comparisonTs = getComparisonTargetTs(period, now);
+    const days = getPeriodShiftDays(period);
+    const shouldUseComparison = Number.isFinite(days) && days > 0;
 
     const videos: InsightTreemapVideoRow[] = targetRows.map((row) => ({
         id: row.id,
@@ -290,6 +365,9 @@ export async function getInsightTreemapData(period: InsightTreemapPeriod): Promi
         publishedAt: row.published_at,
         category: normalizeCategory(row.category),
         viewCount: toNonNegativeNumber(row.view_count),
+        previousViewCount: shouldUseComparison
+            ? getHistoryValueAtOrBefore(row.meta_history, comparisonTs ?? now.getTime(), toNonNegativeNumber(row.view_count))
+            : toNonNegativeNumber(row.view_count),
         likeCount: toNonNegativeNumber(row.like_count),
         commentCount: toNonNegativeNumber(row.comment_count),
         duration: parseDurationToSeconds(row.duration),
