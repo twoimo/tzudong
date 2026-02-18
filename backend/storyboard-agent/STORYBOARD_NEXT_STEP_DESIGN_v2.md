@@ -393,13 +393,113 @@ def build_researcher_subgraph():
 
 ---
 
-## 8. v1 대비 변경점
+## 8. 코드 생성 보안 아키텍처
+
+에이전트가 도구/RPC를 **생성**하는 구조이므로, 보안 설계가 이 시스템의 핵심이다.
+
+### 8.1 5계층 보안 모델
+
+```
+┌─────────────────────────────────────────────────────┐
+│  5층   실행 샌드박스                    [미구현]      │
+│        생성된 코드를 격리 환경에서 테스트 실행          │
+├─────────────────────────────────────────────────────┤
+│  4층   LLM 코드 리뷰 노드              [미구현]      │
+│        정적 검사로 못 잡는 논리적 위험을 LLM이 판단    │
+├─────────────────────────────────────────────────────┤
+│  3층   Human Interrupt                 [구현 완료]   │
+│        interrupt_before → 사람이 코드 직접 확인       │
+├─────────────────────────────────────────────────────┤
+│  2층   정적 코드 검사                   [구현 완료]   │
+│        regex 단어 경계(\b) 기반 위험 패턴 탐지        │
+├─────────────────────────────────────────────────────┤
+│  1층   경로 제한                       [구현 완료]   │
+│        도구별 허용 폴더 외 접근 원천 차단              │
+└─────────────────────────────────────────────────────┘
+```
+
+### 8.2 계층별 상세
+
+#### 1층: 경로 제한 (구현 완료)
+
+| 도구 | 허용 폴더 | 차단 방법 |
+|------|-----------|-----------|
+| `create_tool` | `src/tools/` | `os.path.realpath()` + prefix 검증 |
+| `delete_tool` | `src/tools/` | 동일 + 시스템 파일 보호 목록 |
+| `generate_rpc_sql` | `supabase/` | 동일 |
+
+- `../`, 절대 경로, `/`, `\` 포함 시 즉시 거부
+- `_shared.py`는 `src/`에 위치 (tools/ 외부) → 에이전트 접근 불가
+
+#### 2층: 정적 코드 검사 (구현 완료)
+
+**Python 위험 패턴** (9개):
+```
+os.system(), subprocess, exec(), eval(), __import__(),
+shutil.rmtree, os.remove/unlink/rmdir,
+requests/urllib/httpx (외부 HTTP), socket (네트워크)
+```
+
+**SQL 위험 패턴** (8개 + 조건부 2개):
+```
+DROP (table/schema/database/function/index/view/trigger/role/type),
+TRUNCATE, ALTER (table/schema/database/role/type),
+GRANT, REVOKE, CREATE ROLE, COPY, EXECUTE
++ DELETE FROM without WHERE, UPDATE without WHERE
+```
+
+**SQL 화이트리스트**: `CREATE (OR REPLACE) FUNCTION` 구문이 아니면 즉시 차단.
+
+#### 3층: Human Interrupt (구현 완료)
+
+- `interrupt_before=["intern_tools"]` → Intern이 도구 호출 전 사람 승인 필수
+- 승인(`Command(resume=...)`) 또는 거부(feedback) → Intern 재시도
+
+#### 4층: LLM 코드 리뷰 노드 (미구현)
+
+구현 시 `intern` → `code_reviewer` → `intern_tools` 순서로 노드 삽입:
+
+```python
+def code_review_node(state):
+    """LLM이 코드의 논리적 안전성 평가"""
+    code = extract_pending_code(state)
+    review = llm.with_structured_output(CodeReview).invoke(
+        f"아래 코드가 안전한지 평가하세요. 데이터 손실, 보안 취약점, "
+        f"의도하지 않은 부작용이 있는지 검토합니다.\n\n{code}"
+    )
+    if not review.is_safe:
+        return {"messages": [AIMessage(content=f"[코드 리뷰 거부] {review.reason}")]}
+    return {}  # 통과 → intern_tools로 진행
+
+class CodeReview(BaseModel):
+    is_safe: bool
+    reason: Optional[str] = None
+    risk_level: Literal["low", "medium", "high"]
+```
+
+#### 5층: 실행 샌드박스 (미구현)
+
+생성된 Python 도구를 `subprocess`로 격리 실행하여 import 오류, 런타임 에러 사전 탐지.
+
+### 8.3 공격 시나리오별 방어 매핑
+
+| 공격 시나리오 | 방어 계층 |
+|--------------|-----------|
+| `create_tool("../../.env", "...")` 경로 탈출 | 1층 (경로 제한) |
+| `os.system("rm -rf /")` 포함 코드 생성 | 2층 (정적 검사) |
+| `DROP TABLE restaurants` SQL 생성 | 2층 (정적 검사 + 화이트리스트) |
+| 정적 검사 우회하는 난독화 코드 | 3층 (Human) + 4층 (LLM 리뷰) |
+| 논리적으로 위험한 쿼리 (WHERE 1=1 등) | 4층 (LLM 리뷰) |
+| import 오류가 있는 도구 생성 | 5층 (샌드박스) |
+
+## 9. v1 대비 변경점
 
 | 항목 | v1 (단일 에이전트) | v2 (다중 에이전트) |
 |------|-------------------|-------------------|
 | 구조 | Orchestrator 중심 루프 | Supervisor + 3 전문 에이전트 |
 | 검색 | 순차적 도구 호출 | Researcher 병렬 실행 (`Send`) |
 | 도구 생성 | 없음 | Intern이 RPC/Tool 생성 (human 승인) |
+| 보안 | 없음 | 5계층 보안 모델 (경로·정적·human·LLM·샌드박스) |
 | 검증 | 단순 개수 기반 Validator | Supervisor의 LLM 기반 승인 |
 | 피드백 | Generator 후 종료 | Designer 후 수정/재조사 분기 |
 | 대화 관리 | 전체 유지 | 재조사 시 요약 후 초기화 |
@@ -407,7 +507,7 @@ def build_researcher_subgraph():
 
 ---
 
-## 9. 구현 우선순위
+## 10. 구현 우선순위
 
 | 순서 | 항목 | 의존성 |
 |------|------|--------|
@@ -418,3 +518,74 @@ def build_researcher_subgraph():
 | 5 | Designer 노드 + 피드백 분류기 | 1, 2, 3 |
 | 6 | 전체 그래프 조립 + interrupt 설정 | 1~5 |
 | 7 | `summarize_and_reset` + 메시지 관리 | 5, 6 |
+
+---
+
+## 11. 슬롯 필링 기반 검증으로 전환
+
+### 11.1 전환 배경 (v1 문제점)
+
+v1의 `validate_data`는 **캡션 있는 자막 ≥ 3개**라는 고정 임계값으로 통과 여부를 판단한다.
+
+**문제**: RAG 검색 결과에서 `is_peak=True`인 구간(= 캡션이 존재하는 구간)은 전체 자막 대비 소수. 실제 운영 시 캡션 보유 자막이 0~1개인 경우가 대부분이며, 에이전트가 동일한 주제로 3회 재검색해도 캡션 수가 늘지 않는다. 결과적으로 거의 매번 `need_human` → human interrupt로 빠진다.
+
+**근본 원인**: 임계값이 데이터 분포와 맞지 않음. 캡션 부족은 검색 품질이 아니라 **데이터 커버리지 자체의 한계**.
+
+### 11.2 슬롯 필링 방식으로의 전환
+
+"캡션 N개" 같은 단일 수치 대신, **스토리보드 제작에 필요한 정보 유형(슬롯)** 을 정의하고, 각 슬롯의 충족 상태를 기준으로 검증한다.
+
+**핵심 변경**:
+
+| 구분 | v1 (고정 임계값) | v2 (슬롯 필링) |
+|------|-----------------|---------------|
+| 판단 기준 | `len(docs_with_caption) >= 3` | 슬롯별 충족 여부 |
+| 실패 시 행동 | 동일 쿼리로 재검색 반복 | 미충족 슬롯만 타겟 검색 |
+| human interrupt 시점 | 3회 실패 후 무조건 | 타겟 검색으로도 못 채운 슬롯만 human에게 문의 |
+| human에게 보여주는 정보 | "캡션 N개 부족합니다" | "어떤 슬롯이 왜 부족한지" 구체적 설명 |
+
+### 11.3 `StoryboardSlots` 구체적 슬롯 설계
+
+> **TODO**: 아래는 초안. 실제 스토리보드 제작 과정에서 필요한 정보를 세분화하여 확정해야 함.
+
+```python
+class StoryboardSlots(BaseModel):
+    """스토리보드 제작에 필요한 정보 슬롯"""
+
+    # --- 필수 슬롯 ---
+    # TODO: 각 슬롯의 최소 요구량, 충족 판정 기준을 구체화할 것
+
+    # 시각 자료: 장면의 촬영 대상·구도·색감 등을 묘사하는 캡션
+    visual_references: list[...]       # 캡션 데이터 (is_peak 구간)
+
+    # 자막/대사: 유튜버의 말투·리듬·감정을 참고할 자막
+    transcript_context: list[...]      # 자막 텍스트
+
+    # 음식/식당 정보: 어떤 음식을 어디서 먹는지
+    food_restaurant_info: list[...]    # 카테고리, 식당명, 메뉴 등
+
+    # --- 보조 슬롯 ---
+    video_metadata: list[...]          # 조회수, 제목, 업로드일 등 참고 정보
+    web_search_results: list[...]      # 외부 검색 결과 (트렌드, 배경 지식)
+    audio_cues: list[...]              # 효과음, BGM 힌트 (자막에서 추출)
+
+    # --- 메타 ---
+    user_intent: str                   # 사용자 원본 요청
+    target_scene_count: int            # 목표 씬 수 (6~8)
+```
+
+### 11.4 검증 로직 변경 방향
+
+```
+AS-IS (v1):
+  len(docs_with_caption) >= 3 → pass
+  else → fail (재검색) → 3회 후 need_human
+
+TO-BE (v2):
+  1. Supervisor가 각 슬롯의 충족 상태를 LLM으로 평가
+  2. 미충족 슬롯이 있으면 → 해당 슬롯을 채울 수 있는 Task를 Researcher에 분배
+  3. 캡션 0개여도 transcript + metadata로 시각 묘사를 LLM이 추론 가능하면 pass
+  4. 타겟 검색으로도 못 채우는 슬롯만 human에게 구체적으로 문의
+```
+
+> **TODO**: 슬롯 충족도 평가를 LLM에게 맡길지, 규칙 기반으로 할지 결정 필요. LLM 기반이면 평가 프롬프트 설계가 핵심.
