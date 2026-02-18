@@ -5,12 +5,17 @@ Storyboard Agent Tools - Supabase RPC 함수 호출 도구 모음
 각 도구는 Supabase RPC 함수를 호출하여 데이터를 조회합니다.
 """
 
+import json
+import logging
 import os
 from typing import Optional
+
 import numpy as np
 from langchain_core.tools import tool
 from supabase import create_client, Client
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -80,14 +85,11 @@ def apply_mmr(
     candidates = results.copy()
     query_vec = np.array(query_embedding)
 
-    # Helper to parse embedding from potential JSON string
     def parse_embedding(val):
         if isinstance(val, str):
-            import json
-
             try:
                 val = json.loads(val)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 return []
         return val
 
@@ -160,6 +162,13 @@ def get_video_captions_for_range(
     Returns:
         해당 시간 범위의 캡션 목록
     """
+    logger.info(
+        "get_video_captions_for_range: video_id=%s, recollect_id=%s, start=%s, end=%s",
+        video_id,
+        recollect_id,
+        start_sec,
+        end_sec,
+    )
     client = get_supabase()
     result = client.rpc(
         "get_video_captions_for_range",
@@ -218,7 +227,12 @@ def search_transcripts_hybrid(
     Returns:
         transcripts: 검색된 자막 목록 (video_id, page_content, metadata 포함)
     """
-    # 1. 쿼리 임베딩 생성 (Dense + Sparse)
+    logger.info(
+        "search_transcripts_hybrid: query=%s, video_ids=%s, intent=%s",
+        query,
+        video_ids,
+        intent,
+    )
     model = get_bge_model()
     encoded = model.encode([query], return_dense=True, return_sparse=True)
     query_dense = encoded["dense_vecs"][0].tolist()
@@ -271,28 +285,22 @@ def search_transcripts_hybrid(
     for r in reranked:
         r.pop("embedding", None)
 
-    # 5. 캡션 자동 보강 (Storyboard 모드일 때만 실행)
+    # 캡션 자동 보강 (Storyboard 모드일 때만 실행)
     if intent == "storyboard":
-        print("📸 Storyboard 모드 감지: Peak 구간 캡션 자동 조회 중...")
         for doc in reranked:
-            # 메타데이터에 is_peak가 있고 True인 경우
             meta = doc.get("metadata", {})
             if meta.get("is_peak"):
                 try:
-                    # 내부적으로 캡션 함수 호출
                     captions_result = get_video_captions_for_range(
                         video_id=doc["video_id"],
                         recollect_id=doc["recollect_id"],
                         start_sec=int(meta.get("start_time", 0)),
                         end_sec=int(meta.get("end_time", 0)),
                     )
-                    # 찾은 캡션을 해당 자막 문서에 'caption' 필드로 추가
-                    # (LLM이 참고할 수 있도록 metadata에 합침)
                     if captions_result and captions_result.get("captions"):
                         doc["metadata"]["caption"] = captions_result["captions"]
-
-                except Exception as e:
-                    print(f"⚠️ 캡션 조회 실패 ({doc['video_id']}): {e}")
+                except Exception:
+                    pass
 
     return {"transcripts": reranked}
 
@@ -315,6 +323,9 @@ def search_restaurants_by_category(
     Returns:
         해당 카테고리의 승인된 음식점 목록
     """
+    logger.info(
+        "search_restaurants_by_category: category=%s, limit=%s", category, limit
+    )
     client = get_supabase()
     result = client.rpc(
         "search_restaurants_by_category",
@@ -343,6 +354,12 @@ def get_video_metadata_filtered(
     Returns:
         필터링된 비디오 메타데이터 목록
     """
+    logger.info(
+        "get_video_metadata_filtered: min_view_count=%s, limit=%s, order_by=%s",
+        min_view_count,
+        limit,
+        order_by,
+    )
     client = get_supabase()
     result = client.rpc(
         "get_video_metadata_filtered",
@@ -369,6 +386,11 @@ def get_categories_by_restaurant(
     Returns:
         해당 음식점의 카테고리 배열
     """
+    logger.info(
+        "get_categories_by_restaurant: restaurant_name=%s, video_id=%s",
+        restaurant_name,
+        video_id,
+    )
     client = get_supabase()
     result = client.rpc(
         "get_categories_by_restaurant_name_or_youtube_url",
@@ -395,6 +417,7 @@ def search_restaurants_by_name(
     Returns:
         매칭된 음식점 목록 (id, name, categories, youtube_link, video_id, tzuyang_review)
     """
+    logger.info("search_restaurants_by_name: keyword=%s, limit=%s", keyword, limit)
     client = get_supabase()
     result = client.rpc(
         "search_restaurants_by_name",
@@ -416,6 +439,7 @@ def get_all_approved_restaurant_names() -> dict:
     Returns:
         승인된 음식점명과 카테고리 목록
     """
+    logger.info("get_all_approved_restaurant_names")
     client = get_supabase()
     result = client.rpc("get_all_approved_restaurant_names", {}).execute()
     return {"restaurants": result.data}
@@ -458,7 +482,9 @@ def search_video_ids_by_query(
     Returns:
         video_ids: 관련 video_id 목록 (중복 제거됨)
     """
-    # 쿼리 임베딩 생성
+    logger.info(
+        "search_video_ids_by_query: query=%s, match_count=%s", query, match_count
+    )
     model = get_bge_model()
     encoded = model.encode([query], return_dense=True, return_sparse=True)
     query_dense = encoded["dense_vecs"][0].tolist()
