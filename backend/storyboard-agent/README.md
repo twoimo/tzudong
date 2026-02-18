@@ -123,3 +123,20 @@ backend/agent-rag/
     -   언어적 표현과 비언어적 표현(제스처)의 결합 패턴 분석.
 4.  **Synthesizer**:
     -   "한 입 먹고 나서 3초간 침묵 후 '와'라고 감탄하며 카메라를 응시하세요" 등의 구체적 조언 제공.
+
+---
+
+## Next.js 챗봇 연동 가이드
+
+`apps/web`의 관리자 인사이트 챗봇은 `STORYBOARD_AGENT_API_URL` 환경 변수가 설정되어 있으면 스토리보드 API를 우선 호출합니다.
+
+예시 설정:
+
+```env
+STORYBOARD_AGENT_API_URL=http://localhost:8000
+STORYBOARD_AGENT_CHAT_PATH=/chat
+STORYBOARD_AGENT_TIMEOUT_MS=8000
+```
+
+에이전트 응답 본문에 `content` 필드(또는 `message`, `answer`, `response`, `output`) 하나만 있어도 처리됩니다. 
+`sources` 필드는 `[{ videoTitle, youtubeLink, timestamp, text }]` 형태를 지원합니다.

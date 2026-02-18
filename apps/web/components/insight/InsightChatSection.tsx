@@ -583,6 +583,7 @@ const InsightChatSectionComponent = () => {
         '이번달 시즌 키워드 추천해줘',
         '히트맵 요약해줘',
         '운영 지표 요약',
+        '먹방 스토리보드 기획안 짜줘',
     ];
 
     return (
