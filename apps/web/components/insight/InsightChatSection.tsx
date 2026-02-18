@@ -137,7 +137,7 @@ const MiniWordCloud = memo(() => {
     return (
         <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
             <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-purple-500" />
+                    <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-xs font-medium">인기 키워드</span>
             </div>
             <div className="flex flex-wrap gap-1">
@@ -182,7 +182,7 @@ const MiniCalendar = memo(() => {
     return (
         <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
             <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-blue-500" />
+                <Calendar className="h-4 w-4 text-primary" />
                 <span className="text-xs font-medium">{month}월 시즌 추천</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -226,7 +226,7 @@ const MiniHeatmap = memo(() => {
         <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
             <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-red-500" />
+                            <TrendingUp className="h-4 w-4 text-primary" />
                     <span className="text-xs font-medium">히트맵 요약</span>
                 </div>
                 <span className="text-[10px] text-muted-foreground">
@@ -273,7 +273,7 @@ const MiniStats = memo(() => {
     return (
         <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
             <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="h-4 w-4 text-emerald-600" />
+                <BarChart3 className="h-4 w-4 text-primary" />
                 <span className="text-xs font-medium">운영 요약</span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs">
@@ -320,27 +320,27 @@ const ChatMessageBubble = memo(({ message }: { message: ChatMessage }) => {
             isUser ? "flex-row-reverse" : "flex-row"
         )}>
             <div className={cn(
-                "h-9 w-9 rounded-full flex items-center justify-center shrink-0 shadow-lg",
+                "h-9 w-9 rounded-full flex items-center justify-center shrink-0",
                 isUser
-                    ? "bg-gradient-to-br from-primary to-primary/80 ring-2 ring-primary/20"
-                    : "bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-violet-500/20"
+                    ? "bg-primary/10 text-primary"
+                    : "bg-secondary text-foreground border border-border/60"
             )}>
                 {isUser ? (
                     <User className="h-4 w-4 text-primary-foreground" />
                 ) : (
-                    <Bot className="h-4 w-4 text-white" />
+                    <Bot className="h-4 w-4 text-foreground" />
                 )}
             </div>
             <div className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-3 shadow-md transition-all hover:shadow-lg",
+                "max-w-[85%] rounded-xl px-4 py-3 border transition-colors",
                 isUser
-                    ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground"
-                    : "bg-gradient-to-br from-secondary/80 to-secondary/50 text-foreground border border-border/30"
+                    ? "bg-primary text-primary-foreground border-primary/30"
+                    : "bg-secondary/60 text-foreground border-border/60"
             )}>
                 {isUser ? (
                     <p className="text-sm font-medium whitespace-pre-wrap">{message.content}</p>
                 ) : (
-                    <div className="prose prose-sm prose-invert max-w-none
+                    <div className="prose prose-sm max-w-none
                         [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-2 [&_h2]:text-foreground
                         [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-foreground
                         [&_p]:text-sm [&_p]:mb-2 [&_p]:text-foreground/90 [&_p]:leading-relaxed
@@ -355,7 +355,7 @@ const ChatMessageBubble = memo(({ message }: { message: ChatMessage }) => {
                         [&_td]:px-2 [&_td]:py-1.5 [&_td]:border-b [&_td]:border-border/30 [&_td]:text-foreground/80
                         [&_tr:hover]:bg-primary/5
                         [&_hr]:border-border/50 [&_hr]:my-3
-                        [&_a]:text-blue-400 [&_a]:no-underline hover:[&_a]:underline
+                        [&_a]:text-primary [&_a]:no-underline hover:[&_a]:underline
                         [&_code]:bg-primary/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs
                     ">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -380,7 +380,7 @@ const ChatMessageBubble = memo(({ message }: { message: ChatMessage }) => {
                                     href={source.youtubeLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 rounded px-2 py-1 hover:bg-blue-500/20"
+                                className="flex items-center gap-2 text-xs text-primary/90 hover:text-primary transition-colors bg-primary/10 rounded px-2 py-1 hover:bg-primary/15"
                                 >
                                     {source.videoTitle} ({source.timestamp})
                                 </a>
@@ -408,7 +408,7 @@ const SessionListItem = memo(({
         className={cn(
             "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 text-sm group",
             isActive
-                ? "bg-gradient-to-r from-primary/20 to-violet-500/10 text-primary border border-primary/30 shadow-sm"
+            ? "bg-primary/10 text-primary border border-primary/30"
                 : "hover:bg-secondary/70 text-muted-foreground hover:text-foreground border border-transparent"
         )}
     >
@@ -586,7 +586,7 @@ const InsightChatSectionComponent = () => {
     ];
 
     return (
-        <Card className="h-full border-primary/20 bg-gradient-to-br from-card to-primary/5">
+        <Card className="h-full border-border/60 bg-card shadow-none">
             <CardContent className="h-full p-4">
                 <div className="flex gap-4 h-full">
                     <div className="w-56 shrink-0 border-r border-border pr-4 flex flex-col">
@@ -627,8 +627,8 @@ const InsightChatSectionComponent = () => {
                                     ))
                                 ) : (
                                     <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
-                                        <div className="h-20 w-20 rounded-full bg-gradient-to-br from-violet-500/20 to-purple-600/20 flex items-center justify-center mb-6">
-                                            <MessageSquare className="h-10 w-10 text-primary/50" />
+                                            <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center mb-6">
+                                        <MessageSquare className="h-10 w-10 text-muted-foreground" />
                                         </div>
                                         <h3 className="text-lg font-semibold mb-2">인사이트 분석을 시작하세요</h3>
                                         <p className="text-muted-foreground text-sm mb-6">
@@ -656,10 +656,10 @@ const InsightChatSectionComponent = () => {
 
                                 {isSending && (
                                     <div className="flex gap-3 mb-5">
-                                        <div className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 shadow-lg bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-violet-500/20">
-                                            <Bot className="h-4 w-4 text-white" />
+                                        <div className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 bg-secondary text-foreground border border-border/60">
+                                            <Bot className="h-4 w-4 text-foreground" />
                                         </div>
-                                        <div className="bg-gradient-to-br from-secondary/80 to-secondary/50 text-foreground border border-border/30 max-w-[85%] rounded-2xl px-4 py-3 shadow-md">
+                                        <div className="bg-secondary/60 text-foreground border border-border/60 max-w-[85%] rounded-xl px-4 py-3">
                                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                 분석 중...
