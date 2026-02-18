@@ -1,48 +1,77 @@
 'use client';
 
 import Link from 'next/link';
-import { memo, useState, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
+import { memo, useCallback, useMemo, useState, type ElementType } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { RefreshCw, Menu, AlertTriangle, MapPinned, Users, Sparkles, BarChart3, CalendarClock, Video, Activity, Cloud, Play } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import type { DashboardFailuresResponse, DashboardFunnelResponse, DashboardQualityResponse, DashboardSummaryResponse } from '@/types/dashboard';
-import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users, Play, Sparkles, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type {
+    DashboardFailuresResponse,
+    DashboardFunnelResponse,
+    DashboardQualityResponse,
+    DashboardSummaryResponse,
+} from '@/types/dashboard';
 
-// [OPTIMIZATION] 각 섹션 컴포넌트를 동적 임포트로 코드 스플리팅
-const HeatmapSection = dynamic(
-    () => import('@/components/insight/HeatmapSection'),
-    {
-        ssr: false,
-        loading: () => <SectionSkeleton title="유튜브 히트맵 분석" />,
-    }
-);
+import styles from './insight-overhaul.module.css';
 
-const MapSection = dynamic(
-    () => import('@/components/insight/MapSection'),
-    {
-        ssr: false,
-        loading: () => <SectionSkeleton title="맛집 지도" />,
-    }
-);
+const HeatmapSection = dynamic(() => import('@/components/insight/HeatmapSection'), {
+    ssr: false,
+    loading: () => <SectionSkeleton title="유튜브 히트맵" />,
+});
 
-const WordCloudSection = dynamic(
-    () => import('@/components/insight/WordCloudSection'),
-    {
-        ssr: false,
-        loading: () => <SectionSkeleton title="리뷰 워드 클라우드" />,
-    }
-);
+const MapSection = dynamic(() => import('@/components/insight/MapSection'), {
+    ssr: false,
+    loading: () => <SectionSkeleton title="지도 인사이트" />,
+});
 
-const InsightChatSection = dynamic(
-    () => import('@/components/insight/InsightChatSection'),
-    {
-        ssr: false,
-        loading: () => <SectionSkeleton title="AI 인사이트" />,
-    }
-);
+const WordCloudSection = dynamic(() => import('@/components/insight/WordCloudSection'), {
+    ssr: false,
+    loading: () => <SectionSkeleton title="키워드 인사이트" />,
+});
+
+const SeasonCalendarSection = dynamic(() => import('@/components/insight/SeasonCalendarSection'), {
+    ssr: false,
+    loading: () => <SectionSkeleton title="시즌 인사이트" />,
+});
+
+const InsightChatSection = dynamic(() => import('@/components/insight/InsightChatSection'), {
+    ssr: false,
+    loading: () => <SectionSkeleton title="AI 인사이트" />,
+});
+
+type AdminInsightTab = 'chat' | 'operations' | 'map';
+type InsightMapTab = 'heatmap' | 'map' | 'wordcloud' | 'season';
+type StatTone = 'neutral' | 'danger' | 'success';
+
+type StatItem = {
+    icon: ElementType;
+    label: string;
+    value: string;
+    helper: string;
+    tone: StatTone;
+};
+
+type QuickLink = {
+    href: string;
+    label: string;
+    icon: ElementType;
+};
+
+type Tab = {
+    value: AdminInsightTab;
+    label: string;
+    icon: ElementType;
+    desc: string;
+};
+
+type MapTab = {
+    value: InsightMapTab;
+    label: string;
+    icon: ElementType;
+    desc: string;
+};
 
 async function fetchDashboardJson<T>(url: string): Promise<T> {
     const response = await fetch(url);
@@ -52,446 +81,670 @@ async function fetchDashboardJson<T>(url: string): Promise<T> {
     return response.json() as Promise<T>;
 }
 
-function formatPercent(value: number | null): string {
-    if (value == null) return '-';
+async function fetchYouTubeCount(type: 'subscriberCount' | 'videoCount'): Promise<number> {
+    const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+    if (!apiKey) {
+        return 0;
+    }
+
+    const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=@tzuyang6145&key=${apiKey}`,
+    );
+    if (!response.ok) {
+        throw new Error('YouTube API 응답 실패');
+    }
+
+    const payload = await response.json();
+    const target = type === 'subscriberCount' ? 'subscriberCount' : 'videoCount';
+    const value = payload?.items?.[0]?.statistics?.[target] as string | undefined;
+    const parsed = Number.parseInt(value ?? '0', 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatNumber(value: number | null | undefined): string {
+    if (value == null || !Number.isFinite(value)) return '-';
+    return value.toLocaleString('ko-KR');
+}
+
+function formatPercent(value: number | null | undefined): string {
+    if (value == null || !Number.isFinite(value)) return '-';
     return `${value.toFixed(2)}%`;
 }
 
-// [COMPONENT] 압축된 통계 카드 (헤더용)
-const CompactStatCard = memo(({
-    icon: Icon,
-    title,
-    value,
-    trend
-}: {
-    icon: React.ElementType;
-    title: string;
-    value: string | number;
-    trend?: 'up' | 'down';
-}) => (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 shrink-0">
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <Icon className="h-4 w-4 text-primary" />
-        </div>
-        <div className="min-w-0">
-            <p className="text-xs text-muted-foreground truncate">{title}</p>
-            <div className="flex items-center gap-1">
-                <p className="text-sm font-bold">{value}</p>
-                {trend === 'up' && <TrendingUp className="h-3 w-3 text-green-500" />}
-                {trend === 'down' && <TrendingDown className="h-3 w-3 text-red-500" />}
-            </div>
-        </div>
-    </div>
-));
-CompactStatCard.displayName = 'CompactStatCard';
-
-const YoutubeSubscriberCard = memo(() => {
-    const { data: subscriberCount, isLoading, error } = useQuery({
-        queryKey: ['youtube-subscriber-count'],
-        queryFn: async () => {
-            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-            if (!apiKey) throw new Error('YouTube API 키가 없습니다');
-
-            // fetch using handle
-            const response = await fetch(
-                `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=@tzuyang6145&key=${apiKey}`
-            );
-
-            if (!response.ok) {
-                throw new Error('YouTube API 응답을 가져오지 못했습니다');
-            }
-
-            const data = await response.json();
-            return data.items?.[0]?.statistics?.subscriberCount;
-        },
-        staleTime: 1000 * 60 * 5, // 5 minutes
+function formatAsOf(isoDate: string | null | undefined): string {
+    if (!isoDate) return '동기화 정보 없음';
+    const parsed = new Date(isoDate);
+    if (Number.isNaN(parsed.getTime())) return '동기화 정보 없음';
+    return parsed.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
     });
+}
 
-    const displayValue = isLoading
-        ? '로딩중...'
-        : error
-            ? '-'
-            : subscriberCount
-                ? parseInt(subscriberCount).toLocaleString()
-                : '-';
+function safeSum(items: { count: number }[] | undefined): number {
+    if (!items) return 0;
+    return items.reduce((acc, item) => acc + (item?.count ?? 0), 0);
+}
 
-    return (
-        <CompactStatCard
-            icon={Youtube}
-            title="쯔양 구독자수"
-            value={displayValue}
-            trend="up"
-        />
-    );
-});
-YoutubeSubscriberCard.displayName = 'YoutubeSubscriberCard';
+const tabs: Tab[] = [
+    {
+        value: 'chat',
+        label: 'AI 인사이트',
+        icon: Sparkles,
+        desc: '채팅 분석 / 요약',
+    },
+    {
+        value: 'operations',
+        label: '운영 분석',
+        icon: AlertTriangle,
+        desc: '퍼널 · 실패 원인',
+    },
+    {
+        value: 'map',
+        label: '지도 인사이트',
+        icon: MapPinned,
+        desc: '히트맵 / 지도',
+    },
+];
 
-// [COMPONENT] 유튜브 동영상 개수 카드
-const YoutubeVideoCountCard = memo(() => {
-    const { data: videoCount, isLoading, error } = useQuery({
-        queryKey: ['youtube-video-count'],
-        queryFn: async () => {
-            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-            if (!apiKey) throw new Error('YouTube API 키가 없습니다');
+const mapTabs: MapTab[] = [
+    {
+        value: 'heatmap',
+        label: '유튜브 히트맵',
+        icon: Play,
+        desc: '반응 구간 분석',
+    },
+    {
+        value: 'map',
+        label: '맛집 지도',
+        icon: MapPinned,
+        desc: '좌표 보유 분포',
+    },
+    {
+        value: 'wordcloud',
+        label: '키워드',
+        icon: Cloud,
+        desc: '실시간 트렌드',
+    },
+    {
+        value: 'season',
+        label: '시즌',
+        icon: CalendarClock,
+        desc: '월별 업로드 타이밍',
+    },
+];
 
-            const response = await fetch(
-                `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=@tzuyang6145&key=${apiKey}`
-            );
+const quickLinks: QuickLink[] = [
+    {
+        href: '/admin/evaluations',
+        label: '제보 검수',
+        icon: MapPinned,
+    },
+    {
+        href: '/admin/restaurants',
+        label: '식당 목록',
+        icon: Users,
+    },
+    {
+        href: '/admin/insight',
+        label: '인사이트(현재)',
+        icon: BarChart3,
+    },
+    {
+        href: '/admin/settings',
+        label: '설정',
+        icon: Activity,
+    },
+];
 
-            if (!response.ok) {
-                throw new Error('YouTube API 응답을 가져오지 못했습니다');
-            }
-
-            const data = await response.json();
-            return data.items?.[0]?.statistics?.videoCount;
-        },
-        staleTime: 1000 * 60 * 5, // 5 minutes
-    });
-
-    const displayValue = isLoading
-        ? '로딩중...'
-        : error
-            ? '-'
-            : videoCount
-                ? parseInt(videoCount).toLocaleString() + '개'
-                : '-';
-
-    return (
-        <CompactStatCard
-            icon={Play}
-            title="쯔양 동영상 수"
-            value={displayValue}
-        />
-    );
-});
-YoutubeVideoCountCard.displayName = 'YoutubeVideoCountCard';
-
-
-// [COMPONENT] 섹션 로딩 스켈레톤
 const SectionSkeleton = memo(({ title }: { title: string }) => (
-    <Card className="h-full">
-        <CardHeader>
-            <CardTitle className="text-lg">{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex items-center justify-center min-h-[400px]">
-            <div className="flex flex-col items-center gap-4">
-                <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-            </div>
-        </CardContent>
-    </Card>
+    <section className={styles.panelShell}>
+        <div className={styles.panelHeader}>
+            <h3 className={styles.panelTitle}>{title}</h3>
+        </div>
+        <div className={styles.panelBody}>
+            <RefreshCw className={styles.spin} />
+            <p className={styles.panelHint}>로딩 중</p>
+        </div>
+    </section>
 ));
 SectionSkeleton.displayName = 'SectionSkeleton';
 
-const AdminOpsSection = memo(({
-    funnel,
-    failures,
-    quality,
-    isLoading,
-}: {
-    funnel?: DashboardFunnelResponse;
-    failures?: DashboardFailuresResponse;
-    quality?: DashboardQualityResponse;
-    isLoading: boolean;
-}) => {
-    if (isLoading) {
-        return <SectionSkeleton title="운영 지표" />;
-    }
+const StatTile = memo(
+    ({
+        icon: Icon,
+        label,
+        value,
+        helper,
+        tone,
+    }: {
+        icon: ElementType;
+        label: string;
+        value: string;
+        helper: string;
+        tone: StatTone;
+    }) => {
+        const toneClass =
+            tone === 'danger'
+                ? styles.statDanger
+                : tone === 'success'
+                    ? styles.statSuccess
+                    : styles.statNeutral;
 
-    if (!funnel || !failures || !quality) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">운영 지표</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                    운영 지표를 불러오지 못했습니다.
-                </CardContent>
-            </Card>
+            <article className={cn(styles.statTile, toneClass)}>
+                <div className={styles.statTileHeader}>
+                    <span className={styles.statIconWrap}>
+                        <Icon className={styles.statIcon} />
+                    </span>
+                    <span className={styles.statLabel}>{label}</span>
+                </div>
+                <p className={styles.statValue}>{value}</p>
+                <p className={styles.statHelper}>{helper}</p>
+            </article>
         );
-    }
+    },
+);
+StatTile.displayName = 'StatTile';
 
-    return (
-        <div className="grid gap-3 lg:grid-cols-4">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">퍼널</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                    <div className="flex justify-between"><span>수집 개수</span><span className="font-semibold">{funnel.counts.crawling.toLocaleString()}</span></div>
-                    <div className="flex justify-between"><span>선정·비선정 합계</span><span className="font-semibold">{funnel.counts.selectionUnion.toLocaleString()}</span></div>
-                    <div className="flex justify-between"><span>규칙 통과</span><span className="font-semibold">{funnel.counts.rule.toLocaleString()}</span></div>
-                    <div className="flex justify-between"><span>LAAJ 통과</span><span className="font-semibold">{funnel.counts.laaj.toLocaleString()}</span></div>
-                    <div className="pt-2 border-t border-border space-y-1 text-xs text-muted-foreground">
-                        <div className="flex justify-between"><span>선정율</span><span>{formatPercent(funnel.conversion.selectionRate)}</span></div>
-                        <div className="flex justify-between"><span>규칙 통과율</span><span>{formatPercent(funnel.conversion.ruleRate)}</span></div>
-                        <div className="flex justify-between"><span>LAAJ 통과율</span><span>{formatPercent(funnel.conversion.laajRate)}</span></div>
+const YouTubeTile = memo(
+    ({
+        icon: Icon,
+        label,
+        type,
+        suffix,
+        enabled,
+    }: {
+        icon: ElementType;
+        label: string;
+        type: 'subscriberCount' | 'videoCount';
+        suffix: string;
+        enabled: boolean;
+    }) => {
+        const { data, isLoading, error } = useQuery({
+            queryKey: ['admin-insight-youtube', type],
+            queryFn: () => fetchYouTubeCount(type),
+            staleTime: 1000 * 60 * 5,
+            enabled,
+        });
+        const display = isLoading ? '로딩 중' : error ? '-' : `${formatNumber(data)}${suffix}`;
+
+        return (
+            <article className={cn(styles.statTile, styles.youtubeTile)}>
+                <div className={styles.statTileHeader}>
+                    <span className={styles.statIconWrap}>
+                        <Icon className={styles.statIcon} />
+                    </span>
+                    <span className={styles.statLabel}>{label}</span>
+                </div>
+                <p className={styles.statValue}>{display}</p>
+                <p className={styles.statHelper}>YouTube 실시간 동기화</p>
+            </article>
+        );
+    },
+);
+YouTubeTile.displayName = 'YouTubeTile';
+
+const FailureLinkItem = memo(({ href, label, value }: { href: string; label: string; value: string }) => (
+    <Link href={href} className={styles.failureItem}>
+        <span className={styles.failureLabel}>{label}</span>
+        <span className={styles.failureValue}>{value}</span>
+    </Link>
+));
+FailureLinkItem.displayName = 'FailureLinkItem';
+
+const AdminOpsSection = memo(
+    ({
+        funnel,
+        failures,
+        quality,
+        isLoading,
+    }: {
+        funnel?: DashboardFunnelResponse;
+        failures?: DashboardFailuresResponse;
+        quality?: DashboardQualityResponse;
+        isLoading: boolean;
+    }) => {
+        if (isLoading) {
+            return <SectionSkeleton title="운영 분석" />;
+        }
+
+        if (!funnel || !failures || !quality) {
+            return (
+                <section className={styles.panelShell}>
+                    <div className={styles.panelHeader}>
+                        <h3 className={styles.panelTitle}>운영 분석</h3>
                     </div>
-                </CardContent>
-            </Card>
+                    <div className={styles.panelBody}>
+                        <p className={styles.panelHint}>운영 지표를 불러오지 못했습니다.</p>
+                    </div>
+                </section>
+            );
+        }
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">비선정 사유 상위</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                    {failures.notSelectionReasons.slice(0, 6).map((item) => (
-                        <Link
-                            key={item.label}
-                            href={{ pathname: '/admin/evaluations', query: { issue: 'notSelection', reason: item.label } }}
-                            className="flex items-center justify-between gap-2 rounded-md px-1 py-0.5 hover:bg-muted/40"
-                        >
-                            <span className="text-muted-foreground truncate">{item.label}</span>
-                            <Badge variant="secondary">{item.count}</Badge>
-                        </Link>
-                    ))}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">규칙 실패 + LAAJ 누락</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                    {failures.ruleFalseMessages.slice(0, 5).map((item) => (
-                        <Link
-                            key={item.label}
-                            href={{ pathname: '/admin/evaluations', query: { issue: 'ruleFalse', reason: item.label } }}
-                            className="flex items-center justify-between gap-2 rounded-md px-1 py-0.5 hover:bg-muted/40"
-                        >
-                            <span className="text-muted-foreground truncate">{item.label}</span>
-                            <Badge variant="outline">{item.count}</Badge>
-                        </Link>
-                    ))}
-                    <div className="pt-2 border-t border-border">
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">LAAJ 누락</span>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="destructive">{failures.laajGaps.count}</Badge>
-                                <Link
-                                    href={{ pathname: '/admin/evaluations', query: { issue: 'laajGap' } }}
-                                    className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                                >
-                                    전체 보기
-                                </Link>
-                            </div>
+        return (
+            <div className={styles.opsGrid}>
+                <article className={styles.opsPanel}>
+                    <h4 className={styles.opsPanelTitle}>파이프라인 퍼널</h4>
+                    <div className={styles.metricList}>
+                        <div className={styles.metricRow}>
+                            <span>수집 건수</span>
+                            <span className={styles.metricValue}>{formatNumber(funnel.counts.crawling)}</span>
                         </div>
-                        {failures.laajGaps.videoIds.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                                {failures.laajGaps.videoIds.slice(0, 6).map((id) => (
-                                    <Link key={id} href={{ pathname: '/admin/evaluations', query: { issue: 'laajGap', video_id: id } }}>
-                                        <Badge variant="secondary" className="text-[10px] hover:bg-muted cursor-pointer">{id}</Badge>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
+                        <div className={styles.metricRow}>
+                            <span>선정·비선정</span>
+                            <span className={styles.metricValue}>{formatNumber(funnel.counts.selectionUnion)}</span>
+                        </div>
+                        <div className={styles.metricRow}>
+                            <span>규칙 통과</span>
+                            <span className={styles.metricValue}>{formatNumber(funnel.counts.rule)}</span>
+                        </div>
+                        <div className={styles.metricRow}>
+                            <span>LAAJ 통과</span>
+                            <span className={styles.metricValue}>{formatNumber(funnel.counts.laaj)}</span>
+                        </div>
                     </div>
-                </CardContent>
-            </Card>
+                    <div className={styles.metricList}>
+                        <div className={styles.metricRow}>
+                            <span>선정율</span>
+                            <span className={styles.metricValue}>{formatPercent(funnel.conversion.selectionRate)}</span>
+                        </div>
+                        <div className={styles.metricRow}>
+                            <span>규칙 통과율</span>
+                            <span className={styles.metricValue}>{formatPercent(funnel.conversion.ruleRate)}</span>
+                        </div>
+                        <div className={styles.metricRow}>
+                            <span>LAAJ 통과율</span>
+                            <span className={styles.metricValue}>{formatPercent(funnel.conversion.laajRate)}</span>
+                        </div>
+                    </div>
+                </article>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">품질 지표</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                        <span className="text-muted-foreground">위치 일치(T/F)</span>
-                        <span className="font-semibold">
-                            T {quality.locationMatch.trueCount.toLocaleString()} / F {quality.locationMatch.falseCount.toLocaleString()}
-                        </span>
+                <article className={styles.opsPanel}>
+                    <h4 className={styles.opsPanelTitle}>비선정 사유 상위</h4>
+                    <div className={styles.failureList}>
+                        {(failures.notSelectionReasons ?? []).slice(0, 6).map((item) => (
+                            <FailureLinkItem
+                                key={`not-${item.label}`}
+                                href={`/admin/evaluations?issue=notSelection&reason=${encodeURIComponent(item.label)}`}
+                                label={item.label}
+                                value={formatNumber(item.count)}
+                            />
+                        ))}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                        <span className="text-muted-foreground">카테고리 유효성(T/F)</span>
-                        <span className="font-semibold">
-                            T {quality.categoryValidity.trueCount.toLocaleString()} / F {quality.categoryValidity.falseCount.toLocaleString()}
-                        </span>
+                </article>
+
+                <article className={styles.opsPanel}>
+                    <h4 className={styles.opsPanelTitle}>규칙 실패 / LAAJ 누락</h4>
+                    <div className={styles.failureList}>
+                        {(failures.ruleFalseMessages ?? []).slice(0, 6).map((item) => (
+                            <FailureLinkItem
+                                key={`rule-${item.label}`}
+                                href={`/admin/evaluations?issue=ruleFalse&reason=${encodeURIComponent(item.label)}`}
+                                label={item.label}
+                                value={formatNumber(item.count)}
+                            />
+                        ))}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                        <span className="text-muted-foreground">카테고리 판별(T/F)</span>
-                        <span className="font-semibold">
-                            T {quality.categoryTF.trueCount.toLocaleString()} / F {quality.categoryTF.falseCount.toLocaleString()}
-                        </span>
+                    <div className={styles.opsFooter}>
+                        <span className={styles.opsFooterLabel}>LAAJ 누락 건수</span>
+                        <FailureLinkItem
+                            href="/admin/evaluations?issue=laajGap"
+                            label="상세보기"
+                            value={formatNumber(failures.laajGaps.count)}
+                        />
                     </div>
-                    <div className="pt-2 border-t border-border space-y-1 text-xs text-muted-foreground">
-                        <div className="flex justify-between">
-                            <span>리뷰 신뢰도(평균/중앙값)</span>
-                            <span>
-                                {quality.reviewFaithfulness.average ?? '-'} / {quality.reviewFaithfulness.median ?? '-'}
+                </article>
+
+                <article className={styles.opsPanel}>
+                    <h4 className={styles.opsPanelTitle}>품질 지표</h4>
+                    <div className={styles.metricList}>
+                        <div className={styles.metricRow}>
+                            <span>위치 일치</span>
+                            <span className={styles.metricValue}>
+                                T {formatNumber(quality.locationMatch.trueCount)} / F {formatNumber(quality.locationMatch.falseCount)}
                             </span>
                         </div>
-                        <div className="flex justify-between">
-                            <span>커버리지(규칙/LAAJ)</span>
-                            <span>
-                                {quality.totals.withRuleMetrics.toLocaleString()} / {quality.totals.withLaajMetrics.toLocaleString()}
+                        <div className={styles.metricRow}>
+                            <span>카테고리 유효성</span>
+                            <span className={styles.metricValue}>
+                                T {formatNumber(quality.categoryValidity.trueCount)} / F {formatNumber(quality.categoryValidity.falseCount)}
+                            </span>
+                        </div>
+                        <div className={styles.metricRow}>
+                            <span>카테고리 판별</span>
+                            <span className={styles.metricValue}>
+                                T {formatNumber(quality.categoryTF.trueCount)} / F {formatNumber(quality.categoryTF.falseCount)}
                             </span>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-});
+                </article>
+            </div>
+        );
+    },
+);
 AdminOpsSection.displayName = 'AdminOpsSection';
 
-// [MAIN] 인사이트 클라이언트 컴포넌트
 const InsightClientComponent = () => {
-    const { isAdmin, isLoading } = useAuth();
-    const [activeTab, setActiveTab] = useState('chat');
+    const { isAdmin, isLoading: isAuthLoading } = useAuth();
+    const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+    const [activeTab, setActiveTab] = useState<AdminInsightTab>('chat');
+    const [activeMapTab, setActiveMapTab] = useState<InsightMapTab>('heatmap');
 
-    const { data: dashboardSummary } = useQuery({
-        queryKey: ['dashboard-summary-admin-insight'],
+    const summaryQuery = useQuery<DashboardSummaryResponse, Error>({
+        queryKey: ['admin-dashboard-summary'],
         queryFn: () => fetchDashboardJson<DashboardSummaryResponse>('/api/dashboard/summary'),
+        enabled: isAdmin,
         staleTime: 1000 * 60 * 5,
     });
 
-    const { data: dashboardFunnel, isLoading: isFunnelLoading } = useQuery({
-        queryKey: ['dashboard-funnel-admin-insight'],
+    const funnelQuery = useQuery<DashboardFunnelResponse, Error>({
+        queryKey: ['admin-dashboard-funnel'],
         queryFn: () => fetchDashboardJson<DashboardFunnelResponse>('/api/dashboard/funnel'),
+        enabled: isAdmin,
         staleTime: 1000 * 60 * 5,
     });
 
-    const { data: dashboardFailures, isLoading: isFailuresLoading } = useQuery({
-        queryKey: ['dashboard-failures-admin-insight'],
+    const failuresQuery = useQuery<DashboardFailuresResponse, Error>({
+        queryKey: ['admin-dashboard-failures'],
         queryFn: () => fetchDashboardJson<DashboardFailuresResponse>('/api/dashboard/failures'),
+        enabled: isAdmin,
         staleTime: 1000 * 60 * 5,
     });
 
-    const { data: dashboardQuality, isLoading: isQualityLoading } = useQuery({
-        queryKey: ['dashboard-quality-admin-insight'],
+    const qualityQuery = useQuery<DashboardQualityResponse, Error>({
+        queryKey: ['admin-dashboard-quality'],
         queryFn: () => fetchDashboardJson<DashboardQualityResponse>('/api/dashboard/quality'),
+        enabled: isAdmin,
         staleTime: 1000 * 60 * 5,
     });
 
-    const ruleFailureTotal = (dashboardFailures?.ruleFalseMessages || []).reduce((acc, item) => acc + item.count, 0);
+    const summary = summaryQuery.data;
+    const funnel = funnelQuery.data;
+    const failures = failuresQuery.data;
+    const quality = qualityQuery.data;
 
-    // [OPTIMIZATION] 탭 변경 핸들러 메모이제이션
-    const handleTabChange = useCallback((value: string) => {
-        setActiveTab(value);
+    const syncLabel = useMemo(() => {
+        const allAsOf = [summary?.asOf, funnel?.asOf, failures?.asOf, quality?.asOf].filter(Boolean) as string[];
+        return formatAsOf(allAsOf[0]);
+    }, [summary?.asOf, funnel?.asOf, failures?.asOf, quality?.asOf]);
+
+    const isDataLoading =
+        summaryQuery.isLoading || funnelQuery.isLoading || failuresQuery.isLoading || qualityQuery.isLoading;
+
+    const isOperationsLoading = funnelQuery.isLoading || failuresQuery.isLoading || qualityQuery.isLoading;
+
+    const stats: StatItem[] = useMemo(() => {
+        const ruleFailureTotal = safeSum(failures?.ruleFalseMessages);
+        const laajGapTotal = failures?.laajGaps.count ?? 0;
+
+        return [
+            {
+                icon: MapPinned,
+                label: '좌표 보유 맛집',
+                value: formatNumber(summary?.totals.withCoordinates),
+                helper: '지도 노출 가능',
+                tone: 'success',
+            },
+            {
+                icon: Users,
+                label: '총 맛집',
+                value: formatNumber(summary?.totals.restaurants),
+                helper: '운영 대상 전체',
+                tone: 'neutral',
+            },
+            {
+                icon: Video,
+                label: '총 영상',
+                value: formatNumber(summary?.totals.videos),
+                helper: '크롤링 누적',
+                tone: 'neutral',
+            },
+            {
+                icon: Activity,
+                label: '선정·비선정',
+                value: formatNumber(funnel?.counts.selectionUnion),
+                helper: '파이프라인 합계',
+                tone: 'neutral',
+            },
+            {
+                icon: AlertTriangle,
+                label: '규칙 실패',
+                value: formatNumber(ruleFailureTotal),
+                helper: '운영 알람',
+                tone: ruleFailureTotal > 0 ? 'danger' : 'success',
+            },
+            {
+                icon: CalendarClock,
+                label: 'LAAJ 누락',
+                value: formatNumber(laajGapTotal),
+                helper: '추가 처리 필요',
+                tone: laajGapTotal > 0 ? 'danger' : 'success',
+            },
+        ];
+    }, [summary, funnel, failures]);
+
+    const handleTabChange = useCallback((next: AdminInsightTab) => {
+        setActiveTab(next);
     }, []);
 
-    // 인증 로딩 중일 때 표시
-    if (isLoading) {
+    const handleMapTabChange = useCallback((next: InsightMapTab) => {
+        setActiveMapTab(next);
+    }, []);
+
+    const handleNavToggle = useCallback(() => {
+        setIsNavCollapsed((prev) => !prev);
+    }, []);
+
+    if (isAuthLoading) {
         return (
-            <div className="flex flex-col h-full bg-background items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                    <p className="text-sm text-muted-foreground">권한 확인 중...</p>
+            <div className={styles.centerShell}>
+                <div className={styles.centerPanel}>
+                    <RefreshCw className={styles.spin} />
+                    <p>권한 확인 중입니다.</p>
                 </div>
             </div>
         );
     }
 
-    // 관리자가 아닌 경우 접근 거부
     if (!isAdmin) {
         return (
-            <div className="flex flex-col h-full bg-background">
-                <div className="flex-1 flex items-center justify-center">
-                    <Card className="max-w-md">
-                        <CardContent className="p-8 text-center">
-                            <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                                <BarChart2 className="h-8 w-8 text-destructive" />
-                            </div>
-                            <h2 className="text-xl font-bold mb-2">접근 권한이 없습니다</h2>
-                            <p className="text-muted-foreground">관리자만 인사이트 페이지에 접근할 수 있습니다.</p>
-                        </CardContent>
-                    </Card>
-                </div>
+            <div className={styles.centerShell}>
+                <section className={styles.centerPanel}>
+                    <div className={styles.deniedSign}>!</div>
+                    <h3 className={styles.centerPanelTitle}>관리자 전용 페이지입니다</h3>
+                    <p className={styles.panelHint}>현재 계정은 관리자 권한이 없습니다.</p>
+                    <Link href="/" className={styles.deniedAction}>
+                        홈으로 이동
+                    </Link>
+                </section>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            {/* Header */}
-            <div className="border-b border-border bg-card p-6">
-                <div className="flex items-center justify-between gap-4">
-                    {/* 좌측: 타이틀 */}
-                    <div className="flex-shrink-0">
-                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-                            <BarChart2 className="h-6 w-6 text-primary" />
-                            쯔동여지도 인사이트
-                        </h1>
-                        <p className="text-muted-foreground text-sm mt-1">
-                            유튜브 영상 분석, 맛집 제보 현황, 리뷰 키워드 트렌드를 한눈에 확인하세요.
-                        </p>
+        <section className={cn(styles.shellRoot, isNavCollapsed && styles.shellRootNavCollapsed)}>
+            <div className={styles.shell}>
+                <aside className={styles.nav}>
+                    <div className={styles.navHeader}>
+                        <div className={styles.brandWrap}>
+                            <span className={styles.brandLogo}>ID</span>
+                            <div className={styles.brandTextWrap}>
+                                <div className={styles.brandTitle}>쯔동여지도 인사이트</div>
+                                <div className={styles.brandSub}>OpenClaw-inspired Analytics</div>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.navToggle}
+                            onClick={handleNavToggle}
+                            aria-label={isNavCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+                        >
+                            <Menu className={styles.navToggleIcon} />
+                        </button>
                     </div>
 
-                    {/* 우측: 압축된 통계 카드 */}
-                    <div className="flex items-center gap-3 overflow-x-auto">
-                        <YoutubeSubscriberCard />
-                        <YoutubeVideoCountCard />
-                        <CompactStatCard icon={Map} title="좌표 보유 식당" value={dashboardSummary?.totals.withCoordinates?.toLocaleString() || '-'} />
-                        <CompactStatCard icon={Users} title="선정·비선정 합계" value={dashboardFunnel?.counts.selectionUnion?.toLocaleString() || '-'} />
-                        <CompactStatCard icon={Cloud} title="규칙 실패 건수" value={ruleFailureTotal.toLocaleString()} trend="down" />
-                        <CompactStatCard icon={AlertTriangle} title="LAAJ 누락" value={dashboardFailures?.laajGaps.count?.toLocaleString() || '-'} trend="down" />
-                    </div>
-                </div>
+                    <section className={styles.navSection}>
+                        <h2 className={styles.navSectionTitle}>분석 패널</h2>
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            return (
+                                <button
+                                    key={tab.value}
+                                    type="button"
+                                    className={cn(styles.navItem, activeTab === tab.value && styles.navItemActive)}
+                                    onClick={() => handleTabChange(tab.value)}
+                                >
+                                    <Icon className={styles.navItemIcon} />
+                                    <span className={styles.navItemTextWrap}>
+                                        <span className={styles.navItemLabel}>{tab.label}</span>
+                                        <span className={styles.navItemBlurb}>{tab.desc}</span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </section>
+
+                    <section className={styles.navSection}>
+                        <h2 className={styles.navSectionTitle}>관리 메뉴</h2>
+                        {quickLinks.map((link) => {
+                            const Icon = link.icon;
+                            return (
+                                <Link key={link.label} href={link.href} className={styles.navItem}>
+                                    <Icon className={styles.navItemIcon} />
+                                    <span className={styles.navItemTextWrap}>
+                                        <span className={styles.navItemLabel}>{link.label}</span>
+                                        <span className={styles.navItemBlurb}>바로가기</span>
+                                    </span>
+                                </Link>
+                            );
+                        })}
+                    </section>
+                </aside>
+
+                <main className={styles.content}>
+                    <header className={styles.contentHeader}>
+                        <div>
+                            <h1 className={styles.pageTitle}>관리 운영 대시보드</h1>
+                            <p className={styles.pageSub}>운영 지표, 규칙 실패, 지도 인사이트를 한 화면에서 확인합니다.</p>
+                        </div>
+                        <div className={styles.pageMeta}>
+                            <span className={styles.pill}>SYNC: {syncLabel}</span>
+                            <span className={styles.pill}>ENDPOINT: /api/dashboard</span>
+                        </div>
+                    </header>
+
+                    {isDataLoading && !summary && !funnel && !failures && !quality ? (
+                        <SectionSkeleton title="인사이트 데이터 로딩 중" />
+                    ) : (
+                        <>
+                            <section className={styles.statGrid}>
+                                {stats.map((item) => (
+                                    <StatTile
+                                        key={item.label}
+                                        icon={item.icon}
+                                        label={item.label}
+                                        value={item.value}
+                                        helper={item.helper}
+                                        tone={item.tone}
+                                    />
+                                ))}
+                            </section>
+
+                            <section className={styles.statStrip}>
+                                <YouTubeTile
+                                    icon={BarChart3}
+                                    label="쯔양 구독자"
+                                    type="subscriberCount"
+                                    suffix="명"
+                                    enabled={isAdmin}
+                                />
+                                <YouTubeTile
+                                    icon={Video}
+                                    label="총 영상 수"
+                                    type="videoCount"
+                                    suffix="개"
+                                    enabled={isAdmin}
+                                />
+                            </section>
+
+                            <section className={styles.mainPanel}>
+                                <div className={styles.mainTabBar}>
+                                    {tabs.map((tab) => {
+                                        const Icon = tab.icon;
+                                        return (
+                                            <button
+                                                key={tab.value}
+                                                type="button"
+                                                className={cn(styles.mainTab, activeTab === tab.value && styles.mainTabActive)}
+                                                onClick={() => handleTabChange(tab.value)}
+                                            >
+                                                <Icon className={styles.mainTabIcon} />
+                                                <span>{tab.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className={styles.mainTabContent}>
+                                    {activeTab === 'chat' && (
+                                        <div className={styles.innerPanel}>
+                                            <InsightChatSection />
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'operations' && (
+                                        <AdminOpsSection
+                                            funnel={funnel}
+                                            failures={failures}
+                                            quality={quality}
+                                            isLoading={isOperationsLoading}
+                                        />
+                                    )}
+
+                                    {activeTab === 'map' && (
+                                        <div className={styles.innerPanel}>
+                                            <div className={styles.subTabBar}>
+                                                {mapTabs.map((item) => {
+                                                    const Icon = item.icon;
+                                                    return (
+                                                        <button
+                                                            key={item.value}
+                                                            type="button"
+                                                            className={cn(styles.subTab, activeMapTab === item.value && styles.subTabActive)}
+                                                            onClick={() => handleMapTabChange(item.value)}
+                                                        >
+                                                            <Icon className={styles.subTabIcon} />
+                                                            <span className={styles.subTabText}>
+                                                                <span className={styles.subTabLabel}>{item.label}</span>
+                                                                <span className={styles.subTabDesc}>{item.desc}</span>
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className={styles.subTabContent}>
+                                                {activeMapTab === 'heatmap' && <HeatmapSection />}
+                                                {activeMapTab === 'map' && <MapSection />}
+                                                {activeMapTab === 'wordcloud' && <WordCloudSection />}
+                                                {activeMapTab === 'season' && <SeasonCalendarSection />}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+                        </>
+                    )}
+                </main>
             </div>
-
-            {/* [TABS] 메인 콘텐츠 */}
-            <div className="flex-1 min-h-0 p-4">
-                <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
-                    <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid mb-3 shrink-0 bg-secondary/50">
-                        <TabsTrigger value="chat" className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" />
-                            <span className="hidden sm:inline">AI 인사이트</span>
-                            <span className="sm:hidden">AI</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="ops" className="flex items-center gap-2">
-                            <BarChart2 className="h-4 w-4" />
-                            <span className="hidden sm:inline">운영지표</span>
-                            <span className="sm:hidden">운영</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="heatmap" className="flex items-center gap-2">
-                            <Youtube className="h-4 w-4" />
-                            <span className="hidden sm:inline">유튜브 히트맵</span>
-                            <span className="sm:hidden">히트맵</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="map" className="flex items-center gap-2">
-                            <Map className="h-4 w-4" />
-                            <span className="hidden sm:inline">맛집 지도</span>
-                            <span className="sm:hidden">지도</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="wordcloud" className="flex items-center gap-2">
-                            <Cloud className="h-4 w-4" />
-                            <span className="hidden sm:inline">워드 클라우드</span>
-                            <span className="sm:hidden">키워드</span>
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <div className="flex-1 min-h-0">
-                        <TabsContent value="chat" className="mt-0 h-full">
-                            <InsightChatSection />
-                        </TabsContent>
-
-                        <TabsContent value="ops" className="mt-0 h-full">
-                            <AdminOpsSection
-                                funnel={dashboardFunnel}
-                                failures={dashboardFailures}
-                                quality={dashboardQuality}
-                                isLoading={isFunnelLoading || isFailuresLoading || isQualityLoading}
-                            />
-                        </TabsContent>
-
-                        <TabsContent value="heatmap" className="mt-0 h-full">
-                            <HeatmapSection />
-                        </TabsContent>
-
-                        <TabsContent value="map" className="mt-0 h-full">
-                            <MapSection />
-                        </TabsContent>
-
-                        <TabsContent value="wordcloud" className="mt-0 h-full">
-                            <WordCloudSection />
-                        </TabsContent>
-
-                    </div>
-                </Tabs>
-            </div>
-        </div>
+        </section>
     );
 };
 
-// [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
 const InsightClient = memo(InsightClientComponent);
 InsightClient.displayName = 'InsightClient';
 

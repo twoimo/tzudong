@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -125,63 +125,6 @@ All colors MUST be HSL.
     --gradient-secondary: linear-gradient(135deg, hsl(24 6% 90%), hsl(24 10% 85%));
     --shadow-primary: 0 4px 14px 0 rgba(185, 28, 28, 0.2);
     --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
-  }
-
-  /* 진짜 다크모드 (어두운 배경) */
-  .dark {
-    /* 거의 검정에 가까운 배경 (zinc-950) */
-    --background: 240 10% 4%;
-    /* 밝은 회색 텍스트 (zinc-100) */
-    --foreground: 0 0% 95%;
-
-    /* 카드: 배경보다 약간 밝게 (zinc-900) */
-    --card: 240 6% 10%;
-    --card-foreground: 0 0% 95%;
-
-    /* 팝오버: 카드와 동일 */
-    --popover: 240 6% 10%;
-    --popover-foreground: 0 0% 95%;
-
-    /* 낙관 색상 유지 (빨간색) - 다크모드에서 약간 밝게 */
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 98%;
-
-    /* 보조 색상 (zinc-800) */
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 95%;
-
-    /* 음소거 색상 */
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-
-    /* 강조 색상 */
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 95%;
-
-    /* 파괴적 액션 */
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
-
-    /* 테두리 (zinc-800) */
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 0 72% 51%;
-
-    /* 사이드바 */
-    --sidebar-background: 240 10% 4%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 0 72% 51%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4% 16%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 240 4% 16%;
-    --sidebar-ring: 0 72% 51%;
-
-    /* 그라디언트 및 그림자 */
-    --gradient-primary: linear-gradient(135deg, hsl(0 72% 51%), hsl(0 65% 45%));
-    --gradient-secondary: linear-gradient(135deg, hsl(240 4% 16%), hsl(240 4% 12%));
-    --shadow-primary: 0 4px 14px 0 rgba(239, 68, 68, 0.25);
-    --shadow-glow: 0 0 20px rgba(239, 68, 68, 0.2);
   }
 }
 
@@ -423,11 +366,10 @@ div[style*="z-index"]>div>.custom-marker {
 }
 */
 
-/* [PERF] 다크모드 전환 시 색상 전환 부드럽게 */
-html.dark {
-  color-scheme: dark;
-}
-
-html:not(.dark) {
+/* [PERF] 라이트 모드 고정 */
+html {
   color-scheme: light;
 }
+
+
+
