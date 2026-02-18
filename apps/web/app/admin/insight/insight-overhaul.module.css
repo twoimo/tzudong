@@ -41,40 +41,6 @@
   color: var(--ins-text);
 }
 
-.pageHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 2px 4px;
-}
-
-.pill {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--ins-border);
-  background: var(--ins-bg-soft);
-  color: var(--ins-sub);
-  font-size: 12px;
-}
-
-.pageTitle {
-  margin: 0;
-  font-size: clamp(1.2rem, 2vw, 1.7rem);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.pageSub {
-  margin: 0;
-  color: var(--ins-sub);
-  font-size: 14px;
-}
-
 .chatFrame {
   border: 1px solid var(--ins-border);
   border-radius: var(--ins-radius-lg);

@@ -48,14 +48,6 @@ const InsightClientComponent = () => {
 
     return (
         <section className={styles.pageShell}>
-            <header className={styles.pageHeader}>
-                <div>
-                    <p className={styles.pill}>AI 인사이트 챗봇</p>
-                    <h1 className={styles.pageTitle}>관리자 인사이트</h1>
-                    <p className={styles.pageSub}>운영 데이터 기반 분석을 대화형으로 확인하세요.</p>
-                </div>
-            </header>
-
             <div className={styles.chatFrame}>
                 <InsightChatSection />
             </div>
