@@ -80,4 +80,3 @@ cd apps/web
 bun install
 bun run dev  # http://localhost:8080
 ```
-.
