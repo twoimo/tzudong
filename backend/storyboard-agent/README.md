@@ -138,5 +138,53 @@ STORYBOARD_AGENT_CHAT_PATH=/chat
 STORYBOARD_AGENT_TIMEOUT_MS=8000
 ```
 
-에이전트 응답 본문에 `content` 필드(또는 `message`, `answer`, `response`, `output`) 하나만 있어도 처리됩니다. 
+에이전트 응답 본문에 `content` 필드(또는 `message`, `answer`, `response`, `output`) 하나만 있어도 처리됩니다.
 `sources` 필드는 `[{ videoTitle, youtubeLink, timestamp, text }]` 형태를 지원합니다.
+
+## 로컬 API 서버 실행
+
+### 1) 패키지 설치
+
+```bash
+cd backend/storyboard-agent
+pip install -r requirements.txt
+```
+
+추가로 벡터 검색 및 RAG 도구 실행을 위해 `numpy`, `langchain-core`, `supabase-py`,
+`python-dotenv`가 필요합니다.
+
+### 2) 환경 변수
+
+`backend/storyboard-agent`에서 아래 환경 변수를 설정하세요.
+
+```bash
+PUBLIC_SUPABASE_URL=https://aqlcofblfxdrjhhdmarw.supabase.co
+PUBLIC_SUPABASE_SERVICE_ROLE_KEY=<SUPABASE_SERVICE_ROLE_KEY>
+STORYBOARD_AGENT_HOST=0.0.0.0
+STORYBOARD_AGENT_PORT=8001
+```
+
+`tools.py`가 기존 환경 변수(`SUPABASE_URL`)를 그대로 사용하는 레포도 있으므로,
+`STORYBOARD_AGENT` 서버는 `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_SERVICE_ROLE_KEY`가 우선
+사용되도록 매핑해 둡니다.
+
+### 3) 서버 실행
+
+```bash
+python -m uvicorn src.server:app --app-dir . --host 0.0.0.0 --port 8001
+```
+
+또는 `src/server.py`의 `__main__` 블록 실행도 가능합니다.
+
+```bash
+python src/server.py
+```
+
+실행 후 `/health`와 `/chat` 엔드포인트를 확인할 수 있습니다.
+
+```bash
+curl http://localhost:8001/health
+curl -X POST http://localhost:8001/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"떡볶이 먹방 스토리보드 짜줘"}'
+```
