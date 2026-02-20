@@ -485,16 +485,7 @@ def search_video_ids_by_query(
 # =============================================================================
 import logging
 
-from typing import Any
-
 LOGGER = logging.getLogger(__name__)
-
-
-def _noop_web_search(*args: Any, **kwargs: Any) -> dict[str, Any]:
-    return {
-        "results": [],
-        "error": "TavilySearch module 또는 API 키가 설정되지 않았습니다.",
-    }
 
 
 try:
