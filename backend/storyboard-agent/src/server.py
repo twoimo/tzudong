@@ -40,31 +40,36 @@ TOOL_PREWARM = os.getenv("STORYBOARD_AGENT_PREWARM", "false").lower() in (
 _tools_module: Any | None = None
 _tools_lock = threading.Lock()
 _cache: dict[str, tuple[float, "StoryboardChatResponse"]] = {}
+_cache_lock = threading.Lock()
 
 
 def _cache_get(cache_key: str) -> "StoryboardChatResponse | None":
-    entry = _cache.get(cache_key)
-    if not entry:
+    if CACHE_TTL_SECONDS <= 0:
         return None
 
-    created_at, payload = entry
-    now = datetime.now(timezone.utc).timestamp()
-    if now - created_at > CACHE_TTL_SECONDS:
-        _cache.pop(cache_key, None)
-        return None
+    with _cache_lock:
+        entry = _cache.get(cache_key)
+        if not entry:
+            return None
 
-    return payload
+        created_at, payload = entry
+        now = datetime.now(timezone.utc).timestamp()
+        if now - created_at > CACHE_TTL_SECONDS:
+            _cache.pop(cache_key, None)
+            return None
+
+        return payload
 
 
 def _cache_set(cache_key: str, payload: "StoryboardChatResponse") -> None:
     if CACHE_MAX_ENTRIES <= 0:
         return
+    with _cache_lock:
+        if len(_cache) >= CACHE_MAX_ENTRIES:
+            oldest = min(_cache.items(), key=lambda item: item[1][0])[0]
+            _cache.pop(oldest, None)
 
-    if len(_cache) >= CACHE_MAX_ENTRIES:
-        oldest = min(_cache.items(), key=lambda item: item[1][0])[0]
-        _cache.pop(oldest, None)
-
-    _cache[cache_key] = (datetime.now(timezone.utc).timestamp(), payload)
+        _cache[cache_key] = (datetime.now(timezone.utc).timestamp(), payload)
 
 
 def _resolve_environment() -> None:
