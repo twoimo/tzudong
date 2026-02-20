@@ -1,53 +1,18 @@
 .pageShell {
   min-height: 0;
   min-height: 100%;
-  padding: 16px;
+  padding: 12px;
   display: grid;
   gap: 12px;
-  font-family: "Inter", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 0 84% 61%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 214 32% 96%;
-  --secondary-foreground: 222 47% 20%;
-  --muted: 214 32% 95%;
-  --muted-foreground: 218 11% 42%;
-  --accent: 0 84% 61%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 214 20% 87%;
-  --input: 214 20% 92%;
-  --ring: 0 84% 61%;
-
-  --ins-font: "Inter", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-  --ins-bg-soft: hsl(var(--muted));
-  --ins-bg-card: hsl(var(--card));
-  --ins-bg-panel: hsl(var(--popover));
-  --ins-border: hsl(var(--border));
-  --ins-text: hsl(var(--foreground));
-  --ins-sub: hsl(var(--muted-foreground));
-  --ins-accent: hsl(var(--primary));
-  --ins-accent-soft: rgba(239, 68, 68, 0.16);
-  --ins-radius-lg: 14px;
-  --ins-radius-md: 10px;
-
-  color: var(--ins-text);
+  color: #111827;
 }
 
 .chatFrame {
-  border: 1px solid var(--ins-border);
-  border-radius: var(--ins-radius-lg);
-  background: var(--ins-bg-card);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
   min-height: calc(100vh - 220px);
   overflow: hidden;
-  box-shadow: none;
 }
 
 .chatLoading {
@@ -55,13 +20,12 @@
   display: grid;
   place-items: center;
   gap: 10px;
-  border: 1px solid var(--ins-border);
-  border-radius: var(--ins-radius-lg);
-  background: var(--ins-bg-card);
-  color: var(--ins-sub);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #6b7280;
   text-align: center;
   font-size: 14px;
-  box-shadow: none;
 }
 
 .centerShell {
@@ -74,15 +38,14 @@
 
 .centerPanel {
   width: min(480px, 100%);
-  border: 1px solid var(--ins-border);
-  border-radius: var(--ins-radius-lg);
-  background: var(--ins-bg-card);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
   padding: 20px;
   display: grid;
   gap: 10px;
   justify-items: center;
   text-align: center;
-  box-shadow: none;
 }
 
 .centerPanelTitle {
@@ -96,15 +59,15 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: var(--ins-accent-soft);
-  color: var(--ins-accent);
+  background: rgba(239, 68, 68, 0.16);
+  color: #ef4444;
   font-weight: 700;
 }
 
 .panelHint {
   margin: 0;
   font-size: 13px;
-  color: var(--ins-sub);
+  color: #6b7280;
 }
 
 .deniedAction {
@@ -114,13 +77,13 @@
   justify-content: center;
   min-height: 34px;
   width: 100%;
-  border: 1px solid var(--ins-border);
-  border-radius: var(--ins-radius-md);
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
   padding: 0 12px;
-  color: var(--ins-text);
+  color: #111827;
   text-decoration: none;
   font-size: 13px;
-  background: var(--ins-bg-soft);
+  background: #f9fafb;
 }
 
 .spin {
@@ -137,13 +100,13 @@
 
 @media (max-width: 900px) {
   .pageShell {
-    padding: 12px;
+    padding: 10px;
     gap: 10px;
   }
 
   .chatFrame {
     min-height: calc(100vh - 200px);
-    border-radius: var(--ins-radius-md);
+    border-radius: 10px;
   }
 
   .centerShell {

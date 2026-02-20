@@ -137,16 +137,6 @@ def _percentile(values: list[float], q: float) -> float:
     return float(values[idx])
 
 
-def _normalize_status(status: int | None) -> str:
-    if status is None:
-        return "unknown"
-    if 400 <= status < 500:
-        return f"{status}"
-    if 500 <= status < 600:
-        return f"{status}"
-    return "other"
-
-
 def _metrics_record_cache_hit(hit: bool) -> None:
     global _metrics_cache_hits
     global _metrics_cache_misses
