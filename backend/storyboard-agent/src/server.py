@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, deque, OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 import logging
@@ -42,10 +42,14 @@ TOOL_PREWARM = os.getenv("STORYBOARD_AGENT_PREWARM", "false").lower() in (
 _tools_module: Any | None = None
 _tools_lock = threading.Lock()
 _boot_timestamp = time.time()
-_cache: dict[str, tuple[float, "StoryboardChatResponse"]] = {}
+_cache: OrderedDict[str, tuple[float, "StoryboardChatResponse"]] = OrderedDict()
 _cache_lock = threading.Lock()
 _inflight_requests: dict[str, asyncio.Future["StoryboardChatResponse"]] = {}
 _inflight_lock = asyncio.Lock()
+
+_metrics_history_size = _env_int("STORYBOARD_AGENT_METRICS_HISTORY_SIZE", 300)
+if _metrics_history_size <= 0:
+    _metrics_history_size = 300
 
 _metrics_lock = threading.Lock()
 _metrics_requests_total = 0
@@ -54,11 +58,23 @@ _metrics_requests_latency_ms_sum = 0.0
 _metrics_requests_latency_ms_count = 0
 _metrics_cache_hits = 0
 _metrics_cache_misses = 0
+_metrics_fallback_total = 0
+_metrics_request_latency_ms: deque[float] = deque(maxlen=_metrics_history_size)
+_metrics_tool_latency_ms: defaultdict[str, deque[float]] = defaultdict(lambda: deque(maxlen=_metrics_history_size))
 _metrics_tool_calls = defaultdict(int)
 _metrics_tool_errors = defaultdict(int)
 _metrics_tool_latency_ms_sum = defaultdict(float)
 _metrics_tool_latency_ms_count = defaultdict(int)
 _metrics_tool_latency_ms_max = defaultdict(float)
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    try:
+        return default if raw is None else int(raw)
+    except (TypeError, ValueError):
+        logger.warning("Invalid int value for %s, fallback: %s", name, default)
+        return default
 
 
 def _metrics_record_request(duration_ms: float, error: bool) -> None:
@@ -70,8 +86,27 @@ def _metrics_record_request(duration_ms: float, error: bool) -> None:
         _metrics_requests_total += 1
         _metrics_requests_latency_ms_sum += duration_ms
         _metrics_requests_latency_ms_count += 1
+        _metrics_request_latency_ms.append(duration_ms)
         if error:
             _metrics_requests_errors += 1
+
+
+def _metrics_record_fallback() -> None:
+    global _metrics_fallback_total
+    with _metrics_lock:
+        _metrics_fallback_total += 1
+
+
+def _percentile(values: list[float], q: float) -> float:
+    if not values:
+        return 0.0
+    if q <= 0:
+        return values[0]
+    if q >= 1:
+        return values[-1]
+
+    idx = int((len(values) - 1) * q)
+    return float(values[idx])
 
 
 def _metrics_record_cache_hit(hit: bool) -> None:
@@ -91,6 +126,7 @@ def _metrics_record_tool_call(tool_name: str, latency_ms: float, failed: bool) -
             _metrics_tool_errors[tool_name] += 1
         _metrics_tool_latency_ms_sum[tool_name] += latency_ms
         _metrics_tool_latency_ms_count[tool_name] += 1
+        _metrics_tool_latency_ms[tool_name].append(latency_ms)
         if latency_ms > _metrics_tool_latency_ms_max[tool_name]:
             _metrics_tool_latency_ms_max[tool_name] = latency_ms
 
@@ -104,12 +140,14 @@ def _get_metrics_snapshot() -> dict[str, Any]:
         cache_size = len(_cache)
 
     with _metrics_lock:
+        request_latencies = sorted(_metrics_request_latency_ms)
         tool_names = set(_metrics_tool_calls.keys()) | set(_metrics_tool_latency_ms_count.keys()) | set(_metrics_tool_errors.keys())
         tool_stats = []
         for name in sorted(tool_names):
             calls = _metrics_tool_calls[name]
             if calls <= 0:
                 continue
+            latencies = sorted(_metrics_tool_latency_ms[name])
             latency_sum = _metrics_tool_latency_ms_sum[name]
             latency_count = _metrics_tool_latency_ms_count[name]
             avg_ms = (latency_sum / latency_count) if latency_count else 0
@@ -120,6 +158,9 @@ def _get_metrics_snapshot() -> dict[str, Any]:
                     "errors": _metrics_tool_errors[name],
                     "avgLatencyMs": round(avg_ms, 2),
                     "maxLatencyMs": round(_metrics_tool_latency_ms_max[name], 2),
+                    "p50LatencyMs": round(_percentile(latencies, 0.50), 2),
+                    "p90LatencyMs": round(_percentile(latencies, 0.90), 2),
+                    "p95LatencyMs": round(_percentile(latencies, 0.95), 2),
                 }
             )
 
@@ -136,14 +177,20 @@ def _get_metrics_snapshot() -> dict[str, Any]:
             "total": request_count,
             "errors": request_error_count,
             "success": request_count - request_error_count,
+            "fallbacks": _metrics_fallback_total,
+            "inflight": len(_inflight_requests),
             "cacheHits": _metrics_cache_hits,
             "cacheMisses": _metrics_cache_misses,
             "avgLatencyMs": round(request_avg_latency_ms, 2),
+            "p50LatencyMs": round(_percentile(request_latencies, 0.50), 2),
+            "p90LatencyMs": round(_percentile(request_latencies, 0.90), 2),
+            "p95LatencyMs": round(_percentile(request_latencies, 0.95), 2),
         },
         "cache": {
             "size": cache_size,
             "maxEntries": CACHE_MAX_ENTRIES,
             "ttlSeconds": CACHE_TTL_SECONDS,
+            "historySize": _metrics_history_size,
         },
         "tools": tool_stats,
     }
@@ -166,6 +213,7 @@ def _cache_get(cache_key: str) -> "StoryboardChatResponse | None":
             _metrics_record_cache_hit(False)
             return None
 
+        _cache.move_to_end(cache_key)
         _metrics_record_cache_hit(True)
         return payload
 
@@ -174,9 +222,10 @@ def _cache_set(cache_key: str, payload: "StoryboardChatResponse") -> None:
     if CACHE_MAX_ENTRIES <= 0:
         return
     with _cache_lock:
-        if len(_cache) >= CACHE_MAX_ENTRIES:
-            oldest = min(_cache.items(), key=lambda item: item[1][0])[0]
-            _cache.pop(oldest, None)
+        if cache_key in _cache:
+            _cache.pop(cache_key, None)
+        elif CACHE_MAX_ENTRIES > 0 and len(_cache) >= CACHE_MAX_ENTRIES:
+            _cache.popitem(last=False)
 
         _cache[cache_key] = (datetime.now(timezone.utc).timestamp(), payload)
 
@@ -503,6 +552,7 @@ def _prepare_response(message: str, cache_key: str) -> StoryboardChatResponse:
         return response
     except RuntimeError as exc:
         logger.warning("스토리보드 도구 로드 실패: %s", exc)
+        _metrics_record_fallback()
         response = _build_fallback(
             message,
             message,
@@ -512,6 +562,7 @@ def _prepare_response(message: str, cache_key: str) -> StoryboardChatResponse:
         return response
     except Exception as exc:
         logger.exception("스토리보드 응답 생성 실패: %s", exc)
+        _metrics_record_fallback()
         response = _build_fallback(
             message,
             message,

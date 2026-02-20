@@ -189,3 +189,13 @@ curl -X POST http://localhost:8001/chat \
   -d '{"message":"떡볶이 먹방 스토리보드 짜줘"}'
 curl http://localhost:8001/metrics
 ```
+
+### Observability
+
+`/metrics`는 요청/캐시/툴 호출 레이턴시, 에러, 동시 처리량(fallback 포함) 등을 확인할 수 있습니다.
+
+환경 변수 예시:
+
+```bash
+STORYBOARD_AGENT_METRICS_HISTORY_SIZE=300
+```
