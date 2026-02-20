@@ -13,7 +13,6 @@ for _p in (_dir, _src_dir):
 from _shared import log_tool_call, review_python_code
 from langchain_core.tools import tool
 
-
 def _validate_name(name: str) -> str | None:
     """이름에 경로 탐색 문자가 포함되면 오류 메시지 반환, 정상이면 None"""
     if "/" in name or "\\" in name or ".." in name or os.path.isabs(name):

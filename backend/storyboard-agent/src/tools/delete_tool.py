@@ -23,6 +23,9 @@ _PROTECTED = {
     "delete_rpc_sql.py",
     "list_rpc_sql.py",
     "view_rpc_sql.py",
+    "view_intern_plan.py",
+    "update_intern_plan.py",
+    "write_intern_report.py",
 }
 
 

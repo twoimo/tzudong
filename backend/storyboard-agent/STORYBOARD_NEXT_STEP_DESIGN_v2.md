@@ -173,77 +173,47 @@ Researcher → intern_request + researcher_context → Supervisor
 
 ### 3.3 Intern (RPC·도구 생성/삭제 담당)
 
-**역할 3가지**:
+**역할 2가지**:
 
 #### A. RPC 함수 & 도구 생성/삭제
 - Supervisor가 "이런 함수가 필요하다"고 지시
-- 코드 작성 → LLM 코드 리뷰(review 노드, 보안 계층 3) → 인간 확인
+- 코드 작성 → LLM 코드 리뷰(`review_create` 노드, 보안 계층 3) → 인간 확인
 - 덮어쓰기 불가: 수정 시 delete → human 승인 → create 순서 강제
 
-#### B. 불가능 항목 문서화
-- 현재 데이터로 만들 수 없는 함수/도구 목록을 구조화
-- Pydantic 모델로 검증하여 문서 일관성 보장
+#### B. 제안 보고서 저장
+- 즉시 구현이 어려운 항목은 `write_intern_report(report_type="tool-proposals", ...)`로 저장
+- 메타데이터 확장 제안은 `write_intern_report(report_type="metadata-proposal", ...)`로 저장
+- 보고서는 `.storyboard-agent/intern-reports/` 하위에 Markdown으로 보관
 
-```python
-class InfeasibleItem(BaseModel):
-    """현재 데이터로 구현 불가능한 항목"""
-    item_name: str
-    item_type: Literal["rpc_function", "tool"]
-    reason: str                    # 불가 사유
-    required_data: list[str]       # 필요하지만 없는 데이터
-    suggested_action: str          # 해결 방안 제안
-
-class InfeasibilityReport(BaseModel):
-    """불가능 항목 종합 보고서"""
-    items: list[InfeasibleItem]
-    summary: str
+**사용 도구**: `ADMIN_TOOLS` (9종)
+```
+create_tool, delete_tool, create_rpc_sql, delete_rpc_sql, list_rpc_sql, view_rpc_sql, view_intern_plan, update_intern_plan, write_intern_report
 ```
 
-#### C. 메타데이터 구축 제안서
-- 현재 데이터에서 추출 가능한 메타데이터 항목 제안
-- 구축 방법, 예상 효과 포함
-
-```python
-class MetadataProposal(BaseModel):
-    """메타데이터 구축 제안"""
-    field_name: str
-    source_table: str              # 원본 테이블
-    extraction_method: str         # 추출 방법
-    expected_benefit: str          # 기대 효과
-    implementation_effort: Literal["low", "medium", "high"]
-
-class MetadataProposalReport(BaseModel):
-    """메타데이터 구축 제안서"""
-    proposals: list[MetadataProposal]
-    priority_order: list[str]      # 추천 구축 순서
-    summary: str
-```
-
-**사용 도구**: `ADMIN_TOOLS` (6종)
-```
-create_tool, delete_tool, create_rpc_sql, delete_rpc_sql, list_rpc_sql, view_rpc_sql
-```
-
-**InternState**: `intern_request`(입력) + `intern_plan` + `intern_action` + `created_artifacts` + `intern_result`(출력)
+**InternState**: `intern_request`(입력) + `intern_action` + `pending_review_calls` + `pending_execute_calls` + `review_statuses` + `pending_modified_feedback` + `created_artifacts` + `artifact_statuses` + `intern_result`(출력)
 ```python
 # Shared: messages, intern_request, researcher_context, intern_result
-# Private: intern_reports, intern_plan, intern_action, created_artifacts
+# Private: intern_reports, intern_action, pending_review_calls, pending_review_notes, pending_execute_calls,
+#          review_statuses, pending_modified_feedback, plan_update_events, created_artifacts, artifact_statuses
+# Plan: .storyboard-agent/intern-reports/plan/active_plan.md (Markdown 체크리스트)
 ```
 
 **동작 흐름 (Plan + ReAct + 코드 리뷰 + 상태 기반 분기)**:
 ```
 plan → think → route_think (intern_action 기반):
-  ├─ create_tool / create_rpc_sql
-  │   → review(LLM 보안 검토, interrupt_after)
-  │   → [human 피드백] → route_after_human:
-  │       ├─ 승인 → execute → update_plan → think
-  │       ├─ 수정 → think
-  │       └─ 삭제/취소 → END
-  ├─ delete_tool / delete_rpc_sql
-  │   → execute_delete(interrupt_before) → update_plan → think
-  ├─ list_rpc_sql / view_rpc_sql
-  │   → execute → update_plan → think
-  └─ text → update_plan → report → END
+  ├─ create_tool / create_rpc_sql / delete_tool / delete_rpc_sql
+  │   → pending_review_calls 큐 저장 (delete 먼저, create 다음)
+  │   → delete: execute_delete(interrupt_before)에서 사람 승인/삭제/수정 처리
+  │   → create: review_create(interrupt_after) → create_review_decision에서 사람 승인/삭제/수정 처리
+  │       ├─ 승인(rule) → pending_execute_calls에 넣고 execute
+  │       ├─ 삭제(rule) → 실행 없이 큐에서 제거
+  │       └─ 그 외 텍스트 → pending_modified_feedback 저장 후 think로 복귀
+  ├─ read/list 계열 tool call
+  │   → execute → think
+  └─ tool_call 없음 → finish → END
+
+※ 실행/리뷰 이벤트는 `plan_update_events`에 누적하고 `update_plan`에서 1회 반영
+※ `think`는 `update_intern_plan`을 직접 호출하지 않음
 ```
 
 **Researcher ↔ Intern 핸드오프**:
@@ -261,7 +231,7 @@ Supervisor:
 ```
 1. 경로 제한 (도구 내부)
 2. 정적 검사 (review_python_code/review_sql_code, 도구 내부)
-3. LLM 코드 리뷰 (review 노드, _PROTECTED + 위험패턴 목록)
+3. LLM 코드 리뷰 (`review_create` 노드, _PROTECTED + 위험패턴 목록)
 4. Human 확인 (create→interrupt_after, delete→interrupt_before)
 5. 샌드박스 (미구현)
 ```
@@ -389,9 +359,15 @@ class ResearcherPrivate(TypedDict):
 # Intern — 보고서 관리용
 class InternPrivate(TypedDict):
     intern_reports: Annotated[list[dict], add]
-    intern_plan: Optional[dict]
     intern_action: Optional[str]
+    pending_review_calls: list[dict]       # create/delete 리뷰 대기 큐
+    pending_review_notes: dict[str, str]   # create 코드리뷰 캐시
+    pending_execute_calls: list[dict]      # 승인되어 실제 실행할 호출
+    review_statuses: Annotated[dict, merge_dicts]          # {target: approve/delete/modify}
+    pending_modified_feedback: Annotated[dict, merge_dicts]# {target: 수정 지시}
+    plan_update_events: Annotated[list[BaseMessage], add_messages]
     created_artifacts: Annotated[list[dict], add]
+    artifact_statuses: Annotated[dict, merge_dicts]        # {target: created/deleted/failed}
 
 # Designer — 스토리보드 이력 관리용
 class DesignerPrivate(TypedDict):
@@ -443,7 +419,7 @@ builder = StateGraph(SharedState)
 # --- 노드 등록 ---
 builder.add_node("supervisor", supervisor_node)
 builder.add_node("researcher", researcher_subgraph)       # 하위 그래프 (ReAct 루프)
-builder.add_node("intern", intern_subgraph)               # plan/think/review/update_plan 포함
+builder.add_node("intern", intern_subgraph)               # plan/think/review_create/create_review_decision/execute_delete/update_plan 포함
 builder.add_node("designer", designer_node)
 builder.add_node("feedback_classifier", feedback_classifier_node)
 builder.add_node("summarize_and_reset", summarize_and_reset_node)
@@ -482,7 +458,7 @@ memory = MemorySaver()
 graph = builder.compile(
     checkpointer=memory,
     # Intern 내부 compile에서 처리:
-    #   interrupt_after=["review"], interrupt_before=["execute_delete"]
+    #   interrupt_after=["review_create"], interrupt_before=["execute_delete"]
     interrupt_after=["designer"],        # 스토리보드 생성 후 human 확인
 )
 ```
@@ -523,7 +499,7 @@ def build_researcher_subgraph():
 
 | 시점 | 대상 노드 | 방식 | 사람 역할 |
 |------|-----------|------|-----------|
-| 코드 생성 리뷰 후 | `review` | `interrupt_after` | 생성 코드 확인 후 승인/수정/취소 |
+| 코드 생성 리뷰 후 | `review_create` | `interrupt_after` | 생성 코드 확인 후 승인/삭제/수정 지시 |
 | RPC/도구 삭제 실행 전 | `execute_delete` | `interrupt_before` | 삭제 승인/거부 |
 | 스토리보드 생성 후 | `designer` | `interrupt_after` | 결과 확인 후 승인/수정요청/재조사 |
 
@@ -591,30 +567,21 @@ GRANT, REVOKE, CREATE ROLE, COPY, EXECUTE
 
 #### 3층: Human Interrupt (구현 완료)
 
-- `interrupt_after=["review"]` → create 코드 리뷰 결과를 사람이 확인
+- `interrupt_after=["review_create"]` → create 코드 리뷰 결과를 사람이 확인
 - `interrupt_before=["execute_delete"]` → delete 실행 전 사람 승인 필수
 - 승인(`Command(resume=...)`) 또는 거부(feedback) → Intern 재시도
 
 #### 4층: LLM 코드 리뷰 노드 (구현 완료)
 
-현재 Intern 서브그래프에서 `review` 노드로 동작:
+현재 Intern 서브그래프에서 `review_create` 노드는 create 코드 리뷰를 JSON으로 생성하고,
+사람 검토는 큐 기준으로 1건씩 처리한다:
 
 ```python
-def code_review_node(state):
-    """LLM이 코드의 논리적 안전성 평가"""
-    code = extract_pending_code(state)
-    review = llm.with_structured_output(CodeReview).invoke(
-        f"아래 코드가 안전한지 평가하세요. 데이터 손실, 보안 취약점, "
-        f"의도하지 않은 부작용이 있는지 검토합니다.\n\n{code}"
-    )
-    if not review.is_safe:
-        return {"messages": [AIMessage(content=f"[코드 리뷰 거부] {review.reason}")]}
-    return {}  # 통과 → human 확인(interrupt_after) 후 execute로 진행
-
-class CodeReview(BaseModel):
-    is_safe: bool
-    reason: Optional[str] = None
-    risk_level: Literal["low", "medium", "high"]
+def review_create_node(state):
+    # pending_review_calls의 현재 create 1건 리뷰를 생성/표시 (interrupt_after)
+    # human 응답:
+    #   - "승인"/"삭제" -> rule 분기
+    #   - 그 외 텍스트 -> pending_modified_feedback에 저장 후 think에서 재계획
 ```
 
 #### 5층: 실행 샌드박스 (미구현)
@@ -752,7 +719,7 @@ prompts/   tools/
 | 2 | 프롬프트 템플릿 | `prompts/` | 없음 |
 | 3 | Supervisor 노드 | `agents/supervisor.py` | 1, 2 |
 | 4 | Researcher 서브그래프 | `agents/researcher.py` | 1, 2 |
-| 5 | Intern 노드 + Pydantic 모델 | `agents/intern.py` | 1 |
+| 5 | Intern 노드 + 리뷰/실행 큐 상태머신 | `agents/intern.py` | 1 |
 | 6 | Designer 노드 + 피드백 분류기 | `agents/designer.py` | 1, 2, 3, 4 |
 | 7 | 전체 그래프 조립 + interrupt 설정 | `graph.py` | 1~6 |
 | 8 | `summarize_and_reset` + 메시지 관리 | `agents/designer.py` | 6, 7 |

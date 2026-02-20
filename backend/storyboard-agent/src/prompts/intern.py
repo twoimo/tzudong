@@ -78,6 +78,9 @@ TABLE_SCHEMA = """
 - delete_rpc_sql: supabase/의 SQL 파일 삭제
 - list_rpc_sql: supabase/의 RPC SQL/인덱스 SQL 파일 목록 조회
 - view_rpc_sql: 특정 SQL 파일의 본문 코드 조회
+- view_intern_plan: intern plan markdown 조회
+- update_intern_plan: intern plan markdown 전체 수정
+- write_intern_report: intern 제안 보고서 markdown 저장
 """
 
 # ---------------------------------------------------------------------------
@@ -101,29 +104,17 @@ Supervisor로부터 받은 지시를 자율적으로 수행합니다.
 # 2. INTERN_PLAN_PROMPT — 초기 계획 수립
 # ---------------------------------------------------------------------------
 INTERN_PLAN_PROMPT = """\
-아래 지시사항을 보고 실행 계획을 JSON으로 작성하세요.
-테이블 스키마를 참고해 필요한 작업을 작은 단계로 나누고, 한 번에 하나씩 실행 가능한 순서로 작성합니다.
+아래 지시사항의 실행 계획을 Markdown으로 작성하세요.
 
 ## 지시사항
 {instruction}
 
 ## 규칙
-- 반드시 JSON 객체로만 응답하세요. (설명 문장/코드블록 금지)
-- steps는 최소 2개, 최대 8개로 작성하세요.
-- 각 step은 id, task, status를 포함하고 status는 pending/in_progress/completed/blocked 중 하나입니다.
-- 첫 번째 step만 in_progress로 두고 나머지는 pending으로 시작하세요.
-- RPC 관련 작업이면 list_rpc_sql로 기존 RPC/인덱스 파일 확인 단계를 반드시 포함하세요.
-- SQL 인덱스 관련 변경은 RPC 함수와 분리하여 별도 step으로 작성하세요.
-
-## JSON 스키마
-{
-  "goal": "최종 목표",
-  "steps": [
-    {"id": 1, "task": "구체 작업", "status": "in_progress"},
-    {"id": 2, "task": "구체 작업", "status": "pending"}
-  ],
-  "notes": "주의사항"
-}
+- Markdown 본문만 출력 (설명/코드블록 금지)
+- Goal / Steps / Notes만 포함
+- Steps는 `- [ ]` 체크리스트 2~8개
+- RPC 작업이면 `list_rpc_sql` 확인 step 포함
+- 인덱스 작업은 RPC 함수 작업과 분리
 """
 
 # ---------------------------------------------------------------------------
@@ -133,87 +124,116 @@ INTERN_THINK_PROMPT = """\
 ## 지시사항
 {instruction}
 
-## 현재 실행 계획
-{intern_plan}
+## 현재 수정 요청(사람 피드백)
+{modified_feedback}
 
-## 수행 가능한 작업
-
-### A. 도구 또는 RPC 함수 생성/삭제
-ADMIN_TOOLS를 호출하여 도구/RPC를 관리합니다.
-- create_tool(tool_name, code): tools/에 Python 도구 파일 생성 (덮어쓰기 불가)
-- delete_tool(tool_name): tools/의 도구 파일 삭제
-- create_rpc_sql(function_name, sql_code): supabase/에 SQL RPC 함수 생성 (덮어쓰기 불가)
-- delete_rpc_sql(function_name): supabase/의 SQL 파일 삭제
-- list_rpc_sql(): supabase/의 RPC/인덱스 SQL 파일 목록 조회
-- view_rpc_sql(sql_name): 지정한 SQL 파일 본문 조회
-
-주의: 기존 파일을 수정하려면 반드시 먼저 delete한 후 다시 create하세요.
-
-### B. 불가능 항목 보고
-현재 데이터로 구현 불가능한 경우, "[불가]"로 시작하는 텍스트로 응답하세요.
-사유, 필요한 데이터, 해결 방안을 포함하세요.
-
-### C. 메타데이터 구축 제안
-새로운 메타데이터가 필요한 경우, "[메타데이터]"로 시작하는 텍스트로 응답하세요.
-구축 방법, 기대 효과를 포함하세요.
+## 현재 생성/삭제 상태
+{artifact_statuses}
 
 ## 대화 이력
 {messages}
 
 ## 행동 규칙
-- 현재 계획에서 `in_progress` 단계 1개만 처리하세요. 한 턴에 여러 단계를 동시에 끝내지 마세요.
-- RPC 작업 전에는 필요 시 `list_rpc_sql`로 기존 함수/인덱스 파일을 먼저 확인하세요.
-- 스스로 생각하면서 필요한 도구/RPC를 설계하고 코드를 작성하세요.
-- 도구를 생성/삭제/조회할 수 있으면 tool_calls로 ADMIN_TOOLS를 호출하세요.
-- 이전 시도에서 실패했다면 코드를 수정하여 재시도하세요.
-- 불가능하면 "[불가]"로, 메타데이터 제안이면 "[메타데이터]"로 시작하세요.
+- 한 턴에 필요한 tool call만 간결하게 생성
+- create/delete는 사람 리뷰 루프로 이동하므로 대상 이름을 정확히 작성
+- 사람 수정 피드백이 있으면 우선 반영한 create/delete call을 생성
+- 작업 후 계획 갱신은 시스템이 자동 처리 (`update_intern_plan` 직접 호출 금지)
+- 완료 시 tool call 없이 종료 보고 텍스트 응답
+- RPC 작업 전 필요하면 `list_rpc_sql`/`view_rpc_sql`로 확인
 """
 
 # ---------------------------------------------------------------------------
-# 4. CODE_REVIEW_PROMPT — 보안 코드 리뷰 (별도 LLM)
+# 4. INTERN_UPDATE_PLAN_PROMPT — 실행/피드백 반영 계획 갱신
+# ---------------------------------------------------------------------------
+INTERN_UPDATE_PLAN_PROMPT = """\
+아래 정보를 반영해 계획 markdown을 갱신하세요.
+
+## 요청
+{instruction}
+
+## 현재 계획
+{current_plan}
+
+## 최근 이벤트
+- source: {source_name}
+- content:
+{event_content}
+
+## 규칙
+- 계획 markdown 본문만 출력하세요.
+- Goal/Steps/Notes 정보만 유지하세요.
+- 성공/진행이면 step 상태 갱신
+- 실패/거절/수정이면 Notes 반영 + step 조정
+"""
+
+# ---------------------------------------------------------------------------
+# 5. INTERN_FINAL_RESULT_PROMPT — 최종 결과 요약
+# ---------------------------------------------------------------------------
+INTERN_FINAL_RESULT_PROMPT = """\
+아래 정보를 바탕으로 intern_result를 한 줄로 작성하세요.
+형식: request=<요약> | request_check=met/partial/unmet | summary=<짧게>
+
+request:
+{instruction}
+
+artifacts:
+{artifacts_text}
+
+plan:
+{plan_md}
+"""
+
+# ---------------------------------------------------------------------------
+# 6. CODE_REVIEW_PROMPT — 보안 코드 리뷰 (별도 LLM)
 # ---------------------------------------------------------------------------
 CODE_REVIEW_PROMPT = """\
-당신은 코드 보안 검토 전문가입니다.
-아래 코드가 스토리보드 에이전트의 도구/RPC로 안전하게 실행될 수 있는지 검토하세요.
+보안 리뷰만 수행하세요.
 
-## 검토 대상
+검토 대상:
 {codes}
 
-## 시스템 보호 파일 (생성/덮어쓰기 절대 금지)
-다음 이름의 도구는 시스템 도구이므로, 이 이름으로 create_tool을 시도하면 즉시 거부하세요:
-`__init__`, `_shared`, `list_tools`, `create_tool`, `delete_tool`, `create_rpc_sql`, `delete_rpc_sql`, `list_rpc_sql`, `view_rpc_sql`
+거부 규칙:
+- 시스템 도구명/유사 기능 생성 시 거부:
+`__init__`, `_shared`, `list_tools`, `create_tool`, `delete_tool`, `create_rpc_sql`, `delete_rpc_sql`, `list_rpc_sql`, `view_rpc_sql`, `view_intern_plan`, `update_intern_plan`, `write_intern_report`
+- Python 금지: `os.system`, `subprocess`, `exec`, `eval`, `__import__`, `shutil.rmtree`, `os.remove`, `os.unlink`, `os.rmdir`, `requests`, `urllib`, `httpx`, `socket`
+- SQL 금지: `DROP`, `TRUNCATE`, `ALTER`, `GRANT`, `REVOKE`, `CREATE ROLE`, `COPY`, `EXECUTE`, `DELETE` without `WHERE`, `UPDATE` without `WHERE`
+- SQL은 `CREATE FUNCTION`만 허용, `SECURITY DEFINER`는 거부
 
-## Python 위험 패턴 (하나라도 있으면 [REVIEW_REJECT])
-1. `os.system()` — 시스템 명령 실행
-2. `subprocess` — 서브프로세스
-3. `exec()` — 동적 코드 실행
-4. `eval()` — 동적 표현식 실행
-5. `__import__()` — 동적 임포트
-6. `shutil.rmtree` — 디렉토리 재귀 삭제
-7. `os.remove` / `os.unlink` / `os.rmdir` — 파일 삭제
-8. `requests` / `urllib` / `httpx` — 외부 HTTP 요청
-9. `socket` — 직접 네트워크 접근
+응답 형식(JSON 객체만):
+{{"tool:foo":"[REVIEW_PASS] ...","rpc:bar":"[REVIEW_REJECT] ..."}}
+"""
 
-## SQL 위험 패턴 (하나라도 있으면 [REVIEW_REJECT])
-1. `DROP TABLE/SCHEMA/DATABASE/FUNCTION/INDEX/VIEW/TRIGGER/ROLE/TYPE`
-2. `TRUNCATE` — 전체 데이터 삭제
-3. `ALTER TABLE/SCHEMA/DATABASE/ROLE/TYPE` — 구조 변경
-4. `GRANT` — 권한 부여
-5. `REVOKE` — 권한 회수
-6. `CREATE ROLE` — 역할 생성
-7. `COPY` — 파일 I/O
-8. `EXECUTE` — 동적 SQL
-9. `DELETE FROM` without `WHERE` — 전체 행 삭제
-10. `UPDATE ... SET` without `WHERE` — 전체 행 수정
-11. SQL은 반드시 `CREATE FUNCTION` 구문이어야 합니다. 그 외 DDL은 거부.
+# ---------------------------------------------------------------------------
+# 7. Intern create 리뷰/수정용 보조 프롬프트
+# ---------------------------------------------------------------------------
+INTERN_BATCH_REVIEW_JSON_PROMPT = """\
+create 코드 리뷰 결과를 JSON 객체로만 출력하세요.
 
-## 추가 검토 기준
-1. **데이터 유출**: 민감 정보 노출, 인증 우회 시도
-2. **파일 시스템**: tools/ 또는 supabase/ 외부 접근 시도
-3. **SQL 인젝션**: 동적 SQL 생성, 파라미터 바인딩 미사용
-4. **권한 상승**: SECURITY DEFINER
+review_codes:
+{codes_json}
 
-## 응답 형식
-안전하면: [REVIEW_PASS] 통과 사유
-위험하면: [REVIEW_REJECT] 거부 사유 (구체적 위험 항목 번호 인용)
+required_keys:
+{keys_json}
+
+응답 형식:
+{{"tool:foo":"[REVIEW_PASS] ...","rpc:bar":"[REVIEW_REJECT] ..."}}
+"""
+
+INTERN_BATCH_REVIEW_JSON_RETRY_PROMPT = """\
+이전 응답 형식이 잘못되었습니다. JSON 객체만 다시 출력하세요.
+
+bad_output:
+{bad_output}
+
+error:
+{error}
+
+codes:
+{codes_json}
+
+required_keys:
+{keys_json}
+
+응답 형식:
+{{"tool:foo":"[REVIEW_PASS] ...","rpc:bar":"[REVIEW_REJECT] ..."}}
 """

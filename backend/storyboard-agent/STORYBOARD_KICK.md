@@ -26,7 +26,8 @@ Retrieve 후 데이터 충분성 검증(캡션 ≥ 3개)이 자주 fail. 근본 
 - **슬롯 필링 전환**: 고정 임계값 대신 `StoryboardSlots`(visual_references, transcript_context, food_restaurant_info 등)별 충족 여부로 판단. 미충족 슬롯만 타겟 검색하고, human에게도 "어떤 슬롯이 왜 부족한지" 구체적으로 설명.
 - **웹 검색 적극 활용**: DB에 없는 트렌드, 배경 지식은 `web_search` 도구로 외부에서 보충.
 - **Intern 에이전트의 동적 도구 생성**: 기존 도구로 해결 안 되는 검색 패턴 → Intern이 새로운 RPC 함수/도구를 생성. 에이전트는 `list_tools`로 동적으로 사용 가능한 도구를 확인.
-- **Intern 계획 루프 추가**: Intern은 시작 시 `intern_plan`을 만들고(`plan` 노드), 각 작업 이후 `update_plan`으로 단계 상태를 갱신하며 한 단계씩 처리.
+- **Intern 계획 루프 추가**: Intern은 시작 시 `plan` 노드에서 Markdown 계획 파일을 만들고, 실행 턴 종료/리뷰 비승인 시 시스템이 계획을 자동 갱신한다.
+- **Intern 리뷰 루프 단순화**: create/delete를 `pending_review_calls` 큐로 1개씩 처리한다. create는 `review_create(interrupt_after)`에서 코드리뷰+사람 확인, delete는 `execute_delete(interrupt_before)`에서 사람 확인 후 처리한다. 사람 입력은 `승인/삭제` 규칙 분기, 그 외 텍스트는 `pending_modified_feedback`에 저장하고 다음 think에서 반영한다.
 - **Intern 요청/결과 핸드오프 명시화**: Researcher 요청은 `intern_request`로 전달하고, Intern은 처리 결과를 Supervisor 판단용 `intern_result` 문자열로 반환.
 
 ---
@@ -68,7 +69,7 @@ v1은 모든 필드가 하나의 flat `AgentState`에 몰려 있어서:
 SharedState (공유): messages, slots, is_approved, final_output
  ├── SupervisorPrivate: tasks, loop_count, human_feedback
  ├── ResearcherPrivate: research_results, previous_queries
- ├── InternPrivate:     intern_reports, intern_plan, intern_action, created_artifacts
+ ├── InternPrivate:     intern_reports, intern_action, pending_review_calls, pending_execute_calls, review_statuses, pending_modified_feedback, plan_update_events, created_artifacts, artifact_statuses
  └── DesignerPrivate:   storyboard_history, human_feedback, conversation_summary
 ```
 

@@ -78,13 +78,17 @@ class InternPrivate(TypedDict):
     """Intern 서브그래프 내부용"""
 
     intern_reports: Annotated[list[dict], _append_list]
-    intern_plan: Optional[dict]  # {"goal": str, "steps": [...], "last_updated": str}
-    intern_action: Optional[
-        str
-    ]  # "create_tool" | "create_rpc_sql" | "delete_tool" | "delete_rpc_sql" | "report"
+    intern_action: Optional[str]  # "review_create" | "execute_delete" | "execute" | "update_plan" | "finish"
+    pending_review_calls: list[dict]  # create/delete 리뷰 대기 큐
+    pending_review_notes: dict[str, str]  # create 코드리뷰 결과 캐시
+    pending_execute_calls: list[dict]  # 실행 대기 tool_call (승인된 create/delete + 기타 도구)
+    review_statuses: Annotated[dict, _merge_dicts]  # {"tool:foo": "approve/delete/modify"}
+    pending_modified_feedback: Annotated[dict, _merge_dicts]  # {"tool:foo": "수정 지시"}
+    plan_update_events: Annotated[list[BaseMessage], add_messages]  # plan 자동 업데이트용 이벤트 메시지 버퍼
     created_artifacts: Annotated[
         list[dict], _append_list
     ]  # [{"type": "tool", "name": "xxx"}]
+    artifact_statuses: Annotated[dict, _merge_dicts]  # {"tool:foo": "created/deleted/failed"}
 
 
 class DesignerPrivate(TypedDict):
@@ -137,13 +141,17 @@ class InternState(TypedDict):
     intern_result: Optional[str]  # Intern 완료 요약(문자열). Supervisor 판단용
     # Private
     intern_reports: Annotated[list[dict], _append_list]
-    intern_plan: Optional[dict]  # {"goal": str, "steps": [...], "last_updated": str}
-    intern_action: Optional[
-        str
-    ]  # "create_tool" | "create_rpc_sql" | "delete_tool" | "delete_rpc_sql" | "report"
+    intern_action: Optional[str]  # "review_create" | "execute_delete" | "execute" | "update_plan" | "finish"
+    pending_review_calls: list[dict]  # create/delete 리뷰 대기 큐
+    pending_review_notes: dict[str, str]  # create 코드리뷰 결과 캐시
+    pending_execute_calls: list[dict]  # 실행 대기 tool_call (승인된 create/delete + 기타 도구)
+    review_statuses: Annotated[dict, _merge_dicts]  # {"tool:foo": "approve/delete/modify"}
+    pending_modified_feedback: Annotated[dict, _merge_dicts]  # {"tool:foo": "수정 지시"}
+    plan_update_events: Annotated[list[BaseMessage], add_messages]  # plan 자동 업데이트용 이벤트 메시지 버퍼
     created_artifacts: Annotated[
         list[dict], _append_list
     ]  # [{"type": "tool", "name": "xxx"}]
+    artifact_statuses: Annotated[dict, _merge_dicts]  # {"tool:foo": "created/deleted/failed"}
 
 
 class DesignerState(TypedDict):

@@ -1,41 +1,35 @@
 """Intern 에이전트 서브그래프.
 
-그래프 구조:
+그래프:
 START -> plan -> think
-think --(create)--> review -(human)-> execute -> update_plan -> think
-think --(delete)--> execute_delete -> update_plan -> think
-think --(read/report)--> update_plan -> (report | think)
-report -> END
-
-상태 업데이트 핵심:
-- plan: intern_plan + messages
-- think: messages + intern_action
-- execute/execute_delete: messages + created_artifacts + intern_reports + intern_result
-- update_plan: intern_plan(last_updated 포함)
-- report: intern_reports + messages
-
-읽기 순서:
-1) 공용 헬퍼
-2) 노드/라우팅 함수 (plan -> think -> review -> execute -> update_plan -> report)
-3) 그래프 조립
+think --(delete review 필요)--> execute_delete(interrupt_before)
+think --(create review 필요)--> review_create(interrupt_after) -> create_review_decision
+think --(일반 tool call)--> execute
+execute / create_review_decision / execute_delete --(event 있으면)--> update_plan -> think
+think --(tool call 없음)--> finish -> END
 """
 
 import json
 import os
-from datetime import datetime
+import uuid
 
-from langgraph.graph import START, END, StateGraph
-from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage, SystemMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, StateGraph
+from pydantic import BaseModel, ValidationError
 
-from state.main import InternState
 from prompts.intern import (
-    INTERN_SYSTEM_PROMPT,
-    INTERN_PLAN_PROMPT,
-    INTERN_THINK_PROMPT,
     CODE_REVIEW_PROMPT,
+    INTERN_BATCH_REVIEW_JSON_PROMPT,
+    INTERN_BATCH_REVIEW_JSON_RETRY_PROMPT,
+    INTERN_FINAL_RESULT_PROMPT,
+    INTERN_PLAN_PROMPT,
+    INTERN_SYSTEM_PROMPT,
+    INTERN_THINK_PROMPT,
+    INTERN_UPDATE_PLAN_PROMPT,
 )
+from state.main import InternState
 from tools import load_tools
 
 
@@ -45,635 +39,708 @@ llm_reviewer = ChatOpenAI(model="gpt-4o-mini")
 
 _DELETE_ACTIONS = {"delete_tool", "delete_rpc_sql"}
 _CREATE_ACTIONS = {"create_tool", "create_rpc_sql"}
-_READ_ACTIONS = {"list_rpc_sql", "view_rpc_sql"}
-
-_REPORTS_DIR = os.path.join(
+_PLAN_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     ".storyboard-agent",
     "intern-reports",
+    "plan",
+    "active_plan.md",
 )
 
 
-# ---------------------------------------------------------------------------
-# 공용 헬퍼
-# ---------------------------------------------------------------------------
-# 이 섹션 함수들은 "state를 읽기 쉽게 정규화"하는 역할이다.
-# 노드 함수에서는 가능하면 이 헬퍼를 조합만 하도록 유지한다.
-def _extract_instruction(state: InternState) -> str:
-    """Intern 작업 지시를 반환한다.
+class _ReviewPayload(BaseModel):
+    """코드 리뷰 응답(JSON dict) 검증 모델."""
 
-    우선순위:
-    1) state.intern_request (Researcher/Supervisor가 전달한 요청)
-    2) messages 내 첫 HumanMessage
-    """
-    # Supervisor가 전달한 intern_request가 있으면 항상 그것을 우선 사용한다.
-    intern_request = state.get("intern_request")
-    if isinstance(intern_request, str) and intern_request.strip():
-        return intern_request.strip()
-
-    for msg in state["messages"]:
-        if isinstance(msg, HumanMessage):
-            return msg.content
-    return ""
+    reviews: dict[str, str]
 
 
-def _stringify_recent_messages(state: InternState, limit: int = 8) -> str:
-    """최근 대화를 프롬프트 주입용 문자열로 변환한다."""
-    lines = []
-    for msg in state["messages"][-limit:]:
-        role = "user"
-        if isinstance(msg, AIMessage):
-            role = "assistant"
-        elif isinstance(msg, ToolMessage):
-            role = f"tool:{msg.name}"
-        lines.append(f"[{role}] {msg.content}")
-    return "\n".join(lines)
+def _is_delete_call(tc: dict) -> bool:
+    """tool_call이 delete 계열인지 반환한다."""
+    return tc.get("name") in _DELETE_ACTIONS
 
 
-def _find_pending_tool_calls(state: InternState) -> list:
-    """messages에서 마지막 AIMessage의 tool_calls를 찾는다."""
+def _is_create_call(tc: dict) -> bool:
+    """tool_call이 create 계열인지 반환한다."""
+    return tc.get("name") in _CREATE_ACTIONS
+
+
+def _call_target_name(tc: dict) -> str:
+    """tool_call args에서 대상 이름(tool/function/sql)을 추출한다."""
+    args = tc.get("args", {})
+    return str(args.get("tool_name") or args.get("function_name") or args.get("sql_name") or "unknown")
+
+
+def _call_key(tc: dict) -> str:
+    """리뷰/상태 추적용 고유 키(tool:foo, rpc:bar)를 생성한다."""
+    name = tc.get("name", "")
+    target = _call_target_name(tc)
+    if name in {"create_tool", "delete_tool"}:
+        return f"tool:{target}"
+    if name in {"create_rpc_sql", "delete_rpc_sql"}:
+        return f"rpc:{target}"
+    return f"{name}:{target}"
+
+
+def _decision_from_human(text: str) -> str:
+    """사람 입력을 approve/delete/modify 3가지로 단순 분류한다."""
+    content = (text or "").strip()
+    if content == "승인":
+        return "approve"
+    if content == "삭제":
+        return "delete"
+    return "modify"
+
+
+def _is_error_result(raw: str) -> bool:
+    """도구 실행 결과 문자열에 오류 토큰이 포함됐는지 검사한다."""
+    return any(token in raw for token in ("[오류]", "[거부]", "[차단]"))
+
+
+def _delete_review_prompt(tc: dict) -> str:
+    """delete 대상 1건에 대한 사람 확인 프롬프트를 만든다."""
+    key = _call_key(tc)
+    return "\n".join(
+        [
+            "## Intern 삭제 리뷰",
+            f"- 대상: {key}",
+            "응답: 승인 / 삭제 / <수정 지시 텍스트>",
+        ]
+    )
+
+
+def _create_review_prompt(tc: dict, review: str) -> str:
+    """create 대상 1건에 대한 리뷰+사람 확인 프롬프트를 만든다."""
+    key = _call_key(tc)
+    return "\n".join(
+        [
+            "## Intern 생성 리뷰",
+            f"- 대상: {key}",
+            f"- 코드리뷰: {review}",
+            "응답: 승인 / 삭제 / <수정 지시 텍스트>",
+        ]
+    )
+
+
+def _cleanup_plan_file() -> None:
+    """종료 시 active_plan.md를 삭제한다."""
+    path = os.path.realpath(_PLAN_FILE)
+    root = os.path.realpath(os.path.dirname(_PLAN_FILE))
+    if path.startswith(root + os.sep) and os.path.exists(path):
+        os.remove(path)
+
+
+def _latest_ai_tool_calls(state: InternState) -> list[dict]:
+    """messages에서 가장 최근 AIMessage의 tool_calls를 반환한다."""
     for msg in reversed(state["messages"]):
-        if isinstance(msg, AIMessage) and getattr(msg, "tool_calls", None):
+        if isinstance(msg, AIMessage) and msg.tool_calls:
             return msg.tool_calls
     return []
 
 
-def _extract_codes(tool_calls: list) -> list[dict]:
-    """코드 리뷰 대상(create_tool/create_rpc_sql) payload만 추출한다."""
-    codes = []
-    for tc in tool_calls:
-        if tc["name"] == "create_tool":
-            codes.append(
-                {
-                    "type": "python",
-                    "tool_name": tc["args"].get("tool_name", "unknown"),
-                    "code": tc["args"].get("code", ""),
-                }
+def _next_action_from_pending(pending: list[dict]) -> str:
+    """리뷰 큐의 첫 항목 타입으로 다음 액션(review_create/execute_delete/think)을 고른다."""
+    if not pending:
+        return "think"
+    return "execute_delete" if _is_delete_call(pending[0]) else "review_create"
+
+
+def _make_event_line(text: str) -> ToolMessage:
+    """계획 자동 업데이트 입력용 이벤트 ToolMessage를 만든다."""
+    return ToolMessage(
+        id=f"plan_evt_{uuid.uuid4().hex}",
+        content=text,
+        tool_call_id=f"plan_event_{uuid.uuid4().hex}",
+        name="plan_update_event",
+    )
+
+
+def _review_create_call(tc: dict) -> str:
+    """create 1건을 LLM 보안 리뷰하고 [REVIEW_PASS]/[REVIEW_REJECT] 문자열로 반환한다."""
+    key = _call_key(tc)
+    review_codes = [
+        {
+            "key": key,
+            "type": "tool" if tc["name"] == "create_tool" else "rpc",
+            "name": _call_target_name(tc),
+            "code": tc.get("args", {}).get("code") or tc.get("args", {}).get("sql_code") or "",
+        }
+    ]
+    codes_json = json.dumps(review_codes, ensure_ascii=False)
+    keys_json = json.dumps([key], ensure_ascii=False)
+    base = CODE_REVIEW_PROMPT.format(codes=codes_json)
+
+    bad_output = ""
+    bad_error = ""
+    for attempt in range(3):
+        prompt = (
+            INTERN_BATCH_REVIEW_JSON_PROMPT.format(codes_json=codes_json, keys_json=keys_json)
+            if attempt == 0
+            else INTERN_BATCH_REVIEW_JSON_RETRY_PROMPT.format(
+                bad_output=bad_output,
+                error=bad_error,
+                codes_json=codes_json,
+                keys_json=keys_json,
             )
-        elif tc["name"] == "create_rpc_sql":
-            codes.append(
-                {
-                    "type": "sql",
-                    "function_name": tc["args"].get("function_name", "unknown"),
-                    "code": tc["args"].get("sql_code", ""),
-                }
-            )
-    return codes
-
-
-def _activate_next_pending_step(steps: list[dict]) -> None:
-    """첫 pending step을 in_progress로 바꾼다."""
-    for step in steps:
-        if step.get("status") == "pending":
-            step["status"] = "in_progress"
-            return
-
-
-def _get_active_step(steps: list[dict]) -> dict | None:
-    """현재 active step을 찾는다. 우선순위: in_progress > pending."""
-    for step in steps:
-        if step.get("status") == "in_progress":
-            return step
-    for step in steps:
-        if step.get("status") == "pending":
-            return step
-    return None
-
-
-def _parse_plan(raw_plan: dict | str | None, fallback_instruction: str) -> dict:
-    """plan JSON을 정규화한다.
-
-    - 파싱 실패 시 기본 plan 사용
-    - 잘못된 status 보정
-    - in_progress step은 최대 1개 유지
-    """
-    default = {
-        "goal": fallback_instruction or "Intern 작업 완료",
-        "steps": [
-            {
-                "id": 1,
-                "task": "list_rpc_sql로 현재 RPC/인덱스 현황 확인",
-                "status": "in_progress",
-            },
-            {"id": 2, "task": "필요한 도구 또는 RPC SQL 생성/삭제 수행", "status": "pending"},
-            {"id": 3, "task": "실행 결과를 검토하고 최종 보고", "status": "pending"},
-        ],
-        "notes": "",
-        "last_updated": datetime.now().isoformat(),
-    }
-
-    # 1) 입력을 dict로 통일
-    if isinstance(raw_plan, dict):
-        plan = raw_plan
-    elif isinstance(raw_plan, str):
-        text = raw_plan.strip()
-        if "```" in text:
-            text = text.replace("```json", "").replace("```", "").strip()
+        )
+        raw = (llm_reviewer.invoke([HumanMessage(content="\n".join([base, prompt]))]).content or "").strip()
         try:
-            plan = json.loads(text)
-        except json.JSONDecodeError:
-            return default
-    else:
-        return default
+            loaded = json.loads(raw)
+            reviews = _ReviewPayload(reviews=loaded).reviews
+            text = str(reviews.get(key, "")).strip()
+            if text.startswith("[REVIEW_PASS]") or text.startswith("[REVIEW_REJECT]"):
+                return text
+            bad_output = raw
+            bad_error = "값은 [REVIEW_PASS]/[REVIEW_REJECT]로 시작해야 함"
+        except (json.JSONDecodeError, ValidationError) as e:
+            bad_output = raw
+            bad_error = str(e)
 
-    if not isinstance(plan, dict):
-        return default
-
-    # 2) 최소 필드(goal/steps) 보정
-    goal = plan.get("goal") or default["goal"]
-    steps_raw = plan.get("steps")
-    if not isinstance(steps_raw, list) or not steps_raw:
-        steps = default["steps"]
-    else:
-        steps = []
-        for i, step in enumerate(steps_raw, start=1):
-            if not isinstance(step, dict):
-                continue
-            status = step.get("status", "pending")
-            if status not in {"pending", "in_progress", "completed", "blocked"}:
-                status = "pending"
-            steps.append(
-                {
-                    "id": step.get("id", i),
-                    "task": step.get("task", f"step {i}"),
-                    "status": status,
-                    "result": step.get("result", ""),
-                }
-            )
-        if not steps:
-            steps = default["steps"]
-
-    # 3) active step은 하나만 유지 (여러 개면 첫 번째만 살림)
-    in_progress = [s for s in steps if s.get("status") == "in_progress"]
-    if len(in_progress) == 0:
-        _activate_next_pending_step(steps)
-    elif len(in_progress) > 1:
-        keep_id = in_progress[0].get("id")
-        for step in steps:
-            if step.get("status") == "in_progress" and step.get("id") != keep_id:
-                step["status"] = "pending"
-
-    return {
-        "goal": goal,
-        "steps": steps,
-        "notes": plan.get("notes", ""),
-        "last_updated": plan.get("last_updated", datetime.now().isoformat()),
-    }
+    return "[REVIEW_REJECT] 리뷰 JSON 검증 실패"
 
 
-def _format_plan(plan: dict | None) -> str:
-    """plan을 사람이 읽기 좋은 텍스트로 변환한다."""
-    parsed = _parse_plan(plan, fallback_instruction="")
-    lines = [f"goal: {parsed['goal']}"]
-    for step in parsed["steps"]:
-        lines.append(f"- [{step['status']}] ({step['id']}) {step['task']}")
-    if parsed.get("notes"):
-        lines.append(f"notes: {parsed['notes']}")
-    return "\n".join(lines)
-
-
-def _recent_tool_messages(state: InternState, limit: int = 5) -> list[ToolMessage]:
-    """최근 n개 message에서 ToolMessage만 추린다."""
-    return [m for m in state["messages"][-limit:] if isinstance(m, ToolMessage)]
-
-
-def _is_success_tool_result(content: str) -> bool:
-    """툴 결과 문자열에서 성공/실패를 판정한다."""
-    blocked = ("[오류]", "[거부]", "[차단]")
-    return "완료" in content and not any(token in content for token in blocked)
-
-
-def _is_action_success(tool_name: str, content: str) -> bool:
-    """도구 종류별 성공 판정.
-
-    - read(list/view): 오류 태그가 없으면 성공
-    - create/delete: '완료' 포함 + 오류 태그 없음
-    """
-    blocked = ("[오류]", "[거부]", "[차단]")
-    has_blocked = any(token in content for token in blocked)
-    if tool_name in _READ_ACTIONS:
-        return not has_blocked
-    return "완료" in content and not has_blocked
-
-
-def _build_intern_result_summary(
-    request: str,
-    completed_actions: list[dict],
-    failed_actions: list[dict],
-) -> str:
-    """Supervisor 전달용 intern_result 문자열을 만든다."""
-    done = ", ".join(
-        f"{item.get('tool')}({item.get('target')})" for item in completed_actions
-    )
-    fail = ", ".join(
-        f"{item.get('tool')}({item.get('target')})" for item in failed_actions
-    )
-
-    # Supervisor가 파싱하기 쉽게 status를 고정 문자열로 만든다.
-    if completed_actions and not failed_actions:
-        status = "completed"
-    elif completed_actions and failed_actions:
-        status = "partial"
-    elif failed_actions:
-        status = "failed"
-    else:
-        status = "no_op"
-
-    parts = [f"request={request}", f"status={status}"]
-    if done:
-        parts.append(f"done=[{done}]")
-    if fail:
-        parts.append(f"failed=[{fail}]")
-    return " | ".join(parts)
-
-
-def _save_report(report: dict, report_type: str) -> None:
-    """보고서를 .storyboard-agent/intern-reports/<type>/ 에 저장한다."""
-    report_dir = os.path.join(_REPORTS_DIR, report_type)
-    os.makedirs(report_dir, exist_ok=True)
-
-    # path traversal 방지: reports root 하위만 허용
-    resolved = os.path.realpath(report_dir)
-    if not resolved.startswith(os.path.realpath(_REPORTS_DIR)):
-        return
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(report_dir, f"{ts}.json")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-
-
-# ---------------------------------------------------------------------------
-# 1) plan 노드
-# ---------------------------------------------------------------------------
 def intern_plan_node(state: InternState) -> dict:
-    """첫 진입에서만 intern_plan을 생성한다."""
-    # 이미 계획이 있으면 재생성하지 않는다(루프 중 plan 오염 방지).
-    existing = state.get("intern_plan")
-    if existing and existing.get("steps"):
-        return {}
-
-    instruction = _extract_instruction(state)
-    prompt = INTERN_PLAN_PROMPT.format(instruction=instruction)
-    # plan은 tool_call이 아니라 "텍스트(JSON)"로만 받는다.
-    response = llm_intern.invoke(
-        [SystemMessage(content=INTERN_SYSTEM_PROMPT), HumanMessage(content=prompt)]
-    )
-    plan = _parse_plan(response.content, fallback_instruction=instruction)
-
-    state_update = {
-        "intern_plan": plan,
-        "messages": [AIMessage(content=f"초기 계획 수립 완료\n{_format_plan(plan)}")],
-        "intern_result": None,  # 새 요청 처리 시작 시 이전 결과 초기화
-    }
-    return state_update
-
-
-# ---------------------------------------------------------------------------
-# 2) think 노드 + 라우팅
-# ---------------------------------------------------------------------------
-def intern_think_node(state: InternState) -> dict:
-    """계획/대화 기반으로 다음 행동(tool_call or report)을 결정한다."""
+    """intern_request를 기반으로 초기 계획 markdown을 생성/저장한다."""
     _, admin_tools = load_tools()
-    instruction = _extract_instruction(state)
-    plan_text = _format_plan(state.get("intern_plan"))
+    tool_map = {tool.name: tool for tool in admin_tools}
+    update_plan_tool = tool_map["update_intern_plan"]
 
-    messages = (
+    req = state.get("intern_request")
+    instruction = req.strip() if isinstance(req, str) else ""
+    plan_md = (
+        llm_intern.invoke(
+            [
+                SystemMessage(content=INTERN_SYSTEM_PROMPT),
+                HumanMessage(content=INTERN_PLAN_PROMPT.format(instruction=instruction)),
+            ]
+        ).content
+        or ""
+    ).strip()
+    if not plan_md:
+        return {
+            "intern_result": f"request={instruction} | request_check=unmet | summary=초기 계획 생성 실패",
+            "messages": [AIMessage(content="[오류] 초기 계획 생성 실패")],
+        }
+
+    result = update_plan_tool.invoke({"plan_markdown": plan_md})
+    return {"messages": [AIMessage(content=f"초기 계획 수립 완료\n{result}")]}
+
+
+def route_after_plan(state: InternState) -> str:
+    """계획 생성 실패 시 종료, 아니면 think로 이동한다."""
+    last = state["messages"][-1]
+    if isinstance(last, AIMessage) and "[오류] 초기 계획 생성 실패" in (last.content or ""):
+        return "end"
+    return "think"
+
+
+def intern_think_node(state: InternState) -> dict:
+    """요청/이력/수정 피드백을 보고 다음 작업을 결정한다."""
+    # 1) 기존 리뷰 큐가 남아 있으면 리뷰를 우선 처리한다.
+    pending = state.get("pending_review_calls") or []
+    if pending:
+        # 래퍼: 리뷰 큐 첫 항목 타입으로 분기 액션을 계산한다.
+        return {"intern_action": _next_action_from_pending(pending)}
+    # 2) 기존 실행 큐가 남아 있으면 바로 실행한다.
+    pending_exec = state.get("pending_execute_calls") or []
+    if pending_exec:
+        return {"intern_action": "execute"}
+
+    _, admin_tools = load_tools()
+    think_tools = [tool for tool in admin_tools if tool.name != "update_intern_plan"]
+
+    req = state.get("intern_request")
+    instruction = req.strip() if isinstance(req, str) else ""
+
+    recent = []
+    for msg in state["messages"][-8:]:
+        role = "assistant" if isinstance(msg, AIMessage) else "user"
+        if isinstance(msg, ToolMessage):
+            role = f"tool:{msg.name}"
+        recent.append(f"[{role}] {msg.content}")
+
+    modified = state.get("pending_modified_feedback") or {}
+    modified_lines = [f"- {k}: {v}" for k, v in modified.items() if isinstance(v, str) and v.strip()]
+    modified_text = "\n".join(modified_lines) if modified_lines else "- 없음"
+
+    artifact_states = state.get("artifact_statuses") or {}
+    artifact_lines = [f"- {k}: {v}" for k, v in artifact_states.items()]
+    artifact_text = "\n".join(artifact_lines) if artifact_lines else "- 없음"
+
+    response = llm_intern.bind_tools(think_tools).invoke(
         [SystemMessage(content=INTERN_SYSTEM_PROMPT)]
-        + list(state["messages"])
         + [
             HumanMessage(
                 content=INTERN_THINK_PROMPT.format(
                     instruction=instruction,
-                    intern_plan=plan_text,
-                    messages=_stringify_recent_messages(state),
+                    messages="\n".join(recent),
+                    modified_feedback=modified_text,
+                    artifact_statuses=artifact_text,
                 )
             )
         ]
     )
 
-    # think 단계는 ADMIN 도구를 bind해서 실제 tool_call을 유도한다.
-    response = llm_intern.bind_tools(admin_tools).invoke(messages)
-    result = {"messages": [response]}
+    tool_calls = response.tool_calls or []
+    if not tool_calls:
+        return {
+            "intern_action": "finish",
+            "pending_execute_calls": [],
+            "pending_review_calls": [],
+            "pending_review_notes": {},
+        }
 
-    if response.tool_calls:
-        names = [tc["name"] for tc in response.tool_calls]
-        # 삭제는 사람 승인 흐름(interrupt_before)이 있으므로 우선 분기한다.
-        if any(name in _DELETE_ACTIONS for name in names):
-            result["intern_action"] = next(name for name in names if name in _DELETE_ACTIONS)
-        elif any(name in _CREATE_ACTIONS for name in names):
-            result["intern_action"] = next(name for name in names if name in _CREATE_ACTIONS)
-        elif any(name in _READ_ACTIONS for name in names):
-            result["intern_action"] = next(name for name in names if name in _READ_ACTIONS)
+    review_calls = [tc for tc in tool_calls if tc["name"] in (_CREATE_ACTIONS | _DELETE_ACTIONS)]
+    execute_calls = [tc for tc in tool_calls if tc["name"] not in (_CREATE_ACTIONS | _DELETE_ACTIONS)]
+
+    if review_calls:
+        deletes = [tc for tc in review_calls if _is_delete_call(tc)]
+        creates = [tc for tc in review_calls if _is_create_call(tc)]
+        ordered = [*deletes, *creates]
+
+        # create/delete 리뷰가 끝난 뒤 실행할 나머지 호출도 큐에 보존한다.
+        update = {
+            "pending_review_calls": ordered,
+            "pending_review_notes": {},
+            "pending_execute_calls": execute_calls,
+            # 래퍼: delete 우선 처리 규칙을 액션으로 변환한다.
+            "intern_action": _next_action_from_pending(ordered),
+        }
+        if ordered and _is_delete_call(ordered[0]):
+            update["messages"] = [AIMessage(content=_delete_review_prompt(ordered[0]))]
         else:
-            result["intern_action"] = names[0]
-    else:
-        result["intern_action"] = "report"
+            update["messages"] = [AIMessage(content="create 리뷰 시작")]
+        return update
 
-    return result
+    return {
+        "messages": [AIMessage(content=response.content, tool_calls=execute_calls)],
+        "intern_action": "execute",
+        "pending_execute_calls": execute_calls,
+    }
 
 
 def route_think(state: InternState) -> str:
-    """think 결과를 다음 노드로 연결한다."""
+    """think 결과(intern_action)에 따라 다음 노드로 이동한다."""
     action = state.get("intern_action")
-    if action in _DELETE_ACTIONS:
+    if action == "execute_delete":
         return "execute_delete"
-    if action in _CREATE_ACTIONS:
-        return "review"
-    if action in _READ_ACTIONS:
-        # list/view는 코드 리뷰가 필요 없으므로 바로 execute로 보낸다.
+    if action == "review_create":
+        return "review_create"
+    if action == "execute":
         return "execute"
-    return "update_plan"
-
-
-# ---------------------------------------------------------------------------
-# 3) review 노드 + human 이후 라우팅
-# ---------------------------------------------------------------------------
-def intern_review_node(state: InternState) -> dict:
-    """create 코드 보안 리뷰 후 human 확인용 요약을 만든다."""
-    tool_calls = _find_pending_tool_calls(state)
-    codes_to_review = _extract_codes(tool_calls)
-    has_code = any(c.get("code") for c in codes_to_review)
-
-    if has_code:
-        # create 계열만 코드 리뷰 대상이다.
-        review_input = json.dumps(codes_to_review, ensure_ascii=False, indent=2)
-        review_response = llm_reviewer.invoke(
-            CODE_REVIEW_PROMPT.format(codes=review_input)
-        )
-        review_result = review_response.content
-    else:
-        review_result = "[REVIEW_PASS] 코드 없는 작업, 보안 리뷰 불필요"
-
-    # human interrupt에서 바로 판단할 수 있도록 코드 원문 + 리뷰결과를 함께 보여준다.
-    action = state.get("intern_action", "unknown")
-    summary_parts = ["## Intern 코드 리뷰 결과\n", f"**작업 유형**: {action}\n"]
-
-    for code_item in codes_to_review:
-        if code_item["type"] == "python":
-            summary_parts.append(f"### 도구: {code_item['tool_name']}")
-            summary_parts.append("**목적**: tools/ 폴더에 새 도구 생성")
-            summary_parts.append(f"```python\n{code_item['code']}\n```\n")
-        elif code_item["type"] == "sql":
-            summary_parts.append(f"### RPC 함수: {code_item['function_name']}")
-            summary_parts.append("**목적**: supabase/ 폴더에 SQL RPC 함수 생성")
-            summary_parts.append(f"```sql\n{code_item['code']}\n```\n")
-
-    summary_parts.append(f"**보안 검토 결과**: {review_result}\n")
-
-    # SQL 함수는 파일 생성과 DB 반영이 분리되어 있으므로 안내를 넣는다.
-    has_rpc = any(code_item["type"] == "sql" for code_item in codes_to_review)
-    if has_rpc and "[REVIEW_PASS]" in review_result:
-        summary_parts.append(
-            "> 문제가 없다면 이 RPC 함수를 Supabase SQL Editor에서 직접 실행해주세요.\n"
-            "> 실행 완료 후 알려주세요.\n"
-        )
-
-    summary_parts.append("---")
-    summary_parts.append("**선택지**: 승인(진행) / 수정 사항 전달 / 삭제(취소)")
-    return {"messages": [AIMessage(content="\n".join(summary_parts))]}
-
-
-def route_after_human(state: InternState) -> str:
-    """review interrupt_after 이후 human 의도를 해석해 분기한다."""
-    last_msg = state["messages"][-1]
-    if not isinstance(last_msg, HumanMessage):
-        return "think"
-
-    content = last_msg.content.lower()
-    if any(keyword in content for keyword in ("승인", "진행", "계속", "실행", "완료")):
-        return "execute"
-    if any(keyword in content for keyword in ("삭제", "취소", "중단")):
-        return END
+    if action == "update_plan":
+        return "update_plan"
+    if action == "finish":
+        return "finish"
     return "think"
 
 
-# ---------------------------------------------------------------------------
-# 4) execute 노드
-# ---------------------------------------------------------------------------
-def intern_execute_node(state: InternState) -> dict:
-    """create/read 계열 tool_calls를 실행한다."""
-    return _run_tool_calls(state)
+def intern_review_create_node(state: InternState) -> dict:
+    """현재 create 1건의 코드 리뷰를 보여주고 사람 결정을 기다린다."""
+    pending = state.get("pending_review_calls") or []
+    if not pending:
+        return {"intern_action": "think"}
+
+    current = pending[0]
+    if _is_delete_call(current):
+        return {"intern_action": "execute_delete", "messages": [AIMessage(content=_delete_review_prompt(current))]}
+
+    key = _call_key(current)
+    notes = dict(state.get("pending_review_notes") or {})
+    if key not in notes:
+        notes[key] = _review_create_call(current)
+
+    return {
+        "pending_review_notes": notes,
+        "messages": [AIMessage(content=_create_review_prompt(current, notes[key]))],
+    }
+
+
+def route_after_review_create(state: InternState) -> str:
+    """create 리뷰 후 사람 응답이 들어오면 결정 노드로 이동한다."""
+    return "create_review_decision" if isinstance(state["messages"][-1], HumanMessage) else "review_create"
+
+
+def intern_create_review_decision_node(state: InternState) -> dict:
+    """create 리뷰 응답(승인/삭제/수정)을 처리한다."""
+    last = state["messages"][-1]
+    pending = state.get("pending_review_calls") or []
+    if not isinstance(last, HumanMessage) or not pending:
+        return {"intern_action": "review_create"}
+
+    current = pending[0]
+    rest = pending[1:]
+    if _is_delete_call(current):
+        return {"intern_action": "execute_delete", "messages": [AIMessage(content=_delete_review_prompt(current))]}
+
+    key = _call_key(current)
+    # 래퍼: 사람 입력을 승인/삭제/수정으로 통일해 후속 분기 단순화.
+    decision = _decision_from_human(last.content or "")
+    notes = dict(state.get("pending_review_notes") or {})
+    notes.pop(key, None)
+    existing_exec = list(state.get("pending_execute_calls") or [])
+    messages = []
+    events = []
+    review_statuses = {key: decision}
+    modified_update = {}
+
+    if decision == "approve":
+        messages.append(AIMessage(content=f"{key} 승인됨. 실행합니다."))
+        return {
+            "intern_action": "execute",
+            "messages": messages,
+            "pending_review_calls": rest,
+            "pending_review_notes": notes,
+            "pending_execute_calls": [*existing_exec, current],
+            "review_statuses": review_statuses,
+            "pending_modified_feedback": {key: ""},
+        }
+
+    if decision == "delete":
+        messages.append(AIMessage(content=f"{key}는 사람 요청으로 실행 없이 제거했습니다."))
+        events.append(_make_event_line(f"- {key}: 리뷰 삭제(실행 안함)"))
+    else:
+        feedback = (last.content or "").strip()
+        messages.append(AIMessage(content=f"{key} 수정 요청 저장. think에서 반영하세요."))
+        events.append(_make_event_line(f"- {key}: 수정 요청 - {feedback}"))
+        modified_update[key] = feedback
+
+    if rest:
+        # 래퍼: 남은 리뷰 큐 첫 항목을 다음 노드 액션으로 매핑한다.
+        next_action = _next_action_from_pending(rest)
+    elif existing_exec:
+        next_action = "execute"
+    elif events:
+        next_action = "update_plan"
+    else:
+        next_action = "think"
+    if next_action == "execute_delete" and rest:
+        messages.append(AIMessage(content=_delete_review_prompt(rest[0])))
+
+    update = {
+        "intern_action": next_action,
+        "messages": messages,
+        "pending_review_calls": rest,
+        "pending_review_notes": notes,
+        "pending_execute_calls": existing_exec,
+        "review_statuses": review_statuses,
+    }
+    if events:
+        update["plan_update_events"] = events
+    if modified_update:
+        update["pending_modified_feedback"] = modified_update
+    return update
+
+
+def route_after_create_review_decision(state: InternState) -> str:
+    """create 리뷰 결정 결과(intern_action)를 다음 노드로 매핑한다."""
+    action = state.get("intern_action")
+    if action == "execute":
+        return "execute"
+    if action == "execute_delete":
+        return "execute_delete"
+    if action == "review_create":
+        return "review_create"
+    if action == "update_plan":
+        return "update_plan"
+    return "think"
 
 
 def intern_execute_delete_node(state: InternState) -> dict:
-    """delete 계열 tool_calls를 실행한다."""
-    return _run_tool_calls(state)
+    """삭제 1건에 대한 사람 결정(승인/삭제/수정)을 처리한다.
 
+    이 노드는 interrupt_before로 멈춘 뒤 들어온 HumanMessage를 기준으로 동작한다.
+    """
+    pending = state.get("pending_review_calls") or []
+    if not pending:
+        return {"intern_action": "think"}
 
-def _run_tool_calls(state: InternState) -> dict:
-    """마지막 AI tool_calls를 ADMIN 도구로 실행하고 결과 메시지를 적재한다."""
-    _, admin_tools = load_tools()
-    tool_map = {tool.name: tool for tool in admin_tools}
+    current = pending[0]
+    rest = pending[1:]
+    if not _is_delete_call(current):
+        return {"intern_action": "review_create"}
 
-    tool_calls = _find_pending_tool_calls(state)
-    if not tool_calls:
-        return {"messages": [AIMessage(content="실행할 도구가 없습니다.")]}
+    last = state["messages"][-1]
+    if not isinstance(last, HumanMessage):
+        return {"intern_action": "execute_delete", "messages": [AIMessage(content=_delete_review_prompt(current))]}
 
-    results = []  # ToolMessage 누적
-    artifacts = []  # create/delete 성공 산출물
-    completed_actions = []  # intern_result용 성공 액션
-    failed_actions = []  # intern_result용 실패 액션
+    key = _call_key(current)
+    # 래퍼: 사람 입력을 승인/삭제/수정으로 통일해 후속 분기 단순화.
+    decision = _decision_from_human(last.content or "")
+    existing_exec = list(state.get("pending_execute_calls") or [])
+    messages = []
+    events = []
+    review_statuses = {key: decision}
+    modified_update = {}
 
-    for tc in tool_calls:
-        tool = tool_map.get(tc["name"])
-        if not tool:
-            fail_entry = {
-                "tool": tc["name"],
-                "target": tc["args"].get("tool_name")
-                or tc["args"].get("function_name")
-                or tc["args"].get("sql_name")
-                or "unknown",
-                "reason": "tool_not_found",
-            }
-            failed_actions.append(fail_entry)
-            results.append(
-                ToolMessage(
-                    content=f"[오류] 도구 '{tc['name']}'을 찾을 수 없습니다.",
-                    tool_call_id=tc["id"],
-                    name=tc["name"],
-                )
-            )
-            continue
+    if decision == "approve":
+        messages.append(AIMessage(content=f"{key} 승인됨. 실행합니다."))
+        return {
+            "intern_action": "execute",
+            "messages": messages,
+            "pending_review_calls": rest,
+            "pending_execute_calls": [*existing_exec, current],
+            "review_statuses": review_statuses,
+            "pending_modified_feedback": {key: ""},
+        }
 
-        # 각 tool은 자체 보안검사를 수행하고 문자열 결과를 반환한다.
-        result_str = str(tool.invoke(tc["args"]))
-        results.append(
-            ToolMessage(
-                content=result_str,
-                tool_call_id=tc["id"],
-                name=tc["name"],
-            )
-        )
+    if decision == "delete":
+        messages.append(AIMessage(content=f"{key}는 사람 요청으로 실행 없이 제거했습니다."))
+        events.append(_make_event_line(f"- {key}: 삭제 취소(실행 안함)"))
+    else:
+        feedback = (last.content or "").strip()
+        messages.append(AIMessage(content=f"{key} 수정 요청 저장. think에서 반영하세요."))
+        events.append(_make_event_line(f"- {key}: 수정 요청 - {feedback}"))
+        modified_update[key] = feedback
 
-        artifact_name = tc["args"].get("tool_name") or tc["args"].get("function_name") or "unknown"
-        action_ok = _is_action_success(tc["name"], result_str)
-        if action_ok:
-            completed_actions.append(
-                {
-                    "tool": tc["name"],
-                    "target": artifact_name,
-                    "result": result_str,
-                }
-            )
-        else:
-            failed_actions.append(
-                {
-                    "tool": tc["name"],
-                    "target": artifact_name,
-                    "result": result_str,
-                }
-            )
+    if rest:
+        # 래퍼: 남은 리뷰 큐 첫 항목을 다음 노드 액션으로 매핑한다.
+        next_action = _next_action_from_pending(rest)
+    elif existing_exec:
+        next_action = "execute"
+    elif events:
+        next_action = "update_plan"
+    else:
+        next_action = "think"
+    if next_action == "execute_delete" and rest:
+        messages.append(AIMessage(content=_delete_review_prompt(rest[0])))
 
-        # created_artifacts는 "생성/삭제"만 추적한다. read 도구는 포함하지 않는다.
-        if tc["name"] in _CREATE_ACTIONS | _DELETE_ACTIONS and action_ok:
-            status = "deleted" if tc["name"] in _DELETE_ACTIONS else "created"
-            artifacts.append({"type": tc["name"], "name": artifact_name, "status": status})
-
-    summary_lines = ["## 실행 결과"]
-    for item in artifacts:
-        summary_lines.append(f"- **{item['name']}** ({item['type']}): {item['status']}")
-
-    state_update = {
-        "messages": results + [AIMessage(content="\n".join(summary_lines))],
+    update = {
+        "intern_action": next_action,
+        "messages": messages,
+        "pending_review_calls": rest,
+        "pending_execute_calls": existing_exec,
+        "review_statuses": review_statuses,
     }
-    if artifacts:
-        state_update["created_artifacts"] = artifacts
-
-    # 사람 확인/디버깅용 리포트는 기존대로 파일에도 남긴다.
-    report = {
-        "timestamp": datetime.now().isoformat(),
-        "type": "tool_execution",
-        "artifacts": artifacts,
-    }
-    state_update["intern_reports"] = [report]
-    _save_report(report, "tool-execution")
-
-    # Supervisor 전달용 결과는 문자열 한 줄로 단순화한다.
-    request_text = state.get("intern_request") or _extract_instruction(state)
-    state_update["intern_result"] = _build_intern_result_summary(
-        request=request_text,
-        completed_actions=completed_actions,
-        failed_actions=failed_actions,
-    )
-
-    return state_update
+    if events:
+        update["plan_update_events"] = events
+    if modified_update:
+        update["pending_modified_feedback"] = modified_update
+    return update
 
 
-# ---------------------------------------------------------------------------
-# 5) update_plan 노드 + 라우팅
-# ---------------------------------------------------------------------------
-def intern_update_plan_node(state: InternState) -> dict:
-    """최근 실행 결과를 plan step 상태(completed/blocked)로 반영한다."""
-    plan = _parse_plan(state.get("intern_plan"), fallback_instruction=_extract_instruction(state))
-    steps = plan.get("steps", [])
-    if not steps:
-        return {"intern_plan": plan}
-
-    current = _get_active_step(steps)
+def route_after_execute_delete(state: InternState) -> str:
+    """delete 리뷰 결정 후 다음 동작으로 이동한다."""
     action = state.get("intern_action")
-
-    if action in _READ_ACTIONS:
-        # read 성공/실패도 step 완료/차단에 반영한다.
-        tool_msgs = _recent_tool_messages(state)
-        if current and tool_msgs:
-            last_tool_msg = tool_msgs[-1]
-            if _is_action_success(last_tool_msg.name or "", last_tool_msg.content):
-                current["status"] = "completed"
-                current["result"] = last_tool_msg.content
-                _activate_next_pending_step(steps)
-            else:
-                current["status"] = "blocked"
-                current["result"] = last_tool_msg.content
-        elif current and current.get("status") == "pending":
-            current["status"] = "in_progress"
-
-    elif action in _CREATE_ACTIONS | _DELETE_ACTIONS:
-        # create/delete는 "완료" 키워드 기반 성공 판정
-        tool_msgs = _recent_tool_messages(state)
-        last_tool_msg = tool_msgs[-1] if tool_msgs else None
-        if last_tool_msg:
-            if _is_success_tool_result(last_tool_msg.content):
-                if current:
-                    current["status"] = "completed"
-                    current["result"] = last_tool_msg.content
-                _activate_next_pending_step(steps)
-            elif current:
-                current["status"] = "blocked"
-                current["result"] = last_tool_msg.content
-
-    elif action == "report":
-        # 텍스트 보고 경로에서는 현재 진행중 step만 완료 처리
-        if current and current.get("status") == "in_progress":
-            current["status"] = "completed"
-
-    plan["last_updated"] = datetime.now().isoformat()
-    return {"intern_plan": plan}
-
-
-def route_after_update_plan(state: InternState) -> str:
-    """update_plan 이후 분기: report면 종료, 아니면 think 루프."""
-    if state.get("intern_action") == "report":
-        return "report"
+    if action == "execute":
+        return "execute"
+    if action == "execute_delete":
+        return "execute_delete"
+    if action == "review_create":
+        return "review_create"
+    if action == "update_plan":
+        return "update_plan"
     return "think"
 
 
-# ---------------------------------------------------------------------------
-# 6) report 노드
-# ---------------------------------------------------------------------------
-def intern_report_node(state: InternState) -> dict:
-    """텍스트 응답 경로에서 최종 보고를 기록한다."""
-    last_ai = None
-    for msg in reversed(state["messages"]):
-        if isinstance(msg, AIMessage):
-            last_ai = msg
-            break
+def intern_execute_node(state: InternState) -> dict:
+    """승인된 호출(pending_execute_calls) 또는 일반 호출을 실행한다."""
+    _, admin_tools = load_tools()
+    tool_map = {tool.name: tool for tool in admin_tools}
 
-    content = last_ai.content if last_ai else ""
-    action = state.get("intern_action", "report")
+    calls = state.get("pending_execute_calls") or _latest_ai_tool_calls(state)
+    if not calls:
+        # 래퍼: 실행할 항목이 없으면 리뷰 큐 기준으로 다음 액션 결정.
+        return {"intern_action": _next_action_from_pending(state.get("pending_review_calls") or [])}
 
-    report = {
-        "timestamp": datetime.now().isoformat(),
-        "type": action,
-        "content": content,
+    messages = []
+    events = []
+    artifacts = []
+    artifact_status_updates = {}
+    modified_clear = {}
+
+    for tc in calls:
+        name = tc["name"]
+        tool = tool_map.get(name)
+        if not tool:
+            raw = f"[오류] 도구 '{name}'을 찾을 수 없습니다."
+        else:
+            raw = str(tool.invoke(tc.get("args", {})))
+        messages.append(ToolMessage(content=raw, tool_call_id=tc.get("id", f"tc_{uuid.uuid4().hex}"), name=name))
+
+        if name in (_CREATE_ACTIONS | _DELETE_ACTIONS):
+            key = _call_key(tc)
+            status = "failed" if _is_error_result(raw) else ("deleted" if name in _DELETE_ACTIONS else "created")
+            events.append(_make_event_line(f"- {key}: {status} | {raw}"))
+            artifacts.append({"type": name, "name": _call_target_name(tc), "status": status})
+            artifact_status_updates[key] = status
+            if status in {"created", "deleted"}:
+                modified_clear[key] = ""
+
+    pending = state.get("pending_review_calls") or []
+    # 래퍼: 실행 후에는 리뷰 큐 우선 정책으로 다음 액션을 계산한다.
+    next_action = _next_action_from_pending(pending)
+    if not pending and events:
+        next_action = "update_plan"
+
+    if next_action == "execute_delete" and pending:
+        messages.append(AIMessage(content=_delete_review_prompt(pending[0])))
+
+    update = {
+        "messages": messages + [AIMessage(content="도구 실행 완료")],
+        "intern_action": next_action,
+        "pending_execute_calls": [],
     }
-    _save_report(report, action)
+    if events:
+        update["plan_update_events"] = events
+    if artifacts:
+        update["created_artifacts"] = artifacts
+    if artifact_status_updates:
+        update["artifact_statuses"] = artifact_status_updates
+    if modified_clear:
+        update["pending_modified_feedback"] = modified_clear
+    return update
 
+
+def route_after_execute(state: InternState) -> str:
+    """execute 이후 intern_action 기준으로 다음 노드를 선택한다."""
+    action = state.get("intern_action")
+    if action == "execute_delete":
+        return "execute_delete"
+    if action == "review_create":
+        return "review_create"
+    if action == "update_plan":
+        return "update_plan"
+    return "think"
+
+
+def intern_update_plan_node(state: InternState) -> dict:
+    """plan_update_events를 반영해 계획 markdown을 1회 갱신한다."""
+    pending_events = [msg for msg in (state.get("plan_update_events") or []) if isinstance(msg, ToolMessage)]
+    pending = state.get("pending_review_calls") or []
+    pending_exec = state.get("pending_execute_calls") or []
+    if pending:
+        # 래퍼: 리뷰 큐가 남아 있으면 큐 첫 항목 기준으로 다음 액션을 정한다.
+        default_action = _next_action_from_pending(pending)
+    elif pending_exec:
+        default_action = "execute"
+    else:
+        default_action = "think"
+
+    if not pending_events:
+        return {"intern_action": default_action}
+
+    _, admin_tools = load_tools()
+    tool_map = {tool.name: tool for tool in admin_tools}
+    view_result = tool_map["view_intern_plan"].invoke({})
+    current_plan = str(view_result.get("plan_markdown", "")) if isinstance(view_result, dict) else ""
+    if not current_plan:
+        consumed = [RemoveMessage(id=msg.id) for msg in pending_events if msg.id]
+        return {"plan_update_events": consumed, "intern_action": default_action}
+
+    req = state.get("intern_request")
+    instruction = req.strip() if isinstance(req, str) else ""
+    event_text = "\n".join([(msg.content or "") for msg in pending_events])
+    updated_plan = (
+        llm_intern.invoke(
+            [
+                SystemMessage(content=INTERN_SYSTEM_PROMPT),
+                HumanMessage(
+                    content=INTERN_UPDATE_PLAN_PROMPT.format(
+                        instruction=instruction,
+                        current_plan=current_plan,
+                        source_name="review_and_execute",
+                        event_content=event_text,
+                    )
+                ),
+            ]
+        ).content
+        or ""
+    ).strip()
+
+    if updated_plan:
+        tool_map["update_intern_plan"].invoke({"plan_markdown": updated_plan})
+
+    consumed = [RemoveMessage(id=msg.id) for msg in pending_events if msg.id]
     return {
-        "intern_reports": [report],
-        "messages": [AIMessage(content=f"Intern 보고 완료: {action}")],
+        "messages": [AIMessage(content="계획 업데이트 완료")],
+        "plan_update_events": consumed,
+        "intern_action": default_action,
     }
 
 
-# ---------------------------------------------------------------------------
-# 그래프 조립
-# ---------------------------------------------------------------------------
-def build_intern_subgraph():
-    """Intern 서브그래프를 조립하고 인터럽트 정책을 부여한다."""
-    builder = StateGraph(InternState)
+def route_after_update_plan(state: InternState) -> str:
+    """update_plan 이후 intern_action에 따라 이동한다."""
+    action = state.get("intern_action")
+    if action == "execute_delete":
+        return "execute_delete"
+    if action == "review_create":
+        return "review_create"
+    return "think"
 
+
+def intern_finish_node(state: InternState) -> dict:
+    """최종 intern_result를 생성하고 plan 파일을 정리한다."""
+    _, admin_tools = load_tools()
+    tool_map = {tool.name: tool for tool in admin_tools}
+
+    req = state.get("intern_request")
+    instruction = req.strip() if isinstance(req, str) else ""
+
+    artifacts = state.get("created_artifacts") or []
+    artifact_lines = [f"- {x.get('type')}:{x.get('name')}:{x.get('status')}" for x in artifacts]
+
+    artifact_states = state.get("artifact_statuses") or {}
+    state_lines = [f"- {k}:{v}" for k, v in artifact_states.items()]
+
+    modified = state.get("pending_modified_feedback") or {}
+    modified_lines = [f"- {k}:{v}" for k, v in modified.items() if isinstance(v, str) and v.strip()]
+
+    artifacts_text = "\n".join(artifact_lines + ["-- current --"] + state_lines + ["-- modified --"] + modified_lines)
+    if not artifacts_text.strip():
+        artifacts_text = "- 없음"
+
+    view_result = tool_map["view_intern_plan"].invoke({})
+    plan_md = str(view_result.get("plan_markdown", "")) if isinstance(view_result, dict) else ""
+
+    intern_result = (
+        llm_intern.invoke(
+            [
+                SystemMessage(content=INTERN_SYSTEM_PROMPT),
+                HumanMessage(
+                    content=INTERN_FINAL_RESULT_PROMPT.format(
+                        instruction=instruction,
+                        artifacts_text=artifacts_text,
+                        plan_md=plan_md,
+                    )
+                ),
+            ]
+        ).content
+        or ""
+    ).strip()
+    if not intern_result:
+        intern_result = f"request={instruction} | request_check=unmet | summary=결과 생성 실패"
+
+    _cleanup_plan_file()
+    return {
+        "intern_result": intern_result,
+        "messages": [AIMessage(content=f"Intern 보고 완료\n{intern_result}")],
+    }
+
+
+def build_intern_subgraph():
+    """Intern 서브그래프를 구성하고 interrupt 정책을 적용한다."""
+    builder = StateGraph(InternState)
     builder.add_node("plan", intern_plan_node)
     builder.add_node("think", intern_think_node)
-    builder.add_node("review", intern_review_node)
+    builder.add_node("review_create", intern_review_create_node)
+    builder.add_node("create_review_decision", intern_create_review_decision_node)
     builder.add_node("execute", intern_execute_node)
     builder.add_node("execute_delete", intern_execute_delete_node)
     builder.add_node("update_plan", intern_update_plan_node)
-    builder.add_node("report", intern_report_node)
+    builder.add_node("finish", intern_finish_node)
 
-    # START -> plan -> think 기본 루프
     builder.add_edge(START, "plan")
-    builder.add_edge("plan", "think")
+    builder.add_conditional_edges("plan", route_after_plan, {"think": "think", "end": END})
     builder.add_conditional_edges("think", route_think)
-    builder.add_conditional_edges("review", route_after_human)
-    # execute 계열은 항상 계획 갱신을 거친다.
-    builder.add_edge("execute", "update_plan")
-    builder.add_edge("execute_delete", "update_plan")
+    builder.add_conditional_edges("review_create", route_after_review_create)
+    builder.add_conditional_edges("create_review_decision", route_after_create_review_decision)
+    builder.add_conditional_edges("execute", route_after_execute)
+    builder.add_conditional_edges("execute_delete", route_after_execute_delete)
     builder.add_conditional_edges("update_plan", route_after_update_plan)
-    builder.add_edge("report", END)
+    builder.add_edge("finish", END)
 
-    # create는 review 이후 human 확인, delete는 실행 전에 human 확인
     return builder.compile(
         checkpointer=memory,
-        interrupt_after=["review"],
+        interrupt_after=["review_create"],
         interrupt_before=["execute_delete"],
     )

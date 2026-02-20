@@ -5,7 +5,7 @@
 
 핵심 핸드오프:
 - Researcher -> Supervisor: intern_request, researcher_context
-- Supervisor -> Intern: intern_request를 HumanMessage 또는 전용 필드로 전달
+- Supervisor -> Intern: intern_request 전용 필드로 전달
 - Intern -> Supervisor: intern_result(str) 전달
 - Supervisor -> Researcher: intern_result 판단 후 researcher_context 기반 재시도 지시
 """
@@ -71,13 +71,13 @@
 #             })]
 #     if state.get("intern_request"):
 #         return [Send("intern", {
-#             "messages": [HumanMessage(content=state["intern_request"])],
+#             "messages": state.get("researcher_context", []),
 #             "intern_request": state["intern_request"],
 #             "intern_result": None,
 #         })]
 #     researcher_tasks = [t for t in state["tasks"] if t.agent == "researcher"]
 #     return [Send("researcher", {
-#         "messages": state.get("researcher_context", []) + [HumanMessage(content=task.instruction)],
+#         "messages": state.get("researcher_context", []),
 #         "slots": state["slots"],
 #         "intern_request": None,
 #         "intern_result": None,

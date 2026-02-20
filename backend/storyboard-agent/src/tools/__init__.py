@@ -18,6 +18,9 @@ _ADMIN_NAMES = {
     "delete_rpc_sql",
     "list_rpc_sql",
     "view_rpc_sql",
+    "view_intern_plan",
+    "update_intern_plan",
+    "write_intern_report",
 }
 
 
