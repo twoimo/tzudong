@@ -6,15 +6,65 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 import logging
+import asyncio
+import threading
 from typing import Any
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 from pydantic import field_validator
 import uvicorn
+from dotenv import load_dotenv
 
 
 logger = logging.getLogger(__name__)
+
+
+def _load_dotenv():
+    for env_path in (Path(__file__).resolve().parents[1] / ".env", Path(__file__).resolve().parents[1] / ".env.local"):
+        if env_path.exists():
+            load_dotenv(dotenv_path=env_path, override=False)
+            logger.info("Loaded env file: %s", env_path)
+
+
+_load_dotenv()
+
+CACHE_TTL_SECONDS = int(os.getenv("STORYBOARD_AGENT_CACHE_TTL_SECONDS", "120"))
+CACHE_MAX_ENTRIES = int(os.getenv("STORYBOARD_AGENT_CACHE_MAX_ENTRIES", "200"))
+TOOL_PREWARM = os.getenv("STORYBOARD_AGENT_PREWARM", "false").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
+_tools_module: Any | None = None
+_tools_lock = threading.Lock()
+_cache: dict[str, tuple[float, "StoryboardChatResponse"]] = {}
+
+
+def _cache_get(cache_key: str) -> "StoryboardChatResponse | None":
+    entry = _cache.get(cache_key)
+    if not entry:
+        return None
+
+    created_at, payload = entry
+    now = datetime.now(timezone.utc).timestamp()
+    if now - created_at > CACHE_TTL_SECONDS:
+        _cache.pop(cache_key, None)
+        return None
+
+    return payload
+
+
+def _cache_set(cache_key: str, payload: "StoryboardChatResponse") -> None:
+    if CACHE_MAX_ENTRIES <= 0:
+        return
+
+    if len(_cache) >= CACHE_MAX_ENTRIES:
+        oldest = min(_cache.items(), key=lambda item: item[1][0])[0]
+        _cache.pop(oldest, None)
+
+    _cache[cache_key] = (datetime.now(timezone.utc).timestamp(), payload)
 
 
 def _resolve_environment() -> None:
@@ -22,23 +72,49 @@ def _resolve_environment() -> None:
     if not os.getenv("PUBLIC_SUPABASE_URL") and os.getenv("SUPABASE_URL"):
         os.environ["PUBLIC_SUPABASE_URL"] = os.getenv("SUPABASE_URL", "")
 
+    if not os.getenv("PUBLIC_SUPABASE_SERVICE_ROLE_KEY") and os.getenv("SUPABASE_SERVICE_ROLE_KEY"):
+        os.environ["PUBLIC_SUPABASE_SERVICE_ROLE_KEY"] = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
     if not os.getenv("SUPABASE_SERVICE_ROLE_KEY") and os.getenv("PUBLIC_SUPABASE_SERVICE_ROLE_KEY"):
         os.environ["SUPABASE_SERVICE_ROLE_KEY"] = os.getenv(
             "PUBLIC_SUPABASE_SERVICE_ROLE_KEY",
             "",
         )
 
+    if not os.getenv("PUBLIC_OPENAI_API_KEY") and os.getenv("OPENAI_API_KEY"):
+        os.environ["PUBLIC_OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "")
+
+    if not os.getenv("OPENAI_API_KEY") and os.getenv("PUBLIC_OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = os.getenv("PUBLIC_OPENAI_API_KEY", "")
+
+    if not os.getenv("TAVILY_API_KEY") and os.getenv("PUBLIC_TAVILY_API_KEY"):
+        os.environ["TAVILY_API_KEY"] = os.getenv("PUBLIC_TAVILY_API_KEY", "")
+
+    if not os.getenv("PUBLIC_TAVILY_API_KEY") and os.getenv("TAVILY_API_KEY"):
+        os.environ["PUBLIC_TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY", "")
+
 
 def _load_tools_module():
-    _resolve_environment()
-    logger.info("Loading storyboard tools module.")
+    global _tools_module
+    if _tools_module is not None:
+        return _tools_module
 
-    try:
-        from src import tools
-    except Exception as exc:
-        raise RuntimeError(f"스토리보드 도구 모듈을 불러오지 못했습니다: {exc}") from exc
+    with _tools_lock:
+        if _tools_module is not None:
+            return _tools_module
 
-    return tools
+        _resolve_environment()
+        logger.info("Loading storyboard tools module.")
+
+        try:
+            from src import tools
+        except Exception as exc:
+            raise RuntimeError(f"스토리보드 도구 모듈을 불러오지 못했습니다: {exc}") from exc
+
+        _tools_module = tools
+        return tools
+
+    return _tools_module
 
 
 def _invoke_tool(tool: Any, payload: dict[str, Any]) -> Any:
@@ -256,6 +332,11 @@ def _build_fallback(message: str, message_for_user: str, sources: list[dict[str,
 
 
 def _prepare_response(message: str) -> StoryboardChatResponse:
+    cache_key = message.lower().strip()
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
         tools = _load_tools_module()
 
@@ -288,26 +369,36 @@ def _prepare_response(message: str) -> StoryboardChatResponse:
         content = _build_storyboard_content(message, transcripts)
         sources = _build_sources(transcripts)
 
-        return StoryboardChatResponse(
+        response = StoryboardChatResponse(
             asOf=datetime.now(timezone.utc).isoformat(),
             content=content,
             sources=[StoryboardChatSource(**item) for item in sources],
             visualComponent=None,
         )
+        _cache_set(cache_key, response)
+        return response
     except RuntimeError as exc:
         logger.warning("스토리보드 도구 로드 실패: %s", exc)
-        return _build_fallback(
+        response = _build_fallback(
             message,
             message,
             [],
         )
+        _cache_set(cache_key, response)
+        return response
     except Exception as exc:
         logger.exception("스토리보드 응답 생성 실패: %s", exc)
-        return _build_fallback(
+        response = _build_fallback(
             message,
             message,
             [],
         )
+        _cache_set(cache_key, response)
+        return response
+
+
+async def _prepare_response_async(message: str) -> StoryboardChatResponse:
+    return await asyncio.to_thread(_prepare_response, message)
 
 
 app = FastAPI(
@@ -315,6 +406,16 @@ app = FastAPI(
     description="Admin insight storyboard assistant API",
     version="1.0.0",
 )
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    if TOOL_PREWARM:
+        try:
+            await asyncio.to_thread(_load_tools_module)
+            logger.info("Storyboard tools preloaded.")
+        except Exception as exc:
+            logger.warning("Tools preload failed: %s", exc)
 
 
 @app.get("/health")
@@ -328,8 +429,8 @@ def root():
 
 
 @app.post("/chat", response_model=StoryboardChatResponse)
-def chat(payload: StoryboardChatRequest):
-    return _prepare_response(payload.message)
+async def chat(payload: StoryboardChatRequest):
+    return await _prepare_response_async(payload.message)
 
 
 if __name__ == "__main__":
