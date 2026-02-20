@@ -3,7 +3,7 @@
 다중 에이전트 구성 예시:
   tools, admin_tools = load_tools()
   research_agent  → ToolNode(tools)                    # interrupt 없음
-  admin_agent     → ToolNode(admin_tools)               # interrupt_before 적용
+  intern_subgraph → 내부에서 admin_tools 사용             # review/execute_delete에서 interrupt 처리
   LLM bind: 각 에이전트에 필요한 도구만 bind
 """
 
@@ -11,7 +11,14 @@ import os
 import importlib
 
 _dir = os.path.dirname(os.path.abspath(__file__))
-_ADMIN_NAMES = {"create_tool", "delete_tool", "generate_rpc_sql"}
+_ADMIN_NAMES = {
+    "create_tool",
+    "delete_tool",
+    "create_rpc_sql",
+    "delete_rpc_sql",
+    "list_rpc_sql",
+    "view_rpc_sql",
+}
 
 
 def _is_tool(obj) -> bool:

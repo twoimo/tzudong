@@ -17,21 +17,20 @@ from langchain_core.tools import tool
 
 
 @tool
-def generate_rpc_sql(function_name: str, sql_code: str, overwrite: bool = False) -> str:
+def create_rpc_sql(function_name: str, sql_code: str) -> str:
     """
     Supabase RPC 함수의 SQL 파일을 supabase/ 폴더에 생성합니다.
-    이미 존재하는 경우 주의 문구를 반환합니다.
+    이미 존재하는 경우 에러를 반환합니다. 수정하려면 먼저 delete_rpc_sql로 삭제 후 재생성하세요.
     supabase/ 폴더 외부에는 접근할 수 없습니다.
 
     Args:
         function_name: RPC 함수 이름 (파일명, 확장자 제외, 경로 문자 불가)
         sql_code: SQL 코드 전문
-        overwrite: 이미 존재할 경우 덮어쓸지 여부 (기본값: False)
 
     Returns:
         생성 결과 메시지
     """
-    log_tool_call("generate_rpc_sql", function_name=function_name, overwrite=overwrite)
+    log_tool_call("create_rpc_sql", function_name=function_name)
 
     if (
         "/" in function_name
@@ -46,9 +45,12 @@ def generate_rpc_sql(function_name: str, sql_code: str, overwrite: bool = False)
     if not path.startswith(os.path.realpath(_SQL_DIR) + os.sep):
         return "[거부] supabase/ 폴더 외부 접근이 차단되었습니다."
 
-    exists = os.path.exists(path)
-    if exists and not overwrite:
-        return f"[주의] {function_name}.sql이 이미 존재합니다. 덮어쓰려면 overwrite=True로 다시 호출하세요."
+    if os.path.exists(path):
+        return (
+            f"[오류] {function_name}.sql이 이미 존재합니다. "
+            f"덮어쓰기는 금지되어 있습니다. "
+            f"먼저 delete_rpc_sql('{function_name}')로 삭제한 후 다시 생성하세요."
+        )
 
     warnings = review_sql_code(sql_code)
     if warnings:
@@ -59,8 +61,7 @@ def generate_rpc_sql(function_name: str, sql_code: str, overwrite: bool = False)
     with open(path, "w", encoding="utf-8") as f:
         f.write(sql_code)
 
-    action = "덮어쓰기" if exists else "생성"
-    return f"{function_name}.sql {action} 완료 (위치: supabase/{function_name}.sql)"
+    return f"{function_name}.sql 생성 완료 (위치: supabase/{function_name}.sql)"
 
 
 if __name__ == "__main__":
@@ -69,5 +70,5 @@ if __name__ == "__main__":
             print(f.read())
     else:
         args = json.loads(sys.argv[1])
-        result = generate_rpc_sql.invoke(args)
+        result = create_rpc_sql.invoke(args)
         print(result)

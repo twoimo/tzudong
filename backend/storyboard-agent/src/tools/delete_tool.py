@@ -19,7 +19,10 @@ _PROTECTED = {
     "list_tools.py",
     "create_tool.py",
     "delete_tool.py",
-    "generate_rpc_sql.py",
+    "create_rpc_sql.py",
+    "delete_rpc_sql.py",
+    "list_rpc_sql.py",
+    "view_rpc_sql.py",
 }
 
 

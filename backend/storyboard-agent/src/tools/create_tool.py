@@ -25,30 +25,32 @@ def _validate_name(name: str) -> str | None:
 
 
 @tool
-def create_tool(tool_name: str, code: str, overwrite: bool = False) -> str:
+def create_tool(tool_name: str, code: str) -> str:
     """
     tools/ 폴더에 새로운 도구 파일(.py)을 생성합니다.
-    이미 존재하는 경우 주의 문구를 반환합니다.
+    이미 존재하는 경우 에러를 반환합니다. 수정하려면 먼저 delete_tool로 삭제 후 재생성하세요.
     tools/ 폴더 외부에는 접근할 수 없습니다.
 
     Args:
         tool_name: 도구 이름 (파일명, 확장자 제외, 경로 문자 불가)
         code: 도구 파일의 전체 Python 코드
-        overwrite: 이미 존재할 경우 덮어쓸지 여부 (기본값: False)
 
     Returns:
         생성 결과 메시지
     """
-    log_tool_call("create_tool", tool_name=tool_name, overwrite=overwrite)
+    log_tool_call("create_tool", tool_name=tool_name)
 
     err = _validate_name(tool_name)
     if err:
         return err
 
     path = os.path.join(_dir, f"{tool_name}.py")
-    exists = os.path.exists(path)
-    if exists and not overwrite:
-        return f"[주의] {tool_name}.py가 이미 존재합니다. 덮어쓰려면 overwrite=True로 다시 호출하세요."
+    if os.path.exists(path):
+        return (
+            f"[오류] {tool_name}.py가 이미 존재합니다. "
+            f"덮어쓰기는 금지되어 있습니다. "
+            f"먼저 delete_tool('{tool_name}')로 삭제한 후 다시 생성하세요."
+        )
 
     warnings = review_python_code(code)
     if warnings:
@@ -59,10 +61,7 @@ def create_tool(tool_name: str, code: str, overwrite: bool = False) -> str:
     with open(path, "w", encoding="utf-8") as f:
         f.write(code)
 
-    action = "덮어쓰기" if exists else "생성"
-    return (
-        f"{tool_name}.py {action} 완료. 새 도구를 사용하려면 에이전트를 재시작하세요."
-    )
+    return f"{tool_name}.py 생성 완료. 새 도구를 사용하려면 에이전트를 재시작하세요."
 
 
 if __name__ == "__main__":
