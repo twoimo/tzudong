@@ -99,11 +99,17 @@ export type InsightChatSource = {
   text: string;
 };
 
+export type AdminInsightChatMeta = {
+  source: 'local' | 'agent' | 'fallback';
+  fallbackReason?: string;
+};
+
 export type AdminInsightChatResponse = {
   asOf: string;
   content: string;
   sources?: InsightChatSource[];
   visualComponent?: InsightVisualComponentType;
+  meta?: AdminInsightChatMeta;
 };
 
 export type AdminInsightChatBootstrapResponse = {

@@ -44,6 +44,27 @@ const STORYBOARD_KEYWORDS = [
 
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
 
+function createLocalResponse(
+  asOf: string,
+  content: string,
+  options: {
+    fallbackReason?: string;
+    sources?: InsightChatSource[];
+    visualComponent?: AdminInsightChatResponse['visualComponent'];
+  } = {},
+): AdminInsightChatResponse {
+  return {
+    asOf,
+    content,
+    sources: options.sources ?? [],
+    visualComponent: options.visualComponent,
+    meta: {
+      source: 'local',
+      fallbackReason: options.fallbackReason,
+    },
+  };
+}
+
 function clampPositiveInteger(value: number, fallback: number): number {
   if (!Number.isFinite(value) || value <= 0) {
     return fallback;
@@ -255,6 +276,9 @@ async function askStoryboardAgent(message: string, asOf: string): Promise<AdminI
         asOf,
         content,
         sources: toStoryboardSources(data),
+        meta: {
+          source: 'agent',
+        },
       };
     } catch (error) {
       if (attempt < maxRetries && isRetryableFetchError(error)) {
@@ -312,7 +336,9 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
   const input = message.trim();
 
   if (!input) {
-    return { asOf, content: '질문을 입력해 주세요.', sources: [] };
+    return createLocalResponse(asOf, '질문을 입력해 주세요.', {
+      fallbackReason: 'empty_input',
+    });
   }
 
   if (isStoryboardIntent(input)) {
@@ -326,12 +352,9 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
       .map((k, idx) => `${idx + 1}. **${k.keyword}** (${k.count})`)
       .join('\n');
 
-    return {
-      asOf,
-      content: `## 인기 키워드 TOP 12\n\n${list || '- 데이터 없음'}`,
+    return createLocalResponse(asOf, `## 인기 키워드 TOP 12\n\n${list || '- 데이터 없음'}`, {
       visualComponent: 'wordcloud',
-      sources: [],
-    };
+    });
   }
 
   if (includesAny(input, ['시즌', '캘린더', 'calendar', '이번달', '다음달', '월별'])) {
@@ -343,35 +366,31 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
       `- ${k.icon} **${k.keyword}** (피크: ${k.peakWeek}, 업로드 추천: ${k.recommendedUploadDate})`
     ).join('\n');
 
-    return {
-      asOf,
-      content: `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`,
+    return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, {
       visualComponent: 'calendar',
-      sources: [],
-    };
+    });
   }
 
   if (includesAny(input, ['히트맵', 'heatmap', '리텐션', '하이라이트', 'peak'])) {
     const data = await getAdminInsightHeatmap(false);
     const top = data.videos[0];
     if (!top) {
-      return { asOf, content: '히트맵 데이터를 찾지 못했습니다.', sources: [] };
+      return createLocalResponse(asOf, '히트맵 데이터를 찾지 못했습니다.', {
+        fallbackReason: 'empty_heatmap',
+      });
     }
 
-    return {
-      asOf,
-      content: [
-        `## 히트맵 요약`,
-        '',
-        `- 영상: **${top.title}**`,
-        `- 피크 구간: **${top.peakSegment.start}%~${top.peakSegment.end}%**`,
-        `- 주요 키워드: ${top.analysis.keywords.slice(0, 6).join(', ') || '-'}`,
-        '',
-        top.analysis.overallSummary,
-      ].join('\n'),
+    return createLocalResponse(asOf, [
+      `## 히트맵 요약`,
+      '',
+      `- 영상: **${top.title}**`,
+      `- 피크 구간: **${top.peakSegment.start}%~${top.peakSegment.end}%**`,
+      `- 주요 키워드: ${top.analysis.keywords.slice(0, 6).join(', ') || '-'}`,
+      '',
+      top.analysis.overallSummary,
+    ].join('\n'), {
       visualComponent: 'heatmap',
-      sources: [],
-    };
+    });
   }
 
   if (includesAny(input, ['운영', 'funnel', '실패', 'fail', '품질', 'quality', '지표'])) {
@@ -385,39 +404,32 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
       .map((r) => `- ${r.label}: ${r.count}`)
       .join('\n');
 
-    return {
-      asOf,
-      content: [
-        `## 운영 지표 요약`,
-        '',
-        `- 수집 영상: **${funnel.counts.crawling}**`,
-        `- 선택 영상: **${funnel.counts.selection}** (선택률 ${funnel.conversion.selectionRate ?? '-'}%)`,
-        `- Rule 적용: **${funnel.counts.rule}** (Rule율 ${funnel.conversion.ruleRate ?? '-'}%)`,
-        `- LAAJ 적용: **${funnel.counts.laaj}** (LAAJ율 ${funnel.conversion.laajRate ?? '-'}%)`,
-        '',
-        `### Not-Selection 주요 사유 TOP 5`,
-        topNotSelections || '- 데이터 없음',
-        '',
-        `### 품질(요약)`,
-        `- pipeline rows: ${quality.totals.pipelineRows}`,
-        `- rule metrics: ${quality.totals.withRuleMetrics}`,
-        `- laaj metrics: ${quality.totals.withLaajMetrics}`,
-      ].join('\n'),
+    return createLocalResponse(asOf, [
+      `## 운영 지표 요약`,
+      '',
+      `- 수집 영상: **${funnel.counts.crawling}**`,
+      `- 선택 영상: **${funnel.counts.selection}** (선택률 ${funnel.conversion.selectionRate ?? '-'}%)`,
+      `- Rule 적용: **${funnel.counts.rule}** (Rule율 ${funnel.conversion.ruleRate ?? '-'}%)`,
+      `- LAAJ 적용: **${funnel.counts.laaj}** (LAAJ율 ${funnel.conversion.laajRate ?? '-'}%)`,
+      '',
+      `### Not-Selection 주요 사유 TOP 5`,
+      topNotSelections || '- 데이터 없음',
+      '',
+      `### 품질(요약)`,
+      `- pipeline rows: ${quality.totals.pipelineRows}`,
+      `- rule metrics: ${quality.totals.withRuleMetrics}`,
+      `- laaj metrics: ${quality.totals.withLaajMetrics}`,
+    ].join('\n'), {
       visualComponent: 'stats',
-      sources: [],
-    };
+    });
   }
 
-  return {
-    asOf,
-    content: [
-      `가능한 질문 예시:`,
-      `- "인기 키워드 보여줘"`,
-      `- "이번달 시즌 키워드 추천해줘"`,
-      `- "히트맵 요약해줘"`,
-      `- "운영 지표 요약"`,
-      `- "먹방 스토리보드 기획안 만들어줘"`,
-    ].join('\n'),
-    sources: [],
-  };
+  return createLocalResponse(asOf, [
+    `가능한 질문 예시:`,
+    `- "인기 키워드 보여줘"`,
+    `- "이번달 시즌 키워드 추천해줘"`,
+    `- "히트맵 요약해줘"`,
+    `- "운영 지표 요약"`,
+    `- "먹방 스토리보드 기획안 만들어줘"`,
+  ].join('\n'));
 }

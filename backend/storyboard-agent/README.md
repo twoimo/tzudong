@@ -199,3 +199,14 @@ curl http://localhost:8001/metrics
 ```bash
 STORYBOARD_AGENT_METRICS_HISTORY_SIZE=300
 ```
+
+추가로 아래 값으로 요청 타임아웃 및 툴 회로차단기 정책을 적용합니다.
+
+```bash
+STORYBOARD_AGENT_REQUEST_TIMEOUT_MS=12000
+STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED=true
+STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD=3
+STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS=30
+```
+
+`/metrics`의 `requests.errorReasons`를 통해 timeout/런타임 예외 비율을 모니터링할 수 있습니다.

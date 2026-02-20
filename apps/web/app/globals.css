@@ -366,10 +366,5 @@ div[style*="z-index"]>div>.custom-marker {
 }
 */
 
-/* [PERF] 라이트 모드 고정 */
-html {
-  color-scheme: light;
-}
-
 
 
