@@ -41,6 +41,11 @@ GOOGLE_GEOCODING_API_KEY=your_google_geocoding_server_key
 # Naver Maps (국내 지도)
 NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id
 NEXT_PUBLIC_NAVER_CLIENT_SECRET=your_naver_client_secret
+
+# Storyboard Agent (옵션)
+STORYBOARD_AGENT_API_URL=http://localhost:8001
+STORYBOARD_AGENT_CHAT_PATH=/chat
+STORYBOARD_AGENT_TIMEOUT_MS=8000
 ```
 
 ### 3. 실행

@@ -5,12 +5,16 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+import logging
 from typing import Any
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 from pydantic import field_validator
 import uvicorn
+
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_environment() -> None:
@@ -27,6 +31,7 @@ def _resolve_environment() -> None:
 
 def _load_tools_module():
     _resolve_environment()
+    logger.info("Loading storyboard tools module.")
 
     try:
         from src import tools
@@ -289,13 +294,15 @@ def _prepare_response(message: str) -> StoryboardChatResponse:
             sources=[StoryboardChatSource(**item) for item in sources],
             visualComponent=None,
         )
-    except RuntimeError:
+    except RuntimeError as exc:
+        logger.warning("스토리보드 도구 로드 실패: %s", exc)
         return _build_fallback(
             message,
             message,
             [],
         )
-    except Exception:
+    except Exception as exc:
+        logger.exception("스토리보드 응답 생성 실패: %s", exc)
         return _build_fallback(
             message,
             message,
@@ -312,7 +319,12 @@ app = FastAPI(
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "service": "storyboard-agent"}
+
+
+@app.get("/")
+def root():
+    return {"service": "storyboard-agent", "chat_path": "/chat", "health_path": "/health"}
 
 
 @app.post("/chat", response_model=StoryboardChatResponse)
@@ -325,6 +337,7 @@ if __name__ == "__main__":
     port = int(os.getenv("STORYBOARD_AGENT_PORT", "8001"))
     reload = os.getenv("STORYBOARD_AGENT_RELOAD", "false").lower() in ("1", "true", "yes")
     log_level = os.getenv("STORYBOARD_AGENT_LOG_LEVEL", "info")
+    logging.basicConfig(level=log_level.upper())
 
     uvicorn.run(
         "src.server:app",
