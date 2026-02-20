@@ -187,4 +187,5 @@ curl http://localhost:8001/health
 curl -X POST http://localhost:8001/chat \
   -H "Content-Type: application/json" \
   -d '{"message":"떡볶이 먹방 스토리보드 짜줘"}'
+curl http://localhost:8001/metrics
 ```

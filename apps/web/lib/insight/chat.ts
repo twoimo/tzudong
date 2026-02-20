@@ -13,6 +13,9 @@ function includesAny(message: string, words: string[]): boolean {
 const STORYBOARD_AGENT_API_URL = process.env.STORYBOARD_AGENT_API_URL?.trim();
 const STORYBOARD_AGENT_PATH = process.env.STORYBOARD_AGENT_CHAT_PATH?.trim() || '/chat';
 const STORYBOARD_AGENT_TIMEOUT_MS = Number(process.env.STORYBOARD_AGENT_TIMEOUT_MS || '8000');
+const STORYBOARD_AGENT_MAX_RETRIES = Number(process.env.STORYBOARD_AGENT_MAX_RETRIES || '2');
+const STORYBOARD_AGENT_RETRY_BASE_MS = Number(process.env.STORYBOARD_AGENT_RETRY_BASE_MS || '250');
+const STORYBOARD_AGENT_RETRY_MAX_MS = Number(process.env.STORYBOARD_AGENT_RETRY_MAX_MS || '1500');
 
 const STORYBOARD_KEYWORDS = [
   '스토리보드',
@@ -38,6 +41,44 @@ const STORYBOARD_KEYWORDS = [
   '편집',
   '대본',
 ];
+
+const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+
+function clampPositiveInteger(value: number, fallback: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return fallback;
+  }
+  return Math.floor(value);
+}
+
+function safeMathMax(value: number, fallback: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return fallback;
+  }
+  return Math.floor(value);
+}
+
+function isRetryableFetchError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return true;
+  }
+  return error instanceof TypeError;
+}
+
+function calcBackoffDelay(attempt: number): number {
+  const base = clampPositiveInteger(STORYBOARD_AGENT_RETRY_BASE_MS, 250);
+  const maxDelay = clampPositiveInteger(STORYBOARD_AGENT_RETRY_MAX_MS, 1500);
+  const delay = Math.min(maxDelay, base * 2 ** (attempt - 1));
+  const jitter = Math.floor(Math.random() * Math.min(120, Math.max(20, delay * 0.15)));
+  return Math.min(maxDelay, delay + jitter);
+}
+
+async function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return;
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 function getStoryboardAgentEndpoint(): string | null {
   if (!STORYBOARD_AGENT_API_URL) {
@@ -165,48 +206,70 @@ async function askStoryboardAgent(message: string, asOf: string): Promise<AdminI
   const timeoutMs = Number.isFinite(STORYBOARD_AGENT_TIMEOUT_MS) && STORYBOARD_AGENT_TIMEOUT_MS > 0
     ? STORYBOARD_AGENT_TIMEOUT_MS
     : 8000;
+  const maxRetries = clampPositiveInteger(STORYBOARD_AGENT_MAX_RETRIES, 2);
+  const payload = JSON.stringify({
+    message,
+    role: 'admin_insight',
+    channel: 'admin_insight_chat',
+  });
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: payload,
+        signal: controller.signal,
+        cache: 'no-store',
+      });
 
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message,
-        role: 'admin_insight',
-        channel: 'admin_insight_chat',
-      }),
-      signal: controller.signal,
-      cache: 'no-store',
-    });
+      if (!response.ok) {
+        if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < maxRetries) {
+          const retryAfterHeader = response.headers.get('retry-after');
+          const retryAfter = retryAfterHeader ? Number(retryAfterHeader) * 1000 : NaN;
+          const delay = Number.isFinite(retryAfter) && retryAfter > 0
+            ? safeMathMax(retryAfter, 20)
+            : calcBackoffDelay(attempt);
+          await sleep(delay);
+          continue;
+        }
 
-    const data = await response.json().catch(() => null);
+        const data = await response.json().catch(() => null);
+        console.error('[admin/insight/chat] storyboard agent HTTP error:', response.status, data);
+        return null;
+      }
 
-    if (!response.ok) {
-      console.error('[admin/insight/chat] storyboard agent HTTP error:', response.status, data);
+      const data = await response.json().catch(() => null);
+      const content = extractStoryboardContent(data);
+      if (!content) {
+        return null;
+      }
+
+      return {
+        asOf,
+        content,
+        sources: toStoryboardSources(data),
+      };
+    } catch (error) {
+      if (attempt < maxRetries && isRetryableFetchError(error)) {
+        await sleep(calcBackoffDelay(attempt));
+        continue;
+      }
+
+      console.error('[admin/insight/chat] storyboard agent request failed:', error);
       return null;
+    } finally {
+      clearTimeout(timer);
     }
-
-    const content = extractStoryboardContent(data);
-    if (!content) {
-      return null;
-    }
-
-    return {
-      asOf,
-      content,
-      sources: toStoryboardSources(data),
-    };
-  } catch (error) {
-    console.error('[admin/insight/chat] storyboard agent request failed:', error);
-    return null;
-  } finally {
-    clearTimeout(timer);
   }
+
+  return null;
 }
 
 export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import time
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 import logging
@@ -39,8 +41,112 @@ TOOL_PREWARM = os.getenv("STORYBOARD_AGENT_PREWARM", "false").lower() in (
 
 _tools_module: Any | None = None
 _tools_lock = threading.Lock()
+_boot_timestamp = time.time()
 _cache: dict[str, tuple[float, "StoryboardChatResponse"]] = {}
 _cache_lock = threading.Lock()
+_inflight_requests: dict[str, asyncio.Future["StoryboardChatResponse"]] = {}
+_inflight_lock = asyncio.Lock()
+
+_metrics_lock = threading.Lock()
+_metrics_requests_total = 0
+_metrics_requests_errors = 0
+_metrics_requests_latency_ms_sum = 0.0
+_metrics_requests_latency_ms_count = 0
+_metrics_cache_hits = 0
+_metrics_cache_misses = 0
+_metrics_tool_calls = defaultdict(int)
+_metrics_tool_errors = defaultdict(int)
+_metrics_tool_latency_ms_sum = defaultdict(float)
+_metrics_tool_latency_ms_count = defaultdict(int)
+_metrics_tool_latency_ms_max = defaultdict(float)
+
+
+def _metrics_record_request(duration_ms: float, error: bool) -> None:
+    global _metrics_requests_total
+    global _metrics_requests_errors
+    global _metrics_requests_latency_ms_sum
+    global _metrics_requests_latency_ms_count
+    with _metrics_lock:
+        _metrics_requests_total += 1
+        _metrics_requests_latency_ms_sum += duration_ms
+        _metrics_requests_latency_ms_count += 1
+        if error:
+            _metrics_requests_errors += 1
+
+
+def _metrics_record_cache_hit(hit: bool) -> None:
+    global _metrics_cache_hits
+    global _metrics_cache_misses
+    with _metrics_lock:
+        if hit:
+            _metrics_cache_hits += 1
+        else:
+            _metrics_cache_misses += 1
+
+
+def _metrics_record_tool_call(tool_name: str, latency_ms: float, failed: bool) -> None:
+    with _metrics_lock:
+        _metrics_tool_calls[tool_name] += 1
+        if failed:
+            _metrics_tool_errors[tool_name] += 1
+        _metrics_tool_latency_ms_sum[tool_name] += latency_ms
+        _metrics_tool_latency_ms_count[tool_name] += 1
+        if latency_ms > _metrics_tool_latency_ms_max[tool_name]:
+            _metrics_tool_latency_ms_max[tool_name] = latency_ms
+
+
+def _metric_uptime_seconds() -> int:
+    return max(0, int(time.time() - _boot_timestamp))
+
+
+def _get_metrics_snapshot() -> dict[str, Any]:
+    with _cache_lock:
+        cache_size = len(_cache)
+
+    with _metrics_lock:
+        tool_names = set(_metrics_tool_calls.keys()) | set(_metrics_tool_latency_ms_count.keys()) | set(_metrics_tool_errors.keys())
+        tool_stats = []
+        for name in sorted(tool_names):
+            calls = _metrics_tool_calls[name]
+            if calls <= 0:
+                continue
+            latency_sum = _metrics_tool_latency_ms_sum[name]
+            latency_count = _metrics_tool_latency_ms_count[name]
+            avg_ms = (latency_sum / latency_count) if latency_count else 0
+            tool_stats.append(
+                {
+                    "name": name,
+                    "calls": calls,
+                    "errors": _metrics_tool_errors[name],
+                    "avgLatencyMs": round(avg_ms, 2),
+                    "maxLatencyMs": round(_metrics_tool_latency_ms_max[name], 2),
+                }
+            )
+
+    request_count = _metrics_requests_total
+    request_error_count = _metrics_requests_errors
+    request_latency_count = _metrics_requests_latency_ms_count
+    request_latency_sum = _metrics_requests_latency_ms_sum
+    request_avg_latency_ms = (request_latency_sum / request_latency_count) if request_latency_count else 0
+
+    return {
+        "service": "storyboard-agent",
+        "uptimeSeconds": _metric_uptime_seconds(),
+        "requests": {
+            "total": request_count,
+            "errors": request_error_count,
+            "success": request_count - request_error_count,
+            "cacheHits": _metrics_cache_hits,
+            "cacheMisses": _metrics_cache_misses,
+            "avgLatencyMs": round(request_avg_latency_ms, 2),
+        },
+        "cache": {
+            "size": cache_size,
+            "maxEntries": CACHE_MAX_ENTRIES,
+            "ttlSeconds": CACHE_TTL_SECONDS,
+        },
+        "tools": tool_stats,
+    }
 
 
 def _cache_get(cache_key: str) -> "StoryboardChatResponse | None":
@@ -50,14 +156,17 @@ def _cache_get(cache_key: str) -> "StoryboardChatResponse | None":
     with _cache_lock:
         entry = _cache.get(cache_key)
         if not entry:
+            _metrics_record_cache_hit(False)
             return None
 
         created_at, payload = entry
         now = datetime.now(timezone.utc).timestamp()
         if now - created_at > CACHE_TTL_SECONDS:
             _cache.pop(cache_key, None)
+            _metrics_record_cache_hit(False)
             return None
 
+        _metrics_record_cache_hit(True)
         return payload
 
 
@@ -123,11 +232,22 @@ def _load_tools_module():
 
 
 def _invoke_tool(tool: Any, payload: dict[str, Any]) -> Any:
-    if hasattr(tool, "invoke"):
-        return tool.invoke(payload)
-    if callable(tool):
-        return tool(**payload)
-    raise RuntimeError("Tool is not callable.")
+    started_at = time.perf_counter()
+    tool_name = getattr(tool, "__name__", tool.__class__.__name__ if hasattr(tool, "__class__") else "tool")
+    failed = False
+
+    try:
+        if hasattr(tool, "invoke"):
+            return tool.invoke(payload)
+        if callable(tool):
+            return tool(**payload)
+        raise RuntimeError("Tool is not callable.")
+    except Exception:
+        failed = True
+        raise
+    finally:
+        elapsed_ms = (time.perf_counter() - started_at) * 1000
+        _metrics_record_tool_call(tool_name, elapsed_ms, failed)
 
 
 def _parse_text(value: Any, max_len: int = 220) -> str:
@@ -184,6 +304,10 @@ def _extract_caption(value: Any) -> str:
             if isinstance(value.get(key), str):
                 return _parse_text(value[key], 300)
     return ""
+
+
+def _normalize_query(message: str) -> str:
+    return message.lower().strip()
 
 
 def _extract_video_ids(payload: Any) -> list[str]:
@@ -336,12 +460,7 @@ def _build_fallback(message: str, message_for_user: str, sources: list[dict[str,
     )
 
 
-def _prepare_response(message: str) -> StoryboardChatResponse:
-    cache_key = message.lower().strip()
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
-
+def _prepare_response(message: str, cache_key: str) -> StoryboardChatResponse:
     try:
         tools = _load_tools_module()
 
@@ -403,7 +522,47 @@ def _prepare_response(message: str) -> StoryboardChatResponse:
 
 
 async def _prepare_response_async(message: str) -> StoryboardChatResponse:
-    return await asyncio.to_thread(_prepare_response, message)
+    cache_key = _normalize_query(message)
+    started_at = time.perf_counter()
+    error = False
+
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        _metrics_record_request((time.perf_counter() - started_at) * 1000, False)
+        return cached
+
+    loop = asyncio.get_running_loop()
+    async with _inflight_lock:
+        existing = _inflight_requests.get(cache_key)
+        if existing is not None:
+            future = existing
+            is_leader = False
+        else:
+            future = loop.create_future()
+            _inflight_requests[cache_key] = future
+            is_leader = True
+
+    try:
+        if is_leader:
+            try:
+                response = await asyncio.to_thread(_prepare_response, message, cache_key)
+                if not future.done():
+                    future.set_result(response)
+                return response
+            except Exception as exc:
+                error = True
+                if not future.done():
+                    future.set_exception(exc)
+                raise exc
+        return await future
+    except Exception:
+        error = True
+        raise
+    finally:
+        if is_leader:
+            async with _inflight_lock:
+                _inflight_requests.pop(cache_key, None)
+        _metrics_record_request((time.perf_counter() - started_at) * 1000, error)
 
 
 app = FastAPI(
@@ -426,6 +585,11 @@ async def _startup() -> None:
 @app.get("/health")
 def health():
     return {"ok": True, "service": "storyboard-agent"}
+
+
+@app.get("/metrics")
+def metrics():
+    return _get_metrics_snapshot()
 
 
 @app.get("/")
