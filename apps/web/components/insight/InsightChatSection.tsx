@@ -35,12 +35,35 @@ const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
 const CHAT_REQUEST_TIMEOUT_MS = 18_000;
 const CHAT_REQUEST_CACHE_LIMIT = 64;
 const MAX_CONVERSATIONS = 30;
+const MAX_MESSAGES_PER_CONVERSATION = 220;
+const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
 const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
 const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
 
 type CachedEntry<T> = {
     data: T;
     expiresAt: number;
+};
+
+type PersistedChatMessage = Omit<ChatMessage, 'createdAt' | 'meta'> & {
+    createdAt: string;
+    meta?: AdminInsightChatResponse['meta'];
+};
+
+type PersistedChatState = {
+    version: 1;
+    conversations: PersistedConversation[];
+    activeConversationId: string;
+};
+
+type PersistedConversation = {
+    id: string;
+    title: string;
+    messages: PersistedChatMessage[];
+    createdAt: number;
+    updatedAt: number;
+    isBooting?: boolean;
+    bootstrapFailed?: boolean;
 };
 
 const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
@@ -234,6 +257,97 @@ function mapSources(rawSources: InsightChatSource[] | undefined): InsightChatSou
     return (rawSources ?? []).filter((source) => Boolean(source.videoTitle || source.youtubeLink || source.timestamp || source.text));
 }
 
+function deserializeConversationList(raw: PersistedChatState | null): {
+    conversations: ChatConversation[];
+    activeConversationId: string;
+} | null {
+    if (!raw || raw.version !== 1 || !Array.isArray(raw.conversations) || raw.conversations.length === 0) {
+        return null;
+    }
+
+    const conversations = raw.conversations
+        .map((conversation): ChatConversation | null => {
+            if (!conversation || typeof conversation !== 'object') {
+                return null;
+            }
+
+            if (typeof conversation.id !== 'string' || typeof conversation.title !== 'string') {
+                return null;
+            }
+
+            if (!Array.isArray(conversation.messages)) {
+                return null;
+            }
+
+            const messages = conversation.messages
+                .filter((message): message is PersistedChatMessage => {
+                    if (!message || typeof message !== 'object') {
+                        return false;
+                    }
+                    return typeof message.id === 'string'
+                        && (message.role === 'user' || message.role === 'assistant')
+                        && typeof message.content === 'string'
+                        && typeof message.createdAt === 'string';
+                })
+                .map((message) => {
+                    const parsedCreatedAt = new Date(message.createdAt);
+                    return {
+                        id: message.id,
+                        role: message.role,
+                        content: message.content,
+                        sources: mapSources(message.sources),
+                        createdAt: Number.isNaN(parsedCreatedAt.getTime()) ? new Date() : parsedCreatedAt,
+                        meta: message.meta,
+                    };
+                });
+
+            return {
+                id: conversation.id,
+                title: conversation.title,
+                messages,
+                createdAt: conversation.createdAt ?? Date.now(),
+                updatedAt: conversation.updatedAt ?? Date.now(),
+                isBooting: false,
+                bootstrapFailed: Boolean(conversation.bootstrapFailed),
+            };
+        })
+        .filter((conversation): conversation is ChatConversation => conversation !== null)
+        .slice(0, MAX_CONVERSATIONS);
+
+    if (conversations.length === 0) {
+        return null;
+    }
+
+    const activeConversationId = raw.activeConversationId && conversations.some((conversation) => conversation.id === raw.activeConversationId)
+        ? raw.activeConversationId
+        : conversations[0].id;
+
+    return { conversations, activeConversationId };
+}
+
+function serializeConversationList(conversations: ChatConversation[], activeConversationId: string): PersistedChatState {
+    return {
+        version: 1,
+        activeConversationId,
+        conversations: conversations.slice(-MAX_CONVERSATIONS).map((conversation) => ({
+            id: conversation.id,
+            title: conversation.title,
+            messages: conversation.messages.map((message) => ({
+                id: message.id,
+                role: message.role,
+                content: message.content,
+                sources: message.sources,
+                createdAt: message.createdAt.toISOString(),
+                meta: message.meta,
+            })),
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt,
+            isBooting: conversation.isBooting,
+            bootstrapFailed: conversation.bootstrapFailed,
+        })),
+    };
+}
+
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
     h1: ({ children }: { children: ReactNode }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
     h2: ({ children }: { children: ReactNode }) => <h3 className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
@@ -424,6 +538,18 @@ const InsightChatSectionComponent = () => {
         [conversations],
     );
 
+    const persistConversationState = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        if (conversations.length === 0) return;
+
+        try {
+            const payload = serializeConversationList(conversations, activeConversationId);
+            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(payload));
+        } catch {
+            // localStorage unavailable or full
+        }
+    }, [activeConversationId, conversations]);
+
     const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
         setConversations((prev) => {
             let changed = false;
@@ -521,12 +647,30 @@ const InsightChatSectionComponent = () => {
         void loadBootstrap(nextConversation.id);
     }, [loadBootstrap]);
 
+    const hydrateFromStorage = useCallback(() => {
+        if (typeof window === 'undefined') return null;
+
+        try {
+            const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw) as PersistedChatState;
+            return deserializeConversationList(parsed);
+        } catch {
+            return null;
+        }
+    }, []);
+
     const appendMessage = useCallback((conversationId: string, message: ChatMessage) => {
         updateConversation(conversationId, (prev) => {
             const isTitleDefault = prev.title === EMPTY_TITLE && message.role === 'user';
+            const nextMessages = [...prev.messages, message];
+            const trimmedMessages = nextMessages.length > MAX_MESSAGES_PER_CONVERSATION
+                ? nextMessages.slice(-MAX_MESSAGES_PER_CONVERSATION)
+                : nextMessages;
+
             return {
                 ...prev,
-                messages: [...prev.messages, message],
+                messages: trimmedMessages,
                 title: isTitleDefault ? makeConversationTitle(message.content) : prev.title,
                 updatedAt: Date.now(),
             };
@@ -535,6 +679,19 @@ const InsightChatSectionComponent = () => {
 
     useEffect(() => {
         if (isInitialized) return;
+
+        const restored = hydrateFromStorage();
+        if (restored) {
+            setConversations(restored.conversations);
+            setActiveConversationId(restored.activeConversationId);
+            setIsInitialized(true);
+
+            const activeConversation = restored.conversations.find((conversation) => conversation.id === restored.activeConversationId) ?? restored.conversations[0];
+            if (!activeConversation || activeConversation.messages.length === 0) {
+                void loadBootstrap(activeConversation.id);
+            }
+            return;
+        }
 
         const first = {
             id: makeConversationId(),
@@ -550,11 +707,15 @@ const InsightChatSectionComponent = () => {
         setActiveConversationId(first.id);
         setIsInitialized(true);
         void loadBootstrap(first.id);
-    }, [isInitialized, loadBootstrap]);
+    }, [hydrateFromStorage, isInitialized, loadBootstrap]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [activeConversation?.messages.length, activeConversationId]);
+
+    useEffect(() => {
+        persistConversationState();
+    }, [conversations, activeConversationId, persistConversationState]);
 
     const handleSelectConversation = useCallback((conversationId: string) => {
         setActiveConversationId(conversationId);
