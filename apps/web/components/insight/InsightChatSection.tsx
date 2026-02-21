@@ -35,6 +35,8 @@ const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
 const CHAT_REQUEST_TIMEOUT_MS = 18_000;
 const CHAT_REQUEST_CACHE_LIMIT = 64;
 const MAX_CONVERSATIONS = 30;
+const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
+const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
 
 type CachedEntry<T> = {
     data: T;
@@ -115,6 +117,28 @@ async function fetchJsonWithTimeout<T>(url: string, options: RequestInit, timeou
     }
 }
 
+function isTransientError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+        return false;
+    }
+
+    if (error.name === 'AbortError') {
+        return true;
+    }
+
+    if (error.name === 'TypeError') {
+        return true;
+    }
+
+    return /network|failed|fetch/i.test(error.message);
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+
 async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {
     const cacheKey = 'admin-insight-bootstrap';
     const now = Date.now();
@@ -162,16 +186,34 @@ async function postChatMessage(message: string): Promise<AdminInsightChatRespons
     const inFlight = inFlightChatRequest.get(normalizedMessage);
     if (inFlight) return inFlight;
 
-    const request = fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
-    }, CHAT_REQUEST_TIMEOUT_MS).catch((error) => {
-        if (error instanceof Error) {
-            throw new Error('메시지를 전송하지 못했습니다');
+    const request = (async () => {
+        let lastError: unknown;
+        for (let attempt = 0; attempt <= CHAT_REQUEST_RETRY_ATTEMPTS; attempt += 1) {
+            try {
+                return await fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message }),
+                }, CHAT_REQUEST_TIMEOUT_MS);
+            } catch (error) {
+                lastError = error;
+                if (attempt >= CHAT_REQUEST_RETRY_ATTEMPTS || !isTransientError(error)) {
+                    if (error instanceof Error) {
+                        throw new Error('메시지를 전송하지 못했습니다');
+                    }
+                    throw error;
+                }
+
+                const delay = CHAT_REQUEST_RETRY_BASE_DELAY_MS * 2 ** attempt;
+                await sleep(Math.min(1200, delay));
+            }
         }
-        throw error;
-    });
+
+        if (lastError instanceof Error) {
+            throw lastError;
+        }
+        throw new Error('메시지를 전송하지 못했습니다');
+    })();
 
     inFlightChatRequest.set(normalizedMessage, request);
 

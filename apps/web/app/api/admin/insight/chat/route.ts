@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null);
     const message = typeof body?.message === 'string' ? body.message : '';
     if (!message.trim()) {
-      return NextResponse.json({
+      return NextResponse.json(
+        {
         asOf: new Date().toISOString(),
         content: '질문을 입력해 주세요.',
         meta: {
@@ -32,14 +33,30 @@ export async function POST(request: NextRequest) {
           fallbackReason: 'empty_input',
         },
         sources: [],
-      }, { status: 400 });
+      },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      },
+    );
     }
 
     const data = await answerAdminInsightChat(message);
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (error) {
     console.error('[admin/insight/chat] failed:', error);
-    return NextResponse.json(fallbackResponse(), { status: 200 });
+    return NextResponse.json(fallbackResponse(), {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
   }
 }
 
