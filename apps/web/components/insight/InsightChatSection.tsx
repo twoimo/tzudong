@@ -36,6 +36,8 @@ const CHAT_REQUEST_TIMEOUT_MS = 18_000;
 const CHAT_REQUEST_CACHE_LIMIT = 64;
 const MAX_CONVERSATIONS = 30;
 const MAX_MESSAGES_PER_CONVERSATION = 220;
+const MESSAGE_WINDOW_INITIAL = 80;
+const MESSAGE_WINDOW_BATCH = 80;
 const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
 const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
 const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
@@ -522,6 +524,7 @@ const InsightChatSectionComponent = () => {
     const [conversations, setConversations] = useState<ChatConversation[]>([]);
     const [activeConversationId, setActiveConversationId] = useState<string>('');
     const [inputValue, setInputValue] = useState('');
+    const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const bootstrapRequestRef = useRef(new Map<string, number>());
@@ -537,6 +540,17 @@ const InsightChatSectionComponent = () => {
         () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
         [conversations],
     );
+
+    const visibleMessages = useMemo(() => {
+        if (!activeConversation) return [];
+        const total = activeConversation.messages.length;
+        if (total <= 0) return [];
+
+        const start = Math.max(0, total - Math.min(total, messageWindowSize));
+        return activeConversation.messages.slice(start, total);
+    }, [activeConversation, messageWindowSize]);
+
+    const canShowMoreMessages = !!activeConversation && activeConversation.messages.length > messageWindowSize;
 
     const persistConversationState = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -710,6 +724,14 @@ const InsightChatSectionComponent = () => {
     }, [hydrateFromStorage, isInitialized, loadBootstrap]);
 
     useEffect(() => {
+        if (!activeConversation) {
+            return;
+        }
+
+        setMessageWindowSize(Math.min(MESSAGE_WINDOW_INITIAL, activeConversation.messages.length || MESSAGE_WINDOW_INITIAL));
+    }, [activeConversationId, activeConversation?.messages.length]);
+
+    useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [activeConversation?.messages.length, activeConversationId]);
 
@@ -735,6 +757,15 @@ const InsightChatSectionComponent = () => {
         if (!activeConversation) return;
         void loadBootstrap(activeConversation.id);
     }, [activeConversation, loadBootstrap]);
+
+    const handleLoadMoreMessages = useCallback(() => {
+        if (!activeConversation) return;
+
+        setMessageWindowSize((prev) => Math.min(
+            activeConversation.messages.length,
+            prev + MESSAGE_WINDOW_BATCH,
+        ));
+    }, [activeConversation]);
 
     const handleSendMessage = useCallback(async () => {
         const content = inputValue.trim();
@@ -863,9 +894,23 @@ const InsightChatSectionComponent = () => {
                                     메시지를 시작하려면 아래 입력창에서 질문을 입력해 주세요.
                                 </div>
                             ) : (
-                                activeConversation?.messages.map((message) => (
-                                    <ChatBubble key={message.id} message={message} />
-                                ))
+                                <>
+                                    {canShowMoreMessages ? (
+                                        <div className="px-1 py-2 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={handleLoadMoreMessages}
+                                                className="text-xs text-[#ef4444] underline underline-offset-2 hover:no-underline"
+                                            >
+                                                이전 대화 더 보기
+                                            </button>
+                                        </div>
+                                    ) : null}
+
+                                    {visibleMessages.map((message) => (
+                                        <ChatBubble key={message.id} message={message} />
+                                    ))}
+                                </>
                             )}
 
                             {isSending ? (
