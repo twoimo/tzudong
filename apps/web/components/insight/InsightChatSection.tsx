@@ -392,6 +392,10 @@ const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
 };
 
 const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
+    h1: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
+    h2: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
+    h3: ({ children }: { children: ReactNode }) => <span className="font-medium">{children}</span>,
+    h4: ({ children }: { children: ReactNode }) => <span className="font-medium">{children}</span>,
     p: ({ children }: { children: ReactNode }) => <span>{children}</span>,
     em: ({ children }: { children: ReactNode }) => <span className="italic">{children}</span>,
     strong: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
@@ -414,6 +418,22 @@ const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
         );
     },
     blockquote: ({ children }: { children: ReactNode }) => <span className="text-[#6b7280]">{children}</span>,
+};
+
+const CONVERSATION_PREVIEW_CLAMP_STYLE: {
+    display: string;
+    overflow: string;
+    textOverflow: string;
+    WebkitLineClamp: number;
+    WebkitBoxOrient: 'vertical';
+    whiteSpace: 'nowrap';
+} = {
+    display: '-webkit-box',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    WebkitLineClamp: 1,
+    WebkitBoxOrient: 'vertical',
+    whiteSpace: 'nowrap',
 };
 
 const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
@@ -509,7 +529,10 @@ const ChatSkeleton = memo(() => (
 ChatSkeleton.displayName = 'ChatSkeleton';
 
 const ConversationPreview = memo(({ content }: { content: string }) => (
-    <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+    <div
+        className="text-xs leading-4 text-[#6b7280]"
+        style={CONVERSATION_PREVIEW_CLAMP_STYLE}
+    >
         <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={CHAT_PREVIEW_MARKDOWN_COMPONENTS}
@@ -896,7 +919,7 @@ const InsightChatSectionComponent = () => {
                                     )}
                                 >
                                     <p className="font-medium text-sm text-[#111827] truncate">{conversation.title}</p>
-                                    <div className="mt-1 text-xs text-[#6b7280] leading-relaxed overflow-hidden whitespace-nowrap text-ellipsis">
+                                    <div className="mt-1">
                                         <ConversationPreview content={preview} />
                                     </div>
                                 </button>

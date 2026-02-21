@@ -9,11 +9,6 @@ import styles from './insight-overhaul.module.css';
 
 const InsightChatSection = dynamic(() => import('@/components/insight/InsightChatSection'), {
     ssr: false,
-    loading: () => (
-        <div className={styles.chatLoading}>
-            <ChatSkeleton />
-        </div>
-    ),
 });
 
 const InsightClientComponent = () => {

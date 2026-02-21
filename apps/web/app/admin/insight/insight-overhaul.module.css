@@ -15,19 +15,6 @@
   overflow: hidden;
 }
 
-.chatLoading {
-  min-height: 320px;
-  display: grid;
-  place-items: center;
-  gap: 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #6b7280;
-  text-align: center;
-  font-size: 14px;
-}
-
 .centerShell {
   min-height: 100%;
   display: grid;
