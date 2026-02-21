@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { RefreshCw } from 'lucide-react';
 import { memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
 import styles from './insight-overhaul.module.css';
 
 const InsightChatSection = dynamic(() => import('@/components/insight/InsightChatSection'), {
@@ -21,14 +22,7 @@ const InsightClientComponent = () => {
     const { isAdmin, isLoading: isAuthLoading } = useAuth();
 
     if (isAuthLoading) {
-        return (
-            <section className={styles.centerShell}>
-                <div className={styles.centerPanel}>
-                    <RefreshCw className={styles.spin} />
-                    <p>권한 확인 중입니다.</p>
-                </div>
-            </section>
-        );
+        return <MapSkeleton />;
     }
 
     if (!isAdmin) {

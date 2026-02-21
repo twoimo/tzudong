@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/insight/treemap';
 import AdminInsightsClient from '@/app/admin/insight/insight-client';
 import { useDeviceType } from '@/hooks/useDeviceType';
+import { InsightSkeleton } from '@/components/ui/skeleton-loaders';
 
 type ViewMode = 'all' | 'category' | 'change';
 type MetricMode = 'views' | 'likes' | 'comments' | 'duration';
@@ -1301,22 +1301,11 @@ export default function InsightsClient() {
     };
 
     if (isAuthLoading) {
-        return (
-            <div className="flex h-full items-center justify-center">
-                <div className="flex items-center gap-2 text-muted-foreground">사용자 권한을 확인하는 중입니다.</div>
-            </div>
-        );
+        return <InsightSkeleton />;
     }
 
     if (isLoading && !canRender) {
-        return (
-            <div className="flex h-full items-center justify-center">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    인사이트를 불러오는 중입니다.
-                </div>
-            </div>
-        );
+        return <InsightSkeleton />;
     }
 
     if (treemapQuery.isError || !treemapQuery.data) {
