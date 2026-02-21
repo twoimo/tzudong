@@ -16,6 +16,7 @@ const STORYBOARD_AGENT_TIMEOUT_MS = Number(process.env.STORYBOARD_AGENT_TIMEOUT_
 const STORYBOARD_AGENT_MAX_RETRIES = Number(process.env.STORYBOARD_AGENT_MAX_RETRIES || '2');
 const STORYBOARD_AGENT_RETRY_BASE_MS = Number(process.env.STORYBOARD_AGENT_RETRY_BASE_MS || '250');
 const STORYBOARD_AGENT_RETRY_MAX_MS = Number(process.env.STORYBOARD_AGENT_RETRY_MAX_MS || '1500');
+const INSIGHT_QUERY_TTL_MS = Number(process.env.INSIGHT_QUERY_CACHE_TTL_MS || '45000');
 
 const STORYBOARD_KEYWORDS = [
   '스토리보드',
@@ -43,6 +44,51 @@ const STORYBOARD_KEYWORDS = [
 ];
 
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+
+type CachedQueryEntry<T> = {
+    data: T;
+    expiresAt: number;
+};
+
+const cacheTtl = Number.isFinite(INSIGHT_QUERY_TTL_MS) && INSIGHT_QUERY_TTL_MS > 0
+    ? INSIGHT_QUERY_TTL_MS
+    : 45000;
+const cacheInFlight = new Map<string, Promise<unknown>>();
+const queryCache = new Map<string, CachedQueryEntry<unknown>>();
+
+function normalizeCacheKey(base: string): string {
+    return base.trim().toLowerCase();
+}
+
+function withCachedQuery<T>(key: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
+    const normalizedKey = normalizeCacheKey(key);
+    const now = Date.now();
+    const cached = queryCache.get(normalizedKey);
+    if (cached && cached.expiresAt > now) {
+        return Promise.resolve(cached.data as T);
+    }
+
+    const inFlight = cacheInFlight.get(normalizedKey);
+    if (inFlight) {
+        return inFlight as Promise<T>;
+    }
+
+    const request = (async () => {
+        const value = await loader();
+        queryCache.set(normalizedKey, {
+            data: value as unknown,
+            expiresAt: Date.now() + ttlMs,
+        });
+        return value;
+    })();
+
+    cacheInFlight.set(normalizedKey, request);
+    request.finally(() => {
+        cacheInFlight.delete(normalizedKey);
+    });
+
+    return request;
+}
 
 function createLocalResponse(
   asOf: string,
@@ -300,8 +346,8 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
   const asOf = new Date().toISOString();
 
   const [summary, keywords] = await Promise.all([
-    getDashboardSummary(false),
-    getAdminInsightWordcloud(false),
+    withCachedQuery('admin-insight-summary', cacheTtl, () => getDashboardSummary(false)),
+    withCachedQuery('admin-insight-wordcloud', cacheTtl, () => getAdminInsightWordcloud(false)),
   ]);
 
   const topKeywords = keywords.keywords.slice(0, 8).map((k) => k.keyword).join(', ');
@@ -347,7 +393,7 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
   }
 
   if (includesAny(input, ['키워드', '워드', 'word', 'wordcloud', '인기'])) {
-    const data = await getAdminInsightWordcloud(false);
+    const data = await withCachedQuery('admin-insight-wordcloud', cacheTtl, () => getAdminInsightWordcloud(false));
     const list = data.keywords.slice(0, 12)
       .map((k, idx) => `${idx + 1}. **${k.keyword}** (${k.count})`)
       .join('\n');
@@ -358,7 +404,7 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
   }
 
   if (includesAny(input, ['시즌', '캘린더', 'calendar', '이번달', '다음달', '월별'])) {
-    const data = await getAdminInsightSeason(false);
+    const data = await withCachedQuery('admin-insight-season', cacheTtl, () => getAdminInsightSeason(false));
     const now = new Date();
     const month = now.getUTCMonth() + 1;
     const monthData = data.months.find((m) => m.month === month);
@@ -372,7 +418,7 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
   }
 
   if (includesAny(input, ['히트맵', 'heatmap', '리텐션', '하이라이트', 'peak'])) {
-    const data = await getAdminInsightHeatmap(false);
+    const data = await withCachedQuery('admin-insight-heatmap', cacheTtl, () => getAdminInsightHeatmap(false));
     const top = data.videos[0];
     if (!top) {
       return createLocalResponse(asOf, '히트맵 데이터를 찾지 못했습니다.', {
@@ -395,9 +441,9 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
 
   if (includesAny(input, ['운영', 'funnel', '실패', 'fail', '품질', 'quality', '지표'])) {
     const [funnel, failures, quality] = await Promise.all([
-      getDashboardFunnel(false),
-      getDashboardFailures(false),
-      getDashboardQuality(false),
+      withCachedQuery('admin-insight-funnel', cacheTtl, () => getDashboardFunnel(false)),
+      withCachedQuery('admin-insight-failures', cacheTtl, () => getDashboardFailures(false)),
+      withCachedQuery('admin-insight-quality', cacheTtl, () => getDashboardQuality(false)),
     ]);
 
     const topNotSelections = failures.notSelectionReasons.slice(0, 5)

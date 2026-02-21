@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Bot, Loader2, Send, User, PlusCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -30,6 +30,21 @@ type ChatConversation = {
 };
 
 const EMPTY_TITLE = '새 대화';
+const CHAT_BOOTSTRAP_TTL_MS = 4 * 60 * 1000;
+const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
+const CHAT_REQUEST_TIMEOUT_MS = 18_000;
+const CHAT_REQUEST_CACHE_LIMIT = 64;
+const MAX_CONVERSATIONS = 30;
+
+type CachedEntry<T> = {
+    data: T;
+    expiresAt: number;
+};
+
+const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
+const chatResponseCache = new Map<string, CachedEntry<AdminInsightChatResponse>>();
+const inFlightBootstrapRequest = new Map<string, Promise<AdminInsightChatBootstrapResponse>>();
+const inFlightChatRequest = new Map<string, Promise<AdminInsightChatResponse>>();
 
 const SUGGESTED_PROMPTS = [
     '먹방 스토리보드 기획안 짜줘',
@@ -58,35 +73,190 @@ function makeConversationTitle(content: string): string {
     return shortened || '새 대화';
 }
 
-async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {
-    const response = await fetch('/api/admin/insight/chat/bootstrap');
-    if (!response.ok) {
-        throw new Error('인사이트 채팅 초기 데이터를 가져오지 못했습니다');
+function normalizeCacheKey(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function trimCacheSize<T>(cache: Map<string, CachedEntry<T>>, maxEntries: number) {
+    if (cache.size <= maxEntries) return;
+
+    const overflow = cache.size - maxEntries;
+    let removed = 0;
+    for (const key of cache.keys()) {
+        cache.delete(key);
+        removed += 1;
+        if (removed >= overflow) return;
     }
-    return response.json() as Promise<AdminInsightChatBootstrapResponse>;
+}
+
+async function fetchJsonWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<T> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+        });
+
+        if (!response.ok) {
+            const fallback = await response.json().catch(() => null);
+            if (fallback && typeof (fallback as { content?: unknown })?.content === 'string') {
+                return fallback as T;
+            }
+            throw new Error('요청이 실패했습니다');
+        }
+
+        return response.json() as Promise<T>;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {
+    const cacheKey = 'admin-insight-bootstrap';
+    const now = Date.now();
+    const cached = chatBootstrapCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+        return cached.data;
+    }
+
+    const inFlight = inFlightBootstrapRequest.get(cacheKey);
+    if (inFlight) return inFlight;
+
+    const request = fetchJsonWithTimeout<AdminInsightChatBootstrapResponse>('/api/admin/insight/chat/bootstrap', {
+        method: 'GET',
+        cache: 'no-store',
+    }, CHAT_REQUEST_TIMEOUT_MS).catch((error) => {
+        if (error instanceof Error) {
+            throw new Error('인사이트 채팅 초기 데이터를 가져오지 못했습니다');
+        }
+        throw error;
+    });
+
+    inFlightBootstrapRequest.set(cacheKey, request);
+
+    try {
+        const bootstrap = await request;
+        chatBootstrapCache.set(cacheKey, {
+            data: bootstrap,
+            expiresAt: now + CHAT_BOOTSTRAP_TTL_MS,
+        });
+        trimCacheSize(chatBootstrapCache, 1);
+        return bootstrap;
+    } finally {
+        inFlightBootstrapRequest.delete(cacheKey);
+    }
 }
 
 async function postChatMessage(message: string): Promise<AdminInsightChatResponse> {
-    const response = await fetch('/api/admin/insight/chat', {
+    const normalizedMessage = normalizeCacheKey(message);
+    const now = Date.now();
+    const cached = chatResponseCache.get(normalizedMessage);
+    if (cached && cached.expiresAt > now) {
+        return cached.data;
+    }
+
+    const inFlight = inFlightChatRequest.get(normalizedMessage);
+    if (inFlight) return inFlight;
+
+    const request = fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
+    }, CHAT_REQUEST_TIMEOUT_MS).catch((error) => {
+        if (error instanceof Error) {
+            throw new Error('메시지를 전송하지 못했습니다');
+        }
+        throw error;
     });
 
-    if (!response.ok) {
-        const fallback = await response.json().catch(() => null);
-        if (fallback && typeof fallback.content === 'string') {
-            return fallback as AdminInsightChatResponse;
-        }
-        throw new Error('메시지를 전송하지 못했습니다');
-    }
+    inFlightChatRequest.set(normalizedMessage, request);
 
-    return response.json() as Promise<AdminInsightChatResponse>;
+    try {
+        const response = await request;
+        chatResponseCache.set(normalizedMessage, {
+            data: response,
+            expiresAt: now + CHAT_RESPONSE_TTL_MS,
+        });
+        trimCacheSize(chatResponseCache, CHAT_REQUEST_CACHE_LIMIT);
+        return response;
+    } finally {
+        inFlightChatRequest.delete(normalizedMessage);
+    }
 }
 
 function mapSources(rawSources: InsightChatSource[] | undefined): InsightChatSource[] {
     return (rawSources ?? []).filter((source) => Boolean(source.videoTitle || source.youtubeLink || source.timestamp || source.text));
 }
+
+const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
+    h1: ({ children }: { children: ReactNode }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
+    h2: ({ children }: { children: ReactNode }) => <h3 className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
+    h3: ({ children }: { children: ReactNode }) => <h4 className="text-sm font-medium mb-1 mt-2.5 first:mt-0">{children}</h4>,
+    p: ({ children }: { children: ReactNode }) => <p className="whitespace-pre-wrap text-sm leading-6">{children}</p>,
+    ul: ({ children }: { children: ReactNode }) => <ul className="list-disc pl-5 my-2 space-y-1 text-sm leading-6">{children}</ul>,
+    ol: ({ children }: { children: ReactNode }) => <ol className="list-decimal pl-5 my-2 space-y-1 text-sm leading-6">{children}</ol>,
+    li: ({ children }: { children: ReactNode }) => <li className="text-sm leading-6">{children}</li>,
+    a: ({ children, href }: { children: ReactNode; href?: string }) => {
+        const safeHref = href ?? '';
+        const isExternal = /^https?:/i.test(safeHref);
+        return (
+            <a
+                href={safeHref || '#'}
+                target={isExternal ? '_blank' : undefined}
+                rel={isExternal ? 'noopener noreferrer' : undefined}
+                className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
+            >
+                {children}
+            </a>
+        );
+    },
+    table: ({ children }: { children: ReactNode }) => (
+        <div className="my-2 overflow-x-auto">
+            <table className="w-full text-sm border-collapse border border-[#e5e7eb]">{children}</table>
+        </div>
+    ),
+    thead: ({ children }: { children: ReactNode }) => <thead className="bg-[#f9fafb]">{children}</thead>,
+    th: ({ children }: { children: ReactNode }) => <th className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
+    td: ({ children }: { children: ReactNode }) => <td className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
+    blockquote: ({ children }: { children: ReactNode }) => (
+        <blockquote className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280]">
+            {children}
+        </blockquote>
+    ),
+    pre: ({ children }: { children: ReactNode }) => (
+        <pre className="overflow-x-auto rounded-md bg-[#f3f4f6] p-3 my-2 text-sm">{children}</pre>
+    ),
+    code: ({ children }: { children: ReactNode }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-xs">{children}</code>,
+};
+
+const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
+    p: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+    em: ({ children }: { children: ReactNode }) => <span className="italic">{children}</span>,
+    strong: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
+    code: ({ children }: { children: ReactNode }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-[11px]">{children}</code>,
+    ul: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
+    ol: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
+    li: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
+    a: ({ children, href }: { children: ReactNode; href?: string }) => {
+        const safeHref = href ?? '';
+        const isExternal = /^https?:/i.test(safeHref);
+        return (
+            <a
+                href={safeHref || '#'}
+                target={isExternal ? '_blank' : undefined}
+                rel={isExternal ? 'noopener noreferrer' : undefined}
+                className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
+            >
+                {children}
+            </a>
+        );
+    },
+    blockquote: ({ children }: { children: ReactNode }) => <span className="text-[#6b7280]">{children}</span>,
+};
 
 const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
     if (sources.length === 0) return null;
@@ -147,46 +317,7 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                 ) : (
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
-                        components={{
-                            h1: ({ children }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
-                            h2: ({ children }) => <h3 className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
-                            h3: ({ children }) => <h4 className="text-sm font-medium mb-1 mt-2.5 first:mt-0">{children}</h4>,
-                            p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-6">{children}</p>,
-                            ul: ({ children }) => <ul className="list-disc pl-5 my-2 space-y-1 text-sm leading-6">{children}</ul>,
-                            ol: ({ children }) => <ol className="list-decimal pl-5 my-2 space-y-1 text-sm leading-6">{children}</ol>,
-                            li: ({ children }) => <li className="text-sm leading-6">{children}</li>,
-                            a: ({ children, href }) => {
-                                const safeHref = href ?? '';
-                                const isExternal = /^https?:/i.test(safeHref);
-                                return (
-                                    <a
-                                        href={safeHref || '#'}
-                                        target={isExternal ? '_blank' : undefined}
-                                        rel={isExternal ? 'noopener noreferrer' : undefined}
-                                        className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
-                                    >
-                                        {children}
-                                    </a>
-                                );
-                            },
-                            table: ({ children }) => (
-                                <div className="my-2 overflow-x-auto">
-                                    <table className="w-full text-sm border-collapse border border-[#e5e7eb]">{children}</table>
-                                </div>
-                            ),
-                            thead: ({ children }) => <thead className="bg-[#f9fafb]">{children}</thead>,
-                            th: ({ children }) => <th className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
-                            td: ({ children }) => <td className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
-                            blockquote: ({ children }) => (
-                                <blockquote className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280]">
-                                    {children}
-                                </blockquote>
-                            ),
-                            pre: ({ children }) => (
-                                <pre className="overflow-x-auto rounded-md bg-[#f3f4f6] p-3 my-2 text-sm">{children}</pre>
-                            ),
-                            code: ({ children }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-xs">{children}</code>,
-                        }}
+                        components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
                     >
                         {message.content}
                     </ReactMarkdown>
@@ -219,6 +350,18 @@ const ChatSkeleton = memo(() => (
 ));
 ChatSkeleton.displayName = 'ChatSkeleton';
 
+const ConversationPreview = memo(({ content }: { content: string }) => (
+    <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+        <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={CHAT_PREVIEW_MARKDOWN_COMPONENTS}
+        >
+            {content}
+        </ReactMarkdown>
+    </div>
+));
+ConversationPreview.displayName = 'ConversationPreview';
+
 const InsightChatSectionComponent = () => {
     const [conversations, setConversations] = useState<ChatConversation[]>([]);
     const [activeConversationId, setActiveConversationId] = useState<string>('');
@@ -234,7 +377,10 @@ const InsightChatSectionComponent = () => {
         [conversations, activeConversationId],
     );
 
-    const conversationList = useMemo(() => [...conversations], [conversations]);
+    const conversationList = useMemo(
+        () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
+        [conversations],
+    );
 
     const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
         setConversations((prev) => {
@@ -327,7 +473,7 @@ const InsightChatSectionComponent = () => {
             bootstrapFailed: false,
         };
 
-        setConversations((prev) => [nextConversation, ...prev]);
+        setConversations((prev) => [nextConversation, ...prev].slice(0, MAX_CONVERSATIONS));
         setActiveConversationId(nextConversation.id);
 
         void loadBootstrap(nextConversation.id);
@@ -442,7 +588,6 @@ const InsightChatSectionComponent = () => {
         <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
             <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
                 <div className="p-3 border-b border-[#e5e7eb]">
-                    <p className="text-xs font-medium text-[#6b7280]">챗봇 대화</p>
                     <Button
                         type="button"
                         size="sm"
@@ -462,7 +607,7 @@ const InsightChatSectionComponent = () => {
                             const isActive = conversation.id === activeConversationId;
                             const latestMessage = conversation.messages.at(-1);
                             const preview = latestMessage
-                                ? shortText(latestMessage.content, 38)
+                                ? latestMessage.content
                                 : conversation.bootstrapFailed
                                     ? '연결 실패. 새로고침 필요'
                                     : '메시지 로딩 준비 중';
@@ -482,7 +627,9 @@ const InsightChatSectionComponent = () => {
                                     )}
                                 >
                                     <p className="font-medium text-sm text-[#111827] truncate">{conversation.title}</p>
-                                    <p className="mt-1 text-xs text-[#6b7280] truncate">{preview}</p>
+                                    <div className="mt-1 text-xs text-[#6b7280] leading-relaxed overflow-hidden whitespace-nowrap text-ellipsis">
+                                        <ConversationPreview content={preview} />
+                                    </div>
                                 </button>
                             );
                         })
