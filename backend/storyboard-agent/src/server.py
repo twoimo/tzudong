@@ -10,6 +10,10 @@ from pathlib import Path
 import logging
 import asyncio
 import threading
+import json
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any
 
 from fastapi import FastAPI
@@ -23,7 +27,14 @@ logger = logging.getLogger(__name__)
 
 
 def _load_dotenv():
-    for env_path in (Path(__file__).resolve().parents[1] / ".env", Path(__file__).resolve().parents[1] / ".env.local"):
+    env_candidates = (
+        Path(__file__).resolve().parents[1] / ".env",
+        Path(__file__).resolve().parents[1] / ".env.local",
+        Path(__file__).resolve().parents[2] / ".env",
+        Path(__file__).resolve().parents[2] / ".env.local",
+    )
+
+    for env_path in env_candidates:
         if env_path.exists():
             load_dotenv(dotenv_path=env_path, override=False)
             logger.info("Loaded env file: %s", env_path)
@@ -83,6 +94,27 @@ _metrics_request_error_reasons = defaultdict(int)
 STORYBOARD_AGENT_REQUEST_TIMEOUT_MS = _env_int("STORYBOARD_AGENT_REQUEST_TIMEOUT_MS", 12000)
 if STORYBOARD_AGENT_REQUEST_TIMEOUT_MS < 200:
     STORYBOARD_AGENT_REQUEST_TIMEOUT_MS = 200
+
+STORYBOARD_AGENT_LLM_MODEL = (
+    os.getenv("STORYBOARD_AGENT_LLM_MODEL", "gemini-3-flash-preview").strip()
+    or "gemini-3-flash-preview"
+)
+STORYBOARD_AGENT_LLM_TIMEOUT_MS = _env_int("STORYBOARD_AGENT_LLM_TIMEOUT_MS", STORYBOARD_AGENT_REQUEST_TIMEOUT_MS)
+if STORYBOARD_AGENT_LLM_TIMEOUT_MS < 200:
+    STORYBOARD_AGENT_LLM_TIMEOUT_MS = 200
+STORYBOARD_AGENT_USE_LLM = os.getenv("STORYBOARD_AGENT_USE_LLM", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+STORYBOARD_AGENT_GEMINI_API_KEY = (
+    os.getenv("STORYBOARD_AGENT_GEMINI_API_KEY")
+    or os.getenv("GEMINI_API_KEY")
+    or os.getenv("GOOGLE_API_KEY")
+    or os.getenv("NEXT_PUBLIC_GOOGLE_API_KEY")
+    or ""
+)
 
 STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED = os.getenv(
     "STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED",
@@ -457,6 +489,142 @@ def _extract_transcripts(payload: Any) -> list[dict[str, Any]]:
 
 
 def _build_storyboard_content(query: str, transcripts: list[dict[str, Any]]) -> str:
+    if not transcripts:
+        return (
+            f"요청하신 `{query}`에 대한 스토리보드 후보를 DB에서 바로 찾지 못했습니다.\n\n"
+            "아래를 확인해 주세요.\n\n"
+            "1) 키워드(메뉴, 메뉴명, 분위기, 장소명)를 더 구체적으로 입력\n"
+            "2) 샷 구성(인사/메뉴 소개/반응/클로징)처럼 단계별로 질문\n"
+            "3) 필요 시 내부/외부 검색이 가능한 형태로 재요청"
+        )
+
+    prompt = _build_storyboard_prompt(query, transcripts)
+    generated = _generate_storyboard_from_llm(prompt)
+    if generated:
+        return generated
+
+    return _build_storyboard_content_fallback(query, transcripts)
+
+
+def _build_storyboard_prompt(query: str, transcripts: list[dict[str, Any]]) -> str:
+    lines = [
+        "너는 먹방/맛집 콘텐츠를 위한 실전형 촬영 스토리보드 조수야.",
+        "사용자 질문 기반으로 구체적인 장면 흐름, 카메라 연출, 멘트/타이밍 아이디어를 한국어로 작성해.",
+        "근거는 아래 검색된 장면 단락만 사용해 과장 없이 실무적으로 정리해.",
+        "",
+        f"질문: {query}",
+        "",
+        "검색 근거(최대 8개):",
+    ]
+
+    for idx, doc in enumerate(transcripts[:8], start=1):
+        metadata = doc.get("metadata", {}) if isinstance(doc.get("metadata"), dict) else {}
+        title = metadata.get("video_title") or metadata.get("title") or "참고 영상"
+        time_range = _to_seconds_range(metadata.get("start_time"), metadata.get("end_time"))
+        caption = _extract_caption(metadata.get("caption"))
+        text = _parse_text(doc.get("page_content", ""), 180)
+        lines.append(f"{idx}. [{title}] {time_range} - {caption or text}")
+
+    lines.extend(
+        [
+            "",
+            "요청사항:",
+            "- Markdown 형식 사용",
+            "- 씬별로 제목(### 씬 1...)과 핵심 포인트를 2~3줄 내외로 정리",
+            "- 시각 연출, 멘트/카메라, 체크리스트 섹션 반드시 포함",
+            "- 허위나 과도한 수치/추정을 금지하고, 근거 없는 장면 디테일은 추측하지 말 것",
+            "",
+            "출력 형식:",
+            "- ## 추천 씬 구성",
+            "- ## 촬영 흐름 체크리스트",
+            "- 필요 시 마지막에 ## 참고 포인트",
+        ],
+    )
+
+    return "\n".join(lines)
+
+
+def _call_gemini_storyboard_model(prompt: str) -> str | None:
+    if not STORYBOARD_AGENT_USE_LLM:
+        return None
+
+    if not STORYBOARD_AGENT_GEMINI_API_KEY.strip():
+        logger.warning("Gemini API key not found. Skip LLM generation and fallback.")
+        return None
+
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{urllib.parse.quote(STORYBOARD_AGENT_LLM_MODEL, safe='.-_')}:generateContent"
+    query = urllib.parse.urlencode({"key": STORYBOARD_AGENT_GEMINI_API_KEY.strip()})
+    url = f"{endpoint}?{query}"
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": prompt,
+                    },
+                ],
+            },
+        ],
+        "generationConfig": {
+            "temperature": 0.35,
+            "topP": 0.95,
+            "maxOutputTokens": 2200,
+        },
+    }
+
+    request = urllib.request.Request(
+        url,
+        method="POST",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+        },
+    )
+
+    started_at = time.perf_counter()
+    try:
+        with urllib.request.urlopen(request, timeout=STORYBOARD_AGENT_LLM_TIMEOUT_MS / 1000) as response:
+            raw = response.read().decode("utf-8")
+            body = json.loads(raw)
+            _metrics_record_tool_call("gemini_generate", (time.perf_counter() - started_at) * 1000, False)
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8") if exc.fp else ""
+        logger.error("Gemini HTTP error [%s]: %s", exc.code, raw)
+        _metrics_record_tool_call("gemini_generate", (time.perf_counter() - started_at) * 1000, True)
+        return None
+    except Exception:
+        logger.exception("Gemini request failed")
+        _metrics_record_tool_call("gemini_generate", (time.perf_counter() - started_at) * 1000, True)
+        return None
+
+    candidates = (
+        body.get("candidates")
+        if isinstance(body, dict)
+        else None
+    )
+    if not isinstance(candidates, list) or not candidates:
+        logger.warning("Gemini response has no candidates.")
+        return None
+
+    first = candidates[0]
+    content = first.get("content") if isinstance(first, dict) else None
+    parts = content.get("parts") if isinstance(content, dict) else None
+    if isinstance(parts, list):
+        for part in parts:
+            text = part.get("text") if isinstance(part, dict) else None
+            if isinstance(text, str) and text.strip():
+                return text.strip()
+
+    logger.warning("Gemini response parsing failed.")
+    return None
+
+
+def _generate_storyboard_from_llm(prompt: str) -> str | None:
+    return _call_gemini_storyboard_model(prompt)
+
+
+def _build_storyboard_content_fallback(query: str, transcripts: list[dict[str, Any]]) -> str:
     if not transcripts:
         return (
             f"요청하신 `{query}`에 대한 스토리보드 후보를 DB에서 바로 찾지 못했습니다.\n\n"
