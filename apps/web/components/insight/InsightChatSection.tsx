@@ -2,6 +2,8 @@
 
 import { KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Bot, Loader2, Send, User, PlusCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -140,7 +142,55 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                     isUser ? 'bg-[#fde68a] text-[#111827]' : 'bg-white text-[#111827]',
                 )}
             >
-                <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                {isUser ? (
+                    <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                ) : (
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            h1: ({ children }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
+                            h2: ({ children }) => <h3 className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
+                            h3: ({ children }) => <h4 className="text-sm font-medium mb-1 mt-2.5 first:mt-0">{children}</h4>,
+                            p: ({ children }) => <p className="whitespace-pre-wrap text-sm leading-6">{children}</p>,
+                            ul: ({ children }) => <ul className="list-disc pl-5 my-2 space-y-1 text-sm leading-6">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal pl-5 my-2 space-y-1 text-sm leading-6">{children}</ol>,
+                            li: ({ children }) => <li className="text-sm leading-6">{children}</li>,
+                            a: ({ children, href }) => {
+                                const safeHref = href ?? '';
+                                const isExternal = /^https?:/i.test(safeHref);
+                                return (
+                                    <a
+                                        href={safeHref || '#'}
+                                        target={isExternal ? '_blank' : undefined}
+                                        rel={isExternal ? 'noopener noreferrer' : undefined}
+                                        className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
+                                    >
+                                        {children}
+                                    </a>
+                                );
+                            },
+                            table: ({ children }) => (
+                                <div className="my-2 overflow-x-auto">
+                                    <table className="w-full text-sm border-collapse border border-[#e5e7eb]">{children}</table>
+                                </div>
+                            ),
+                            thead: ({ children }) => <thead className="bg-[#f9fafb]">{children}</thead>,
+                            th: ({ children }) => <th className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
+                            td: ({ children }) => <td className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
+                            blockquote: ({ children }) => (
+                                <blockquote className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280]">
+                                    {children}
+                                </blockquote>
+                            ),
+                            pre: ({ children }) => (
+                                <pre className="overflow-x-auto rounded-md bg-[#f3f4f6] p-3 my-2 text-sm">{children}</pre>
+                            ),
+                            code: ({ children }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-xs">{children}</code>,
+                        }}
+                    >
+                        {message.content}
+                    </ReactMarkdown>
+                )}
                 {message.meta?.source ? (
                     <p className="text-[11px] text-[#6b7280] mt-1.5">
                         응답 유형: {message.meta.source}
