@@ -149,58 +149,6 @@ All colors MUST be HSL.
     overflow: hidden;
   }
 
-  /* 초기 로딩 화면 - CSS로만 구현하여 hydration 충돌 방지 */
-  /* GPU 가속 및 성능 최적화 적용 */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--muted)));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    opacity: 1;
-    transition: opacity 300ms ease-out;
-    /* GPU 가속 최적화 */
-    will-change: opacity;
-    transform: translateZ(0);
-    /* CSS Containment - 레이아웃 재계산 방지 */
-    contain: layout style paint;
-  }
-
-  /* 로딩 완료 시 숨김 */
-  body.loading-complete::before {
-    opacity: 0;
-    pointer-events: none;
-    will-change: auto;
-    /* 완료 후 GPU 메모리 해제 */
-  }
-
-  /* 로딩 화면 내용은 별도 div로 처리 */
-  #initial-loading-content {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    opacity: 1;
-    transition: opacity 300ms ease-out;
-    /* GPU 가속 최적화 */
-    will-change: opacity;
-    transform: translateZ(0);
-    /* CSS Containment */
-    contain: layout style paint;
-  }
-
-  body.loading-complete #initial-loading-content {
-    opacity: 0;
-    display: none;
-    will-change: auto;
-  }
 }
 
 /* 네이버 지도 마커 최적화 및 스타일 초기화 */
@@ -344,7 +292,6 @@ div[style*="z-index"]>div>.custom-marker {
 /* [PERF] 프린트 미디어에서 불필요한 요소 숨김 */
 @media print {
 
-  #initial-loading-content,
   .mobile-bottom-nav,
   nav {
     display: none !important;

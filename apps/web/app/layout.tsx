@@ -88,28 +88,8 @@ export default function RootLayout({
                 <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
             </head>
             <body className={notoSerifKR.className} suppressHydrationWarning>
-                {/* 초기 로딩 화면 - 순수 HTML, CSS로 제어 */}
-                <div id="initial-loading-content">
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ position: 'relative', margin: '0 auto 1.5rem', width: '4rem', height: '4rem' }}>
-                            <div style={{ position: 'absolute', inset: '0', borderRadius: '9999px', border: '4px solid', borderColor: 'hsl(var(--primary)/0.2)', borderTopColor: 'hsl(var(--primary))', animation: 'spin 1s linear infinite' }}></div>
-                            <div style={{ position: 'absolute', inset: '0', borderRadius: '9999px', border: '4px solid transparent', borderRightColor: 'hsl(var(--secondary))', animation: 'spin 1.5s linear infinite' }}></div>
-                        </div>
-                        <div style={{ marginBottom: '0.75rem' }}>
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: '700', background: 'linear-gradient(to right,hsl(var(--primary)),hsl(var(--secondary)))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', marginBottom: '0.75rem' }}>쯔동여지도 로딩 중...</h2>
-                            <p style={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.75rem' }}>맛있는 발견을 준비하고 있습니다</p>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
-                                <div style={{ width: '0.5rem', height: '0.5rem', background: 'hsl(var(--primary))', borderRadius: '9999px', animation: 'bounce 1s infinite' }}></div>
-                                <div style={{ width: '0.5rem', height: '0.5rem', background: 'hsl(var(--primary))', borderRadius: '9999px', animation: 'bounce 1s infinite', animationDelay: '0.1s' }}></div>
-                                <div style={{ width: '0.5rem', height: '0.5rem', background: 'hsl(var(--primary))', borderRadius: '9999px', animation: 'bounce 1s infinite', animationDelay: '0.2s' }}></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* [PERF] 최소화된 인라인 스크립트 - 뷰포트 높이 계산 + 로딩 제거 */}
                 <script dangerouslySetInnerHTML={{
-                    __html: `(function(){var d=document.documentElement,s=d.style;function v(){if(CSS.supports('height','100dvh'))return;var h=window.innerHeight*.01;s.setProperty('--vh',h+'px');s.setProperty('--full-height',h*100+'px')}v();var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(v,100)});window.addEventListener('orientationchange',function(){setTimeout(v,200)});var r=false;function hide(){if(r)return;r=true;document.body.classList.add('loading-complete')}window.addEventListener('mapLoadingComplete',hide,{once:true});setTimeout(hide,800)})();`
+                    __html: `(function(){var d=document.documentElement,s=d.style;function v(){if(CSS.supports('height','100dvh'))return;var h=window.innerHeight*.01;s.setProperty('--vh',h+'px');s.setProperty('--full-height',h*100+'px')}v();var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(v,100)});window.addEventListener('orientationchange',function(){setTimeout(v,200)})})();`
                 }} />
 
                 <QueryProvider>

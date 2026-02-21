@@ -2,18 +2,16 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { RefreshCw } from 'lucide-react';
 import { memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
+import { ChatSkeleton } from '@/components/ui/skeleton-loaders';
 import styles from './insight-overhaul.module.css';
 
 const InsightChatSection = dynamic(() => import('@/components/insight/InsightChatSection'), {
     ssr: false,
     loading: () => (
         <div className={styles.chatLoading}>
-            <RefreshCw className={styles.spin} />
-            <p>챗봇을 준비하고 있습니다...</p>
+            <ChatSkeleton />
         </div>
     ),
 });
@@ -22,7 +20,7 @@ const InsightClientComponent = () => {
     const { isAdmin, isLoading: isAuthLoading } = useAuth();
 
     if (isAuthLoading) {
-        return <MapSkeleton />;
+        return <ChatSkeleton />;
     }
 
     if (!isAdmin) {
