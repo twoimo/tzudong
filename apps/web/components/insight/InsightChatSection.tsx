@@ -729,7 +729,7 @@ const InsightChatSectionComponent = () => {
         }
 
         setMessageWindowSize(Math.min(MESSAGE_WINDOW_INITIAL, activeConversation.messages.length || MESSAGE_WINDOW_INITIAL));
-    }, [activeConversationId, activeConversation?.messages.length]);
+    }, [activeConversationId]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
