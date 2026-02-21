@@ -818,6 +818,41 @@ const InsightChatSectionComponent = () => {
 
     const isSending = sendingConversationId === activeConversationId;
 
+    if (!isInitialized) {
+        return (
+            <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
+                <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
+                    <div className="p-3 border-b border-[#e5e7eb]">
+                        <Skeleton className="h-9 w-full bg-[#e5e7eb]" />
+                    </div>
+                    <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
+                        {Array.from({ length: 6 }, (_, index) => (
+                            <div
+                                key={index}
+                                className="w-full rounded-lg border border-[#f3f4f6] p-2 space-y-1.5"
+                            >
+                                <Skeleton className="h-3.5 w-24 bg-[#e5e7eb]" />
+                                <Skeleton className="h-3.5 w-11/12 bg-[#e5e7eb]" />
+                            </div>
+                        ))}
+                    </div>
+                </aside>
+
+                <section className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
+                        <ChatSkeleton />
+                    </div>
+                    <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
+                        <div className="flex gap-2">
+                            <Skeleton className="h-11 flex-1 bg-[#e5e7eb]" />
+                            <Skeleton className="h-11 w-11 bg-[#e5e7eb]" />
+                        </div>
+                    </div>
+                </section>
+            </section>
+        );
+    }
+
     return (
         <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
             <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
