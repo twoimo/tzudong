@@ -6,7 +6,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource } from '@/types/insight';
 
@@ -350,6 +349,18 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
     };
 }
 
+function createInitialConversation(id: string): ChatConversation {
+    return {
+        id,
+        title: EMPTY_TITLE,
+        messages: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isBooting: true,
+        bootstrapFailed: false,
+    };
+}
+
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
     h1: ({ children }: { children: ReactNode }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
     h2: ({ children }: { children: ReactNode }) => <h3 className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
@@ -513,21 +524,6 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
 });
 ChatBubble.displayName = 'ChatBubble';
 
-const ChatSkeleton = memo(() => (
-    <div className="h-full px-3 py-4 space-y-3">
-        {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className={cn('space-y-2', index % 2 === 0 ? 'items-end' : 'items-start', 'flex flex-col')}>
-                <div className="flex items-center gap-2 w-full">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <Skeleton className="h-3.5 w-16" />
-                </div>
-                <Skeleton className={cn('rounded-xl', index % 2 === 0 ? 'ml-auto' : '', 'h-20 max-w-[84%] w-80')} />
-            </div>
-        ))}
-    </div>
-));
-ChatSkeleton.displayName = 'ChatSkeleton';
-
 const ConversationPreview = memo(({ content }: { content: string }) => (
     <div
         className="text-xs leading-4 text-[#6b7280]"
@@ -544,12 +540,14 @@ const ConversationPreview = memo(({ content }: { content: string }) => (
 ConversationPreview.displayName = 'ConversationPreview';
 
 const InsightChatSectionComponent = () => {
-    const [conversations, setConversations] = useState<ChatConversation[]>([]);
-    const [activeConversationId, setActiveConversationId] = useState<string>('');
+    const initialConversationId = useMemo(() => makeConversationId(), []);
+    const [conversations, setConversations] = useState<ChatConversation[]>(() => [
+        createInitialConversation(initialConversationId),
+    ]);
+    const [activeConversationId, setActiveConversationId] = useState<string>(initialConversationId);
     const [inputValue, setInputValue] = useState('');
     const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
-    const [isInitialized, setIsInitialized] = useState(false);
     const bootstrapRequestRef = useRef(new Map<string, number>());
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -715,36 +713,21 @@ const InsightChatSectionComponent = () => {
     }, [updateConversation]);
 
     useEffect(() => {
-        if (isInitialized) return;
-
         const restored = hydrateFromStorage();
         if (restored) {
             setConversations(restored.conversations);
             setActiveConversationId(restored.activeConversationId);
-            setIsInitialized(true);
 
             const activeConversation = restored.conversations.find((conversation) => conversation.id === restored.activeConversationId) ?? restored.conversations[0];
             if (!activeConversation || activeConversation.messages.length === 0) {
                 void loadBootstrap(activeConversation.id);
             }
+
             return;
         }
 
-        const first = {
-            id: makeConversationId(),
-            title: EMPTY_TITLE,
-            messages: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            isBooting: true,
-            bootstrapFailed: false,
-        };
-
-        setConversations([first]);
-        setActiveConversationId(first.id);
-        setIsInitialized(true);
-        void loadBootstrap(first.id);
-    }, [hydrateFromStorage, isInitialized, loadBootstrap]);
+        void loadBootstrap(initialConversationId);
+    }, [hydrateFromStorage, initialConversationId, loadBootstrap]);
 
     useEffect(() => {
         if (!activeConversation) {
@@ -841,41 +824,6 @@ const InsightChatSectionComponent = () => {
 
     const isSending = sendingConversationId === activeConversationId;
 
-    if (!isInitialized) {
-        return (
-            <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
-                <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
-                    <div className="p-3 border-b border-[#e5e7eb]">
-                        <Skeleton className="h-9 w-full bg-[#e5e7eb]" />
-                    </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
-                        {Array.from({ length: 6 }, (_, index) => (
-                            <div
-                                key={index}
-                                className="w-full rounded-lg border border-[#f3f4f6] p-2 space-y-1.5"
-                            >
-                                <Skeleton className="h-3.5 w-24 bg-[#e5e7eb]" />
-                                <Skeleton className="h-3.5 w-11/12 bg-[#e5e7eb]" />
-                            </div>
-                        ))}
-                    </div>
-                </aside>
-
-                <section className="flex-1 flex flex-col min-h-0">
-                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
-                        <ChatSkeleton />
-                    </div>
-                    <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
-                        <div className="flex gap-2">
-                            <Skeleton className="h-11 flex-1 bg-[#e5e7eb]" />
-                            <Skeleton className="h-11 w-11 bg-[#e5e7eb]" />
-                        </div>
-                    </div>
-                </section>
-            </section>
-        );
-    }
-
     return (
         <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
             <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
@@ -932,7 +880,10 @@ const InsightChatSectionComponent = () => {
             <section className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
                     {activeConversation?.isBooting ? (
-                        <ChatSkeleton />
+                        <div className="min-h-[360px] flex items-center justify-center text-sm text-[#6b7280] gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-[#6b7280]" />
+                            챗봇 준비 중입니다.
+                        </div>
                     ) : activeConversation?.bootstrapFailed ? (
                         <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-4 gap-2">
                             <AlertCircle className="h-10 w-10 text-[#f59e0b]" />
