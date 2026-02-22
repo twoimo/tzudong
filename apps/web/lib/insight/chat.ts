@@ -1,4 +1,10 @@
-import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource, LlmRequestConfig } from '@/types/insight';
+import type {
+  AdminInsightChatBootstrapResponse,
+  AdminInsightChatResponse,
+  InsightChatSource,
+  LlmRequestConfig,
+  StoryboardModelProfile,
+} from '@/types/insight';
 import { getDashboardFunnel, getDashboardFailures } from '@/lib/dashboard/evaluation';
 import { getDashboardQuality } from '@/lib/dashboard/quality';
 import { getAdminInsightHeatmap } from '@/lib/insight/heatmap';
@@ -19,6 +25,8 @@ const INSIGHT_QUERY_TTL_MS = Number(process.env.INSIGHT_QUERY_CACHE_TTL_MS || '4
 
 const GEMINI_API_KEY_ENV = process.env.GEMINI_OCR_YEON?.trim() || '';
 const GEMINI_MODEL_DEFAULT = 'gemini-3-flash-preview';
+const DEFAULT_STORYBOARD_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
+const DEFAULT_IMAGE_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
 const LLM_TIMEOUT_MS = 30_000;
 const LLM_MAX_TOKENS = 4096;
 
@@ -270,7 +278,13 @@ function isStoryboardIntent(message: string): boolean {
   return includesAny(message, STORYBOARD_KEYWORDS);
 }
 
-async function askStoryboardAgent(message: string, asOf: string): Promise<AdminInsightChatResponse | null> {
+async function askStoryboardAgent(
+  message: string,
+  asOf: string,
+  storyboardModelProfile: StoryboardModelProfile = DEFAULT_STORYBOARD_MODEL_PROFILE,
+): Promise<AdminInsightChatResponse | null> {
+  const normalizedProfile = storyboardModelProfile === 'nanobanana_pro' ? 'nanobanana_pro' : 'nanobanana';
+
   const endpoint = getStoryboardAgentEndpoint();
   if (!endpoint) return null;
 
@@ -280,6 +294,8 @@ async function askStoryboardAgent(message: string, asOf: string): Promise<AdminI
   const maxRetries = clampPositiveInteger(STORYBOARD_AGENT_MAX_RETRIES, 2);
   const payload = JSON.stringify({
     message,
+    storyboardModelProfile: normalizedProfile,
+    imageModelProfile: normalizedProfile,
     role: 'admin_insight',
     channel: 'admin_insight_chat',
   });
@@ -346,6 +362,11 @@ async function askStoryboardAgent(message: string, asOf: string): Promise<AdminI
   return null;
 }
 
+function resolveStoryboardImageProfile(llmConfig?: LlmRequestConfig): StoryboardModelProfile {
+  const requested = llmConfig?.imageModelProfile ?? llmConfig?.storyboardModelProfile;
+  return requested === 'nanobanana_pro' ? 'nanobanana_pro' : DEFAULT_IMAGE_MODEL_PROFILE;
+}
+
 export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {
   const asOf = new Date().toISOString();
 
@@ -383,7 +404,8 @@ export async function answerAdminInsightChat(
   }
 
   if (isStoryboardIntent(input)) {
-    const storyboardReply = await askStoryboardAgent(input, asOf);
+    const storyboardProfile = resolveStoryboardImageProfile(llmConfig);
+    const storyboardReply = await askStoryboardAgent(input, asOf, storyboardProfile);
     if (storyboardReply) return storyboardReply;
   }
 
@@ -547,14 +569,15 @@ export async function streamAdminInsightChat(
 
 async function tryLocalAnswer(
   message: string,
-  _llmConfig?: LlmRequestConfig,
+  llmConfig?: LlmRequestConfig,
 ): Promise<AdminInsightChatResponse | null> {
   const asOf = new Date().toISOString();
   const input = message.trim();
   if (!input) return createLocalResponse(asOf, '질문을 입력해 주세요.', { fallbackReason: 'empty_input' });
 
   if (isStoryboardIntent(input)) {
-    const reply = await askStoryboardAgent(input, asOf);
+    const storyboardProfile = resolveStoryboardImageProfile(llmConfig);
+    const reply = await askStoryboardAgent(input, asOf, storyboardProfile);
     if (reply) return reply;
   }
 

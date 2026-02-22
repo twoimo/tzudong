@@ -8,7 +8,12 @@ export async function GET() {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    const envKey = process.env.GEMINI_OCR_YEON?.trim() || '';
+    const envKey =
+        process.env.GEMINI_OCR_YEON?.trim()
+        || process.env.STORYBOARD_AGENT_GEMINI_API_KEY?.trim()
+        || process.env.GEMINI_API_KEY?.trim()
+        || process.env.GOOGLE_API_KEY?.trim()
+        || '';
 
     return NextResponse.json(
         { geminiEnvKey: envKey || null },

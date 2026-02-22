@@ -11,13 +11,20 @@ import {
     useRef,
     useState,
 } from 'react';
-import { AlertCircle, Bot, Loader2, Send, User, PlusCircle, Settings, Eye, EyeOff, ChevronDown, Check, Trash2 } from 'lucide-react';
+import { AlertCircle, Bot, Send, User, PlusCircle, Settings, Eye, EyeOff, ChevronDown, Check, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource, LlmProvider, LlmModelOption } from '@/types/insight';
+import type {
+    AdminInsightChatBootstrapResponse,
+    AdminInsightChatResponse,
+    InsightChatSource,
+    LlmProvider,
+    LlmModelOption,
+    StoryboardModelProfile,
+} from '@/types/insight';
 
 type ChatMessage = {
     id: string;
@@ -53,6 +60,7 @@ const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
 const LLM_KEYS_STORAGE_KEY = 'tzudong-admin-llm-keys';
 const LLM_MODEL_STORAGE_KEY = 'tzudong-admin-llm-active-model';
 const LLM_ENABLED_MODELS_KEY = 'tzudong-admin-llm-enabled-models';
+const STORYBOARD_PROFILE_STORAGE_KEY = 'tzudong-admin-storyboard-profile';
 
 const LLM_MODELS: LlmModelOption[] = [
     // Google Gemini
@@ -80,6 +88,14 @@ const LLM_PROVIDER_LABELS: Record<LlmProvider, string> = {
     openai: 'OpenAI',
     anthropic: 'Anthropic',
 };
+
+type ImageModelSelection = StoryboardModelProfile | 'none';
+
+const IMAGE_MODEL_PROFILES: Array<{ id: ImageModelSelection; name: string }> = [
+    { id: 'none', name: '선택 안 함' },
+    { id: 'nanobanana', name: '나노 바나나' },
+    { id: 'nanobanana_pro', name: '나노 바나나 프로' },
+];
 
 type StoredLlmKeys = Partial<Record<LlmProvider, string>>;
 
@@ -243,9 +259,19 @@ async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> 
 
 async function postChatMessage(
     message: string,
-    llmConfig?: { provider: LlmProvider; model: string; apiKey: string },
+    llmConfig?: {
+        provider: LlmProvider;
+        model: string;
+        apiKey: string;
+        storyboardModelProfile?: StoryboardModelProfile;
+        imageModelProfile?: StoryboardModelProfile;
+    },
+    imageModelProfile?: StoryboardModelProfile,
 ): Promise<AdminInsightChatResponse> {
-    const normalizedMessage = normalizeCacheKey(message);
+    const resolvedImageModelProfile = llmConfig?.imageModelProfile
+        || llmConfig?.storyboardModelProfile
+        || imageModelProfile;
+    const normalizedMessage = `${normalizeCacheKey(message)}|${resolvedImageModelProfile || ''}`;
     const now = Date.now();
 
     if (!llmConfig) {
@@ -261,15 +287,25 @@ async function postChatMessage(
     const request = (async () => {
         let lastError: unknown;
         for (let attempt = 0; attempt <= CHAT_REQUEST_RETRY_ATTEMPTS; attempt += 1) {
-            try {
-                return await fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message,
-                        ...(llmConfig ? { provider: llmConfig.provider, model: llmConfig.model, apiKey: llmConfig.apiKey } : {}),
-                    }),
-                }, CHAT_REQUEST_TIMEOUT_MS);
+    try {
+        return await fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message,
+                ...(llmConfig
+                    ? {
+                provider: llmConfig.provider,
+                        model: llmConfig.model,
+                        apiKey: llmConfig.apiKey,
+                        ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
+                        ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
+                      }
+                    : {}),
+                ...(resolvedImageModelProfile && !llmConfig ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
+                ...(resolvedImageModelProfile && !llmConfig ? { imageModelProfile: resolvedImageModelProfile } : {}),
+            }),
+        }, CHAT_REQUEST_TIMEOUT_MS);
             } catch (error) {
                 lastError = error;
                 if (attempt >= CHAT_REQUEST_RETRY_ATTEMPTS || !isTransientError(error)) {
@@ -313,7 +349,13 @@ async function postChatMessage(
 
 async function postStreamChat(
     message: string,
-    llmConfig: { provider: LlmProvider; model: string; apiKey: string },
+    llmConfig: {
+        provider: LlmProvider;
+        model: string;
+        apiKey: string;
+        storyboardModelProfile?: StoryboardModelProfile;
+        imageModelProfile?: StoryboardModelProfile;
+    },
     onToken: (token: string) => void,
 ): Promise<AdminInsightChatResponse | null> {
     const resp = await fetch('/api/admin/insight/chat/stream', {
@@ -324,6 +366,8 @@ async function postStreamChat(
             provider: llmConfig.provider,
             model: llmConfig.model,
             apiKey: llmConfig.apiKey,
+            ...(llmConfig.imageModelProfile ? { imageModelProfile: llmConfig.imageModelProfile } : {}),
+            ...(llmConfig.storyboardModelProfile ? { storyboardModelProfile: llmConfig.storyboardModelProfile } : {}),
         }),
     });
 
@@ -662,7 +706,7 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
             <div
                 className={cn(
                     'max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb]',
-                    isUser ? 'bg-[#fde68a] text-[#111827]' : 'bg-white text-[#111827]',
+                isUser ? 'bg-[#fde68a] text-[#111827]' : 'bg-white text-[#111827]',
                 )}
             >
                 {isUser ? (
@@ -675,7 +719,7 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                         plainTextClassName="whitespace-pre-wrap text-sm leading-6"
                     />
                 ) : (
-                    <span className="text-sm text-[#6b7280]">...</span>
+                    <p className="text-sm text-[#6b7280]">응답 생성 중...</p>
                 )}
                 {message.meta?.source ? (
                     <p className="text-[11px] text-[#6b7280] mt-1.5">
@@ -719,10 +763,13 @@ const InsightChatSectionComponent = () => {
     const [llmKeys, setLlmKeys] = useState<StoredLlmKeys>({});
     const [activeModelId, setActiveModelId] = useState<string>('gemini-3-flash-preview');
     const [enabledModelIds, setEnabledModelIds] = useState<Set<string>>(LLM_DEFAULT_ENABLED);
+    const [imageModelProfile, setImageModelProfile] = useState<ImageModelSelection>('none');
     const [showSettings, setShowSettings] = useState(false);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const [showImageModelDropdown, setShowImageModelDropdown] = useState(false);
     const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
     const modelDropdownRef = useRef<HTMLDivElement>(null);
+    const imageModelDropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         try {
@@ -734,6 +781,10 @@ const InsightChatSectionComponent = () => {
             if (savedEnabled) {
                 const parsed = JSON.parse(savedEnabled) as string[];
                 if (Array.isArray(parsed)) setEnabledModelIds(new Set(parsed));
+            }
+            const savedImageProfile = localStorage.getItem(STORYBOARD_PROFILE_STORAGE_KEY);
+            if (savedImageProfile === 'none' || savedImageProfile === 'nanobanana' || savedImageProfile === 'nanobanana_pro') {
+                setImageModelProfile(savedImageProfile);
             }
         } catch { /* ignore */ }
 
@@ -782,8 +833,24 @@ const InsightChatSectionComponent = () => {
         try { localStorage.setItem(LLM_MODEL_STORAGE_KEY, modelId); } catch { /* ignore */ }
     }, []);
 
+    const selectImageModelProfile = useCallback((profile: ImageModelSelection) => {
+        setImageModelProfile(profile);
+        setShowImageModelDropdown(false);
+        try {
+            if (profile === 'none') {
+                localStorage.removeItem(STORYBOARD_PROFILE_STORAGE_KEY);
+            } else {
+                localStorage.setItem(STORYBOARD_PROFILE_STORAGE_KEY, profile);
+            }
+        } catch { /* ignore */ }
+    }, []);
+
     const activeModel = useMemo(() => LLM_MODELS.find((m) => m.id === activeModelId) ?? LLM_MODELS[0], [activeModelId]);
     const activeProviderKey = llmKeys[activeModel.provider] || '';
+    const activeImageModelProfile = useMemo(
+        () => IMAGE_MODEL_PROFILES.find((profile) => profile.id === imageModelProfile) ?? IMAGE_MODEL_PROFILES[0],
+        [imageModelProfile],
+    );
 
     const availableModels = useMemo(() => {
         return LLM_MODELS.filter((m) => enabledModelIds.has(m.id)).map((model) => ({
@@ -794,18 +861,31 @@ const InsightChatSectionComponent = () => {
 
     const currentLlmConfig = useMemo(() => {
         if (!activeProviderKey) return undefined;
-        return { provider: activeModel.provider, model: activeModel.id, apiKey: activeProviderKey };
-    }, [activeModel, activeProviderKey]);
+        const resolvedImageModelProfile = imageModelProfile === 'none' ? undefined : imageModelProfile;
+        return {
+            provider: activeModel.provider,
+            model: activeModel.id,
+            apiKey: activeProviderKey,
+            ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
+            ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
+        };
+    }, [activeModel, activeProviderKey, imageModelProfile]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
                 setShowModelDropdown(false);
             }
+
+            if (imageModelDropdownRef.current && !imageModelDropdownRef.current.contains(e.target as Node)) {
+                setShowImageModelDropdown(false);
+            }
         };
-        if (showModelDropdown) document.addEventListener('mousedown', handleClickOutside);
+        if (showModelDropdown || showImageModelDropdown) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showModelDropdown]);
+    }, [showModelDropdown, showImageModelDropdown]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -1093,7 +1173,8 @@ const InsightChatSectionComponent = () => {
                     updateMessageContent(convId, assistantId, () => localResponse.content);
                 }
             } else {
-                const response = await postChatMessage(content);
+                const resolvedImageModelProfile = imageModelProfile === 'none' ? undefined : imageModelProfile;
+                const response = await postChatMessage(content, undefined, resolvedImageModelProfile);
                 appendMessage(convId, {
                     id: makeId('assistant'),
                     role: 'assistant',
@@ -1118,7 +1199,7 @@ const InsightChatSectionComponent = () => {
             setSendingConversationId(null);
             inputRef.current?.focus();
         }
-    }, [activeConversation, appendMessage, updateMessageContent, inputValue, sendingConversationId, currentLlmConfig]);
+    }, [activeConversation, appendMessage, updateMessageContent, inputValue, sendingConversationId, currentLlmConfig, imageModelProfile]);
 
     const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -1130,8 +1211,8 @@ const InsightChatSectionComponent = () => {
     const isSending = sendingConversationId === activeConversationId;
 
     return (
-        <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
-            <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
+        <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
+            <aside className="w-[clamp(150px,36vw,292px)] min-w-[150px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col min-h-0">
                 <div className="p-3 border-b border-[#e5e7eb]">
                     <div className="flex gap-2">
                         <Button
@@ -1157,7 +1238,7 @@ const InsightChatSectionComponent = () => {
                 </div>
 
                 {showSettings ? (
-                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-4">
+                        <div className="flex-1 h-0 min-h-0 overflow-y-auto px-3 py-3 space-y-4">
                         <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">API 키 설정</p>
                         {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
                             const isVisible = keyVisibility[provider] ?? false;
@@ -1233,7 +1314,7 @@ const InsightChatSectionComponent = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
+                        <div className="flex-1 h-0 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
                         {conversationList.length === 0 ? (
                             <p className="px-2 py-10 text-sm text-[#6b7280] text-center">새로운 대화를 준비 중입니다</p>
                         ) : (
@@ -1287,7 +1368,7 @@ const InsightChatSectionComponent = () => {
                 )}
             </aside>
 
-            <section className="flex-1 flex flex-col min-h-0">
+            <section className="flex-1 min-w-0 flex flex-col min-h-0">
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
                     {activeConversation?.bootstrapFailed ? (
                         <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-4 gap-2">
@@ -1333,7 +1414,7 @@ const InsightChatSectionComponent = () => {
                                         <Bot className="h-3.5 w-3.5" />
                                     </div>
                                     <div className="max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb]">
-                                        <span className="text-sm text-[#6b7280]">...</span>
+                                        <p className="text-sm text-[#111827] font-medium">응답 생성 중...</p>
                                     </div>
                                 </div>
                             ) : null}
@@ -1391,6 +1472,38 @@ const InsightChatSectionComponent = () => {
                                             </div>
                                         );
                                     })}
+                                </div>
+                            ) : null}
+                        </div>
+
+                        <div ref={imageModelDropdownRef} className="relative">
+                            <button
+                                type="button"
+                                className={cn(
+                                    'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white border-emerald-300 text-emerald-700',
+                                )}
+                                onClick={() => setShowImageModelDropdown((prev) => !prev)}
+                            >
+                                <span>{activeImageModelProfile.name}</span>
+                                <ChevronDown className="h-3 w-3" />
+                            </button>
+
+                            {showImageModelDropdown ? (
+                                <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                    {IMAGE_MODEL_PROFILES.map((profile) => (
+                                        <button
+                                            key={profile.id}
+                                            type="button"
+                                            className={cn(
+                                                'w-full text-left px-3 py-2 text-xs flex items-center justify-between',
+                                                profile.id === imageModelProfile ? 'bg-[#f0fdf4]' : 'hover:bg-[#f9fafb]',
+                                            )}
+                                            onClick={() => selectImageModelProfile(profile.id)}
+                                        >
+                                            <span>{profile.name}</span>
+                                            {profile.id === imageModelProfile ? <Check className="h-3 w-3 text-emerald-600" /> : null}
+                                        </button>
+                                    ))}
                                 </div>
                             ) : null}
                         </div>

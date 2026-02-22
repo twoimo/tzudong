@@ -21,9 +21,27 @@ export async function POST(request: NextRequest) {
         const provider = typeof body?.provider === 'string' ? body.provider : undefined;
         const model = typeof body?.model === 'string' ? body.model : undefined;
         const apiKey = typeof body?.apiKey === 'string' ? body.apiKey : undefined;
+        const storyboardModelProfile = typeof body?.storyboardModelProfile === 'string'
+            ? body.storyboardModelProfile
+            : undefined;
+        const imageModelProfile = typeof body?.imageModelProfile === 'string'
+            ? body.imageModelProfile
+            : undefined;
+        const resolvedImageModelProfile = imageModelProfile === 'nanobanana_pro' || imageModelProfile === 'nanobanana'
+            ? imageModelProfile
+            : undefined;
 
         const llmConfig = provider && model && apiKey
-            ? { provider: provider as 'gemini' | 'openai' | 'anthropic', model, apiKey }
+            ? {
+                provider: provider as 'gemini' | 'openai' | 'anthropic',
+                model,
+                apiKey,
+                storyboardModelProfile:
+                    storyboardModelProfile === 'nanobanana_pro' || storyboardModelProfile === 'nanobanana'
+                        ? storyboardModelProfile
+                        : undefined,
+                imageModelProfile: resolvedImageModelProfile,
+            }
             : undefined;
 
         const result = await streamAdminInsightChat(message, llmConfig);

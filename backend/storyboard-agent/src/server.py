@@ -14,7 +14,9 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Literal
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -115,6 +117,40 @@ STORYBOARD_AGENT_GEMINI_API_KEY = (
     or os.getenv("NEXT_PUBLIC_GOOGLE_API_KEY")
     or ""
 )
+STORYBOARD_AGENT_NANO_BANANA_MODEL = (
+    os.getenv("STORYBOARD_AGENT_NANO_BANANA_MODEL")
+    or os.getenv("NANO_BANANA_MODEL")
+    or "gemini-2.5-flash-preview"
+).strip()
+STORYBOARD_AGENT_NANO_BANANA_PRO_MODEL = (
+    os.getenv("STORYBOARD_AGENT_NANO_BANANA_PRO_MODEL")
+    or os.getenv("NANO_BANANA_PRO_MODEL")
+    or "gemini-2.5-pro-preview"
+).strip()
+STORYBOARD_AGENT_MODEL_FALLBACK = (
+    os.getenv("STORYBOARD_AGENT_MODEL_FALLBACK")
+    or STORYBOARD_AGENT_NANO_BANANA_MODEL
+).strip()
+
+STORYBOARD_AGENT_BMAD_ENABLED = os.getenv("STORYBOARD_AGENT_BMAD_ENABLED", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+STORYBOARD_AGENT_DEFAULT_PROFILE = (
+    os.getenv("STORYBOARD_AGENT_DEFAULT_PROFILE", "nanobanana").strip()
+    or "nanobanana"
+)
+STORYBOARD_AGENT_BMAD_MAX_AGENTS = _env_int("STORYBOARD_AGENT_BMAD_MAX_AGENTS", 3)
+if STORYBOARD_AGENT_BMAD_MAX_AGENTS <= 0:
+    STORYBOARD_AGENT_BMAD_MAX_AGENTS = 3
+STORYBOARD_AGENT_MAX_RESEARCH_QUERIES = _env_int("STORYBOARD_AGENT_MAX_RESEARCH_QUERIES", 3)
+if STORYBOARD_AGENT_MAX_RESEARCH_QUERIES <= 0:
+    STORYBOARD_AGENT_MAX_RESEARCH_QUERIES = 3
+STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT = _env_int("STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT", 12)
+if STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT <= 0:
+    STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT = 12
 
 STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED = os.getenv(
     "STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED",
@@ -129,6 +165,8 @@ if STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS <= 0:
 
 _tool_circuit_failures: dict[str, int] = {}
 _tool_circuit_open_until: dict[str, float] = {}
+
+StoryboardModelProfile = Literal["nanobanana", "nanobanana_pro"]
 
 
 def _metrics_record_request(duration_ms: float, error_reason: str | None) -> None:
@@ -488,25 +526,31 @@ def _extract_transcripts(payload: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _build_storyboard_content(query: str, transcripts: list[dict[str, Any]]) -> str:
-    if not transcripts:
-        return (
-            f"요청하신 `{query}`에 대한 스토리보드 후보를 DB에서 바로 찾지 못했습니다.\n\n"
-            "아래를 확인해 주세요.\n\n"
-            "1) 키워드(메뉴, 메뉴명, 분위기, 장소명)를 더 구체적으로 입력\n"
-            "2) 샷 구성(인사/메뉴 소개/반응/클로징)처럼 단계별로 질문\n"
-            "3) 필요 시 내부/외부 검색이 가능한 형태로 재요청"
-        )
+def _normalize_storyboard_profile(profile: str | None) -> StoryboardModelProfile:
+    if profile == "nanobanana_pro":
+        return "nanobanana_pro"
+    if profile == "nanobanana":
+        return "nanobanana"
 
-    prompt = _build_storyboard_prompt(query, transcripts)
-    generated = _generate_storyboard_from_llm(prompt)
-    if generated:
-        return generated
-
-    return _build_storyboard_content_fallback(query, transcripts)
+    fallback = STORYBOARD_AGENT_DEFAULT_PROFILE.strip().lower()
+    if fallback == "nanobanana_pro":
+        return "nanobanana_pro"
+    return "nanobanana"
 
 
-def _build_storyboard_prompt(query: str, transcripts: list[dict[str, Any]]) -> str:
+def _resolve_storyboard_model(profile: StoryboardModelProfile | None) -> str:
+    return (
+        STORYBOARD_AGENT_NANO_BANANA_PRO_MODEL
+        if profile == "nanobanana_pro"
+        else STORYBOARD_AGENT_NANO_BANANA_MODEL
+    )
+
+
+def _build_storyboard_prompt(
+    query: str,
+    transcripts: list[dict[str, Any]],
+    planning_notes: dict[str, Any] | None,
+) -> str:
     lines = [
         "너는 먹방/맛집 콘텐츠를 위한 실전형 촬영 스토리보드 조수야.",
         "사용자 질문 기반으로 구체적인 장면 흐름, 카메라 연출, 멘트/타이밍 아이디어를 한국어로 작성해.",
@@ -516,6 +560,14 @@ def _build_storyboard_prompt(query: str, transcripts: list[dict[str, Any]]) -> s
         "",
         "검색 근거(최대 8개):",
     ]
+
+    if planning_notes:
+        intent_summary = planning_notes.get("intent_summary")
+        focus = planning_notes.get("focus") or []
+        if intent_summary:
+            lines.append(f"- 요청 요약: {intent_summary}")
+        if focus:
+            lines.append(f"- 집중 키워드: {', '.join(focus[:3])}")
 
     for idx, doc in enumerate(transcripts[:8], start=1):
         metadata = doc.get("metadata", {}) if isinstance(doc.get("metadata"), dict) else {}
@@ -544,7 +596,229 @@ def _build_storyboard_prompt(query: str, transcripts: list[dict[str, Any]]) -> s
     return "\n".join(lines)
 
 
-def _call_gemini_storyboard_model(prompt: str) -> str | None:
+def _build_storyboard_plan(message: str) -> dict[str, Any]:
+    cleaned = message.strip()
+    base = cleaned.lower()
+    focus_words = [part for part in re.split(r"[\s,，/.!?()]+", base) if len(part) > 1]
+
+    focus_candidates = []
+    for token in focus_words:
+        trimmed = token.strip()
+        if trimmed and len(trimmed) > 1 and trimmed not in focus_candidates:
+            focus_candidates.append(trimmed)
+        if len(focus_candidates) >= 6:
+            break
+
+    queries: list[str] = []
+    if cleaned:
+        queries.append(cleaned)
+        if "먹방" not in base:
+            queries.append(f"{cleaned} 먹방 스토리보드")
+        if "연출" not in base:
+            queries.append(f"{cleaned} 촬영 연출")
+        for token in focus_candidates[:2]:
+            queries.append(f"{token} 씬 구성")
+            queries.append(f"{token} 촬영")
+
+    deduped = []
+    for query in queries:
+        normalized = query.strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    deduped = deduped[:STORYBOARD_AGENT_MAX_RESEARCH_QUERIES]
+
+    if not deduped:
+        deduped = [message.strip()]
+
+    return {
+        "intent_summary": _parse_text(cleaned, 120),
+        "focus": focus_candidates[:3],
+        "queries": deduped,
+    }
+
+
+def _storyboard_transcript_key(doc: dict[str, Any]) -> str:
+    metadata = doc.get("metadata", {})
+    video_id = doc.get("video_id") or metadata.get("video_id") or "-"
+    start_time = metadata.get("start_time")
+    end_time = metadata.get("end_time")
+    if start_time is None or end_time is None:
+        fallback_text = _parse_text(doc.get("page_content", ""), 48)
+        return f"{video_id}:{fallback_text}"
+    return f"{video_id}:{start_time}:{end_time}"
+
+
+def _search_storyboard_by_query(
+    tools: Any,
+    query: str,
+    query_weight: int,
+) -> list[tuple[dict[str, Any], int]]:
+    try:
+        payload = _invoke_tool(
+            tools.search_transcripts_hybrid,
+            {
+                "query": query,
+                "intent": "storyboard",
+                "match_count": STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT * 4,
+                "mmr_k": max(4, STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT + 2),
+                "rerank_top_k": max(4, STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT),
+            },
+        )
+        transcripts = _extract_transcripts(payload)
+    except Exception:
+        logger.debug("Storyboard query search failed: %s", query)
+        return []
+
+    output = []
+    for rank, doc in enumerate(transcripts):
+        if not isinstance(doc, dict):
+            continue
+        normalized = dict(doc)
+        metadata = normalized.get("metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+            normalized["metadata"] = metadata
+        is_peak = bool(metadata.get("is_peak"))
+        text = normalized.get("page_content", "")
+        score = (STORYBOARD_AGENT_MAX_RESEARCH_QUERIES - query_weight) * 14
+        score += max(0, 12 - rank)
+        score += len(str(text)) / 120.0
+        if is_peak:
+            score += 10
+        normalized["__searchScore"] = score
+        normalized["__queryWeight"] = query_weight
+        output.append((normalized, int(query_weight)))
+    return output
+
+
+def _research_storyboard_transcripts(
+    message: str,
+    planning_notes: dict[str, Any],
+) -> list[dict[str, Any]]:
+    planning_notes_queries = planning_notes.get("queries", [])
+    queries = [str(item).strip() for item in planning_notes_queries if isinstance(item, str) and item.strip()]
+    if not queries:
+        queries = [message]
+
+    queries = queries[:STORYBOARD_AGENT_MAX_RESEARCH_QUERIES]
+
+    tools = _load_tools_module()
+    merged: dict[str, dict[str, Any]] = {}
+    max_workers = min(len(queries), max(1, STORYBOARD_AGENT_BMAD_MAX_AGENTS))
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_map = {
+            executor.submit(_search_storyboard_by_query, tools, query, idx): idx
+            for idx, query in enumerate(queries)
+        }
+        for future in as_completed(future_map):
+            try:
+                results = future.result(timeout=max(1, STORYBOARD_AGENT_REQUEST_TIMEOUT_MS / 1000))
+            except Exception:
+                logger.debug("Storyboard planner/research task failed: %s", future_map[future])
+                continue
+            for item, _ in results:
+                key = _storyboard_transcript_key(item)
+                existing = merged.get(key)
+                if existing is None:
+                    merged[key] = item
+                    continue
+                if item.get("__searchScore", 0) > existing.get("__searchScore", 0):
+                    merged[key] = item
+
+    if not merged:
+        try:
+            fallback_ids_payload = _invoke_tool(
+                tools.search_video_ids_by_query,
+                {"query": message, "match_count": 12},
+            )
+            fallback_ids = _extract_video_ids(fallback_ids_payload)
+            if fallback_ids:
+                try:
+                    fallback_payload = _invoke_tool(
+                        tools.search_transcripts_hybrid,
+                        {
+                            "query": message,
+                            "video_ids": fallback_ids[:12],
+                            "intent": "storyboard",
+                            "match_count": 15,
+                            "mmr_k": 8,
+                            "rerank_top_k": 5,
+                        },
+                    )
+                    fallback_transcripts = _extract_transcripts(fallback_payload)
+                    for doc in fallback_transcripts:
+                        if not isinstance(doc, dict):
+                            continue
+                        key = _storyboard_transcript_key(doc)
+                        if key not in merged:
+                            normalized = dict(doc)
+                            normalized["__searchScore"] = 0
+                            merged[key] = normalized
+                except Exception:
+                    logger.debug("Storyboard fallback transcript search failed.")
+        except Exception:
+            logger.debug("Storyboard fallback video-id search failed.")
+
+    ranked = sorted(
+        merged.values(),
+        key=lambda d: (
+            float(d.get("__searchScore", 0)),
+            1 if (d.get("metadata") or {}).get("is_peak") else 0,
+        ),
+        reverse=True,
+    )
+    return ranked[:STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT * 2]
+
+
+def _is_valid_storyboard_output(content: str | None) -> bool:
+    if not content:
+        return False
+    normalized = content.strip()
+    if len(normalized) < 260:
+        return False
+    return (
+        "## 추천 씬 구성" in normalized
+        or "### 씬" in normalized
+    ) and "## 촬영 흐름 체크리스트" in normalized
+
+
+def _build_storyboard_content(
+    query: str,
+    transcripts: list[dict[str, Any]],
+    storyboard_profile: StoryboardModelProfile | None = None,
+    planning_notes: dict[str, Any] | None = None,
+) -> str:
+    if not transcripts:
+        return (
+            f"요청하신 `{query}`에 대한 스토리보드 후보를 DB에서 바로 찾지 못했습니다.\n\n"
+            "아래를 확인해 주세요.\n\n"
+            "1) 키워드(메뉴, 메뉴명, 분위기, 장소명)를 더 구체적으로 입력\n"
+            "2) 샷 구성(인사/메뉴 소개/반응/클로징)처럼 단계별로 질문\n"
+            "3) 필요 시 내부/외부 검색이 가능한 형태로 재요청"
+        )
+
+    prompt = _build_storyboard_prompt(query, transcripts, planning_notes)
+    generated = _generate_storyboard_from_llm(prompt, storyboard_profile)
+    if _is_valid_storyboard_output(generated):
+        return generated
+
+    return _build_storyboard_content_fallback(query, transcripts)
+
+
+def _prepare_storyboard_content(
+    query: str,
+    profile: StoryboardModelProfile | None,
+) -> tuple[list[dict[str, Any]], str]:
+    planning_notes = _build_storyboard_plan(query)
+    transcripts = _research_storyboard_transcripts(query, planning_notes)
+    content = _build_storyboard_content(query, transcripts, profile, planning_notes)
+    return transcripts, content
+
+
+def _call_gemini_storyboard_model(prompt: str, model_name: str | None = None) -> str | None:
+    selected_model = (model_name or STORYBOARD_AGENT_LLM_MODEL).strip() or STORYBOARD_AGENT_LLM_MODEL
+
     if not STORYBOARD_AGENT_USE_LLM:
         return None
 
@@ -552,7 +826,7 @@ def _call_gemini_storyboard_model(prompt: str) -> str | None:
         logger.warning("Gemini API key not found. Skip LLM generation and fallback.")
         return None
 
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{urllib.parse.quote(STORYBOARD_AGENT_LLM_MODEL, safe='.-_')}:generateContent"
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{urllib.parse.quote(selected_model, safe='.-_')}:generateContent"
     query = urllib.parse.urlencode({"key": STORYBOARD_AGENT_GEMINI_API_KEY.strip()})
     url = f"{endpoint}?{query}"
     payload = {
@@ -620,8 +894,11 @@ def _call_gemini_storyboard_model(prompt: str) -> str | None:
     return None
 
 
-def _generate_storyboard_from_llm(prompt: str) -> str | None:
-    return _call_gemini_storyboard_model(prompt)
+def _generate_storyboard_from_llm(
+    prompt: str,
+    storyboard_profile: StoryboardModelProfile | None,
+) -> str | None:
+    return _call_gemini_storyboard_model(prompt, _resolve_storyboard_model(storyboard_profile))
 
 
 def _build_storyboard_content_fallback(query: str, transcripts: list[dict[str, Any]]) -> str:
@@ -717,6 +994,8 @@ class StoryboardChatRequest(BaseModel):
     message: str
     role: str | None = None
     channel: str | None = None
+    imageModelProfile: StoryboardModelProfile | None = None
+    storyboardModelProfile: StoryboardModelProfile | None = None
 
     @field_validator("message")
     @classmethod
@@ -741,46 +1020,59 @@ class StoryboardChatResponse(BaseModel):
     visualComponent: str | None = None
 
 
-def _build_fallback(message: str, message_for_user: str, sources: list[dict[str, str]]) -> StoryboardChatResponse:
+def _build_fallback(
+    message: str,
+    message_for_user: str,
+    sources: list[dict[str, str]],
+    storyboard_model_profile: StoryboardModelProfile | None = None,
+) -> StoryboardChatResponse:
     return StoryboardChatResponse(
         asOf=datetime.now(timezone.utc).isoformat(),
-        content=_build_storyboard_content(message_for_user, []),
+        content=_build_storyboard_content(message_for_user, [], storyboard_model_profile),
         sources=[StoryboardChatSource(**item) for item in sources],
         visualComponent=None,
     )
 
 
-def _prepare_response(message: str, cache_key: str) -> StoryboardChatResponse:
+def _prepare_response(
+    message: str,
+    cache_key: str,
+    storyboard_model_profile: StoryboardModelProfile | None = None,
+) -> StoryboardChatResponse:
+    normalized_profile = _normalize_storyboard_model(storyboard_model_profile)
     try:
-        tools = _load_tools_module()
-
-        try_transcripts_payload = _invoke_tool(
-            tools.search_transcripts_hybrid,
-            {"query": message, "intent": "storyboard", "match_count": 15, "mmr_k": 8, "rerank_top_k": 5},
-        )
-        transcripts = _extract_transcripts(try_transcripts_payload)
-
-        if not transcripts:
-            fallback_ids_payload = _invoke_tool(
-                tools.search_video_ids_by_query,
-                {"query": message, "match_count": 12},
+        if STORYBOARD_AGENT_BMAD_ENABLED:
+            transcripts, content = _prepare_storyboard_content(message, normalized_profile)
+        else:
+            tools = _load_tools_module()
+            try_transcripts_payload = _invoke_tool(
+                tools.search_transcripts_hybrid,
+                {"query": message, "intent": "storyboard", "match_count": 15, "mmr_k": 8, "rerank_top_k": 5},
             )
-            video_ids = _extract_video_ids(fallback_ids_payload)
-            if video_ids:
-                fallback_payload = _invoke_tool(
-                    tools.search_transcripts_hybrid,
-                    {
-                        "query": message,
-                        "video_ids": video_ids[:12],
-                        "intent": "storyboard",
-                        "match_count": 15,
-                        "mmr_k": 8,
-                        "rerank_top_k": 5,
-                    },
-                )
-                transcripts = _extract_transcripts(fallback_payload)
+            transcripts = _extract_transcripts(try_transcripts_payload)
 
-        content = _build_storyboard_content(message, transcripts)
+            if not transcripts:
+                fallback_ids_payload = _invoke_tool(
+                    tools.search_video_ids_by_query,
+                    {"query": message, "match_count": 12},
+                )
+                video_ids = _extract_video_ids(fallback_ids_payload)
+                if video_ids:
+                    fallback_payload = _invoke_tool(
+                        tools.search_transcripts_hybrid,
+                        {
+                            "query": message,
+                            "video_ids": video_ids[:12],
+                            "intent": "storyboard",
+                            "match_count": 15,
+                            "mmr_k": 8,
+                            "rerank_top_k": 5,
+                        },
+                    )
+                    transcripts = _extract_transcripts(fallback_payload)
+
+            content = _build_storyboard_content(message, transcripts, normalized_profile)
+
         sources = _build_sources(transcripts)
 
         response = StoryboardChatResponse(
@@ -798,6 +1090,7 @@ def _prepare_response(message: str, cache_key: str) -> StoryboardChatResponse:
             message,
             message,
             [],
+            normalized_profile,
         )
         _cache_set(cache_key, response)
         return response
@@ -808,13 +1101,18 @@ def _prepare_response(message: str, cache_key: str) -> StoryboardChatResponse:
             message,
             message,
             [],
+            normalized_profile,
         )
         _cache_set(cache_key, response)
         return response
 
 
-async def _prepare_response_async(message: str) -> StoryboardChatResponse:
-    cache_key = _normalize_query(message)
+async def _prepare_response_async(
+    message: str,
+    storyboard_model_profile: StoryboardModelProfile | None = None,
+) -> StoryboardChatResponse:
+    normalized_profile = _normalize_storyboard_model(storyboard_model_profile)
+    cache_key = f"{_normalize_query(message)}|{normalized_profile}"
     started_at = time.perf_counter()
     error_reason: str | None = None
     response: StoryboardChatResponse | None = None
@@ -840,31 +1138,31 @@ async def _prepare_response_async(message: str) -> StoryboardChatResponse:
         if is_leader:
             try:
                 response = await asyncio.wait_for(
-                    asyncio.to_thread(_prepare_response, message, cache_key),
+                    asyncio.to_thread(_prepare_response, message, cache_key, normalized_profile),
                     timeout=STORYBOARD_AGENT_REQUEST_TIMEOUT_MS / 1000,
                 )
                 if future and not future.done():
                     future.set_result(response)
             except asyncio.TimeoutError:
-                response = _build_fallback(message, message, [])
+                response = _build_fallback(message, message, [], normalized_profile)
                 _metrics_record_fallback()
                 error_reason = "timeout"
                 if future and not future.done():
                     future.set_result(response)
             except Exception as exc:
                 logger.exception("Storyboard chat failed: %s", exc)
-                response = _build_fallback(message, message, [])
+                response = _build_fallback(message, message, [], normalized_profile)
                 _metrics_record_fallback()
                 error_reason = exc.__class__.__name__
                 if future and not future.done():
                     future.set_result(response)
             finally:
-                _cache_set(cache_key, response if response else _build_fallback(message, message, []))
+                _cache_set(cache_key, response if response else _build_fallback(message, message, [], normalized_profile))
 
             return response
 
         if future is None:
-            response = _build_fallback(message, message, [])
+            response = _build_fallback(message, message, [], normalized_profile)
             error_reason = "missing_future"
             return response
 
@@ -873,7 +1171,7 @@ async def _prepare_response_async(message: str) -> StoryboardChatResponse:
         if error_reason is None:
             error_reason = exc.__class__.__name__
         logger.exception("Storyboard chat async failure: %s", exc)
-        fallback = _build_fallback(message, message, [])
+        fallback = _build_fallback(message, message, [], normalized_profile)
         _metrics_record_fallback()
         _cache_set(cache_key, fallback)
         if future is not None and not future.done():
@@ -921,7 +1219,8 @@ def root():
 
 @app.post("/chat", response_model=StoryboardChatResponse)
 async def chat(payload: StoryboardChatRequest):
-    return await _prepare_response_async(payload.message)
+    requested_profile = payload.imageModelProfile or payload.storyboardModelProfile
+    return await _prepare_response_async(payload.message, requested_profile)
 
 
 if __name__ == "__main__":
