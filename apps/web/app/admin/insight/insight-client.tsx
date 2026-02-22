@@ -1,21 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChatSkeleton } from '@/components/ui/skeleton-loaders';
+import InsightChatSection from '@/components/insight/InsightChatSection';
 import styles from './insight-overhaul.module.css';
-
-const InsightChatSection = dynamic(() => import('@/components/insight/InsightChatSection'), {
-    ssr: false,
-});
 
 const InsightClientComponent = () => {
     const { isAdmin, isLoading: isAuthLoading } = useAuth();
 
     if (isAuthLoading) {
-        return <ChatSkeleton />;
+        return (
+            <section className={styles.pageShell}>
+                <div className={styles.chatFrame} />
+            </section>
+        );
     }
 
     if (!isAdmin) {

@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource } from '@/types/insight';
 
@@ -431,6 +432,29 @@ const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
     blockquote: ({ children }: { children: ReactNode }) => <span className="text-[#6b7280]">{children}</span>,
 };
 
+
+const MARKDOWN_HINT_PATTERN = /(?:^#{1,6}\s+|^\s*[-*+]\s+|^\s*\d+\.\s+|`{3}|`[^`]+`|\*\*|__|\[[^\]]+\]\([^)]+\)|^>\s+|\|[^\n]*\|)/m;
+const MARKDOWN_HINT_CACHE_LIMIT = 300;
+const markdownHeuristicCache = new Map<string, boolean>();
+
+type ReactMarkdownProps = Parameters<typeof ReactMarkdown>[0];
+type MarkdownComponentMap = NonNullable<ReactMarkdownProps['components']>;
+
+function shouldRenderMarkdown(content: string): boolean {
+    const cached = markdownHeuristicCache.get(content);
+    if (cached !== undefined) {
+        return cached;
+    }
+
+    const result = MARKDOWN_HINT_PATTERN.test(content);
+
+    if (markdownHeuristicCache.size >= MARKDOWN_HINT_CACHE_LIMIT) {
+        markdownHeuristicCache.clear();
+    }
+    markdownHeuristicCache.set(content, result);
+
+    return result;
+}
 const CONVERSATION_PREVIEW_CLAMP_STYLE: {
     display: string;
     overflow: string;
@@ -477,6 +501,60 @@ const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
     );
 });
 SourceList.displayName = 'SourceList';
+const MarkdownRenderer = memo(({
+    content,
+    components,
+    className,
+    plainTextClassName,
+}: {
+    content: string;
+    components: MarkdownComponentMap;
+    className?: string;
+    plainTextClassName?: string;
+}) => {
+    const shouldParse = shouldRenderMarkdown(content);
+
+    if (!shouldParse) {
+        return <div className={cn(plainTextClassName, className)}>{content}</div>;
+    }
+
+    return (
+        <div className={className}>
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={components}
+            >
+                {content}
+            </ReactMarkdown>
+        </div>
+    );
+});
+MarkdownRenderer.displayName = 'MarkdownRenderer';
+
+const ChatBubbleLoadingSkeleton = memo(() => (
+    <div className="space-y-3 px-1">
+        {Array.from({ length: 4 }).map((_, index) => (
+            <div
+                key={index}
+                className={cn(
+                    'flex gap-2.5',
+                    index % 2 === 0 ? 'flex-row' : 'flex-row-reverse',
+                )}
+            >
+                <Skeleton className={index % 2 === 0 ? 'h-8 w-8 rounded-full bg-[#e5e7eb]' : 'h-8 w-8 rounded-full bg-[#fef3c7]'} />
+                <div className={cn(
+                    'h-16 max-w-[84%] rounded-xl border border-[#e5e7eb] px-3 py-2.5 bg-[#f9fafb]',
+                    index % 2 === 0 ? 'text-left' : 'text-right',
+                )}>
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-3/4 mt-2" />
+                </div>
+            </div>
+        ))}
+    </div>
+));
+ChatBubbleLoadingSkeleton.displayName = 'ChatBubbleLoadingSkeleton';
+
 
 const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
     const isUser = message.role === 'user';
@@ -504,12 +582,12 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                 {isUser ? (
                     <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
                 ) : (
-                    <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
+                    <MarkdownRenderer
+                        content={message.content}
                         components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
-                    >
-                        {message.content}
-                    </ReactMarkdown>
+                        className="text-sm leading-6"
+                        plainTextClassName="whitespace-pre-wrap text-sm leading-6"
+                    />
                 )}
                 {message.meta?.source ? (
                     <p className="text-[11px] text-[#6b7280] mt-1.5">
@@ -529,12 +607,12 @@ const ConversationPreview = memo(({ content }: { content: string }) => (
         className="text-xs leading-4 text-[#6b7280]"
         style={CONVERSATION_PREVIEW_CLAMP_STYLE}
     >
-        <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
+        <MarkdownRenderer
+            content={content}
             components={CHAT_PREVIEW_MARKDOWN_COMPONENTS}
-        >
-            {content}
-        </ReactMarkdown>
+            className="text-xs leading-4 text-[#6b7280]"
+            plainTextClassName="text-xs leading-4 text-[#6b7280]"
+        />
     </div>
 ));
 ConversationPreview.displayName = 'ConversationPreview';
@@ -880,9 +958,8 @@ const InsightChatSectionComponent = () => {
             <section className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
                     {activeConversation?.isBooting ? (
-                        <div className="min-h-[360px] flex items-center justify-center text-sm text-[#6b7280] gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin text-[#6b7280]" />
-                            챗봇 준비 중입니다.
+                        <div className="min-h-[360px] px-3 py-4">
+                            <ChatBubbleLoadingSkeleton />
                         </div>
                     ) : activeConversation?.bootstrapFailed ? (
                         <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-4 gap-2">
