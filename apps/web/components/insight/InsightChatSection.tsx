@@ -371,8 +371,6 @@ function createInitialConversation(id: string): ChatConversation {
     };
 }
 
-}
-
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
     h1: ({ children, ...props }: ComponentPropsWithoutRef<'h1'>) => <h2 {...props} className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
     h2: ({ children, ...props }: ComponentPropsWithoutRef<'h2'>) => <h3 {...props} className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
