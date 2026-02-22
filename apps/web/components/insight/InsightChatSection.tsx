@@ -1,700 +1,1095 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import type {
-    AdminInsightChatBootstrapResponse,
-    AdminInsightChatResponse,
-    AdminInsightHeatmapResponse,
-    AdminInsightSeasonResponse,
-    AdminInsightWordcloudResponse,
-    InsightChatSource,
-    InsightHeatmapDataPoint,
-    InsightVisualComponentType,
-} from '@/types/insight';
-import type { DashboardSummaryResponse } from '@/types/dashboard';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { toKoreanKeywordLabel } from '@/lib/insight/keyword-label';
+import { type ReactNode, KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Bot, Loader2, Send, User, PlusCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {
-    Bot,
-    Calendar,
-    ExternalLink,
-    Loader2,
-    MessageSquare,
-    Plus,
-    Send,
-    Sparkles,
-    TrendingUp,
-    User,
-    BarChart3,
-} from 'lucide-react';
-
-type VisualComponentType = InsightVisualComponentType;
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource } from '@/types/insight';
 
 type ChatMessage = {
     id: string;
     role: 'user' | 'assistant';
     content: string;
     sources?: InsightChatSource[];
-    visualComponent?: VisualComponentType;
     createdAt: Date;
+    meta?: AdminInsightChatResponse['meta'];
 };
 
-type ChatSession = {
+type ChatConversation = {
     id: string;
     title: string;
-    createdAt: Date;
     messages: ChatMessage[];
+    createdAt: number;
+    updatedAt: number;
+    isBooting: boolean;
+    bootstrapFailed: boolean;
+    showBootingSkeleton: boolean;
 };
+
+const EMPTY_TITLE = '새 대화';
+const CHAT_BOOTSTRAP_TTL_MS = 4 * 60 * 1000;
+const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
+const CHAT_REQUEST_TIMEOUT_MS = 18_000;
+const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
+const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
+const OVERVIEW_BOOTSTRAP_MARKER = '쯔양 데이터 종합 인사이트';
+const CHAT_REQUEST_CACHE_LIMIT = 64;
+const MAX_CONVERSATIONS = 30;
+const MAX_MESSAGES_PER_CONVERSATION = 220;
+const MESSAGE_WINDOW_INITIAL = 80;
+const MESSAGE_WINDOW_BATCH = 80;
+const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
+
+type CachedEntry<T> = {
+    data: T;
+    expiresAt: number;
+};
+
+type PersistedChatMessage = Omit<ChatMessage, 'createdAt' | 'meta'> & {
+    createdAt: string;
+    meta?: AdminInsightChatResponse['meta'];
+};
+
+type PersistedChatState = {
+    version: 1;
+    conversations: PersistedConversation[];
+    activeConversationId: string;
+};
+
+type PersistedConversation = {
+    id: string;
+    title: string;
+    messages: PersistedChatMessage[];
+    createdAt: number;
+    updatedAt: number;
+    isBooting?: boolean;
+    bootstrapFailed?: boolean;
+    showBootingSkeleton?: boolean;
+};
+
+const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
+const chatResponseCache = new Map<string, CachedEntry<AdminInsightChatResponse>>();
+const inFlightBootstrapRequest = new Map<string, Promise<AdminInsightChatBootstrapResponse>>();
+const inFlightChatRequest = new Map<string, Promise<AdminInsightChatResponse>>();
+
+const SUGGESTED_PROMPTS = [
+    '먹방 스토리보드 기획안 짜줘',
+    '인기 키워드 보여줘',
+    '이번달 시즌 키워드 추천해줘',
+    '히트맵 요약해줘',
+    '운영 지표 요약',
+];
 
 function makeId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function makeConversationId(): string {
+    return makeId('conversation');
+}
+
+function shortText(input: string, max: number): string {
+    const normalized = input.trim().replace(/\s+/g, ' ');
+    if (!normalized) return '';
+    return normalized.length <= max ? normalized : `${normalized.slice(0, max - 1).trimEnd()}…`;
+}
+
+function makeConversationTitle(content: string): string {
+    const shortened = shortText(content, 24);
+    return shortened || '새 대화';
+}
+
+function normalizeCacheKey(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function trimCacheSize<T>(cache: Map<string, CachedEntry<T>>, maxEntries: number) {
+    if (cache.size <= maxEntries) return;
+
+    const overflow = cache.size - maxEntries;
+    let removed = 0;
+    for (const key of cache.keys()) {
+        cache.delete(key);
+        removed += 1;
+        if (removed >= overflow) return;
+    }
+}
+
+async function fetchJsonWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<T> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+        controller.abort();
+    }, timeoutMs);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+        });
+
+        if (!response.ok) {
+            const fallback = await response.json().catch(() => null);
+            if (fallback && typeof (fallback as { content?: unknown })?.content === 'string') {
+                return fallback as T;
+            }
+            throw new Error('요청이 실패했습니다');
+        }
+
+        return response.json() as Promise<T>;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function isTransientError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+        return false;
+    }
+
+    if (error.name === 'AbortError') {
+        return true;
+    }
+
+    if (error.name === 'TypeError') {
+        return true;
+    }
+
+    return /network|failed|fetch/i.test(error.message);
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+
 async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {
-    const response = await fetch('/api/admin/insight/chat/bootstrap');
-    if (!response.ok) throw new Error('인사이트 채팅 초기 데이터를 가져오지 못했습니다');
-    return response.json() as Promise<AdminInsightChatBootstrapResponse>;
+    const cacheKey = 'admin-insight-bootstrap';
+    const now = Date.now();
+    const cached = chatBootstrapCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+        return cached.data;
+    }
+
+    const inFlight = inFlightBootstrapRequest.get(cacheKey);
+    if (inFlight) return inFlight;
+
+    const request = fetchJsonWithTimeout<AdminInsightChatBootstrapResponse>('/api/admin/insight/chat/bootstrap', {
+        method: 'GET',
+        cache: 'no-store',
+    }, CHAT_REQUEST_TIMEOUT_MS).catch((error) => {
+        if (error instanceof Error) {
+            throw new Error('인사이트 채팅 초기 데이터를 가져오지 못했습니다');
+        }
+        throw error;
+    });
+
+    inFlightBootstrapRequest.set(cacheKey, request);
+
+    try {
+        const bootstrap = await request;
+        chatBootstrapCache.set(cacheKey, {
+            data: bootstrap,
+            expiresAt: now + CHAT_BOOTSTRAP_TTL_MS,
+        });
+        trimCacheSize(chatBootstrapCache, 1);
+        return bootstrap;
+    } finally {
+        inFlightBootstrapRequest.delete(cacheKey);
+    }
 }
 
 async function postChatMessage(message: string): Promise<AdminInsightChatResponse> {
-    const response = await fetch('/api/admin/insight/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
-    });
-    if (!response.ok) throw new Error('메시지를 전송하지 못했습니다');
-    return response.json() as Promise<AdminInsightChatResponse>;
-}
-
-async function fetchWordcloud(): Promise<AdminInsightWordcloudResponse> {
-    const response = await fetch('/api/admin/insight/wordcloud');
-    if (!response.ok) throw new Error('워드클라우드 데이터를 가져오지 못했습니다');
-    return response.json() as Promise<AdminInsightWordcloudResponse>;
-}
-
-async function fetchSeason(): Promise<AdminInsightSeasonResponse> {
-    const response = await fetch('/api/admin/insight/season');
-    if (!response.ok) throw new Error('시즌 데이터를 가져오지 못했습니다');
-    return response.json() as Promise<AdminInsightSeasonResponse>;
-}
-
-async function fetchHeatmap(): Promise<AdminInsightHeatmapResponse> {
-    const response = await fetch('/api/admin/insight/heatmap');
-    if (!response.ok) throw new Error('히트맵 데이터를 가져오지 못했습니다');
-    return response.json() as Promise<AdminInsightHeatmapResponse>;
-}
-
-async function fetchDashboardSummary(): Promise<DashboardSummaryResponse> {
-    const response = await fetch('/api/dashboard/summary');
-    if (!response.ok) throw new Error('대시보드 요약 데이터를 가져오지 못했습니다');
-    return response.json() as Promise<DashboardSummaryResponse>;
-}
-
-function buildHeatmapBars(points: InsightHeatmapDataPoint[], buckets: number): number[] {
-    if (points.length === 0) return [];
-    const binSize = Math.max(1, Math.floor(100 / buckets));
-    const sums = new Array(buckets).fill(0);
-    const counts = new Array(buckets).fill(0);
-
-    for (const p of points) {
-        const idx = Math.min(buckets - 1, Math.max(0, Math.floor(p.position / binSize)));
-        sums[idx] += p.engagement;
-        counts[idx] += 1;
+    const normalizedMessage = normalizeCacheKey(message);
+    const now = Date.now();
+    const cached = chatResponseCache.get(normalizedMessage);
+    if (cached && cached.expiresAt > now) {
+        return cached.data;
     }
 
-    return sums.map((sum, i) => (counts[i] ? sum / counts[i] : 0));
+    const inFlight = inFlightChatRequest.get(normalizedMessage);
+    if (inFlight) return inFlight;
+
+    const request = (async () => {
+        let lastError: unknown;
+        for (let attempt = 0; attempt <= CHAT_REQUEST_RETRY_ATTEMPTS; attempt += 1) {
+            try {
+                return await fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message }),
+                }, CHAT_REQUEST_TIMEOUT_MS);
+            } catch (error) {
+                lastError = error;
+                if (attempt >= CHAT_REQUEST_RETRY_ATTEMPTS || !isTransientError(error)) {
+                    if (error instanceof Error) {
+                        throw new Error('메시지를 전송하지 못했습니다');
+                    }
+                    throw error;
+                }
+
+                const delay = CHAT_REQUEST_RETRY_BASE_DELAY_MS * 2 ** attempt;
+                await sleep(Math.min(1200, delay));
+            }
+        }
+
+        if (lastError instanceof Error) {
+            throw lastError;
+        }
+        throw new Error('메시지를 전송하지 못했습니다');
+    })();
+
+    inFlightChatRequest.set(normalizedMessage, request);
+
+    try {
+        const response = await request;
+        chatResponseCache.set(normalizedMessage, {
+            data: response,
+            expiresAt: now + CHAT_RESPONSE_TTL_MS,
+        });
+        trimCacheSize(chatResponseCache, CHAT_REQUEST_CACHE_LIMIT);
+        return response;
+    } finally {
+        inFlightChatRequest.delete(normalizedMessage);
+    }
 }
 
-const MiniWordCloud = memo(() => {
-    const { data, isLoading, error } = useQuery({
-        queryKey: ['admin-insight-wordcloud-mini'],
-        queryFn: fetchWordcloud,
-        staleTime: 1000 * 60 * 5,
-    });
+function mapSources(rawSources: InsightChatSource[] | undefined): InsightChatSource[] {
+    return (rawSources ?? []).filter((source) => Boolean(source.videoTitle || source.youtubeLink || source.timestamp || source.text));
+}
 
-    if (isLoading) {
-        return (
-            <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30 flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
-
-    if (error) {
+function deserializeConversationList(raw: PersistedChatState | null): {
+    conversations: ChatConversation[];
+    activeConversationId: string;
+} | null {
+    if (!raw || raw.version !== 1 || !Array.isArray(raw.conversations) || raw.conversations.length === 0) {
         return null;
     }
 
-    const top = (data?.keywords ?? []).slice(0, 10);
-    if (top.length === 0) return null;
+    const conversations = raw.conversations
+        .map((conversation): ChatConversation | null => {
+            if (!conversation || typeof conversation !== 'object') {
+                return null;
+            }
 
-    return (
-        <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
-            <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-purple-500" />
-                <span className="text-xs font-medium">인기 키워드</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-                {top.map((k) => (
-                            <span
-                                key={k.keyword}
-                                className="px-1.5 py-0.5 rounded bg-secondary/50 text-[10px] text-muted-foreground"
-                                title={`${k.count}`}
-                            >
-                                {toKoreanKeywordLabel(k.keyword)}
-                            </span>
-                        ))}
-                    </div>
-        </div>
-    );
-});
-MiniWordCloud.displayName = 'MiniWordCloud';
+            if (typeof conversation.id !== 'string' || typeof conversation.title !== 'string') {
+                return null;
+            }
 
-const MiniCalendar = memo(() => {
-    const { data, isLoading, error } = useQuery({
-        queryKey: ['admin-insight-season-mini'],
-        queryFn: fetchSeason,
-        staleTime: 1000 * 60 * 5,
-    });
+            if (!Array.isArray(conversation.messages)) {
+                return null;
+            }
 
-    if (isLoading) {
-        return (
-            <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30 flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-        );
+            const messages = conversation.messages
+                .filter((message): message is PersistedChatMessage => {
+                    if (!message || typeof message !== 'object') {
+                        return false;
+                    }
+                    return typeof message.id === 'string'
+                        && (message.role === 'user' || message.role === 'assistant')
+                        && typeof message.content === 'string'
+                        && typeof message.createdAt === 'string';
+                })
+                .map((message) => {
+                    const parsedCreatedAt = new Date(message.createdAt);
+                    return {
+                        id: message.id,
+                        role: message.role,
+                        content: message.content,
+                        sources: mapSources(message.sources),
+                        createdAt: Number.isNaN(parsedCreatedAt.getTime()) ? new Date() : parsedCreatedAt,
+                        meta: message.meta,
+                    };
+                });
+
+            return {
+                id: conversation.id,
+                title: conversation.title,
+                messages,
+                createdAt: conversation.createdAt ?? Date.now(),
+                updatedAt: conversation.updatedAt ?? Date.now(),
+                isBooting: false,
+                bootstrapFailed: Boolean(conversation.bootstrapFailed),
+                showBootingSkeleton: Boolean(conversation.showBootingSkeleton),
+            };
+        })
+        .filter((conversation): conversation is ChatConversation => conversation !== null)
+        .slice(0, MAX_CONVERSATIONS);
+
+    if (conversations.length === 0) {
+        return null;
     }
 
-    if (error) return null;
+    const activeConversationId = raw.activeConversationId && conversations.some((conversation) => conversation.id === raw.activeConversationId)
+        ? raw.activeConversationId
+        : conversations[0].id;
 
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const monthData = data?.months?.find((m) => m.month === month);
-    const keywords = monthData?.keywords?.slice(0, 3) ?? [];
-    if (keywords.length === 0) return null;
+    return { conversations, activeConversationId };
+}
+
+function serializeConversationList(conversations: ChatConversation[], activeConversationId: string): PersistedChatState {
+    return {
+        version: 1,
+        activeConversationId,
+        conversations: conversations.slice(-MAX_CONVERSATIONS).map((conversation) => ({
+            id: conversation.id,
+            title: conversation.title,
+            messages: conversation.messages.map((message) => ({
+                id: message.id,
+                role: message.role,
+                content: message.content,
+                sources: message.sources,
+                createdAt: message.createdAt.toISOString(),
+                meta: message.meta,
+            })),
+            createdAt: conversation.createdAt,
+            updatedAt: conversation.updatedAt,
+            isBooting: conversation.isBooting,
+            bootstrapFailed: conversation.bootstrapFailed,
+            showBootingSkeleton: conversation.showBootingSkeleton,
+        })),
+    };
+}
+
+function createInitialConversation(id: string): ChatConversation {
+    return {
+        id,
+        title: EMPTY_TITLE,
+        messages: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isBooting: false,
+        bootstrapFailed: false,
+        showBootingSkeleton: false,
+    };
+}
+
+function isOverviewBootstrapMessage(content: string): boolean {
+    const normalized = content.replace(/\s+/g, ' ').trim();
+    return normalized.includes(`**${OVERVIEW_BOOTSTRAP_MARKER}**`) || normalized.includes(OVERVIEW_BOOTSTRAP_MARKER);
+}
+
+const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
+    h1: ({ children }: { children: ReactNode }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
+    h2: ({ children }: { children: ReactNode }) => <h3 className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
+    h3: ({ children }: { children: ReactNode }) => <h4 className="text-sm font-medium mb-1 mt-2.5 first:mt-0">{children}</h4>,
+    p: ({ children }: { children: ReactNode }) => <p className="whitespace-pre-wrap text-sm leading-6">{children}</p>,
+    ul: ({ children }: { children: ReactNode }) => <ul className="list-disc pl-5 my-2 space-y-1 text-sm leading-6">{children}</ul>,
+    ol: ({ children }: { children: ReactNode }) => <ol className="list-decimal pl-5 my-2 space-y-1 text-sm leading-6">{children}</ol>,
+    li: ({ children }: { children: ReactNode }) => <li className="text-sm leading-6">{children}</li>,
+    a: ({ children, href }: { children: ReactNode; href?: string }) => {
+        const safeHref = href ?? '';
+        const isExternal = /^https?:/i.test(safeHref);
+        return (
+            <a
+                href={safeHref || '#'}
+                target={isExternal ? '_blank' : undefined}
+                rel={isExternal ? 'noopener noreferrer' : undefined}
+                className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
+            >
+                {children}
+            </a>
+        );
+    },
+    table: ({ children }: { children: ReactNode }) => (
+        <div className="my-2 overflow-x-auto">
+            <table className="w-full text-sm border-collapse border border-[#e5e7eb]">{children}</table>
+        </div>
+    ),
+    thead: ({ children }: { children: ReactNode }) => <thead className="bg-[#f9fafb]">{children}</thead>,
+    th: ({ children }: { children: ReactNode }) => <th className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
+    td: ({ children }: { children: ReactNode }) => <td className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
+    blockquote: ({ children }: { children: ReactNode }) => (
+        <blockquote className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280]">
+            {children}
+        </blockquote>
+    ),
+    pre: ({ children }: { children: ReactNode }) => (
+        <pre className="overflow-x-auto rounded-md bg-[#f3f4f6] p-3 my-2 text-sm">{children}</pre>
+    ),
+    code: ({ children }: { children: ReactNode }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-xs">{children}</code>,
+};
+
+const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
+    h1: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
+    h2: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
+    h3: ({ children }: { children: ReactNode }) => <span className="font-medium">{children}</span>,
+    h4: ({ children }: { children: ReactNode }) => <span className="font-medium">{children}</span>,
+    p: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+    em: ({ children }: { children: ReactNode }) => <span className="italic">{children}</span>,
+    strong: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
+    code: ({ children }: { children: ReactNode }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-[11px]">{children}</code>,
+    ul: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
+    ol: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
+    li: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
+    a: ({ children, href }: { children: ReactNode; href?: string }) => {
+        const safeHref = href ?? '';
+        const isExternal = /^https?:/i.test(safeHref);
+        return (
+            <a
+                href={safeHref || '#'}
+                target={isExternal ? '_blank' : undefined}
+                rel={isExternal ? 'noopener noreferrer' : undefined}
+                className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
+            >
+                {children}
+            </a>
+        );
+    },
+    blockquote: ({ children }: { children: ReactNode }) => <span className="text-[#6b7280]">{children}</span>,
+};
+
+
+const MARKDOWN_HINT_PATTERN = /(?:^#{1,6}\s+|^\s*[-*+]\s+|^\s*\d+\.\s+|`{3}|`[^`]+`|\*\*|__|\[[^\]]+\]\([^)]+\)|^>\s+|\|[^\n]*\|)/m;
+const MARKDOWN_HINT_CACHE_LIMIT = 300;
+const markdownHeuristicCache = new Map<string, boolean>();
+
+type ReactMarkdownProps = Parameters<typeof ReactMarkdown>[0];
+type MarkdownComponentMap = NonNullable<ReactMarkdownProps['components']>;
+
+function shouldRenderMarkdown(content: string): boolean {
+    const cached = markdownHeuristicCache.get(content);
+    if (cached !== undefined) {
+        return cached;
+    }
+
+    const result = MARKDOWN_HINT_PATTERN.test(content);
+
+    if (markdownHeuristicCache.size >= MARKDOWN_HINT_CACHE_LIMIT) {
+        markdownHeuristicCache.clear();
+    }
+    markdownHeuristicCache.set(content, result);
+
+    return result;
+}
+const CONVERSATION_PREVIEW_CLAMP_STYLE: {
+    display: string;
+    overflow: string;
+    textOverflow: string;
+    WebkitLineClamp: number;
+    WebkitBoxOrient: 'vertical';
+    whiteSpace: 'nowrap';
+} = {
+    display: '-webkit-box',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    WebkitLineClamp: 1,
+    WebkitBoxOrient: 'vertical',
+    whiteSpace: 'nowrap',
+};
+
+const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
+    if (sources.length === 0) return null;
 
     return (
-        <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
-            <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-blue-500" />
-                <span className="text-xs font-medium">{month}월 시즌 추천</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-                {keywords.map((k) => (
-                    <div key={k.keyword} className="text-center p-1.5 bg-secondary/50 rounded">
-                        <div className="text-lg">{k.icon}</div>
-                        <div className="text-[10px] font-medium truncate">{k.keyword}</div>
-                        <div className="text-[8px] text-muted-foreground truncate">{k.recommendedUploadDate}</div>
-                    </div>
+        <div className="mt-3 border-t border-[#e5e7eb] pt-2">
+            <p className="text-xs text-[#6b7280] mb-2">참고 자료</p>
+            <div className="space-y-1">
+                {sources.map((source, idx) => (
+                    <a
+                        key={`${source.videoTitle}-${idx}`}
+                        href={source.youtubeLink || '#'}
+                        target={source.youtubeLink ? '_blank' : undefined}
+                        rel={source.youtubeLink ? 'noopener noreferrer' : undefined}
+                        className={cn(
+                            'flex flex-wrap gap-1 text-xs leading-4',
+                            source.youtubeLink
+                                ? 'text-[#ef4444] hover:underline'
+                                : 'text-[#6b7280]',
+                        )}
+                    >
+                        <span className="font-medium">{source.videoTitle || '스토리보드 참고 소스'}</span>
+                        <span className="text-[#6b7280]">({source.timestamp || '-'})</span>
+                        {source.text ? <span className="text-[#374151] truncate">: {source.text}</span> : null}
+                    </a>
                 ))}
             </div>
         </div>
     );
 });
-MiniCalendar.displayName = 'MiniCalendar';
+SourceList.displayName = 'SourceList';
+const MarkdownRenderer = memo(({
+    content,
+    components,
+    className,
+    plainTextClassName,
+}: {
+    content: string;
+    components: MarkdownComponentMap;
+    className?: string;
+    plainTextClassName?: string;
+}) => {
+    const shouldParse = shouldRenderMarkdown(content);
 
-const MiniHeatmap = memo(() => {
-    const { data, isLoading, error } = useQuery({
-        queryKey: ['admin-insight-heatmap-mini'],
-        queryFn: fetchHeatmap,
-        staleTime: 1000 * 60 * 5,
-    });
-
-    if (isLoading) {
-        return (
-            <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30 flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-        );
+    if (!shouldParse) {
+        return <div className={cn(plainTextClassName, className)}>{content}</div>;
     }
 
-    if (error) return null;
-
-    const top = data?.videos?.[0];
-    if (!top) return null;
-
-    const bars = buildHeatmapBars(top.heatmapData ?? [], 20);
-    const max = Math.max(...bars, 0.001);
-
     return (
-        <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
-            <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-red-500" />
-                    <span className="text-xs font-medium">히트맵 요약</span>
-                </div>
-                <span className="text-[10px] text-muted-foreground">
-                    {top.peakSegment.start}%~{top.peakSegment.end}%
-                </span>
-            </div>
-            <div className="flex gap-0.5 h-8">
-                {bars.map((v, i) => (
-                    <div
-                        key={i}
-                        className="flex-1 rounded-sm"
-                        style={{ backgroundColor: `rgba(239, 68, 68, ${Math.max(0.12, v / max)})` }}
-                        title={`${Math.round(v * 100)}%`}
-                    />
-                ))}
-            </div>
-            <div className="mt-2 text-[10px] text-muted-foreground line-clamp-1" title={top.title}>
-                {top.title}
-            </div>
+        <div className={className}>
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={components}
+            >
+                {content}
+            </ReactMarkdown>
         </div>
     );
 });
-MiniHeatmap.displayName = 'MiniHeatmap';
+MarkdownRenderer.displayName = 'MarkdownRenderer';
 
-const MiniStats = memo(() => {
-    const { data, isLoading, error } = useQuery({
-        queryKey: ['dashboard-summary-mini'],
-        queryFn: fetchDashboardSummary,
-        staleTime: 1000 * 60 * 5,
-    });
-
-    if (isLoading) {
-        return (
-            <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30 flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
-
-    if (error) return null;
-
-    if (!data) return null;
-
-    return (
-        <div className="bg-secondary/30 rounded-lg p-3 mt-2 border border-border/30">
-            <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="h-4 w-4 text-emerald-600" />
-                <span className="text-xs font-medium">운영 요약</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="bg-secondary/50 rounded p-2">
-                    <div className="text-[10px] text-muted-foreground">맛집</div>
-                    <div className="font-semibold">{data.totals.restaurants.toLocaleString()}</div>
-                </div>
-                <div className="bg-secondary/50 rounded p-2">
-                    <div className="text-[10px] text-muted-foreground">영상</div>
-                    <div className="font-semibold">{data.totals.videos.toLocaleString()}</div>
-                </div>
-                <div className="bg-secondary/50 rounded p-2">
-                    <div className="text-[10px] text-muted-foreground">좌표</div>
-                    <div className="font-semibold">{data.totals.withCoordinates.toLocaleString()}</div>
+const ChatBubbleLoadingSkeleton = memo(() => (
+    <div className="space-y-3 px-1">
+        {Array.from({ length: 4 }).map((_, index) => (
+            <div
+                key={index}
+                className={cn(
+                    'flex gap-2.5',
+                    index % 2 === 0 ? 'flex-row' : 'flex-row-reverse',
+                )}
+            >
+                <Skeleton className={index % 2 === 0 ? 'h-8 w-8 rounded-full bg-[#e5e7eb]' : 'h-8 w-8 rounded-full bg-[#fef3c7]'} />
+                <div className={cn(
+                    'h-16 max-w-[84%] rounded-xl border border-[#e5e7eb] px-3 py-2.5 bg-[#f9fafb]',
+                    index % 2 === 0 ? 'text-left' : 'text-right',
+                )}>
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-3/4 mt-2" />
                 </div>
             </div>
-        </div>
-    );
-});
-MiniStats.displayName = 'MiniStats';
+        ))}
+    </div>
+));
+ChatBubbleLoadingSkeleton.displayName = 'ChatBubbleLoadingSkeleton';
 
-const VisualComponentRenderer = memo(({ type }: { type: VisualComponentType }) => {
-    switch (type) {
-        case 'wordcloud':
-            return <MiniWordCloud />;
-        case 'calendar':
-            return <MiniCalendar />;
-        case 'heatmap':
-            return <MiniHeatmap />;
-        case 'stats':
-            return <MiniStats />;
-        default:
-            return null;
-    }
-});
-VisualComponentRenderer.displayName = 'VisualComponentRenderer';
 
-const ChatMessageBubble = memo(({ message }: { message: ChatMessage }) => {
+const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
     const isUser = message.role === 'user';
 
     return (
         <div className={cn(
-            "flex gap-3 mb-5 animate-in fade-in slide-in-from-bottom-2 duration-300",
-            isUser ? "flex-row-reverse" : "flex-row"
+            'flex gap-2.5 mb-4',
+            isUser ? 'flex-row-reverse' : 'flex-row',
         )}>
-            <div className={cn(
-                "h-9 w-9 rounded-full flex items-center justify-center shrink-0 shadow-lg",
-                isUser
-                    ? "bg-gradient-to-br from-primary to-primary/80 ring-2 ring-primary/20"
-                    : "bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-violet-500/20"
-            )}>
-                {isUser ? (
-                    <User className="h-4 w-4 text-primary-foreground" />
-                ) : (
-                    <Bot className="h-4 w-4 text-white" />
+            <div
+                className={cn(
+                    'h-8 w-8 rounded-full grid place-items-center text-white text-xs shrink-0',
+                    isUser ? 'bg-[#ef4444]' : 'bg-[#111827]',
                 )}
+            >
+                {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
             </div>
-            <div className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-3 shadow-md transition-all hover:shadow-lg",
-                isUser
-                    ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground"
-                    : "bg-gradient-to-br from-secondary/80 to-secondary/50 text-foreground border border-border/30"
-            )}>
+
+            <div
+                className={cn(
+                    'max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb]',
+                    isUser ? 'bg-[#fde68a] text-[#111827]' : 'bg-white text-[#111827]',
+                )}
+            >
                 {isUser ? (
-                    <p className="text-sm font-medium whitespace-pre-wrap">{message.content}</p>
+                    <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
                 ) : (
-                    <div className="prose prose-sm prose-invert max-w-none
-                        [&_h2]:text-base [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-2 [&_h2]:text-foreground
-                        [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-foreground
-                        [&_p]:text-sm [&_p]:mb-2 [&_p]:text-foreground/90 [&_p]:leading-relaxed
-                        [&_ul]:text-sm [&_ul]:mb-2 [&_ul]:pl-4
-                        [&_ol]:text-sm [&_ol]:mb-2 [&_ol]:pl-4
-                        [&_li]:mb-1 [&_li]:text-foreground/90
-                        [&_strong]:text-primary [&_strong]:font-semibold
-                        [&_table]:w-full [&_table]:text-xs [&_table]:mb-3
-                        [&_table]:border-collapse [&_table]:rounded-lg [&_table]:overflow-hidden
-                        [&_th]:bg-primary/20 [&_th]:text-foreground [&_th]:font-medium
-                        [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:border-b [&_th]:border-border/50
-                        [&_td]:px-2 [&_td]:py-1.5 [&_td]:border-b [&_td]:border-border/30 [&_td]:text-foreground/80
-                        [&_tr:hover]:bg-primary/5
-                        [&_hr]:border-border/50 [&_hr]:my-3
-                        [&_a]:text-blue-400 [&_a]:no-underline hover:[&_a]:underline
-                        [&_code]:bg-primary/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs
-                    ">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {message.content}
-                        </ReactMarkdown>
-                    </div>
+                    <MarkdownRenderer
+                        content={message.content}
+                        components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
+                        className="text-sm leading-6"
+                        plainTextClassName="whitespace-pre-wrap text-sm leading-6"
+                    />
                 )}
-
-                {message.visualComponent && (
-                    <VisualComponentRenderer type={message.visualComponent} />
-                )}
-
-                {message.sources && message.sources.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-border/30">
-                        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                            <ExternalLink className="h-3 w-3" /> 참고 자료
-                        </p>
-                        <div className="space-y-1">
-                            {message.sources.map((source, idx) => (
-                                <a
-                                    key={idx}
-                                    href={source.youtubeLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 rounded px-2 py-1 hover:bg-blue-500/20"
-                                >
-                                    {source.videoTitle} ({source.timestamp})
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                {message.meta?.source ? (
+                    <p className="text-[11px] text-[#6b7280] mt-1.5">
+                        응답 유형: {message.meta.source}
+                        {message.meta.fallbackReason ? ` · 사유: ${message.meta.fallbackReason}` : null}
+                    </p>
+                ) : null}
+                {message.sources ? <SourceList sources={message.sources} /> : null}
             </div>
         </div>
     );
 });
-ChatMessageBubble.displayName = 'ChatMessageBubble';
+ChatBubble.displayName = 'ChatBubble';
 
-const SessionListItem = memo(({
-    session,
-    isActive,
-    onClick,
-}: {
-    session: ChatSession;
-    isActive: boolean;
-    onClick: () => void;
-}) => (
-    <button
-        onClick={onClick}
-        className={cn(
-            "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 text-sm group",
-            isActive
-                ? "bg-gradient-to-r from-primary/20 to-violet-500/10 text-primary border border-primary/30 shadow-sm"
-                : "hover:bg-secondary/70 text-muted-foreground hover:text-foreground border border-transparent"
-        )}
+const ConversationPreview = memo(({ content }: { content: string }) => (
+    <div
+        className="text-xs leading-4 text-[#6b7280]"
+        style={CONVERSATION_PREVIEW_CLAMP_STYLE}
     >
-        <div className="flex items-center gap-2">
-            <MessageSquare className={cn(
-                "h-4 w-4 shrink-0 transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-            )} />
-            <div className="min-w-0 flex-1">
-                <p className="font-medium truncate">{session.title}</p>
-                <p className="text-[10px] opacity-60">
-                    {session.createdAt.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                </p>
-            </div>
-        </div>
-    </button>
+        <MarkdownRenderer
+            content={content}
+            components={CHAT_PREVIEW_MARKDOWN_COMPONENTS}
+            className="text-xs leading-4 text-[#6b7280]"
+            plainTextClassName="text-xs leading-4 text-[#6b7280]"
+        />
+    </div>
 ));
-SessionListItem.displayName = 'SessionListItem';
+ConversationPreview.displayName = 'ConversationPreview';
 
 const InsightChatSectionComponent = () => {
-    const bootstrapQuery = useQuery({
-        queryKey: ['admin-insight-chat-bootstrap'],
-        queryFn: fetchChatBootstrap,
-        staleTime: 1000 * 60 * 5,
-    });
-
-    const [sessions, setSessions] = useState<ChatSession[]>([]);
-    const [activeSessionId, setActiveSessionId] = useState<string>('');
+    const initialConversationId = useMemo(() => makeConversationId(), []);
+    const initialSeedConversationRef = useRef<string>(initialConversationId);
+    const suppressInitialSkeletonRef = useRef<Set<string>>(new Set([initialConversationId]));
+    const [conversations, setConversations] = useState<ChatConversation[]>(() => [
+        createInitialConversation(initialConversationId),
+    ]);
+    const [activeConversationId, setActiveConversationId] = useState<string>(initialConversationId);
     const [inputValue, setInputValue] = useState('');
-    const [isSending, setIsSending] = useState(false);
+    const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
+    const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
+    const bootstrapRequestRef = useRef(new Map<string, number>());
 
-    const didInitRef = useRef(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-
-    const bootstrapMessage = bootstrapQuery.data?.message;
-
-    useEffect(() => {
-        if (didInitRef.current) return;
-        if (!bootstrapMessage) return;
-        didInitRef.current = true;
-
-        const initialAssistantMessage: ChatMessage = {
-            id: makeId('bootstrap'),
-            role: 'assistant',
-            content: bootstrapMessage.content,
-            sources: (bootstrapMessage.sources ?? []) as InsightChatSource[],
-            visualComponent: bootstrapMessage.visualComponent,
-            createdAt: new Date(),
-        };
-
-        const initialSession: ChatSession = {
-            id: makeId('session'),
-            title: '종합 인사이트',
-            createdAt: new Date(),
-            messages: [initialAssistantMessage],
-        };
-
-        setSessions([initialSession]);
-        setActiveSessionId(initialSession.id);
-    }, [bootstrapMessage]);
-
-    const activeSession = useMemo(
-        () => sessions.find((s) => s.id === activeSessionId),
-        [activeSessionId, sessions],
+    const activeConversation = useMemo(
+        () => conversations.find((conversation) => conversation.id === activeConversationId) ?? null,
+        [conversations, activeConversationId],
     );
 
-    const scrollToBottom = useCallback(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const conversationList = useMemo(
+        () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
+        [conversations],
+    );
+    const shouldShowBootingSkeleton = activeConversation?.isBooting && activeConversation.showBootingSkeleton;
+
+    const visibleMessages = useMemo(() => {
+        if (!activeConversation) return [];
+        const total = activeConversation.messages.length;
+        if (total <= 0) return [];
+
+        const start = Math.max(0, total - Math.min(total, messageWindowSize));
+        return activeConversation.messages.slice(start, total);
+    }, [activeConversation, messageWindowSize]);
+
+    const canShowMoreMessages = !!activeConversation && activeConversation.messages.length > messageWindowSize;
+
+    const persistConversationState = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        if (conversations.length === 0) return;
+
+        try {
+            const payload = serializeConversationList(conversations, activeConversationId);
+            localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(payload));
+        } catch {
+            // localStorage unavailable or full
+        }
+    }, [activeConversationId, conversations]);
+
+    const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
+        setConversations((prev) => {
+            let changed = false;
+            const next = prev.map((item) => {
+                if (item.id !== conversationId) return item;
+                changed = true;
+                return update(item);
+            });
+            return changed ? next : prev;
+        });
     }, []);
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [activeSession?.messages.length, scrollToBottom]);
+    const loadBootstrap = useCallback(async (conversationId: string): Promise<void> => {
+        const requestId = (bootstrapRequestRef.current.get(conversationId) ?? 0) + 1;
+        bootstrapRequestRef.current.set(conversationId, requestId);
+        const isSeedConversation = suppressInitialSkeletonRef.current.has(conversationId);
 
-    const handleNewSession = useCallback(() => {
-        const initialAssistantMessage: ChatMessage | null = bootstrapMessage ? {
-            id: makeId('bootstrap'),
-            role: 'assistant',
-            content: bootstrapMessage.content,
-            sources: (bootstrapMessage.sources ?? []) as InsightChatSource[],
-            visualComponent: bootstrapMessage.visualComponent,
-            createdAt: new Date(),
-        } : null;
+        updateConversation(conversationId, (prev) => ({
+            ...prev,
+            isBooting: true,
+            bootstrapFailed: false,
+            showBootingSkeleton: isSeedConversation ? false : true,
+        }));
 
-        const newSession: ChatSession = {
-            id: makeId('session'),
-            title: '새 대화',
-            createdAt: new Date(),
-            messages: initialAssistantMessage ? [initialAssistantMessage] : [],
+        try {
+            const bootstrap = await fetchChatBootstrap();
+            const isOverviewMessage = isOverviewBootstrapMessage(bootstrap.message.content);
+
+            setConversations((prev) => {
+                if ((bootstrapRequestRef.current.get(conversationId) ?? 0) !== requestId) {
+                    return prev;
+                }
+
+                return prev.map((conversation) => {
+                    if (conversation.id !== conversationId) return conversation;
+                    return {
+                        ...conversation,
+                        messages: [
+                            {
+                                id: makeId('bootstrap'),
+                                role: 'assistant',
+                                content: bootstrap.message.content,
+                                sources: mapSources(bootstrap.message.sources),
+                                createdAt: new Date(),
+                            },
+                        ],
+                        isBooting: false,
+                        bootstrapFailed: false,
+                        showBootingSkeleton: isOverviewMessage,
+                        updatedAt: Date.now(),
+                    };
+                });
+            });
+        } catch {
+            setConversations((prev) => {
+                if ((bootstrapRequestRef.current.get(conversationId) ?? 0) !== requestId) {
+                    return prev;
+                }
+
+                return prev.map((conversation) => {
+                    if (conversation.id !== conversationId) return conversation;
+                    return {
+                        ...conversation,
+                        messages: [
+                            {
+                                id: makeId('bootstrap'),
+                                role: 'assistant',
+                                content: '초기 인사이트를 불러오지 못했습니다. 다시 열람하려면 새로고침해 주세요.',
+                                createdAt: new Date(),
+                                meta: {
+                                    source: 'fallback',
+                                    fallbackReason: 'bootstrap_failed',
+                                },
+                            },
+                        ],
+                        isBooting: false,
+                        bootstrapFailed: true,
+                        showBootingSkeleton: false,
+                        updatedAt: Date.now(),
+                    };
+                });
+            });
+        } finally {
+            if (isSeedConversation) {
+                suppressInitialSkeletonRef.current.delete(conversationId);
+            }
+        }
+    }, [updateConversation]);
+
+    const createConversation = useCallback((title: string = EMPTY_TITLE) => {
+        const nextConversation: ChatConversation = {
+            id: makeConversationId(),
+            title,
+            messages: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            isBooting: true,
+            bootstrapFailed: false,
+            showBootingSkeleton: false,
         };
 
-        setSessions((prev) => [newSession, ...prev]);
-        setActiveSessionId(newSession.id);
-        setInputValue('');
-        inputRef.current?.focus();
-    }, [bootstrapMessage]);
+        setConversations((prev) => [nextConversation, ...prev].slice(0, MAX_CONVERSATIONS));
+        setActiveConversationId(nextConversation.id);
+
+        void loadBootstrap(nextConversation.id);
+    }, [loadBootstrap]);
+
+    const hydrateFromStorage = useCallback(() => {
+        if (typeof window === 'undefined') return null;
+
+        try {
+            const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw) as PersistedChatState;
+            return deserializeConversationList(parsed);
+        } catch {
+            return null;
+        }
+    }, []);
+
+    const appendMessage = useCallback((conversationId: string, message: ChatMessage) => {
+        updateConversation(conversationId, (prev) => {
+            const isTitleDefault = prev.title === EMPTY_TITLE && message.role === 'user';
+            const nextMessages = [...prev.messages, message];
+            const trimmedMessages = nextMessages.length > MAX_MESSAGES_PER_CONVERSATION
+                ? nextMessages.slice(-MAX_MESSAGES_PER_CONVERSATION)
+                : nextMessages;
+
+            return {
+                ...prev,
+                messages: trimmedMessages,
+                title: isTitleDefault ? makeConversationTitle(message.content) : prev.title,
+                updatedAt: Date.now(),
+            };
+        });
+    }, [updateConversation]);
+
+    useEffect(() => {
+        const restored = hydrateFromStorage();
+        if (restored) {
+            setConversations(restored.conversations);
+            setActiveConversationId(restored.activeConversationId);
+            initialSeedConversationRef.current = restored.activeConversationId;
+
+            const activeConversation = restored.conversations.find((conversation) => conversation.id === restored.activeConversationId) ?? restored.conversations[0];
+            if (activeConversation) {
+                suppressInitialSkeletonRef.current.add(activeConversation.id);
+            }
+            if (!activeConversation || activeConversation.messages.length === 0) {
+                void loadBootstrap(activeConversation.id);
+            }
+
+            return;
+        }
+
+        initialSeedConversationRef.current = initialConversationId;
+        suppressInitialSkeletonRef.current.add(initialConversationId);
+        void loadBootstrap(initialConversationId);
+    }, [hydrateFromStorage, initialConversationId, loadBootstrap]);
+
+    useEffect(() => {
+        if (!activeConversation) {
+            return;
+        }
+
+        setMessageWindowSize(Math.min(MESSAGE_WINDOW_INITIAL, activeConversation.messages.length || MESSAGE_WINDOW_INITIAL));
+    }, [activeConversationId]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [activeConversation?.messages.length, activeConversationId]);
+
+    useEffect(() => {
+        persistConversationState();
+    }, [conversations, activeConversationId, persistConversationState]);
+
+    const handleSelectConversation = useCallback((conversationId: string) => {
+        setActiveConversationId(conversationId);
+        window.requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    }, []);
+
+    const handleNewConversation = useCallback(() => {
+        createConversation();
+        window.requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    }, [createConversation]);
+
+    const handleRetryBootstrap = useCallback(() => {
+        if (!activeConversation) return;
+        void loadBootstrap(activeConversation.id);
+    }, [activeConversation, loadBootstrap]);
+
+    const handleLoadMoreMessages = useCallback(() => {
+        if (!activeConversation) return;
+
+        setMessageWindowSize((prev) => Math.min(
+            activeConversation.messages.length,
+            prev + MESSAGE_WINDOW_BATCH,
+        ));
+    }, [activeConversation]);
 
     const handleSendMessage = useCallback(async () => {
         const content = inputValue.trim();
-        if (!content || !activeSessionId || isSending) return;
+        if (!activeConversation || !content || sendingConversationId === activeConversation.id) return;
 
         const userMessage: ChatMessage = {
-            id: makeId('msg'),
+            id: makeId('user'),
             role: 'user',
             content,
             createdAt: new Date(),
         };
 
-        setSessions((prev) => prev.map((session) => {
-            if (session.id !== activeSessionId) return session;
-
-            const hasUserMessage = session.messages.some((m) => m.role === 'user');
-            const nextTitle = hasUserMessage
-                ? session.title
-                : (content.length > 20 ? `${content.slice(0, 20)}...` : content);
-
-            return {
-                ...session,
-                title: session.title === '새 대화' ? nextTitle : session.title,
-                messages: [...session.messages, userMessage],
-            };
-        }));
-
+        appendMessage(activeConversation.id, userMessage);
         setInputValue('');
-        setIsSending(true);
+        setSendingConversationId(activeConversation.id);
 
         try {
-            const data = await postChatMessage(content);
-
-            const assistantMessage: ChatMessage = {
-                id: makeId('msg'),
+            const response = await postChatMessage(content);
+            appendMessage(activeConversation.id, {
+                id: makeId('assistant'),
                 role: 'assistant',
-                content: data.content,
-                sources: (data.sources ?? []) as InsightChatSource[],
-                visualComponent: data.visualComponent,
+                content: response.content,
+                sources: mapSources(response.sources),
                 createdAt: new Date(),
-            };
-
-            setSessions((prev) => prev.map((session) =>
-                session.id === activeSessionId
-                    ? { ...session, messages: [...session.messages, assistantMessage] }
-                    : session
-            ));
+                meta: response.meta,
+            });
         } catch {
-            const assistantMessage: ChatMessage = {
-                id: makeId('msg'),
+            appendMessage(activeConversation.id, {
+                id: makeId('assistant'),
                 role: 'assistant',
-                content: '응답을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+                content: '응답을 전송하지 못했습니다. 잠시 뒤 다시 시도해 주세요.',
                 createdAt: new Date(),
-            };
-
-            setSessions((prev) => prev.map((session) =>
-                session.id === activeSessionId
-                    ? { ...session, messages: [...session.messages, assistantMessage] }
-                    : session
-            ));
+                meta: {
+                    source: 'fallback',
+                    fallbackReason: 'request_failed',
+                },
+            });
         } finally {
-            setIsSending(false);
+            setSendingConversationId(null);
+            inputRef.current?.focus();
         }
-    }, [activeSessionId, inputValue, isSending]);
+    }, [activeConversation, appendMessage, inputValue, sendingConversationId]);
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
+    const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            void handleSendMessage();
         }
     }, [handleSendMessage]);
 
-    const suggestions = [
-        '인기 키워드 보여줘',
-        '이번달 시즌 키워드 추천해줘',
-        '히트맵 요약해줘',
-        '운영 지표 요약',
-    ];
+    const isSending = sendingConversationId === activeConversationId;
 
     return (
-        <Card className="h-full border-primary/20 bg-gradient-to-br from-card to-primary/5">
-            <CardContent className="h-full p-4">
-                <div className="flex gap-4 h-full">
-                    <div className="w-56 shrink-0 border-r border-border pr-4 flex flex-col">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full mb-3 gap-2"
-                            onClick={handleNewSession}
-                        >
-                            <Plus className="h-4 w-4" />
-                            새 대화
-                        </Button>
-                        <ScrollArea className="flex-1">
-                            <div className="space-y-2">
-                                {sessions.map((session) => (
-                                    <SessionListItem
-                                        key={session.id}
-                                        session={session}
-                                        isActive={session.id === activeSessionId}
-                                        onClick={() => setActiveSessionId(session.id)}
-                                    />
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </div>
-
-                    <div className="flex-1 flex flex-col min-w-0">
-                        <ScrollArea className="flex-1 pr-4">
-                            <div className="py-2">
-                                {bootstrapQuery.isLoading && sessions.length === 0 ? (
-                                    <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        인사이트를 준비 중입니다...
-                                    </div>
-                                ) : activeSession?.messages?.length ? (
-                                    activeSession.messages.map((message) => (
-                                        <ChatMessageBubble key={message.id} message={message} />
-                                    ))
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
-                                        <div className="h-20 w-20 rounded-full bg-gradient-to-br from-violet-500/20 to-purple-600/20 flex items-center justify-center mb-6">
-                                            <MessageSquare className="h-10 w-10 text-primary/50" />
-                                        </div>
-                                        <h3 className="text-lg font-semibold mb-2">인사이트 분석을 시작하세요</h3>
-                                        <p className="text-muted-foreground text-sm mb-6">
-                                            DB에 적재된 쯔양 자막/메타 데이터 기반으로<br />
-                                            요약과 추천을 제공합니다.
-                                        </p>
-                                        <div className="flex flex-wrap gap-2 justify-center max-w-md">
-                                            {suggestions.map((suggestion) => (
-                                                <Button
-                                                    key={suggestion}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-xs"
-                                                    onClick={() => {
-                                                        setInputValue(suggestion);
-                                                        inputRef.current?.focus();
-                                                    }}
-                                                >
-                                                    {suggestion}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {isSending && (
-                                    <div className="flex gap-3 mb-5">
-                                        <div className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 shadow-lg bg-gradient-to-br from-violet-500 to-purple-600 ring-2 ring-violet-500/20">
-                                            <Bot className="h-4 w-4 text-white" />
-                                        </div>
-                                        <div className="bg-gradient-to-br from-secondary/80 to-secondary/50 text-foreground border border-border/30 max-w-[85%] rounded-2xl px-4 py-3 shadow-md">
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                분석 중...
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                <div ref={messagesEndRef} />
-                            </div>
-                        </ScrollArea>
-
-                        <div className="pt-3 border-t border-border/50">
-                            <div className="flex gap-2">
-                                <Input
-                                    ref={inputRef}
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder="예: 인기 키워드 보여줘"
-                                    disabled={!activeSessionId || isSending}
-                                    className="h-11"
-                                />
-                                <Button
-                                    onClick={handleSendMessage}
-                                    disabled={!inputValue.trim() || !activeSessionId || isSending}
-                                    className="h-11 px-4"
-                                >
-                                    <Send className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
+        <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
+            <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
+                <div className="p-3 border-b border-[#e5e7eb]">
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="mt-2 h-9 w-full bg-[#111827] text-white hover:bg-[#27272a]"
+                        onClick={handleNewConversation}
+                    >
+                        <PlusCircle className="h-4 w-4 mr-1.5" />
+                        새 대화 시작
+                    </Button>
                 </div>
-            </CardContent>
-        </Card>
+
+                <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
+                    {conversationList.length === 0 ? (
+                        <p className="px-2 py-10 text-sm text-[#6b7280] text-center">새 대화를 준비 중입니다</p>
+                    ) : (
+                        conversationList.map((conversation) => {
+                            const isActive = conversation.id === activeConversationId;
+                            const latestMessage = conversation.messages.at(-1);
+                            const preview = latestMessage
+                                ? latestMessage.content
+                                : conversation.bootstrapFailed
+                                    ? '연결 실패. 새로고침 필요'
+                                    : '메시지 로딩 준비 중';
+
+                            return (
+                                <button
+                                    key={conversation.id}
+                                    type="button"
+                                    onClick={() => {
+                                        handleSelectConversation(conversation.id);
+                                    }}
+                                    className={cn(
+                                        'w-full text-left px-3 py-2 rounded-lg border',
+                                        isActive
+                                            ? 'border-[#fb7185] bg-white'
+                                            : 'border-transparent hover:border-[#e5e7eb] hover:bg-white',
+                                    )}
+                                >
+                                    <p className="font-medium text-sm text-[#111827] truncate">{conversation.title}</p>
+                                    <div className="mt-1">
+                                        <ConversationPreview content={preview} />
+                                    </div>
+                                </button>
+                            );
+                        })
+                    )}
+                </div>
+            </aside>
+
+            <section className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
+                    {shouldShowBootingSkeleton ? (
+                        <div className="min-h-[360px] px-3 py-4">
+                            <ChatBubbleLoadingSkeleton />
+                        </div>
+                    ) : activeConversation?.bootstrapFailed ? (
+                        <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-4 gap-2">
+                            <AlertCircle className="h-10 w-10 text-[#f59e0b]" />
+                            <p className="text-sm text-[#374151]">현재 챗봇 준비 상태를 확인할 수 없습니다.</p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRetryBootstrap}
+                            >
+                                다시 불러오기
+                            </Button>
+                        </div>
+                    ) : (
+                        <>
+                            {activeConversation?.messages.length === 0 ? (
+                                <div className="min-h-[360px] flex items-center justify-center text-sm text-[#6b7280]">
+                                    
+                                </div>
+                            ) : (
+                                <>
+                                    {canShowMoreMessages ? (
+                                        <div className="px-1 py-2 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={handleLoadMoreMessages}
+                                                className="text-xs text-[#ef4444] underline underline-offset-2 hover:no-underline"
+                                            >
+                                                이전 대화 더 보기
+                                            </button>
+                                        </div>
+                                    ) : null}
+
+                                    {visibleMessages.map((message) => (
+                                        <ChatBubble key={message.id} message={message} />
+                                    ))}
+                                </>
+                            )}
+
+                            {isSending ? (
+                                <div className="flex gap-2.5 mb-3">
+                                    <div className="h-8 w-8 rounded-full grid place-items-center text-white text-xs bg-[#111827]">
+                                        <Bot className="h-3.5 w-3.5" />
+                                    </div>
+                                    <div className="max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb]">
+                                        <div className="flex items-center gap-2 text-[#6b7280]">
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            분석 중...
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            <div ref={messagesEndRef} />
+                        </>
+                    )}
+                </div>
+
+                <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
+                    <div className="mb-2 flex flex-wrap gap-2">
+                        {SUGGESTED_PROMPTS.map((prompt) => (
+                            <button
+                                key={prompt}
+                                type="button"
+                                className="text-xs px-2.5 py-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#fff7ed]"
+                                onClick={() => setInputValue(prompt)}
+                                disabled={!!activeConversation?.isBooting || !!sendingConversationId}
+                            >
+                                {prompt}
+                            </button>
+                        ))}
+                    </div>
+
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            void handleSendMessage();
+                        }}
+                        className="flex gap-2"
+                    >
+                        <Input
+                            ref={inputRef}
+                            value={inputValue}
+                            onChange={(event) => setInputValue(event.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="예: 먹방 스토리보드 기획안 짜줘"
+                            disabled={!!activeConversation?.isBooting || !!isSending}
+                            className="h-11 border-[#e5e7eb] focus-visible:ring-[#f87171]"
+                        />
+                        <Button
+                            type="submit"
+                            className="h-11"
+                            disabled={!inputValue.trim() || !!activeConversation?.isBooting || !!isSending}
+                        >
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </form>
+                </div>
+            </section>
+        </section>
     );
 };
 
@@ -702,3 +1097,4 @@ const InsightChatSection = memo(InsightChatSectionComponent);
 InsightChatSection.displayName = 'InsightChatSection';
 
 export default InsightChatSection;
+

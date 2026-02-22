@@ -10,12 +10,21 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const data = await getAdminInsightChatBootstrap();
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (error) {
     console.error('[admin/insight/chat/bootstrap] failed:', error);
     return NextResponse.json(
       { error: 'Failed to build chat bootstrap.' },
-      { status: 500 },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      },
     );
   }
 }

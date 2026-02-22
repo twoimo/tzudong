@@ -1,9 +1,18 @@
-import { GlobalLoader } from "@/components/ui/global-loader";
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { GlobalLoader } from '@/components/ui/global-loader';
 
 /**
  * [PERF] 관리자 페이지 로딩 UI - 즉각적 페이지 전환
  */
 export default function AdminLoading() {
+    const pathname = usePathname();
+
+    if (!pathname || pathname.startsWith('/admin/insight')) {
+        return null;
+    }
+
     return (
         <GlobalLoader
             message="관리자 페이지를 불러오는 중..."

@@ -1,0 +1,102 @@
+.pageShell {
+  min-height: 0;
+  min-height: 100%;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+  color: #111827;
+}
+
+.chatFrame {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  min-height: calc(100vh - 220px);
+  overflow: hidden;
+}
+
+.centerShell {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: var(--ins-text);
+}
+
+.centerPanel {
+  width: min(480px, 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+}
+
+.centerPanelTitle {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.deniedSign {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(239, 68, 68, 0.16);
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.panelHint {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.deniedAction {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0 12px;
+  color: #111827;
+  text-decoration: none;
+  font-size: 13px;
+  background: #f9fafb;
+}
+
+.spin {
+  width: 22px;
+  height: 22px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .pageShell {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .chatFrame {
+    min-height: calc(100vh - 200px);
+    border-radius: 10px;
+  }
+
+  .centerShell {
+    padding: 12px;
+  }
+}
