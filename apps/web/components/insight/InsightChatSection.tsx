@@ -11,7 +11,19 @@ import {
     useRef,
     useState,
 } from 'react';
-import { AlertCircle, Bot, Send, User, PlusCircle, Settings, Eye, EyeOff, ChevronDown, Check, Trash2 } from 'lucide-react';
+import {
+    AlertCircle,
+    Bot,
+    Send,
+    User,
+    PlusCircle,
+    Settings,
+    Eye,
+    EyeOff,
+    ChevronDown,
+    Check,
+    Trash2,
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
@@ -767,6 +779,7 @@ const InsightChatSectionComponent = () => {
     const [showSettings, setShowSettings] = useState(false);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
     const [showImageModelDropdown, setShowImageModelDropdown] = useState(false);
+    const [showConversationList, setShowConversationList] = useState(false);
     const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
     const modelDropdownRef = useRef<HTMLDivElement>(null);
     const imageModelDropdownRef = useRef<HTMLDivElement>(null);
@@ -886,6 +899,17 @@ const InsightChatSectionComponent = () => {
         }
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showModelDropdown, showImageModelDropdown]);
+
+    useEffect(() => {
+        const updatePanelState = () => {
+            const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+            setShowConversationList(isDesktop);
+        };
+
+        updatePanelState();
+        window.addEventListener('resize', updatePanelState);
+        return () => window.removeEventListener('resize', updatePanelState);
+    }, []);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -1093,6 +1117,9 @@ const InsightChatSectionComponent = () => {
 
     const handleSelectConversation = useCallback((conversationId: string) => {
         setActiveConversationId(conversationId);
+        if (!window.matchMedia('(min-width: 1024px)').matches) {
+            setShowConversationList(false);
+        }
         window.requestAnimationFrame(() => {
             inputRef.current?.focus();
         });
@@ -1116,6 +1143,9 @@ const InsightChatSectionComponent = () => {
 
     const handleNewConversation = useCallback(() => {
         createConversation();
+        if (!window.matchMedia('(min-width: 1024px)').matches) {
+            setShowConversationList(false);
+        }
         window.requestAnimationFrame(() => {
             inputRef.current?.focus();
         });
@@ -1211,13 +1241,28 @@ const InsightChatSectionComponent = () => {
     const isSending = sendingConversationId === activeConversationId;
 
     return (
-        <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
-            <aside className="w-[clamp(150px,36vw,292px)] min-w-[150px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col min-h-0">
+            <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb] relative">
+                {showConversationList ? (
+                    <button
+                        type="button"
+                        className="fixed inset-0 z-20 bg-black/20 lg:hidden"
+                        onClick={() => setShowConversationList(false)}
+                        aria-label="대화 목록 닫기"
+                    />
+                ) : null}
+                <aside
+                    className={cn(
+                        'fixed inset-y-0 left-0 z-30 w-[82vw] max-w-[320px] min-w-[150px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col min-h-0',
+                        'transform transition-transform duration-200',
+                        showConversationList ? 'translate-x-0' : '-translate-x-full',
+                        'lg:relative lg:inset-auto lg:z-auto lg:w-[clamp(150px,36vw,292px)] lg:translate-x-0',
+                    )}
+                >
                 <div className="p-3 border-b border-[#e5e7eb]">
-                    <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            size="sm"
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    size="sm"
                             className="mt-2 h-9 flex-1 bg-[#111827] text-white hover:bg-[#27272a]"
                             onClick={handleNewConversation}
                         >
@@ -1365,10 +1410,30 @@ const InsightChatSectionComponent = () => {
                             })
                         )}
                     </div>
-                )}
-            </aside>
+                    )}
+                </aside>
 
             <section className="flex-1 min-w-0 flex flex-col min-h-0">
+                <div className="lg:hidden flex items-center gap-2 px-3 py-2 border-b border-[#e5e7eb] bg-white">
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowConversationList(true)}
+                        className="h-9 flex-1"
+                    >
+                        대화 목록
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="h-9"
+                        onClick={handleNewConversation}
+                    >
+                        <PlusCircle className="h-4 w-4 mr-1.5" />
+                        새 대화
+                    </Button>
+                </div>
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
                     {activeConversation?.bootstrapFailed ? (
                         <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-4 gap-2">
