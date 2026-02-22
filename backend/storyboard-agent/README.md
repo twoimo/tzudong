@@ -123,3 +123,96 @@ backend/agent-rag/
     -   언어적 표현과 비언어적 표현(제스처)의 결합 패턴 분석.
 4.  **Synthesizer**:
     -   "한 입 먹고 나서 3초간 침묵 후 '와'라고 감탄하며 카메라를 응시하세요" 등의 구체적 조언 제공.
+
+---
+
+## Next.js 챗봇 연동 가이드
+
+`apps/web`의 관리자 인사이트 챗봇은 `STORYBOARD_AGENT_API_URL` 환경 변수가 설정되어 있으면 스토리보드 API를 우선 호출합니다.
+
+예시 설정:
+
+```env
+STORYBOARD_AGENT_API_URL=http://localhost:8000
+STORYBOARD_AGENT_CHAT_PATH=/chat
+STORYBOARD_AGENT_TIMEOUT_MS=8000
+```
+
+에이전트 응답 본문에 `content` 필드(또는 `message`, `answer`, `response`, `output`) 하나만 있어도 처리됩니다.
+`sources` 필드는 `[{ videoTitle, youtubeLink, timestamp, text }]` 형태를 지원합니다.
+
+## 로컬 API 서버 실행
+
+### 1) 패키지 설치
+
+```bash
+cd backend/storyboard-agent
+pip install -r requirements.txt
+```
+
+추가로 벡터 검색 및 RAG 도구 실행을 위해 `numpy`, `langchain-core`, `supabase-py`,
+`python-dotenv`가 필요합니다.
+
+### 2) 환경 변수
+
+`backend/storyboard-agent`에서 아래 환경 변수를 설정하세요.
+
+```bash
+PUBLIC_SUPABASE_URL=https://aqlcofblfxdrjhhdmarw.supabase.co
+PUBLIC_SUPABASE_SERVICE_ROLE_KEY=<SUPABASE_SERVICE_ROLE_KEY>
+STORYBOARD_AGENT_HOST=0.0.0.0
+STORYBOARD_AGENT_PORT=8001
+STORYBOARD_AGENT_LLM_MODEL=gemini-3-flash-preview
+STORYBOARD_AGENT_USE_LLM=true
+STORYBOARD_AGENT_GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
+```
+
+`tools.py`가 기존 환경 변수(`SUPABASE_URL`)를 그대로 사용하는 레포도 있으므로,
+`STORYBOARD_AGENT` 서버는 `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_SERVICE_ROLE_KEY`가 우선
+사용되도록 매핑해 둡니다.
+
+### 3) 서버 실행
+
+```bash
+python -m uvicorn src.server:app --app-dir . --host 0.0.0.0 --port 8001
+```
+
+또는 `src/server.py`의 `__main__` 블록 실행도 가능합니다.
+
+```bash
+python src/server.py
+```
+
+실행 후 `/health`와 `/chat` 엔드포인트를 확인할 수 있습니다.
+
+```bash
+curl http://localhost:8001/health
+curl -X POST http://localhost:8001/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"떡볶이 먹방 스토리보드 짜줘"}'
+curl http://localhost:8001/metrics
+```
+
+### Observability
+
+`/metrics`는 요청/캐시/툴 호출 레이턴시, 에러, 동시 처리량(fallback 포함) 등을 확인할 수 있습니다.
+
+환경 변수 예시:
+
+```bash
+STORYBOARD_AGENT_METRICS_HISTORY_SIZE=300
+STORYBOARD_AGENT_LLM_MODEL=gemini-3-flash-preview
+STORYBOARD_AGENT_LLM_TIMEOUT_MS=12000
+STORYBOARD_AGENT_USE_LLM=true
+```
+
+추가로 아래 값으로 요청 타임아웃 및 툴 회로차단기 정책을 적용합니다.
+
+```bash
+STORYBOARD_AGENT_REQUEST_TIMEOUT_MS=12000
+STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED=true
+STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD=3
+STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS=30
+```
+
+`/metrics`의 `requests.errorReasons`를 통해 timeout/런타임 예외 비율을 모니터링할 수 있습니다.

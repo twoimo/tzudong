@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import InsightClient from './insight-client';
 
 export default function AdminInsightPage() {
-    redirect('/insights');
+    return <InsightClient />;
 }

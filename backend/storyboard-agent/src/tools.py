@@ -483,10 +483,19 @@ def search_video_ids_by_query(
 # =============================================================================
 # 10. 웹 검색 (Tavily)
 # =============================================================================
-from langchain_teddynote.tools.tavily import TavilySearch
+import logging
 
-# Tavily 웹 검색 도구 초기화
-web_search = TavilySearch(max_results=5)
+LOGGER = logging.getLogger(__name__)
+
+
+try:
+    from langchain_teddynote.tools.tavily import TavilySearch
+
+    # Tavily 웹 검색 도구 초기화
+    web_search = TavilySearch(max_results=5)
+except Exception as exc:
+    LOGGER.warning("TavilySearch 초기화 실패: %s", exc)
+    web_search = None
 
 
 # =============================================================================
@@ -501,6 +510,7 @@ TOOLS = [
     get_categories_by_restaurant,
     search_restaurants_by_name,
     get_all_approved_restaurant_names,
-    # 외부 도구
-    web_search,
 ]
+
+if web_search is not None:
+    TOOLS.append(web_search)  # 외부 도구

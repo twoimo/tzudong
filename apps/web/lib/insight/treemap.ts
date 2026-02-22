@@ -140,6 +140,9 @@ type PeriodCoverage = {
 
 const videoPeriodCache = new Map<string, CacheEntry<VideoDbRow[]>>();
 const historyCache = new Map<string, HistoryCacheEntry>();
+const treemapResponseCache = new Map<string, CacheEntry<InsightTreemapResponse>>();
+const TREEMAP_RESPONSE_CACHE_TTL_MS = 60 * 1000;
+
 
 function toNonNegativeNumber(value: unknown): number {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -556,22 +559,60 @@ export async function getInsightTreemapData(
     options: TreemapRequestOptions = {},
 ): Promise<InsightTreemapResponse> {
     const { filterByPeriod = true, metricMode = 'views' } = options;
+    const now = Date.now();
+    const responseCacheKey = `${filterByPeriod ? 'filtered' : 'change'}:${period}:${metricMode}`;
+    const cachedResponse = treemapResponseCache.get(responseCacheKey);
+    if (cachedResponse && cachedResponse.expiresAt > now) {
+        return cachedResponse.value;
+    }
+
     const rows = await cacheOrFetchVideos(filterByPeriod ? period : 'ALL');
 
-    if (filterByPeriod) {
-        const videos: InsightTreemapVideoRow[] = rows.map((row) => ({
+    const result: InsightTreemapResponse = (() => {
+        if (filterByPeriod) {
+            const videos: InsightTreemapVideoRow[] = rows.map((row) => ({
+                id: row.id,
+                title: normalizeTitle(row.title),
+                publishedAt: row.published_at,
+                category: normalizeCategory(row.category),
+                viewCount: toNonNegativeNumber(row.view_count),
+                likeCount: toNonNegativeNumber(row.like_count),
+                commentCount: toNonNegativeNumber(row.comment_count),
+                duration: parseDurationToSeconds(row.duration),
+                previousViewCount: null,
+                previousLikeCount: null,
+                previousCommentCount: null,
+                previousDuration: null,
+            }));
+
+            return {
+                asOf: new Date().toISOString(),
+                period,
+                totalVideos: videos.length,
+                videos,
+                availablePeriods: [],
+            };
+        }
+
+        const rowsWithHistory = rows.map((row) => ({
+            row,
+            history: getCachedMetaHistory(row.meta_history, row.id),
+        }));
+        const availablePeriods = getAvailablePeriods(rowsWithHistory, metricMode);
+
+        const videos: InsightTreemapVideoRow[] = rowsWithHistory.map(({ row, history }) => ({
             id: row.id,
             title: normalizeTitle(row.title),
             publishedAt: row.published_at,
             category: normalizeCategory(row.category),
-            viewCount: toNonNegativeNumber(row.view_count),
-            likeCount: toNonNegativeNumber(row.like_count),
-            commentCount: toNonNegativeNumber(row.comment_count),
+            viewCount: getLatestMetricValueFromHistory(history, 'views') ?? toNonNegativeNumber(row.view_count),
+            likeCount: getLatestMetricValueFromHistory(history, 'likes') ?? toNonNegativeNumber(row.like_count),
+            commentCount: getLatestMetricValueFromHistory(history, 'comments') ?? toNonNegativeNumber(row.comment_count),
             duration: parseDurationToSeconds(row.duration),
-            previousViewCount: null,
-            previousLikeCount: null,
-            previousCommentCount: null,
-            previousDuration: null,
+            previousViewCount: getPreviousMetricFromHistory(history, 'views', period),
+            previousLikeCount: getPreviousMetricFromHistory(history, 'likes', period),
+            previousCommentCount: getPreviousMetricFromHistory(history, 'comments', period),
+            previousDuration: getPreviousMetricFromHistory(history, 'duration', period),
         }));
 
         return {
@@ -579,36 +620,15 @@ export async function getInsightTreemapData(
             period,
             totalVideos: videos.length,
             videos,
-            availablePeriods: [],
+            availablePeriods,
         };
-    }
+    })();
 
-    const rowsWithHistory = rows.map((row) => ({
-        row,
-        history: getCachedMetaHistory(row.meta_history, row.id),
-    }));
-    const availablePeriods = getAvailablePeriods(rowsWithHistory, metricMode);
+    treemapResponseCache.set(responseCacheKey, {
+        expiresAt: now + TREEMAP_RESPONSE_CACHE_TTL_MS,
+        value: result,
+    });
 
-    const videos: InsightTreemapVideoRow[] = rowsWithHistory.map(({ row, history }) => ({
-        id: row.id,
-        title: normalizeTitle(row.title),
-        publishedAt: row.published_at,
-        category: normalizeCategory(row.category),
-        viewCount: getLatestMetricValueFromHistory(history, 'views') ?? toNonNegativeNumber(row.view_count),
-        likeCount: getLatestMetricValueFromHistory(history, 'likes') ?? toNonNegativeNumber(row.like_count),
-        commentCount: getLatestMetricValueFromHistory(history, 'comments') ?? toNonNegativeNumber(row.comment_count),
-        duration: parseDurationToSeconds(row.duration),
-        previousViewCount: getPreviousMetricFromHistory(history, 'views', period),
-        previousLikeCount: getPreviousMetricFromHistory(history, 'likes', period),
-        previousCommentCount: getPreviousMetricFromHistory(history, 'comments', period),
-        previousDuration: getPreviousMetricFromHistory(history, 'duration', period),
-    }));
-
-    return {
-        asOf: new Date().toISOString(),
-        period,
-        totalVideos: videos.length,
-        videos,
-        availablePeriods,
-    };
+    return result;
 }
+

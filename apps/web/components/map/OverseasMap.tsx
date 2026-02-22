@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import '@/styles/maplibre-gl.css';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { useRestaurants } from '@/hooks/use-restaurants';
@@ -337,3 +337,4 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 };
 
 export default OverseasMap;
+

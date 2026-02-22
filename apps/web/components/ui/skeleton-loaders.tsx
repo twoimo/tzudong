@@ -117,6 +117,47 @@ function InsightSkeletonComponent({ className }: { className?: string }) {
     );
 }
 
+function InsightChatSkeletonComponent({ className }: { className?: string }) {
+    return (
+        <div
+            className={cn(
+                "w-full h-full min-h-0 rounded-lg border border-[#e5e7eb] bg-white overflow-hidden flex",
+                className,
+            )}
+            style={CONTAIN_STYLE}
+        >
+            <div className="w-[280px] border-r border-[#e5e7eb] bg-[#fafafa] p-3 space-y-3">
+                <div className="h-9 w-full rounded-lg bg-muted/40" />
+                <div className="space-y-2">
+                    {Array.from({ length: 6 }, (_, i) => (
+                        <div key={i} className="space-y-2 border border-[#e5e7eb] rounded-lg p-2 bg-white">
+                            <Skeleton className="h-4 w-28 bg-muted/50" />
+                            <Skeleton className="h-3 w-40 bg-muted/30" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 min-h-0 px-3 py-4 space-y-3">
+                    {Array.from({ length: 6 }, (_, i) => (
+                        <div key={`message-${i}`} className={cn('space-y-2', i % 2 === 0 ? 'items-end' : 'items-start', 'flex flex-col')}>
+                            <div className="flex gap-2 items-center w-full">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <Skeleton className="h-3.5 w-20" />
+                            </div>
+                            <Skeleton className="rounded-xl h-20 w-[74%]" />
+                        </div>
+                    ))}
+                </div>
+                <div className="border-t border-[#e5e7eb] px-3 py-3">
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export const FeedSkeleton = memo(FeedSkeletonComponent);
 FeedSkeleton.displayName = "FeedSkeleton";
 
@@ -131,3 +172,6 @@ CostsSkeleton.displayName = "CostsSkeleton";
 
 export const InsightSkeleton = memo(InsightSkeletonComponent);
 InsightSkeleton.displayName = "InsightSkeleton";
+
+export const ChatSkeleton = memo(InsightChatSkeletonComponent);
+ChatSkeleton.displayName = "ChatSkeleton";
