@@ -92,7 +92,7 @@ type TreemapTilesProps = {
 type LeafRowsData = {
     leafRows: TreemapLeafNode[];
     leafTotalMetric: number;
-        leafMetricValuesSorted: number[];
+    leafMetricValuesSorted: number[];
 };
 
 const TREEMAP_TEXT_CACHE_LIMIT = 3_000;
@@ -100,7 +100,6 @@ const treemapTextFitCache = new Map<string, { text: string; fontSize: number }>(
 
 const AdminInsightsClient = dynamic(() => import('@/app/admin/insight/insight-client'), {
     ssr: false,
-    loading: () => <InsightSkeleton />,
 });
 
 
@@ -121,7 +120,7 @@ const METRIC_OPTIONS: { value: MetricMode; label: string }[] = [
 type PeriodOption = {
     value: InsightTreemapPeriod;
     label: string;
-    };
+};
 
 const PERIOD_OPTIONS: PeriodOption[] = [
     { value: 'ALL', label: '전체' },
@@ -180,7 +179,7 @@ async function fetchTreemapData(
     const response = await fetch(`/api/insights/treemap?${params.toString()}`, {
         method: 'GET',
         signal,
-        
+
     });
     if (!response.ok) {
         const message = await response.text();
@@ -782,73 +781,73 @@ export default function InsightsClient() {
     const renderWidth = useMemo(() => Math.max(1, chartWidth), [chartWidth]);
 
     const { leafRows, leafTotalMetric, leafMetricValuesSorted } = useMemo<LeafRowsData>(() => {
-    if (rawRows.length === 0) {
+        if (rawRows.length === 0) {
+            return {
+                leafRows: [],
+                leafTotalMetric: 0,
+                leafMetricValuesSorted: [],
+            };
+        }
+
+        const isChangeMode = viewMode === 'change';
+        const rows: TreemapLeafNode[] = [];
+        let totalMetric = 0;
+        const metricValues: number[] = [];
+
+        for (let i = 0; i < rawRows.length; i += 1) {
+            const row = rawRows[i];
+            const metricRaw = Math.max(getMetricValue(row, metricMode), 0);
+            const previousMetricRaw = getPreviousMetricValue(row, metricMode);
+            const rowPercent = isChangeMode ? calculateChangePercent(metricRaw, previousMetricRaw) : 0;
+
+            rows.push({
+                id: row.id,
+                name: row.title,
+                title: row.title,
+                category: row.category,
+                viewCount: row.viewCount,
+                likeCount: row.likeCount,
+                commentCount: row.commentCount,
+                duration: row.duration,
+                publishedAt: row.publishedAt,
+                value: Math.max(metricRaw, 0.25),
+                metricRaw,
+                previousMetricRaw,
+                metricText: formatMetricText(metricMode, metricRaw),
+                percent: rowPercent,
+                percentText: isChangeMode ? formatNonNegativePercent(rowPercent) : '0%',
+                color: getColorByPercent(rowPercent),
+            });
+
+            totalMetric += metricRaw;
+            metricValues.push(metricRaw);
+        }
+
+        if (!isChangeMode) {
+            for (const row of rows) {
+                row.percent = totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0;
+                row.percentText = formatPercent(row.percent);
+                row.color = getColorByPercent(row.percent);
+            }
+        }
+
+        rows.sort((a, b) => b.metricRaw - a.metricRaw);
+
+        const sortedMetricValues = [...metricValues].sort((a, b) => a - b);
+        const leafMetricValuesSorted: number[] = [];
+        for (const value of sortedMetricValues) {
+            if (!Number.isFinite(value) || value < 0) continue;
+            if (leafMetricValuesSorted.length === 0 || leafMetricValuesSorted[leafMetricValuesSorted.length - 1] !== value) {
+                leafMetricValuesSorted.push(value);
+            }
+        }
+
         return {
-            leafRows: [],
-            leafTotalMetric: 0,
-            leafMetricValuesSorted: [],
+            leafRows: rows,
+            leafTotalMetric: totalMetric,
+            leafMetricValuesSorted,
         };
-    }
-
-    const isChangeMode = viewMode === 'change';
-    const rows: TreemapLeafNode[] = [];
-    let totalMetric = 0;
-    const metricValues: number[] = [];
-
-    for (let i = 0; i < rawRows.length; i += 1) {
-        const row = rawRows[i];
-        const metricRaw = Math.max(getMetricValue(row, metricMode), 0);
-        const previousMetricRaw = getPreviousMetricValue(row, metricMode);
-        const rowPercent = isChangeMode ? calculateChangePercent(metricRaw, previousMetricRaw) : 0;
-
-        rows.push({
-            id: row.id,
-            name: row.title,
-            title: row.title,
-            category: row.category,
-            viewCount: row.viewCount,
-            likeCount: row.likeCount,
-            commentCount: row.commentCount,
-            duration: row.duration,
-            publishedAt: row.publishedAt,
-            value: Math.max(metricRaw, 0.25),
-            metricRaw,
-            previousMetricRaw,
-            metricText: formatMetricText(metricMode, metricRaw),
-            percent: rowPercent,
-            percentText: isChangeMode ? formatNonNegativePercent(rowPercent) : '0%',
-            color: getColorByPercent(rowPercent),
-        });
-
-        totalMetric += metricRaw;
-        metricValues.push(metricRaw);
-    }
-
-    if (!isChangeMode) {
-        for (const row of rows) {
-            row.percent = totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0;
-            row.percentText = formatPercent(row.percent);
-            row.color = getColorByPercent(row.percent);
-        }
-    }
-
-    rows.sort((a, b) => b.metricRaw - a.metricRaw);
-
-    const sortedMetricValues = [...metricValues].sort((a, b) => a - b);
-    const leafMetricValuesSorted: number[] = [];
-    for (const value of sortedMetricValues) {
-        if (!Number.isFinite(value) || value < 0) continue;
-        if (leafMetricValuesSorted.length === 0 || leafMetricValuesSorted[leafMetricValuesSorted.length - 1] !== value) {
-            leafMetricValuesSorted.push(value);
-        }
-    }
-
-    return {
-        leafRows: rows,
-        leafTotalMetric: totalMetric,
-        leafMetricValuesSorted,
-    };
-}, [rawRows, metricMode, viewMode]);
+    }, [rawRows, metricMode, viewMode]);
 
     const chartConstraints = useMemo(
         () => (isMobile
@@ -1151,7 +1150,7 @@ export default function InsightsClient() {
 
         return leafRows;
     }, [leafRows, viewMode, metricMode, clusterStep]);
-        const treemapCells = useMemo<TreemapCellLayout[]>(() => {
+    const treemapCells = useMemo<TreemapCellLayout[]>(() => {
         if (treeData.length === 0) return [];
         return buildTreemapLayout(treeData, renderWidth, chartHeight);
     }, [treeData, renderWidth, chartHeight]);

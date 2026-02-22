@@ -1,5 +1,4 @@
-import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource } from '@/types/insight';
-import { getDashboardSummary } from '@/lib/dashboard/summary';
+import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource, LlmRequestConfig } from '@/types/insight';
 import { getDashboardFunnel, getDashboardFailures } from '@/lib/dashboard/evaluation';
 import { getDashboardQuality } from '@/lib/dashboard/quality';
 import { getAdminInsightHeatmap } from '@/lib/insight/heatmap';
@@ -17,6 +16,11 @@ const STORYBOARD_AGENT_MAX_RETRIES = Number(process.env.STORYBOARD_AGENT_MAX_RET
 const STORYBOARD_AGENT_RETRY_BASE_MS = Number(process.env.STORYBOARD_AGENT_RETRY_BASE_MS || '250');
 const STORYBOARD_AGENT_RETRY_MAX_MS = Number(process.env.STORYBOARD_AGENT_RETRY_MAX_MS || '1500');
 const INSIGHT_QUERY_TTL_MS = Number(process.env.INSIGHT_QUERY_CACHE_TTL_MS || '45000');
+
+const GEMINI_API_KEY_ENV = process.env.GEMINI_OCR_YEON?.trim() || '';
+const GEMINI_MODEL_DEFAULT = 'gemini-3-flash-preview';
+const LLM_TIMEOUT_MS = 30_000;
+const LLM_MAX_TOKENS = 4096;
 
 const STORYBOARD_KEYWORDS = [
   '스토리보드',
@@ -46,48 +50,48 @@ const STORYBOARD_KEYWORDS = [
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
 
 type CachedQueryEntry<T> = {
-    data: T;
-    expiresAt: number;
+  data: T;
+  expiresAt: number;
 };
 
 const cacheTtl = Number.isFinite(INSIGHT_QUERY_TTL_MS) && INSIGHT_QUERY_TTL_MS > 0
-    ? INSIGHT_QUERY_TTL_MS
-    : 45000;
+  ? INSIGHT_QUERY_TTL_MS
+  : 45000;
 const cacheInFlight = new Map<string, Promise<unknown>>();
 const queryCache = new Map<string, CachedQueryEntry<unknown>>();
 
 function normalizeCacheKey(base: string): string {
-    return base.trim().toLowerCase();
+  return base.trim().toLowerCase();
 }
 
 function withCachedQuery<T>(key: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
-    const normalizedKey = normalizeCacheKey(key);
-    const now = Date.now();
-    const cached = queryCache.get(normalizedKey);
-    if (cached && cached.expiresAt > now) {
-        return Promise.resolve(cached.data as T);
-    }
+  const normalizedKey = normalizeCacheKey(key);
+  const now = Date.now();
+  const cached = queryCache.get(normalizedKey);
+  if (cached && cached.expiresAt > now) {
+    return Promise.resolve(cached.data as T);
+  }
 
-    const inFlight = cacheInFlight.get(normalizedKey);
-    if (inFlight) {
-        return inFlight as Promise<T>;
-    }
+  const inFlight = cacheInFlight.get(normalizedKey);
+  if (inFlight) {
+    return inFlight as Promise<T>;
+  }
 
-    const request = (async () => {
-        const value = await loader();
-        queryCache.set(normalizedKey, {
-            data: value as unknown,
-            expiresAt: Date.now() + ttlMs,
-        });
-        return value;
-    })();
-
-    cacheInFlight.set(normalizedKey, request);
-    request.finally(() => {
-        cacheInFlight.delete(normalizedKey);
+  const request = (async () => {
+    const value = await loader();
+    queryCache.set(normalizedKey, {
+      data: value as unknown,
+      expiresAt: Date.now() + ttlMs,
     });
+    return value;
+  })();
 
-    return request;
+  cacheInFlight.set(normalizedKey, request);
+  request.finally(() => {
+    cacheInFlight.delete(normalizedKey);
+  });
+
+  return request;
 }
 
 function createLocalResponse(
@@ -345,39 +349,30 @@ async function askStoryboardAgent(message: string, asOf: string): Promise<AdminI
 export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {
   const asOf = new Date().toISOString();
 
-  const [summary, keywords] = await Promise.all([
-    withCachedQuery('admin-insight-summary', cacheTtl, () => getDashboardSummary(false)),
-    withCachedQuery('admin-insight-wordcloud', cacheTtl, () => getAdminInsightWordcloud(false)),
-  ]);
-
-  const topKeywords = keywords.keywords.slice(0, 8).map((k) => k.keyword).join(', ');
-  const topVideos = summary.videos.slice(0, 3).map((v, idx) => `${idx + 1}. ${v.title}`).join('\n');
-
   const content = [
-    `**쯔양 데이터 종합 인사이트** (DB 기준)`,
+    '안녕하세요! 쯔양 인사이트 챗봇입니다.',
     '',
-    `- 맛집: **${summary.totals.restaurants.toLocaleString()}개**`,
-    `- 영상: **${summary.totals.videos.toLocaleString()}개**`,
-    `- 좌표 보유: **${summary.totals.withCoordinates.toLocaleString()}개**`,
-    '',
-    `**TOP 영상(맛집 언급 기준)**`,
-    topVideos || '- 데이터 없음',
-    '',
-    `**TOP 키워드(자막 하이라이트 기준)**`,
-    topKeywords ? `- ${topKeywords}` : '- 데이터 없음',
+    '궁금한 점을 자유롭게 질문해 주세요.',
+    '- "인기 키워드 보여줘"',
+    '- "이번달 시즌 키워드 추천해줘"',
+    '- "히트맵 요약해줘"',
+    '- "운영 지표 요약"',
+    '- "먹방 스토리보드 기획안 만들어줘"',
   ].join('\n');
 
   return {
     asOf,
     message: {
       content,
-      visualComponent: topKeywords ? 'wordcloud' : undefined,
       sources: [],
     },
   };
 }
 
-export async function answerAdminInsightChat(message: string): Promise<AdminInsightChatResponse> {
+export async function answerAdminInsightChat(
+  message: string,
+  llmConfig?: LlmRequestConfig,
+): Promise<AdminInsightChatResponse> {
   const asOf = new Date().toISOString();
   const input = message.trim();
 
@@ -470,6 +465,9 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
     });
   }
 
+  const llmReply = await routeLlmRequest(input, asOf, llmConfig);
+  if (llmReply) return llmReply;
+
   return createLocalResponse(asOf, [
     `가능한 질문 예시:`,
     `- "인기 키워드 보여줘"`,
@@ -477,5 +475,434 @@ export async function answerAdminInsightChat(message: string): Promise<AdminInsi
     `- "히트맵 요약해줘"`,
     `- "운영 지표 요약"`,
     `- "먹방 스토리보드 기획안 만들어줘"`,
-  ].join('\n'));
+  ].join('\n'), { fallbackReason: 'llm_unavailable' });
+}
+
+const LLM_SYSTEM_PROMPT = [
+  '당신은 "쯔양 인사이트 챗봇"입니다.',
+  '쯔양(먹방 유튜버)의 영상·맛집 데이터를 관리하는 관리자용 챗봇으로서, 데이터 분석, 콘텐츠 기획, 운영 인사이트 등에 대해 도움을 제공합니다.',
+  '',
+  '규칙:',
+  '- 항상 한국어로 답변',
+  '- 답변은 간결하고 핵심적으로',
+  '- 마크다운 형식 사용 가능 (제목, 리스트, 볼드 등)',
+  '- 데이터에 대해 모르는 부분은 솔직히 안내',
+  '- 기획안, 분석, 추천 등 창의적 요청에 적극 응답',
+].join('\n');
+
+async function routeLlmRequest(
+  message: string,
+  asOf: string,
+  config?: LlmRequestConfig,
+): Promise<AdminInsightChatResponse | null> {
+  const provider = config?.provider || 'gemini';
+  const apiKey = config?.apiKey || (provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const model = config?.model || GEMINI_MODEL_DEFAULT;
+
+  if (!apiKey) return null;
+
+  switch (provider) {
+    case 'gemini':
+      return askGemini(message, model, apiKey, asOf);
+    case 'openai':
+      return askOpenAI(message, model, apiKey, asOf);
+    case 'anthropic':
+      return askAnthropic(message, model, apiKey, asOf);
+    default:
+      return null;
+  }
+}
+
+/* ──────────────────────────────────────────────────────── */
+/*  Streaming support                                      */
+/* ──────────────────────────────────────────────────────── */
+
+export async function streamAdminInsightChat(
+  message: string,
+  llmConfig?: LlmRequestConfig,
+): Promise<{ stream: ReadableStream<Uint8Array> } | { local: AdminInsightChatResponse }> {
+  const localResult = await tryLocalAnswer(message, llmConfig);
+  if (localResult) return { local: localResult };
+
+  const provider = llmConfig?.provider || 'gemini';
+  const apiKey = llmConfig?.apiKey || (provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
+
+  if (!apiKey) {
+    return {
+      local: createLocalResponse(new Date().toISOString(), [
+        '가능한 질문 예시:',
+        '- "인기 키워드 보여줘"',
+        '- "이번달 시즌 키워드 추천해줘"',
+        '- "히트맵 요약해줘"',
+        '- "운영 지표 요약"',
+        '- "먹방 스토리보드 기획안 만들어줘"',
+      ].join('\n'), { fallbackReason: 'llm_unavailable' }),
+    };
+  }
+
+  const stream = createLlmStream(message, provider, model, apiKey);
+  return { stream };
+}
+
+async function tryLocalAnswer(
+  message: string,
+  _llmConfig?: LlmRequestConfig,
+): Promise<AdminInsightChatResponse | null> {
+  const asOf = new Date().toISOString();
+  const input = message.trim();
+  if (!input) return createLocalResponse(asOf, '질문을 입력해 주세요.', { fallbackReason: 'empty_input' });
+
+  if (isStoryboardIntent(input)) {
+    const reply = await askStoryboardAgent(input, asOf);
+    if (reply) return reply;
+  }
+
+  if (includesAny(input, ['키워드', '워드', 'word', 'wordcloud', '인기'])) {
+    const data = await withCachedQuery('admin-insight-wordcloud', cacheTtl, () => getAdminInsightWordcloud(false));
+    const list = data.keywords.slice(0, 12).map((k, idx) => `${idx + 1}. **${k.keyword}** (${k.count})`).join('\n');
+    return createLocalResponse(asOf, `## 인기 키워드 TOP 12\n\n${list || '- 데이터 없음'}`, { visualComponent: 'wordcloud' });
+  }
+
+  if (includesAny(input, ['시즌', '캘린더', 'calendar', '이번달', '다음달', '월별'])) {
+    const data = await withCachedQuery('admin-insight-season', cacheTtl, () => getAdminInsightSeason(false));
+    const month = new Date().getUTCMonth() + 1;
+    const monthData = data.months.find((m) => m.month === month);
+    const list = monthData?.keywords?.slice(0, 6).map((k) =>
+      `- ${k.icon} **${k.keyword}** (피크: ${k.peakWeek}, 업로드 추천: ${k.recommendedUploadDate})`
+    ).join('\n');
+    return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, { visualComponent: 'calendar' });
+  }
+
+  if (includesAny(input, ['히트맵', 'heatmap', '리텐션', '하이라이트', 'peak'])) {
+    const data = await withCachedQuery('admin-insight-heatmap', cacheTtl, () => getAdminInsightHeatmap(false));
+    const top = data.videos[0];
+    if (!top) return createLocalResponse(asOf, '히트맵 데이터를 찾지 못했습니다.', { fallbackReason: 'empty_heatmap' });
+    return createLocalResponse(asOf, [
+      '## 히트맵 요약', '',
+      `- 영상: **${top.title}**`,
+      `- 피크 구간: **${top.peakSegment.start}%~${top.peakSegment.end}%**`,
+      `- 주요 키워드: ${top.analysis.keywords.slice(0, 6).join(', ') || '-'}`,
+      '', top.analysis.overallSummary,
+    ].join('\n'), { visualComponent: 'heatmap' });
+  }
+
+  if (includesAny(input, ['운영', 'funnel', '실패', 'fail', '품질', 'quality', '지표'])) {
+    const [funnel, failures, quality] = await Promise.all([
+      withCachedQuery('admin-insight-funnel', cacheTtl, () => getDashboardFunnel(false)),
+      withCachedQuery('admin-insight-failures', cacheTtl, () => getDashboardFailures(false)),
+      withCachedQuery('admin-insight-quality', cacheTtl, () => getDashboardQuality(false)),
+    ]);
+    const topNotSelections = failures.notSelectionReasons.slice(0, 5).map((r) => `- ${r.label}: ${r.count}`).join('\n');
+    return createLocalResponse(asOf, [
+      '## 운영 지표 요약', '',
+      `- 수집 영상: **${funnel.counts.crawling}**`,
+      `- 선택 영상: **${funnel.counts.selection}** (선택률 ${funnel.conversion.selectionRate ?? '-'}%)`,
+      `- Rule 적용: **${funnel.counts.rule}** (Rule율 ${funnel.conversion.ruleRate ?? '-'}%)`,
+      `- LAAJ 적용: **${funnel.counts.laaj}** (LAAJ율 ${funnel.conversion.laajRate ?? '-'}%)`,
+      '', '### Not-Selection 주요 사유 TOP 5', topNotSelections || '- 데이터 없음',
+      '', '### 품질(요약)',
+      `- pipeline rows: ${quality.totals.pipelineRows}`,
+      `- rule metrics: ${quality.totals.withRuleMetrics}`,
+      `- laaj metrics: ${quality.totals.withLaajMetrics}`,
+    ].join('\n'), { visualComponent: 'stats' });
+  }
+
+  return null;
+}
+
+function createLlmStream(
+  message: string, provider: string, model: string, apiKey: string,
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    async start(ctrl) {
+      try {
+        switch (provider) {
+          case 'gemini': await streamGemini(message, model, apiKey, ctrl, encoder); break;
+          case 'openai': await streamOpenAI(message, model, apiKey, ctrl, encoder); break;
+          case 'anthropic': await streamAnthropic(message, model, apiKey, ctrl, encoder); break;
+          default: ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'unknown_provider' })}\n\n`));
+        }
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'stream_error';
+        try { ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errMsg })}\n\n`)); } catch { /* closed */ }
+      } finally {
+        try { ctrl.enqueue(encoder.encode('data: [DONE]\n\n')); } catch { /* closed */ }
+        ctrl.close();
+      }
+    },
+  });
+}
+
+async function streamGemini(
+  message: string, model: string, apiKey: string,
+  ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
+  try {
+    const resp = await fetch(endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: LLM_SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { maxOutputTokens: LLM_MAX_TOKENS, temperature: 0.7 },
+      }),
+      signal: ac.signal,
+    });
+    if (!resp.ok || !resp.body) throw new Error(`Gemini HTTP ${resp.status}`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const js = line.slice(6).trim();
+        if (!js || js === '[DONE]') continue;
+        try {
+          const p = JSON.parse(js);
+          const t = p?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (typeof t === 'string' && t) ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t })}\n\n`));
+        } catch { /* skip */ }
+      }
+    }
+  } finally { clearTimeout(timer); }
+}
+
+async function streamOpenAI(
+  message: string, model: string, apiKey: string,
+  ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model, max_tokens: LLM_MAX_TOKENS, temperature: 0.7, stream: true,
+        messages: [{ role: 'system', content: LLM_SYSTEM_PROMPT }, { role: 'user', content: message }],
+      }),
+      signal: ac.signal,
+    });
+    if (!resp.ok || !resp.body) throw new Error(`OpenAI HTTP ${resp.status}`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const js = line.slice(6).trim();
+        if (!js || js === '[DONE]') continue;
+        try {
+          const p = JSON.parse(js);
+          const t = p?.choices?.[0]?.delta?.content;
+          if (typeof t === 'string' && t) ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t })}\n\n`));
+        } catch { /* skip */ }
+      }
+    }
+  } finally { clearTimeout(timer); }
+}
+
+async function streamAnthropic(
+  message: string, model: string, apiKey: string,
+  ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model, max_tokens: LLM_MAX_TOKENS, system: LLM_SYSTEM_PROMPT, stream: true,
+        messages: [{ role: 'user', content: message }],
+      }),
+      signal: ac.signal,
+    });
+    if (!resp.ok || !resp.body) throw new Error(`Anthropic HTTP ${resp.status}`);
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const js = line.slice(6).trim();
+        if (!js || js === '[DONE]') continue;
+        try {
+          const p = JSON.parse(js);
+          if (p?.type === 'content_block_delta' && p?.delta?.text) {
+            ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: p.delta.text })}\n\n`));
+          }
+        } catch { /* skip */ }
+      }
+    }
+  } finally { clearTimeout(timer); }
+}
+
+async function askGemini(
+  message: string,
+  model: string,
+  apiKey: string,
+  asOf: string,
+): Promise<AdminInsightChatResponse | null> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: LLM_SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { maxOutputTokens: LLM_MAX_TOKENS, temperature: 0.7 },
+      }),
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      console.error('[insight/chat] Gemini HTTP error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (typeof content !== 'string' || !content.trim()) return null;
+
+    return {
+      asOf,
+      content: content.trim(),
+      sources: [],
+      meta: { source: 'gemini', model },
+    };
+  } catch (error) {
+    console.error('[insight/chat] Gemini request failed:', error);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function askOpenAI(
+  message: string,
+  model: string,
+  apiKey: string,
+  asOf: string,
+): Promise<AdminInsightChatResponse | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: LLM_MAX_TOKENS,
+        temperature: 0.7,
+        messages: [
+          { role: 'system', content: LLM_SYSTEM_PROMPT },
+          { role: 'user', content: message },
+        ],
+      }),
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      console.error('[insight/chat] OpenAI HTTP error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) return null;
+
+    return {
+      asOf,
+      content: content.trim(),
+      sources: [],
+      meta: { source: 'openai', model },
+    };
+  } catch (error) {
+    console.error('[insight/chat] OpenAI request failed:', error);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function askAnthropic(
+  message: string,
+  model: string,
+  apiKey: string,
+  asOf: string,
+): Promise<AdminInsightChatResponse | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: LLM_MAX_TOKENS,
+        system: LLM_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: message }],
+      }),
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      console.error('[insight/chat] Anthropic HTTP error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const textBlock = data?.content?.find?.(
+      (block: { type: string }) => block.type === 'text',
+    );
+    const content = textBlock?.text;
+    if (typeof content !== 'string' || !content.trim()) return null;
+
+    return {
+      asOf,
+      content: content.trim(),
+      sources: [],
+      meta: { source: 'anthropic', model },
+    };
+  } catch (error) {
+    console.error('[insight/chat] Anthropic request failed:', error);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

@@ -26,24 +26,32 @@ export async function POST(request: NextRequest) {
     if (!message.trim()) {
       return NextResponse.json(
         {
-        asOf: new Date().toISOString(),
-        content: '질문을 입력해 주세요.',
-        meta: {
-          source: 'fallback',
-          fallbackReason: 'empty_input',
+          asOf: new Date().toISOString(),
+          content: '질문을 입력해 주세요.',
+          meta: {
+            source: 'fallback',
+            fallbackReason: 'empty_input',
+          },
+          sources: [],
         },
-        sources: [],
-      },
-      {
-        status: 400,
-        headers: {
-          'Cache-Control': 'no-store',
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
         },
-      },
-    );
+      );
     }
 
-    const data = await answerAdminInsightChat(message);
+    const provider = typeof body?.provider === 'string' ? body.provider : undefined;
+    const model = typeof body?.model === 'string' ? body.model : undefined;
+    const apiKey = typeof body?.apiKey === 'string' ? body.apiKey : undefined;
+
+    const llmConfig = provider && model && apiKey
+      ? { provider: provider as 'gemini' | 'openai' | 'anthropic', model, apiKey }
+      : undefined;
+
+    const data = await answerAdminInsightChat(message, llmConfig);
     return NextResponse.json(data, {
       headers: {
         'Cache-Control': 'no-store',

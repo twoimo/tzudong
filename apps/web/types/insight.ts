@@ -99,9 +99,24 @@ export type InsightChatSource = {
   text: string;
 };
 
+export type LlmProvider = 'gemini' | 'openai' | 'anthropic';
+
+export type LlmModelOption = {
+  id: string;
+  name: string;
+  provider: LlmProvider;
+};
+
+export type LlmRequestConfig = {
+  provider: LlmProvider;
+  model: string;
+  apiKey: string;
+};
+
 export type AdminInsightChatMeta = {
-  source: 'local' | 'agent' | 'fallback';
+  source: 'local' | 'agent' | 'gemini' | 'openai' | 'anthropic' | 'fallback';
   fallbackReason?: string;
+  model?: string;
 };
 
 export type AdminInsightChatResponse = {
