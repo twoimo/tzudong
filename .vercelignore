@@ -1,32 +1,26 @@
-# Keep deploy payload small for Vercel CLI (avoid api-upload-free limits)
+# ── 버전 관리 / CI ────────────────────────────────────────
 .git/
 .github/
 .vscode/
 .agent/
 
-# Local build/output
+# ── 빌드 / 출력 ───────────────────────────────────────────
 .next/
 .turbo/
 dist/
 
-# Local dependencies (Vercel installs during build)
+# ── 의존성 (Vercel이 빌드 시 설치) ────────────────────────
 node_modules/
 
-# Monorepo explicit paths (Root Directory is apps/web)
-apps/web/node_modules/
-apps/web/.next/
-apps/web/playwright-report/
-apps/web/test-results/
-
-# Test artifacts
+# ── 테스트 산출물 ─────────────────────────────────────────
 playwright-report/
 test-results/
 
-# Local env files
+# ── 환경 파일 ─────────────────────────────────────────────
 .env
 .env.*
 
-# Backend/infra not needed for the Next.js web build
+# ── 백엔드 / 인프라 (Next.js 빌드에 불필요) ───────────────
 backend/
 supabase/
 docs/

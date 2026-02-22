@@ -16,7 +16,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource } from '@/types/insight';
 
@@ -37,7 +36,6 @@ type ChatConversation = {
     updatedAt: number;
     isBooting: boolean;
     bootstrapFailed: boolean;
-    showBootingSkeleton: boolean;
 };
 
 const EMPTY_TITLE = '새 대화';
@@ -46,7 +44,6 @@ const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
 const CHAT_REQUEST_TIMEOUT_MS = 18_000;
 const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
 const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
-const OVERVIEW_BOOTSTRAP_MARKER = '쯔양 데이터 종합 인사이트';
 const CHAT_REQUEST_CACHE_LIMIT = 64;
 const MAX_CONVERSATIONS = 30;
 const MAX_MESSAGES_PER_CONVERSATION = 220;
@@ -78,7 +75,6 @@ type PersistedConversation = {
     updatedAt: number;
     isBooting?: boolean;
     bootstrapFailed?: boolean;
-    showBootingSkeleton?: boolean;
 };
 
 const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
@@ -324,7 +320,6 @@ function deserializeConversationList(raw: PersistedChatState | null): {
                 updatedAt: conversation.updatedAt ?? Date.now(),
                 isBooting: false,
                 bootstrapFailed: Boolean(conversation.bootstrapFailed),
-                showBootingSkeleton: Boolean(conversation.showBootingSkeleton),
             };
         })
         .filter((conversation): conversation is ChatConversation => conversation !== null)
@@ -360,7 +355,6 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
             updatedAt: conversation.updatedAt,
             isBooting: conversation.isBooting,
             bootstrapFailed: conversation.bootstrapFailed,
-            showBootingSkeleton: conversation.showBootingSkeleton,
         })),
     };
 }
@@ -374,13 +368,9 @@ function createInitialConversation(id: string): ChatConversation {
         updatedAt: Date.now(),
         isBooting: false,
         bootstrapFailed: false,
-        showBootingSkeleton: false,
     };
 }
 
-function isOverviewBootstrapMessage(content: string): boolean {
-    const normalized = content.replace(/\s+/g, ' ').trim();
-    return normalized.includes(`**${OVERVIEW_BOOTSTRAP_MARKER}**`) || normalized.includes(OVERVIEW_BOOTSTRAP_MARKER);
 }
 
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
@@ -553,29 +543,6 @@ const MarkdownRenderer = memo(({
 });
 MarkdownRenderer.displayName = 'MarkdownRenderer';
 
-const ChatBubbleLoadingSkeleton = memo(() => (
-    <div className="space-y-3 px-1">
-        {Array.from({ length: 4 }).map((_, index) => (
-            <div
-                key={index}
-                className={cn(
-                    'flex gap-2.5',
-                    index % 2 === 0 ? 'flex-row' : 'flex-row-reverse',
-                )}
-            >
-                <Skeleton className={index % 2 === 0 ? 'h-8 w-8 rounded-full bg-[#e5e7eb]' : 'h-8 w-8 rounded-full bg-[#fef3c7]'} />
-                <div className={cn(
-                    'h-16 max-w-[84%] rounded-xl border border-[#e5e7eb] px-3 py-2.5 bg-[#f9fafb]',
-                    index % 2 === 0 ? 'text-left' : 'text-right',
-                )}>
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-3/4 mt-2" />
-                </div>
-            </div>
-        ))}
-    </div>
-));
-ChatBubbleLoadingSkeleton.displayName = 'ChatBubbleLoadingSkeleton';
 
 
 const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
@@ -641,8 +608,6 @@ ConversationPreview.displayName = 'ConversationPreview';
 
 const InsightChatSectionComponent = () => {
     const initialConversationId = useMemo(() => makeConversationId(), []);
-    const initialSeedConversationRef = useRef<string>(initialConversationId);
-    const suppressInitialSkeletonRef = useRef<Set<string>>(new Set([initialConversationId]));
     const [conversations, setConversations] = useState<ChatConversation[]>(() => [
         createInitialConversation(initialConversationId),
     ]);
@@ -663,7 +628,6 @@ const InsightChatSectionComponent = () => {
         () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
         [conversations],
     );
-    const shouldShowBootingSkeleton = activeConversation?.isBooting && activeConversation.showBootingSkeleton;
 
     const visibleMessages = useMemo(() => {
         if (!activeConversation) return [];
@@ -703,18 +667,15 @@ const InsightChatSectionComponent = () => {
     const loadBootstrap = useCallback(async (conversationId: string): Promise<void> => {
         const requestId = (bootstrapRequestRef.current.get(conversationId) ?? 0) + 1;
         bootstrapRequestRef.current.set(conversationId, requestId);
-        const isSeedConversation = suppressInitialSkeletonRef.current.has(conversationId);
 
         updateConversation(conversationId, (prev) => ({
             ...prev,
             isBooting: true,
             bootstrapFailed: false,
-            showBootingSkeleton: isSeedConversation ? false : true,
         }));
 
         try {
             const bootstrap = await fetchChatBootstrap();
-            const isOverviewMessage = isOverviewBootstrapMessage(bootstrap.message.content);
 
             setConversations((prev) => {
                 if ((bootstrapRequestRef.current.get(conversationId) ?? 0) !== requestId) {
@@ -736,7 +697,6 @@ const InsightChatSectionComponent = () => {
                         ],
                         isBooting: false,
                         bootstrapFailed: false,
-                        showBootingSkeleton: isOverviewMessage,
                         updatedAt: Date.now(),
                     };
                 });
@@ -765,15 +725,10 @@ const InsightChatSectionComponent = () => {
                         ],
                         isBooting: false,
                         bootstrapFailed: true,
-                        showBootingSkeleton: false,
                         updatedAt: Date.now(),
                     };
                 });
             });
-        } finally {
-            if (isSeedConversation) {
-                suppressInitialSkeletonRef.current.delete(conversationId);
-            }
         }
     }, [updateConversation]);
 
@@ -786,7 +741,6 @@ const InsightChatSectionComponent = () => {
             updatedAt: Date.now(),
             isBooting: true,
             bootstrapFailed: false,
-            showBootingSkeleton: false,
         };
 
         setConversations((prev) => [nextConversation, ...prev].slice(0, MAX_CONVERSATIONS));
@@ -830,21 +784,14 @@ const InsightChatSectionComponent = () => {
         if (restored) {
             setConversations(restored.conversations);
             setActiveConversationId(restored.activeConversationId);
-            initialSeedConversationRef.current = restored.activeConversationId;
 
             const activeConversation = restored.conversations.find((conversation) => conversation.id === restored.activeConversationId) ?? restored.conversations[0];
-            if (activeConversation) {
-                suppressInitialSkeletonRef.current.add(activeConversation.id);
-            }
             if (!activeConversation || activeConversation.messages.length === 0) {
                 void loadBootstrap(activeConversation.id);
             }
 
             return;
         }
-
-        initialSeedConversationRef.current = initialConversationId;
-        suppressInitialSkeletonRef.current.add(initialConversationId);
         void loadBootstrap(initialConversationId);
     }, [hydrateFromStorage, initialConversationId, loadBootstrap]);
 
@@ -998,11 +945,7 @@ const InsightChatSectionComponent = () => {
 
             <section className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
-                    {shouldShowBootingSkeleton ? (
-                        <div className="min-h-[360px] px-3 py-4">
-                            <ChatBubbleLoadingSkeleton />
-                        </div>
-                    ) : activeConversation?.bootstrapFailed ? (
+                    {activeConversation?.bootstrapFailed ? (
                         <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-4 gap-2">
                             <AlertCircle className="h-10 w-10 text-[#f59e0b]" />
                             <p className="text-sm text-[#374151]">현재 챗봇 준비 상태를 확인할 수 없습니다.</p>
@@ -1108,6 +1051,7 @@ const InsightChatSection = memo(InsightChatSectionComponent);
 InsightChatSection.displayName = 'InsightChatSection';
 
 export default InsightChatSection;
+
 
 
 

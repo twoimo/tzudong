@@ -1,6 +1,6 @@
-# Enforce LF for shell scripts
+# 텍스트 파일 자동 감지 및 줄바꿈 정규화
+* text=auto
+
+# 셸 스크립트는 LF 강제 (크로스 플랫폼 호환)
 *.sh text eol=lf
 *.bash text eol=lf
-
-# Standard auto-normalization for other files
-* text=auto
