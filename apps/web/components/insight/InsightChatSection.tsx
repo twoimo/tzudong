@@ -357,7 +357,7 @@ function createInitialConversation(id: string): ChatConversation {
         messages: [],
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        isBooting: true,
+        isBooting: false,
         bootstrapFailed: false,
     };
 }
@@ -619,6 +619,7 @@ ConversationPreview.displayName = 'ConversationPreview';
 
 const InsightChatSectionComponent = () => {
     const initialConversationId = useMemo(() => makeConversationId(), []);
+    const initialSeedConversationRef = useRef<string>(initialConversationId);
     const [conversations, setConversations] = useState<ChatConversation[]>(() => [
         createInitialConversation(initialConversationId),
     ]);
@@ -639,6 +640,7 @@ const InsightChatSectionComponent = () => {
         () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
         [conversations],
     );
+    const shouldShowBootingSkeleton = activeConversation?.isBooting && activeConversation.id !== initialSeedConversationRef.current;
 
     const visibleMessages = useMemo(() => {
         if (!activeConversation) return [];
@@ -795,6 +797,7 @@ const InsightChatSectionComponent = () => {
         if (restored) {
             setConversations(restored.conversations);
             setActiveConversationId(restored.activeConversationId);
+            initialSeedConversationRef.current = restored.activeConversationId;
 
             const activeConversation = restored.conversations.find((conversation) => conversation.id === restored.activeConversationId) ?? restored.conversations[0];
             if (!activeConversation || activeConversation.messages.length === 0) {
@@ -804,6 +807,7 @@ const InsightChatSectionComponent = () => {
             return;
         }
 
+        initialSeedConversationRef.current = initialConversationId;
         void loadBootstrap(initialConversationId);
     }, [hydrateFromStorage, initialConversationId, loadBootstrap]);
 
@@ -957,7 +961,7 @@ const InsightChatSectionComponent = () => {
 
             <section className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
-                    {activeConversation?.isBooting ? (
+                    {shouldShowBootingSkeleton ? (
                         <div className="min-h-[360px] px-3 py-4">
                             <ChatBubbleLoadingSkeleton />
                         </div>
