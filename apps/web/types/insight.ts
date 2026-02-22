@@ -101,6 +101,8 @@ export type InsightChatSource = {
 
 export type LlmProvider = 'gemini' | 'openai' | 'anthropic';
 
+export type StoryboardModelProfile = 'nanobanana' | 'nanobanana_pro';
+
 export type LlmModelOption = {
   id: string;
   name: string;
@@ -111,6 +113,8 @@ export type LlmRequestConfig = {
   provider: LlmProvider;
   model: string;
   apiKey: string;
+  storyboardModelProfile?: StoryboardModelProfile;
+  imageModelProfile?: StoryboardModelProfile;
 };
 
 export type AdminInsightChatMeta = {

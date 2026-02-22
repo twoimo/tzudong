@@ -216,3 +216,41 @@ STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS=30
 ```
 
 `/metrics`의 `requests.errorReasons`를 통해 timeout/런타임 예외 비율을 모니터링할 수 있습니다.
+
+### 멀티 에이전트(Planner/Researcher/Writer/Critic) 동작
+
+스토리보드 요청은 다음 순서로 처리됩니다.
+
+1. Planner: 사용자 요청을 분석해 의도 요약과 연구 쿼리 후보를 만듭니다.
+2. Researcher: 후보 쿼리를 기반으로 `search_transcripts_hybrid`을 병렬 실행해 자막/캡션 근거를 수집합니다.
+3. Writer: 수집 근거를 기반으로 Gemini 모델로 최종 스토리보드를 생성합니다.
+4. Critic: 결과 형식(추천 씬 구성, 촬영 흐름 체크리스트)과 분량을 검증하고 미달 시 fallback 템플릿을 적용합니다.
+
+`STORYBOARD_AGENT_BMAD_ENABLED=false`로 두면 기존 단일 파이프라인으로 동작합니다.
+
+### 스토리보드 프로필
+
+`storyboardModelProfile`(또는 `imageModelProfile`)로 나노 바나나/프로를 선택할 수 있습니다.
+
+- `nanobanana`: `STORYBOARD_AGENT_NANO_BANANA_MODEL`
+- `nanobanana_pro`: `STORYBOARD_AGENT_NANO_BANANA_PRO_MODEL`
+
+요청 예시:
+
+```bash
+curl -X POST http://localhost:8001/chat \
+  -H "Content-Type: application/json" \
+-d '{"message":"떡볶이 먹방 스토리보드 짜줘","imageModelProfile":"nanobanana_pro"}'
+```
+
+권장 환경 변수:
+
+```bash
+STORYBOARD_AGENT_DEFAULT_PROFILE=nanobanana
+STORYBOARD_AGENT_NANO_BANANA_MODEL=gemini-2.5-flash-preview
+STORYBOARD_AGENT_NANO_BANANA_PRO_MODEL=gemini-2.5-pro-preview
+STORYBOARD_AGENT_BMAD_ENABLED=true
+STORYBOARD_AGENT_BMAD_MAX_AGENTS=3
+STORYBOARD_AGENT_MAX_RESEARCH_QUERIES=3
+STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT=12
+```
