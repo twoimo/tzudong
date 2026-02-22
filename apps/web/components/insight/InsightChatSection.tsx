@@ -27,20 +27,22 @@ type ChatConversation = {
     updatedAt: number;
     isBooting: boolean;
     bootstrapFailed: boolean;
+    showBootingSkeleton: boolean;
 };
 
 const EMPTY_TITLE = '새 대화';
 const CHAT_BOOTSTRAP_TTL_MS = 4 * 60 * 1000;
 const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
 const CHAT_REQUEST_TIMEOUT_MS = 18_000;
+const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
+const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
+const OVERVIEW_BOOTSTRAP_MARKER = '쯔양 데이터 종합 인사이트';
 const CHAT_REQUEST_CACHE_LIMIT = 64;
 const MAX_CONVERSATIONS = 30;
 const MAX_MESSAGES_PER_CONVERSATION = 220;
 const MESSAGE_WINDOW_INITIAL = 80;
 const MESSAGE_WINDOW_BATCH = 80;
 const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
-const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
-const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
 
 type CachedEntry<T> = {
     data: T;
@@ -66,6 +68,7 @@ type PersistedConversation = {
     updatedAt: number;
     isBooting?: boolean;
     bootstrapFailed?: boolean;
+    showBootingSkeleton?: boolean;
 };
 
 const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
@@ -311,6 +314,7 @@ function deserializeConversationList(raw: PersistedChatState | null): {
                 updatedAt: conversation.updatedAt ?? Date.now(),
                 isBooting: false,
                 bootstrapFailed: Boolean(conversation.bootstrapFailed),
+                showBootingSkeleton: Boolean(conversation.showBootingSkeleton),
             };
         })
         .filter((conversation): conversation is ChatConversation => conversation !== null)
@@ -346,6 +350,7 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
             updatedAt: conversation.updatedAt,
             isBooting: conversation.isBooting,
             bootstrapFailed: conversation.bootstrapFailed,
+            showBootingSkeleton: conversation.showBootingSkeleton,
         })),
     };
 }
@@ -359,7 +364,13 @@ function createInitialConversation(id: string): ChatConversation {
         updatedAt: Date.now(),
         isBooting: false,
         bootstrapFailed: false,
+        showBootingSkeleton: false,
     };
+}
+
+function isOverviewBootstrapMessage(content: string): boolean {
+    const normalized = content.replace(/\s+/g, ' ').trim();
+    return normalized.includes(`**${OVERVIEW_BOOTSTRAP_MARKER}**`) || normalized.includes(OVERVIEW_BOOTSTRAP_MARKER);
 }
 
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
@@ -641,7 +652,7 @@ const InsightChatSectionComponent = () => {
         () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
         [conversations],
     );
-    const shouldShowBootingSkeleton = activeConversation?.isBooting && !suppressInitialSkeletonRef.current.has(activeConversation.id);
+    const shouldShowBootingSkeleton = activeConversation?.isBooting && activeConversation.showBootingSkeleton;
 
     const visibleMessages = useMemo(() => {
         if (!activeConversation) return [];
@@ -687,10 +698,12 @@ const InsightChatSectionComponent = () => {
             ...prev,
             isBooting: true,
             bootstrapFailed: false,
+            showBootingSkeleton: isSeedConversation ? false : true,
         }));
 
         try {
             const bootstrap = await fetchChatBootstrap();
+            const isOverviewMessage = isOverviewBootstrapMessage(bootstrap.message.content);
 
             setConversations((prev) => {
                 if ((bootstrapRequestRef.current.get(conversationId) ?? 0) !== requestId) {
@@ -712,6 +725,7 @@ const InsightChatSectionComponent = () => {
                         ],
                         isBooting: false,
                         bootstrapFailed: false,
+                        showBootingSkeleton: isOverviewMessage,
                         updatedAt: Date.now(),
                     };
                 });
@@ -740,6 +754,7 @@ const InsightChatSectionComponent = () => {
                         ],
                         isBooting: false,
                         bootstrapFailed: true,
+                        showBootingSkeleton: false,
                         updatedAt: Date.now(),
                     };
                 });
@@ -760,6 +775,7 @@ const InsightChatSectionComponent = () => {
             updatedAt: Date.now(),
             isBooting: true,
             bootstrapFailed: false,
+            showBootingSkeleton: false,
         };
 
         setConversations((prev) => [nextConversation, ...prev].slice(0, MAX_CONVERSATIONS));
