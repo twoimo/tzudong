@@ -1,14 +1,14 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/insight/treemap';
-import AdminInsightsClient from '@/app/admin/insight/insight-client';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { InsightSkeleton } from '@/components/ui/skeleton-loaders';
 
@@ -89,9 +89,20 @@ type TreemapTilesProps = {
     onCellMove: TreemapTileInteraction;
     onCellLeave: () => void;
 };
+type LeafRowsData = {
+    leafRows: TreemapLeafNode[];
+    leafTotalMetric: number;
+        leafMetricValuesSorted: number[];
+};
 
 const TREEMAP_TEXT_CACHE_LIMIT = 3_000;
 const treemapTextFitCache = new Map<string, { text: string; fontSize: number }>();
+
+const AdminInsightsClient = dynamic(() => import('@/app/admin/insight/insight-client'), {
+    ssr: false,
+    loading: () => <InsightSkeleton />,
+});
+
 
 const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
 
@@ -110,8 +121,7 @@ const METRIC_OPTIONS: { value: MetricMode; label: string }[] = [
 type PeriodOption = {
     value: InsightTreemapPeriod;
     label: string;
-    disabled?: boolean;
-};
+    };
 
 const PERIOD_OPTIONS: PeriodOption[] = [
     { value: 'ALL', label: '전체' },
@@ -156,20 +166,28 @@ function getInitialChartSize(isMobile: boolean, isTablet: boolean): ChartDimensi
 
 let measureCanvasContext: CanvasRenderingContext2D | null = null;
 
-async function fetchTreemapData(viewMode: ViewMode, period: InsightTreemapPeriod, metricMode: MetricMode): Promise<InsightTreemapResponse> {
+async function fetchTreemapData(
+    viewMode: ViewMode,
+    period: InsightTreemapPeriod,
+    metricMode: MetricMode,
+    signal?: AbortSignal,
+): Promise<InsightTreemapResponse> {
     const params = new URLSearchParams({
         period,
         viewMode,
         metricMode,
     });
-    const response = await fetch(`/api/insights/treemap?${params.toString()}`);
+    const response = await fetch(`/api/insights/treemap?${params.toString()}`, {
+        method: 'GET',
+        signal,
+        
+    });
     if (!response.ok) {
         const message = await response.text();
         throw new Error(message || `요청 실패: ${response.status}`);
     }
     return response.json() as Promise<InsightTreemapResponse>;
 }
-
 function getMetricValue(row: InsightTreemapVideoRow, mode: MetricMode): number {
     if (mode === 'views') return row.viewCount;
     if (mode === 'likes') return row.likeCount;
@@ -268,65 +286,6 @@ function getColorByPercent(percent: number): string {
     return TREEMAP_COLORS[3];
 }
 
-function parseClusterStep(input: string, metricMode: MetricMode): number | null {
-    const trimmed = input.trim();
-    if (!trimmed) return null;
-
-    const raw = trimmed.split(/\s+/)[0] ?? '';
-    const normalized = raw.toLowerCase().replace(/,/g, '').trim();
-
-    if (!normalized) return null;
-
-    if (metricMode === 'duration') {
-        if (/\d+분$/.test(normalized)) {
-            return Number.parseFloat(normalized.slice(0, -1).trim()) * 60;
-        }
-
-        if (/\d+초$/.test(normalized)) {
-            return Number.parseFloat(normalized.slice(0, -1).trim());
-        }
-    }
-
-    if (metricMode === 'views') {
-        if (/\d+(\.\d+)?k$/.test(normalized)) {
-            return Number.parseFloat(normalized.slice(0, -1)) * 1_000;
-        }
-        if (/\d+(\.\d+)?m$/.test(normalized)) {
-            return Number.parseFloat(normalized.slice(0, -1)) * 1_000_000;
-        }
-    }
-
-    if ((metricMode === 'likes' || metricMode === 'comments') && /개$/.test(normalized)) {
-        return Number.parseFloat(normalized.slice(0, -1));
-    }
-
-    const numeric = Number.parseFloat(normalized);
-    if (!Number.isFinite(numeric)) return null;
-
-    if (metricMode === 'duration') return numeric * 60;
-    return numeric;
-}
-
-function getClusterStepValue(input: string, metricMode: MetricMode): number | null {
-    const parsed = parseClusterStep(input, metricMode);
-    if (!Number.isFinite(parsed) || !parsed || parsed <= 0) return null;
-    return Math.floor(parsed);
-}
-
-function formatClusterStepInput(metricMode: MetricMode, step: number): string {
-    if (!Number.isFinite(step) || step <= 0) return '';
-
-    if (metricMode === 'duration') {
-        return `${Math.max(0, Math.round(step / 60)).toLocaleString()}분`;
-    }
-
-    return Math.round(step).toLocaleString();
-}
-
-function buildStepCutsFromValue(values: number[], step: number): number[] {
-    return buildStepBasedCuts(values, step);
-}
-
 function getClusterIndex(value: number, cuts: number[]): number {
     if (cuts.length === 0) return 0;
 
@@ -378,11 +337,10 @@ function getNiceStep(value: number): number {
     return stepBase * unit;
 }
 
-function buildDynamicStepPresets(values: number[], mode: MetricMode): number[] {
-    const numeric = [...new Set(values.filter((value) => Number.isFinite(value) && value >= 0))].sort((a, b) => a - b);
-    if (numeric.length <= 1) return [];
+function buildDynamicStepPresets(valuesSorted: number[], mode: MetricMode): number[] {
+    if (valuesSorted.length <= 1) return [];
 
-    const max = numeric[numeric.length - 1];
+    const max = valuesSorted[valuesSorted.length - 1];
     if (!Number.isFinite(max) || max <= 0) return [];
 
     const baseCountList = [3, 4, 5, 6, 8];
@@ -398,36 +356,22 @@ function buildDynamicStepPresets(values: number[], mode: MetricMode): number[] {
     });
 
     CLUSTER_PRESET_STEPS[mode].forEach((step) => {
-        candidateSet.add(step);
+        if (step > 0) candidateSet.add(Math.floor(step));
     });
 
     const rawSteps = [...candidateSet]
         .filter((step) => step > 0 && step < max)
-        .filter((step) => buildStepBasedCuts(numeric, step).length >= 2)
+        .filter((step) => buildStepBasedCuts(valuesSorted, step).length >= 2)
         .sort((a, b) => a - b);
 
     if (rawSteps.length === 0) return [];
 
     const filtered = rawSteps.filter((step, index, all) => {
         if (index === 0) return true;
-        return step / all[index - 1] >= 1.35;
+        return step > all[index - 1] * 1.35;
     });
 
     return filtered.slice(0, 6);
-}
-
-function buildClusterPresetSteps(values: number[], mode: MetricMode): { step: number; cuts: number[]; label: string; input: string }[] {
-    const metricValues = values.map((value) => Math.max(0, value));
-
-    return buildDynamicStepPresets(metricValues, mode).map((step) => {
-        const cuts = buildStepBasedCuts(metricValues, step);
-        return {
-            step,
-            cuts,
-            label: formatClusterStepLabel(mode, step),
-            input: formatClusterStepInput(mode, step),
-        };
-    });
 }
 
 function buildStepBasedCuts(values: number[], step: number): number[] {
@@ -444,10 +388,6 @@ function buildStepBasedCuts(values: number[], step: number): number[] {
     }
 
     return cuts;
-}
-
-function formatClusterStepLabel(mode: MetricMode, step: number): string {
-    return formatClusterValueByMode(mode, step);
 }
 
 function canTextFitInWidth(text: string, fontPx: number, width: number): boolean {
@@ -551,67 +491,6 @@ function fitMetricTextToCellWidthCached(
 
     treemapTextFitCache.set(key, result);
     return result;
-}
-
-function areCutsSame(a: number[], b: number[]): boolean {
-    if (a.length !== b.length) return false;
-
-    for (let i = 0; i < a.length; i += 1) {
-        if (a[i] !== b[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function getClusterInputPlaceholder(metricMode: MetricMode): string {
-    if (metricMode === 'views') {
-        return '직접 구간 입력 (예: 500,000 또는 500k / 1m)';
-    }
-
-    if (metricMode === 'likes' || metricMode === 'comments') {
-        return '직접 구간 입력 (예: 1,000 또는 1,000개)';
-    }
-
-    return '직접 구간 입력 (분 단위, 예: 5 또는 5분)';
-}
-
-function isGroupNode(node: TreemapNode): node is TreemapGroupNode {
-    return 'children' in node && Array.isArray(node.children);
-}
-
-function getNodeValue(node: TreemapNode): number {
-    if (isGroupNode(node) && node.children.length > 0) {
-        return node.value;
-    }
-    return node.value;
-}
-
-function normalizeTreemapNode(node: TreemapNode): TreemapNode | null {
-    if (isGroupNode(node)) {
-        const children: TreemapLeafNode[] = [];
-        for (const rawChild of node.children) {
-            const normalizedChild = normalizeTreemapNode(rawChild);
-            if (!normalizedChild || isGroupNode(normalizedChild)) continue;
-            children.push(normalizedChild);
-        }
-
-        if (children.length === 0) return null;
-
-        const nodeValue = children.reduce((acc, child) => acc + getNodeValue(child), 0);
-        if (!Number.isFinite(nodeValue) || nodeValue <= 0) return null;
-
-        return {
-            name: node.name,
-            children,
-            value: nodeValue,
-        };
-    }
-
-    if (!Number.isFinite(node.value) || node.value <= 0) return null;
-
-    return node;
 }
 
 function isLeafNode(node: TreemapNode | TreemapRootNode): node is TreemapLeafNode {
@@ -860,6 +739,7 @@ export default function InsightsClient() {
     }, [isMobile, isTablet]);
 
     const [chartSize, setChartSize] = useState<ChartDimensions>(() => getInitialChartSize(isMobile, isTablet));
+    const [, startTransition] = useTransition();
     const chartWidth = chartSize.width;
     const chartHeight = chartSize.height;
     const [tooltip, setTooltip] = useState<TreemapTooltipState | null>(null);
@@ -867,14 +747,16 @@ export default function InsightsClient() {
     const tooltipRafRef = useRef<number | null>(null);
     const layoutRafRef = useRef<number | null>(null);
     const chartAreaRef = useRef<HTMLDivElement>(null);
-
     const treemapQuery = useQuery({
         queryKey: ['insight-treemap', viewMode, period, metricMode],
-        queryFn: () => fetchTreemapData(viewMode, period, metricMode),
+        queryFn: ({ signal }) => fetchTreemapData(viewMode, period, metricMode, signal),
         enabled: !isAuthLoading && !!user,
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 20,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
         placeholderData: (previousData) => previousData,
+        retry: 1,
     });
 
     const periodOptionsForView = useMemo(() => {
@@ -899,48 +781,74 @@ export default function InsightsClient() {
     const rawRows = treemapQuery.data?.videos ?? [];
     const renderWidth = useMemo(() => Math.max(1, chartWidth), [chartWidth]);
 
-    const leafRowsWithMetric = useMemo(
-        () =>
-            rawRows.map((row) => ({
-                row,
-                metricRaw: getMetricValue(row, metricMode),
-                previousMetricRaw: getPreviousMetricValue(row, metricMode),
-            })),
-        [rawRows, metricMode],
-    );
+    const { leafRows, leafTotalMetric, leafMetricValuesSorted } = useMemo<LeafRowsData>(() => {
+    if (rawRows.length === 0) {
+        return {
+            leafRows: [],
+            leafTotalMetric: 0,
+            leafMetricValuesSorted: [],
+        };
+    }
 
-    const leafRows = useMemo(() => {
-        if (leafRowsWithMetric.length === 0) return [] as TreemapLeafNode[];
+    const isChangeMode = viewMode === 'change';
+    const rows: TreemapLeafNode[] = [];
+    let totalMetric = 0;
+    const metricValues: number[] = [];
 
-        const isChangeMode = viewMode === 'change';
-        const totalMetric = leafRowsWithMetric.reduce((acc, item) => acc + Math.max(item.metricRaw, 0), 0);
+    for (let i = 0; i < rawRows.length; i += 1) {
+        const row = rawRows[i];
+        const metricRaw = Math.max(getMetricValue(row, metricMode), 0);
+        const previousMetricRaw = getPreviousMetricValue(row, metricMode);
+        const rowPercent = isChangeMode ? calculateChangePercent(metricRaw, previousMetricRaw) : 0;
 
-        return leafRowsWithMetric
-            .map<TreemapLeafNode>((item) => {
-                const metricRaw = Math.max(item.metricRaw, 0);
-                const percent = isChangeMode ? calculateChangePercent(metricRaw, item.previousMetricRaw) : (totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0);
-                const percentText = isChangeMode ? formatNonNegativePercent(percent) : formatPercent(percent);
-                return {
-                    id: item.row.id,
-                    name: item.row.title,
-                    title: item.row.title,
-                    category: item.row.category,
-                    viewCount: item.row.viewCount,
-                    likeCount: item.row.likeCount,
-                    commentCount: item.row.commentCount,
-                    duration: item.row.duration,
-                    publishedAt: item.row.publishedAt,
-                    value: Math.max(metricRaw, 0.25),
-                    metricRaw,
-                    previousMetricRaw: item.previousMetricRaw,
-                    metricText: formatMetricText(metricMode, metricRaw),
-                    percent,
-                    percentText,
-                    color: getColorByPercent(percent),
-                };
-            })
-            .sort((a, b) => b.metricRaw - a.metricRaw);
-    }, [leafRowsWithMetric, metricMode, viewMode]);
+        rows.push({
+            id: row.id,
+            name: row.title,
+            title: row.title,
+            category: row.category,
+            viewCount: row.viewCount,
+            likeCount: row.likeCount,
+            commentCount: row.commentCount,
+            duration: row.duration,
+            publishedAt: row.publishedAt,
+            value: Math.max(metricRaw, 0.25),
+            metricRaw,
+            previousMetricRaw,
+            metricText: formatMetricText(metricMode, metricRaw),
+            percent: rowPercent,
+            percentText: isChangeMode ? formatNonNegativePercent(rowPercent) : '0%',
+            color: getColorByPercent(rowPercent),
+        });
+
+        totalMetric += metricRaw;
+        metricValues.push(metricRaw);
+    }
+
+    if (!isChangeMode) {
+        for (const row of rows) {
+            row.percent = totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0;
+            row.percentText = formatPercent(row.percent);
+            row.color = getColorByPercent(row.percent);
+        }
+    }
+
+    rows.sort((a, b) => b.metricRaw - a.metricRaw);
+
+    const sortedMetricValues = [...metricValues].sort((a, b) => a - b);
+    const leafMetricValuesSorted: number[] = [];
+    for (const value of sortedMetricValues) {
+        if (!Number.isFinite(value) || value < 0) continue;
+        if (leafMetricValuesSorted.length === 0 || leafMetricValuesSorted[leafMetricValuesSorted.length - 1] !== value) {
+            leafMetricValuesSorted.push(value);
+        }
+    }
+
+    return {
+        leafRows: rows,
+        leafTotalMetric: totalMetric,
+        leafMetricValuesSorted,
+    };
+}, [rawRows, metricMode, viewMode]);
 
     const chartConstraints = useMemo(
         () => (isMobile
@@ -950,7 +858,6 @@ export default function InsightsClient() {
                 : { minWidth: 420, minHeight: 360 }),
         [isMobile, isTablet],
     );
-
     useEffect(() => {
         const chartArea = chartAreaRef.current;
         if (!chartArea) return undefined;
@@ -1111,8 +1018,7 @@ export default function InsightsClient() {
     const clusterStepOptions = useMemo(() => {
         if (leafRows.length === 0) return [];
 
-        const values = leafRows.map((row) => row.metricRaw);
-        const dynamic = buildDynamicStepPresets(values, metricMode);
+        const dynamic = buildDynamicStepPresets(leafMetricValuesSorted, metricMode);
         const candidates = new Set<number>();
 
         CLUSTER_PRESET_STEPS[metricMode].forEach((step) => {
@@ -1130,9 +1036,7 @@ export default function InsightsClient() {
                 return step > all[index - 1];
             })
             .slice(0, 7);
-    }, [leafRows, metricMode]);
-
-    const leafTotalMetric = useMemo(() => leafRows.reduce((acc, item) => acc + item.metricRaw, 0), [leafRows]);
+    }, [leafMetricValuesSorted, metricMode]);
 
     useEffect(() => {
         if (clusterStep === null) return;
@@ -1146,8 +1050,7 @@ export default function InsightsClient() {
 
         if (clusterStep !== null && clusterStep > 0) {
             const isChangeMode = viewMode === 'change';
-            const values = leafRows.map((row) => row.metricRaw);
-            const cuts = buildStepBasedCuts(values, clusterStep);
+            const cuts = buildStepBasedCuts(leafMetricValuesSorted, clusterStep);
             const totalMetric = Math.max(leafTotalMetric, 0);
             const buckets = new Map<
                 number,
@@ -1248,27 +1151,10 @@ export default function InsightsClient() {
 
         return leafRows;
     }, [leafRows, viewMode, metricMode, clusterStep]);
-
-    const safeTreeData = useMemo<TreemapNode[]>(() => {
-        const normalized = treeData
-            .map((node) => normalizeTreemapNode(node))
-            .filter((node): node is TreemapNode => {
-                if (!node) return false;
-                if (isGroupNode(node)) {
-                    return node.children.length > 0;
-                }
-                return true;
-            });
-
-        if (normalized.length === 0) return [];
-
-        return normalized;
-    }, [treeData]);
-
-    const treemapCells = useMemo<TreemapCellLayout[]>(() => {
-        if (safeTreeData.length === 0) return [];
-        return buildTreemapLayout(safeTreeData, renderWidth, chartHeight);
-    }, [safeTreeData, renderWidth, chartHeight]);
+        const treemapCells = useMemo<TreemapCellLayout[]>(() => {
+        if (treeData.length === 0) return [];
+        return buildTreemapLayout(treeData, renderWidth, chartHeight);
+    }, [treeData, renderWidth, chartHeight]);
 
     const selectedCount = treemapQuery.data?.totalVideos ?? 0;
 
@@ -1292,13 +1178,38 @@ export default function InsightsClient() {
         setTooltipThrottled(null);
     }, [setTooltipThrottled]);
 
-    const handleResetFilters = () => {
-        setViewMode('all');
-        setMetricMode('views');
-        setPeriod('ALL');
-        setClusterStep(null);
-        treemapQuery.refetch();
-    };
+    const handleSetViewMode = useCallback((nextViewMode: ViewMode) => {
+        startTransition(() => {
+            setViewMode(nextViewMode);
+        });
+    }, [startTransition]);
+
+    const handleSetMetricMode = useCallback((nextMetricMode: MetricMode) => {
+        startTransition(() => {
+            setMetricMode(nextMetricMode);
+        });
+    }, [startTransition]);
+
+    const handleSetPeriod = useCallback((nextPeriod: InsightTreemapPeriod) => {
+        startTransition(() => {
+            setPeriod(nextPeriod);
+        });
+    }, [startTransition]);
+
+    const handleSetClusterStep = useCallback((nextClusterStep: number | null) => {
+        startTransition(() => {
+            setClusterStep(nextClusterStep);
+        });
+    }, [startTransition]);
+
+    const handleResetFilters = useCallback(() => {
+        startTransition(() => {
+            setViewMode('all');
+            setMetricMode('views');
+            setPeriod('ALL');
+            setClusterStep(null);
+        });
+    }, [startTransition]);
 
     if (!isAuthLoading && isAdmin) {
         return <AdminInsightsClient />;
@@ -1361,7 +1272,7 @@ export default function InsightsClient() {
                                                 key={option.value}
                                                 size="sm"
                                                 variant={viewMode === option.value ? 'default' : 'ghost'}
-                                                onClick={() => setViewMode(option.value)}
+                                                onClick={() => handleSetViewMode(option.value)}
                                                 className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                             >
                                                 {option.label}
@@ -1378,7 +1289,7 @@ export default function InsightsClient() {
                                                 key={option.value}
                                                 size="sm"
                                                 variant={metricMode === option.value ? 'default' : 'ghost'}
-                                                onClick={() => setMetricMode(option.value)}
+                                                onClick={() => handleSetMetricMode(option.value)}
                                                 className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                             >
                                                 {option.label}
@@ -1395,7 +1306,7 @@ export default function InsightsClient() {
                                                 key={option.value}
                                                 size="sm"
                                                 variant={period === option.value ? 'default' : 'ghost'}
-                                                onClick={() => setPeriod(option.value)}
+                                                onClick={() => handleSetPeriod(option.value)}
                                                 className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                             >
                                                 {option.label}
@@ -1410,7 +1321,7 @@ export default function InsightsClient() {
                                         <Button
                                             size="sm"
                                             variant={clusterStep === null ? 'default' : 'ghost'}
-                                            onClick={() => setClusterStep(null)}
+                                            onClick={() => handleSetClusterStep(null)}
                                             className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                         >
                                             전체
@@ -1420,7 +1331,7 @@ export default function InsightsClient() {
                                                 key={step}
                                                 size="sm"
                                                 variant={clusterStep === step ? 'default' : 'ghost'}
-                                                onClick={() => setClusterStep(step)}
+                                                onClick={() => handleSetClusterStep(step)}
                                                 className="rounded-none h-8 px-2.5 text-[11px] whitespace-nowrap"
                                             >
                                                 {formatClusterValueByMode(metricMode, step)}
@@ -1484,7 +1395,7 @@ export default function InsightsClient() {
                         style={{ minHeight: 0, minWidth: 0 }}
                     >
                         <div className="relative h-full w-full">
-                            {safeTreeData.length === 0 ? (
+                            {treeData.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
                             ) : (
                                 <TreemapTiles
@@ -1524,3 +1435,9 @@ export default function InsightsClient() {
         </div>
     );
 }
+
+
+
+
+
+
