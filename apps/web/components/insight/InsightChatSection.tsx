@@ -620,6 +620,7 @@ ConversationPreview.displayName = 'ConversationPreview';
 const InsightChatSectionComponent = () => {
     const initialConversationId = useMemo(() => makeConversationId(), []);
     const initialSeedConversationRef = useRef<string>(initialConversationId);
+    const suppressInitialSkeletonRef = useRef<Set<string>>(new Set([initialConversationId]));
     const [conversations, setConversations] = useState<ChatConversation[]>(() => [
         createInitialConversation(initialConversationId),
     ]);
@@ -640,7 +641,7 @@ const InsightChatSectionComponent = () => {
         () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
         [conversations],
     );
-    const shouldShowBootingSkeleton = activeConversation?.isBooting && activeConversation.id !== initialSeedConversationRef.current;
+    const shouldShowBootingSkeleton = activeConversation?.isBooting && !suppressInitialSkeletonRef.current.has(activeConversation.id);
 
     const visibleMessages = useMemo(() => {
         if (!activeConversation) return [];
@@ -680,6 +681,7 @@ const InsightChatSectionComponent = () => {
     const loadBootstrap = useCallback(async (conversationId: string): Promise<void> => {
         const requestId = (bootstrapRequestRef.current.get(conversationId) ?? 0) + 1;
         bootstrapRequestRef.current.set(conversationId, requestId);
+        const isSeedConversation = suppressInitialSkeletonRef.current.has(conversationId);
 
         updateConversation(conversationId, (prev) => ({
             ...prev,
@@ -742,6 +744,10 @@ const InsightChatSectionComponent = () => {
                     };
                 });
             });
+        } finally {
+            if (isSeedConversation) {
+                suppressInitialSkeletonRef.current.delete(conversationId);
+            }
         }
     }, [updateConversation]);
 
@@ -800,6 +806,9 @@ const InsightChatSectionComponent = () => {
             initialSeedConversationRef.current = restored.activeConversationId;
 
             const activeConversation = restored.conversations.find((conversation) => conversation.id === restored.activeConversationId) ?? restored.conversations[0];
+            if (activeConversation) {
+                suppressInitialSkeletonRef.current.add(activeConversation.id);
+            }
             if (!activeConversation || activeConversation.messages.length === 0) {
                 void loadBootstrap(activeConversation.id);
             }
@@ -808,6 +817,7 @@ const InsightChatSectionComponent = () => {
         }
 
         initialSeedConversationRef.current = initialConversationId;
+        suppressInitialSkeletonRef.current.add(initialConversationId);
         void loadBootstrap(initialConversationId);
     }, [hydrateFromStorage, initialConversationId, loadBootstrap]);
 
