@@ -1300,14 +1300,17 @@ export default function InsightsClient() {
         treemapQuery.refetch();
     };
 
-    if (isAuthLoading) {
-        return <InsightSkeleton />;
+    if (!isAuthLoading && isAdmin) {
+        return <AdminInsightsClient />;
     }
 
     if (isLoading && !canRender) {
         return <InsightSkeleton />;
     }
 
+    if (isAuthLoading) {
+        return null;
+    }
     if (treemapQuery.isError || !treemapQuery.data) {
         return (
             <div className="flex min-h-0 items-center justify-center p-6 h-full">
