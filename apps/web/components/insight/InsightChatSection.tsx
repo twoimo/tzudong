@@ -991,7 +991,7 @@ const InsightChatSectionComponent = () => {
                         <>
                             {activeConversation?.messages.length === 0 ? (
                                 <div className="min-h-[360px] flex items-center justify-center text-sm text-[#6b7280]">
-                                    메시지를 시작하려면 아래 입력창에서 질문을 입력해 주세요.
+                                    
                                 </div>
                             ) : (
                                 <>
@@ -1081,3 +1081,4 @@ const InsightChatSection = memo(InsightChatSectionComponent);
 InsightChatSection.displayName = 'InsightChatSection';
 
 export default InsightChatSection;
+
