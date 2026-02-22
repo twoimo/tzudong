@@ -1,15 +1,49 @@
 #!/bin/bash
 # Storage Migration Script: Supabase Cloud -> Self-Hosted
+set -euo pipefail
 
-CLOUD_URL="https://aqlcofblfxdrjhhdmarw.supabase.co"
-SELF_HOST_URL="http://localhost:8000"
-SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3NjkwNjU0MTcsImV4cCI6MTkyNjc0NTQxN30.h5POIDxJCNPTKV7RTMRUPzf9hyxogL0e9RFTFndX1z4"
+# Required settings are injected via environment variables.
+# Example:
+# CLOUD_URL=https://<project-ref>.supabase.co
+# PGHOST=<postgres-host>
+# PGUSER=<postgres-user>
+# PGPASSWORD=<postgres-password>
+# SERVICE_ROLE_KEY=<service-role-jwt>
+#
+# Optional:
+# SELF_HOST_URL=http://localhost:8000
+# PGPORT=5432
+# PGDATABASE=postgres
+
+CLOUD_URL="${CLOUD_URL:-}"
+SELF_HOST_URL="${SELF_HOST_URL:-http://localhost:8000}"
+SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-}}"
+PGHOST="${PGHOST:-}"
+PGPORT="${PGPORT:-5432}"
+PGUSER="${PGUSER:-}"
+PGPASSWORD="${PGPASSWORD:-}"
+PGDATABASE="${PGDATABASE:-postgres}"
+
+if [[ -z "${CLOUD_URL}" ]]; then
+    echo "CLOUD_URL is required."
+    exit 1
+fi
+
+if [[ -z "${SERVICE_ROLE_KEY}" ]]; then
+    echo "SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE_KEY) is required."
+    exit 1
+fi
+
+if [[ -z "${PGHOST}" || -z "${PGUSER}" || -z "${PGPASSWORD}" ]]; then
+    echo "PGHOST, PGUSER, and PGPASSWORD are required."
+    exit 1
+fi
 
 # Create temp directory
 mkdir -p /tmp/storage_migration
 
 # Get file list from Cloud database
-PGPASSWORD='H)M2MAprnII$vZKe' psql -h aws-1-ap-southeast-1.pooler.supabase.com -p 5432 -U postgres.aqlcofblfxdrjhhdmarw -d postgres -t -A -F '|' -c "SELECT bucket_id, name FROM storage.objects;" > /tmp/storage_migration/files.txt
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -t -A -F '|' -c "SELECT bucket_id, name FROM storage.objects;" > /tmp/storage_migration/files.txt
 
 # Download and upload each file
 while IFS='|' read -r bucket_id filename; do

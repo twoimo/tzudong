@@ -28,6 +28,8 @@ pids
 # ── 환경 변수 ─────────────────────────────────────────────
 .env
 .env.test
+.env.local
+*.env.local
 backend/.env
 
 # ── OS 메타데이터 ─────────────────────────────────────────
@@ -51,6 +53,9 @@ supabase/backup_db/
 supabase/.env*
 
 # ── 프로젝트 데이터 (대용량 / 자동 생성) ──────────────────
+backend/data/cookies.txt
+backend/restaurant-crawling/data/cookies.txt
+backend/restaurant-crawling/data/cookies.json
 backend/restaurant-crawling/data/*/frames
 backend/restaurant-crawling/data/*/video_cache
 backend/restaurant-crawling/data/*/temp_video
