@@ -1,6 +1,16 @@
-'use client';
+﻿'use client';
 
-import { type ReactNode, KeyboardEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    type ComponentPropsWithoutRef,
+    type KeyboardEvent,
+    type ReactNode,
+    memo,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { AlertCircle, Bot, Loader2, Send, User, PlusCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -374,14 +384,14 @@ function isOverviewBootstrapMessage(content: string): boolean {
 }
 
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
-    h1: ({ children }: { children: ReactNode }) => <h2 className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
-    h2: ({ children }: { children: ReactNode }) => <h3 className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
-    h3: ({ children }: { children: ReactNode }) => <h4 className="text-sm font-medium mb-1 mt-2.5 first:mt-0">{children}</h4>,
-    p: ({ children }: { children: ReactNode }) => <p className="whitespace-pre-wrap text-sm leading-6">{children}</p>,
-    ul: ({ children }: { children: ReactNode }) => <ul className="list-disc pl-5 my-2 space-y-1 text-sm leading-6">{children}</ul>,
-    ol: ({ children }: { children: ReactNode }) => <ol className="list-decimal pl-5 my-2 space-y-1 text-sm leading-6">{children}</ol>,
-    li: ({ children }: { children: ReactNode }) => <li className="text-sm leading-6">{children}</li>,
-    a: ({ children, href }: { children: ReactNode; href?: string }) => {
+    h1: ({ children, ...props }: ComponentPropsWithoutRef<'h1'>) => <h2 {...props} className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
+    h2: ({ children, ...props }: ComponentPropsWithoutRef<'h2'>) => <h3 {...props} className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
+    h3: ({ children, ...props }: ComponentPropsWithoutRef<'h3'>) => <h4 {...props} className="text-sm font-medium mb-1 mt-2.5 first:mt-0">{children}</h4>,
+    p: ({ children, ...props }: ComponentPropsWithoutRef<'p'>) => <p {...props} className="whitespace-pre-wrap text-sm leading-6">{children}</p>,
+    ul: ({ children, ...props }: ComponentPropsWithoutRef<'ul'>) => <ul {...props} className="list-disc pl-5 my-2 space-y-1 text-sm leading-6">{children}</ul>,
+    ol: ({ children, ...props }: ComponentPropsWithoutRef<'ol'>) => <ol {...props} className="list-decimal pl-5 my-2 space-y-1 text-sm leading-6">{children}</ol>,
+    li: ({ children, ...props }: ComponentPropsWithoutRef<'li'>) => <li {...props} className="text-sm leading-6">{children}</li>,
+    a: ({ children, href, ...props }: ComponentPropsWithoutRef<'a'>) => {
         const safeHref = href ?? '';
         const isExternal = /^https?:/i.test(safeHref);
         return (
@@ -389,44 +399,45 @@ const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
                 href={safeHref || '#'}
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
+                {...props}
                 className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
             >
                 {children}
             </a>
         );
     },
-    table: ({ children }: { children: ReactNode }) => (
+    table: ({ children, ...props }: ComponentPropsWithoutRef<'table'>) => (
         <div className="my-2 overflow-x-auto">
-            <table className="w-full text-sm border-collapse border border-[#e5e7eb]">{children}</table>
+            <table {...props} className="w-full text-sm border-collapse border border-[#e5e7eb]">{children}</table>
         </div>
     ),
-    thead: ({ children }: { children: ReactNode }) => <thead className="bg-[#f9fafb]">{children}</thead>,
-    th: ({ children }: { children: ReactNode }) => <th className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
-    td: ({ children }: { children: ReactNode }) => <td className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
-    blockquote: ({ children }: { children: ReactNode }) => (
-        <blockquote className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280]">
+    thead: ({ children, ...props }: ComponentPropsWithoutRef<'thead'>) => <thead {...props} className="bg-[#f9fafb]">{children}</thead>,
+    th: ({ children, ...props }: ComponentPropsWithoutRef<'th'>) => <th {...props} className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
+    td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => <td {...props} className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
+    blockquote: ({ children, ...props }: ComponentPropsWithoutRef<'blockquote'>) => (
+        <blockquote {...props} className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280]">
             {children}
         </blockquote>
     ),
-    pre: ({ children }: { children: ReactNode }) => (
-        <pre className="overflow-x-auto rounded-md bg-[#f3f4f6] p-3 my-2 text-sm">{children}</pre>
+    pre: ({ children, ...props }: ComponentPropsWithoutRef<'pre'>) => (
+        <pre {...props} className="overflow-x-auto rounded-md bg-[#f3f4f6] p-3 my-2 text-sm">{children}</pre>
     ),
-    code: ({ children }: { children: ReactNode }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-xs">{children}</code>,
+    code: ({ children, ...props }: ComponentPropsWithoutRef<'code'>) => <code {...props} className="rounded bg-[#f3f4f6] px-1 py-0.5 text-xs">{children}</code>,
 };
 
 const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
-    h1: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
-    h2: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
-    h3: ({ children }: { children: ReactNode }) => <span className="font-medium">{children}</span>,
-    h4: ({ children }: { children: ReactNode }) => <span className="font-medium">{children}</span>,
-    p: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-    em: ({ children }: { children: ReactNode }) => <span className="italic">{children}</span>,
-    strong: ({ children }: { children: ReactNode }) => <span className="font-semibold">{children}</span>,
-    code: ({ children }: { children: ReactNode }) => <code className="rounded bg-[#f3f4f6] px-1 py-0.5 text-[11px]">{children}</code>,
-    ul: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
-    ol: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
-    li: ({ children }: { children: ReactNode }) => <span className="inline">{children}</span>,
-    a: ({ children, href }: { children: ReactNode; href?: string }) => {
+    h1: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="font-semibold">{children}</span>,
+    h2: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="font-semibold">{children}</span>,
+    h3: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="font-medium">{children}</span>,
+    h4: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="font-medium">{children}</span>,
+    p: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props}>{children}</span>,
+    em: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="italic">{children}</span>,
+    strong: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="font-semibold">{children}</span>,
+    code: ({ children, ...props }: ComponentPropsWithoutRef<'code'>) => <code {...props} className="rounded bg-[#f3f4f6] px-1 py-0.5 text-[11px]">{children}</code>,
+    ul: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="inline">{children}</span>,
+    ol: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="inline">{children}</span>,
+    li: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="inline">{children}</span>,
+    a: ({ children, href, ...props }: ComponentPropsWithoutRef<'a'>) => {
         const safeHref = href ?? '';
         const isExternal = /^https?:/i.test(safeHref);
         return (
@@ -434,15 +445,15 @@ const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
                 href={safeHref || '#'}
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
+                {...props}
                 className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
             >
                 {children}
             </a>
         );
     },
-    blockquote: ({ children }: { children: ReactNode }) => <span className="text-[#6b7280]">{children}</span>,
+    blockquote: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="text-[#6b7280]">{children}</span>,
 };
-
 
 const MARKDOWN_HINT_PATTERN = /(?:^#{1,6}\s+|^\s*[-*+]\s+|^\s*\d+\.\s+|`{3}|`[^`]+`|\*\*|__|\[[^\]]+\]\([^)]+\)|^>\s+|\|[^\n]*\|)/m;
 const MARKDOWN_HINT_CACHE_LIMIT = 300;
@@ -1097,4 +1108,6 @@ const InsightChatSection = memo(InsightChatSectionComponent);
 InsightChatSection.displayName = 'InsightChatSection';
 
 export default InsightChatSection;
+
+
 
