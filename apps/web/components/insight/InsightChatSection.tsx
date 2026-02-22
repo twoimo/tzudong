@@ -11,13 +11,13 @@ import {
     useRef,
     useState,
 } from 'react';
-import { AlertCircle, Bot, Loader2, Send, User, PlusCircle } from 'lucide-react';
+import { AlertCircle, Bot, Loader2, Send, User, PlusCircle, Settings, Eye, EyeOff, ChevronDown, Check, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource } from '@/types/insight';
+import type { AdminInsightChatBootstrapResponse, AdminInsightChatResponse, InsightChatSource, LlmProvider, LlmModelOption } from '@/types/insight';
 
 type ChatMessage = {
     id: string;
@@ -38,7 +38,7 @@ type ChatConversation = {
     bootstrapFailed: boolean;
 };
 
-const EMPTY_TITLE = '새 대화';
+const EMPTY_TITLE = '새로운 대화';
 const CHAT_BOOTSTRAP_TTL_MS = 4 * 60 * 1000;
 const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
 const CHAT_REQUEST_TIMEOUT_MS = 18_000;
@@ -50,6 +50,38 @@ const MAX_MESSAGES_PER_CONVERSATION = 220;
 const MESSAGE_WINDOW_INITIAL = 80;
 const MESSAGE_WINDOW_BATCH = 80;
 const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
+const LLM_KEYS_STORAGE_KEY = 'tzudong-admin-llm-keys';
+const LLM_MODEL_STORAGE_KEY = 'tzudong-admin-llm-active-model';
+const LLM_ENABLED_MODELS_KEY = 'tzudong-admin-llm-enabled-models';
+
+const LLM_MODELS: LlmModelOption[] = [
+    // Google Gemini
+    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', provider: 'gemini' },
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', provider: 'gemini' },
+    // OpenAI
+    { id: 'gpt-5.3', name: 'GPT-5.3', provider: 'openai' },
+    { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+    // Anthropic
+    { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', provider: 'anthropic' },
+    { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'anthropic' },
+];
+
+const LLM_DEFAULT_ENABLED = new Set([
+    'gemini-3.1-pro-preview',
+    'gemini-3-flash-preview',
+    'gpt-5.3',
+    'gpt-4o',
+    'claude-opus-4-6',
+    'claude-sonnet-4-6',
+]);
+
+const LLM_PROVIDER_LABELS: Record<LlmProvider, string> = {
+    gemini: 'Google Gemini',
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+};
+
+type StoredLlmKeys = Partial<Record<LlmProvider, string>>;
 
 type CachedEntry<T> = {
     data: T;
@@ -105,8 +137,8 @@ function shortText(input: string, max: number): string {
 }
 
 function makeConversationTitle(content: string): string {
-    const shortened = shortText(content, 24);
-    return shortened || '새 대화';
+    const shortened = shortText(content, 40);
+    return shortened || '새로운 대화';
 }
 
 function normalizeCacheKey(value: string): string {
@@ -209,16 +241,22 @@ async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> 
     }
 }
 
-async function postChatMessage(message: string): Promise<AdminInsightChatResponse> {
+async function postChatMessage(
+    message: string,
+    llmConfig?: { provider: LlmProvider; model: string; apiKey: string },
+): Promise<AdminInsightChatResponse> {
     const normalizedMessage = normalizeCacheKey(message);
     const now = Date.now();
-    const cached = chatResponseCache.get(normalizedMessage);
-    if (cached && cached.expiresAt > now) {
-        return cached.data;
+
+    if (!llmConfig) {
+        const cached = chatResponseCache.get(normalizedMessage);
+        if (cached && cached.expiresAt > now) {
+            return cached.data;
+        }
     }
 
     const inFlight = inFlightChatRequest.get(normalizedMessage);
-    if (inFlight) return inFlight;
+    if (inFlight && !llmConfig) return inFlight;
 
     const request = (async () => {
         let lastError: unknown;
@@ -227,7 +265,10 @@ async function postChatMessage(message: string): Promise<AdminInsightChatRespons
                 return await fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message }),
+                    body: JSON.stringify({
+                        message,
+                        ...(llmConfig ? { provider: llmConfig.provider, model: llmConfig.model, apiKey: llmConfig.apiKey } : {}),
+                    }),
                 }, CHAT_REQUEST_TIMEOUT_MS);
             } catch (error) {
                 lastError = error;
@@ -249,19 +290,77 @@ async function postChatMessage(message: string): Promise<AdminInsightChatRespons
         throw new Error('메시지를 전송하지 못했습니다');
     })();
 
-    inFlightChatRequest.set(normalizedMessage, request);
+    if (!llmConfig) {
+        inFlightChatRequest.set(normalizedMessage, request);
+    }
 
     try {
         const response = await request;
-        chatResponseCache.set(normalizedMessage, {
-            data: response,
-            expiresAt: now + CHAT_RESPONSE_TTL_MS,
-        });
-        trimCacheSize(chatResponseCache, CHAT_REQUEST_CACHE_LIMIT);
+        if (!llmConfig) {
+            chatResponseCache.set(normalizedMessage, {
+                data: response,
+                expiresAt: now + CHAT_RESPONSE_TTL_MS,
+            });
+            trimCacheSize(chatResponseCache, CHAT_REQUEST_CACHE_LIMIT);
+        }
         return response;
     } finally {
-        inFlightChatRequest.delete(normalizedMessage);
+        if (!llmConfig) {
+            inFlightChatRequest.delete(normalizedMessage);
+        }
     }
+}
+
+async function postStreamChat(
+    message: string,
+    llmConfig: { provider: LlmProvider; model: string; apiKey: string },
+    onToken: (token: string) => void,
+): Promise<AdminInsightChatResponse | null> {
+    const resp = await fetch('/api/admin/insight/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            message,
+            provider: llmConfig.provider,
+            model: llmConfig.model,
+            apiKey: llmConfig.apiKey,
+        }),
+    });
+
+    if (!resp.ok) throw new Error('스트리밍 요청 실패');
+
+    const contentType = resp.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+        return resp.json() as Promise<AdminInsightChatResponse>;
+    }
+
+    if (!resp.body) throw new Error('스트리밍 본문 없음');
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = line.slice(6).trim();
+            if (!payload || payload === '[DONE]') continue;
+            try {
+                const parsed = JSON.parse(payload) as { text?: string; error?: string };
+                if (parsed.text) onToken(parsed.text);
+            } catch { /* skip */ }
+        }
+    }
+
+    return null;
 }
 
 function mapSources(rawSources: InsightChatSource[] | undefined): InsightChatSource[] {
@@ -568,13 +667,15 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
             >
                 {isUser ? (
                     <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
-                ) : (
+                ) : message.content ? (
                     <MarkdownRenderer
                         content={message.content}
                         components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
                         className="text-sm leading-6"
                         plainTextClassName="whitespace-pre-wrap text-sm leading-6"
                     />
+                ) : (
+                    <span className="text-sm text-[#6b7280]">...</span>
                 )}
                 {message.meta?.source ? (
                     <p className="text-[11px] text-[#6b7280] mt-1.5">
@@ -614,6 +715,97 @@ const InsightChatSectionComponent = () => {
     const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const bootstrapRequestRef = useRef(new Map<string, number>());
+
+    const [llmKeys, setLlmKeys] = useState<StoredLlmKeys>({});
+    const [activeModelId, setActiveModelId] = useState<string>('gemini-3-flash-preview');
+    const [enabledModelIds, setEnabledModelIds] = useState<Set<string>>(LLM_DEFAULT_ENABLED);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
+    const modelDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(LLM_KEYS_STORAGE_KEY);
+            if (raw) setLlmKeys(JSON.parse(raw) as StoredLlmKeys);
+            const savedModel = localStorage.getItem(LLM_MODEL_STORAGE_KEY);
+            if (savedModel && LLM_MODELS.some((m) => m.id === savedModel)) setActiveModelId(savedModel);
+            const savedEnabled = localStorage.getItem(LLM_ENABLED_MODELS_KEY);
+            if (savedEnabled) {
+                const parsed = JSON.parse(savedEnabled) as string[];
+                if (Array.isArray(parsed)) setEnabledModelIds(new Set(parsed));
+            }
+        } catch { /* ignore */ }
+
+        // 서버 환경변수 Gemini 키 로드
+        void (async () => {
+            try {
+                const resp = await fetch('/api/admin/insight/llm-config');
+                if (!resp.ok) return;
+                const data = (await resp.json()) as { geminiEnvKey: string | null };
+                if (data.geminiEnvKey) {
+                    setLlmKeys((prev) => {
+                        if (prev.gemini) return prev; // 사용자 설정 우선
+                        const next = { ...prev, gemini: data.geminiEnvKey! };
+                        return next;
+                    });
+                }
+            } catch { /* ignore */ }
+        })();
+    }, []);
+
+    const saveLlmKey = useCallback((provider: LlmProvider, key: string) => {
+        setLlmKeys((prev) => {
+            const next = { ...prev, [provider]: key.trim() || undefined };
+            if (!key.trim()) delete next[provider];
+            try { localStorage.setItem(LLM_KEYS_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+            return next;
+        });
+    }, []);
+
+    const toggleModel = useCallback((modelId: string) => {
+        setEnabledModelIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(modelId)) {
+                next.delete(modelId);
+            } else {
+                next.add(modelId);
+            }
+            try { localStorage.setItem(LLM_ENABLED_MODELS_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+            return next;
+        });
+    }, []);
+
+    const selectModel = useCallback((modelId: string) => {
+        setActiveModelId(modelId);
+        setShowModelDropdown(false);
+        try { localStorage.setItem(LLM_MODEL_STORAGE_KEY, modelId); } catch { /* ignore */ }
+    }, []);
+
+    const activeModel = useMemo(() => LLM_MODELS.find((m) => m.id === activeModelId) ?? LLM_MODELS[0], [activeModelId]);
+    const activeProviderKey = llmKeys[activeModel.provider] || '';
+
+    const availableModels = useMemo(() => {
+        return LLM_MODELS.filter((m) => enabledModelIds.has(m.id)).map((model) => ({
+            ...model,
+            hasKey: Boolean(llmKeys[model.provider]),
+        }));
+    }, [llmKeys, enabledModelIds]);
+
+    const currentLlmConfig = useMemo(() => {
+        if (!activeProviderKey) return undefined;
+        return { provider: activeModel.provider, model: activeModel.id, apiKey: activeProviderKey };
+    }, [activeModel, activeProviderKey]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
+                setShowModelDropdown(false);
+            }
+        };
+        if (showModelDropdown) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showModelDropdown]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -777,6 +969,16 @@ const InsightChatSectionComponent = () => {
         });
     }, [updateConversation]);
 
+    const updateMessageContent = useCallback((conversationId: string, messageId: string, updater: (prev: string) => string) => {
+        updateConversation(conversationId, (prev) => ({
+            ...prev,
+            messages: prev.messages.map((m) =>
+                m.id === messageId ? { ...m, content: updater(m.content) } : m,
+            ),
+            updatedAt: Date.now(),
+        }));
+    }, [updateConversation]);
+
     useEffect(() => {
         const restored = hydrateFromStorage();
         if (restored) {
@@ -816,6 +1018,22 @@ const InsightChatSectionComponent = () => {
         });
     }, []);
 
+    const handleDeleteConversation = useCallback((conversationId: string) => {
+        const remaining = conversations.filter((c) => c.id !== conversationId);
+        if (remaining.length === 0) {
+            createConversation();
+        }
+        setConversations((prev) => {
+            const next = prev.filter((c) => c.id !== conversationId);
+            return next.length > 0 ? next : prev;
+        });
+        if (activeConversationId === conversationId) {
+            if (remaining.length > 0) {
+                setActiveConversationId(remaining[0].id);
+            }
+        }
+    }, [activeConversationId, conversations, createConversation]);
+
     const handleNewConversation = useCallback(() => {
         createConversation();
         window.requestAnimationFrame(() => {
@@ -852,18 +1070,41 @@ const InsightChatSectionComponent = () => {
         setInputValue('');
         setSendingConversationId(activeConversation.id);
 
+        const convId = activeConversation.id;
+
         try {
-            const response = await postChatMessage(content);
-            appendMessage(activeConversation.id, {
-                id: makeId('assistant'),
-                role: 'assistant',
-                content: response.content,
-                sources: mapSources(response.sources),
-                createdAt: new Date(),
-                meta: response.meta,
-            });
+            if (currentLlmConfig) {
+                const assistantId = makeId('assistant');
+                appendMessage(convId, {
+                    id: assistantId,
+                    role: 'assistant',
+                    content: '',
+                    createdAt: new Date(),
+                    meta: { source: currentLlmConfig.provider as 'gemini' | 'openai' | 'anthropic', model: currentLlmConfig.model },
+                });
+
+                const localResponse = await postStreamChat(
+                    content,
+                    currentLlmConfig,
+                    (token) => updateMessageContent(convId, assistantId, (prev) => prev + token),
+                );
+
+                if (localResponse) {
+                    updateMessageContent(convId, assistantId, () => localResponse.content);
+                }
+            } else {
+                const response = await postChatMessage(content);
+                appendMessage(convId, {
+                    id: makeId('assistant'),
+                    role: 'assistant',
+                    content: response.content,
+                    sources: mapSources(response.sources),
+                    createdAt: new Date(),
+                    meta: response.meta,
+                });
+            }
         } catch {
-            appendMessage(activeConversation.id, {
+            appendMessage(convId, {
                 id: makeId('assistant'),
                 role: 'assistant',
                 content: '응답을 전송하지 못했습니다. 잠시 뒤 다시 시도해 주세요.',
@@ -877,7 +1118,7 @@ const InsightChatSectionComponent = () => {
             setSendingConversationId(null);
             inputRef.current?.focus();
         }
-    }, [activeConversation, appendMessage, inputValue, sendingConversationId]);
+    }, [activeConversation, appendMessage, updateMessageContent, inputValue, sendingConversationId, currentLlmConfig]);
 
     const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -892,53 +1133,158 @@ const InsightChatSectionComponent = () => {
         <section className="h-full min-h-0 flex overflow-hidden bg-white border border-[#e5e7eb]">
             <aside className="w-[292px] min-w-[240px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col">
                 <div className="p-3 border-b border-[#e5e7eb]">
-                    <Button
-                        type="button"
-                        size="sm"
-                        className="mt-2 h-9 w-full bg-[#111827] text-white hover:bg-[#27272a]"
-                        onClick={handleNewConversation}
-                    >
-                        <PlusCircle className="h-4 w-4 mr-1.5" />
-                        새 대화 시작
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            size="sm"
+                            className="mt-2 h-9 flex-1 bg-[#111827] text-white hover:bg-[#27272a]"
+                            onClick={handleNewConversation}
+                        >
+                            <PlusCircle className="h-4 w-4 mr-1.5" />
+                            새로운 대화
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className={cn('mt-2 h-9 w-9 p-0 border-[#e5e7eb]', showSettings && 'bg-[#f3f4f6]')}
+                            onClick={() => setShowSettings((prev) => !prev)}
+                            title="LLM 설정"
+                        >
+                            <Settings className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
-                    {conversationList.length === 0 ? (
-                        <p className="px-2 py-10 text-sm text-[#6b7280] text-center">새 대화를 준비 중입니다</p>
-                    ) : (
-                        conversationList.map((conversation) => {
-                            const isActive = conversation.id === activeConversationId;
-                            const latestMessage = conversation.messages.at(-1);
-                            const preview = latestMessage
-                                ? latestMessage.content
-                                : conversation.bootstrapFailed
-                                    ? '연결 실패. 새로고침 필요'
-                                    : '메시지 로딩 준비 중';
-
+                {showSettings ? (
+                    <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-4">
+                        <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">API 키 설정</p>
+                        {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
+                            const isVisible = keyVisibility[provider] ?? false;
                             return (
-                                <button
-                                    key={conversation.id}
-                                    type="button"
-                                    onClick={() => {
-                                        handleSelectConversation(conversation.id);
-                                    }}
-                                    className={cn(
-                                        'w-full text-left px-3 py-2 rounded-lg border',
-                                        isActive
-                                            ? 'border-[#fb7185] bg-white'
-                                            : 'border-transparent hover:border-[#e5e7eb] hover:bg-white',
-                                    )}
-                                >
-                                    <p className="font-medium text-sm text-[#111827] truncate">{conversation.title}</p>
-                                    <div className="mt-1">
-                                        <ConversationPreview content={preview} />
+                                <div key={provider} className="space-y-1.5">
+                                    <label className="text-xs font-medium text-[#374151]">
+                                        {LLM_PROVIDER_LABELS[provider]}
+                                    </label>
+                                    <div className="flex gap-1">
+                                        <input
+                                            type={isVisible ? 'text' : 'password'}
+                                            placeholder="API Key"
+                                            value={llmKeys[provider] ?? ''}
+                                            onChange={(e) => saveLlmKey(provider, e.target.value)}
+                                            className="flex-1 h-8 px-2 text-xs border border-[#e5e7eb] rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#f87171] font-mono"
+                                        />
+                                        <button
+                                            type="button"
+                                            className="h-8 w-8 grid place-items-center border border-[#e5e7eb] rounded-md hover:bg-[#f3f4f6]"
+                                            onClick={() => setKeyVisibility((prev) => ({ ...prev, [provider]: !isVisible }))}
+                                            title={isVisible ? '숨기기' : '보기'}
+                                        >
+                                            {isVisible ? <EyeOff className="h-3 w-3 text-[#6b7280]" /> : <Eye className="h-3 w-3 text-[#6b7280]" />}
+                                        </button>
                                     </div>
-                                </button>
+                                    {llmKeys[provider] ? (
+                                        <p className="text-[10px] text-emerald-600">키 설정됨</p>
+                                    ) : (
+                                        <p className="text-[10px] text-[#9ca3af]">
+                                            {provider === 'gemini' ? '서버 키 로드 중...' : '미설정'}
+                                        </p>
+                                    )}
+                                </div>
                             );
-                        })
-                    )}
-                </div>
+                        })}
+
+                        <div className="pt-3 border-t border-[#e5e7eb] space-y-2">
+                            <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">모델 활성화</p>
+                            {LLM_MODELS.map((model) => {
+                                const isEnabled = enabledModelIds.has(model.id);
+                                return (
+                                    <button
+                                        key={model.id}
+                                        type="button"
+                                        onClick={() => toggleModel(model.id)}
+                                        className={cn(
+                                            'w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-xs transition-colors',
+                                            isEnabled
+                                                ? 'border-emerald-200 bg-[#f0fdf4] text-[#111827]'
+                                                : 'border-[#e5e7eb] bg-[#f9fafb] text-[#9ca3af]',
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className={cn(
+                                                'h-4 w-4 rounded border flex items-center justify-center transition-colors',
+                                                isEnabled ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-[#d1d5db]',
+                                            )}>
+                                                {isEnabled ? <Check className="h-2.5 w-2.5 text-white" /> : null}
+                                            </div>
+                                            <span>{model.name}</span>
+                                        </div>
+                                        <span className="text-[10px] text-[#9ca3af]">{LLM_PROVIDER_LABELS[model.provider]}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="pt-2 border-t border-[#e5e7eb]">
+                            <p className="text-[10px] text-[#9ca3af] leading-relaxed">
+                                API 키는 브라우저에만 저장됩니다.
+                                활성화된 모델 중 키가 설정된 모델만 선택 가능합니다.
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
+                        {conversationList.length === 0 ? (
+                            <p className="px-2 py-10 text-sm text-[#6b7280] text-center">새로운 대화를 준비 중입니다</p>
+                        ) : (
+                            conversationList.map((conversation) => {
+                                const isActive = conversation.id === activeConversationId;
+                                const userMsg = conversation.messages.find((m) => m.role === 'user');
+                                const label = conversation.title !== EMPTY_TITLE
+                                    ? conversation.title
+                                    : userMsg
+                                        ? shortText(userMsg.content, 30)
+                                        : conversation.bootstrapFailed
+                                            ? '연결 실패'
+                                            : '새로운 대화';
+
+                                return (
+                                    <div
+                                        key={conversation.id}
+                                        className={cn(
+                                            'group relative flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer',
+                                            isActive
+                                                ? 'border-[#fb7185] bg-white'
+                                                : 'border-transparent hover:border-[#e5e7eb] hover:bg-white',
+                                        )}
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSelectConversation(conversation.id)}
+                                            className="flex-1 min-w-0 text-left"
+                                        >
+                                            <p className={cn(
+                                                'text-sm truncate pr-5',
+                                                isActive ? 'font-semibold text-[#111827]' : 'font-medium text-[#374151]',
+                                            )}>{label}</p>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteConversation(conversation.id);
+                                            }}
+                                            className="absolute top-1/2 -translate-y-1/2 right-2 h-6 w-6 grid place-items-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#fee2e2] transition-opacity"
+                                            title="대화 삭제"
+                                        >
+                                            <Trash2 className="h-3 w-3 text-[#ef4444]" />
+                                        </button>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
             </aside>
 
             <section className="flex-1 flex flex-col min-h-0">
@@ -959,7 +1305,7 @@ const InsightChatSectionComponent = () => {
                         <>
                             {activeConversation?.messages.length === 0 ? (
                                 <div className="min-h-[360px] flex items-center justify-center text-sm text-[#6b7280]">
-                                    
+
                                 </div>
                             ) : (
                                 <>
@@ -981,16 +1327,13 @@ const InsightChatSectionComponent = () => {
                                 </>
                             )}
 
-                            {isSending ? (
+                            {isSending && !currentLlmConfig ? (
                                 <div className="flex gap-2.5 mb-3">
                                     <div className="h-8 w-8 rounded-full grid place-items-center text-white text-xs bg-[#111827]">
                                         <Bot className="h-3.5 w-3.5" />
                                     </div>
                                     <div className="max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb]">
-                                        <div className="flex items-center gap-2 text-[#6b7280]">
-                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                            분석 중...
-                                        </div>
+                                        <span className="text-sm text-[#6b7280]">...</span>
                                     </div>
                                 </div>
                             ) : null}
@@ -1001,7 +1344,57 @@ const InsightChatSectionComponent = () => {
                 </div>
 
                 <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
-                    <div className="mb-2 flex flex-wrap gap-2">
+                    <div className="mb-2 flex flex-wrap gap-2 items-center">
+                        <div ref={modelDropdownRef} className="relative">
+                            <button
+                                type="button"
+                                className={cn(
+                                    'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white',
+                                    activeProviderKey
+                                        ? 'border-emerald-300 text-emerald-700'
+                                        : 'border-[#fca5a5] text-[#ef4444]',
+                                )}
+                                onClick={() => setShowModelDropdown((prev) => !prev)}
+                            >
+                                <span className="font-medium">{activeModel.name}</span>
+                                <ChevronDown className="h-3 w-3" />
+                            </button>
+
+                            {showModelDropdown ? (
+                                <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                    {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
+                                        const providerModels = availableModels.filter((m) => m.provider === provider);
+                                        return (
+                                            <div key={provider}>
+                                                <p className="px-3 py-1.5 text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider">
+                                                    {LLM_PROVIDER_LABELS[provider]}
+                                                    {!llmKeys[provider] && <span className="ml-1 text-[#fca5a5]">키 미설정</span>}
+                                                </p>
+                                                {providerModels.map((model) => (
+                                                    <button
+                                                        key={model.id}
+                                                        type="button"
+                                                        disabled={!model.hasKey}
+                                                        className={cn(
+                                                            'w-full text-left px-3 py-2 text-xs flex items-center justify-between',
+                                                            model.hasKey
+                                                                ? 'hover:bg-[#f9fafb] text-[#111827]'
+                                                                : 'text-[#d1d5db] cursor-not-allowed',
+                                                            model.id === activeModelId && 'bg-[#f0fdf4]',
+                                                        )}
+                                                        onClick={() => selectModel(model.id)}
+                                                    >
+                                                        <span>{model.name}</span>
+                                                        {model.id === activeModelId ? <Check className="h-3 w-3 text-emerald-600" /> : null}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : null}
+                        </div>
+
                         {SUGGESTED_PROMPTS.map((prompt) => (
                             <button
                                 key={prompt}
@@ -1041,7 +1434,7 @@ const InsightChatSectionComponent = () => {
                     </form>
                 </div>
             </section>
-        </section>
+        </section >
     );
 };
 
@@ -1049,7 +1442,3 @@ const InsightChatSection = memo(InsightChatSectionComponent);
 InsightChatSection.displayName = 'InsightChatSection';
 
 export default InsightChatSection;
-
-
-
-
