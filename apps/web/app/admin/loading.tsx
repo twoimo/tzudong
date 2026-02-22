@@ -1,15 +1,15 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { GlobalLoader } from '@/components/ui/global-loader';
 
 /**
  * [PERF] 관리자 페이지 로딩 UI - 즉각적 페이지 전환
  */
 export default function AdminLoading() {
-    const pathname = usePathname() ?? '';
+    const pathname = usePathname();
 
-    if (pathname.startsWith('/admin/insight')) {
+    if (!pathname || pathname.startsWith('/admin/insight')) {
         return null;
     }
 
