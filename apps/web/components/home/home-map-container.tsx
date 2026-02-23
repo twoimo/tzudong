@@ -13,7 +13,6 @@ import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
-const MapView = lazy(() => import("@/components/map/MapView"));
 const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
 
 interface HomeMapContainerProps {
@@ -44,21 +43,47 @@ interface HomeMapContainerProps {
 }
 
 // ========== [PERFORMANCE] 상수 호이스팅 - 컴포넌트 외부로 이동하여 리렌더링 시 재선언 방지 ==========
-const INITIAL_HEIGHT = 65;
+const INITIAL_HEIGHT = 50;
 const HEADER_OFFSET = 80; // 헤더(64px) + 여유(16px)
-const MIN_DRAG_HEIGHT = 5;
-const MIN_SHEET_HEIGHT = 20;
-const CLOSE_THRESHOLD = 15;
-const SWIPE_VELOCITY_THRESHOLD = 0.5;
+const HALF_SHEET_HEIGHT = 50;
+const SWIPE_VELOCITY_THRESHOLD = 0.22;
+const SWIPE_VELOCITY_CLOSE_THRESHOLD = 0.26;
+const SWIPE_VELOCITY_OPEN_THRESHOLD = 0.24;
 const CONTENT_TOP_EPSILON = 2;
-const CONTENT_DRAG_START_THRESHOLD = 16;
-const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
-const HORIZONTAL_SWIPE_THRESHOLD = 24;
-const HORIZONTAL_SWIPE_INTENT_RATIO = 1.0;
-const HORIZONTAL_SWIPE_FALLBACK_RATIO = 0.9;
+const CONTENT_DRAG_START_THRESHOLD = 9;
+const CONTENT_VERTICAL_INTENT_RATIO = 1.0;
+const SHEET_HALF_OPEN_TOLERANCE = 1;
+const HALF_TO_FULL_DISTANCE_PX = 14;
+const FULL_TO_HALF_DISTANCE_PX = 18;
+const FULL_TO_HALF_FAST_DISTANCE_PX = 18;
+const HALF_TO_DISMISS_DISTANCE_PX = 36;
+const HALF_TO_DISMISS_HINT_DISTANCE_PX = 24;
+const HALF_TO_DISMISS_FAST_DISTANCE_PX = 16;
+const HALF_TO_FULL_FAST_DISTANCE_PX = 12;
+const HALF_TO_FULL_VELOCITY_FLOOR_PX_PER_MS = 0.16;
+const HALF_TO_DISMISS_VELOCITY_FLOOR_PX_PER_MS = 0.15;
+const HALF_TO_DISMISS_QUICK_VELOCITY_FLOOR_PX_PER_MS = 0.20;
+const HALF_TO_FULL_QUICK_VELOCITY_FLOOR_PX_PER_MS = 0.19;
+const QUICK_GESTURE_DURATION_MS = 85;
+const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
+const QUICK_GESTURE_SHORT_DISTANCE_PX = 25;
+const LONG_PRESS_TRANSITION_THRESHOLD_MS = 175;
+const DRAG_RENDER_EPSILON_PERCENT = 0.08;
+const SNAP_TRANSITION_BASE_MS = 235;
+const SNAP_TRANSITION_FAST_MS = 175;
+const SNAP_TRANSITION_SMOOTH_MS = 295;
+const SNAP_EASING_BASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const SNAP_EASING_FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const SNAP_EASING_SMOOTH = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+const SHEET_HEIGHT_CSS_VAR = '--home-sheet-height-px';
 const OVERSEAS_KEYWORDS = Object.values(OVERSEAS_REGIONS).flatMap(config =>
     config.keywords.map((keyword) => keyword.toLowerCase())
 );
+
+type SheetSnapTransition = {
+    duration: number;
+    easing: string;
+};
 
 const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
     if (a.id === b.id) return true;
@@ -87,31 +112,7 @@ const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
     return false;
 };
 
-const isVerticallyScrollable = (element: HTMLElement) => {
-    const style = window.getComputedStyle(element);
-    const overflowY = style.overflowY;
-    const allowsScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
-    return allowsScroll && element.scrollHeight > element.clientHeight;
-};
-
-const findScrollableTouchTarget = (
-    target: EventTarget | null,
-    boundary: HTMLElement | null
-): HTMLElement | null => {
-    if (!(target instanceof HTMLElement)) return boundary;
-
-    let node: HTMLElement | null = target;
-    while (node && node !== boundary) {
-        if (isVerticallyScrollable(node)) return node;
-        node = node.parentElement;
-    }
-
-    if (boundary && isVerticallyScrollable(boundary)) return boundary;
-    return null;
-};
-
-const isDetailSwipeArea = (target: EventTarget | null) =>
-    target instanceof Element && target.closest('[data-restaurant-detail-swipe-area="content"]') !== null;
+const RESTAURANT_CONTENT_SCROLL_SELECTOR = "[data-restaurant-detail-swipe-area='content']";
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
 function HomeMapContainerComponent({
@@ -153,19 +154,33 @@ function HomeMapContainerComponent({
     const lastYRef = useRef(0);
     const lastTimeRef = useRef(0);
     const velocityRef = useRef(0);
+    const dragEndYRef = useRef(0);
+    const dragEndTimeRef = useRef(0);
     const handleRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const sheetContainerRef = useRef<HTMLDivElement>(null);
+    const detailScrollAreaRef = useRef<HTMLElement | null>(null);
+    const sheetHeightRef = useRef(INITIAL_HEIGHT);
+    const sheetHeightPxRef = useRef(0);
     const rafIdRef = useRef<number>(0);
+    const dragStartTimeRef = useRef(0);
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
-    const contentStartBoundaryRef = useRef<'top' | null>(null);
-    const contentScrollTargetRef = useRef<HTMLElement | null>(null);
     const contentSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
+    const wasPanelOpenRef = useRef(false);
+    const lastPanelRestaurantIdRef = useRef<string | null>(null);
+    const contentScrollResetNeededRef = useRef(false);
+    const pendingSwipeableRestaurantsRef = useRef<Restaurant[]>([]);
+    const swipeableRestaurantsRafRef = useRef(0);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
+    const [sheetSnapTransition, setSheetSnapTransition] = useState<SheetSnapTransition>({
+        duration: SNAP_TRANSITION_BASE_MS,
+        easing: SNAP_EASING_BASE,
+    });
     const [swipeableRestaurantsByMode, setSwipeableRestaurantsByMode] = useState<{
         domestic: Restaurant[];
         overseas: Restaurant[];
@@ -214,10 +229,8 @@ function HomeMapContainerComponent({
     }, []);
 
     const getContentSnapPoints = useCallback(() => {
-        const minSnap = MIN_SHEET_HEIGHT;
-        const maxSnap = Math.max(minSnap, getCurrentMaxHeight());
-        const midSnap = minSnap + ((maxSnap - minSnap) / 2);
-        return [minSnap, midSnap, maxSnap];
+        const maxSnap = Math.max(HALF_SHEET_HEIGHT, getCurrentMaxHeight());
+        return [HALF_SHEET_HEIGHT, maxSnap];
     }, [getCurrentMaxHeight]);
 
     const getNearestSnapHeight = useCallback((currentHeight: number) => {
@@ -226,6 +239,104 @@ function HomeMapContainerComponent({
             Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
         , snapPoints[0]);
     }, [getContentSnapPoints]);
+
+    const pxToPercent = useCallback((px: number) => {
+        return (px / viewportHeightRef.current) * 100;
+    }, []);
+
+    const percentToPx = useCallback((percent: number) => {
+        return (percent / 100) * viewportHeightRef.current;
+    }, []);
+
+    const writeSheetHeightStyle = useCallback((heightPercent: number) => {
+        const sheetContainer = sheetContainerRef.current;
+        if (!sheetContainer) return;
+
+        const nextHeightPx = percentToPx(heightPercent);
+        if (Math.abs(sheetHeightPxRef.current - nextHeightPx) < 0.25) return;
+
+        sheetHeightPxRef.current = nextHeightPx;
+        sheetContainer.style.setProperty(SHEET_HEIGHT_CSS_VAR, `${nextHeightPx}px`);
+    }, [percentToPx]);
+
+    const applySnapTransition = useCallback((isFlick: boolean, distancePx: number, isLongPress: boolean) => {
+        if (isFlick) {
+            setSheetSnapTransition({
+                duration: SNAP_TRANSITION_FAST_MS,
+                easing: SNAP_EASING_FAST,
+            });
+            return;
+        }
+
+        if (isLongPress || distancePx >= 80) {
+            setSheetSnapTransition({
+                duration: SNAP_TRANSITION_SMOOTH_MS,
+                easing: SNAP_EASING_SMOOTH,
+            });
+            return;
+        }
+
+        setSheetSnapTransition({
+            duration: SNAP_TRANSITION_BASE_MS,
+            easing: SNAP_EASING_BASE,
+        });
+    }, []);
+
+    const getDetailScrollArea = useCallback(() => {
+        const cachedScrollArea = detailScrollAreaRef.current;
+        if (cachedScrollArea && contentRef.current?.contains(cachedScrollArea)) {
+            return cachedScrollArea;
+        }
+
+        if (!contentRef.current) {
+            detailScrollAreaRef.current = null;
+            return null;
+        }
+
+        const scrollArea = contentRef.current.querySelector<HTMLElement>(RESTAURANT_CONTENT_SCROLL_SELECTOR);
+        detailScrollAreaRef.current = scrollArea;
+        return scrollArea;
+    }, []);
+
+    const setSheetHeightSafe = useCallback((nextHeight: number, forceRender = false) => {
+        const maxHeight = getCurrentMaxHeight();
+        const nextHeightSafe = Math.max(HALF_SHEET_HEIGHT, Math.min(maxHeight, nextHeight));
+        if (Math.abs(sheetHeightRef.current - nextHeightSafe) < DRAG_RENDER_EPSILON_PERCENT) {
+            return;
+        }
+
+        sheetHeightRef.current = nextHeightSafe;
+        writeSheetHeightStyle(nextHeightSafe);
+
+        const shouldCommitRender = forceRender || !isDraggingRef.current;
+        if (!shouldCommitRender) {
+            return;
+        }
+
+        setSheetHeight(nextHeightSafe);
+    }, [getCurrentMaxHeight, writeSheetHeightStyle]);
+
+    const resetSheetInteractionState = useCallback(() => {
+        isDraggingRef.current = false;
+        if (rafIdRef.current) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = 0;
+        }
+        setIsDragging(false);
+        isContentDraggingSheetRef.current = false;
+        contentSwipeDirectionRef.current = null;
+        velocityRef.current = 0;
+    }, []);
+
+    const resetContentScrollPosition = useCallback(() => {
+        if (!contentRef.current) return;
+
+        contentRef.current.scrollTop = 0;
+        const detailScrollArea = getDetailScrollArea();
+        if (detailScrollArea) {
+            detailScrollArea.scrollTop = 0;
+        }
+    }, [getDetailScrollArea]);
 
     // [PERFORMANCE] visualViewport resize 스로틀링 (16ms ≈ 60fps)
     useEffect(() => {
@@ -238,11 +349,15 @@ function HomeMapContainerComponent({
             if (throttleTimer !== null) return;
 
             throttleTimer = requestAnimationFrame(() => {
-                viewportHeightRef.current = viewport.height;
+            viewportHeightRef.current = viewport.height;
                 // 드래그 중이 아닐 때만 상태 업데이트 (리렌더링 최소화)
                 if (!isDraggingRef.current) {
-                    // maxHeight 초과 시에만 조정
-                    setSheetHeight(prev => Math.min(prev, getCurrentMaxHeight(viewport.height)));
+                    const currentMaxHeight = getCurrentMaxHeight(viewport.height);
+                    setSheetHeight(prev => Math.max(HALF_SHEET_HEIGHT, Math.min(prev, currentMaxHeight)));
+                } else if (sheetContainerRef.current) {
+                    const sheetHeightPx = percentToPx(sheetHeightRef.current);
+                    sheetContainerRef.current.style.setProperty(SHEET_HEIGHT_CSS_VAR, `${sheetHeightPx}px`);
+                    sheetHeightPxRef.current = sheetHeightPx;
                 }
                 throttleTimer = null;
             });
@@ -255,65 +370,249 @@ function HomeMapContainerComponent({
         };
     }, [getCurrentMaxHeight]);
 
-    // 패널이 열릴 때 최대 높이로 열기 (헤더 배제)
+    // 패널이 열릴 때 50% 높이로 열기 (헤더 배제)
     useEffect(() => {
-        if (isPanelOpen && isMobileOrTablet) {
-            setSheetHeight(getCurrentMaxHeight()); // 최대 높이로 열기
+        if (!isMobileOrTablet) return;
+
+        if (!isPanelOpen) {
+            resetSheetInteractionState();
+            wasPanelOpenRef.current = false;
+            lastPanelRestaurantIdRef.current = null;
+            contentScrollResetNeededRef.current = false;
+            return;
         }
-    }, [isPanelOpen, isMobileOrTablet, getCurrentMaxHeight]);
+
+        if (!panelRestaurant) {
+            contentScrollResetNeededRef.current = false;
+            return;
+        }
+
+        const nextPanelRestaurantId = panelRestaurant.id;
+        const isNewRestaurant = lastPanelRestaurantIdRef.current !== nextPanelRestaurantId;
+        const isFirstOpen = !wasPanelOpenRef.current;
+        const shouldResetContentScroll = isFirstOpen || isNewRestaurant;
+
+        if (isFirstOpen || isNewRestaurant) {
+            setSheetHeightSafe(Math.min(HALF_SHEET_HEIGHT, getCurrentMaxHeight()));
+        }
+        contentScrollResetNeededRef.current = shouldResetContentScroll;
+
+        lastPanelRestaurantIdRef.current = nextPanelRestaurantId;
+        wasPanelOpenRef.current = true;
+        resetSheetInteractionState();
+    }, [
+        isPanelOpen,
+        isMobileOrTablet,
+        panelRestaurant?.id,
+        getCurrentMaxHeight,
+        resetSheetInteractionState,
+        setSheetHeightSafe
+    ]);
 
     useEffect(() => {
-        if (!isPanelOpen || !isMobileOrTablet || !contentRef.current) return;
-
-        contentRef.current.scrollTop = 0;
-        const detailScrollArea = contentRef.current.querySelector<HTMLElement>(
-            "[data-restaurant-detail-swipe-area='content']"
-        );
-        if (detailScrollArea) {
-            detailScrollArea.scrollTop = 0;
+        if (!isPanelOpen) {
+            detailScrollAreaRef.current = null;
+            return;
         }
-    }, [isPanelOpen, isMobileOrTablet, panelRestaurant?.id]);
+    }, [isPanelOpen, panelRestaurant?.id]);
 
-    // [PERFORMANCE] 드래그 시작 공통 로직
-    const handleDragStartCore = useCallback((clientY: number) => {
-        // Ref로 상태 저장 (리렌더링 없음)
-        isDraggingRef.current = true;
-        startYRef.current = clientY;
-        startHeightRef.current = sheetHeight;
-        lastYRef.current = clientY;
-        lastTimeRef.current = Date.now();
-        velocityRef.current = 0;
-
-        // 시각적 피드백을 위한 최소한의 상태 업데이트
-        setIsDragging(true);
+    useEffect(() => {
+        sheetHeightRef.current = sheetHeight;
     }, [sheetHeight]);
 
-    // 터치 드래그 시작
+    useEffect(() => {
+        if (!isMobileOrTablet || !isPanelOpen || !panelRestaurant) return;
+
+        if (!contentScrollResetNeededRef.current) return;
+
+        const rafId = requestAnimationFrame(() => {
+            resetContentScrollPosition();
+            contentScrollResetNeededRef.current = false;
+        });
+
+        return () => cancelAnimationFrame(rafId);
+    }, [
+        isPanelOpen,
+        isMobileOrTablet,
+        panelRestaurant?.id,
+        resetContentScrollPosition
+    ]);
+
+    const startSheetDrag = useCallback((clientY: number) => {
+        isDraggingRef.current = true;
+        startYRef.current = clientY;
+        startHeightRef.current = sheetHeightRef.current;
+        dragStartTimeRef.current = performance.now();
+        lastYRef.current = clientY;
+        lastTimeRef.current = performance.now();
+        dragEndYRef.current = clientY;
+        dragEndTimeRef.current = performance.now();
+        velocityRef.current = 0;
+        setSheetSnapTransition({
+            duration: SNAP_TRANSITION_BASE_MS,
+            easing: SNAP_EASING_BASE,
+        });
+
+        setIsDragging(true);
+    }, []);
+
+    const canContentDragFromTouch = useCallback((deltaY: number) => {
+        const scrollArea = getDetailScrollArea();
+        const top = scrollArea ? scrollArea.scrollTop : contentRef.current?.scrollTop ?? 0;
+
+        const currentMaxHeight = getCurrentMaxHeight();
+        const isAtHalf = sheetHeightRef.current <= HALF_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE;
+        const isAtFull = sheetHeightRef.current >= currentMaxHeight - SHEET_HALF_OPEN_TOLERANCE;
+
+        if (isAtHalf) return top <= CONTENT_TOP_EPSILON;
+        if (deltaY > 0 && isAtFull) return top <= CONTENT_TOP_EPSILON;
+
+        return false;
+    }, [getCurrentMaxHeight, getDetailScrollArea]);
+
+    const endSheetDrag = useCallback(() => {
+        isDraggingRef.current = false;
+        setIsDragging(false);
+
+        if (rafIdRef.current) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = 0;
+        }
+
+        const currentHeight = sheetHeightRef.current;
+        const currentMaxHeight = getCurrentMaxHeight();
+        const elapsedMs = Math.max(16, dragEndTimeRef.current - dragStartTimeRef.current);
+        const dragDistancePx = dragEndYRef.current - startYRef.current;
+        const upwardDistancePx = startYRef.current - dragEndYRef.current;
+        const gestureVelocity = elapsedMs > 0
+            ? dragDistancePx / elapsedMs
+            : velocityRef.current;
+        const isSwipeDown = gestureVelocity >= SWIPE_VELOCITY_THRESHOLD;
+        const isSwipeDownStrong = gestureVelocity >= SWIPE_VELOCITY_CLOSE_THRESHOLD;
+        const isSwipeUp = gestureVelocity <= -SWIPE_VELOCITY_THRESHOLD;
+        const isSwipeUpStrong = gestureVelocity <= -SWIPE_VELOCITY_OPEN_THRESHOLD;
+        const movementFromStart = currentHeight - startHeightRef.current;
+        const movementPxFromStart = percentToPx(movementFromStart);
+        const startedAtHalf = startHeightRef.current <= HALF_SHEET_HEIGHT + 0.5;
+        const startedAtFull = startHeightRef.current >= currentMaxHeight - 0.5;
+        const isQuickGesture = elapsedMs <= QUICK_GESTURE_DURATION_MS;
+        const movementPx = Math.abs(movementPxFromStart);
+        const isLongPress = !isQuickGesture && elapsedMs >= LONG_PRESS_TRANSITION_THRESHOLD_MS;
+        const halfToFullDistancePercent = pxToPercent(
+            HALF_TO_FULL_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
+        );
+        const fullToHalfDistancePercent = pxToPercent(
+            FULL_TO_HALF_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
+        );
+        const shouldUseFastTransition = isSwipeUpStrong || isSwipeDownStrong;
+        const isQuickAndSmall = isQuickGesture && movementPx <= QUICK_GESTURE_SHORT_DISTANCE_PX;
+        const shouldUseSmoothTransition = isLongPress || (!isQuickAndSmall && movementPx > QUICK_GESTURE_SHORT_DISTANCE_PX) || dragDistancePx > HALF_TO_DISMISS_HINT_DISTANCE_PX;
+
+        applySnapTransition(
+            shouldUseFastTransition,
+            movementPx,
+            shouldUseSmoothTransition
+        );
+        velocityRef.current = 0;
+
+        const halfToDismissDistancePx =
+            HALF_TO_DISMISS_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
+        const halfToDismissHintDistancePx =
+            HALF_TO_DISMISS_HINT_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
+        const halfToDismissFastDistancePx = HALF_TO_DISMISS_FAST_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
+        const fullToHalfDistancePx =
+            FULL_TO_HALF_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
+        const fullToHalfFastDistancePx = FULL_TO_HALF_FAST_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
+        const hasClearDownDistance = dragDistancePx >= halfToDismissDistancePx;
+        const hasHintDownDistance = isSwipeDownStrong && dragDistancePx >= halfToDismissHintDistancePx;
+        const hasFastDownDistance = isSwipeDownStrong &&
+            dragDistancePx >= halfToDismissFastDistancePx &&
+            elapsedMs <= QUICK_GESTURE_DURATION_MS;
+        const hasDownVelocity = dragDistancePx >= HALF_TO_DISMISS_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
+        const hasFastVelocityDown = isSwipeDownStrong && dragDistancePx >= HALF_TO_DISMISS_QUICK_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
+        const hasFullToHalfHint = isSwipeDownStrong && dragDistancePx >= fullToHalfFastDistancePx;
+        const halfToFullFastDistancePx = HALF_TO_FULL_FAST_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
+        const hasFastUpDistance = isSwipeUpStrong && upwardDistancePx >= halfToFullFastDistancePx;
+        const hasFastUpVelocity = isSwipeUpStrong && upwardDistancePx >= HALF_TO_FULL_QUICK_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
+        const hasFastUpDistanceByVelocity = isSwipeUpStrong && upwardDistancePx >= HALF_TO_FULL_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
+        const shouldCloseFromHalf =
+            startedAtHalf &&
+            dragDistancePx > 0 &&
+            (hasClearDownDistance ||
+                (hasHintDownDistance && hasDownVelocity) ||
+                (hasFastDownDistance && hasFastVelocityDown) ||
+                (isSwipeDownStrong && hasFastDownDistance));
+
+        if (isSwipeDown) {
+            if (startedAtHalf) {
+                if (shouldCloseFromHalf) {
+                    onPanelClose();
+                    return;
+                }
+
+                setSheetHeightSafe(HALF_SHEET_HEIGHT, true);
+                return;
+            }
+
+            setSheetHeightSafe(HALF_SHEET_HEIGHT, true);
+            return;
+        }
+
+        if (shouldCloseFromHalf) {
+            onPanelClose();
+            return;
+        }
+
+        if (startedAtHalf && (movementPxFromStart > halfToFullDistancePercent || (hasFastUpDistance && hasFastUpVelocity) || hasFastUpDistanceByVelocity)) {
+            setSheetHeightSafe(currentMaxHeight, true);
+            return;
+        }
+
+        if (startedAtFull && (movementPxFromStart < -fullToHalfDistancePercent || (hasFullToHalfHint && dragDistancePx >= fullToHalfDistancePx))) {
+            setSheetHeightSafe(HALF_SHEET_HEIGHT, true);
+            return;
+        }
+
+        if (Math.abs(currentHeight - startHeightRef.current) < 2) {
+            setSheetHeightSafe(getNearestSnapHeight(currentHeight), true);
+            return;
+        }
+
+        setSheetHeightSafe(getNearestSnapHeight(currentHeight), true);
+    }, [
+        applySnapTransition,
+        getCurrentMaxHeight,
+        getNearestSnapHeight,
+        percentToPx,
+        pxToPercent,
+        onPanelClose,
+        setSheetHeightSafe,
+    ]);
+
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        handleDragStartCore(e.touches[0].clientY);
-    }, [handleDragStartCore]);
+        startSheetDrag(e.touches[0].clientY);
+    }, [startSheetDrag]);
 
     // 마우스 드래그 시작
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
-        handleDragStartCore(e.clientY);
-    }, [handleDragStartCore]);
+        startSheetDrag(e.clientY);
+    }, [startSheetDrag]);
 
     // [PERFORMANCE] 드래그 중 공통 로직 - RAF 기반 최적화, 상태 업데이트 최소화
     const handleDragMoveCore = useCallback((currentY: number) => {
         if (!isDraggingRef.current) return;
 
-        const currentTime = Date.now();
-
-        // 속도 계산
+        const currentTime = performance.now();
         const deltaTime = currentTime - lastTimeRef.current;
         if (deltaTime > 0) {
             velocityRef.current = (currentY - lastYRef.current) / deltaTime;
         }
         lastYRef.current = currentY;
         lastTimeRef.current = currentTime;
+        dragEndYRef.current = currentY;
+        dragEndTimeRef.current = currentTime;
 
-        // [PERFORMANCE] 이전 RAF 취소하여 프레임 스키핑 방지
         if (rafIdRef.current) {
             cancelAnimationFrame(rafIdRef.current);
         }
@@ -322,14 +621,10 @@ function HomeMapContainerComponent({
             const deltaY = startYRef.current - currentY;
             const vh = viewportHeightRef.current;
             const deltaPercent = (deltaY / vh) * 100;
-            const maxHeight = getCurrentMaxHeight(vh);
-
-            let newHeight = startHeightRef.current + deltaPercent;
-            newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(maxHeight, newHeight));
-
-            setSheetHeight(newHeight);
+            const newHeight = startHeightRef.current + deltaPercent;
+            setSheetHeightSafe(newHeight);
         });
-    }, [getCurrentMaxHeight]);
+    }, [setSheetHeightSafe]);
 
     // 터치 드래그 중
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -337,187 +632,149 @@ function HomeMapContainerComponent({
     }, [handleDragMoveCore]);
 
     // [PERFORMANCE] 드래그 종료 - 조건부 로직 최적화
-    const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
-        isDraggingRef.current = false;
-        setIsDragging(false);
-
-        // RAF 정리
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = 0;
-        }
-
-        // 빠른 스와이프로 닫기
-        if (source === 'handle' && velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
-            onPanelClose();
-            return;
-        }
-
-        // 현재 높이 기반 판단 (클로저 문제 회피를 위해 직접 접근)
-        setSheetHeight(currentHeight => {
-            if (source === 'content') {
-                return getNearestSnapHeight(currentHeight);
-            }
-            if (currentHeight <= CLOSE_THRESHOLD) {
-                // 비동기로 닫기 처리 (상태 업데이트 후)
-                queueMicrotask(onPanelClose);
-                return currentHeight;
-            }
-            // 최소 높이 보정
-            return currentHeight < MIN_SHEET_HEIGHT ? MIN_SHEET_HEIGHT : currentHeight;
-        });
-    }, [onPanelClose, getNearestSnapHeight]);
+    const handleDragEnd = useCallback(() => {
+        if (!isDraggingRef.current) return;
+        endSheetDrag();
+    }, [endSheetDrag]);
 
     const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         contentTouchStartYRef.current = e.touches[0].clientY;
         contentTouchStartXRef.current = e.touches[0].clientX;
         isContentDraggingSheetRef.current = false;
         contentSwipeDirectionRef.current = null;
-        const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
-        contentScrollTargetRef.current = scrollTarget;
-        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
-        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
     }, []);
 
     const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        const isDetailArea = isDetailSwipeArea(e.target);
+        const touch = e.touches[0];
+        if (!touch) return;
 
-        const currentY = e.touches[0].clientY;
-        const currentX = e.touches[0].clientX;
+        const currentY = touch.clientY;
+        const currentX = touch.clientX;
         const deltaY = currentY - contentTouchStartYRef.current;
         const deltaX = currentX - contentTouchStartXRef.current;
         const absDeltaY = Math.abs(deltaY);
         const absDeltaX = Math.abs(deltaX);
-        const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
-        if (!contentScrollTargetRef.current) {
-            contentScrollTargetRef.current = scrollTarget;
-        }
 
         if (!contentSwipeDirectionRef.current) {
-            if (
-                activeSwipeableRestaurants.length > 1 &&
-                !isDetailArea &&
-                absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD &&
-                absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO
-            ) {
+            if (absDeltaX >= 24 && absDeltaX >= absDeltaY * 1.0) {
                 contentSwipeDirectionRef.current = 'horizontal';
                 return;
             }
 
-            if (contentStartBoundaryRef.current !== 'top') return;
-            if (absDeltaY <= CONTENT_DRAG_START_THRESHOLD) return;
-            if (absDeltaY <= absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
-            handleDragStartCore(contentTouchStartYRef.current);
+            if (absDeltaY < CONTENT_DRAG_START_THRESHOLD) return;
+            if (absDeltaY < absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
+            if (!canContentDragFromTouch(deltaY)) return;
+
+            startSheetDrag(contentTouchStartYRef.current);
             isContentDraggingSheetRef.current = true;
             contentSwipeDirectionRef.current = 'vertical';
         }
 
-        if (contentSwipeDirectionRef.current === 'horizontal') {
-            return;
-        }
+        if (contentSwipeDirectionRef.current === 'horizontal') return;
 
         e.stopPropagation();
         handleDragMoveCore(currentY);
-    }, [handleDragMoveCore, handleDragStartCore, activeSwipeableRestaurants.length]);
+    }, [canContentDragFromTouch, handleDragMoveCore, startSheetDrag]);
 
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        const isDetailArea = isDetailSwipeArea(e.target);
-
-        const currentTouch = e.changedTouches?.[0] ?? e.touches?.[0];
-
-        if (!currentTouch) {
-            contentScrollTargetRef.current = null;
-            contentStartBoundaryRef.current = null;
-            contentSwipeDirectionRef.current = null;
-            return;
-        }
-
-        const deltaX = currentTouch.clientX - contentTouchStartXRef.current;
-        const deltaY = currentTouch.clientY - contentTouchStartYRef.current;
-        const absDeltaX = Math.abs(deltaX);
-        const absDeltaY = Math.abs(deltaY);
-
-        const canSwipeHorizontal =
-            activeSwipeableRestaurants.length > 1 &&
-            (absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO);
-        const canSwipeFallback =
-            activeSwipeableRestaurants.length > 1 &&
-            (absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_FALLBACK_RATIO);
-
-        if (!isDetailArea && (contentSwipeDirectionRef.current === 'horizontal' || contentSwipeDirectionRef.current === null) &&
-            (canSwipeHorizontal || canSwipeFallback) &&
-            (deltaX !== 0)) {
-            const direction = deltaX < 0 ? 1 : -1;
-            const currentRestaurant = panelRestaurant || selectedRestaurant;
-            if (currentRestaurant) {
-                const currentIndex = activeSwipeableRestaurants.findIndex((restaurant) =>
-                    isSameRestaurantForSwipe(restaurant, currentRestaurant)
-                );
-
-                if (currentIndex >= 0) {
-                    const nextIndex = currentIndex + direction;
-                    const nextRestaurant = activeSwipeableRestaurants[nextIndex];
-                    if (nextRestaurant) {
-                        onRestaurantSelect(nextRestaurant);
-                    }
-                }
-            }
-        }
-
         if (!isContentDraggingSheetRef.current || contentSwipeDirectionRef.current !== 'vertical') {
-            contentScrollTargetRef.current = null;
-            contentStartBoundaryRef.current = null;
             contentSwipeDirectionRef.current = null;
+            isContentDraggingSheetRef.current = false;
             return;
         }
 
         e.stopPropagation();
         isContentDraggingSheetRef.current = false;
-        contentScrollTargetRef.current = null;
-        contentStartBoundaryRef.current = null;
         contentSwipeDirectionRef.current = null;
-        handleDragEnd('content');
-    }, [contentSwipeDirectionRef, onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants, handleDragEnd]);
+        handleDragEnd();
+    }, [handleDragEnd]);
 
     const handleSwipeableRestaurantsChange = useCallback((restaurants: Restaurant[]) => {
         const filteredRestaurants = getRestaurantListByMode(restaurants);
 
-        if (!filteredRestaurants.length) {
-            setSwipeableRestaurantsByMode((prev) =>
-                mapMode === 'domestic'
-                    ? (prev.domestic.length === 0 ? prev : { ...prev, domestic: [] })
-                    : (prev.overseas.length === 0 ? prev : { ...prev, overseas: [] })
-            );
+        const uniqueRestaurants: Restaurant[] = [];
+        const seenIds = new Set<string>();
+        const seenMergeIds = new Set<string>();
+        const seenLocationKeys = new Set<string>();
+        const seenRestaurantKeys = new Set<string>();
+
+        for (const restaurant of filteredRestaurants) {
+            if (!restaurant) continue;
+
+            const normalizedName = (restaurant.name || '').trim().toLowerCase();
+            const lat = Number(restaurant.lat);
+            const lng = Number(restaurant.lng);
+            const hasLatLng = Number.isFinite(lat) && Number.isFinite(lng);
+            const locationKey = hasLatLng
+                ? `${lat.toFixed(5)}:${lng.toFixed(5)}:${normalizedName}`
+                : normalizedName;
+
+            const mergedRestaurants = restaurant.mergedRestaurants ?? [];
+            const restaurantIds = [restaurant.id, ...mergedRestaurants.map((merged) => merged.id)].filter(Boolean);
+
+            const isDuplicateById =
+                !!restaurantIds.length &&
+                restaurantIds.some((id) => seenIds.has(id) || seenMergeIds.has(id));
+
+            if (isDuplicateById) continue;
+            if (seenLocationKeys.has(locationKey)) continue;
+            if (seenRestaurantKeys.has(restaurant.id)) continue;
+
+            if (restaurant.id) {
+                seenIds.add(restaurant.id);
+                for (const mergedId of restaurantIds) {
+                    if (mergedId) seenMergeIds.add(mergedId);
+                }
+            }
+            seenRestaurantKeys.add(restaurant.id);
+            if (locationKey) {
+                seenLocationKeys.add(locationKey);
+            }
+            uniqueRestaurants.push(restaurant);
+        }
+
+        pendingSwipeableRestaurantsRef.current = uniqueRestaurants;
+
+        if (swipeableRestaurantsRafRef.current !== 0) {
             return;
         }
 
-        const uniqueRestaurants: Restaurant[] = [];
-        filteredRestaurants.forEach((restaurant) => {
-            const isDuplicate = uniqueRestaurants.some((existingRestaurant) =>
-                isSameRestaurantForSwipe(existingRestaurant, restaurant)
-            );
+        swipeableRestaurantsRafRef.current = requestAnimationFrame(() => {
+            swipeableRestaurantsRafRef.current = 0;
 
-            if (!isDuplicate) {
-                uniqueRestaurants.push(restaurant);
-            }
-        });
-
-        setSwipeableRestaurantsByMode(prev => {
-            const prevRestaurants = mapMode === 'domestic' ? prev.domestic : prev.overseas;
-
-            if (
-                prevRestaurants.length === uniqueRestaurants.length &&
-                prevRestaurants.every((restaurant, index) => isSameRestaurantForSwipe(restaurant, uniqueRestaurants[index]!))
-            ) {
-                return prev;
+            const nextRestaurants = pendingSwipeableRestaurantsRef.current;
+            if (!nextRestaurants.length) {
+                setSwipeableRestaurantsByMode((prev) =>
+                    mapMode === 'domestic'
+                        ? (prev.domestic.length === 0 ? prev : { ...prev, domestic: [] })
+                        : (prev.overseas.length === 0 ? prev : { ...prev, overseas: [] })
+                );
+                return;
             }
 
-            return mapMode === 'domestic'
-                ? { ...prev, domestic: uniqueRestaurants }
-                : { ...prev, overseas: uniqueRestaurants };
+            setSwipeableRestaurantsByMode(prev => {
+                const prevRestaurants = mapMode === 'domestic' ? prev.domestic : prev.overseas;
+
+                if (
+                    prevRestaurants.length === nextRestaurants.length &&
+                    prevRestaurants.every((restaurant, index) => isSameRestaurantForSwipe(restaurant, nextRestaurants[index]!))
+                ) {
+                    return prev;
+                }
+
+                return mapMode === 'domestic'
+                    ? { ...prev, domestic: nextRestaurants }
+                    : { ...prev, overseas: nextRestaurants };
+            });
         });
     }, [mapMode, getRestaurantListByMode]);
+
+    useEffect(() => () => {
+        if (swipeableRestaurantsRafRef.current !== 0) {
+            cancelAnimationFrame(swipeableRestaurantsRafRef.current);
+            swipeableRestaurantsRafRef.current = 0;
+        }
+    }, []);
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
         if (activeSwipeableRestaurants.length <= 1) return;
@@ -704,13 +961,14 @@ function HomeMapContainerComponent({
                             className="fixed inset-0 z-50 bg-black/30 transition-opacity duration-200"
                             onClick={onPanelClose}
                         >
-                            <div
+                <div
+                                ref={sheetContainerRef}
                                 className={cn(
                                     'fixed bottom-0 left-0 right-0 z-50',
                                     'bg-background rounded-t-2xl shadow-xl',
                                     'overflow-hidden flex flex-col',
                                     // 드래그 중에는 트랜지션 제거, 종료 시 부드러운 스프링 효과
-                                    isDragging ? '' : 'transition-[height] duration-300',
+                                    isDragging ? '' : 'transition-[height]',
                                     // iOS safe area 지원 + 하단 네비게이션바 공간
                                     'pb-[calc(env(safe-area-inset-bottom)+64px)]'
                                 )}
@@ -718,13 +976,15 @@ function HomeMapContainerComponent({
                                     // [FIX] Safari/삼성 인터넷 100vh 버그 수정
                                     // bottom: 0 고정 + height(px)로 직접 계산
                                     // viewportHeightRef 사용 (visualViewport API 기반)
-                                    height: `${viewportHeightRef.current * sheetHeight / 100}px`,
+                                    [`${SHEET_HEIGHT_CSS_VAR}`]: `${viewportHeightRef.current * sheetHeight / 100}px`,
+                                    height: `var(${SHEET_HEIGHT_CSS_VAR})`,
                                     // 최소 상단 위치 강제 (헤더 80px 아래)
                                     maxHeight: `calc(100% - 80px)`,
                                     willChange: 'height',
+                                    transitionDuration: isDragging ? '0ms' : `${sheetSnapTransition.duration}ms`,
                                     // 커스텀 이징 함수
-                                    transitionTimingFunction: isDragging ? undefined : 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                                }}
+                                    transitionTimingFunction: isDragging ? undefined : sheetSnapTransition.easing,
+                                } as unknown as Record<string, string | number | undefined>}
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* 핸들 바 - 드래그 가능, 항상 상단 고정, touch-action: none으로 Pull-to-Refresh 방지 */}
@@ -734,8 +994,8 @@ function HomeMapContainerComponent({
                                     style={{ touchAction: 'none' }}
                                     onTouchStart={handleTouchStart}
                                     onTouchMove={handleTouchMove}
-                                    onTouchEnd={() => handleDragEnd('handle')}
-                                    onTouchCancel={() => handleDragEnd('handle')}
+                                    onTouchEnd={() => handleDragEnd()}
+                                    onTouchCancel={() => handleDragEnd()}
                                     onMouseDown={handleMouseDown}
                                 >
                                     <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
@@ -753,7 +1013,11 @@ function HomeMapContainerComponent({
                                 <div
                                     ref={contentRef}
                                     className="flex-1 overflow-hidden"
-                                    style={{ touchAction: 'pan-y' }}
+                                    style={{
+                                        touchAction: isDragging
+                                            ? 'none'
+                                            : (sheetHeight <= HALF_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE ? 'none' : 'pan-y'),
+                                    }}
                                     onTouchStart={handleContentTouchStart}
                                     onTouchMove={handleContentTouchMove}
                                     onTouchEnd={handleContentTouchEnd}
