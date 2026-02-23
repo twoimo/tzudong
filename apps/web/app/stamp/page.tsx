@@ -1302,17 +1302,17 @@ export default function StampPage() {
             </PanelGroup>
 
             {/* 바텀 시트 - 리뷰 (모바일/태블릿 전용) */}
-            {isRightPanelVisible && selectedRestaurant && (
+            {isMobileOrTablet && isRightPanelVisible && selectedRestaurant && (
                 <BottomSheet
+                    key={selectedRestaurant.id}
                     isOpen={isRightPanelVisible}
                     onClose={handleCloseRightPanel}
-                    defaultHeight={100} // 최대로 열어서 헤더 아래까지 채움
+                    defaultHeight={50}
+                    minHeight={50}
                     headerOffset={80}   // 헤더(64px) + 여백(16px) 공간 확보
                     bottomNavOffset={64} // 하단 네비게이션(56px) 공간 확보
                     disableContentScroll={true} // 내부 패널 스크롤 사용
-                    onSwipeLeft={handleBottomSheetSwipeLeft}
-                    onSwipeRight={handleBottomSheetSwipeRight}
-                    showCloseButton={false}
+                    showCloseButton={true}
                     className="p-0"
                 >
                     <RestaurantDetailPanel
@@ -1321,6 +1321,8 @@ export default function StampPage() {
                         onWriteReview={handleWriteReview}
                         isPanelOpen={isRightPanelVisible}
                         isMobile={true}
+                        onSwipeLeft={handleBottomSheetSwipeLeft}
+                        onSwipeRight={handleBottomSheetSwipeRight}
                         className="h-full shadow-none border-0 overflow-hidden"
                     />
                 </BottomSheet>
