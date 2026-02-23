@@ -1499,7 +1499,7 @@ async function runStoryboardOrchestrator(
     },
   );
   if (llmResponse) {
-    if (!llmResponse.sources.length && responseSources.length) {
+    if (!(llmResponse.sources?.length) && responseSources.length) {
       llmResponse.sources = responseSources;
     }
     return llmResponse;
