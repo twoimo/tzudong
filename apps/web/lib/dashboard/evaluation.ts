@@ -1,6 +1,6 @@
 import type { DashboardFailuresResponse, DashboardFunnelResponse } from '@/types/dashboard';
-import { extractVideoIdFromYoutubeLink, toPercent } from '@/lib/dashboard/helpers';
-import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '@/lib/dashboard/classifiers';
+import { extractVideoIdFromYoutubeLink, toPercent } from './helpers';
+import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from './classifiers';
 import { getRestaurantRows, type DashboardRestaurantRow } from '@/lib/dashboard/supabase';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
