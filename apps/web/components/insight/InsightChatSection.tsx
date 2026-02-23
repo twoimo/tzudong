@@ -628,6 +628,114 @@ function sanitizeHtmlForMarkdownInput(html: string): string {
         .replace(/<(?:!--[\s\S]*?-->|\?[\s\S]*?\?>)/g, '');
 }
 
+function htmlToMarkdown(html: string): string {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(`<!doctype html><body>${html}</body>`, 'text/html');
+  const root = doc.body;
+  if (!root) return '';
+
+  const escapeMarkdownText = (value: string): string => value.replace(/[\\`*_~\[\]{}]/g, (char) => `\\${char}`);
+  const normalizeSpace = (value: string): string => value.replace(/\s+/g, ' ').trim();
+
+  const collectRows = (table: HTMLTableElement): string => {
+    const rows = [...table.rows];
+    if (!rows.length) return '';
+
+    const parsedRows = rows.map((row) => [...row.cells].map((cell) => normalizeSpace(normalizeHtmlNode(cell))));
+    const header = parsedRows[0] ?? [];
+    const body = parsedRows.slice(1);
+    if (!header.length) return '';
+
+    const headerLine = `| ${header.join(' | ')} |`;
+    const separator = `| ${header.map(() => '---').join(' | ')} |`;
+    const bodyLines = body.map((columns) => `| ${columns.join(' | ')} |`);
+    return [headerLine, separator, ...bodyLines].join('\n') + '\n\n';
+  };
+
+  const listToMarkdown = (node: HTMLUListElement | HTMLOListElement): string => {
+    const items = [...node.children].filter((child): child is HTMLLIElement => child.tagName.toLowerCase() === 'li');
+    return items
+      .map((item, index) => {
+        const prefix = node.tagName.toLowerCase() === 'ol' ? `${index + 1}. ` : '- ';
+        return `${prefix}${normalizeSpace(normalizeHtmlNode(item))}`;
+      })
+      .join('\n') + '\n\n';
+  };
+
+  const normalizeHtmlNode = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return normalizeSpace(node.textContent || '');
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return '';
+    }
+
+    const element = node as Element;
+    const tag = element.tagName.toLowerCase();
+    const children = [...element.childNodes].map(normalizeHtmlNode).join('');
+
+    switch (tag) {
+      case 'h1':
+        return `# ${normalizeSpace(children)}\n\n`;
+      case 'h2':
+        return `## ${normalizeSpace(children)}\n\n`;
+      case 'h3':
+        return `### ${normalizeSpace(children)}\n\n`;
+      case 'h4':
+        return `#### ${normalizeSpace(children)}\n\n`;
+      case 'h5':
+        return `##### ${normalizeSpace(children)}\n\n`;
+      case 'h6':
+        return `###### ${normalizeSpace(children)}\n\n`;
+      case 'p':
+      case 'div':
+        return `${normalizeSpace(children)}\n\n`;
+      case 'hr':
+        return '---\n\n';
+      case 'br':
+        return '\n';
+      case 'blockquote':
+        return children.split('\n').map((line) => `> ${line}`).join('\n') + '\n\n';
+      case 'pre':
+        return `\n\`\`\`\n${element.textContent?.trim() || ''}\n\`\`\`\n\n`;
+      case 'code':
+        return `\`${escapeMarkdownText(element.textContent || '')}\``;
+      case 'strong':
+      case 'b':
+        return `**${normalizeSpace(children)}**`;
+      case 'em':
+      case 'i':
+        return `*${normalizeSpace(children)}*`;
+      case 'a': {
+        const href = (element.getAttribute('href') || '').trim();
+        const text = normalizeSpace(children);
+        return href ? `[${text}](${href})` : text;
+      }
+      case 'ul':
+      case 'ol':
+        return listToMarkdown(element as HTMLUListElement | HTMLOListElement);
+      case 'li':
+        return `- ${normalizeSpace(children)}`;
+      case 'table':
+        return collectRows(element as HTMLTableElement);
+      case 'thead':
+      case 'tbody':
+      case 'tr':
+      case 'th':
+      case 'td':
+        return normalizeSpace(children);
+      default:
+        return normalizeSpace(children);
+    }
+  };
+
+  return [...root.childNodes]
+    .map(normalizeHtmlNode)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 type ReactMarkdownProps = Parameters<typeof ReactMarkdown>[0];
 type MarkdownComponentMap = NonNullable<ReactMarkdownProps['components']>;
 
@@ -711,11 +819,18 @@ const MarkdownRenderer = memo(({
     }
 
     if (shouldRenderRawHtml) {
+        const markdown = htmlToMarkdown(sanitizeHtmlForMarkdownInput(content));
         return (
             <div
                 className={cn(className, 'space-y-2')}
-                dangerouslySetInnerHTML={{ __html: sanitizeHtmlForMarkdownInput(content) }}
-            />
+            >
+                <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={components}
+                >
+                    {markdown || content}
+                </ReactMarkdown>
+            </div>
         );
     }
 
