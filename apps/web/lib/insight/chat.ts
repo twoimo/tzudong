@@ -83,8 +83,8 @@ const STORYBOARD_KEYWORDS = [
 ];
 
 const DEFAULT_STORYBOARD_TEMPLATE_PROFILE: Record<StoryboardModelProfile, string> = {
-    nanobanana: '실무형',
-    nanobanana_pro: '프리미엄',
+  nanobanana: '실무형',
+  nanobanana_pro: '프리미엄',
 };
 
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
@@ -602,7 +602,7 @@ async function searchTranscriptsHybridTool(
   if (!embedding || !embedding.length || !sparse || !Object.keys(sparse).length) {
     const artifacts = await buildStoryboardQueryArtifacts(query);
     if (!artifacts) return [];
-    embedding = artifacts.embedding;
+    embedding = artifacts.embedding ?? undefined;
     sparse = artifacts.sparse;
   }
 
@@ -923,38 +923,38 @@ function setStoryboardEndpointCooldown(endpoint: string): void {
 }
 
 function inferStoryboardTopic(input: string): string {
-    const candidates = [
-        '제육', '삼겹살', '떡볶이', '마라', '파스타', '김치찌개', '찜닭', '보쌈', '회', '돈까스', '라면', '닭강정',
-        '국밥', '칼국수', '피자', '치킨', '햄버거', '오리', '족발', '먹방',
-    ];
-    const match = candidates.find((keyword) => input.includes(keyword));
-    return match ?? '요청 주제';
+  const candidates = [
+    '제육', '삼겹살', '떡볶이', '마라', '파스타', '김치찌개', '찜닭', '보쌈', '회', '돈까스', '라면', '닭강정',
+    '국밥', '칼국수', '피자', '치킨', '햄버거', '오리', '족발', '먹방',
+  ];
+  const match = candidates.find((keyword) => input.includes(keyword));
+  return match ?? '요청 주제';
 }
 
 function buildStoryboardFallbackContent(input: string, profile: StoryboardModelProfile): string {
-    const topic = inferStoryboardTopic(input);
-    const profileLabel = DEFAULT_STORYBOARD_TEMPLATE_PROFILE[profile];
-    const safeInput = input.trim() || '현재 주제';
+  const topic = inferStoryboardTopic(input);
+  const profileLabel = DEFAULT_STORYBOARD_TEMPLATE_PROFILE[profile];
+  const safeInput = input.trim() || '현재 주제';
 
-    return [
-        `## ${safeInput} 스토리보드 (내부 생성)`,
-        '',
-        `**프로필:** ${profileLabel}`,
-        '',
-        '### 🎬 제작 구성',
-        '| 순서 | 장면 (Visual) | 오디오/자막 (Audio/Sub) | 핵심 포인트 |',
-        '|---|---|---|---|',
-        '| 1. 오프닝 | 화면 전체가 주제 메뉴를 한 번에 보여줌 | \"오늘은 **' + topic + '**로 집중 공략해볼게요\" | 첫인상 몰입, 기대감 형성 |',
-        '| 2. 핵심 재료 | 재료 클로즈업, 향과 질감 강조 | 칼질/볶음 소리 강조, 짧은 설명 멘트 | 양감과 비주얼 임팩트 강화 |',
-        '| 3. 첫 입 | 한입 클로즈업 또는 첫 접시 제시 | ASMR 계열의 씹히는 소리 + 감상 멘트 | 몰입감 높은 먹방 포인트 |',
-        '| 4. 변주 샷 | 밥/면/계란 등 조합 변형 쇼트 | "먹는 재미 + 반응" 멘트 | 반복 시청 동기 부여 |',
-        '| 5. 클라이맥스 | 마지막 대형 플레이(볶음/마무리) | "이거 완성!" 강한 감정 표현 | 고조되는 리듬과 감정선 마감 |',
-        '| 6. 엔딩 | 접시 비우기 + 결과 샷 | \"오늘도 잘 먹었습니다\" | 시청자 피로도 낮추는 정리 |',
-        '',
-        '### 💡 콘텐츠 업그레이드 인사이트',
-        '- 주제는 간결하게 제시하고, 장면마다 음향 포인트를 분리하세요.',
-        `- ${topic} 특성을 살리려면 접시 비율(비주얼 대비)과 먹는 속도(리듬)를 같이 관리하세요.`,
-        '- 썸네일은 큰 접시/한 입샷/반응표정 3컷 이내로 구성하면 클릭률이 안정적입니다.',
+  return [
+    `## ${safeInput} 스토리보드 (내부 생성)`,
+    '',
+    `**프로필:** ${profileLabel}`,
+    '',
+    '### 🎬 제작 구성',
+    '| 순서 | 장면 (Visual) | 오디오/자막 (Audio/Sub) | 핵심 포인트 |',
+    '|---|---|---|---|',
+    '| 1. 오프닝 | 화면 전체가 주제 메뉴를 한 번에 보여줌 | \"오늘은 **' + topic + '**로 집중 공략해볼게요\" | 첫인상 몰입, 기대감 형성 |',
+    '| 2. 핵심 재료 | 재료 클로즈업, 향과 질감 강조 | 칼질/볶음 소리 강조, 짧은 설명 멘트 | 양감과 비주얼 임팩트 강화 |',
+    '| 3. 첫 입 | 한입 클로즈업 또는 첫 접시 제시 | ASMR 계열의 씹히는 소리 + 감상 멘트 | 몰입감 높은 먹방 포인트 |',
+    '| 4. 변주 샷 | 밥/면/계란 등 조합 변형 쇼트 | "먹는 재미 + 반응" 멘트 | 반복 시청 동기 부여 |',
+    '| 5. 클라이맥스 | 마지막 대형 플레이(볶음/마무리) | "이거 완성!" 강한 감정 표현 | 고조되는 리듬과 감정선 마감 |',
+    '| 6. 엔딩 | 접시 비우기 + 결과 샷 | \"오늘도 잘 먹었습니다\" | 시청자 피로도 낮추는 정리 |',
+    '',
+    '### 💡 콘텐츠 업그레이드 인사이트',
+    '- 주제는 간결하게 제시하고, 장면마다 음향 포인트를 분리하세요.',
+    `- ${topic} 특성을 살리려면 접시 비율(비주얼 대비)과 먹는 속도(리듬)를 같이 관리하세요.`,
+    '- 썸네일은 큰 접시/한 입샷/반응표정 3컷 이내로 구성하면 클릭률이 안정적입니다.',
   ].join('\n');
 }
 
@@ -1196,76 +1196,76 @@ function createStoryboardLlmPrompt(
 }
 
 async function askStoryboardViaLlm(
-    message: string,
-    asOf: string,
-    storyboardModelProfile: StoryboardModelProfile,
-    llmConfig?: LlmRequestConfig,
-    bgeContext: StoryboardBgeResult[] = [],
-    stateContext?: {
-      transcriptDocs?: StoryboardBgeResult[];
-      webDocs?: StoryboardWebSearchResult[];
-      metadataDocs?: Record<string, unknown>[];
-      stateFeedback?: string;
-    },
+  message: string,
+  asOf: string,
+  storyboardModelProfile: StoryboardModelProfile,
+  llmConfig?: LlmRequestConfig,
+  bgeContext: StoryboardBgeResult[] = [],
+  stateContext?: {
+    transcriptDocs?: StoryboardBgeResult[];
+    webDocs?: StoryboardWebSearchResult[];
+    metadataDocs?: Record<string, unknown>[];
+    stateFeedback?: string;
+  },
 ): Promise<AdminInsightChatResponse | null> {
-    const provider = llmConfig?.provider || 'gemini';
-    const apiKey = llmConfig?.apiKey || (provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
-    const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
-    if (!apiKey) return null;
+  const provider = llmConfig?.provider || 'gemini';
+  const apiKey = llmConfig?.apiKey || (provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
+  if (!apiKey) return null;
 
-    const prompt = createStoryboardLlmPrompt(message, storyboardModelProfile, bgeContext, stateContext);
-    const contextSources = stateContext?.transcriptDocs?.length
-      ? storyboardSourcesFromBgeResults(stateContext.transcriptDocs)
-      : storyboardSourcesFromBgeResults(bgeContext);
-    const fallbackSources = contextSources.length
-      ? contextSources
-      : storyboardSourcesFromBgeResults(stateContext?.transcriptDocs ?? []);
+  const prompt = createStoryboardLlmPrompt(message, storyboardModelProfile, bgeContext, stateContext);
+  const contextSources = stateContext?.transcriptDocs?.length
+    ? storyboardSourcesFromBgeResults(stateContext.transcriptDocs)
+    : storyboardSourcesFromBgeResults(bgeContext);
+  const fallbackSources = contextSources.length
+    ? contextSources
+    : storyboardSourcesFromBgeResults(stateContext?.transcriptDocs ?? []);
 
-    switch (provider) {
-        case 'openai': {
-            const response = await askOpenAI(prompt, model, apiKey, asOf);
-            return response ? {
-                ...response,
-                meta: {
-                    ...response.meta,
-                    source: 'agent',
-                    fallbackReason: response.meta?.fallbackReason,
-                },
-                sources: response.sources?.length ? response.sources : fallbackSources,
-            } : null;
-        }
-        case 'anthropic': {
-            const response = await askAnthropic(prompt, model, apiKey, asOf);
-            return response ? {
-                ...response,
-                meta: {
-                    ...response.meta,
-                    source: 'agent',
-                    fallbackReason: response.meta?.fallbackReason,
-                },
-                sources: response.sources?.length ? response.sources : fallbackSources,
-            } : null;
-        }
-        case 'gemini':
-        default: {
-            const response = await askGemini(prompt, model, apiKey, asOf);
-            return response ? {
-                ...response,
-                meta: {
-                    ...response.meta,
-                    source: 'agent',
-                    fallbackReason: response.meta?.fallbackReason,
-                },
-                sources: response.sources?.length ? response.sources : fallbackSources,
-            } : null;
-        }
+  switch (provider) {
+    case 'openai': {
+      const response = await askOpenAI(prompt, model, apiKey, asOf);
+      return response ? {
+        ...response,
+        meta: {
+          ...response.meta,
+          source: 'agent',
+          fallbackReason: response.meta?.fallbackReason,
+        },
+        sources: response.sources?.length ? response.sources : fallbackSources,
+      } : null;
     }
+    case 'anthropic': {
+      const response = await askAnthropic(prompt, model, apiKey, asOf);
+      return response ? {
+        ...response,
+        meta: {
+          ...response.meta,
+          source: 'agent',
+          fallbackReason: response.meta?.fallbackReason,
+        },
+        sources: response.sources?.length ? response.sources : fallbackSources,
+      } : null;
+    }
+    case 'gemini':
+    default: {
+      const response = await askGemini(prompt, model, apiKey, asOf);
+      return response ? {
+        ...response,
+        meta: {
+          ...response.meta,
+          source: 'agent',
+          fallbackReason: response.meta?.fallbackReason,
+        },
+        sources: response.sources?.length ? response.sources : fallbackSources,
+      } : null;
+    }
+  }
 }
 
 function createLocalStoryboardResponse(message: string, asOf: string, profile: StoryboardModelProfile): AdminInsightChatResponse {
-    return createLocalResponse(asOf, buildStoryboardFallbackContent(message, profile), {
-        fallbackReason: 'storyboard_internal_fallback',
-    });
+  return createLocalResponse(asOf, buildStoryboardFallbackContent(message, profile), {
+    fallbackReason: 'storyboard_internal_fallback',
+  });
 }
 
 function shouldUseWebSearch(message: string): boolean {
