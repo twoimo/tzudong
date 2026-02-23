@@ -1762,7 +1762,7 @@ async function askStoryboardAgent(
           source: 'agent',
         },
       };
-      if (!remoteResponse.sources.length && bgeContext.length > 0) {
+      if (!(remoteResponse.sources?.length) && bgeContext.length > 0) {
         remoteResponse.sources = storyboardSourcesFromBgeResults(bgeContext);
       }
       return remoteResponse;
