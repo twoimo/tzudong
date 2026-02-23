@@ -71,8 +71,22 @@ const nextConfig = {
             },
         ];
     },
+    webpack: (config, { dev }) => {
+        if (dev) {
+            config.devtool = false;
+            const warnings = config.ignoreWarnings ?? [];
+            config.ignoreWarnings = [
+                ...warnings,
+                {
+                    message: /Invalid source map\. Only conformant source maps can be used to find the original code/,
+                },
+            ];
+        }
+        return config;
+    },
+    // Turbopack 설정 추가 (Next.js 16 호환성)
+    turbopack: {},
     experimental: {
-        // [PERF] 트리쉐이킹을 위한 패키지 임포트 최적화 - 번들 크기 대폭 감소
         optimizePackageImports: [
             'lucide-react',
             'date-fns',
@@ -93,14 +107,11 @@ const nextConfig = {
             'sonner',
             'cmdk',
         ],
-        // [PERF] 라우터 캐시로 페이지 이동 속도 향상
         staleTimes: {
-            dynamic: 30,  // 동적 페이지 30초 캐시
-            static: 180,  // 정적 페이지 3분 캐시
+            dynamic: 30,
+            static: 180,
         },
     },
-    // Turbopack 설정 추가 (Next.js 16 호환성)
-    turbopack: {},
     // [PERF] 컴파일러 최적화
     compiler: {
         // 프로덕션에서 console.log 제거 (번들 크기 + 런타임 성능)

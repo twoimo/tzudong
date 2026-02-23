@@ -555,6 +555,8 @@ const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
         </div>
     ),
     thead: ({ children, ...props }: ComponentPropsWithoutRef<'thead'>) => <thead {...props} className="bg-[#f9fafb]">{children}</thead>,
+    tbody: ({ children, ...props }: ComponentPropsWithoutRef<'tbody'>) => <tbody {...props}>{children}</tbody>,
+    tr: ({ children, ...props }: ComponentPropsWithoutRef<'tr'>) => <tr {...props} className="border-b border-[#e5e7eb]">{children}</tr>,
     th: ({ children, ...props }: ComponentPropsWithoutRef<'th'>) => <th {...props} className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
     td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => <td {...props} className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
     blockquote: ({ children, ...props }: ComponentPropsWithoutRef<'blockquote'>) => (
@@ -577,6 +579,16 @@ const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
     em: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="italic">{children}</span>,
     strong: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="font-semibold">{children}</span>,
     code: ({ children, ...props }: ComponentPropsWithoutRef<'code'>) => <code {...props} className="rounded bg-[#f3f4f6] px-1 py-0.5 text-[11px]">{children}</code>,
+    table: ({ children, ...props }: ComponentPropsWithoutRef<'table'>) => (
+        <div className="my-1 overflow-x-auto">
+            <table {...props} className="w-full text-xs border-collapse border border-[#e5e7eb]">{children}</table>
+        </div>
+    ),
+    thead: ({ children, ...props }: ComponentPropsWithoutRef<'thead'>) => <thead {...props} className="bg-[#f9fafb]">{children}</thead>,
+    tbody: ({ children, ...props }: ComponentPropsWithoutRef<'tbody'>) => <tbody {...props}>{children}</tbody>,
+    tr: ({ children, ...props }: ComponentPropsWithoutRef<'tr'>) => <tr {...props} className="border-b border-[#e5e7eb]">{children}</tr>,
+    th: ({ children, ...props }: ComponentPropsWithoutRef<'th'>) => <th {...props} className="border border-[#e5e7eb] p-1 text-left text-[11px]">{children}</th>,
+    td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => <td {...props} className="border border-[#e5e7eb] p-1 text-[11px]">{children}</td>,
     ul: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="inline">{children}</span>,
     ol: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="inline">{children}</span>,
     li: ({ children, ...props }: ComponentPropsWithoutRef<'span'>) => <span {...props} className="inline">{children}</span>,
@@ -601,6 +613,20 @@ const CHAT_PREVIEW_MARKDOWN_COMPONENTS = {
 const MARKDOWN_HINT_PATTERN = /(?:^#{1,6}\s+|^\s*[-*+]\s+|^\s*\d+\.\s+|`{3}|`[^`]+`|\*\*|__|\[[^\]]+\]\([^)]+\)|^>\s+|\|[^\n]*\|)/m;
 const MARKDOWN_HINT_CACHE_LIMIT = 300;
 const markdownHeuristicCache = new Map<string, boolean>();
+const HTML_HINT_PATTERN = /<([a-z][\w:-]*)(\s|\/?>)/i;
+const BLOCKED_HTML_TAGS_PATTERN = /<(script|style|iframe|object|embed|meta|link|base|form|svg|math|frame|frameset)\b[\s\S]*?>[\s\S]*?(?:<\/\1>|(?=\/\s*>))/gi;
+const EVENT_ATTR_PATTERN = /\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+const SRC_HREF_JS_PROTOCOL_PATTERN = /\s+(src|href)\s*=\s*(["'])\s*javascript:[^"']*\2/gi;
+const NODE_ATTR_PATTERN = /\s+node=(?:"\[object Object\]"|'\[object Object\]')/g;
+
+function sanitizeHtmlForMarkdownInput(html: string): string {
+    return html
+        .replace(NODE_ATTR_PATTERN, '')
+        .replace(SRC_HREF_JS_PROTOCOL_PATTERN, ' href="#"')
+        .replace(BLOCKED_HTML_TAGS_PATTERN, '')
+        .replace(EVENT_ATTR_PATTERN, '')
+        .replace(/<(?:!--[\s\S]*?-->|\?[\s\S]*?\?>)/g, '');
+}
 
 type ReactMarkdownProps = Parameters<typeof ReactMarkdown>[0];
 type MarkdownComponentMap = NonNullable<ReactMarkdownProps['components']>;
@@ -611,7 +637,7 @@ function shouldRenderMarkdown(content: string): boolean {
         return cached;
     }
 
-    const result = MARKDOWN_HINT_PATTERN.test(content);
+    const result = MARKDOWN_HINT_PATTERN.test(content) || HTML_HINT_PATTERN.test(content);
 
     if (markdownHeuristicCache.size >= MARKDOWN_HINT_CACHE_LIMIT) {
         markdownHeuristicCache.clear();
@@ -678,9 +704,19 @@ const MarkdownRenderer = memo(({
     plainTextClassName?: string;
 }) => {
     const shouldParse = shouldRenderMarkdown(content);
+    const shouldRenderRawHtml = HTML_HINT_PATTERN.test(content);
 
     if (!shouldParse) {
         return <div className={cn(plainTextClassName, className)}>{content}</div>;
+    }
+
+    if (shouldRenderRawHtml) {
+        return (
+            <div
+                className={cn(className, 'space-y-2')}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtmlForMarkdownInput(content) }}
+            />
+        );
     }
 
     return (

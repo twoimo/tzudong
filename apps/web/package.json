@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 8080",
+    "dev:clean": "node -e \"const fs = require('fs'); fs.rmSync('.next', { recursive: true, force: true });\" && next dev --webpack --port 8080",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",

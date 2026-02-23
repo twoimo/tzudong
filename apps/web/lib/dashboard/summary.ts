@@ -5,7 +5,7 @@ import type {
     DashboardVideoDetailResponse,
     DashboardVideoSummary,
 } from '@/types/dashboard';
-import { extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from '@/lib/dashboard/helpers';
+import { extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
 import { getRestaurantRows, type DashboardRestaurantRow } from '@/lib/dashboard/supabase';
 
 type RestaurantsFilter = {

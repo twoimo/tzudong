@@ -1,5 +1,5 @@
 import type { DashboardQualityResponse } from '@/types/dashboard';
-import { hasLaajMetrics, hasRuleMetrics } from '@/lib/dashboard/classifiers';
+import { hasLaajMetrics, hasRuleMetrics } from './classifiers';
 import { getRestaurantRows } from '@/lib/dashboard/supabase';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;

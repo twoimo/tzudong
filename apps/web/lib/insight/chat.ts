@@ -21,6 +21,8 @@ const STORYBOARD_AGENT_TIMEOUT_MS = Number(process.env.STORYBOARD_AGENT_TIMEOUT_
 const STORYBOARD_AGENT_MAX_RETRIES = Number(process.env.STORYBOARD_AGENT_MAX_RETRIES || '2');
 const STORYBOARD_AGENT_RETRY_BASE_MS = Number(process.env.STORYBOARD_AGENT_RETRY_BASE_MS || '250');
 const STORYBOARD_AGENT_RETRY_MAX_MS = Number(process.env.STORYBOARD_AGENT_RETRY_MAX_MS || '1500');
+const STORYBOARD_AGENT_UNAVAILABLE_COOLDOWN_MS = Number(process.env.STORYBOARD_AGENT_UNAVAILABLE_COOLDOWN_MS || '30000');
+const STORYBOARD_AGENT_ENABLED = process.env.STORYBOARD_AGENT_ENABLED !== 'false';
 const INSIGHT_QUERY_TTL_MS = Number(process.env.INSIGHT_QUERY_CACHE_TTL_MS || '45000');
 
 const GEMINI_API_KEY_ENV = process.env.GEMINI_OCR_YEON?.trim() || '';
@@ -56,6 +58,21 @@ const STORYBOARD_KEYWORDS = [
 ];
 
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
+const RETRYABLE_FETCH_ERROR_CODES = new Set([
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ENOTFOUND',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'ETIMEDOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+]);
+const RETRYABLE_FETCH_ERROR_MESSAGES = [
+  /fetch failed/i,
+  /connect (econnrefused|econnreset|etimedout|econnaborted|unknown)|connect timeout/i,
+  /network/i,
+];
 
 type CachedQueryEntry<T> = {
   data: T;
@@ -67,6 +84,7 @@ const cacheTtl = Number.isFinite(INSIGHT_QUERY_TTL_MS) && INSIGHT_QUERY_TTL_MS >
   : 45000;
 const cacheInFlight = new Map<string, Promise<unknown>>();
 const queryCache = new Map<string, CachedQueryEntry<unknown>>();
+const storyboardEndpointCooldownByUrl = new Map<string, number>();
 
 function normalizeCacheKey(base: string): string {
   return base.trim().toLowerCase();
@@ -141,7 +159,61 @@ function isRetryableFetchError(error: unknown): boolean {
   if (error instanceof DOMException && error.name === 'AbortError') {
     return true;
   }
-  return error instanceof TypeError;
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const errorCode = extractFetchErrorCode(error);
+  if (errorCode && RETRYABLE_FETCH_ERROR_CODES.has(errorCode.toUpperCase())) {
+    return true;
+  }
+
+  if (error instanceof TypeError) {
+    return true;
+  }
+
+  return RETRYABLE_FETCH_ERROR_MESSAGES.some((pattern) => pattern.test(error.message));
+}
+
+function extractFetchErrorCode(error: unknown): string | null {
+  if (error instanceof TypeError) {
+    const typed = error as { code?: string };
+    if (typed.code) return typed.code;
+  }
+  if (error && typeof error === 'object') {
+    const typed = error as { code?: string; cause?: { code?: string } };
+    if (typed.code) return typed.code;
+    if (typed.cause?.code) return typed.cause.code;
+  }
+
+  if (error instanceof Error) {
+    const cause = error.cause as { code?: string } | undefined;
+    if (cause?.code) return cause.code;
+  }
+  return null;
+}
+
+function createStoryboardUnavailableResponse(asOf: string): AdminInsightChatResponse {
+  return createLocalResponse(asOf, '스토리보드 에이전트 연결이 일시적으로 불안정합니다. 잠시 뒤 다시 시도해 주세요.', {
+    fallbackReason: 'storyboard_agent_unavailable',
+  });
+}
+
+function getStoryboardEndpointCooldownUntil(endpoint: string): number | null {
+  const until = storyboardEndpointCooldownByUrl.get(endpoint);
+  if (until === undefined) return null;
+  if (until <= Date.now()) {
+    storyboardEndpointCooldownByUrl.delete(endpoint);
+    return null;
+  }
+  return until;
+}
+
+function setStoryboardEndpointCooldown(endpoint: string): void {
+  const cooldown = Number.isFinite(STORYBOARD_AGENT_UNAVAILABLE_COOLDOWN_MS) && STORYBOARD_AGENT_UNAVAILABLE_COOLDOWN_MS > 0
+    ? STORYBOARD_AGENT_UNAVAILABLE_COOLDOWN_MS
+    : 30000;
+  storyboardEndpointCooldownByUrl.set(endpoint, Date.now() + cooldown);
 }
 
 function calcBackoffDelay(attempt: number): number {
@@ -161,6 +233,9 @@ async function sleep(ms: number): Promise<void> {
 
 function getStoryboardAgentEndpoint(): string | null {
   if (!STORYBOARD_AGENT_API_URL) {
+    return null;
+  }
+  if (!STORYBOARD_AGENT_ENABLED) {
     return null;
   }
 
@@ -287,6 +362,10 @@ async function askStoryboardAgent(
 
   const endpoint = getStoryboardAgentEndpoint();
   if (!endpoint) return null;
+  const cooldownUntil = getStoryboardEndpointCooldownUntil(endpoint);
+  if (cooldownUntil) {
+    return createStoryboardUnavailableResponse(asOf);
+  }
 
   const timeoutMs = Number.isFinite(STORYBOARD_AGENT_TIMEOUT_MS) && STORYBOARD_AGENT_TIMEOUT_MS > 0
     ? STORYBOARD_AGENT_TIMEOUT_MS
@@ -335,7 +414,8 @@ async function askStoryboardAgent(
       const data = await response.json().catch(() => null);
       const content = extractStoryboardContent(data);
       if (!content) {
-        return null;
+        setStoryboardEndpointCooldown(endpoint);
+        return createStoryboardUnavailableResponse(asOf);
       }
 
       return {
@@ -348,8 +428,27 @@ async function askStoryboardAgent(
       };
     } catch (error) {
       if (attempt < maxRetries && isRetryableFetchError(error)) {
+        const errorCode = extractFetchErrorCode(error);
+        console.warn('[admin/insight/chat] storyboard agent request retrying:', {
+          endpoint,
+          attempt,
+          maxRetries,
+          errorCode,
+        });
         await sleep(calcBackoffDelay(attempt));
         continue;
+      }
+
+      const errorCode = extractFetchErrorCode(error);
+      if (isRetryableFetchError(error)) {
+        console.info('[admin/insight/chat] storyboard agent unavailable:', {
+          endpoint,
+          attempt,
+          maxRetries,
+          errorCode,
+        });
+        setStoryboardEndpointCooldown(endpoint);
+        return createStoryboardUnavailableResponse(asOf);
       }
 
       console.error('[admin/insight/chat] storyboard agent request failed:', error);
