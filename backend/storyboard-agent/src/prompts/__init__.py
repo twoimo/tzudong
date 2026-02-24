@@ -1,19 +1,4 @@
-"""prompts 패키지 — 프롬프트 템플릿 re-export
+"""Prompt 템플릿 모음 패키지.
 
-TODO: 각 프롬프트 파일 구현 후 아래 import 활성화
+각 에이전트는 필요한 템플릿을 개별 모듈에서 직접 import 한다.
 """
-
-# from prompts.supervisor import (
-#     SLOT_EXTRACTION_PROMPT,
-#     SLOT_EVALUATION_PROMPT,
-#     TASK_GENERATION_PROMPT,
-# )
-# from prompts.researcher import (
-#     RESEARCHER_SYSTEM_PROMPT,
-#     RESULT_EVALUATION_PROMPT,
-# )
-# from prompts.designer import (
-#     STORYBOARD_GENERATION_PROMPT,
-#     STORYBOARD_EDIT_PROMPT,
-# )
-# from prompts.feedback import FEEDBACK_CLASSIFICATION_PROMPT

@@ -1,7 +1,8 @@
 """Tavily 웹 검색"""
 
-import sys
+import json
 import os
+import sys
 
 _dir = os.path.dirname(os.path.abspath(__file__))
 _src_dir = os.path.dirname(_dir)
@@ -10,21 +11,20 @@ for _p in (_dir, _src_dir):
         sys.path.insert(0, _p)
 
 from _shared import log_tool_call
+from langchain_core.tools import tool
 from langchain_teddynote.tools.tavily import TavilySearch
 
-web_search = TavilySearch(max_results=5)
-
-# 원본 invoke를 래핑하여 log.md에 기록
-_original_invoke = web_search.invoke
+_tavily = TavilySearch(max_results=5)
 
 
-def _logged_invoke(input, *args, **kwargs):
-    query = input if isinstance(input, str) else str(input)
+@tool
+def web_search(query: str) -> dict:
+    """웹에서 최신 정보를 검색한다."""
     log_tool_call("web_search", query=query)
-    return _original_invoke(input, *args, **kwargs)
-
-
-web_search.invoke = _logged_invoke
+    result = _tavily.invoke(query)
+    if isinstance(result, dict):
+        return result
+    return {"result": result}
 
 
 if __name__ == "__main__":
@@ -32,5 +32,5 @@ if __name__ == "__main__":
         with open(__file__, encoding="utf-8") as f:
             print(f.read())
     else:
-        result = web_search.invoke(sys.argv[1])
-        print(result)
+        r = web_search.invoke({"query": sys.argv[1]})
+        print(json.dumps(r, ensure_ascii=False, indent=2))

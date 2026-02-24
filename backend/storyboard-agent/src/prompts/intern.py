@@ -130,6 +130,12 @@ INTERN_THINK_PROMPT = """\
 ## 현재 생성/삭제 상태
 {artifact_statuses}
 
+## 기존 생성 호출 원본(요약)
+{original_tool_calls}
+
+## 현재 수정본 상태
+{modified_tool_calls}
+
 ## 대화 이력
 {messages}
 
@@ -137,6 +143,7 @@ INTERN_THINK_PROMPT = """\
 - 한 턴에 필요한 tool call만 간결하게 생성
 - create/delete는 사람 리뷰 루프로 이동하므로 대상 이름을 정확히 작성
 - 사람 수정 피드백이 있으면 우선 반영한 create/delete call을 생성
+- 이미 승인/실행된 동일 대상을 다시 생성하지 말 것
 - 작업 후 계획 갱신은 시스템이 자동 처리 (`update_intern_plan` 직접 호출 금지)
 - 완료 시 tool call 없이 종료 보고 텍스트 응답
 - RPC 작업 전 필요하면 `list_rpc_sql`/`view_rpc_sql`로 확인
@@ -193,6 +200,7 @@ CODE_REVIEW_PROMPT = """\
 {codes}
 
 거부 규칙:
+- 보안 상 위험한 코드 생성 시 거부
 - 시스템 도구명/유사 기능 생성 시 거부:
 `__init__`, `_shared`, `list_tools`, `create_tool`, `delete_tool`, `create_rpc_sql`, `delete_rpc_sql`, `list_rpc_sql`, `view_rpc_sql`, `view_intern_plan`, `update_intern_plan`, `write_intern_report`
 - Python 금지: `os.system`, `subprocess`, `exec`, `eval`, `__import__`, `shutil.rmtree`, `os.remove`, `os.unlink`, `os.rmdir`, `requests`, `urllib`, `httpx`, `socket`
@@ -236,4 +244,25 @@ required_keys:
 
 응답 형식:
 {{"tool:foo":"[REVIEW_PASS] ...","rpc:bar":"[REVIEW_REJECT] ..."}}
+"""
+
+# ---------------------------------------------------------------------------
+# 8. INTERN_CREATE_MODIFY_PROMPT — 수정 지시 기반 create 1건 재생성
+# ---------------------------------------------------------------------------
+INTERN_CREATE_MODIFY_PROMPT = """\
+아래 create 1건의 수정본을 생성하세요.
+
+target_key:
+{target_key}
+
+current_tool_call:
+{current_tool_call}
+
+modify_feedback:
+{modify_feedback}
+
+규칙:
+- 반드시 create tool_call 1개만 반환
+- 대상 이름(tool_name/function_name)은 기존과 동일해야 함
+- 수정 요구사항을 반영한 전체 code/sql_code를 포함
 """

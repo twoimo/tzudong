@@ -21,6 +21,6 @@ create or replace function search_restaurants_by_category (
     substring(r.youtube_link from 'v=([^&]+)') as video_id
   from restaurants r
   where r.status = 'approved'
-    and p_category = any(r.categories)
+    and r.categories @> array[p_category]
   limit p_limit;
 $$;

@@ -1,30 +1,47 @@
-"""Designer 프롬프트 템플릿
+"""Designer 프롬프트 템플릿."""
 
-설계 문서: STORYBOARD_NEXT_STEP_DESIGN_v2.md §3.4
+STORYBOARD_GENERATION_PROMPT = """\
+사용자 요청에 맞춰 먹방 하이라이트 스토리보드를 작성하세요.
+
+[요청/슬롯]
+{slots_data}
+
+[장면 데이터(search_scene_data)]
+{scene_data}
+
+[웹 검색 요약]
+{web_summary}
+
+[작성 규칙]
+- 인물은 항상 '유튜버'로 표기
+- 장면 구조/연출을 대사보다 우선
+- 자막의 특정 사건/사물/행동을 그대로 재현하지 말 것
+- 6~8개 연속 씬
+
+[출력 형식]
+# 제목: ...
+# 컨셉: ...
+## 📍 씬 1: ...
+- 영상: ...
+- 오디오: ...
+- 연출 포인트: ...
 """
 
-# TODO: 아래 프롬프트 템플릿 구현
 
-# ---------------------------------------------------------------------------
-# 1. STORYBOARD_GENERATION_PROMPT — 스토리보드 생성
-# ---------------------------------------------------------------------------
-# - 슬롯 데이터를 기반으로 스토리보드를 생성
-# - 각 씬에 포함할 요소:
-#   - 시각적 묘사 (visual_references 기반)
-#   - 대사/나레이션 (transcript_context 기반)
-#   - 장소/음식 정보 (food_restaurant_info 기반)
-#   - 카메라 앵글/전환 제안
-#   - 효과음/BGM 힌트 (audio_cues 기반)
-# - target_scene_count에 맞춰 씬 수 조절
-# - storyboard_history가 있으면 이전 버전 참고 (수정 흐름)
-#
-# 변수 삽입: {slots_data}, {target_scene_count}, {storyboard_history}
+STORYBOARD_EDIT_PROMPT = """\
+아래 기존 스토리보드를 수정 지시에 맞게 고치세요.
 
-# ---------------------------------------------------------------------------
-# 2. STORYBOARD_EDIT_PROMPT — 피드백 기반 수정
-# ---------------------------------------------------------------------------
-# - human_feedback.edit_instruction을 기반으로 기존 스토리보드 수정
-# - 전체 재생성이 아닌 부분 수정 지향
-# - 수정 전/후 차이를 명확히 표시
-#
-# 변수 삽입: {current_storyboard}, {edit_instruction}
+[기존 스토리보드]
+{current_storyboard}
+
+[수정 지시]
+{edit_instruction}
+"""
+
+
+SUMMARY_PROMPT = """\
+아래 대화를 supervisor 재요청용으로 5줄 이내로 요약하세요.
+
+{messages}
+"""
+

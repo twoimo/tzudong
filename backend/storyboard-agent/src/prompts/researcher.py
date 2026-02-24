@@ -1,11 +1,6 @@
-"""Researcher 프롬프트 템플릿
+"""Researcher 프롬프트 템플릿."""
 
-설계 문서: STORYBOARD_NEXT_STEP_DESIGN_v2.md §3.2, §6
-"""
-
-# ---------------------------------------------------------------------------
-# 1. RESEARCHER_THINK_PROMPT — ReAct 행동 결정 프롬프트
-# ---------------------------------------------------------------------------
+# think 단계: 도구 호출 계획 생성
 RESEARCHER_THINK_PROMPT = """\
 당신은 먹방 유튜브 스토리보드 제작을 위한 자료조사 전문가입니다.
 
@@ -14,15 +9,6 @@ RESEARCHER_THINK_PROMPT = """\
 
 ## 사용 가능한 도구
 도구는 자동으로 바인딩되어 있습니다. 복수 도구를 동시에 호출할 수 있습니다.
-- **search_scene_data**: 자막 + is_peak 캡션 하이브리드 검색 (메인 도구)
-- **search_video_ids_by_query**: 키워드로 video_id 목록 조회 (search_scene_data의 video_ids 필터용)
-- **get_video_metadata_filtered**: 영상 메타데이터 조회 (조회수, 제목 등)
-- **search_restaurants_by_category**: 카테고리로 식당 검색
-- **search_restaurants_by_name**: 식당명으로 검색
-- **get_categories_by_restaurant**: 식당의 카테고리 조회
-- **get_all_approved_restaurant_names**: 승인된 식당 목록
-- **web_search**: 외부 검색 (트렌드, 배경 지식 필요 시에만)
-- **request_new_tool**: 기존 도구로 불가능할 때 새 도구 생성 요청
 
 ## 검색 전략
 1. search_scene_data로 자막 + 캡션을 먼저 검색하세요.
@@ -45,9 +31,7 @@ RESEARCHER_THINK_PROMPT = """\
 - 더 이상 검색할 필요가 없으면 텍스트로 결과를 정리하세요.
 """
 
-# ---------------------------------------------------------------------------
-# 2. RESULT_EVALUATION_PROMPT — 웹검색 결과 주관적 평가
-# ---------------------------------------------------------------------------
+# evaluate 단계: 웹 결과 기반 충분/부족 보조 판정
 RESULT_EVALUATION_PROMPT = """\
 당신은 스토리보드 자료조사 결과를 평가하는 검증자입니다.
 
@@ -55,7 +39,7 @@ RESULT_EVALUATION_PROMPT = """\
 {instruction}
 
 ## 현재 자막/캡션 상태
-- 자막: {transcript_count}건 (최소 3건 권장)
+- 자막: {transcript_count}건 (최소 2~3건 권장)
 - 캡션 확보 여부: {has_caption}
 
 ## 웹검색 결과
@@ -72,4 +56,48 @@ RESULT_EVALUATION_PROMPT = """\
 반드시 "충분" 또는 "부족"으로 시작하세요.
 
 충분/부족: [이유]
+"""
+
+
+# evaluate 단계: web_search 결과 요약
+WEB_RESULTS_SUMMARY_PROMPT = """\
+당신은 리서치 결과 정리자입니다.
+
+원래 요청:
+{instruction}
+
+웹 검색 쿼리:
+{web_queries}
+
+웹 검색 원문 결과(JSON):
+{web_results}
+
+요약 규칙:
+- 요청과 직접 관련된 정보만 남길 것
+- 장면 연출/대사 참고에 쓸 핵심만 3~6줄로 정리할 것
+- 추측 금지, 원문에 없는 내용 추가 금지
+
+출력:
+- 불릿 목록만 출력
+"""
+
+
+# evaluate 단계: think 반복 정체 요약
+RESEARCH_STALL_SUMMARY_PROMPT = """\
+당신은 researcher 진행 정체를 supervisor에게 보고합니다.
+
+원래 요청:
+{instruction}
+
+현재 상태:
+- think_count: {think_count}
+- previous_scene_queries: {scene_queries}
+- previous_web_queries: {web_queries}
+- research_summary: {research_summary}
+- missing_slots: {missing_slots}
+
+요구:
+- 왜 정체됐는지 3줄 이내로 요약
+- 추가 조사로 해결 가능한지, 툴/RPC 보완이 필요한지 명시
+- 간결한 한국어 문장만 출력
 """
