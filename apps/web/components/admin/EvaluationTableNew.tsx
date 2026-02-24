@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/tooltip';
 import { ChevronDown, ChevronUp, Check, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X, Undo2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCategoryText } from '@/lib/category-utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 
 interface EvaluationTableProps {
@@ -1206,9 +1207,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
           ? '-'
           : getBooleanLabel(record.evaluation_results?.category_TF?.eval_value);
 
-        const categoryText = record.categories && record.categories.length > 0
-          ? record.categories.join(', ')
-          : (record.restaurant_info?.category || '-');
+        const categoryText = formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-');
         const originAddress = getOriginAddress(record);
         const roadAddress = record.restaurant_info?.naver_address_info?.road_address || record.road_address || '-';
         const jibunAddress = record.restaurant_info?.naver_address_info?.jibun_address || record.jibun_address || '-';
@@ -1409,7 +1408,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   </dl>
                   {record.evaluation_results?.category_TF?.category_revision && (
                     <p className="mt-2 text-amber-700">
-                      카테고리 수정안: {record.evaluation_results.category_TF.category_revision}
+                      카테고리 수정안: {formatCategoryText(record.evaluation_results?.category_TF.category_revision, '-')}
                     </p>
                   )}
                 </div>

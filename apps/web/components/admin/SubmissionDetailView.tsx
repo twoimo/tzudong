@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
+import { formatCategoryText } from '@/lib/category-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 
@@ -569,7 +570,7 @@ export function SubmissionDetailView({
                                     <p><span className="text-muted-foreground">이름:</span> <span className="font-medium">{submission.original_restaurant_data.name || '-'}</span></p>
                                     <p><span className="text-muted-foreground">전화:</span> {submission.original_restaurant_data.phone || '-'}</p>
                                     <p><span className="text-muted-foreground">주소:</span> {submission.original_restaurant_data.road_address || submission.original_restaurant_data.jibun_address || '-'}</p>
-                                    <p><span className="text-muted-foreground">카테고리:</span> {submission.original_restaurant_data.categories?.join(', ') || '-'}</p>
+                                    <p><span className="text-muted-foreground">카테고리:</span> {formatCategoryText(submission.original_restaurant_data.categories, '-')}</p>
                                 </div>
                             </div>
                             {/* 사용자 제출 정보 */}
@@ -581,7 +582,7 @@ export function SubmissionDetailView({
                                     <p><span className="text-muted-foreground">이름:</span> <span className="font-medium">{submission.restaurant_name || '-'}</span></p>
                                     <p><span className="text-muted-foreground">전화:</span> {submission.restaurant_phone || '-'}</p>
                                     <p><span className="text-muted-foreground">주소:</span> {submission.restaurant_address || '-'}</p>
-                                    <p><span className="text-muted-foreground">카테고리:</span> {submission.restaurant_categories?.join(', ') || '-'}</p>
+                                    <p><span className="text-muted-foreground">카테고리:</span> {formatCategoryText(submission.restaurant_categories, '-')}</p>
                                 </div>
                             </div>
                         </div>

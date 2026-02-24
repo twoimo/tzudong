@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Trophy, PenSquare, X, Plus, MapPin } from 'lucide-react';
 import { Restaurant } from '@/types/restaurant';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
+import { parseCategory } from './stamp-utils';
 
 interface Review {
     id: string;
@@ -56,20 +57,6 @@ interface RestaurantReviewsPanelProps {
         adminNote: string | null;
     }) => void;
 }
-
-const parseCategory = (categoryData: any): string | null => {
-    if (Array.isArray(categoryData) && categoryData.length > 0) return categoryData[0];
-    if (typeof categoryData === 'string') {
-        try {
-            const parsed = JSON.parse(categoryData);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
-            return categoryData;
-        } catch {
-            return categoryData;
-        }
-    }
-    return null;
-};
 
 export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel({
     restaurant,

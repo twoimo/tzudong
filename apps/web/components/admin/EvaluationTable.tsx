@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCategoryText } from '@/lib/category-utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 
 interface EvaluationTableProps {
@@ -170,7 +171,7 @@ export function EvaluationTable({
 
                   <TableCell>
                     <div className="whitespace-normal">
-                      {record.restaurant_info?.category || '-'}
+                      {formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-')}
                     </div>
                   </TableCell>
 

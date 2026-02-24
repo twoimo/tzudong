@@ -1,5 +1,6 @@
 // 도장 관련 공통 유틸리티 함수 및 상수
 // stamp/page.tsx와 StampOverlay.tsx에서 공유
+import { parseCategoryList } from '@/lib/category-utils';
 
 // ========== Constants ==========
 
@@ -67,17 +68,8 @@ export const extractRegion = (roadAddress: string | null, jibunAddress: string |
 
 /** 카테고리 데이터 파싱 */
 export const parseCategory = (categoryData: any): string | null => {
-    if (Array.isArray(categoryData) && categoryData.length > 0) return categoryData[0];
-    if (typeof categoryData === 'string') {
-        try {
-            const parsed = JSON.parse(categoryData);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
-            return categoryData;
-        } catch {
-            return categoryData;
-        }
-    }
-    return null;
+    const categories = parseCategoryList(categoryData);
+    return categories[0] || null;
 };
 
 /** YouTube 비디오 ID 추출 */

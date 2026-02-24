@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCategoryText } from '@/lib/category-utils';
 
 // 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
 const getYoutubeVideoId = (url: string | undefined): string | null => {
@@ -240,7 +241,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                             </Badge>
                             {record.evaluation_results?.category_TF?.category_revision && (
                                 <span className="ml-2 text-xs text-yellow-700 font-medium">
-                                    (수정: {record.evaluation_results.category_TF.category_revision})
+                                    (수정: {formatCategoryText(record.evaluation_results?.category_TF.category_revision, '-')})
                                 </span>
                             )}
                         </div>
@@ -262,9 +263,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                     <div className="flex flex-col gap-0.5 min-w-0">
                         <span className="text-gray-500 text-xs font-medium">카테고리</span>
                         <span className="text-gray-900 text-sm break-all">
-                            {record.categories && record.categories.length > 0
-                                ? record.categories.join(', ')
-                                : record.restaurant_info?.category || '-'}
+                            {formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-')}
                         </span>
                     </div>
 

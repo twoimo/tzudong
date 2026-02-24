@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { parseCategoryList } from '@/lib/category-utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import {
   ADMIN_MODAL_ACTION,
@@ -51,6 +52,7 @@ const OVERSEAS_COUNTRIES = [
   "헝가리", "Hungary",
   "오스트레일리아", "Australia"
 ];
+
 
 interface EditRestaurantModalProps {
   record: EvaluationRecord | null;
@@ -819,12 +821,16 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       let initialCategories: string[] = [];
 
       // 1. record.categories가 존재하면 우선 사용 (배열)
-      if (record.categories && record.categories.length > 0) {
-        initialCategories = record.categories;
+      const recordCategories = parseCategoryList(record.categories);
+      if (recordCategories.length > 0) {
+        initialCategories = recordCategories;
       }
       // 2. 아니면 기존 restaurant_info.category 사용 (단일)
-      else if (record.restaurant_info.category) {
-        initialCategories = [record.restaurant_info.category];
+      else {
+        const legacyCategory = parseCategoryList(record.restaurant_info?.category);
+        if (legacyCategory.length > 0) {
+          initialCategories = legacyCategory;
+        }
       }
 
       // 3. AI 제안 적용 (단, 관리자가 수정한 적이 없는 경우에만!)
@@ -833,20 +839,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         const categoryRevision = record.evaluation_results.category_TF.category_revision;
 
         if (categoryRevision) {
-          // category_revision이 배열인 경우
-          if (Array.isArray(categoryRevision)) {
-            const validCategories = categoryRevision.filter(cat =>
-              RESTAURANT_CATEGORIES.includes(cat as typeof RESTAURANT_CATEGORIES[number])
-            );
-            if (validCategories.length > 0) {
-              initialCategories = validCategories;
-            }
-          }
-          // category_revision이 문자열인 경우
-          else if (typeof categoryRevision === 'string') {
-            if (RESTAURANT_CATEGORIES.includes(categoryRevision as typeof RESTAURANT_CATEGORIES[number])) {
-              initialCategories = [categoryRevision];
-            }
+          const revisionCategories = parseCategoryList(categoryRevision).filter(cat =>
+            RESTAURANT_CATEGORIES.includes(cat as typeof RESTAURANT_CATEGORIES[number])
+          );
+          if (revisionCategories.length > 0) {
+            initialCategories = revisionCategories;
           }
         }
       }
@@ -1086,15 +1083,24 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                 <Label className="text-sm text-muted-foreground">기존 카테고리</Label>
                 <div className="p-3 rounded-lg border bg-muted min-h-[60px]">
                   <div className="flex flex-wrap gap-1">
-                    {record?.categories && record.categories.length > 0 ? (
-                      record.categories.map((cat, idx) => (
-                        <Badge key={idx} variant="outline">{cat}</Badge>
-                      ))
-                    ) : record?.restaurant_info?.category ? (
-                      <Badge variant="outline">{record.restaurant_info.category}</Badge>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">없음</span>
-                    )}
+                    {(() => {
+                      const existingCategories = parseCategoryList(record?.categories);
+                      const legacyCategory = parseCategoryList(record?.restaurant_info?.category);
+
+                      if (existingCategories.length > 0) {
+                        return existingCategories.map((cat, idx) => (
+                          <Badge key={idx} variant="outline">{cat}</Badge>
+                        ));
+                      }
+
+                      if (legacyCategory.length > 0) {
+                        return legacyCategory.map((cat, idx) => (
+                          <Badge key={idx} variant="outline">{cat}</Badge>
+                        ));
+                      }
+
+                      return <span className="text-sm text-muted-foreground">없음</span>;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1111,21 +1117,31 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                   )}
                 </Label>
                 <div className="p-3 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 min-h-[60px]">
-                  {record?.evaluation_results?.category_TF?.category_revision ? (
-                    <div className="flex flex-wrap gap-1">
-                      {Array.isArray(record.evaluation_results.category_TF.category_revision) ? (
-                        record.evaluation_results.category_TF.category_revision.map((cat: string, idx: number) => (
-                          <Badge key={idx} variant="secondary" className="bg-blue-100 dark:bg-blue-900">{cat}</Badge>
-                        ))
-                      ) : (
-                        <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900">
-                          {record.evaluation_results.category_TF.category_revision}
-                        </Badge>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">제안 없음</span>
-                  )}
+                    {record?.evaluation_results?.category_TF?.category_revision ? (
+                      (() => {
+                        const revisionCategories = parseCategoryList(record.evaluation_results?.category_TF.category_revision).filter(cat =>
+                          RESTAURANT_CATEGORIES.includes(cat as typeof RESTAURANT_CATEGORIES[number])
+                        );
+
+                        if (revisionCategories.length === 0) {
+                          return (
+                            <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900">
+                              {record.evaluation_results?.category_TF?.category_revision}
+                            </Badge>
+                          );
+                        }
+
+                        return (
+                          <div className="flex flex-wrap gap-1">
+                            {revisionCategories.map((cat: string, idx: number) => (
+                              <Badge key={idx} variant="secondary" className="bg-blue-100 dark:bg-blue-900">{cat}</Badge>
+                            ))}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-sm text-muted-foreground">제안 없음</span>
+                    )}
                   {record?.evaluation_results?.category_TF?.eval_basis && (
                     <p className="text-xs text-muted-foreground mt-2 italic">
                       {record.evaluation_results.category_TF.eval_basis}
