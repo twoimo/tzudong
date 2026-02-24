@@ -2312,7 +2312,7 @@ const InsightChatSectionComponent = () => {
                             value={inputValue}
                             onChange={(event) => setInputValue(event.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="예: 먹방 스토리보드 기획안 짜줘"
+                            placeholder="질문을 입력해 주세요"
                             disabled={!!activeConversation?.isBooting || !!isSending}
                             className="h-11 border-[#e5e7eb] focus-visible:ring-[#f87171]"
                         />
