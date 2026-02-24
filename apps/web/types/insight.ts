@@ -1,4 +1,4 @@
-export type InsightVisualComponentType = 'heatmap' | 'map' | 'wordcloud' | 'calendar' | 'stats';
+export type InsightVisualComponentType = 'heatmap' | 'map' | 'wordcloud' | 'calendar' | 'stats' | 'treemap';
 
 export type InsightHeatmapDataPoint = {
   position: number; // 0-100 (progress %)

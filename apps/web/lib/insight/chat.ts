@@ -11,6 +11,7 @@ import { getDashboardQuality } from '@/lib/dashboard/quality';
 import { getAdminInsightHeatmap } from '@/lib/insight/heatmap';
 import { getAdminInsightSeason } from '@/lib/insight/season';
 import { getAdminInsightWordcloud } from '@/lib/insight/wordcloud';
+import { getInsightTreemapData } from '@/lib/insight/treemap';
 
 function includesAny(message: string, words: string[]): boolean {
   return words.some((word) => message.includes(word));
@@ -1827,10 +1828,8 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
     '안녕하세요! 쯔양 인사이트 챗봇입니다.',
     '',
     '궁금한 점을 자유롭게 질문해 주세요.',
-    '- "인기 키워드 보여줘"',
-    '- "이번달 시즌 키워드 추천해줘"',
+    '- "트리맵으로 조회수 분포 보여줘"',
     '- "히트맵 요약해줘"',
-    '- "운영 지표 요약"',
     '- "먹방 스토리보드 기획안 만들어줘"',
   ].join('\n');
 
@@ -1909,6 +1908,53 @@ export async function answerAdminInsightChat(
     });
   }
 
+  if (includesAny(input, ['트리맵', 'treemap', '트리 맵'])) {
+    const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
+      filterByPeriod: true,
+      metricMode: 'views',
+    }));
+
+    const totalViews = data.videos.reduce((acc, video) => acc + Math.max(0, video.viewCount), 0);
+    const topRows = data.videos
+      .map((video) => ({
+        ...video,
+        metricRaw: Math.max(0, video.viewCount),
+      }))
+      .filter((video) => video.metricRaw > 0)
+      .sort((a, b) => b.metricRaw - a.metricRaw)
+      .slice(0, 12)
+      .map((video, idx) =>
+        `- ${idx + 1}. **${video.title}** (${video.metricRaw.toLocaleString()}회 조회)`
+      );
+
+    const categoryTotals = new Map<string, number>();
+    for (const video of data.videos) {
+      const value = Math.max(0, video.viewCount);
+      if (value <= 0) continue;
+      categoryTotals.set(video.category, (categoryTotals.get(video.category) || 0) + value);
+    }
+
+    const topCategories = [...categoryTotals.entries()]
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 6)
+      .map(([category, total], idx) => `- ${idx + 1}. ${category}: ${Math.round(total).toLocaleString()}회`);
+
+    return createLocalResponse(asOf, [
+      '## 조회수 트리맵 요약',
+      '',
+      `- 데이터 수: ${data.totalVideos}개 영상`,
+      `- 누적 조회수 합: ${Math.round(totalViews).toLocaleString()}회`,
+      '',
+      '### 상위 영상(조회수 기준)',
+      ...(topRows.length > 0 ? topRows : ['- 데이터가 없습니다.']),
+      '',
+      '### 상위 카테고리',
+      ...(topCategories.length > 0 ? topCategories : ['- 데이터가 없습니다.']),
+    ].join('\n'), {
+      visualComponent: 'treemap',
+    });
+  }
+
   if (includesAny(input, ['운영', 'funnel', '실패', 'fail', '품질', 'quality', '지표'])) {
     const [funnel, failures, quality] = await Promise.all([
       withCachedQuery('admin-insight-funnel', cacheTtl, () => getDashboardFunnel(false)),
@@ -1921,7 +1967,7 @@ export async function answerAdminInsightChat(
       .join('\n');
 
     return createLocalResponse(asOf, [
-      `## 운영 지표 요약`,
+      `## 운영 지표 현황`,
       '',
       `- 수집 영상: **${funnel.counts.crawling}**`,
       `- 선택 영상: **${funnel.counts.selection}** (선택률 ${funnel.conversion.selectionRate ?? '-'}%)`,
@@ -1945,10 +1991,8 @@ export async function answerAdminInsightChat(
 
   return createLocalResponse(asOf, [
     `가능한 질문 예시:`,
-    `- "인기 키워드 보여줘"`,
-    `- "이번달 시즌 키워드 추천해줘"`,
     `- "히트맵 요약해줘"`,
-    `- "운영 지표 요약"`,
+    `- "트리맵으로 조회수 분포 보여줘"`,
     `- "먹방 스토리보드 기획안 만들어줘"`,
   ].join('\n'), { fallbackReason: 'llm_unavailable' });
 }
@@ -2007,10 +2051,8 @@ export async function streamAdminInsightChat(
     return {
       local: createLocalResponse(new Date().toISOString(), [
         '가능한 질문 예시:',
-        '- "인기 키워드 보여줘"',
-        '- "이번달 시즌 키워드 추천해줘"',
+        '- "트리맵으로 조회수 분포 보여줘"',
         '- "히트맵 요약해줘"',
-        '- "운영 지표 요약"',
         '- "먹방 스토리보드 기획안 만들어줘"',
       ].join('\n'), { fallbackReason: 'llm_unavailable' }),
     };
@@ -2063,6 +2105,53 @@ async function tryLocalAnswer(
     ].join('\n'), { visualComponent: 'heatmap' });
   }
 
+  if (includesAny(input, ['트리맵', 'treemap', '트리 맵'])) {
+    const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
+      filterByPeriod: true,
+      metricMode: 'views',
+    }));
+
+    const totalViews = data.videos.reduce((acc, video) => acc + Math.max(0, video.viewCount), 0);
+    const topRows = data.videos
+      .map((video) => ({
+        ...video,
+        metricRaw: Math.max(0, video.viewCount),
+      }))
+      .filter((video) => video.metricRaw > 0)
+      .sort((a, b) => b.metricRaw - a.metricRaw)
+      .slice(0, 12)
+      .map((video, idx) =>
+        `- ${idx + 1}. **${video.title}** (${video.metricRaw.toLocaleString()}회 조회)`
+      );
+
+    const categoryTotals = new Map<string, number>();
+    for (const video of data.videos) {
+      const value = Math.max(0, video.viewCount);
+      if (value <= 0) continue;
+      categoryTotals.set(video.category, (categoryTotals.get(video.category) || 0) + value);
+    }
+
+    const topCategories = [...categoryTotals.entries()]
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 6)
+      .map(([category, total], idx) => `- ${idx + 1}. ${category}: ${Math.round(total).toLocaleString()}회`);
+
+    return createLocalResponse(asOf, [
+      '## 조회수 트리맵 요약',
+      '',
+      `- 데이터 수: ${data.totalVideos}개 영상`,
+      `- 누적 조회수 합: ${Math.round(totalViews).toLocaleString()}회`,
+      '',
+      '### 상위 영상(조회수 기준)',
+      ...(topRows.length > 0 ? topRows : ['- 데이터가 없습니다.']),
+      '',
+      '### 상위 카테고리',
+      ...(topCategories.length > 0 ? topCategories : ['- 데이터가 없습니다.']),
+    ].join('\n'), {
+      visualComponent: 'treemap',
+    });
+  }
+
   if (includesAny(input, ['운영', 'funnel', '실패', 'fail', '품질', 'quality', '지표'])) {
     const [funnel, failures, quality] = await Promise.all([
       withCachedQuery('admin-insight-funnel', cacheTtl, () => getDashboardFunnel(false)),
@@ -2071,7 +2160,7 @@ async function tryLocalAnswer(
     ]);
     const topNotSelections = failures.notSelectionReasons.slice(0, 5).map((r) => `- ${r.label}: ${r.count}`).join('\n');
     return createLocalResponse(asOf, [
-      '## 운영 지표 요약', '',
+      '## 운영 지표 현황', '',
       `- 수집 영상: **${funnel.counts.crawling}**`,
       `- 선택 영상: **${funnel.counts.selection}** (선택률 ${funnel.conversion.selectionRate ?? '-'}%)`,
       `- Rule 적용: **${funnel.counts.rule}** (Rule율 ${funnel.conversion.ruleRate ?? '-'}%)`,

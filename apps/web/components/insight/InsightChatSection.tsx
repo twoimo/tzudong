@@ -1,8 +1,9 @@
-﻿'use client';
+'use client';
 
 import {
     type ComponentPropsWithoutRef,
     type KeyboardEvent,
+    type PointerEvent,
     type ReactNode,
     memo,
     useCallback,
@@ -11,6 +12,7 @@ import {
     useRef,
     useState,
 } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
     AlertCircle,
     Bot,
@@ -24,6 +26,7 @@ import {
     Check,
     Trash2,
 } from 'lucide-react';
+import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
@@ -45,6 +48,7 @@ type ChatMessage = {
     sources?: InsightChatSource[];
     createdAt: Date;
     meta?: AdminInsightChatResponse['meta'];
+    visualComponent?: AdminInsightChatResponse['visualComponent'];
 };
 
 type ChatConversation = {
@@ -142,13 +146,7 @@ const chatResponseCache = new Map<string, CachedEntry<AdminInsightChatResponse>>
 const inFlightBootstrapRequest = new Map<string, Promise<AdminInsightChatBootstrapResponse>>();
 const inFlightChatRequest = new Map<string, Promise<AdminInsightChatResponse>>();
 
-const SUGGESTED_PROMPTS = [
-    '먹방 스토리보드 기획안 짜줘',
-    '인기 키워드 보여줘',
-    '이번달 시즌 키워드 추천해줘',
-    '히트맵 요약해줘',
-    '운영 지표 요약',
-];
+const SUGGESTED_PROMPTS: string[] = [];
 
 function makeId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -423,6 +421,541 @@ function mapSources(rawSources: InsightChatSource[] | undefined): InsightChatSou
     return (rawSources ?? []).filter((source) => Boolean(source.videoTitle || source.youtubeLink || source.timestamp || source.text));
 }
 
+type InsightChatTreemapResponse = {
+    asOf: string;
+    period: string;
+    totalVideos: number;
+    videos: Array<{
+        id: string;
+        title: string;
+        category: string;
+        viewCount: number;
+        likeCount: number;
+        commentCount: number;
+        duration: number;
+        publishedAt: string | null;
+        previousViewCount: number | null;
+        previousLikeCount: number | null;
+        previousCommentCount: number | null;
+        previousDuration: number | null;
+    }>;
+    availablePeriods?: string[];
+};
+
+type ChatTreemapLeaf = {
+    id: string;
+    name: string;
+    title: string;
+    category: string;
+    value: number;
+    metricText: string;
+    percentText: string;
+    color: string;
+};
+
+type ChatTreemapHierarchyLeaf = ChatTreemapLeaf;
+
+type ChatTreemapGroup = {
+    name: string;
+    children: ChatTreemapLeaf[];
+    value: number;
+};
+
+type ChatTreemapNode = ChatTreemapLeaf | ChatTreemapGroup | ChatTreemapRoot;
+type ChatTreemapRoot = {
+    name: string;
+    children: ChatTreemapNode[];
+};
+
+type ChatTreemapAnyNode = ChatTreemapNode;
+
+type TreemapCell = {
+    node: ChatTreemapLeaf;
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+};
+
+type ChatTreemapSourceRow = ChatTreemapLeaf & {
+    metric: number;
+};
+
+type ChatTreemapTooltip = {
+    id: string;
+    title: string;
+    category: string;
+    metricText: string;
+    percentText: string;
+    x: number;
+    y: number;
+};
+
+type TreemapChartDimensions = {
+    width: number;
+    height: number;
+};
+
+const CHAT_TREEMAP_PALETTE = ['#22c55e', '#0ea5e9', '#f97316', '#a855f7', '#ef4444', '#14b8a6', '#6366f1', '#facc15', '#fb7185', '#2dd4bf'];
+const CHAT_TREEMAP_MAX_LEAVES = 18;
+const CHAT_TREEMAP_MIN_LEAVES = 5;
+const CHAT_TREEMAP_MOBILE_MAX_LEAVES = 10;
+const CHAT_TREEMAP_MOBILE_MIN_LEAVES = 4;
+const CHAT_TREEMAP_TABLET_MAX_LEAVES = 14;
+const CHAT_TREEMAP_TABLET_MIN_LEAVES = 5;
+const CHAT_TREEMAP_MIN_WIDTH = 320;
+const CHAT_TREEMAP_TABLET_MIN_WIDTH = 280;
+const CHAT_TREEMAP_MOBILE_MIN_WIDTH = 220;
+const CHAT_TREEMAP_MIN_HEIGHT = 220;
+const CHAT_TREEMAP_TABLET_MIN_HEIGHT = 260;
+const CHAT_TREEMAP_DESKTOP_MIN_HEIGHT = 280;
+const CHAT_TREEMAP_MAX_HEIGHT = 760;
+const CHAT_TREEMAP_ASPECT_RATIO = 0.82;
+const CHAT_TREEMAP_TOOLTIP_WIDTH = 240;
+const CHAT_TREEMAP_TOOLTIP_HEIGHT = 108;
+const CHAT_TREEMAP_AREA_PER_CELL = 9_500;
+const CHAT_TREEMAP_MOBILE_AREA_PER_CELL = 12_000;
+const CHAT_TREEMAP_TABLET_AREA_PER_CELL = 10_500;
+const CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE = 0.52;
+const CHAT_TREEMAP_EMPTY_MESSAGE = '트리맵에 표시할 데이터가 없습니다.';
+
+const CHAT_TREEMAP_MOBILE_BP = 768;
+const CHAT_TREEMAP_TABLET_BP = 1024;
+
+const getTreemapAreaPerCell = (width: number): number => {
+    if (width < CHAT_TREEMAP_MOBILE_BP) return CHAT_TREEMAP_MOBILE_AREA_PER_CELL;
+    if (width < CHAT_TREEMAP_TABLET_BP) return CHAT_TREEMAP_TABLET_AREA_PER_CELL;
+    return CHAT_TREEMAP_AREA_PER_CELL;
+};
+
+const getTreemapLeafBounds = (width: number): { minLeaves: number; maxLeaves: number } => {
+    if (width < CHAT_TREEMAP_MOBILE_BP) {
+        return {
+            minLeaves: CHAT_TREEMAP_MOBILE_MIN_LEAVES,
+            maxLeaves: CHAT_TREEMAP_MOBILE_MAX_LEAVES,
+        };
+    }
+
+    if (width < CHAT_TREEMAP_TABLET_BP) {
+        return {
+            minLeaves: CHAT_TREEMAP_TABLET_MIN_LEAVES,
+            maxLeaves: CHAT_TREEMAP_TABLET_MAX_LEAVES,
+        };
+    }
+
+    return {
+        minLeaves: CHAT_TREEMAP_MIN_LEAVES,
+        maxLeaves: CHAT_TREEMAP_MAX_LEAVES,
+    };
+};
+
+const getTreemapMinDimensions = (width: number): { minWidth: number; minHeight: number } => {
+    if (width < CHAT_TREEMAP_MOBILE_BP) {
+        return {
+            minWidth: CHAT_TREEMAP_MOBILE_MIN_WIDTH,
+            minHeight: CHAT_TREEMAP_MIN_HEIGHT,
+        };
+    }
+
+    if (width < CHAT_TREEMAP_TABLET_BP) {
+        return {
+            minWidth: CHAT_TREEMAP_TABLET_MIN_WIDTH,
+            minHeight: CHAT_TREEMAP_TABLET_MIN_HEIGHT,
+        };
+    }
+
+    return {
+        minWidth: CHAT_TREEMAP_MIN_WIDTH,
+        minHeight: CHAT_TREEMAP_DESKTOP_MIN_HEIGHT,
+    };
+};
+
+function isTreemapLeaf(node: ChatTreemapAnyNode): node is ChatTreemapHierarchyLeaf {
+    return !('children' in node);
+}
+
+function buildTreemapLayout(nodes: ChatTreemapNode[], width: number, height: number): TreemapCell[] {
+    if (nodes.length === 0 || width <= 0 || height <= 0) {
+        return [];
+    }
+
+    const source: ChatTreemapRoot = { name: 'root', children: nodes };
+
+    const rootHierarchy = hierarchy<ChatTreemapAnyNode>(source, (entry) => (isTreemapLeaf(entry) ? undefined : entry.children));
+    const root = rootHierarchy
+        .sum((entry) => (isTreemapLeaf(entry) ? Math.max(0.25, entry.value) : 0));
+
+    const layoutGenerator = treemap<ChatTreemapAnyNode>()
+        .size([width, height])
+        .paddingInner(2)
+        .round(true)
+        .tile(treemapResquarify);
+
+    const laidOut = layoutGenerator(root) as HierarchyRectangularNode<ChatTreemapAnyNode>;
+
+    return laidOut
+        .descendants()
+        .filter((entry) => entry.depth > 0 && isTreemapLeaf(entry.data as ChatTreemapAnyNode))
+        .map((entry) => ({
+            node: entry.data as ChatTreemapLeaf,
+            x0: entry.x0,
+            y0: entry.y0,
+            x1: entry.x1,
+            y1: entry.y1,
+        }))
+        .filter((entry) => entry.x1 > entry.x0 && entry.y1 > entry.y0);
+}
+
+const InsightChatTreemap = memo(() => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState<TreemapChartDimensions>({
+        width: CHAT_TREEMAP_MOBILE_MIN_WIDTH,
+        height: CHAT_TREEMAP_DESKTOP_MIN_HEIGHT,
+    });
+    const [tooltip, setTooltip] = useState<ChatTreemapTooltip | null>(null);
+
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['admin-insight-chat-treemap'],
+        queryFn: async () => {
+            const params = new URLSearchParams({
+                period: 'ALL',
+                viewMode: 'all',
+                metricMode: 'views',
+            });
+            const response = await fetch(`/api/insights/treemap?${params.toString()}`);
+            if (!response.ok) {
+                const text = await response.text().catch(() => '');
+                throw new Error(text || '트리맵 데이터를 가져오지 못했습니다.');
+            }
+            const payload = await response.json().catch(() => null);
+            if (!payload || typeof payload !== 'object') {
+                throw new Error('트리맵 응답 형식이 올바르지 않습니다.');
+            }
+            const videos = (payload as Partial<InsightChatTreemapResponse>).videos;
+            if (!Array.isArray(videos)) {
+                throw new Error('트리맵 응답 형식이 올바르지 않습니다.');
+            }
+            return payload as InsightChatTreemapResponse;
+        },
+        staleTime: 60_000,
+    });
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const container = containerRef.current;
+        const measurementTarget = container.parentElement ?? container;
+
+        const update = () => {
+            if (!containerRef.current) return;
+
+            const resolveWidthFromElement = (element: HTMLElement | null): number => {
+                if (!element) return 0;
+                const candidate = Math.floor(element.clientWidth);
+                if (candidate > 0) return candidate;
+
+                const rectWidth = Math.floor(element.getBoundingClientRect().width);
+                return rectWidth > 0 ? rectWidth : 0;
+            };
+
+            const viewportFallback = typeof window === 'undefined'
+                ? CHAT_TREEMAP_MOBILE_MIN_WIDTH
+                : Math.max(1, Math.floor((window.visualViewport?.width ?? window.innerWidth) * 0.92));
+            const resolvedWidth = resolveWidthFromElement(measurementTarget)
+                || resolveWidthFromElement(containerRef.current)
+                || resolveWidthFromElement(measurementTarget.parentElement)
+                || viewportFallback;
+
+            const width = Math.max(1, Math.floor(resolvedWidth));
+            const { minHeight } = getTreemapMinDimensions(width);
+            const ratioHeight = Math.round(width * CHAT_TREEMAP_ASPECT_RATIO);
+            const viewportHeight = typeof window === 'undefined'
+                ? Number.MAX_SAFE_INTEGER
+                : Math.floor((window.visualViewport?.height ?? window.innerHeight) * 0.75);
+            const targetHeight = Math.max(minHeight, Math.min(CHAT_TREEMAP_MAX_HEIGHT, Math.max(minHeight, Math.min(viewportHeight, ratioHeight))));
+            setDimensions({ width, height: targetHeight });
+        };
+
+        update();
+        const rafId = typeof window === 'undefined' ? null : window.requestAnimationFrame(update);
+
+        const resizeObserver = new ResizeObserver(update);
+        resizeObserver.observe(containerRef.current);
+        if (measurementTarget !== container) {
+            resizeObserver.observe(measurementTarget);
+        }
+
+        return () => {
+            resizeObserver.disconnect();
+            if (rafId !== null) {
+                window.cancelAnimationFrame(rafId);
+            }
+        };
+    }, []);
+
+    const updateTooltip = useCallback((event: PointerEvent<HTMLDivElement>, cell: TreemapCell) => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const pointerX = event.clientX - containerRect.left;
+        const pointerY = event.clientY - containerRect.top;
+        const tooltipWidth = Math.min(CHAT_TREEMAP_TOOLTIP_WIDTH, Math.max(170, containerRect.width * 0.8));
+        const tooltipHeight = CHAT_TREEMAP_TOOLTIP_HEIGHT;
+
+        setTooltip({
+            id: cell.node.id,
+            title: cell.node.title,
+            category: cell.node.category,
+            metricText: cell.node.metricText,
+            percentText: cell.node.percentText,
+            x: Math.max(0, Math.min(pointerX + 12, containerRect.width - tooltipWidth)),
+            y: Math.max(0, Math.min(pointerY + 12, containerRect.height - tooltipHeight)),
+        });
+    }, []);
+
+    const clearTooltip = useCallback(() => {
+        setTooltip(null);
+    }, []);
+
+    useEffect(() => {
+        clearTooltip();
+    }, [clearTooltip, dimensions.width, dimensions.height, data]);
+
+    const rows = useMemo(() => {
+        if (dimensions.width <= 0 || dimensions.height <= 0) return [];
+        if (!data) return [];
+
+        const sortedVideos = data.videos
+            .map((video) => ({
+                ...video,
+                metric: Number.isFinite(video.viewCount) ? Math.max(0, video.viewCount) : 0,
+            }))
+            .filter((video) => Number.isFinite(video.metric))
+            .sort((a, b) => b.metric - a.metric);
+
+        if (sortedVideos.length === 0) return [];
+
+        const totalMetric = sortedVideos.reduce((sum, row) => sum + row.metric, 0);
+        const { minLeaves, maxLeaves } = getTreemapLeafBounds(dimensions.width);
+        const areaPerCell = getTreemapAreaPerCell(dimensions.width);
+        const areaBasedLimit = Math.max(minLeaves, Math.floor((dimensions.width * dimensions.height) / areaPerCell));
+        const visibleCount = Math.max(
+            minLeaves,
+            Math.min(maxLeaves, areaBasedLimit || minLeaves),
+        );
+        const visibleVideos = sortedVideos.slice(0, visibleCount);
+
+        const layoutRows = visibleVideos.map((row) => ({
+            ...row,
+            metricForDisplay: row.metric,
+            metricForLayout: row.metric,
+        }));
+
+        const totalLayoutMetric = layoutRows.reduce((sum, row) => sum + row.metricForLayout, 0);
+        if (totalLayoutMetric > 0) {
+            for (const row of layoutRows) {
+                row.metricForLayout = row.metricForLayout / totalLayoutMetric;
+            }
+        } else {
+            const equalShare = 1 / layoutRows.length;
+            for (const row of layoutRows) {
+                row.metricForLayout = equalShare;
+            }
+        }
+
+        if (layoutRows.length > 1) {
+            const topShare = layoutRows[0].metricForLayout;
+            if (topShare > CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE) {
+                const targetTop = CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE;
+                const remainForOthers = 1 - targetTop;
+                const otherTotal = 1 - topShare;
+                layoutRows[0].metricForLayout = targetTop;
+
+                if (otherTotal > 0) {
+                    const boostRatio = remainForOthers / otherTotal;
+                    for (let i = 1; i < layoutRows.length; i += 1) {
+                        layoutRows[i].metricForLayout *= boostRatio;
+                    }
+                } else {
+                    const shared = remainForOthers / (layoutRows.length - 1);
+                    for (let i = 1; i < layoutRows.length; i += 1) {
+                        layoutRows[i].metricForLayout = shared;
+                    }
+                }
+            }
+        }
+
+        const rowsWithColor = layoutRows
+            .map((row, index) => ({
+            id: row.id,
+            name: row.title,
+            title: row.title,
+            category: row.category?.trim() || '기타',
+            value: Math.max(0.25, row.metricForLayout),
+            metric: row.metricForDisplay,
+            metricText: `${Math.round(row.metricForDisplay).toLocaleString()}회`,
+                percentText: totalMetric > 0 ? `${((row.metricForDisplay / totalMetric) * 100).toFixed(1)}%` : '0%',
+                color: CHAT_TREEMAP_PALETTE[index % CHAT_TREEMAP_PALETTE.length],
+            }));
+
+        const visibleMetric = rowsWithColor.reduce((sum, row) => sum + row.metric, 0);
+        return rowsWithColor
+            .sort((a, b) => b.metric - a.metric)
+            .slice(0, CHAT_TREEMAP_MAX_LEAVES)
+            .map((row) => ({
+                ...row,
+                percentText: visibleMetric > 0 ? `${((row.metric / visibleMetric) * 100).toFixed(1)}%` : '0%',
+            }));
+    }, [data, dimensions.width, dimensions.height]);
+
+    const treemapCells = useMemo(
+        () => buildTreemapLayout(rows, dimensions.width, dimensions.height),
+        [rows, dimensions.width, dimensions.height],
+    );
+    const visibleTreemapCells = treemapCells;
+
+    const displayedSummary = useMemo(() => {
+        if (!data) return '';
+        const total = data.totalVideos;
+        const shownVideos = rows.length;
+        return `조회수 기준 상위 ${shownVideos}/${total}개 영상 분포`;
+    }, [data, rows]);
+
+    if (isLoading) {
+        return (
+            <div className="mt-2 text-xs text-[#6b7280]">
+                트리맵 데이터를 불러오는 중입니다...
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="mt-2 text-xs text-[#ef4444]">
+                트리맵을 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.
+            </div>
+        );
+    }
+
+    if (!data || data.videos.length === 0) {
+        return (
+            <div className="mt-2 text-xs text-[#6b7280]">
+                {CHAT_TREEMAP_EMPTY_MESSAGE}
+            </div>
+        );
+    }
+
+    if (visibleTreemapCells.length === 0) {
+        return (
+            <div className="mt-2 rounded-md border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2 text-xs text-[#6b7280]">
+                트리맵을 표시할 수 없습니다. 잠시 후 다시 시도해 주세요.
+            </div>
+        );
+    }
+
+    return (
+        <div className="mt-2">
+            <div className="mb-2 text-xs text-[#6b7280]">
+                {displayedSummary}
+            </div>
+            <div ref={containerRef} className="w-full min-w-0">
+                <div
+                    className="relative w-full rounded-lg border border-[#e5e7eb] bg-[#f8fafc] overflow-visible"
+                    style={{ width: `${dimensions.width}px`, height: `${dimensions.height}px` }}
+                >
+                    {tooltip ? (
+                        <div
+                            className="absolute z-20 min-w-[200px] max-w-[250px] rounded-md border border-[#111827]/20 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm"
+                            style={{ left: `${tooltip.x}px`, top: `${tooltip.y}px` }}
+                        >
+                            <p className="text-xs font-semibold leading-snug text-[#111827] break-all">
+                                {tooltip.title}
+                            </p>
+                            <p className="mt-1 text-[11px] text-[#374151]">
+                                카테고리: {tooltip.category}
+                            </p>
+                            <p className="text-[11px] text-[#374151]">
+                                조회수: {tooltip.metricText}
+                            </p>
+                            <p className="text-[11px] text-[#6b7280]">
+                                비중: {tooltip.percentText}
+                            </p>
+                        </div>
+                    ) : null}
+                    {visibleTreemapCells.map((cell) => {
+                        const width = Math.max(0, cell.x1 - cell.x0);
+                        const height = Math.max(0, cell.y1 - cell.y0);
+                        const area = width * height;
+                        const hasText = area >= 1200 && width >= 32 && height >= 28;
+                        const hasMetric = area >= 1600 && width >= 44 && height >= 32;
+                        const hasPercent = area >= 2800 && width >= 58 && height >= 42;
+                        const isRenderable = width > 2 && height > 2;
+
+                        if (!isRenderable) return null;
+
+                        const titleMaxLength = Math.max(5, Math.min(24, Math.floor(Math.sqrt(area) / 3.3)));
+                        const shortTitle = hasText
+                            ? (cell.node.title.length > titleMaxLength
+                                ? `${cell.node.title.slice(0, Math.max(5, titleMaxLength - 1))}…`
+                                : cell.node.title)
+                            : '';
+
+                        const titleFont = hasText ? Math.max(9, Math.min(12, Math.floor(Math.sqrt(area) / 16))) : 0;
+                        const metricFont = hasMetric ? Math.max(8, Math.min(11, Math.floor(Math.sqrt(area) / 19))) : 0;
+                        const percentFont = hasPercent ? Math.max(7, Math.min(9, Math.floor(Math.sqrt(area) / 22))) : 0;
+
+                        return (
+                            <div
+                                key={`${cell.node.id}-${cell.x0}-${cell.y0}`}
+                                className="absolute flex flex-col justify-end border border-white/35 px-1.5 py-1 text-white overflow-hidden"
+                                onPointerMove={(event) => updateTooltip(event, cell)}
+                                onPointerEnter={(event) => updateTooltip(event, cell)}
+                                onPointerLeave={clearTooltip}
+                                onPointerDown={(event) => updateTooltip(event, cell)}
+                                style={{
+                                    left: cell.x0,
+                                    top: cell.y0,
+                                    width,
+                                    height,
+                                    backgroundColor: cell.node.color,
+                                    color: '#f8fafc',
+                                }}
+                            >
+                                {hasText ? (
+                                    <p
+                                        style={{ fontSize: `${titleFont}px` }}
+                                        className="truncate leading-tight font-semibold"
+                                        title={cell.node.title}
+                                    >
+                                        {shortTitle}
+                                    </p>
+                                ) : null}
+                                {hasMetric ? (
+                                    <p
+                                        style={{ fontSize: `${metricFont}px` }}
+                                        className="font-bold leading-tight"
+                                    >
+                                        {cell.node.metricText}
+                                    </p>
+                                ) : null}
+                                {hasPercent ? (
+                                    <p
+                                        style={{ fontSize: `${percentFont}px` }}
+                                        className="leading-tight text-white/90"
+                                    >
+                                        {cell.node.percentText}
+                                    </p>
+                                ) : null}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+});
+InsightChatTreemap.displayName = 'InsightChatTreemap';
+
 function deserializeConversationList(raw: PersistedChatState | null): {
     conversations: ChatConversation[];
     activeConversationId: string;
@@ -464,6 +997,7 @@ function deserializeConversationList(raw: PersistedChatState | null): {
                         sources: mapSources(message.sources),
                         createdAt: Number.isNaN(parsedCreatedAt.getTime()) ? new Date() : parsedCreatedAt,
                         meta: message.meta,
+                        visualComponent: message.visualComponent,
                     };
                 });
 
@@ -505,6 +1039,7 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
                 sources: message.sources,
                 createdAt: message.createdAt.toISOString(),
                 meta: message.meta,
+                visualComponent: message.visualComponent,
             })),
             createdAt: conversation.createdAt,
             updatedAt: conversation.updatedAt,
@@ -527,13 +1062,13 @@ function createInitialConversation(id: string): ChatConversation {
 }
 
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
-    h1: ({ children, ...props }: ComponentPropsWithoutRef<'h1'>) => <h2 {...props} className="text-base font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
-    h2: ({ children, ...props }: ComponentPropsWithoutRef<'h2'>) => <h3 {...props} className="text-sm font-semibold mb-1 mt-2.5 first:mt-0">{children}</h3>,
-    h3: ({ children, ...props }: ComponentPropsWithoutRef<'h3'>) => <h4 {...props} className="text-sm font-medium mb-1 mt-2.5 first:mt-0">{children}</h4>,
-    p: ({ children, ...props }: ComponentPropsWithoutRef<'p'>) => <p {...props} className="whitespace-pre-wrap text-sm leading-6">{children}</p>,
-    ul: ({ children, ...props }: ComponentPropsWithoutRef<'ul'>) => <ul {...props} className="list-disc pl-5 my-2 space-y-1 text-sm leading-6">{children}</ul>,
-    ol: ({ children, ...props }: ComponentPropsWithoutRef<'ol'>) => <ol {...props} className="list-decimal pl-5 my-2 space-y-1 text-sm leading-6">{children}</ol>,
-    li: ({ children, ...props }: ComponentPropsWithoutRef<'li'>) => <li {...props} className="text-sm leading-6">{children}</li>,
+    h1: ({ children, ...props }: ComponentPropsWithoutRef<'h1'>) => <h2 {...props} className="text-base font-semibold mb-2 mt-3 first:mt-0 break-words">{children}</h2>,
+    h2: ({ children, ...props }: ComponentPropsWithoutRef<'h2'>) => <h3 {...props} className="text-sm font-semibold mb-1 mt-2.5 first:mt-0 break-words">{children}</h3>,
+    h3: ({ children, ...props }: ComponentPropsWithoutRef<'h3'>) => <h4 {...props} className="text-sm font-medium mb-1 mt-2.5 first:mt-0 break-words">{children}</h4>,
+    p: ({ children, ...props }: ComponentPropsWithoutRef<'p'>) => <p {...props} className="whitespace-pre-wrap break-words text-sm leading-6">{children}</p>,
+    ul: ({ children, ...props }: ComponentPropsWithoutRef<'ul'>) => <ul {...props} className="list-disc pl-5 my-1 space-y-0.5 text-sm leading-6 break-words">{children}</ul>,
+    ol: ({ children, ...props }: ComponentPropsWithoutRef<'ol'>) => <ol {...props} className="list-decimal pl-5 my-1 space-y-0.5 text-sm leading-6 break-words">{children}</ol>,
+    li: ({ children, ...props }: ComponentPropsWithoutRef<'li'>) => <li {...props} className="text-sm leading-6 break-words">{children}</li>,
     a: ({ children, href, ...props }: ComponentPropsWithoutRef<'a'>) => {
         const safeHref = href ?? '';
         const isExternal = /^https?:/i.test(safeHref);
@@ -543,7 +1078,7 @@ const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
                 {...props}
-                className="text-[#ef4444] underline underline-offset-2 hover:no-underline"
+                className="text-[#ef4444] underline underline-offset-2 hover:no-underline break-all"
             >
                 {children}
             </a>
@@ -551,16 +1086,16 @@ const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
     },
     table: ({ children, ...props }: ComponentPropsWithoutRef<'table'>) => (
         <div className="my-2 overflow-x-auto">
-            <table {...props} className="w-full text-sm border-collapse border border-[#e5e7eb]">{children}</table>
+            <table {...props} className="w-full min-w-0 text-sm border-collapse border border-[#e5e7eb]">{children}</table>
         </div>
     ),
     thead: ({ children, ...props }: ComponentPropsWithoutRef<'thead'>) => <thead {...props} className="bg-[#f9fafb]">{children}</thead>,
     tbody: ({ children, ...props }: ComponentPropsWithoutRef<'tbody'>) => <tbody {...props}>{children}</tbody>,
     tr: ({ children, ...props }: ComponentPropsWithoutRef<'tr'>) => <tr {...props} className="border-b border-[#e5e7eb]">{children}</tr>,
-    th: ({ children, ...props }: ComponentPropsWithoutRef<'th'>) => <th {...props} className="border border-[#e5e7eb] p-2 text-left text-[11px]">{children}</th>,
-    td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => <td {...props} className="border border-[#e5e7eb] p-2 text-sm">{children}</td>,
+    th: ({ children, ...props }: ComponentPropsWithoutRef<'th'>) => <th {...props} className="border border-[#e5e7eb] p-2 text-left text-[11px] break-words">{children}</th>,
+    td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => <td {...props} className="border border-[#e5e7eb] p-2 text-sm break-words">{children}</td>,
     blockquote: ({ children, ...props }: ComponentPropsWithoutRef<'blockquote'>) => (
-        <blockquote {...props} className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280]">
+        <blockquote {...props} className="border-l-4 border-[#e5e7eb] pl-3 my-2 text-sm text-[#6b7280] break-words">
             {children}
         </blockquote>
     ),
@@ -784,14 +1319,14 @@ const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
                         target={source.youtubeLink ? '_blank' : undefined}
                         rel={source.youtubeLink ? 'noopener noreferrer' : undefined}
                         className={cn(
-                            'flex flex-wrap gap-1 text-xs leading-4',
+                            'flex flex-wrap gap-1 text-xs leading-4 min-w-0 break-words',
                             source.youtubeLink
                                 ? 'text-[#ef4444] hover:underline'
                                 : 'text-[#6b7280]',
                         )}
                     >
-                        <span className="font-medium">{source.videoTitle || '스토리보드 참고 소스'}</span>
-                        <span className="text-[#6b7280]">({source.timestamp || '-'})</span>
+                        <span className="font-medium break-words">{source.videoTitle || '스토리보드 참고 소스'}</span>
+                        <span className="text-[#6b7280] break-words">({source.timestamp || '-'})</span>
                         {source.text ? <span className="text-[#374151] truncate">: {source.text}</span> : null}
                     </a>
                 ))}
@@ -851,11 +1386,15 @@ MarkdownRenderer.displayName = 'MarkdownRenderer';
 
 const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
     const isUser = message.role === 'user';
+    const isTreemapMessage = message.visualComponent === 'treemap';
+    const maxWidthClass = isUser ? 'max-w-[84%]' : isTreemapMessage ? 'w-full max-w-full' : 'max-w-[84%]';
+    const textWrapClass = isTreemapMessage ? 'w-full' : 'w-full';
 
     return (
         <div className={cn(
-            'flex gap-2.5 mb-4',
+            'flex gap-2.5 mb-4 min-w-0',
             isUser ? 'flex-row-reverse' : 'flex-row',
+            isTreemapMessage ? 'w-full' : 'w-auto',
         )}>
             <div
                 className={cn(
@@ -868,29 +1407,36 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
 
             <div
                 className={cn(
-                    'max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb]',
+                    maxWidthClass,
+                    'rounded-xl px-3.5 py-2.5 border border-[#e5e7eb] min-w-0 break-words',
+                    isTreemapMessage ? 'overflow-visible' : 'overflow-hidden',
                 isUser ? 'bg-[#fde68a] text-[#111827]' : 'bg-white text-[#111827]',
                 )}
             >
                 {isUser ? (
-                    <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
                 ) : message.content ? (
-                    <MarkdownRenderer
-                        content={message.content}
-                        components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
-                        className="text-sm leading-6"
-                        plainTextClassName="whitespace-pre-wrap text-sm leading-6"
-                    />
+                    <div className={textWrapClass}>
+                        <MarkdownRenderer
+                            content={message.content}
+                            components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
+                            className="text-sm leading-6 break-words"
+                            plainTextClassName="whitespace-pre-wrap break-words text-sm leading-6"
+                        />
+                    </div>
                 ) : (
                     <p className="text-sm text-[#6b7280]">응답 생성 중...</p>
                 )}
-                {message.meta?.source ? (
-                    <p className="text-[11px] text-[#6b7280] mt-1.5">
-                        응답 유형: {message.meta.source}
-                        {message.meta.fallbackReason ? ` · 사유: ${message.meta.fallbackReason}` : null}
-                    </p>
-                ) : null}
-                {message.sources ? <SourceList sources={message.sources} /> : null}
+                {message.visualComponent === 'treemap' ? <InsightChatTreemap /> : null}
+                <div className={textWrapClass}>
+                    {message.meta?.source ? (
+                        <p className="text-[11px] text-[#6b7280] mt-1.5">
+                            응답 유형: {message.meta.source}
+                            {message.meta.fallbackReason ? ` · 사유: ${message.meta.fallbackReason}` : null}
+                        </p>
+                    ) : null}
+                    {message.sources ? <SourceList sources={message.sources} /> : null}
+                </div>
             </div>
         </div>
     );
@@ -1131,15 +1677,16 @@ const InsightChatSectionComponent = () => {
                     if (conversation.id !== conversationId) return conversation;
                     return {
                         ...conversation,
-                        messages: [
-                            {
-                                id: makeId('bootstrap'),
-                                role: 'assistant',
-                                content: bootstrap.message.content,
-                                sources: mapSources(bootstrap.message.sources),
-                                createdAt: new Date(),
-                            },
-                        ],
+                            messages: [
+                                {
+                                    id: makeId('bootstrap'),
+                                    role: 'assistant',
+                                    content: bootstrap.message.content,
+                                    visualComponent: bootstrap.message.visualComponent,
+                                    sources: mapSources(bootstrap.message.sources),
+                                    createdAt: new Date(),
+                                },
+                            ],
                         isBooting: false,
                         bootstrapFailed: false,
                         updatedAt: Date.now(),
@@ -1224,15 +1771,24 @@ const InsightChatSectionComponent = () => {
         });
     }, [updateConversation]);
 
-    const updateMessageContent = useCallback((conversationId: string, messageId: string, updater: (prev: string) => string) => {
+    const updateMessage = useCallback((conversationId: string, messageId: string, updater: (prev: ChatMessage) => ChatMessage) => {
         updateConversation(conversationId, (prev) => ({
             ...prev,
-            messages: prev.messages.map((m) =>
-                m.id === messageId ? { ...m, content: updater(m.content) } : m,
+            messages: prev.messages.map((message) =>
+                message.id === messageId
+                    ? updater(message)
+                    : message,
             ),
             updatedAt: Date.now(),
         }));
     }, [updateConversation]);
+
+    const updateMessageContent = useCallback((conversationId: string, messageId: string, updater: (prev: string) => string) => {
+        updateMessage(conversationId, messageId, (message) => ({
+            ...message,
+            content: updater(message.content),
+        }));
+    }, [updateMessage]);
 
     useEffect(() => {
         const restored = hydrateFromStorage();
@@ -1351,7 +1907,13 @@ const InsightChatSectionComponent = () => {
                 );
 
                 if (localResponse) {
-                    updateMessageContent(convId, assistantId, () => localResponse.content);
+                    updateMessage(convId, assistantId, (message) => ({
+                        ...message,
+                        content: localResponse.content,
+                        sources: mapSources(localResponse.sources),
+                        visualComponent: localResponse.visualComponent,
+                        meta: localResponse.meta,
+                    }));
                 }
             } else {
                 const resolvedImageModelProfile = imageModelProfile === 'none' ? undefined : imageModelProfile;
@@ -1361,6 +1923,7 @@ const InsightChatSectionComponent = () => {
                     role: 'assistant',
                     content: response.content,
                     sources: mapSources(response.sources),
+                    visualComponent: response.visualComponent,
                     createdAt: new Date(),
                     meta: response.meta,
                 });
@@ -1380,7 +1943,7 @@ const InsightChatSectionComponent = () => {
             setSendingConversationId(null);
             inputRef.current?.focus();
         }
-    }, [activeConversation, appendMessage, updateMessageContent, inputValue, sendingConversationId, currentLlmConfig, imageModelProfile]);
+    }, [activeConversation, appendMessage, updateMessage, updateMessageContent, inputValue, sendingConversationId, currentLlmConfig, imageModelProfile]);
 
     const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -1625,11 +2188,11 @@ const InsightChatSectionComponent = () => {
                             )}
 
                             {isSending && !currentLlmConfig ? (
-                                <div className="flex gap-2.5 mb-3">
+                            <div className="flex gap-2.5 mb-3">
                                     <div className="h-8 w-8 rounded-full grid place-items-center text-white text-xs bg-[#111827]">
                                         <Bot className="h-3.5 w-3.5" />
                                     </div>
-                                    <div className="max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb]">
+                                    <div className="max-w-[84%] rounded-xl px-3.5 py-2.5 border border-[#e5e7eb] break-words min-w-0">
                                         <p className="text-sm text-[#111827] font-medium">응답 생성 중...</p>
                                     </div>
                                 </div>
