@@ -12,7 +12,6 @@ from typing import Annotated, Optional
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from state.models import Task
 from state.slots import StoryboardSlots
 
 
@@ -72,7 +71,6 @@ class SharedState(TypedDict):
 class SupervisorPrivate(TypedDict):
     """Supervisor 서브그래프 내부용"""
 
-    tasks: list[Task]
     loop_count: int
     human_feedback: Optional[str]
 
@@ -91,14 +89,12 @@ class ResearcherPrivate(TypedDict):
 class InternPrivate(TypedDict):
     """Intern 서브그래프 내부용"""
 
-    intern_reports: Annotated[list[dict], _append_list]
     intern_action: Optional[str]  # "review_create" | "create_modify" | "execute_delete" | "execute" | "update_plan" | "finish" | "end"
     original_tool_calls: Annotated[list[dict], _append_list]  # think에서 최초 생성한 tool_call 원본 로그
     modified_tool_calls: Annotated[dict, _merge_dicts]  # {"tool:foo": {"tool_call": {...}, "status": "...", "version": n}}
     tool_call_order: Annotated[list[str], _append_list]  # modified_tool_calls 순회 순서
     current_tool_key: Optional[str]  # 현재 리뷰/수정 중인 대상 key
     intern_ready_to_end: bool  # finish 수행 완료 플래그(END는 think에서만 분기)
-    pending_review_calls: list[dict]  # create/delete 리뷰 대기 큐
     pending_review_notes: dict[str, str]  # create 코드리뷰 결과 캐시
     pending_execute_calls: list[dict]  # 실행 대기 tool_call (승인된 create/delete + 기타 도구)
     review_statuses: Annotated[dict, _merge_dicts]  # {"tool:foo": "approve/delete/modify"}
@@ -143,7 +139,6 @@ class SupervisorState(TypedDict):
     researcher_context: Optional[list[BaseMessage]]
     intern_result: Optional[str]
     # Private
-    tasks: list[Task]
     loop_count: int
     human_feedback: Optional[str]
 
@@ -177,14 +172,12 @@ class InternState(TypedDict):
     researcher_context: Optional[list[BaseMessage]]  # Researcher 대화 보존용(재시도 시)
     intern_result: Optional[str]  # Intern 완료 요약(문자열). Supervisor 판단용
     # Private
-    intern_reports: Annotated[list[dict], _append_list]
     intern_action: Optional[str]  # "review_create" | "create_modify" | "execute_delete" | "execute" | "update_plan" | "finish" | "end"
     original_tool_calls: Annotated[list[dict], _append_list]  # think에서 최초 생성한 tool_call 원본 로그
     modified_tool_calls: Annotated[dict, _merge_dicts]  # {"tool:foo": {"tool_call": {...}, "status": "...", "version": n}}
     tool_call_order: Annotated[list[str], _append_list]  # modified_tool_calls 순회 순서
     current_tool_key: Optional[str]  # 현재 리뷰/수정 중인 대상 key
     intern_ready_to_end: bool  # finish 수행 완료 플래그(END는 think에서만 분기)
-    pending_review_calls: list[dict]  # create/delete 리뷰 대기 큐
     pending_review_notes: dict[str, str]  # create 코드리뷰 결과 캐시
     pending_execute_calls: list[dict]  # 실행 대기 tool_call (승인된 create/delete + 기타 도구)
     review_statuses: Annotated[dict, _merge_dicts]  # {"tool:foo": "approve/delete/modify"}

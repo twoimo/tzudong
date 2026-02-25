@@ -1,4 +1,7 @@
-# Storyboard Agent 고도화 설계
+# Storyboard Agent 고도화 설계 (Legacy Draft)
+
+> 이 문서는 초기 구상/아이디어 초안입니다.  
+> 현재 구현 기준 최신 설계는 `STORYBOARD_NEXT_STEP_DESIGN_v2.md`를 사용하세요.
 
 현재 에이전트의 다음 단계 개선 사항을 정리한다. 핵심 축은 세 가지:
 1. **슬롯 필링 기반 에이전트 루프** — 사용자 의도 + 콘텐츠 요소를 구조적으로 수집
