@@ -297,25 +297,25 @@ async function postChatMessage(
     const request = (async () => {
         let lastError: unknown;
         for (let attempt = 0; attempt <= CHAT_REQUEST_RETRY_ATTEMPTS; attempt += 1) {
-    try {
-        return await fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                message,
-                ...(llmConfig
-                    ? {
-                provider: llmConfig.provider,
-                        model: llmConfig.model,
-                        apiKey: llmConfig.apiKey,
-                        ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
-                        ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
-                      }
-                    : {}),
-                ...(resolvedImageModelProfile && !llmConfig ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
-                ...(resolvedImageModelProfile && !llmConfig ? { imageModelProfile: resolvedImageModelProfile } : {}),
-            }),
-        }, CHAT_REQUEST_TIMEOUT_MS);
+            try {
+                return await fetchJsonWithTimeout<AdminInsightChatResponse>('/api/admin/insight/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message,
+                        ...(llmConfig
+                            ? {
+                                provider: llmConfig.provider,
+                                model: llmConfig.model,
+                                apiKey: llmConfig.apiKey,
+                                ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
+                                ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
+                            }
+                            : {}),
+                        ...(resolvedImageModelProfile && !llmConfig ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
+                        ...(resolvedImageModelProfile && !llmConfig ? { imageModelProfile: resolvedImageModelProfile } : {}),
+                    }),
+                }, CHAT_REQUEST_TIMEOUT_MS);
             } catch (error) {
                 lastError = error;
                 if (attempt >= CHAT_REQUEST_RETRY_ATTEMPTS || !isTransientError(error)) {
@@ -497,25 +497,25 @@ type TreemapChartDimensions = {
 };
 
 const CHAT_TREEMAP_PALETTE = ['#22c55e', '#0ea5e9', '#f97316', '#a855f7', '#ef4444', '#14b8a6', '#6366f1', '#facc15', '#fb7185', '#2dd4bf'];
-const CHAT_TREEMAP_MAX_LEAVES = 18;
+const CHAT_TREEMAP_MAX_LEAVES = 50;
 const CHAT_TREEMAP_MIN_LEAVES = 5;
-const CHAT_TREEMAP_MOBILE_MAX_LEAVES = 10;
+const CHAT_TREEMAP_MOBILE_MAX_LEAVES = 30;
 const CHAT_TREEMAP_MOBILE_MIN_LEAVES = 4;
-const CHAT_TREEMAP_TABLET_MAX_LEAVES = 14;
+const CHAT_TREEMAP_TABLET_MAX_LEAVES = 40;
 const CHAT_TREEMAP_TABLET_MIN_LEAVES = 5;
 const CHAT_TREEMAP_MIN_WIDTH = 320;
 const CHAT_TREEMAP_TABLET_MIN_WIDTH = 280;
 const CHAT_TREEMAP_MOBILE_MIN_WIDTH = 220;
 const CHAT_TREEMAP_MIN_HEIGHT = 220;
-const CHAT_TREEMAP_TABLET_MIN_HEIGHT = 260;
-const CHAT_TREEMAP_DESKTOP_MIN_HEIGHT = 280;
-const CHAT_TREEMAP_MAX_HEIGHT = 760;
-const CHAT_TREEMAP_ASPECT_RATIO = 0.82;
+const CHAT_TREEMAP_TABLET_MIN_HEIGHT = 320;
+const CHAT_TREEMAP_DESKTOP_MIN_HEIGHT = 400;
+const CHAT_TREEMAP_MAX_HEIGHT = 1400;
+const CHAT_TREEMAP_ASPECT_RATIO = 1.0;
 const CHAT_TREEMAP_TOOLTIP_WIDTH = 240;
 const CHAT_TREEMAP_TOOLTIP_HEIGHT = 108;
-const CHAT_TREEMAP_AREA_PER_CELL = 9_500;
-const CHAT_TREEMAP_MOBILE_AREA_PER_CELL = 12_000;
-const CHAT_TREEMAP_TABLET_AREA_PER_CELL = 10_500;
+const CHAT_TREEMAP_AREA_PER_CELL = 4_500;
+const CHAT_TREEMAP_MOBILE_AREA_PER_CELL = 6_000;
+const CHAT_TREEMAP_TABLET_AREA_PER_CELL = 5_000;
 const CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE = 0.52;
 const CHAT_TREEMAP_EMPTY_MESSAGE = '트리맵에 표시할 데이터가 없습니다.';
 
@@ -642,53 +642,46 @@ const InsightChatTreemap = memo(() => {
 
     useEffect(() => {
         if (!containerRef.current) return;
-        const container = containerRef.current;
-        const measurementTarget = container.parentElement ?? container;
 
-        const update = () => {
-            if (!containerRef.current) return;
-
-            const resolveWidthFromElement = (element: HTMLElement | null): number => {
-                if (!element) return 0;
-                const candidate = Math.floor(element.clientWidth);
-                if (candidate > 0) return candidate;
-
-                const rectWidth = Math.floor(element.getBoundingClientRect().width);
-                return rectWidth > 0 ? rectWidth : 0;
-            };
-
-            const viewportFallback = typeof window === 'undefined'
-                ? CHAT_TREEMAP_MOBILE_MIN_WIDTH
-                : Math.max(1, Math.floor((window.visualViewport?.width ?? window.innerWidth) * 0.92));
-            const resolvedWidth = resolveWidthFromElement(measurementTarget)
-                || resolveWidthFromElement(containerRef.current)
-                || resolveWidthFromElement(measurementTarget.parentElement)
-                || viewportFallback;
-
-            const width = Math.max(1, Math.floor(resolvedWidth));
+        const computeHeight = (width: number): number => {
             const { minHeight } = getTreemapMinDimensions(width);
             const ratioHeight = Math.round(width * CHAT_TREEMAP_ASPECT_RATIO);
             const viewportHeight = typeof window === 'undefined'
                 ? Number.MAX_SAFE_INTEGER
-                : Math.floor((window.visualViewport?.height ?? window.innerHeight) * 0.75);
-            const targetHeight = Math.max(minHeight, Math.min(CHAT_TREEMAP_MAX_HEIGHT, Math.max(minHeight, Math.min(viewportHeight, ratioHeight))));
-            setDimensions({ width, height: targetHeight });
+                : Math.floor((window.visualViewport?.height ?? window.innerHeight) * 0.88);
+            return Math.max(minHeight, Math.min(CHAT_TREEMAP_MAX_HEIGHT, Math.max(minHeight, Math.min(viewportHeight, ratioHeight))));
         };
 
-        update();
-        const rafId = typeof window === 'undefined' ? null : window.requestAnimationFrame(update);
+        const observeTarget = containerRef.current;
 
-        const resizeObserver = new ResizeObserver(update);
-        resizeObserver.observe(containerRef.current);
-        if (measurementTarget !== container) {
-            resizeObserver.observe(measurementTarget);
-        }
+        const handleResize = () => {
+            if (!observeTarget) return;
+            const contentWidth = Math.floor(observeTarget.clientWidth);
+            if (contentWidth <= 0) return;
+            const width = Math.max(1, contentWidth - 2);
+            const height = computeHeight(width);
+            setDimensions((prev) => {
+                if (Math.abs(prev.width - width) < 2 && Math.abs(prev.height - height) < 2) return prev;
+                return { width, height };
+            });
+        };
+
+        const resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(observeTarget);
+        window.addEventListener('resize', handleResize);
+
+        const fallbackRaf = window.requestAnimationFrame(handleResize);
+        const t1 = setTimeout(handleResize, 100);
+        const t2 = setTimeout(handleResize, 400);
+        const t3 = setTimeout(handleResize, 1200);
 
         return () => {
             resizeObserver.disconnect();
-            if (rafId !== null) {
-                window.cancelAnimationFrame(rafId);
-            }
+            window.removeEventListener('resize', handleResize);
+            window.cancelAnimationFrame(fallbackRaf);
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
         };
     }, []);
 
@@ -787,13 +780,13 @@ const InsightChatTreemap = memo(() => {
 
         const rowsWithColor = layoutRows
             .map((row, index) => ({
-            id: row.id,
-            name: row.title,
-            title: row.title,
-            category: row.category?.trim() || '기타',
-            value: Math.max(0.25, row.metricForLayout),
-            metric: row.metricForDisplay,
-            metricText: `${Math.round(row.metricForDisplay).toLocaleString()}회`,
+                id: row.id,
+                name: row.title,
+                title: row.title,
+                category: row.category?.trim() || '기타',
+                value: Math.max(0.25, row.metricForLayout),
+                metric: row.metricForDisplay,
+                metricText: `${Math.round(row.metricForDisplay).toLocaleString()}회`,
                 percentText: totalMetric > 0 ? `${((row.metricForDisplay / totalMetric) * 100).toFixed(1)}%` : '0%',
                 color: CHAT_TREEMAP_PALETTE[index % CHAT_TREEMAP_PALETTE.length],
             }));
@@ -854,14 +847,14 @@ const InsightChatTreemap = memo(() => {
     }
 
     return (
-        <div className="mt-2">
-            <div className="mb-2 text-xs text-[#6b7280]">
+        <div className="mt-1">
+            <div className="mb-1 text-xs text-[#6b7280]">
                 {displayedSummary}
             </div>
             <div ref={containerRef} className="w-full min-w-0">
                 <div
                     className="relative w-full rounded-lg border border-[#e5e7eb] bg-[#f8fafc] overflow-visible"
-                    style={{ width: `${dimensions.width}px`, height: `${dimensions.height}px` }}
+                    style={{ height: `${dimensions.height}px` }}
                 >
                     {tooltip ? (
                         <div
@@ -913,10 +906,10 @@ const InsightChatTreemap = memo(() => {
                                 onPointerLeave={clearTooltip}
                                 onPointerDown={(event) => updateTooltip(event, cell)}
                                 style={{
-                                    left: cell.x0,
-                                    top: cell.y0,
-                                    width,
-                                    height,
+                                    left: `${(cell.x0 / dimensions.width) * 100}%`,
+                                    top: `${(cell.y0 / dimensions.height) * 100}%`,
+                                    width: `${(width / dimensions.width) * 100}%`,
+                                    height: `${(height / dimensions.height) * 100}%`,
                                     backgroundColor: cell.node.color,
                                     color: '#f8fafc',
                                 }}
@@ -1164,111 +1157,111 @@ function sanitizeHtmlForMarkdownInput(html: string): string {
 }
 
 function htmlToMarkdown(html: string): string {
-  if (!html) return '';
-  const doc = new DOMParser().parseFromString(`<!doctype html><body>${html}</body>`, 'text/html');
-  const root = doc.body;
-  if (!root) return '';
+    if (!html) return '';
+    const doc = new DOMParser().parseFromString(`<!doctype html><body>${html}</body>`, 'text/html');
+    const root = doc.body;
+    if (!root) return '';
 
-  const escapeMarkdownText = (value: string): string => value.replace(/[\\`*_~\[\]{}]/g, (char) => `\\${char}`);
-  const normalizeSpace = (value: string): string => value.replace(/\s+/g, ' ').trim();
+    const escapeMarkdownText = (value: string): string => value.replace(/[\\`*_~\[\]{}]/g, (char) => `\\${char}`);
+    const normalizeSpace = (value: string): string => value.replace(/\s+/g, ' ').trim();
 
-  const collectRows = (table: HTMLTableElement): string => {
-    const rows = [...table.rows];
-    if (!rows.length) return '';
+    const collectRows = (table: HTMLTableElement): string => {
+        const rows = [...table.rows];
+        if (!rows.length) return '';
 
-    const parsedRows = rows.map((row) => [...row.cells].map((cell) => normalizeSpace(normalizeHtmlNode(cell))));
-    const header = parsedRows[0] ?? [];
-    const body = parsedRows.slice(1);
-    if (!header.length) return '';
+        const parsedRows = rows.map((row) => [...row.cells].map((cell) => normalizeSpace(normalizeHtmlNode(cell))));
+        const header = parsedRows[0] ?? [];
+        const body = parsedRows.slice(1);
+        if (!header.length) return '';
 
-    const headerLine = `| ${header.join(' | ')} |`;
-    const separator = `| ${header.map(() => '---').join(' | ')} |`;
-    const bodyLines = body.map((columns) => `| ${columns.join(' | ')} |`);
-    return [headerLine, separator, ...bodyLines].join('\n') + '\n\n';
-  };
+        const headerLine = `| ${header.join(' | ')} |`;
+        const separator = `| ${header.map(() => '---').join(' | ')} |`;
+        const bodyLines = body.map((columns) => `| ${columns.join(' | ')} |`);
+        return [headerLine, separator, ...bodyLines].join('\n') + '\n\n';
+    };
 
-  const listToMarkdown = (node: HTMLUListElement | HTMLOListElement): string => {
-    const items = [...node.children].filter((child): child is HTMLLIElement => child.tagName.toLowerCase() === 'li');
-    return items
-      .map((item, index) => {
-        const prefix = node.tagName.toLowerCase() === 'ol' ? `${index + 1}. ` : '- ';
-        return `${prefix}${normalizeSpace(normalizeHtmlNode(item))}`;
-      })
-      .join('\n') + '\n\n';
-  };
+    const listToMarkdown = (node: HTMLUListElement | HTMLOListElement): string => {
+        const items = [...node.children].filter((child): child is HTMLLIElement => child.tagName.toLowerCase() === 'li');
+        return items
+            .map((item, index) => {
+                const prefix = node.tagName.toLowerCase() === 'ol' ? `${index + 1}. ` : '- ';
+                return `${prefix}${normalizeSpace(normalizeHtmlNode(item))}`;
+            })
+            .join('\n') + '\n\n';
+    };
 
-  const normalizeHtmlNode = (node: Node): string => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return normalizeSpace(node.textContent || '');
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) {
-      return '';
-    }
+    const normalizeHtmlNode = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return normalizeSpace(node.textContent || '');
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return '';
+        }
 
-    const element = node as Element;
-    const tag = element.tagName.toLowerCase();
-    const children = [...element.childNodes].map(normalizeHtmlNode).join('');
+        const element = node as Element;
+        const tag = element.tagName.toLowerCase();
+        const children = [...element.childNodes].map(normalizeHtmlNode).join('');
 
-    switch (tag) {
-      case 'h1':
-        return `# ${normalizeSpace(children)}\n\n`;
-      case 'h2':
-        return `## ${normalizeSpace(children)}\n\n`;
-      case 'h3':
-        return `### ${normalizeSpace(children)}\n\n`;
-      case 'h4':
-        return `#### ${normalizeSpace(children)}\n\n`;
-      case 'h5':
-        return `##### ${normalizeSpace(children)}\n\n`;
-      case 'h6':
-        return `###### ${normalizeSpace(children)}\n\n`;
-      case 'p':
-      case 'div':
-        return `${normalizeSpace(children)}\n\n`;
-      case 'hr':
-        return '---\n\n';
-      case 'br':
-        return '\n';
-      case 'blockquote':
-        return children.split('\n').map((line) => `> ${line}`).join('\n') + '\n\n';
-      case 'pre':
-        return `\n\`\`\`\n${element.textContent?.trim() || ''}\n\`\`\`\n\n`;
-      case 'code':
-        return `\`${escapeMarkdownText(element.textContent || '')}\``;
-      case 'strong':
-      case 'b':
-        return `**${normalizeSpace(children)}**`;
-      case 'em':
-      case 'i':
-        return `*${normalizeSpace(children)}*`;
-      case 'a': {
-        const href = (element.getAttribute('href') || '').trim();
-        const text = normalizeSpace(children);
-        return href ? `[${text}](${href})` : text;
-      }
-      case 'ul':
-      case 'ol':
-        return listToMarkdown(element as HTMLUListElement | HTMLOListElement);
-      case 'li':
-        return `- ${normalizeSpace(children)}`;
-      case 'table':
-        return collectRows(element as HTMLTableElement);
-      case 'thead':
-      case 'tbody':
-      case 'tr':
-      case 'th':
-      case 'td':
-        return normalizeSpace(children);
-      default:
-        return normalizeSpace(children);
-    }
-  };
+        switch (tag) {
+            case 'h1':
+                return `# ${normalizeSpace(children)}\n\n`;
+            case 'h2':
+                return `## ${normalizeSpace(children)}\n\n`;
+            case 'h3':
+                return `### ${normalizeSpace(children)}\n\n`;
+            case 'h4':
+                return `#### ${normalizeSpace(children)}\n\n`;
+            case 'h5':
+                return `##### ${normalizeSpace(children)}\n\n`;
+            case 'h6':
+                return `###### ${normalizeSpace(children)}\n\n`;
+            case 'p':
+            case 'div':
+                return `${normalizeSpace(children)}\n\n`;
+            case 'hr':
+                return '---\n\n';
+            case 'br':
+                return '\n';
+            case 'blockquote':
+                return children.split('\n').map((line) => `> ${line}`).join('\n') + '\n\n';
+            case 'pre':
+                return `\n\`\`\`\n${element.textContent?.trim() || ''}\n\`\`\`\n\n`;
+            case 'code':
+                return `\`${escapeMarkdownText(element.textContent || '')}\``;
+            case 'strong':
+            case 'b':
+                return `**${normalizeSpace(children)}**`;
+            case 'em':
+            case 'i':
+                return `*${normalizeSpace(children)}*`;
+            case 'a': {
+                const href = (element.getAttribute('href') || '').trim();
+                const text = normalizeSpace(children);
+                return href ? `[${text}](${href})` : text;
+            }
+            case 'ul':
+            case 'ol':
+                return listToMarkdown(element as HTMLUListElement | HTMLOListElement);
+            case 'li':
+                return `- ${normalizeSpace(children)}`;
+            case 'table':
+                return collectRows(element as HTMLTableElement);
+            case 'thead':
+            case 'tbody':
+            case 'tr':
+            case 'th':
+            case 'td':
+                return normalizeSpace(children);
+            default:
+                return normalizeSpace(children);
+        }
+    };
 
-  return [...root.childNodes]
-    .map(normalizeHtmlNode)
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+    return [...root.childNodes]
+        .map(normalizeHtmlNode)
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 }
 
 type ReactMarkdownProps = Parameters<typeof ReactMarkdown>[0];
@@ -1392,31 +1385,32 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
 
     return (
         <div className={cn(
-            'flex gap-2.5 mb-4 min-w-0',
-            isUser ? 'flex-row-reverse' : 'flex-row',
+            'flex min-w-0',
+            isUser ? 'flex-row-reverse gap-2.5 mb-4' : isTreemapMessage ? 'flex-row gap-1.5 mb-2' : 'flex-row gap-2.5 mb-4',
             isTreemapMessage ? 'w-full' : 'w-auto',
         )}>
             <div
                 className={cn(
-                    'h-8 w-8 rounded-full grid place-items-center text-white text-xs shrink-0',
+                    'rounded-full grid place-items-center text-white text-xs shrink-0',
+                    isTreemapMessage ? 'h-6 w-6' : 'h-8 w-8',
                     isUser ? 'bg-[#ef4444]' : 'bg-[#111827]',
                 )}
             >
-                {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className={isTreemapMessage ? 'h-3 w-3' : 'h-3.5 w-3.5'} />}
             </div>
 
             <div
                 className={cn(
                     maxWidthClass,
-                    'rounded-xl px-3.5 py-2.5 border border-[#e5e7eb] min-w-0 break-words',
-                    isTreemapMessage ? 'overflow-visible' : 'overflow-hidden',
-                isUser ? 'bg-[#fde68a] text-[#111827]' : 'bg-white text-[#111827]',
+                    'rounded-xl border border-[#e5e7eb] min-w-0 break-words',
+                    isTreemapMessage ? 'px-1 py-1 overflow-visible' : 'px-3.5 py-2.5 overflow-hidden',
+                    isUser ? 'bg-[#fde68a] text-[#111827]' : 'bg-white text-[#111827]',
                 )}
             >
                 {isUser ? (
                     <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
                 ) : message.content ? (
-                    <div className={textWrapClass}>
+                    <div className={cn(textWrapClass, isTreemapMessage && 'px-1.5')}>
                         <MarkdownRenderer
                             content={message.content}
                             components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
@@ -1428,7 +1422,7 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                     <p className="text-sm text-[#6b7280]">응답 생성 중...</p>
                 )}
                 {message.visualComponent === 'treemap' ? <InsightChatTreemap /> : null}
-                <div className={textWrapClass}>
+                <div className={cn(textWrapClass, isTreemapMessage && 'px-1.5')}>
                     {message.meta?.source ? (
                         <p className="text-[11px] text-[#6b7280] mt-1.5">
                             응답 유형: {message.meta.source}
@@ -1677,16 +1671,16 @@ const InsightChatSectionComponent = () => {
                     if (conversation.id !== conversationId) return conversation;
                     return {
                         ...conversation,
-                            messages: [
-                                {
-                                    id: makeId('bootstrap'),
-                                    role: 'assistant',
-                                    content: bootstrap.message.content,
-                                    visualComponent: bootstrap.message.visualComponent,
-                                    sources: mapSources(bootstrap.message.sources),
-                                    createdAt: new Date(),
-                                },
-                            ],
+                        messages: [
+                            {
+                                id: makeId('bootstrap'),
+                                role: 'assistant',
+                                content: bootstrap.message.content,
+                                visualComponent: bootstrap.message.visualComponent,
+                                sources: mapSources(bootstrap.message.sources),
+                                createdAt: new Date(),
+                            },
+                        ],
                         isBooting: false,
                         bootstrapFailed: false,
                         updatedAt: Date.now(),
@@ -1955,28 +1949,28 @@ const InsightChatSectionComponent = () => {
     const isSending = sendingConversationId === activeConversationId;
 
     return (
-            <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb] relative">
-                {showConversationList ? (
-                    <button
-                        type="button"
-                        className="fixed inset-0 z-20 bg-black/20 lg:hidden"
-                        onClick={() => setShowConversationList(false)}
-                        aria-label="대화 목록 닫기"
-                    />
-                ) : null}
-                <aside
-                    className={cn(
-                        'fixed inset-y-0 left-0 z-30 w-[82vw] max-w-[320px] min-w-[150px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col min-h-0',
-                        'transform transition-transform duration-200',
-                        showConversationList ? 'translate-x-0' : '-translate-x-full',
-                        'lg:relative lg:inset-auto lg:z-auto lg:w-[clamp(150px,36vw,292px)] lg:translate-x-0',
-                    )}
-                >
+        <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb] relative">
+            {showConversationList ? (
+                <button
+                    type="button"
+                    className="fixed inset-0 z-20 bg-black/20 lg:hidden"
+                    onClick={() => setShowConversationList(false)}
+                    aria-label="대화 목록 닫기"
+                />
+            ) : null}
+            <aside
+                className={cn(
+                    'fixed inset-y-0 left-0 z-30 w-[82vw] max-w-[320px] min-w-[150px] border-r border-[#e5e7eb] bg-[#fafafa] flex flex-col min-h-0',
+                    'transform transition-transform duration-200',
+                    showConversationList ? 'translate-x-0' : '-translate-x-full',
+                    'lg:relative lg:inset-auto lg:z-auto lg:w-[clamp(150px,36vw,292px)] lg:translate-x-0',
+                )}
+            >
                 <div className="p-3 border-b border-[#e5e7eb]">
-                            <div className="flex gap-2">
-                                <Button
-                                    type="button"
-                                    size="sm"
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            size="sm"
                             className="mt-2 h-9 flex-1 bg-[#111827] text-white hover:bg-[#27272a]"
                             onClick={handleNewConversation}
                         >
@@ -1997,7 +1991,7 @@ const InsightChatSectionComponent = () => {
                 </div>
 
                 {showSettings ? (
-                        <div className="flex-1 h-0 min-h-0 overflow-y-auto px-3 py-3 space-y-4">
+                    <div className="flex-1 h-0 min-h-0 overflow-y-auto px-3 py-3 space-y-4">
                         <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">API 키 설정</p>
                         {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
                             const isVisible = keyVisibility[provider] ?? false;
@@ -2073,7 +2067,7 @@ const InsightChatSectionComponent = () => {
                         </div>
                     </div>
                 ) : (
-                        <div className="flex-1 h-0 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
+                    <div className="flex-1 h-0 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
                         {conversationList.length === 0 ? (
                             <p className="px-2 py-10 text-sm text-[#6b7280] text-center">새로운 대화를 준비 중입니다</p>
                         ) : (
@@ -2124,8 +2118,8 @@ const InsightChatSectionComponent = () => {
                             })
                         )}
                     </div>
-                    )}
-                </aside>
+                )}
+            </aside>
 
             <section className="flex-1 min-w-0 flex flex-col min-h-0">
                 <div className="lg:hidden flex items-center gap-2 px-3 py-2 border-b border-[#e5e7eb] bg-white">
@@ -2188,7 +2182,7 @@ const InsightChatSectionComponent = () => {
                             )}
 
                             {isSending && !currentLlmConfig ? (
-                            <div className="flex gap-2.5 mb-3">
+                                <div className="flex gap-2.5 mb-3">
                                     <div className="h-8 w-8 rounded-full grid place-items-center text-white text-xs bg-[#111827]">
                                         <Bot className="h-3.5 w-3.5" />
                                     </div>
