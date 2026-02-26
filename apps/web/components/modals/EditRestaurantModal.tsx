@@ -1,0 +1,442 @@
+'use client';
+
+import { memo, useState, useEffect, useCallback } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
+import { Check, ChevronsUpDown, X, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Restaurant } from "@/types/restaurant";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { saveDraft, getDraft, deleteDraft } from "@/lib/editRequestDraftDB";
+
+interface EditRestaurantModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    restaurant: Restaurant | null;
+    initialFormData: {
+        name: string;
+        address: string;
+        phone: string;
+        category: string[];
+        youtube_reviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[];
+    };
+}
+
+export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData }: EditRestaurantModalProps) {
+    const [editFormData, setEditFormData] = useState(initialFormData);
+    const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+    const handleEditFormChange = (field: string, value: string | string[]) => {
+        setEditFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleYoutubeReviewChange = (index: number, field: 'youtube_link' | 'tzuyang_review', value: string) => {
+        setEditFormData(prev => ({
+            ...prev,
+            youtube_reviews: prev.youtube_reviews.map((item, i) =>
+                i === index ? { ...item, [field]: value } : item
+            )
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                throw new Error('로그인이 필요합니다.');
+            }
+
+            if (!restaurant?.id) {
+                throw new Error('수정할 맛집 정보가 없습니다.');
+            }
+
+            // 유효성 검사
+            if (!editFormData.name.trim()) {
+                throw new Error('맛집 이름을 입력해주세요.');
+            }
+            if (editFormData.category.length === 0) {
+                throw new Error('카테고리를 선택해주세요.');
+            }
+            if (editFormData.youtube_reviews.length === 0) {
+                throw new Error('최소 1개의 영상 정보가 필요합니다.');
+            }
+            for (const review of editFormData.youtube_reviews) {
+                if (!review.youtube_link.trim()) {
+                    throw new Error('모든 영상의 유튜브 링크를 입력해주세요.');
+                }
+            }
+
+            // 1. restaurant_submissions 테이블에 INSERT (target_restaurant_id는 items 레벨에서 관리)
+            const { data: submission, error: submissionError } = await supabase
+                .from('restaurant_submissions')
+                .insert({
+                    user_id: user.id,
+                    submission_type: 'edit',
+                    status: 'pending',
+                    restaurant_name: editFormData.name.trim(),
+                    restaurant_address: editFormData.address.trim() || null,
+                    restaurant_phone: editFormData.phone.trim() || null,
+                    restaurant_categories: editFormData.category,
+                    // target_restaurant_id는 submission 레벨이 아닌 items 레벨에서 저장
+                } as any)
+                .select('id')
+                .single();
+
+            if (submissionError) throw submissionError;
+
+            const submissionId = (submission as { id: string }).id;
+
+            // 2. restaurant_submission_items 테이블에 각 영상별 INSERT (각 아이템에 해당 레코드의 target_restaurant_id 저장)
+            const itemsToInsert = editFormData.youtube_reviews.map(review => ({
+                submission_id: submissionId,
+                youtube_link: review.youtube_link.trim(),
+                tzuyang_review: review.tzuyang_review?.trim() || null,
+                target_restaurant_id: review.restaurant_id, // 각 아이템별로 해당 레코드의 restaurants.id 저장
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('restaurant_submission_items')
+                .insert(itemsToInsert as any);
+
+            if (itemsError) {
+                // 롤백: submission 삭제 (CASCADE로 items도 삭제됨)
+                await supabase.from('restaurant_submissions').delete().eq('id', submissionId);
+                throw itemsError;
+            }
+
+            await clearDraft();
+            toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
+            onClose();
+        } catch (error: any) {
+            console.error('제출 실패:', error);
+            toast.error(error.message || '제출에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // 임시 저장된 데이터 불러오기
+    const loadDraft = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || !restaurant?.id) return;
+
+        try {
+            const draft = await getDraft(user.id, restaurant.id);
+            if (draft) {
+                setEditFormData({
+                    name: draft.name,
+                    address: draft.address,
+                    phone: draft.phone,
+                    category: draft.category,
+                    youtube_reviews: draft.youtube_reviews,
+                });
+                setLastSavedAt(new Date(draft.savedAt));
+
+                toast.success("임시 저장된 내용을 불러왔습니다", {
+                    description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}`,
+                });
+            }
+        } catch (error) {
+            console.error('임시 저장 데이터 로드 실패:', error);
+        }
+    }, [restaurant?.id]);
+
+    // 자동 저장
+    const autoSave = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || !restaurant?.id) return;
+
+        // 내용이 하나라도 있을 때만 저장
+        if (!editFormData.name && !editFormData.address && !editFormData.phone && editFormData.category.length === 0 && editFormData.youtube_reviews.length === 0) {
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            await saveDraft({
+                userId: user.id,
+                restaurantId: restaurant.id,
+                name: editFormData.name,
+                address: editFormData.address,
+                phone: editFormData.phone,
+                category: editFormData.category,
+                youtube_reviews: editFormData.youtube_reviews,
+            });
+            setLastSavedAt(new Date());
+        } catch (error) {
+            console.error('자동 저장 실패:', error);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [restaurant?.id, editFormData]);
+
+    // 임시 저장 데이터 삭제
+    const clearDraft = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || !restaurant?.id) return;
+
+        try {
+            await deleteDraft(user.id, restaurant.id);
+            setLastSavedAt(null);
+        } catch (error) {
+            console.error('임시 저장 데이터 삭제 실패:', error);
+        }
+    }, [restaurant?.id]);
+
+    // 디바운스된 자동 저장 (500ms)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const timer = setTimeout(() => {
+            autoSave();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [isOpen, editFormData, autoSave]);
+
+    // 모달이 열릴 때 임시 저장된 데이터 확인
+    useEffect(() => {
+        if (isOpen && restaurant?.id) {
+            loadDraft();
+        }
+    }, [isOpen, restaurant?.id, loadDraft]);
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            {isOpen && (
+                <DialogContent
+                    className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+                    onPointerDownOutside={(e) => {
+                        // Popover 내부 클릭 시 Dialog가 닫히지 않도록
+                        const target = e.target as HTMLElement;
+                        if (target.closest('[data-radix-popper-content-wrapper]')) {
+                            e.preventDefault();
+                        }
+                    }}
+                    onInteractOutside={(e) => {
+                        // Popover 내부 상호작용 시 Dialog가 닫히지 않도록
+                        const target = e.target as HTMLElement;
+                        if (target.closest('[data-radix-popper-content-wrapper]')) {
+                            e.preventDefault();
+                        }
+                    }}
+                >
+                    <DialogHeader className="relative">
+                        {/* 자동 저장 상태 표시 - 좌측 상단 */}
+                        {lastSavedAt && (
+                            <div className="absolute -top-1 left-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+                                {isSaving ? (
+                                    <>
+                                        <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
+                                        <span>저장 중</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                                        <span className="text-green-600">
+                                            저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="flex items-start justify-between gap-2 pt-3">
+                            <div className="flex-1">
+                                <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                                    맛집 수정 요청
+                                </DialogTitle>
+                                <DialogDescription>
+                                    해당 맛집의 유튜브 영상별 정보를 수정해주세요
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    {restaurant && (
+                        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                            {/* 공통 정보 입력 */}
+                            <div className="space-y-4 p-4 bg-muted rounded-lg">
+                                <h3 className="font-semibold text-lg">공통 정보</h3>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">
+                                        맛집 이름 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        value={editFormData.name}
+                                        onChange={(e) => handleEditFormChange('name', e.target.value)}
+                                        placeholder="맛집 이름을 입력해주세요"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="address">
+                                        주소 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="address"
+                                        value={editFormData.address}
+                                        onChange={(e) => handleEditFormChange('address', e.target.value)}
+                                        placeholder="주소를 입력해주세요"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="phone">전화번호</Label>
+                                    <Input
+                                        id="phone"
+                                        value={editFormData.phone}
+                                        onChange={(e) => handleEditFormChange('phone', e.target.value)}
+                                        placeholder="전화번호를 입력해주세요"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="category">
+                                        카테고리 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen} modal={true}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={isCategoryPopoverOpen}
+                                                className="w-full justify-between"
+                                                type="button"
+                                            >
+                                                {editFormData.category.length > 0
+                                                    ? `${editFormData.category.length}개 선택됨`
+                                                    : "카테고리를 선택해주세요"
+                                                }
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            className="w-full p-0 z-[200]"
+                                            align="start"
+                                            onInteractOutside={(e) => {
+                                                // Dialog 내부 클릭 시 Popover가 닫히지 않도록 방지
+                                                e.preventDefault();
+                                            }}
+                                        >
+                                            <Command>
+                                                <CommandInput placeholder="카테고리 검색..." />
+                                                <CommandList>
+                                                    <CommandEmpty>카테고리를 찾을 수 없습니다.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {[
+                                                            "한식", "중식", "일식", "양식", "분식", "치킨·피자",
+                                                            "고기", "족발·보쌈", "돈까스·회", "아시안",
+                                                            "패스트푸드", "카페·디저트", "기타"
+                                                        ].map((category) => {
+                                                            const isSelected = editFormData.category.includes(category);
+                                                            return (
+                                                                <CommandItem
+                                                                    key={category}
+                                                                    onSelect={() => {
+                                                                        const newCategories = isSelected
+                                                                            ? editFormData.category.filter(c => c !== category)
+                                                                            : [...editFormData.category, category];
+                                                                        handleEditFormChange('category', newCategories);
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                                                                    />
+                                                                    {category}
+                                                                </CommandItem>
+                                                            );
+                                                        })}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    {editFormData.category.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {editFormData.category.map((category) => (
+                                                <Badge key={category} variant="secondary" className="text-xs">
+                                                    {category}
+                                                    <button
+                                                        type="button"
+                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                                        onClick={() => {
+                                                            const newCategories = editFormData.category.filter(c => c !== category);
+                                                            handleEditFormChange('category', newCategories);
+                                                        }}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 유튜브 영상별 정보 */}
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-lg">유튜브 영상별 정보</h3>
+
+                                {editFormData.youtube_reviews.map((review, index) => (
+                                    <Card key={index} className="p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Badge variant="outline">영상 {index + 1}</Badge>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>유튜브 링크</Label>
+                                            <Input
+                                                value={review.youtube_link}
+                                                onChange={(e) => handleYoutubeReviewChange(index, 'youtube_link', e.target.value)}
+                                                placeholder="https://www.youtube.com/watch?v=..."
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>쯔양의 리뷰</Label>
+                                            <Textarea
+                                                value={review.tzuyang_review}
+                                                onChange={(e) => handleYoutubeReviewChange(index, 'tzuyang_review', e.target.value)}
+                                                placeholder="쯔양의 리뷰 내용을 입력해주세요"
+                                                rows={3}
+                                            />
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-2 pt-4">
+                                <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isSubmitting}>
+                                    취소
+                                </Button>
+                                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90" disabled={isSubmitting}>
+                                    {isSubmitting ? '제출 중...' : '수정 요청 제출'}
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+                </DialogContent>
+            )}
+        </Dialog>
+    );
+});

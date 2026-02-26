@@ -1,0 +1,317 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)
+   
+   문제: 모바일 브라우저(삼성 인터넷, Safari 등)에서 100vh가
+   URL 바와 하단 네비게이션을 포함한 높이로 계산되어 콘텐츠가 잘림.
+   
+   해결: 
+   1. 신규 CSS 단위(dvh/svh) 사용 - Safari 15.4+, Chrome 108+, Samsung Internet 20+
+   2. JavaScript fallback으로 --vh 변수 설정 - 구형 브라우저 지원
+   ============================================ */
+
+:root {
+  /* JavaScript fallback 변수 (동적 업데이트됨) */
+  --vh: 1vh;
+
+  /* 전체 높이 계산 - 우선순위: dvh > svh > JS fallback > vh */
+  --full-height: 100vh;
+  /* 기본값 (fallback) */
+}
+
+/* dvh 지원 브라우저용 */
+@supports (height: 100dvh) {
+  :root {
+    --full-height: 100dvh;
+  }
+}
+
+/* svh 지원 브라우저용 (dvh 미지원 시) */
+@supports (height: 100svh) and (not (height: 100dvh)) {
+  :root {
+    --full-height: 100svh;
+  }
+}
+
+/* 스크롤바 숨김 유틸리티 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
+All colors MUST be HSL.
+*/
+
+/* 성능 최적화: 폰트 로딩 최적화 */
+@font-face {
+  font-family: 'Noto Serif KR';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Noto Serif KR'), local('NotoSerifKR-Regular');
+}
+
+/* 조선100년체 로컬 폰트 */
+@font-face {
+  font-family: 'ChosunCentennial';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ChosunCentennial_otf.otf') format('opentype');
+}
+
+@layer base {
+  :root {
+    /* 한지 색상 (Background) - HSL: 38 30% 98% */
+    --background: 38 30% 98%;
+    /* 먹물 색상 (Foreground - Stone 900) - HSL: 24 10% 10% */
+    --foreground: 24 10% 10%;
+
+    --card: 38 30% 98%;
+    --card-foreground: 24 10% 10%;
+
+    --popover: 38 30% 98%;
+    --popover-foreground: 24 10% 10%;
+
+    /* 낙관 색상 (Primary - Red 700) - HSL: 0 74% 42% */
+    --primary: 0 74% 42%;
+    --primary-foreground: 0 0% 98%;
+
+    /* 보조 색상 (Secondary - Stone 200) - HSL: 24 6% 90% */
+    --secondary: 24 6% 90%;
+    --secondary-foreground: 24 10% 10%;
+
+    --muted: 24 6% 90%;
+    --muted-foreground: 24 5% 45%;
+
+    --accent: 24 6% 90%;
+    --accent-foreground: 24 10% 10%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* 테두리 색상 (Stone 300) - HSL: 24 5% 83% */
+    --border: 24 5% 83%;
+    --input: 24 5% 83%;
+    --ring: 0 74% 42%;
+
+    --radius: 0.5rem;
+
+    /* 모바일 하단 네비게이션 높이 (동적 업데이트) */
+    --mobile-bottom-nav-height: 60px;
+
+    --sidebar-background: 38 30% 98%;
+    --sidebar-foreground: 24 10% 10%;
+    --sidebar-primary: 0 74% 42%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 24 6% 90%;
+    --sidebar-accent-foreground: 24 10% 10%;
+    --sidebar-border: 24 5% 83%;
+    --sidebar-ring: 0 74% 42%;
+
+    /* Custom tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(0 74% 42%), hsl(0 60% 35%));
+    --gradient-secondary: linear-gradient(135deg, hsl(24 6% 90%), hsl(24 10% 85%));
+    --shadow-primary: 0 4px 14px 0 rgba(185, 28, 28, 0.2);
+    --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
+  }
+}
+
+@layer base {
+
+  /* html과 body에 동적 뷰포트 높이 적용 */
+  html {
+    /* 모바일 브라우저 뷰포트 문제 해결 */
+    height: 100%;
+    height: var(--full-height, 100vh);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-serif tracking-tight;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    /* 동적 뷰포트 높이 적용 */
+    height: 100%;
+    min-height: var(--full-height, 100vh);
+    /* 스크롤 방지 (메인 레이아웃에서 처리) */
+    overflow: hidden;
+  }
+
+}
+
+/* 네이버 지도 마커 최적화 및 스타일 초기화 */
+.marker-icon,
+.custom-marker,
+.marker-icon>div,
+.custom-marker>div,
+.marker-icon span,
+.custom marker span,
+.marker-icon img,
+.custom-marker img {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* 네이버 지도 내부의 특정 div들이 불필요한 스타일을 갖지 않도록 강제 */
+div[style*="z-index"]>div>.marker-icon,
+div[style*="z-index"]>div>.custom-marker {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.marker-icon:hover,
+.custom-marker:hover {
+  transform: scale(1.2);
+}
+
+/* GPU 가속 활성화 (선택적) */
+/* GPU 가속 활성화 (선택적) 
+.marker-icon,
+.custom-marker {
+  transform: translateZ(0);  <-- [PERF] Removed to prevent VRAM explosion 
+} */
+
+/* 선택된 마커 애니메이션 */
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.9);
+  }
+
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6), 0 0 0 5px rgba(255, 255, 255, 1);
+  }
+}
+
+/* 맛집 개수 배지 fade-in/out 애니메이션 */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  85% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.95);
+  }
+}
+
+.selected-marker {
+  animation: pulse 2s infinite !important;
+}
+
+/* 페이드인 애니메이션 (위치 이동 없음) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* 네이버 지도 로고 숨기기 CSS 제거됨 (약관 준수) */
+
+/* ============================================
+   [PERF] 성능 최적화 유틸리티 클래스
+   ============================================ */
+
+/* [PERF] 오프스크린 콘텐츠 렌더링 최적화
+   - content-visibility: auto → 뷰포트 밖 요소의 렌더링을 건너뜀
+   - 긴 목록이나 카드 그리드의 초기 렌더링 속도 대폭 개선 */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+/* 반응형 텍스트 넘침 방지 유틸리티 */
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* [PERF] GPU 가속 레이어 프로모션 */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* [PERF] 스크롤 성능 최적화 */
+.scroll-optimized {
+  -webkit-overflow-scrolling: touch;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+}
+
+/* [PERF] 터치 디바이스 최적화 - 300ms 탭 딜레이 제거 */
+/* [NOTE] 네이버 지도 제스처(핀치 줌 등)와 충돌하여 비활성화
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+*/
+
+/* [PERF] 프린트 미디어에서 불필요한 요소 숨김 */
+@media print {
+
+  .mobile-bottom-nav,
+  nav {
+    display: none !important;
+  }
+}
+
+/* [PERF] 모션 감소 선호 사용자를 위한 접근성 최적화 */
+/* [NOTE] 네이버 지도 줌/팬 애니메이션을 강제로 0ms로 만들어 버벅거림 유발 -> 비활성화
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+*/
+
+
+

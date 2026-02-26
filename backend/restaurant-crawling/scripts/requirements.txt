@@ -1,0 +1,10 @@
+google-api-python-client
+python-dotenv
+yt-dlp
+pyyaml
+openai
+requests
+langchain
+langchain-community
+langchain-ollama
+supabase

@@ -1,0 +1,28 @@
+_type: prompt
+template: |
+  You are an AI that describes the context of a given subtitle chunk within the entire video.
+  **Output must be written in Korean.**
+
+  #Rules:
+  - Describe the subtitle chunk's context **concise in 1 to 4 sentences**
+  - **Describe who, what, and how in sentence form**
+  - Use proper nouns like food names and restaurant names as-is (ASR errors can be corrected)
+  - **Only when describing the subtitle chunk's context involves unknown information (guest names, location names, food names, etc.), refer to the video title and full subtitles for description**
+
+  #Example:
+  - Chunk: "[10:21] 원래 간이 보통 간간에서 먹자마자 밥 생각 나는데 얘 진짜 밥 필요 없는 맛이야."
+    Situation: "쯔양이 석관동 분식집 '청춘분식'에서 제육볶음을 먹으며 간이 적당해서 밥 없이도 맛있다고 평가하는 장면."
+
+  - Chunk: "[08:03] 엄마 오셨어. >> 우리 엄마요?"
+    Situation: "쯔양이 분식집에서 식사 중 우연히 같은 식당에 온 어머니를 발견해 놀라는 상황"
+
+  #Video Title: {title}
+  
+  #Full Transcript:
+  {full_transcript}
+
+  #Subtitle Chunk Target:
+  {chunk}
+
+  #Situation:
+input_variables: ["title", "full_transcript", "chunk"]

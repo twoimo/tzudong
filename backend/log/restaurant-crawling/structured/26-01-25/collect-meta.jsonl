@@ -1,0 +1,21 @@
+{"timestamp": "2026-01-25T13:27:07.141561+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-25T13:27:07.146551+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-25T13:27:07.148500+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-25 13:27:07", "data": null}
+{"timestamp": "2026-01-25T13:27:07.150504+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: C:\\Users\\twoimo\\Desktop\\tzudong\\backend\\log\\restaurant-crawling", "data": null}
+{"timestamp": "2026-01-25T13:27:07.156686+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📄 text: C:\\Users\\twoimo\\Desktop\\tzudong\\backend\\log\\restaurant-crawling\\text\\26-01-25", "data": null}
+{"timestamp": "2026-01-25T13:27:07.159808+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📊 structured: C:\\Users\\twoimo\\Desktop\\tzudong\\backend\\log\\restaurant-crawling\\structured\\26-01-25", "data": null}
+{"timestamp": "2026-01-25T13:27:07.161806+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📋 report: C:\\Users\\twoimo\\Desktop\\tzudong\\backend\\log\\restaurant-crawling\\report\\26-01-25", "data": null}
+{"timestamp": "2026-01-25T13:27:07.163083+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-25T13:27:07.166082+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-25T13:27:07.168097+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-25T13:27:07.170083+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-25 13:27:07", "data": null}
+{"timestamp": "2026-01-25T13:27:07.171087+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: C:\\Users\\twoimo\\Desktop\\tzudong\\backend\\log\\restaurant-crawling\\report\\26-01-25", "data": null}
+{"timestamp": "2026-01-25T13:27:07.173085+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-25T13:27:07.236114+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "  🔍 수집 대상: 1013개", "data": null}
+{"timestamp": "2026-01-25T13:27:07.237204+09:00", "level": "INFO", "phase": "collect-meta", "step": "progress", "message": "진행: 0/1013 (0.0%)", "data": null}
+{"timestamp": "2026-01-25T13:35:27.283337+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "완료: 업데이트 93개", "data": null}
+{"timestamp": "2026-01-25T13:35:27.284559+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-25T13:35:27.286991+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🏁 [COLLECT-META] 파이프라인 종료", "data": null}
+{"timestamp": "2026-01-25T13:35:27.288993+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 종료 시간: 2026-01-25 13:35:27", "data": null}
+{"timestamp": "2026-01-25T13:35:27.289994+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏱️ 소요 시간: 8분 20초", "data": null}
+{"timestamp": "2026-01-25T13:35:27.291934+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}

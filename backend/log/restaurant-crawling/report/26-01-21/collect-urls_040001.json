@@ -1,0 +1,168 @@
+{
+  "phase": "collect-urls",
+  "started_at": "2026-01-21 04:00:01",
+  "ended_at": "2026-01-21 04:00:13",
+  "duration_seconds": 12.46,
+  "duration_formatted": "12.5초",
+  "statistics": {
+    "total_urls_fetched": 1049,
+    "youtube_api_calls": 22,
+    "new_urls_saved": 1044,
+    "skipped_existing": 5
+  },
+  "timers": {
+    "load_existing_urls": {
+      "count": 2,
+      "total_seconds": 0.0,
+      "avg_seconds": 0.0,
+      "formatted": "0.0초"
+    },
+    "youtube_api_channel_list": {
+      "count": 2,
+      "total_seconds": 0.53,
+      "avg_seconds": 0.264,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_1": {
+      "count": 2,
+      "total_seconds": 0.89,
+      "avg_seconds": 0.445,
+      "formatted": "0.9초"
+    },
+    "youtube_api_playlist_page_2": {
+      "count": 2,
+      "total_seconds": 0.57,
+      "avg_seconds": 0.284,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_3": {
+      "count": 2,
+      "total_seconds": 0.52,
+      "avg_seconds": 0.258,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_4": {
+      "count": 2,
+      "total_seconds": 0.56,
+      "avg_seconds": 0.279,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_5": {
+      "count": 2,
+      "total_seconds": 0.56,
+      "avg_seconds": 0.28,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_6": {
+      "count": 2,
+      "total_seconds": 0.58,
+      "avg_seconds": 0.291,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_7": {
+      "count": 2,
+      "total_seconds": 0.59,
+      "avg_seconds": 0.293,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_8": {
+      "count": 2,
+      "total_seconds": 0.56,
+      "avg_seconds": 0.278,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_9": {
+      "count": 2,
+      "total_seconds": 0.54,
+      "avg_seconds": 0.268,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_10": {
+      "count": 2,
+      "total_seconds": 0.54,
+      "avg_seconds": 0.271,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_11": {
+      "count": 2,
+      "total_seconds": 0.56,
+      "avg_seconds": 0.278,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_12": {
+      "count": 2,
+      "total_seconds": 0.5,
+      "avg_seconds": 0.252,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_13": {
+      "count": 2,
+      "total_seconds": 0.54,
+      "avg_seconds": 0.272,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_14": {
+      "count": 2,
+      "total_seconds": 0.56,
+      "avg_seconds": 0.279,
+      "formatted": "0.6초"
+    },
+    "youtube_api_playlist_page_15": {
+      "count": 2,
+      "total_seconds": 0.52,
+      "avg_seconds": 0.258,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_16": {
+      "count": 2,
+      "total_seconds": 0.53,
+      "avg_seconds": 0.266,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_17": {
+      "count": 2,
+      "total_seconds": 0.66,
+      "avg_seconds": 0.329,
+      "formatted": "0.7초"
+    },
+    "youtube_api_playlist_page_18": {
+      "count": 2,
+      "total_seconds": 0.53,
+      "avg_seconds": 0.266,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_19": {
+      "count": 2,
+      "total_seconds": 0.54,
+      "avg_seconds": 0.272,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_20": {
+      "count": 2,
+      "total_seconds": 0.55,
+      "avg_seconds": 0.275,
+      "formatted": "0.5초"
+    },
+    "youtube_api_playlist_page_21": {
+      "count": 2,
+      "total_seconds": 0.51,
+      "avg_seconds": 0.256,
+      "formatted": "0.5초"
+    },
+    "fetch_all_video_urls": {
+      "count": 2,
+      "total_seconds": 12.44,
+      "avg_seconds": 6.222,
+      "formatted": "12.4초"
+    },
+    "save_urls": {
+      "count": 2,
+      "total_seconds": 0.0,
+      "avg_seconds": 0.0,
+      "formatted": "0.0초"
+    }
+  },
+  "success_count": 3,
+  "error_count": 0,
+  "skip_count": 0
+}

@@ -1,0 +1,42 @@
+{"timestamp": "2026-01-20T19:11:25.578055+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T19:11:25.578324+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-20T19:11:25.578532+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-20 19:11:25", "data": null}
+{"timestamp": "2026-01-20T19:11:25.578674+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling", "data": null}
+{"timestamp": "2026-01-20T19:11:25.578884+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📄 text: /home/ubuntu/tzudong/backend/log/restaurant-crawling/text/26-01-20", "data": null}
+{"timestamp": "2026-01-20T19:11:25.578974+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📊 structured: /home/ubuntu/tzudong/backend/log/restaurant-crawling/structured/26-01-20", "data": null}
+{"timestamp": "2026-01-20T19:11:25.579043+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📋 report: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-20", "data": null}
+{"timestamp": "2026-01-20T19:11:25.579109+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T19:11:25.579171+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T19:11:25.579228+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-20T19:11:25.579286+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-20 19:11:25", "data": null}
+{"timestamp": "2026-01-20T19:11:25.579346+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-20", "data": null}
+{"timestamp": "2026-01-20T19:11:25.579403+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T19:11:25.581139+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "  🔍 수집 대상: 1010개", "data": null}
+{"timestamp": "2026-01-20T19:11:25.581351+09:00", "level": "INFO", "phase": "collect-meta", "step": "progress", "message": "진행: 0/1010 (0.0%)", "data": null}
+{"timestamp": "2026-01-20T19:16:49.577029+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "완료: 업데이트 166개", "data": null}
+{"timestamp": "2026-01-20T19:16:49.577288+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T19:16:49.577391+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🏁 [COLLECT-META] 파이프라인 종료", "data": null}
+{"timestamp": "2026-01-20T19:16:49.577465+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 종료 시간: 2026-01-20 19:16:49", "data": null}
+{"timestamp": "2026-01-20T19:16:49.577530+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏱️ 소요 시간: 5분 24초", "data": null}
+{"timestamp": "2026-01-20T19:16:49.577592+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T20:59:53.122269+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T20:59:53.122525+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-20T20:59:53.122639+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-20 20:59:53", "data": null}
+{"timestamp": "2026-01-20T20:59:53.122721+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling", "data": null}
+{"timestamp": "2026-01-20T20:59:53.122859+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📄 text: /home/ubuntu/tzudong/backend/log/restaurant-crawling/text/26-01-20", "data": null}
+{"timestamp": "2026-01-20T20:59:53.122949+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📊 structured: /home/ubuntu/tzudong/backend/log/restaurant-crawling/structured/26-01-20", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123023+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📋 report: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-20", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123094+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123160+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123225+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123292+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-20 20:59:53", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123351+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-20", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123411+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T20:59:53.123847+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "  🔍 수집 대상: 5개", "data": null}
+{"timestamp": "2026-01-20T20:59:53.124059+09:00", "level": "INFO", "phase": "collect-meta", "step": "progress", "message": "진행: 0/5 (0.0%)", "data": null}
+{"timestamp": "2026-01-20T20:59:59.642249+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "완료: 업데이트 5개", "data": null}
+{"timestamp": "2026-01-20T20:59:59.642442+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T20:59:59.642547+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🏁 [COLLECT-META] 파이프라인 종료", "data": null}
+{"timestamp": "2026-01-20T20:59:59.642667+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 종료 시간: 2026-01-20 20:59:59", "data": null}
+{"timestamp": "2026-01-20T20:59:59.642729+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏱️ 소요 시간: 6.5초", "data": null}
+{"timestamp": "2026-01-20T20:59:59.642868+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
