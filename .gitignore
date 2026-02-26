@@ -75,3 +75,6 @@ pr_body_main.md
 
 # Large DB backup files
 backend/supabase/backup_db/*.sql
+
+# omx
+.omx
