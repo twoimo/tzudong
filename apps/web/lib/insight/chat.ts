@@ -1829,7 +1829,6 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
     '',
     '궁금한 점을 자유롭게 질문해 주세요.',
     '- "트리맵으로 조회수 분포 보여줘"',
-    '- "히트맵 요약해줘"',
     '- "먹방 스토리보드 기획안 만들어줘"',
   ].join('\n');
 
@@ -1991,7 +1990,6 @@ export async function answerAdminInsightChat(
 
   return createLocalResponse(asOf, [
     `가능한 질문 예시:`,
-    `- "히트맵 요약해줘"`,
     `- "트리맵으로 조회수 분포 보여줘"`,
     `- "먹방 스토리보드 기획안 만들어줘"`,
   ].join('\n'), { fallbackReason: 'llm_unavailable' });
@@ -2052,7 +2050,6 @@ export async function streamAdminInsightChat(
       local: createLocalResponse(new Date().toISOString(), [
         '가능한 질문 예시:',
         '- "트리맵으로 조회수 분포 보여줘"',
-        '- "히트맵 요약해줘"',
         '- "먹방 스토리보드 기획안 만들어줘"',
       ].join('\n'), { fallbackReason: 'llm_unavailable' }),
     };
