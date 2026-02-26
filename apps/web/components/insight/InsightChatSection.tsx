@@ -442,14 +442,25 @@ type InsightChatTreemapResponse = {
     availablePeriods?: string[];
 };
 
+type ChatTreemapMetricMode = 'views' | 'likes' | 'comments' | 'duration';
+type ChatTreemapViewMode = 'all' | 'category' | 'change';
+type ChatTreemapPeriod = 'ALL' | '1D' | '1W' | '2W' | '1M' | '3M' | '6M' | '1Y';
+
 type ChatTreemapLeaf = {
     id: string;
     name: string;
     title: string;
     category: string;
     value: number;
+    metricRaw: number;
+    previousMetricRaw: number | null;
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+    duration: number;
     metricText: string;
     percentText: string;
+    percent: number;
     color: string;
 };
 
@@ -485,8 +496,15 @@ type ChatTreemapTooltip = {
     id: string;
     title: string;
     category: string;
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+    duration: number;
+    metricRaw: number;
     metricText: string;
     percentText: string;
+    percent: number;
+    previousMetricRaw: number | null;
     x: number;
     y: number;
 };
@@ -496,7 +514,8 @@ type TreemapChartDimensions = {
     height: number;
 };
 
-const CHAT_TREEMAP_PALETTE = ['#22c55e', '#0ea5e9', '#f97316', '#a855f7', '#ef4444', '#14b8a6', '#6366f1', '#facc15', '#fb7185', '#2dd4bf'];
+// 메인 트리맵과 동일한 녹색 그라데이션 — 일관된 시각 언어
+const CHAT_TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
 const CHAT_TREEMAP_MAX_LEAVES = 50;
 const CHAT_TREEMAP_MIN_LEAVES = 5;
 const CHAT_TREEMAP_MOBILE_MAX_LEAVES = 30;
@@ -511,8 +530,8 @@ const CHAT_TREEMAP_TABLET_MIN_HEIGHT = 320;
 const CHAT_TREEMAP_DESKTOP_MIN_HEIGHT = 400;
 const CHAT_TREEMAP_MAX_HEIGHT = 1400;
 const CHAT_TREEMAP_ASPECT_RATIO = 1.0;
-const CHAT_TREEMAP_TOOLTIP_WIDTH = 240;
-const CHAT_TREEMAP_TOOLTIP_HEIGHT = 108;
+const CHAT_TREEMAP_TOOLTIP_WIDTH = 280;
+const CHAT_TREEMAP_TOOLTIP_HEIGHT = 160;
 const CHAT_TREEMAP_AREA_PER_CELL = 4_500;
 const CHAT_TREEMAP_MOBILE_AREA_PER_CELL = 6_000;
 const CHAT_TREEMAP_TABLET_AREA_PER_CELL = 5_000;
@@ -521,6 +540,110 @@ const CHAT_TREEMAP_EMPTY_MESSAGE = '트리맵에 표시할 데이터가 없습�
 
 const CHAT_TREEMAP_MOBILE_BP = 768;
 const CHAT_TREEMAP_TABLET_BP = 1024;
+
+const CHAT_TREEMAP_METRIC_OPTIONS: { value: ChatTreemapMetricMode; label: string }[] = [
+    { value: 'views', label: '조회수' },
+    { value: 'likes', label: '좋아요' },
+    { value: 'comments', label: '댓글수' },
+    { value: 'duration', label: '영상 길이' },
+];
+
+const CHAT_TREEMAP_PERIOD_OPTIONS: { value: ChatTreemapPeriod; label: string }[] = [
+    { value: 'ALL', label: '전체' },
+    { value: '1D', label: '1D' },
+    { value: '1W', label: '1W' },
+    { value: '2W', label: '2W' },
+    { value: '1M', label: '1M' },
+    { value: '3M', label: '3M' },
+    { value: '6M', label: '6M' },
+    { value: '1Y', label: '1Y' },
+];
+
+const CHAT_TREEMAP_VIEW_MODE_OPTIONS: { value: ChatTreemapViewMode; label: string }[] = [
+    { value: 'all', label: '비율' },
+    { value: 'category', label: '카테고리' },
+    { value: 'change', label: '증감률' },
+];
+
+function chatTreemapGetMetricValue(video: InsightChatTreemapResponse['videos'][number], mode: ChatTreemapMetricMode): number {
+    if (mode === 'views') return video.viewCount;
+    if (mode === 'likes') return video.likeCount;
+    if (mode === 'comments') return video.commentCount;
+    return video.duration;
+}
+
+function chatTreemapGetPreviousMetric(video: InsightChatTreemapResponse['videos'][number], mode: ChatTreemapMetricMode): number | null {
+    if (mode === 'views') return video.previousViewCount;
+    if (mode === 'likes') return video.previousLikeCount;
+    if (mode === 'comments') return video.previousCommentCount;
+    return video.previousDuration;
+}
+
+function chatTreemapCalcChange(current: number, previous: number | null): number {
+    if (!Number.isFinite(current) || previous == null || previous <= 0) return 0;
+    return ((current - previous) / previous) * 100;
+}
+
+function chatTreemapFormatShort(value: number): string {
+    if (!Number.isFinite(value)) return '0';
+    if (value >= 1_000_000) return `${Number.parseFloat((value / 1_000_000).toFixed(1))}M`;
+    if (value >= 1_000) return `${Number.parseFloat((value / 1_000).toFixed(1))}k`;
+    return value.toLocaleString();
+}
+
+function chatTreemapFormatDuration(totalSeconds: number): string {
+    const s = Math.max(0, Math.floor(totalSeconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function chatTreemapFormatMetric(mode: ChatTreemapMetricMode, value: number): string {
+    if (mode === 'duration') return chatTreemapFormatDuration(value);
+    return chatTreemapFormatShort(value);
+}
+
+function chatTreemapFormatTooltipMetric(mode: 'views' | 'likes' | 'comments' | 'duration', value: number): string {
+    if (mode === 'duration') return chatTreemapFormatDuration(value);
+    return `${Math.round(value).toLocaleString()}개`;
+}
+
+function chatTreemapGetMetricLabel(mode: ChatTreemapMetricMode): string {
+    if (mode === 'views') return '조회수';
+    if (mode === 'likes') return '좋아요';
+    if (mode === 'comments') return '댓글수';
+    return '영상 길이';
+}
+
+function chatTreemapFormatPercent(value: number): string {
+    return `${value.toFixed(2)}%`;
+}
+
+function chatTreemapFormatNonNegativePercent(value: number): string {
+    if (!Number.isFinite(value)) return '0%';
+    return `${Math.max(0, value).toFixed(2)}%`;
+}
+
+function chatTreemapGetColorByPercent(percent: number): string {
+    if (percent <= 0) return CHAT_TREEMAP_COLORS[0];
+    if (percent <= 1) return CHAT_TREEMAP_COLORS[1];
+    if (percent <= 2) return CHAT_TREEMAP_COLORS[2];
+    return CHAT_TREEMAP_COLORS[3];
+}
+
+function chatTreemapGetPeriodLabel(period: ChatTreemapPeriod): string {
+    if (period === 'ALL') return '전체';
+    if (period === '1D') return '전일';
+    if (period === '1W') return '전주';
+    if (period === '2W') return '2주전';
+    if (period === '1M') return '전월';
+    if (period === '3M') return '3개월전';
+    if (period === '6M') return '6개월전';
+    if (period === '1Y') return '1년전';
+    return '1년전';
+}
 
 const getTreemapAreaPerCell = (width: number): number => {
     if (width < CHAT_TREEMAP_MOBILE_BP) return CHAT_TREEMAP_MOBILE_AREA_PER_CELL;
@@ -613,14 +736,17 @@ const InsightChatTreemap = memo(() => {
         height: CHAT_TREEMAP_DESKTOP_MIN_HEIGHT,
     });
     const [tooltip, setTooltip] = useState<ChatTreemapTooltip | null>(null);
+    const [metricMode, setMetricMode] = useState<ChatTreemapMetricMode>('views');
+    const [viewMode, setViewMode] = useState<ChatTreemapViewMode>('all');
+    const [period, setPeriod] = useState<ChatTreemapPeriod>('ALL');
 
     const { data, isLoading, error } = useQuery({
-        queryKey: ['admin-insight-chat-treemap'],
+        queryKey: ['admin-insight-chat-treemap', metricMode, viewMode, period],
         queryFn: async () => {
             const params = new URLSearchParams({
-                period: 'ALL',
-                viewMode: 'all',
-                metricMode: 'views',
+                period,
+                viewMode,
+                metricMode,
             });
             const response = await fetch(`/api/insights/treemap?${params.toString()}`);
             if (!response.ok) {
@@ -692,15 +818,22 @@ const InsightChatTreemap = memo(() => {
         const containerRect = container.getBoundingClientRect();
         const pointerX = event.clientX - containerRect.left;
         const pointerY = event.clientY - containerRect.top;
-        const tooltipWidth = Math.min(CHAT_TREEMAP_TOOLTIP_WIDTH, Math.max(170, containerRect.width * 0.8));
+        const tooltipWidth = Math.min(CHAT_TREEMAP_TOOLTIP_WIDTH, Math.max(200, containerRect.width * 0.8));
         const tooltipHeight = CHAT_TREEMAP_TOOLTIP_HEIGHT;
 
         setTooltip({
             id: cell.node.id,
             title: cell.node.title,
             category: cell.node.category,
+            viewCount: cell.node.viewCount,
+            likeCount: cell.node.likeCount,
+            commentCount: cell.node.commentCount,
+            duration: cell.node.duration,
+            metricRaw: cell.node.metricRaw,
             metricText: cell.node.metricText,
             percentText: cell.node.percentText,
+            percent: cell.node.percent,
+            previousMetricRaw: cell.node.previousMetricRaw,
             x: Math.max(0, Math.min(pointerX + 12, containerRect.width - tooltipWidth)),
             y: Math.max(0, Math.min(pointerY + 12, containerRect.height - tooltipHeight)),
         });
@@ -714,34 +847,34 @@ const InsightChatTreemap = memo(() => {
         clearTooltip();
     }, [clearTooltip, dimensions.width, dimensions.height, data]);
 
+    const isChangeMode = viewMode === 'change';
+
     const rows = useMemo(() => {
         if (dimensions.width <= 0 || dimensions.height <= 0) return [];
         if (!data) return [];
 
         const sortedVideos = data.videos
-            .map((video) => ({
-                ...video,
-                metric: Number.isFinite(video.viewCount) ? Math.max(0, video.viewCount) : 0,
-            }))
-            .filter((video) => Number.isFinite(video.metric))
-            .sort((a, b) => b.metric - a.metric);
+            .map((video) => {
+                const metricRaw = Math.max(0, chatTreemapGetMetricValue(video, metricMode));
+                const previousMetricRaw = chatTreemapGetPreviousMetric(video, metricMode);
+                return { ...video, metricRaw, previousMetricRaw };
+            })
+            .filter((video) => Number.isFinite(video.metricRaw))
+            .sort((a, b) => b.metricRaw - a.metricRaw);
 
         if (sortedVideos.length === 0) return [];
 
-        const totalMetric = sortedVideos.reduce((sum, row) => sum + row.metric, 0);
+        const totalMetric = sortedVideos.reduce((sum, row) => sum + row.metricRaw, 0);
         const { minLeaves, maxLeaves } = getTreemapLeafBounds(dimensions.width);
         const areaPerCell = getTreemapAreaPerCell(dimensions.width);
         const areaBasedLimit = Math.max(minLeaves, Math.floor((dimensions.width * dimensions.height) / areaPerCell));
-        const visibleCount = Math.max(
-            minLeaves,
-            Math.min(maxLeaves, areaBasedLimit || minLeaves),
-        );
+        const visibleCount = Math.max(minLeaves, Math.min(maxLeaves, areaBasedLimit || minLeaves));
         const visibleVideos = sortedVideos.slice(0, visibleCount);
 
         const layoutRows = visibleVideos.map((row) => ({
             ...row,
-            metricForDisplay: row.metric,
-            metricForLayout: row.metric,
+            metricForDisplay: row.metricRaw,
+            metricForLayout: row.metricRaw,
         }));
 
         const totalLayoutMetric = layoutRows.reduce((sum, row) => sum + row.metricForLayout, 0);
@@ -763,7 +896,6 @@ const InsightChatTreemap = memo(() => {
                 const remainForOthers = 1 - targetTop;
                 const otherTotal = 1 - topShare;
                 layoutRows[0].metricForLayout = targetTop;
-
                 if (otherTotal > 0) {
                     const boostRatio = remainForOthers / otherTotal;
                     for (let i = 1; i < layoutRows.length; i += 1) {
@@ -778,41 +910,86 @@ const InsightChatTreemap = memo(() => {
             }
         }
 
-        const rowsWithColor = layoutRows
-            .map((row, index) => ({
+        const leafRows: ChatTreemapLeaf[] = layoutRows.map((row) => {
+            const percent = isChangeMode
+                ? chatTreemapCalcChange(row.metricRaw, row.previousMetricRaw)
+                : (totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0);
+            const percentText = isChangeMode
+                ? chatTreemapFormatNonNegativePercent(percent)
+                : chatTreemapFormatPercent(percent);
+
+            return {
                 id: row.id,
                 name: row.title,
                 title: row.title,
                 category: row.category?.trim() || '기타',
                 value: Math.max(0.25, row.metricForLayout),
-                metric: row.metricForDisplay,
-                metricText: `${Math.round(row.metricForDisplay).toLocaleString()}회`,
-                percentText: totalMetric > 0 ? `${((row.metricForDisplay / totalMetric) * 100).toFixed(1)}%` : '0%',
-                color: CHAT_TREEMAP_PALETTE[index % CHAT_TREEMAP_PALETTE.length],
-            }));
+                metricRaw: row.metricRaw,
+                previousMetricRaw: row.previousMetricRaw,
+                viewCount: row.viewCount,
+                likeCount: row.likeCount,
+                commentCount: row.commentCount,
+                duration: row.duration,
+                metricText: chatTreemapFormatMetric(metricMode, row.metricRaw),
+                percentText,
+                percent,
+                color: chatTreemapGetColorByPercent(percent),
+            };
+        });
 
-        const visibleMetric = rowsWithColor.reduce((sum, row) => sum + row.metric, 0);
-        return rowsWithColor
-            .sort((a, b) => b.metric - a.metric)
-            .slice(0, CHAT_TREEMAP_MAX_LEAVES)
-            .map((row) => ({
-                ...row,
-                percentText: visibleMetric > 0 ? `${((row.metric / visibleMetric) * 100).toFixed(1)}%` : '0%',
-            }));
-    }, [data, dimensions.width, dimensions.height]);
+        if (viewMode === 'category') {
+            const grouped = new Map<string, { children: ChatTreemapLeaf[]; totalMetric: number }>();
+            for (const item of leafRows) {
+                const bucket = grouped.get(item.category) ?? { children: [], totalMetric: 0 };
+                bucket.children.push(item);
+                bucket.totalMetric += item.metricRaw;
+                grouped.set(item.category, bucket);
+            }
+            const groupNodes = [...grouped.entries()]
+                .map(([name, group]) => ({
+                    name,
+                    value: Math.max(group.totalMetric, 0.25),
+                    children: [...group.children].sort((a, b) => b.metricRaw - a.metricRaw),
+                }))
+                .sort((a, b) => b.value - a.value);
+            return groupNodes.flatMap((g) => g.children).slice(0, CHAT_TREEMAP_MAX_LEAVES);
+        }
+
+        return leafRows
+            .sort((a, b) => b.metricRaw - a.metricRaw)
+            .slice(0, CHAT_TREEMAP_MAX_LEAVES);
+    }, [data, dimensions.width, dimensions.height, metricMode, isChangeMode, viewMode]);
 
     const treemapCells = useMemo(
         () => buildTreemapLayout(rows, dimensions.width, dimensions.height),
         [rows, dimensions.width, dimensions.height],
     );
-    const visibleTreemapCells = treemapCells;
 
     const displayedSummary = useMemo(() => {
         if (!data) return '';
         const total = data.totalVideos;
         const shownVideos = rows.length;
-        return `조회수 기준 상위 ${shownVideos}/${total}개 영상 분포`;
-    }, [data, rows]);
+        const label = chatTreemapGetMetricLabel(metricMode);
+        const modeLabel = isChangeMode ? '증감률' : '비율';
+        return `${label} ${modeLabel} 기준 상위 ${shownVideos}/${total}개 영상 분포`;
+    }, [data, rows, metricMode, isChangeMode]);
+
+    const periodOptions = useMemo(() => {
+        if (isChangeMode) {
+            return CHAT_TREEMAP_PERIOD_OPTIONS.filter((o) => o.value !== 'ALL');
+        }
+        if (viewMode === 'all') {
+            return CHAT_TREEMAP_PERIOD_OPTIONS.filter((o) => o.value !== '1D' && o.value !== '1W');
+        }
+        return CHAT_TREEMAP_PERIOD_OPTIONS;
+    }, [isChangeMode, viewMode]);
+
+    useEffect(() => {
+        const hasCurrentPeriod = periodOptions.some((o) => o.value === period);
+        if (!hasCurrentPeriod) {
+            setPeriod(periodOptions[0]?.value ?? '1D');
+        }
+    }, [periodOptions, period]);
 
     if (isLoading) {
         return (
@@ -838,7 +1015,7 @@ const InsightChatTreemap = memo(() => {
         );
     }
 
-    if (visibleTreemapCells.length === 0) {
+    if (treemapCells.length === 0) {
         return (
             <div className="mt-2 rounded-md border border-[#e5e7eb] bg-[#f8fafc] px-3 py-2 text-xs text-[#6b7280]">
                 트리맵을 표시할 수 없습니다. 잠시 후 다시 시도해 주세요.
@@ -848,6 +1025,81 @@ const InsightChatTreemap = memo(() => {
 
     return (
         <div className="mt-1">
+            {/* 컨트롤 바 — Google Looker / Tableau 스타일 컴팩트 pill toggles */}
+            <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                {/* 모드 */}
+                <div className="inline-flex items-center gap-1">
+                    <span className="text-[10px] text-[#9ca3af] select-none">모드</span>
+                    <div className="inline-flex overflow-hidden rounded-md border border-[#e5e7eb]">
+                        {CHAT_TREEMAP_VIEW_MODE_OPTIONS.map((o) => (
+                            <button
+                                key={o.value}
+                                type="button"
+                                onClick={() => setViewMode(o.value)}
+                                className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${viewMode === o.value
+                                    ? 'bg-[#111827] text-white'
+                                    : 'bg-white text-[#374151] hover:bg-[#f3f4f6]'
+                                    }`}
+                            >
+                                {o.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                {/* 지표 */}
+                <div className="inline-flex items-center gap-1">
+                    <span className="text-[10px] text-[#9ca3af] select-none">지표</span>
+                    <div className="inline-flex overflow-hidden rounded-md border border-[#e5e7eb]">
+                        {CHAT_TREEMAP_METRIC_OPTIONS.map((o) => (
+                            <button
+                                key={o.value}
+                                type="button"
+                                onClick={() => setMetricMode(o.value)}
+                                className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${metricMode === o.value
+                                    ? 'bg-[#111827] text-white'
+                                    : 'bg-white text-[#374151] hover:bg-[#f3f4f6]'
+                                    }`}
+                            >
+                                {o.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                {/* 기간 */}
+                <div className="inline-flex items-center gap-1">
+                    <span className="text-[10px] text-[#9ca3af] select-none">기간</span>
+                    <div className="inline-flex overflow-hidden rounded-md border border-[#e5e7eb]">
+                        {periodOptions.map((o) => (
+                            <button
+                                key={o.value}
+                                type="button"
+                                onClick={() => setPeriod(o.value)}
+                                className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${period === o.value
+                                    ? 'bg-[#111827] text-white'
+                                    : 'bg-white text-[#374151] hover:bg-[#f3f4f6]'
+                                    }`}
+                            >
+                                {o.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                {/* 색상 범례 */}
+                <div className="inline-flex items-center gap-1 ml-auto">
+                    <div className="inline-flex overflow-hidden rounded border border-[#e5e7eb]">
+                        {CHAT_TREEMAP_COLORS.map((color, idx) => (
+                            <div
+                                key={color}
+                                className="h-4 px-1.5 text-[8px] leading-4 text-white font-medium"
+                                style={{ backgroundColor: color, textShadow: '0 1px 0 rgba(0,0,0,.25)' }}
+                            >
+                                {idx === 0 ? '0%' : `+${idx}%`}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
             <div className="mb-1 text-xs text-[#6b7280]">
                 {displayedSummary}
             </div>
@@ -858,49 +1110,92 @@ const InsightChatTreemap = memo(() => {
                 >
                     {tooltip ? (
                         <div
-                            className="absolute z-20 min-w-[200px] max-w-[250px] rounded-md border border-[#111827]/20 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm"
+                            className="absolute z-20 min-w-[220px] max-w-[280px] rounded-lg border border-[#111827]/20 bg-white/95 px-3 py-2.5 shadow-xl backdrop-blur-sm"
                             style={{ left: `${tooltip.x}px`, top: `${tooltip.y}px` }}
                         >
                             <p className="text-xs font-semibold leading-snug text-[#111827] break-all">
                                 {tooltip.title}
                             </p>
-                            <p className="mt-1 text-[11px] text-[#374151]">
-                                카테고리: {tooltip.category}
+                            <p className="mt-1 text-[11px] text-[#6b7280]">
+                                {tooltip.category}
                             </p>
-                            <p className="text-[11px] text-[#374151]">
-                                조회수: {tooltip.metricText}
-                            </p>
-                            <p className="text-[11px] text-[#6b7280]">
-                                비중: {tooltip.percentText}
-                            </p>
+                            <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-0.5">
+                                <p className="text-[11px] text-[#374151]">
+                                    조회수: {chatTreemapFormatTooltipMetric('views', tooltip.viewCount)}
+                                </p>
+                                <p className="text-[11px] text-[#374151]">
+                                    좋아요: {chatTreemapFormatTooltipMetric('likes', tooltip.likeCount)}
+                                </p>
+                                <p className="text-[11px] text-[#374151]">
+                                    댓글수: {chatTreemapFormatTooltipMetric('comments', tooltip.commentCount)}
+                                </p>
+                                <p className="text-[11px] text-[#374151]">
+                                    영상 길이: {chatTreemapFormatTooltipMetric('duration', tooltip.duration)}
+                                </p>
+                            </div>
+                            <div className="mt-1.5 flex items-center gap-2 border-t border-[#e5e7eb] pt-1.5">
+                                <p className="text-[11px] font-medium text-[#111827]">
+                                    {isChangeMode
+                                        ? `${chatTreemapGetPeriodLabel(period)} 증감률: ${tooltip.percentText}`
+                                        : `비율: ${tooltip.percentText}`}
+                                </p>
+                                {isChangeMode ? (
+                                    <p className="text-[10px] text-[#9ca3af]">
+                                        이전 {chatTreemapGetMetricLabel(metricMode)}: {chatTreemapFormatMetric(metricMode, tooltip.previousMetricRaw ?? tooltip.metricRaw)}
+                                    </p>
+                                ) : null}
+                            </div>
                         </div>
                     ) : null}
-                    {visibleTreemapCells.map((cell) => {
+                    {treemapCells.map((cell) => {
                         const width = Math.max(0, cell.x1 - cell.x0);
                         const height = Math.max(0, cell.y1 - cell.y0);
-                        const area = width * height;
-                        const hasText = area >= 1200 && width >= 32 && height >= 28;
-                        const hasMetric = area >= 1600 && width >= 44 && height >= 32;
-                        const hasPercent = area >= 2800 && width >= 58 && height >= 42;
+                        const tileArea = Math.max(1, width * height);
+                        const tileBaseSize = Math.sqrt(tileArea);
+                        const tileInnerHeight = Math.max(6, height - 6);
                         const isRenderable = width > 2 && height > 2;
 
                         if (!isRenderable) return null;
 
-                        const titleMaxLength = Math.max(5, Math.min(24, Math.floor(Math.sqrt(area) / 3.3)));
-                        const shortTitle = hasText
-                            ? (cell.node.title.length > titleMaxLength
-                                ? `${cell.node.title.slice(0, Math.max(5, titleMaxLength - 1))}…`
-                                : cell.node.title)
-                            : '';
+                        const metricFont = Math.max(10, Math.min(54, Math.floor(tileBaseSize * 0.19)));
+                        const percentFont = Math.max(8, Math.min(24, Math.floor(metricFont * 0.6)));
+                        const tinyFont = Math.max(8, Math.floor(Math.min(width, height) * 0.38));
 
-                        const titleFont = hasText ? Math.max(9, Math.min(12, Math.floor(Math.sqrt(area) / 16))) : 0;
-                        const metricFont = hasMetric ? Math.max(8, Math.min(11, Math.floor(Math.sqrt(area) / 19))) : 0;
-                        const percentFont = hasPercent ? Math.max(7, Math.min(9, Math.floor(Math.sqrt(area) / 22))) : 0;
+                        const bothLineHeight = metricFont + percentFont + 4;
+                        const canShowBoth = width >= 24 && tileArea >= 220 && bothLineHeight <= Math.max(10, tileInnerHeight - 2);
+                        const canShowOneLine = width >= 14 && tileArea >= 150;
+                        const canShowEllipsis = width >= 12 && height >= 12;
+
+                        if (width < 16 || height < 16) {
+                            return (
+                                <div
+                                    key={`${cell.node.id}-${cell.x0}-${cell.y0}`}
+                                    className="absolute flex items-center justify-center border border-white/30 overflow-hidden"
+                                    onPointerMove={(event) => updateTooltip(event, cell)}
+                                    onPointerEnter={(event) => updateTooltip(event, cell)}
+                                    onPointerLeave={clearTooltip}
+                                    onPointerDown={(event) => updateTooltip(event, cell)}
+                                    style={{
+                                        left: `${(cell.x0 / dimensions.width) * 100}%`,
+                                        top: `${(cell.y0 / dimensions.height) * 100}%`,
+                                        width: `${(width / dimensions.width) * 100}%`,
+                                        height: `${(height / dimensions.height) * 100}%`,
+                                        backgroundColor: cell.node.color,
+                                        color: '#ffffff',
+                                        textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                    }}
+                                >
+                                    {canShowEllipsis ? (
+                                        <span style={{ fontSize: `${tinyFont}px`, lineHeight: 1, fontWeight: 700 }}>...</span>
+                                    ) : null}
+                                </div>
+                            );
+                        }
 
                         return (
                             <div
                                 key={`${cell.node.id}-${cell.x0}-${cell.y0}`}
-                                className="absolute flex flex-col justify-end border border-white/35 px-1.5 py-1 text-white overflow-hidden"
+                                className="absolute flex items-center justify-center border border-white/30 overflow-hidden"
                                 onPointerMove={(event) => updateTooltip(event, cell)}
                                 onPointerEnter={(event) => updateTooltip(event, cell)}
                                 onPointerLeave={clearTooltip}
@@ -911,33 +1206,55 @@ const InsightChatTreemap = memo(() => {
                                     width: `${(width / dimensions.width) * 100}%`,
                                     height: `${(height / dimensions.height) * 100}%`,
                                     backgroundColor: cell.node.color,
-                                    color: '#f8fafc',
+                                    overflow: 'hidden',
+                                    boxSizing: 'border-box',
                                 }}
                             >
-                                {hasText ? (
-                                    <p
-                                        style={{ fontSize: `${titleFont}px` }}
-                                        className="truncate leading-tight font-semibold"
-                                        title={cell.node.title}
+                                {canShowBoth ? (
+                                    <div
+                                        className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1 text-center"
+                                        style={{ color: '#ffffff', textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px' }}
                                     >
-                                        {shortTitle}
-                                    </p>
-                                ) : null}
-                                {hasMetric ? (
-                                    <p
-                                        style={{ fontSize: `${metricFont}px` }}
-                                        className="font-bold leading-tight"
+                                        <span
+                                            title={cell.node.metricText}
+                                            className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight font-semibold"
+                                            style={{ fontSize: `${metricFont}px`, lineHeight: 1 }}
+                                        >
+                                            {cell.node.metricText}
+                                        </span>
+                                        <span
+                                            title={cell.node.percentText}
+                                            className="w-full truncate text-center overflow-hidden whitespace-nowrap leading-tight"
+                                            style={{ fontSize: `${percentFont}px`, lineHeight: 1 }}
+                                        >
+                                            {cell.node.percentText}
+                                        </span>
+                                    </div>
+                                ) : canShowOneLine ? (
+                                    <div
+                                        className="flex h-full w-full items-center justify-center px-1 text-center"
+                                        style={{ color: '#ffffff', textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px' }}
                                     >
-                                        {cell.node.metricText}
-                                    </p>
-                                ) : null}
-                                {hasPercent ? (
-                                    <p
-                                        style={{ fontSize: `${percentFont}px` }}
-                                        className="leading-tight text-white/90"
+                                        <span
+                                            className="w-full truncate overflow-hidden whitespace-nowrap font-semibold leading-tight"
+                                            style={{ fontSize: `${metricFont}px`, lineHeight: 1 }}
+                                        >
+                                            {cell.node.metricText}
+                                        </span>
+                                    </div>
+                                ) : canShowEllipsis ? (
+                                    <div
+                                        className="flex h-full w-full items-center justify-center px-1 text-center"
+                                        style={{
+                                            color: '#ffffff',
+                                            textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
+                                            fontSize: `${metricFont}px`,
+                                            lineHeight: 1,
+                                            fontWeight: 700,
+                                        }}
                                     >
-                                        {cell.node.percentText}
-                                    </p>
+                                        ...
+                                    </div>
                                 ) : null}
                             </div>
                         );
@@ -2166,7 +2483,7 @@ const InsightChatSectionComponent = () => {
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
                     {activeConversation?.bootstrapFailed ? (
-                        <div className="min-h-[360px] flex flex-col items-center justify-center text-center px-4 gap-2">
+                        <div className="h-full flex flex-col items-center justify-center text-center px-4 gap-2">
                             <AlertCircle className="h-10 w-10 text-[#f59e0b]" />
                             <p className="text-sm text-[#374151]">현재 챗봇 준비 상태를 확인할 수 없습니다.</p>
                             <Button
@@ -2180,7 +2497,7 @@ const InsightChatSectionComponent = () => {
                     ) : (
                         <>
                             {activeConversation?.messages.length === 0 ? (
-                                <div className="min-h-[360px] flex items-center justify-center">
+                                <div className="h-full flex items-center justify-center">
                                     <div className="flex flex-col items-center gap-3">
                                         <div className="h-10 w-10 rounded-full grid place-items-center bg-[#111827]">
                                             <Bot className="h-4 w-4 text-white" />

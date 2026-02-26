@@ -1828,8 +1828,22 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
     '안녕하세요! 쯔양 인사이트 챗봇입니다.',
     '',
     '궁금한 점을 자유롭게 질문해 주세요.',
+    '',
+    '**📊 데이터 시각화**',
     '- "트리맵으로 조회수 분포 보여줘"',
+    '- "카테고리별 영상 분포 분석해줘"',
+    '- "최근 1개월 증감률 트리맵 보여줘"',
+    '- "히트맵 보여줘"',
+    '- "워드클라우드 보여줘"',
+    '',
+    '**📈 채널 분석**',
+    '- "최근 조회수 상위 영상 알려줘"',
+    '- "대시보드 현황 요약해줘"',
+    '- "운영 지표 분석해줘"',
+    '',
+    '**🎬 콘텐츠 기획**',
     '- "먹방 스토리보드 기획안 만들어줘"',
+    '- "인기 영상 트렌드 분석해줘"',
   ].join('\n');
 
   return {
@@ -1907,13 +1921,15 @@ export async function answerAdminInsightChat(
     });
   }
 
-  if (includesAny(input, ['트리맵', 'treemap', '트리 맵'])) {
+  if (includesAny(input, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '증감', '변화율'])) {
     const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
       filterByPeriod: true,
       metricMode: 'views',
     }));
 
     const totalViews = data.videos.reduce((acc, video) => acc + Math.max(0, video.viewCount), 0);
+    const totalLikes = data.videos.reduce((acc, video) => acc + Math.max(0, video.likeCount), 0);
+    const totalComments = data.videos.reduce((acc, video) => acc + Math.max(0, video.commentCount), 0);
     const topRows = data.videos
       .map((video) => ({
         ...video,
@@ -1923,7 +1939,7 @@ export async function answerAdminInsightChat(
       .sort((a, b) => b.metricRaw - a.metricRaw)
       .slice(0, 12)
       .map((video, idx) =>
-        `- ${idx + 1}. **${video.title}** (${video.metricRaw.toLocaleString()}회 조회)`
+        `- ${idx + 1}. **${video.title}** (${video.metricRaw.toLocaleString()}회 조회, 좋아요 ${Math.max(0, video.likeCount).toLocaleString()}, 댓글 ${Math.max(0, video.commentCount).toLocaleString()})`
       );
 
     const categoryTotals = new Map<string, number>();
@@ -1939,16 +1955,20 @@ export async function answerAdminInsightChat(
       .map(([category, total], idx) => `- ${idx + 1}. ${category}: ${Math.round(total).toLocaleString()}회`);
 
     return createLocalResponse(asOf, [
-      '## 조회수 트리맵 요약',
+      '## 트리맵 분석 요약',
       '',
-      `- 데이터 수: ${data.totalVideos}개 영상`,
-      `- 누적 조회수 합: ${Math.round(totalViews).toLocaleString()}회`,
+      `- 전체 영상: **${data.totalVideos}개**`,
+      `- 누적 조회수: **${Math.round(totalViews).toLocaleString()}회**`,
+      `- 누적 좋아요: **${Math.round(totalLikes).toLocaleString()}개**`,
+      `- 누적 댓글: **${Math.round(totalComments).toLocaleString()}개**`,
       '',
-      '### 상위 영상(조회수 기준)',
+      '### 상위 영상 (조회수 기준)',
       ...(topRows.length > 0 ? topRows : ['- 데이터가 없습니다.']),
       '',
       '### 상위 카테고리',
       ...(topCategories.length > 0 ? topCategories : ['- 데이터가 없습니다.']),
+      '',
+      '> 아래 트리맵에서 **지표·기간·모드**를 자유롭게 전환하여 분석할 수 있습니다.',
     ].join('\n'), {
       visualComponent: 'treemap',
     });
@@ -2102,13 +2122,15 @@ async function tryLocalAnswer(
     ].join('\n'), { visualComponent: 'heatmap' });
   }
 
-  if (includesAny(input, ['트리맵', 'treemap', '트리 맵'])) {
+  if (includesAny(input, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '증감', '변화율'])) {
     const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
       filterByPeriod: true,
       metricMode: 'views',
     }));
 
     const totalViews = data.videos.reduce((acc, video) => acc + Math.max(0, video.viewCount), 0);
+    const totalLikes = data.videos.reduce((acc, video) => acc + Math.max(0, video.likeCount), 0);
+    const totalComments = data.videos.reduce((acc, video) => acc + Math.max(0, video.commentCount), 0);
     const topRows = data.videos
       .map((video) => ({
         ...video,
@@ -2118,7 +2140,7 @@ async function tryLocalAnswer(
       .sort((a, b) => b.metricRaw - a.metricRaw)
       .slice(0, 12)
       .map((video, idx) =>
-        `- ${idx + 1}. **${video.title}** (${video.metricRaw.toLocaleString()}회 조회)`
+        `- ${idx + 1}. **${video.title}** (${video.metricRaw.toLocaleString()}회 조회, 좋아요 ${Math.max(0, video.likeCount).toLocaleString()}, 댓글 ${Math.max(0, video.commentCount).toLocaleString()})`
       );
 
     const categoryTotals = new Map<string, number>();
@@ -2134,16 +2156,20 @@ async function tryLocalAnswer(
       .map(([category, total], idx) => `- ${idx + 1}. ${category}: ${Math.round(total).toLocaleString()}회`);
 
     return createLocalResponse(asOf, [
-      '## 조회수 트리맵 요약',
+      '## 트리맵 분석 요약',
       '',
-      `- 데이터 수: ${data.totalVideos}개 영상`,
-      `- 누적 조회수 합: ${Math.round(totalViews).toLocaleString()}회`,
+      `- 전체 영상: **${data.totalVideos}개**`,
+      `- 누적 조회수: **${Math.round(totalViews).toLocaleString()}회**`,
+      `- 누적 좋아요: **${Math.round(totalLikes).toLocaleString()}개**`,
+      `- 누적 댓글: **${Math.round(totalComments).toLocaleString()}개**`,
       '',
-      '### 상위 영상(조회수 기준)',
+      '### 상위 영상 (조회수 기준)',
       ...(topRows.length > 0 ? topRows : ['- 데이터가 없습니다.']),
       '',
       '### 상위 카테고리',
       ...(topCategories.length > 0 ? topCategories : ['- 데이터가 없습니다.']),
+      '',
+      '> 아래 트리맵에서 **지표·기간·모드**를 자유롭게 전환하여 분석할 수 있습니다.',
     ].join('\n'), {
       visualComponent: 'treemap',
     });
