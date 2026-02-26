@@ -1,0 +1,9 @@
+# Secrets
+.env
+
+# Runtime data
+volumes/
+
+# Temporary files
+*.log
+*.tmp

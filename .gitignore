@@ -1,0 +1,77 @@
+# ── 의존성 ────────────────────────────────────────────────
+node_modules/
+__pycache__/
+backend/bun.lock
+
+# ── 빌드 / 출력 ───────────────────────────────────────────
+.next/
+.turbo/
+dist/
+.vercel
+
+# ── 로그 ──────────────────────────────────────────────────
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+backend/log/
+daily_run.log
+run_*.log
+
+# ── 런타임 데이터 ─────────────────────────────────────────
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ── 환경 변수 ─────────────────────────────────────────────
+.env
+.env.test
+.env.local
+*.env.local
+backend/.env
+
+# ── OS 메타데이터 ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.desktop.ini
+
+# ── IDE / 에디터 ──────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── Supabase ──────────────────────────────────────────────
+supabase/.temp/
+supabase/backup_db/
+supabase/.env*
+
+# ── 프로젝트 데이터 (대용량 / 자동 생성) ──────────────────
+backend/data/cookies.txt
+backend/restaurant-crawling/data/cookies.txt
+backend/restaurant-crawling/data/cookies.json
+backend/restaurant-crawling/data/*/frames
+backend/restaurant-crawling/data/*/video_cache
+backend/restaurant-crawling/data/*/temp_video
+backend/restaurant-crawling/data/*/thumbnails
+backend/restaurant-crawling/data/frames/
+backend/restaurant-crawling/data/credentials.json
+backend/restaurant-crawling/data/tzuyang/checked_cache.json
+backend/restaurant-evaluation/temp/health_check_prompt.txt
+backend/restaurant-evaluation/temp/health_check_response.json
+backend/.sync_trigger
+
+# ── CI / 임시 파일 ────────────────────────────────────────
+summary.md
+pr_body.md
+pr_body_develop.md
+pr_body_main.md
+
+# Large DB backup files
+backend/supabase/backup_db/*.sql

@@ -1,0 +1,11 @@
+_type: prompt
+template: |
+  You are an AI assistant that only converts the format of the given text.
+  Convert all text content into **sentence form** (removing bullet points, lists, and Markdown formatting),
+  and write it in Korean with a **length of 1 to 4 sentences** (no other mentions allowed).
+
+  #text:
+  {error_context}
+
+  #Conversion result:
+input_variables: ["error_context"]
