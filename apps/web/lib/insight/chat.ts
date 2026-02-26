@@ -1833,13 +1833,10 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
     '- "트리맵으로 조회수 분포 보여줘"',
     '- "카테고리별 영상 분포 분석해줘"',
     '- "최근 1개월 증감률 트리맵 보여줘"',
-    '- "히트맵 보여줘"',
-    '- "워드클라우드 보여줘"',
     '',
     '**📈 채널 분석**',
     '- "최근 조회수 상위 영상 알려줘"',
     '- "대시보드 현황 요약해줘"',
-    '- "운영 지표 분석해줘"',
     '',
     '**🎬 콘텐츠 기획**',
     '- "먹방 스토리보드 기획안 만들어줘"',
@@ -1899,27 +1896,7 @@ export async function answerAdminInsightChat(
     });
   }
 
-  if (includesAny(input, ['히트맵', 'heatmap', '리텐션', '하이라이트', 'peak'])) {
-    const data = await withCachedQuery('admin-insight-heatmap', cacheTtl, () => getAdminInsightHeatmap(false));
-    const top = data.videos[0];
-    if (!top) {
-      return createLocalResponse(asOf, '히트맵 데이터를 찾지 못했습니다.', {
-        fallbackReason: 'empty_heatmap',
-      });
-    }
 
-    return createLocalResponse(asOf, [
-      `## 히트맵 요약`,
-      '',
-      `- 영상: **${top.title}**`,
-      `- 피크 구간: **${top.peakSegment.start}%~${top.peakSegment.end}%**`,
-      `- 주요 키워드: ${top.analysis.keywords.slice(0, 6).join(', ') || '-'}`,
-      '',
-      top.analysis.overallSummary,
-    ].join('\n'), {
-      visualComponent: 'heatmap',
-    });
-  }
 
   if (includesAny(input, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '증감', '변화율'])) {
     const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
@@ -1974,36 +1951,7 @@ export async function answerAdminInsightChat(
     });
   }
 
-  if (includesAny(input, ['운영', 'funnel', '실패', 'fail', '품질', 'quality', '지표'])) {
-    const [funnel, failures, quality] = await Promise.all([
-      withCachedQuery('admin-insight-funnel', cacheTtl, () => getDashboardFunnel(false)),
-      withCachedQuery('admin-insight-failures', cacheTtl, () => getDashboardFailures(false)),
-      withCachedQuery('admin-insight-quality', cacheTtl, () => getDashboardQuality(false)),
-    ]);
 
-    const topNotSelections = failures.notSelectionReasons.slice(0, 5)
-      .map((r) => `- ${r.label}: ${r.count}`)
-      .join('\n');
-
-    return createLocalResponse(asOf, [
-      `## 운영 지표 현황`,
-      '',
-      `- 수집 영상: **${funnel.counts.crawling}**`,
-      `- 선택 영상: **${funnel.counts.selection}** (선택률 ${funnel.conversion.selectionRate ?? '-'}%)`,
-      `- Rule 적용: **${funnel.counts.rule}** (Rule율 ${funnel.conversion.ruleRate ?? '-'}%)`,
-      `- LAAJ 적용: **${funnel.counts.laaj}** (LAAJ율 ${funnel.conversion.laajRate ?? '-'}%)`,
-      '',
-      `### Not-Selection 주요 사유 TOP 5`,
-      topNotSelections || '- 데이터 없음',
-      '',
-      `### 품질(요약)`,
-      `- pipeline rows: ${quality.totals.pipelineRows}`,
-      `- rule metrics: ${quality.totals.withRuleMetrics}`,
-      `- laaj metrics: ${quality.totals.withLaajMetrics}`,
-    ].join('\n'), {
-      visualComponent: 'stats',
-    });
-  }
 
   const llmReply = await routeLlmRequest(input, asOf, llmConfig);
   if (llmReply) return llmReply;
@@ -2109,18 +2057,7 @@ async function tryLocalAnswer(
     return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, { visualComponent: 'calendar' });
   }
 
-  if (includesAny(input, ['히트맵', 'heatmap', '리텐션', '하이라이트', 'peak'])) {
-    const data = await withCachedQuery('admin-insight-heatmap', cacheTtl, () => getAdminInsightHeatmap(false));
-    const top = data.videos[0];
-    if (!top) return createLocalResponse(asOf, '히트맵 데이터를 찾지 못했습니다.', { fallbackReason: 'empty_heatmap' });
-    return createLocalResponse(asOf, [
-      '## 히트맵 요약', '',
-      `- 영상: **${top.title}**`,
-      `- 피크 구간: **${top.peakSegment.start}%~${top.peakSegment.end}%**`,
-      `- 주요 키워드: ${top.analysis.keywords.slice(0, 6).join(', ') || '-'}`,
-      '', top.analysis.overallSummary,
-    ].join('\n'), { visualComponent: 'heatmap' });
-  }
+
 
   if (includesAny(input, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '증감', '변화율'])) {
     const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
@@ -2175,26 +2112,7 @@ async function tryLocalAnswer(
     });
   }
 
-  if (includesAny(input, ['운영', 'funnel', '실패', 'fail', '품질', 'quality', '지표'])) {
-    const [funnel, failures, quality] = await Promise.all([
-      withCachedQuery('admin-insight-funnel', cacheTtl, () => getDashboardFunnel(false)),
-      withCachedQuery('admin-insight-failures', cacheTtl, () => getDashboardFailures(false)),
-      withCachedQuery('admin-insight-quality', cacheTtl, () => getDashboardQuality(false)),
-    ]);
-    const topNotSelections = failures.notSelectionReasons.slice(0, 5).map((r) => `- ${r.label}: ${r.count}`).join('\n');
-    return createLocalResponse(asOf, [
-      '## 운영 지표 현황', '',
-      `- 수집 영상: **${funnel.counts.crawling}**`,
-      `- 선택 영상: **${funnel.counts.selection}** (선택률 ${funnel.conversion.selectionRate ?? '-'}%)`,
-      `- Rule 적용: **${funnel.counts.rule}** (Rule율 ${funnel.conversion.ruleRate ?? '-'}%)`,
-      `- LAAJ 적용: **${funnel.counts.laaj}** (LAAJ율 ${funnel.conversion.laajRate ?? '-'}%)`,
-      '', '### Not-Selection 주요 사유 TOP 5', topNotSelections || '- 데이터 없음',
-      '', '### 품질(요약)',
-      `- pipeline rows: ${quality.totals.pipelineRows}`,
-      `- rule metrics: ${quality.totals.withRuleMetrics}`,
-      `- laaj metrics: ${quality.totals.withLaajMetrics}`,
-    ].join('\n'), { visualComponent: 'stats' });
-  }
+
 
   return null;
 }
