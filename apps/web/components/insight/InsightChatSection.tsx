@@ -516,11 +516,11 @@ type TreemapChartDimensions = {
 
 // 메인 트리맵과 동일한 녹색 그라데이션 — 일관된 시각 언어
 const CHAT_TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
-const CHAT_TREEMAP_MAX_LEAVES = 50;
+const CHAT_TREEMAP_MAX_LEAVES = 2000;
 const CHAT_TREEMAP_MIN_LEAVES = 5;
-const CHAT_TREEMAP_MOBILE_MAX_LEAVES = 30;
+const CHAT_TREEMAP_MOBILE_MAX_LEAVES = 2000;
 const CHAT_TREEMAP_MOBILE_MIN_LEAVES = 4;
-const CHAT_TREEMAP_TABLET_MAX_LEAVES = 40;
+const CHAT_TREEMAP_TABLET_MAX_LEAVES = 2000;
 const CHAT_TREEMAP_TABLET_MIN_LEAVES = 5;
 const CHAT_TREEMAP_MIN_WIDTH = 320;
 const CHAT_TREEMAP_TABLET_MIN_WIDTH = 280;
@@ -532,9 +532,9 @@ const CHAT_TREEMAP_MAX_HEIGHT = 1400;
 const CHAT_TREEMAP_ASPECT_RATIO = 1.0;
 const CHAT_TREEMAP_TOOLTIP_WIDTH = 280;
 const CHAT_TREEMAP_TOOLTIP_HEIGHT = 160;
-const CHAT_TREEMAP_AREA_PER_CELL = 4_500;
-const CHAT_TREEMAP_MOBILE_AREA_PER_CELL = 6_000;
-const CHAT_TREEMAP_TABLET_AREA_PER_CELL = 5_000;
+const CHAT_TREEMAP_AREA_PER_CELL = 800;
+const CHAT_TREEMAP_MOBILE_AREA_PER_CELL = 1200;
+const CHAT_TREEMAP_TABLET_AREA_PER_CELL = 1000;
 const CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE = 0.52;
 const CHAT_TREEMAP_EMPTY_MESSAGE = '트리맵에 표시할 데이터가 없습니다.';
 
@@ -778,6 +778,16 @@ const InsightChatTreemap = memo(() => {
             return Math.max(minHeight, Math.min(CHAT_TREEMAP_MAX_HEIGHT, Math.max(minHeight, Math.min(viewportHeight, ratioHeight))));
         };
 
+        const computeHeightForData = (width: number): number => {
+            const baseHeight = computeHeight(width);
+            const itemCount = data?.videos?.length ?? 0;
+            if (itemCount <= 0 || width <= 0) return baseHeight;
+            // 메인 트리맵과 동일한 밀도: 셀당 최소 1500px² 확보
+            const minAreaPerCell = 1500;
+            const contentHeight = Math.ceil((itemCount * minAreaPerCell) / width);
+            return Math.max(baseHeight, Math.min(CHAT_TREEMAP_MAX_HEIGHT, contentHeight));
+        };
+
         const observeTarget = containerRef.current;
 
         const handleResize = () => {
@@ -785,7 +795,7 @@ const InsightChatTreemap = memo(() => {
             const contentWidth = Math.floor(observeTarget.clientWidth);
             if (contentWidth <= 0) return;
             const width = Math.max(1, contentWidth - 2);
-            const height = computeHeight(width);
+            const height = computeHeightForData(width);
             setDimensions((prev) => {
                 if (Math.abs(prev.width - width) < 2 && Math.abs(prev.height - height) < 2) return prev;
                 return { width, height };
@@ -809,7 +819,7 @@ const InsightChatTreemap = memo(() => {
             clearTimeout(t2);
             clearTimeout(t3);
         };
-    }, []);
+    }, [data]);
 
     const updateTooltip = useCallback((event: PointerEvent<HTMLDivElement>, cell: TreemapCell) => {
         const container = containerRef.current;
@@ -853,89 +863,46 @@ const InsightChatTreemap = memo(() => {
         if (dimensions.width <= 0 || dimensions.height <= 0) return [];
         if (!data) return [];
 
-        const sortedVideos = data.videos
-            .map((video) => {
-                const metricRaw = Math.max(0, chatTreemapGetMetricValue(video, metricMode));
-                const previousMetricRaw = chatTreemapGetPreviousMetric(video, metricMode);
-                return { ...video, metricRaw, previousMetricRaw };
-            })
-            .filter((video) => Number.isFinite(video.metricRaw))
-            .sort((a, b) => b.metricRaw - a.metricRaw);
+        const rawRows = data.videos;
+        if (rawRows.length === 0) return [];
 
-        if (sortedVideos.length === 0) return [];
+        const totalMetric = rawRows.reduce((sum, row) => sum + Math.max(0, chatTreemapGetMetricValue(row, metricMode)), 0);
 
-        const totalMetric = sortedVideos.reduce((sum, row) => sum + row.metricRaw, 0);
-        const { minLeaves, maxLeaves } = getTreemapLeafBounds(dimensions.width);
-        const areaPerCell = getTreemapAreaPerCell(dimensions.width);
-        const areaBasedLimit = Math.max(minLeaves, Math.floor((dimensions.width * dimensions.height) / areaPerCell));
-        const visibleCount = Math.max(minLeaves, Math.min(maxLeaves, areaBasedLimit || minLeaves));
-        const visibleVideos = sortedVideos.slice(0, visibleCount);
+        const leafRows: ChatTreemapLeaf[] = [];
+        for (let i = 0; i < rawRows.length; i += 1) {
+            const row = rawRows[i];
+            const metricRaw = Math.max(chatTreemapGetMetricValue(row, metricMode), 0);
+            const previousMetricRaw = chatTreemapGetPreviousMetric(row, metricMode);
+            const rowPercent = isChangeMode ? chatTreemapCalcChange(metricRaw, previousMetricRaw) : 0;
 
-        const layoutRows = visibleVideos.map((row) => ({
-            ...row,
-            metricForDisplay: row.metricRaw,
-            metricForLayout: row.metricRaw,
-        }));
-
-        const totalLayoutMetric = layoutRows.reduce((sum, row) => sum + row.metricForLayout, 0);
-        if (totalLayoutMetric > 0) {
-            for (const row of layoutRows) {
-                row.metricForLayout = row.metricForLayout / totalLayoutMetric;
-            }
-        } else {
-            const equalShare = 1 / layoutRows.length;
-            for (const row of layoutRows) {
-                row.metricForLayout = equalShare;
-            }
-        }
-
-        if (layoutRows.length > 1) {
-            const topShare = layoutRows[0].metricForLayout;
-            if (topShare > CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE) {
-                const targetTop = CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE;
-                const remainForOthers = 1 - targetTop;
-                const otherTotal = 1 - topShare;
-                layoutRows[0].metricForLayout = targetTop;
-                if (otherTotal > 0) {
-                    const boostRatio = remainForOthers / otherTotal;
-                    for (let i = 1; i < layoutRows.length; i += 1) {
-                        layoutRows[i].metricForLayout *= boostRatio;
-                    }
-                } else {
-                    const shared = remainForOthers / (layoutRows.length - 1);
-                    for (let i = 1; i < layoutRows.length; i += 1) {
-                        layoutRows[i].metricForLayout = shared;
-                    }
-                }
-            }
-        }
-
-        const leafRows: ChatTreemapLeaf[] = layoutRows.map((row) => {
-            const percent = isChangeMode
-                ? chatTreemapCalcChange(row.metricRaw, row.previousMetricRaw)
-                : (totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0);
-            const percentText = isChangeMode
-                ? chatTreemapFormatNonNegativePercent(percent)
-                : chatTreemapFormatPercent(percent);
-
-            return {
+            leafRows.push({
                 id: row.id,
                 name: row.title,
                 title: row.title,
                 category: row.category?.trim() || '기타',
-                value: Math.max(0.25, row.metricForLayout),
-                metricRaw: row.metricRaw,
-                previousMetricRaw: row.previousMetricRaw,
+                value: Math.max(metricRaw, 0.25),
+                metricRaw,
+                previousMetricRaw,
                 viewCount: row.viewCount,
                 likeCount: row.likeCount,
                 commentCount: row.commentCount,
                 duration: row.duration,
-                metricText: chatTreemapFormatMetric(metricMode, row.metricRaw),
-                percentText,
-                percent,
-                color: chatTreemapGetColorByPercent(percent),
-            };
-        });
+                metricText: chatTreemapFormatMetric(metricMode, metricRaw),
+                percent: rowPercent,
+                percentText: isChangeMode ? chatTreemapFormatNonNegativePercent(rowPercent) : '0%',
+                color: chatTreemapGetColorByPercent(rowPercent),
+            });
+        }
+
+        if (!isChangeMode) {
+            for (const row of leafRows) {
+                row.percent = totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0;
+                row.percentText = chatTreemapFormatPercent(row.percent);
+                row.color = chatTreemapGetColorByPercent(row.percent);
+            }
+        }
+
+        leafRows.sort((a, b) => b.metricRaw - a.metricRaw);
 
         if (viewMode === 'category') {
             const grouped = new Map<string, { children: ChatTreemapLeaf[]; totalMetric: number }>();
@@ -952,12 +919,10 @@ const InsightChatTreemap = memo(() => {
                     children: [...group.children].sort((a, b) => b.metricRaw - a.metricRaw),
                 }))
                 .sort((a, b) => b.value - a.value);
-            return groupNodes.flatMap((g) => g.children).slice(0, CHAT_TREEMAP_MAX_LEAVES);
+            return groupNodes.flatMap((g) => g.children);
         }
 
-        return leafRows
-            .sort((a, b) => b.metricRaw - a.metricRaw)
-            .slice(0, CHAT_TREEMAP_MAX_LEAVES);
+        return leafRows;
     }, [data, dimensions.width, dimensions.height, metricMode, isChangeMode, viewMode]);
 
     const treemapCells = useMemo(
