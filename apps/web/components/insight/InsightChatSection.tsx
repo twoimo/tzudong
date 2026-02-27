@@ -2468,7 +2468,6 @@ const InsightChatSectionComponent = () => {
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
-    const [isPromptPaletteExpanded, setIsPromptPaletteExpanded] = useState(false);
     const bootstrapRequestRef = useRef(new Map<string, number>());
     const streamAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -2759,7 +2758,7 @@ const InsightChatSectionComponent = () => {
 
     const compactQuickPrompts = useMemo(() => {
         if (isCommandMode) return [];
-        return flattenPromptCommands(activePromptGroups).slice(0, 6);
+        return flattenPromptCommands(activePromptGroups);
     }, [activePromptGroups, isCommandMode]);
 
     useEffect(() => {
@@ -3586,8 +3585,8 @@ const InsightChatSectionComponent = () => {
                 </div>
 
                 <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
-                    <div className="mb-2 flex flex-wrap gap-2 items-center">
-                        <div ref={modelDropdownRef} className="relative">
+                    <div className="mb-2 flex flex-nowrap gap-2 items-center overflow-x-auto pb-1">
+                        <div ref={modelDropdownRef} className="relative shrink-0">
                             <button
                                 type="button"
                                 className={cn(
@@ -3638,7 +3637,7 @@ const InsightChatSectionComponent = () => {
                             ) : null}
                         </div>
 
-                        <div ref={imageModelDropdownRef} className="relative">
+                        <div ref={imageModelDropdownRef} className="relative shrink-0">
                             <button
                                 type="button"
                                 className={cn(
@@ -3746,99 +3745,45 @@ const InsightChatSectionComponent = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className="w-full rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-2 space-y-2">
-                                <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-[28rem] flex-1 rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-1.5">
+                                <div className="flex items-center gap-2 min-w-0">
                                     <p className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280]">
                                         빠른 프롬프트
                                         <span className="ml-1.5 text-[#9ca3af] font-normal">({totalQuickPromptCount})</span>
                                     </p>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsPromptPaletteExpanded((prev) => !prev)}
-                                        className="inline-flex items-center gap-1 rounded-md border border-[#e5e7eb] bg-white px-2 py-1 text-[11px] text-[#4b5563] hover:bg-[#f9fafb]"
-                                        aria-label={isPromptPaletteExpanded ? '프롬프트 그룹 접기' : '프롬프트 그룹 펼치기'}
-                                    >
-                                        {isPromptPaletteExpanded ? '접기' : '펼치기'}
-                                        <ChevronDown className={cn('h-3 w-3 transition-transform', isPromptPaletteExpanded && 'rotate-180')} />
-                                    </button>
+                                    <div className="min-w-0 flex-1">
+                                        {compactQuickPrompts.length > 0 ? (
+                                            <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5">
+                                                {compactQuickPrompts.map((prompt: InsightPromptCommand) => (
+                                                    <span
+                                                        key={`compact-${prompt.groupId}-${prompt.id}`}
+                                                        className="inline-flex shrink-0 items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handlePromptTemplateApply(prompt)}
+                                                            className="px-2 py-1 text-[#374151] font-medium hover:bg-[#f3f4f6] rounded-l-md"
+                                                            aria-label={`삽입: ${prompt.label}`}
+                                                        >
+                                                            {prompt.label}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
+                                                            className="px-1.5 py-1 border-l border-[#e5e7eb] text-[#f97316] hover:bg-[#ffedd5] rounded-r-md inline-flex items-center justify-center"
+                                                            aria-label={`즉시 전송: ${prompt.label}`}
+                                                        >
+                                                            <Send className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">즉시 전송</span>
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-[#9ca3af] truncate">추천 가능한 프롬프트가 없습니다.</p>
+                                        )}
+                                    </div>
                                 </div>
-
-                                {compactQuickPrompts.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {compactQuickPrompts.map((prompt: InsightPromptCommand) => (
-                                            <span
-                                                key={`compact-${prompt.groupId}-${prompt.id}`}
-                                                className="inline-flex items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
-                                            >
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handlePromptTemplateApply(prompt)}
-                                                    className="px-2 py-1 text-[#374151] font-medium hover:bg-[#f3f4f6] rounded-l-md"
-                                                    aria-label={`삽입: ${prompt.label}`}
-                                                >
-                                                    {prompt.label}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
-                                                    className="px-1.5 py-1 border-l border-[#e5e7eb] text-[#f97316] hover:bg-[#ffedd5] rounded-r-md inline-flex items-center justify-center"
-                                                    aria-label={`즉시 전송: ${prompt.label}`}
-                                                >
-                                                    <Send className="h-3.5 w-3.5" />
-                                                    <span className="sr-only">즉시 전송</span>
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-[#9ca3af]">추천 가능한 프롬프트가 없습니다.</p>
-                                )}
-
-                                {isPromptPaletteExpanded ? (
-                                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                                        {activePromptGroups.map((group: InsightPromptCommandGroup) => {
-                                            const showGroup = group.prompts.length > 0;
-                                            if (!showGroup) return null;
-                                            return (
-                                                <div key={group.id} className="rounded-lg border border-[#f3f4f6] bg-white px-2 py-1.5">
-                                                    <p className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280] mb-1">
-                                                        {group.title}
-                                                        <span className="ml-1.5 text-[#9ca3af] font-normal">({group.prompts.length})</span>
-                                                    </p>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {group.prompts.map((prompt: InsightPromptCommand) => (
-                                                            <span
-                                                                key={`${group.id}-${prompt.id}`}
-                                                                className="inline-flex items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
-                                                            >
-                                                                <span className="px-2 py-1 text-[#374151] font-medium">{prompt.label}</span>
-                                                                <span className="h-3.5 w-px bg-[#e5e7eb]" />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handlePromptTemplateApply(prompt)}
-                                                                    className="px-1.5 py-1 text-[#4b5563] hover:bg-[#f3f4f6] inline-flex items-center gap-1"
-                                                                    aria-label={`삽입: ${prompt.label}`}
-                                                                >
-                                                                    <Pencil className="h-3 w-3" />
-                                                                    <span className="sr-only">입력창에 삽입</span>
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
-                                                                    className="px-1.5 py-1 rounded-r-md bg-amber-50 text-[#f97316] hover:bg-[#ffedd5] inline-flex items-center gap-1"
-                                                                    aria-label={`즉시 전송: ${prompt.label}`}
-                                                                >
-                                                                    <Send className="h-3 w-3" />
-                                                                    <span className="sr-only">즉시 전송</span>
-                                                                </button>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : null}
                             </div>
                         )}
                     </div>
