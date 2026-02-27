@@ -65,6 +65,36 @@ bun run build
 bun run start
 ```
 
+### 4. /insights 챗봇 QA
+
+`/api/admin/insight/chat`, `/api/admin/insight/chat/stream`, `/api/admin/insight/chat/bootstrap`의 핵심 검증을 위한
+스크립트/테스트가 추가되어 있습니다.
+
+```bash
+# 모의 의존성 주입 기반 단위 테스트 (항상 실행, 외부 의존성 없음)
+bun run qa:insights-chat
+
+# Supabase DB 데이터/RPC 점검 (서비스 롤 키 필요)
+bun run qa:insights-chat:db
+
+# 단위 + DB 점검 + 라이브 API를 한 번에
+INSIGHTS_CHAT_ADMIN_COOKIE="sb-xxx=..." \
+INSIGHT_CHAT_QA_BASE_URL="http://localhost:8080" \
+bun run qa:insights-chat -- --db --live
+
+# 라이브 엔드포인트 점검 (선택)
+INSIGHTS_CHAT_ADMIN_COOKIE="sb-xxx=..." \
+INSIGHT_CHAT_QA_BASE_URL="http://localhost:8080" \
+bun run qa:insights-chat -- --live
+```
+
+`INSIGHTS_CHAT_ADMIN_COOKIE`가 없으면 라이브 체크는 건너뜁니다.
+
+관련 파일:
+- `apps/web/scripts/insight-chat-qa.mjs`
+- `apps/web/scripts/insight-chat-db-ops.mjs`
+- `apps/web/tests-unit/insight-chat-api-routes.test.ts`
+
 ## 📁 폴더 구조
 
 ```
