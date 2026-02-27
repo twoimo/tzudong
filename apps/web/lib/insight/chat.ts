@@ -17,6 +17,27 @@ function includesAny(message: string, words: string[]): boolean {
   return words.some((word) => message.includes(word));
 }
 
+function isWordcloudQuery(message: string): boolean {
+  return includesAny(message, ['워드클라우드', 'wordcloud', 'word cloud', '키워드', '워드'])
+    || (includesAny(message, ['인기', '트렌드', '최고', '많은']) && includesAny(message, ['키워드', '워드', 'word', 'wordcloud', 'word cloud']));
+}
+
+function isTreemapQuery(message: string): boolean {
+  return includesAny(message, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '카테고리', '증감', '변화율']);
+}
+
+function buildLocalInsightResponseFailureMessage(reason: string): string {
+  if (reason === 'llm_unavailable') {
+    return [
+      '가능한 질문 예시:',
+      '- "트리맵으로 조회수 분포 보여줘"',
+      '- "먹방 스토리보드 기획안 만들어줘"',
+    ].join('\n');
+  }
+
+  return '해당 요청을 처리할 수 있는 답변이 현재 준비되지 않았습니다.';
+}
+
 const STORYBOARD_AGENT_API_URL = process.env.STORYBOARD_AGENT_API_URL?.trim();
 const STORYBOARD_AGENT_PATH = process.env.STORYBOARD_AGENT_CHAT_PATH?.trim() || '/chat';
 const STORYBOARD_AGENT_TIMEOUT_MS = Number(process.env.STORYBOARD_AGENT_TIMEOUT_MS || '8000');
@@ -299,16 +320,16 @@ function normalizeStoryboardAgentIntent(message: string): StoryboardAgentIntent 
     return 'qna_about_data';
   }
 
-  if (includesAny(message, ['안녕', '고마워', '감사', '반갑', '지금 시간', '뭐', '어떤'])) {
-    return 'simple_chat';
-  }
-
   if (includesAny(message, STORYBOARD_KEYWORDS)) {
     return 'storyboard';
   }
 
-  if (includesAny(message, ['기획', '구성', '촬영', '먹방', '컨셉', '영상', '컷', '스크립트', '스토리'])) {
+  if (includesAny(message, ['기획', '구성', '촬영', '먹방', '컨셉', '컷', '스크립트', '스토리', '연출', '쇼츠'])) {
     return 'storyboard';
+  }
+
+  if (includesAny(message, ['안녕', '고마워', '감사', '반갑', '지금 시간', '뭐', '어떤'])) {
+    return 'simple_chat';
   }
 
   return 'simple_chat';
@@ -1210,7 +1231,8 @@ async function askStoryboardViaLlm(
   },
 ): Promise<AdminInsightChatResponse | null> {
   const provider = llmConfig?.provider || 'gemini';
-  const apiKey = llmConfig?.apiKey || (provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const apiKey = llmConfig?.apiKey
+    || (llmConfig?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
   const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
   if (!apiKey) return null;
 
@@ -1865,15 +1887,44 @@ export async function answerAdminInsightChat(
     });
   }
 
+  const localResponse = await resolveLocalInsightResponse(asOf, input);
+  if (localResponse) return localResponse;
+
   if (isStoryboardIntent(input)) {
     const storyboardProfile = resolveStoryboardImageProfile(llmConfig);
     const storyboardReply = await askStoryboardAgent(input, asOf, storyboardProfile, llmConfig);
     if (storyboardReply) return storyboardReply;
   }
 
-  if (includesAny(input, ['키워드', '워드', 'word', 'wordcloud', '인기'])) {
+  const llmReply = await routeLlmRequest(input, asOf, llmConfig);
+  if (llmReply) return llmReply;
+
+  return createLocalResponse(asOf, buildLocalInsightResponseFailureMessage('llm_unavailable'), {
+    fallbackReason: 'llm_unavailable',
+  });
+}
+
+const LLM_SYSTEM_PROMPT = [
+  '당신은 "쯔양 인사이트 챗봇"입니다.',
+  '쯔양(먹방 유튜버)의 영상·맛집 데이터를 관리하는 관리자용 챗봇으로서, 데이터 분석, 콘텐츠 기획, 운영 인사이트 등에 대해 도움을 제공합니다.',
+  '',
+  '규칙:',
+  '- 항상 한국어로 답변',
+  '- 답변은 간결하고 핵심적으로',
+  '- 마크다운 형식 사용 가능 (제목, 리스트, 볼드 등)',
+  '- 데이터에 대해 모르는 부분은 솔직히 안내',
+  '- 기획안, 분석, 추천 등 창의적 요청에 적극 응답',
+].join('\n');
+
+async function resolveLocalInsightResponse(asOf: string, input: string): Promise<AdminInsightChatResponse | null> {
+  if (isStoryboardIntent(input)) {
+    return null;
+  }
+
+  if (isWordcloudQuery(input)) {
     const data = await withCachedQuery('admin-insight-wordcloud', cacheTtl, () => getAdminInsightWordcloud(false));
-    const list = data.keywords.slice(0, 12)
+    const list = data.keywords
+      .slice(0, 12)
       .map((k, idx) => `${idx + 1}. **${k.keyword}** (${k.count})`)
       .join('\n');
 
@@ -1884,21 +1935,19 @@ export async function answerAdminInsightChat(
 
   if (includesAny(input, ['시즌', '캘린더', 'calendar', '이번달', '다음달', '월별'])) {
     const data = await withCachedQuery('admin-insight-season', cacheTtl, () => getAdminInsightSeason(false));
-    const now = new Date();
-    const month = now.getUTCMonth() + 1;
+    const month = new Date().getUTCMonth() + 1;
     const monthData = data.months.find((m) => m.month === month);
-    const list = monthData?.keywords?.slice(0, 6).map((k) =>
-      `- ${k.icon} **${k.keyword}** (피크: ${k.peakWeek}, 업로드 추천: ${k.recommendedUploadDate})`
-    ).join('\n');
+    const list = monthData?.keywords
+      ?.slice(0, 6)
+      .map((k) => `- ${k.icon} **${k.keyword}** (피크: ${k.peakWeek}, 업로드 추천: ${k.recommendedUploadDate})`)
+      .join('\n');
 
     return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, {
       visualComponent: 'calendar',
     });
   }
 
-
-
-  if (includesAny(input, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '증감', '변화율'])) {
+  if (isTreemapQuery(input)) {
     const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
       filterByPeriod: true,
       metricMode: 'views',
@@ -1951,29 +2000,8 @@ export async function answerAdminInsightChat(
     });
   }
 
-
-
-  const llmReply = await routeLlmRequest(input, asOf, llmConfig);
-  if (llmReply) return llmReply;
-
-  return createLocalResponse(asOf, [
-    `가능한 질문 예시:`,
-    `- "트리맵으로 조회수 분포 보여줘"`,
-    `- "먹방 스토리보드 기획안 만들어줘"`,
-  ].join('\n'), { fallbackReason: 'llm_unavailable' });
+  return null;
 }
-
-const LLM_SYSTEM_PROMPT = [
-  '당신은 "쯔양 인사이트 챗봇"입니다.',
-  '쯔양(먹방 유튜버)의 영상·맛집 데이터를 관리하는 관리자용 챗봇으로서, 데이터 분석, 콘텐츠 기획, 운영 인사이트 등에 대해 도움을 제공합니다.',
-  '',
-  '규칙:',
-  '- 항상 한국어로 답변',
-  '- 답변은 간결하고 핵심적으로',
-  '- 마크다운 형식 사용 가능 (제목, 리스트, 볼드 등)',
-  '- 데이터에 대해 모르는 부분은 솔직히 안내',
-  '- 기획안, 분석, 추천 등 창의적 요청에 적극 응답',
-].join('\n');
 
 async function routeLlmRequest(
   message: string,
@@ -1981,7 +2009,7 @@ async function routeLlmRequest(
   config?: LlmRequestConfig,
 ): Promise<AdminInsightChatResponse | null> {
   const provider = config?.provider || 'gemini';
-  const apiKey = config?.apiKey || (provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const apiKey = config?.apiKey || (config?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
   const model = config?.model || GEMINI_MODEL_DEFAULT;
 
   if (!apiKey) return null;
@@ -2005,12 +2033,13 @@ async function routeLlmRequest(
 export async function streamAdminInsightChat(
   message: string,
   llmConfig?: LlmRequestConfig,
+  requestSignal?: AbortSignal,
 ): Promise<{ stream: ReadableStream<Uint8Array> } | { local: AdminInsightChatResponse }> {
   const localResult = await tryLocalAnswer(message, llmConfig);
   if (localResult) return { local: localResult };
 
   const provider = llmConfig?.provider || 'gemini';
-  const apiKey = llmConfig?.apiKey || (provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const apiKey = llmConfig?.apiKey || (llmConfig?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
   const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
 
   if (!apiKey) {
@@ -2023,7 +2052,7 @@ export async function streamAdminInsightChat(
     };
   }
 
-  const stream = createLlmStream(message, provider, model, apiKey);
+  const stream = createLlmStream(message, provider, model, apiKey, requestSignal);
   return { stream };
 }
 
@@ -2041,93 +2070,22 @@ async function tryLocalAnswer(
     if (reply) return reply;
   }
 
-  if (includesAny(input, ['키워드', '워드', 'word', 'wordcloud', '인기'])) {
-    const data = await withCachedQuery('admin-insight-wordcloud', cacheTtl, () => getAdminInsightWordcloud(false));
-    const list = data.keywords.slice(0, 12).map((k, idx) => `${idx + 1}. **${k.keyword}** (${k.count})`).join('\n');
-    return createLocalResponse(asOf, `## 인기 키워드 TOP 12\n\n${list || '- 데이터 없음'}`, { visualComponent: 'wordcloud' });
-  }
-
-  if (includesAny(input, ['시즌', '캘린더', 'calendar', '이번달', '다음달', '월별'])) {
-    const data = await withCachedQuery('admin-insight-season', cacheTtl, () => getAdminInsightSeason(false));
-    const month = new Date().getUTCMonth() + 1;
-    const monthData = data.months.find((m) => m.month === month);
-    const list = monthData?.keywords?.slice(0, 6).map((k) =>
-      `- ${k.icon} **${k.keyword}** (피크: ${k.peakWeek}, 업로드 추천: ${k.recommendedUploadDate})`
-    ).join('\n');
-    return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, { visualComponent: 'calendar' });
-  }
-
-
-
-  if (includesAny(input, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '증감', '변화율'])) {
-    const data = await withCachedQuery('admin-insight-treemap-all-views', cacheTtl, () => getInsightTreemapData('ALL', {
-      filterByPeriod: true,
-      metricMode: 'views',
-    }));
-
-    const totalViews = data.videos.reduce((acc, video) => acc + Math.max(0, video.viewCount), 0);
-    const totalLikes = data.videos.reduce((acc, video) => acc + Math.max(0, video.likeCount), 0);
-    const totalComments = data.videos.reduce((acc, video) => acc + Math.max(0, video.commentCount), 0);
-    const topRows = data.videos
-      .map((video) => ({
-        ...video,
-        metricRaw: Math.max(0, video.viewCount),
-      }))
-      .filter((video) => video.metricRaw > 0)
-      .sort((a, b) => b.metricRaw - a.metricRaw)
-      .slice(0, 12)
-      .map((video, idx) =>
-        `- ${idx + 1}. **${video.title}** (${video.metricRaw.toLocaleString()}회 조회, 좋아요 ${Math.max(0, video.likeCount).toLocaleString()}, 댓글 ${Math.max(0, video.commentCount).toLocaleString()})`
-      );
-
-    const categoryTotals = new Map<string, number>();
-    for (const video of data.videos) {
-      const value = Math.max(0, video.viewCount);
-      if (value <= 0) continue;
-      categoryTotals.set(video.category, (categoryTotals.get(video.category) || 0) + value);
-    }
-
-    const topCategories = [...categoryTotals.entries()]
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 6)
-      .map(([category, total], idx) => `- ${idx + 1}. ${category}: ${Math.round(total).toLocaleString()}회`);
-
-    return createLocalResponse(asOf, [
-      '## 트리맵 분석 요약',
-      '',
-      `- 전체 영상: **${data.totalVideos}개**`,
-      `- 누적 조회수: **${Math.round(totalViews).toLocaleString()}회**`,
-      `- 누적 좋아요: **${Math.round(totalLikes).toLocaleString()}개**`,
-      `- 누적 댓글: **${Math.round(totalComments).toLocaleString()}개**`,
-      '',
-      '### 상위 영상 (조회수 기준)',
-      ...(topRows.length > 0 ? topRows : ['- 데이터가 없습니다.']),
-      '',
-      '### 상위 카테고리',
-      ...(topCategories.length > 0 ? topCategories : ['- 데이터가 없습니다.']),
-      '',
-      '> 아래 트리맵에서 **지표·기간·모드**를 자유롭게 전환하여 분석할 수 있습니다.',
-    ].join('\n'), {
-      visualComponent: 'treemap',
-    });
-  }
-
-
-
-  return null;
+  return resolveLocalInsightResponse(asOf, input);
 }
 
 function createLlmStream(
+
   message: string, provider: string, model: string, apiKey: string,
+  requestSignal?: AbortSignal,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream({
     async start(ctrl) {
       try {
         switch (provider) {
-          case 'gemini': await streamGemini(message, model, apiKey, ctrl, encoder); break;
-          case 'openai': await streamOpenAI(message, model, apiKey, ctrl, encoder); break;
-          case 'anthropic': await streamAnthropic(message, model, apiKey, ctrl, encoder); break;
+          case 'gemini': await streamGemini(message, model, apiKey, ctrl, encoder, requestSignal); break;
+          case 'openai': await streamOpenAI(message, model, apiKey, ctrl, encoder, requestSignal); break;
+          case 'anthropic': await streamAnthropic(message, model, apiKey, ctrl, encoder, requestSignal); break;
           default: ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'unknown_provider' })}\n\n`));
         }
       } catch (error) {
@@ -2144,10 +2102,19 @@ function createLlmStream(
 async function streamGemini(
   message: string, model: string, apiKey: string,
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+  requestSignal?: AbortSignal,
 ) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
+  const onAbort = () => {
+    ac.abort();
+  };
+  if (requestSignal?.aborted) {
+    ac.abort();
+  } else if (requestSignal) {
+    requestSignal.addEventListener('abort', onAbort, { once: true });
+  }
   try {
     const resp = await fetch(endpoint, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2178,15 +2145,29 @@ async function streamGemini(
         } catch { /* skip */ }
       }
     }
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+    if (requestSignal) {
+      requestSignal.removeEventListener('abort', onAbort);
+    }
+  }
 }
 
 async function streamOpenAI(
   message: string, model: string, apiKey: string,
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+  requestSignal?: AbortSignal,
 ) {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
+  const onAbort = () => {
+    ac.abort();
+  };
+  if (requestSignal?.aborted) {
+    ac.abort();
+  } else if (requestSignal) {
+    requestSignal.addEventListener('abort', onAbort, { once: true });
+  }
   try {
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -2217,15 +2198,29 @@ async function streamOpenAI(
         } catch { /* skip */ }
       }
     }
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+    if (requestSignal) {
+      requestSignal.removeEventListener('abort', onAbort);
+    }
+  }
 }
 
 async function streamAnthropic(
   message: string, model: string, apiKey: string,
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+  requestSignal?: AbortSignal,
 ) {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
+  const onAbort = () => {
+    ac.abort();
+  };
+  if (requestSignal?.aborted) {
+    ac.abort();
+  } else if (requestSignal) {
+    requestSignal.addEventListener('abort', onAbort, { once: true });
+  }
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -2257,7 +2252,12 @@ async function streamAnthropic(
         } catch { /* skip */ }
       }
     }
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+    if (requestSignal) {
+      requestSignal.removeEventListener('abort', onAbort);
+    }
+  }
 }
 
 async function askGemini(
