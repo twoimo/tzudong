@@ -275,9 +275,9 @@ function getPeriodLabel(period: InsightTreemapPeriod): string {
     return '1년전';
 }
 
-function formatNonNegativePercent(value: number): string {
+function formatSignedPercent(value: number): string {
     if (!Number.isFinite(value)) return '0%';
-    return `${Math.max(0, value).toFixed(2)}%`;
+    return `${value.toFixed(2)}%`;
 }
 
 function getColorByPercent(percent: number): string {
@@ -819,7 +819,7 @@ export default function InsightsClient() {
                 previousMetricRaw,
                 metricText: formatMetricText(metricMode, metricRaw),
                 percent: rowPercent,
-                percentText: isChangeMode ? formatNonNegativePercent(rowPercent) : '0%',
+                percentText: isChangeMode ? formatSignedPercent(rowPercent) : '0%',
                 color: getColorByPercent(rowPercent),
             });
 
@@ -1102,7 +1102,7 @@ export default function InsightsClient() {
                     const percent = isChangeMode
                         ? calculateChangePercent(metricRaw, bucket.hasPrevious ? bucket.previousMetricRaw : null)
                         : (totalMetric > 0 ? (metricRaw / totalMetric) * 100 : 0);
-                    const percentText = isChangeMode ? formatNonNegativePercent(percent) : formatPercent(percent);
+                    const percentText = isChangeMode ? formatSignedPercent(percent) : formatPercent(percent);
 
                     return {
                         id: `cluster-${clusterStep}-${metricMode}-${index}`,
@@ -1205,14 +1205,9 @@ export default function InsightsClient() {
         });
     }, [startTransition]);
 
-    const handleResetFilters = useCallback(() => {
-        startTransition(() => {
-            setViewMode('all');
-            setMetricMode('views');
-            setPeriod('ALL');
-            setClusterStep(null);
-        });
-    }, [startTransition]);
+    const handleRetry = useCallback(() => {
+        void treemapQuery.refetch();
+    }, [treemapQuery]);
 
     if (!isAuthLoading && isAdmin) {
         return <AdminInsightsClient />;
@@ -1234,7 +1229,7 @@ export default function InsightsClient() {
                     <p className="text-sm text-muted-foreground mb-6">일시적인 오류가 발생했습니다. 다시 시도해 주세요.</p>
                     <div className="flex gap-3 justify-center flex-wrap">
                         <Button
-                            onClick={handleResetFilters}
+                            onClick={handleRetry}
                             className="h-10 px-4 py-2"
                         >
                             다시 시도

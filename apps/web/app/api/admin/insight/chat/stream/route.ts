@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
         const provider = typeof body?.provider === 'string' ? body.provider : undefined;
         const model = typeof body?.model === 'string' ? body.model : undefined;
         const apiKey = typeof body?.apiKey === 'string' ? body.apiKey : undefined;
+        const useServerKey = body?.useServerKey === true;
         const storyboardModelProfile = typeof body?.storyboardModelProfile === 'string'
             ? body.storyboardModelProfile
             : undefined;
@@ -31,11 +32,16 @@ export async function POST(request: NextRequest) {
             ? imageModelProfile
             : undefined;
 
-        const llmConfig = provider && model && apiKey
+        const normalizedProvider = provider === 'gemini' || provider === 'openai' || provider === 'anthropic'
+            ? provider
+            : undefined;
+        const shouldUseServerKey = useServerKey || (normalizedProvider === 'gemini' && !apiKey);
+        const llmConfig = normalizedProvider && model
             ? {
-                provider: provider as 'gemini' | 'openai' | 'anthropic',
+                provider: normalizedProvider,
                 model,
                 apiKey,
+                useServerKey: shouldUseServerKey,
                 storyboardModelProfile:
                     storyboardModelProfile === 'nanobanana_pro' || storyboardModelProfile === 'nanobanana'
                         ? storyboardModelProfile
@@ -44,7 +50,7 @@ export async function POST(request: NextRequest) {
             }
             : undefined;
 
-        const result = await streamAdminInsightChat(message, llmConfig);
+        const result = await streamAdminInsightChat(message, llmConfig, request.signal);
 
         if ('local' in result) {
             return NextResponse.json(result.local, {

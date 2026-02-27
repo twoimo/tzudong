@@ -16,6 +16,10 @@ import { useQuery } from '@tanstack/react-query';
 import {
     AlertCircle,
     Bot,
+    Check,
+    RefreshCw,
+    Square,
+    Copy,
     Send,
     User,
     PlusCircle,
@@ -23,7 +27,6 @@ import {
     Eye,
     EyeOff,
     ChevronDown,
-    Check,
     Trash2,
 } from 'lucide-react';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
@@ -35,6 +38,7 @@ import { cn } from '@/lib/utils';
 import type {
     AdminInsightChatBootstrapResponse,
     AdminInsightChatResponse,
+    AdminInsightChatMeta,
     InsightChatSource,
     LlmProvider,
     LlmModelOption,
@@ -77,6 +81,49 @@ const LLM_KEYS_STORAGE_KEY = 'tzudong-admin-llm-keys';
 const LLM_MODEL_STORAGE_KEY = 'tzudong-admin-llm-active-model';
 const LLM_ENABLED_MODELS_KEY = 'tzudong-admin-llm-enabled-models';
 const STORYBOARD_PROFILE_STORAGE_KEY = 'tzudong-admin-storyboard-profile';
+const STREAM_STOP_MESSAGE = '답변 생성을 중단했습니다. 재생성 버튼으로 다시 요청해 주세요.';
+const COPY_SUCCESS_MESSAGE = '복사했습니다';
+const META_SOURCE_PANEL_LABELS: Record<NonNullable<AdminInsightChatMeta['source']> & string, string> = {
+    local: '로컬 분석',
+    agent: '에이전트',
+    gemini: 'Google Gemini',
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    fallback: '폴백 응답',
+};
+
+const META_FALLBACK_REASON_LABELS: Record<string, string> = {
+    empty_input: '입력 없음',
+    llm_unavailable: 'LLM 응답 불가',
+    request_cancelled: '요청 중단',
+    request_failed: '요청 실패',
+    stream_error: '스트리밍 오류',
+    stream_no_data: '스트리밍 응답 없음',
+    bootstrap_failed: '초기화 실패',
+    server_error: '서버 오류',
+    storyboard_agent_unavailable: '스토리보드 에이전트 응답 없음',
+    storyboard_qna_local: '스토리보드 로컬 폴백',
+    storyboard_internal_fallback: '스토리보드 내부 폴백',
+    storyboard_need_human: '수동 검토 필요',
+    storyboard_local_fallback: '스토리보드 로컬 폴백',
+    storyboard_simple_chat: '스토리보드 단순 채팅',
+    storyboard_qna_unavailable: '스토리보드 Q&A 불가',
+};
+
+function getSourceLabel(source: AdminInsightChatMeta['source'] | undefined): string {
+    if (!source) return '출처 미정';
+    return META_SOURCE_PANEL_LABELS[source] ?? source;
+}
+
+function getFallbackReasonLabel(reason: string | undefined): string | null {
+    if (!reason) return null;
+    return META_FALLBACK_REASON_LABELS[reason] ?? reason;
+}
+
+function getModelLabel(model: string | undefined): string | null {
+    if (!model || !model.trim()) return null;
+    return model.trim();
+}
 
 const LLM_MODELS: LlmModelOption[] = [
     // Google Gemini
@@ -114,7 +161,6 @@ const IMAGE_MODEL_PROFILES: Array<{ id: ImageModelSelection; name: string }> = [
 ];
 
 type StoredLlmKeys = Partial<Record<LlmProvider, string>>;
-
 type CachedEntry<T> = {
     data: T;
     expiresAt: number;
@@ -146,7 +192,36 @@ const chatResponseCache = new Map<string, CachedEntry<AdminInsightChatResponse>>
 const inFlightBootstrapRequest = new Map<string, Promise<AdminInsightChatBootstrapResponse>>();
 const inFlightChatRequest = new Map<string, Promise<AdminInsightChatResponse>>();
 
-const SUGGESTED_PROMPTS: string[] = [];
+const DEFAULT_SUGGESTED_PROMPTS: string[] = [
+    '최근 7일 매출 추이를 한 번에 요약해줘',
+    '어제 대비 오늘 전환율이 떨어진 이유를 분석해줘',
+    '성과가 낮은 캠페인 상위 3개를 찾아줘',
+    '고객 세그먼트별 전환 패턴을 비교해줘',
+    '방금 분석한 내용을 실행 액션으로 정리해줘',
+];
+
+function normalizeSuggestedPrompt(prompt: string): string {
+    return prompt.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function dedupePrompts(prompts: string[]): string[] {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    for (const prompt of prompts) {
+        const normalized = normalizeSuggestedPrompt(prompt);
+        if (!normalized || seen.has(normalized)) {
+            continue;
+        }
+
+        seen.add(normalized);
+        result.push(prompt.trim().replace(/\s+/g, ' '));
+    }
+
+    return result;
+}
+
+const BASE_SUGGESTED_PROMPTS = dedupePrompts(DEFAULT_SUGGESTED_PROMPTS);
 
 function makeId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -272,9 +347,10 @@ async function postChatMessage(
     llmConfig?: {
         provider: LlmProvider;
         model: string;
-        apiKey: string;
+        apiKey?: string;
         storyboardModelProfile?: StoryboardModelProfile;
         imageModelProfile?: StoryboardModelProfile;
+        useServerKey?: boolean;
     },
     imageModelProfile?: StoryboardModelProfile,
 ): Promise<AdminInsightChatResponse> {
@@ -303,11 +379,12 @@ async function postChatMessage(
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message,
-                        ...(llmConfig
+                    ...(llmConfig
                             ? {
                                 provider: llmConfig.provider,
                                 model: llmConfig.model,
-                                apiKey: llmConfig.apiKey,
+                                ...(llmConfig.apiKey ? { apiKey: llmConfig.apiKey } : {}),
+                                ...(llmConfig.useServerKey ? { useServerKey: true } : {}),
                                 ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
                                 ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
                             }
@@ -362,20 +439,24 @@ async function postStreamChat(
     llmConfig: {
         provider: LlmProvider;
         model: string;
-        apiKey: string;
+        apiKey?: string;
+        useServerKey?: boolean;
         storyboardModelProfile?: StoryboardModelProfile;
         imageModelProfile?: StoryboardModelProfile;
     },
     onToken: (token: string) => void,
+    abortSignal?: AbortSignal,
 ): Promise<AdminInsightChatResponse | null> {
     const resp = await fetch('/api/admin/insight/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: abortSignal,
         body: JSON.stringify({
             message,
             provider: llmConfig.provider,
             model: llmConfig.model,
-            apiKey: llmConfig.apiKey,
+            ...(llmConfig.apiKey ? { apiKey: llmConfig.apiKey } : {}),
+            useServerKey: llmConfig.useServerKey,
             ...(llmConfig.imageModelProfile ? { imageModelProfile: llmConfig.imageModelProfile } : {}),
             ...(llmConfig.storyboardModelProfile ? { storyboardModelProfile: llmConfig.storyboardModelProfile } : {}),
         }),
@@ -386,7 +467,11 @@ async function postStreamChat(
     const contentType = resp.headers.get('content-type') || '';
 
     if (contentType.includes('application/json')) {
-        return resp.json() as Promise<AdminInsightChatResponse>;
+        const payload = (await resp.json()) as { error?: string; content?: string } & AdminInsightChatResponse;
+        if (payload && 'error' in payload && payload.error) {
+            throw new Error(payload.error);
+        }
+        return payload as AdminInsightChatResponse;
     }
 
     if (!resp.body) throw new Error('스트리밍 본문 없음');
@@ -394,6 +479,8 @@ async function postStreamChat(
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let accumulated = '';
+    let streamError: string | null = null;
 
     while (true) {
         const { done, value } = await reader.read();
@@ -407,11 +494,38 @@ async function postStreamChat(
             if (!line.startsWith('data: ')) continue;
             const payload = line.slice(6).trim();
             if (!payload || payload === '[DONE]') continue;
+            let parsed: { text?: string; error?: string };
             try {
-                const parsed = JSON.parse(payload) as { text?: string; error?: string };
-                if (parsed.text) onToken(parsed.text);
-            } catch { /* skip */ }
+                parsed = JSON.parse(payload) as { text?: string; error?: string };
+            } catch {
+                continue;
+            }
+
+            if (parsed.error) {
+                streamError = parsed.error;
+                break;
+            }
+
+            if (parsed.text) {
+                accumulated += parsed.text;
+                onToken(parsed.text);
+            }
         }
+
+        if (streamError) break;
+    }
+
+    if (streamError || !accumulated) {
+        const streamFailed = streamError ? '스트리밍 응답 중 오류가 발생했습니다.' : '스트리밍 응답을 받지 못했습니다.';
+        return {
+            asOf: new Date().toISOString(),
+            content: `${accumulated ? `${accumulated}\n\n` : ''}${streamFailed} ${streamError ? `(${streamError})` : '잠시 후 다시 시도해 주세요.'}`.trim(),
+            sources: [],
+            meta: {
+                source: 'fallback',
+                fallbackReason: streamError ? 'stream_error' : 'stream_no_data',
+            },
+        };
     }
 
     return null;
@@ -623,7 +737,7 @@ function chatTreemapFormatPercent(value: number): string {
 
 function chatTreemapFormatNonNegativePercent(value: number): string {
     if (!Number.isFinite(value)) return '0%';
-    return `${Math.max(0, value).toFixed(2)}%`;
+    return `${value.toFixed(2)}%`;
 }
 
 function chatTreemapGetColorByPercent(percent: number): string {
@@ -889,7 +1003,7 @@ const InsightChatTreemap = memo(() => {
                 duration: row.duration,
                 metricText: chatTreemapFormatMetric(metricMode, metricRaw),
                 percent: rowPercent,
-                percentText: isChangeMode ? chatTreemapFormatNonNegativePercent(rowPercent) : '0%',
+                percentText: isChangeMode ? chatTreemapFormatPercent(rowPercent) : '0%',
                 color: chatTreemapGetColorByPercent(rowPercent),
             });
         }
@@ -919,7 +1033,7 @@ const InsightChatTreemap = memo(() => {
                     children: [...group.children].sort((a, b) => b.metricRaw - a.metricRaw),
                 }))
                 .sort((a, b) => b.value - a.value);
-            return groupNodes.flatMap((g) => g.children);
+            return groupNodes;
         }
 
         return leafRows;
@@ -933,11 +1047,15 @@ const InsightChatTreemap = memo(() => {
     const displayedSummary = useMemo(() => {
         if (!data) return '';
         const total = data.totalVideos;
-        const shownVideos = rows.length;
+        const shownVideos = isFinite(rows.length) ? rows.length : 0;
+        const leafNodeCount = rows.reduce((count, row) => (
+            'children' in row ? count + row.children.length : count + 1
+        ), 0);
+        const summaryCount = viewMode === 'category' ? leafNodeCount : shownVideos;
         const label = chatTreemapGetMetricLabel(metricMode);
         const modeLabel = isChangeMode ? '증감률' : '비율';
-        return `${label} ${modeLabel} 기준 상위 ${shownVideos}/${total}개 영상 분포`;
-    }, [data, rows, metricMode, isChangeMode]);
+        return `${label} ${modeLabel} 기준 상위 ${summaryCount}/${total}개 영상 분포`;
+    }, [data, metricMode, isChangeMode, rows, viewMode]);
 
     const periodOptions = useMemo(() => {
         if (isChangeMode) {
@@ -1613,7 +1731,10 @@ const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
 
     return (
         <div className="mt-3 border-t border-[#e5e7eb] pt-2">
-            <p className="text-xs text-[#6b7280] mb-2">참고 자료</p>
+            <p className="text-xs text-[#6b7280] font-semibold mb-2">
+                참고 자료
+                <span className="ml-1 text-[#9ca3af]">({sources.length}건)</span>
+            </p>
             <div className="space-y-1">
                 {sources.map((source, idx) => (
                     <a
@@ -1638,6 +1759,35 @@ const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
     );
 });
 SourceList.displayName = 'SourceList';
+
+const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null }) => {
+    if (!meta) return null;
+
+    const sourceLabel = getSourceLabel(meta.source);
+    const modelLabel = getModelLabel(meta.model);
+    const fallbackReasonLabel = getFallbackReasonLabel(meta.fallbackReason);
+
+    return (
+        <div className="mt-2 border-t border-[#e5e7eb] pt-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#eef2ff] text-[#3730a3]">
+                    출처: {sourceLabel}
+                </span>
+                {modelLabel ? (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#f0fdf4] text-[#166534]">
+                        모델: {modelLabel}
+                    </span>
+                ) : null}
+                {fallbackReasonLabel ? (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#fff7ed] text-[#9a3412]">
+                        사유: {fallbackReasonLabel}
+                    </span>
+                ) : null}
+            </div>
+        </div>
+    );
+});
+MessageMetaPanel.displayName = 'MessageMetaPanel';
 const MarkdownRenderer = memo(({
     content,
     components,
@@ -1692,6 +1842,33 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
     const isTreemapMessage = message.visualComponent === 'treemap';
     const maxWidthClass = isUser ? 'max-w-[84%]' : isTreemapMessage ? 'w-full max-w-full' : 'max-w-[84%]';
     const textWrapClass = isTreemapMessage ? 'w-full' : 'w-full';
+    const [isCopied, setIsCopied] = useState(false);
+    const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (copyResetTimerRef.current) {
+                clearTimeout(copyResetTimerRef.current);
+            }
+        };
+    }, []);
+
+    const handleCopyMessage = useCallback(async () => {
+        if (!message.content) return;
+        try {
+            await navigator.clipboard.writeText(message.content);
+            setIsCopied(true);
+            if (copyResetTimerRef.current) {
+                clearTimeout(copyResetTimerRef.current);
+            }
+            copyResetTimerRef.current = setTimeout(() => {
+                setIsCopied(false);
+            }, 1200);
+        } catch (error) {
+            console.error('메시지 복사 실패:', error);
+            setIsCopied(false);
+        }
+    }, [message.content]);
 
     return (
         <div className={cn(
@@ -1732,9 +1909,33 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                     <TypingIndicator />
                 )}
                 {message.visualComponent === 'treemap' ? <InsightChatTreemap /> : null}
-                <div className={cn(textWrapClass, isTreemapMessage && 'px-1.5')}>
-                    {message.sources ? <SourceList sources={message.sources} /> : null}
-                </div>
+                {!isTreemapMessage ? (
+                    <div className={cn(textWrapClass)}>
+                        <div className="mt-2 flex items-center justify-end">
+                            <button
+                                type="button"
+                                className={cn(
+                                    'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs',
+                                    isCopied
+                                        ? 'border-emerald-300 bg-[#ecfdf5] text-[#065f46]'
+                                        : 'border-[#e5e7eb] hover:bg-[#f9fafb]',
+                                    !message.content ? 'text-[#d1d5db] cursor-not-allowed' : 'text-[#374151]',
+                                )}
+                                onClick={handleCopyMessage}
+                                disabled={!message.content}
+                            >
+                                {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                {isCopied ? COPY_SUCCESS_MESSAGE : '복사'}
+                            </button>
+                        </div>
+                        {message.meta ? <MessageMetaPanel meta={message.meta} /> : null}
+                        {message.sources ? <SourceList sources={message.sources} /> : null}
+                    </div>
+                ) : message.sources ? (
+                    <div className={cn(textWrapClass, isTreemapMessage && 'px-1.5')}>
+                        <SourceList sources={message.sources} />
+                    </div>
+                ) : null}
             </div>
         </div>
     );
@@ -1766,6 +1967,7 @@ const InsightChatSectionComponent = () => {
     const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const bootstrapRequestRef = useRef(new Map<string, number>());
+    const streamAbortControllerRef = useRef<AbortController | null>(null);
 
     const [llmKeys, setLlmKeys] = useState<StoredLlmKeys>({});
     const [activeModelId, setActiveModelId] = useState<string>('gemini-3-flash-preview');
@@ -1776,6 +1978,7 @@ const InsightChatSectionComponent = () => {
     const [showImageModelDropdown, setShowImageModelDropdown] = useState(false);
     const [showConversationList, setShowConversationList] = useState(false);
     const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
+    const [hasServerGeminiKey, setHasServerGeminiKey] = useState(false);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
     const imageModelDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -1801,14 +2004,8 @@ const InsightChatSectionComponent = () => {
             try {
                 const resp = await fetch('/api/admin/insight/llm-config');
                 if (!resp.ok) return;
-                const data = (await resp.json()) as { geminiEnvKey: string | null };
-                if (data.geminiEnvKey) {
-                    setLlmKeys((prev) => {
-                        if (prev.gemini) return prev; // 사용자 설정 우선
-                        const next = { ...prev, gemini: data.geminiEnvKey! };
-                        return next;
-                    });
-                }
+                const data = (await resp.json()) as { hasGeminiServerKey?: boolean };
+                if (data?.hasGeminiServerKey) setHasServerGeminiKey(true);
             } catch { /* ignore */ }
         })();
     }, []);
@@ -1854,7 +2051,10 @@ const InsightChatSectionComponent = () => {
     }, []);
 
     const activeModel = useMemo(() => LLM_MODELS.find((m) => m.id === activeModelId) ?? LLM_MODELS[0], [activeModelId]);
-    const activeProviderKey = llmKeys[activeModel.provider] || '';
+    const activeProviderHasUserKey = Boolean(llmKeys[activeModel.provider]);
+    const activeProviderHasServerKey = activeModel.provider === 'gemini' && hasServerGeminiKey;
+    const activeProviderHasKey = activeProviderHasUserKey || activeProviderHasServerKey;
+    const activeProviderUsesServerKey = activeModel.provider === 'gemini' && !activeProviderHasUserKey && hasServerGeminiKey;
     const activeImageModelProfile = useMemo(
         () => IMAGE_MODEL_PROFILES.find((profile) => profile.id === imageModelProfile) ?? IMAGE_MODEL_PROFILES[0],
         [imageModelProfile],
@@ -1863,21 +2063,22 @@ const InsightChatSectionComponent = () => {
     const availableModels = useMemo(() => {
         return LLM_MODELS.filter((m) => enabledModelIds.has(m.id)).map((model) => ({
             ...model,
-            hasKey: Boolean(llmKeys[model.provider]),
+            hasKey: Boolean(llmKeys[model.provider]) || (model.provider === 'gemini' && hasServerGeminiKey),
         }));
-    }, [llmKeys, enabledModelIds]);
+    }, [hasServerGeminiKey, llmKeys, enabledModelIds]);
 
     const currentLlmConfig = useMemo(() => {
-        if (!activeProviderKey) return undefined;
+        if (!activeProviderHasKey) return undefined;
         const resolvedImageModelProfile = imageModelProfile === 'none' ? undefined : imageModelProfile;
         return {
             provider: activeModel.provider,
             model: activeModel.id,
-            apiKey: activeProviderKey,
+            apiKey: llmKeys[activeModel.provider],
+            useServerKey: activeProviderUsesServerKey,
             ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
             ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
         };
-    }, [activeModel, activeProviderKey, imageModelProfile]);
+    }, [activeModel, activeProviderHasKey, activeProviderUsesServerKey, imageModelProfile, llmKeys]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -1928,6 +2129,49 @@ const InsightChatSectionComponent = () => {
     }, [activeConversation, messageWindowSize]);
 
     const canShowMoreMessages = !!activeConversation && activeConversation.messages.length > messageWindowSize;
+
+    const canRegenerateLastResponse = useMemo(() => {
+        if (!activeConversation || !activeConversation.messages.length) {
+            return false;
+        }
+        const last = activeConversation.messages[activeConversation.messages.length - 1];
+        const prev = activeConversation.messages[activeConversation.messages.length - 2];
+        return last?.role === 'assistant' && prev?.role === 'user' && !sendingConversationId && prev.content.trim();
+    }, [activeConversation, sendingConversationId]);
+
+    const suggestedPrompts = useMemo(() => {
+        if (!activeConversation) {
+            return BASE_SUGGESTED_PROMPTS;
+        }
+
+        const latestUserMessage = [...activeConversation.messages]
+            .reverse()
+            .find((message) => message.role === 'user')?.content
+            ?? '';
+
+        const normalizedLatestMessage = latestUserMessage.trim().toLowerCase();
+        if (!normalizedLatestMessage) {
+            return BASE_SUGGESTED_PROMPTS;
+        }
+
+        const contextPrompts: string[] = [];
+
+        if (normalizedLatestMessage.includes('매출') || normalizedLatestMessage.includes('매입') || normalizedLatestMessage.includes('수익')) {
+            contextPrompts.push('이 매출 하락의 주 원인을 지표별로 더 자세히 나눠줘');
+            contextPrompts.push('매출 개선을 위한 다음 30일 액션을 제안해줘');
+        }
+
+        if (normalizedLatestMessage.includes('캠페인') || normalizedLatestMessage.includes('광고')) {
+            contextPrompts.push('캠페인 성과 하락 구간만 골라 재배치 방안을 제안해줘');
+            contextPrompts.push('같은 카테고리의 고성능 캠페인 3개를 찾아 비교해줘');
+        }
+
+        if (contextPrompts.length === 0) {
+            return BASE_SUGGESTED_PROMPTS;
+        }
+
+        return dedupePrompts([...BASE_SUGGESTED_PROMPTS, ...contextPrompts]);
+    }, [activeConversation]);
 
     const persistConversationState = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -2120,6 +2364,11 @@ const InsightChatSectionComponent = () => {
         persistConversationState();
     }, [conversations, activeConversationId, persistConversationState]);
 
+    useEffect(() => () => {
+        streamAbortControllerRef.current?.abort();
+        streamAbortControllerRef.current = null;
+    }, []);
+
     const handleSelectConversation = useCallback((conversationId: string) => {
         setActiveConversationId(conversationId);
         if (!window.matchMedia('(min-width: 1024px)').matches) {
@@ -2170,8 +2419,8 @@ const InsightChatSectionComponent = () => {
         ));
     }, [activeConversation]);
 
-    const handleSendMessage = useCallback(async () => {
-        const content = inputValue.trim();
+    const sendMessage = useCallback(async (input: string) => {
+        const content = input.trim();
         if (!activeConversation || !content || sendingConversationId === activeConversation.id) return;
 
         const userMessage: ChatMessage = {
@@ -2186,22 +2435,30 @@ const InsightChatSectionComponent = () => {
         setSendingConversationId(activeConversation.id);
 
         const convId = activeConversation.id;
+        let assistantMessageId: string | null = null;
+        let assistantProfile: ChatMessage['meta'] | null = null;
+        let streamController: AbortController | null = null;
 
         try {
             if (currentLlmConfig) {
+                streamController = new AbortController();
+                streamAbortControllerRef.current = streamController;
                 const assistantId = makeId('assistant');
+                assistantMessageId = assistantId;
+                assistantProfile = { source: currentLlmConfig.provider as 'gemini' | 'openai' | 'anthropic', model: currentLlmConfig.model };
                 appendMessage(convId, {
                     id: assistantId,
                     role: 'assistant',
                     content: '',
                     createdAt: new Date(),
-                    meta: { source: currentLlmConfig.provider as 'gemini' | 'openai' | 'anthropic', model: currentLlmConfig.model },
+                    meta: assistantProfile,
                 });
 
                 const localResponse = await postStreamChat(
                     content,
                     currentLlmConfig,
                     (token) => updateMessageContent(convId, assistantId, (prev) => prev + token),
+                    streamController.signal,
                 );
 
                 if (localResponse) {
@@ -2226,11 +2483,30 @@ const InsightChatSectionComponent = () => {
                     meta: response.meta,
                 });
             }
-        } catch {
+        } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError' && assistantMessageId) {
+                updateMessage(convId, assistantMessageId, (message) => ({
+                    ...message,
+                    content: message.content || STREAM_STOP_MESSAGE,
+                    meta: message.meta ?? assistantProfile ?? { source: 'fallback', fallbackReason: 'request_cancelled' },
+                }));
+                return;
+            }
+
+            const fallbackMessage = '응답을 전송하지 못했습니다. 잠시 뒤 다시 시도해 주세요.';
+            if (assistantMessageId) {
+                updateMessage(convId, assistantMessageId, (message) => ({
+                    ...message,
+                    content: message.content || fallbackMessage,
+                    meta: message.meta ?? assistantProfile ?? { source: 'fallback', fallbackReason: 'request_failed' },
+                }));
+                return;
+            }
+
             appendMessage(convId, {
                 id: makeId('assistant'),
                 role: 'assistant',
-                content: '응답을 전송하지 못했습니다. 잠시 뒤 다시 시도해 주세요.',
+                content: fallbackMessage,
                 createdAt: new Date(),
                 meta: {
                     source: 'fallback',
@@ -2238,10 +2514,61 @@ const InsightChatSectionComponent = () => {
                 },
             });
         } finally {
+            if (streamAbortControllerRef.current === streamController) {
+                streamAbortControllerRef.current = null;
+            }
             setSendingConversationId(null);
             inputRef.current?.focus();
         }
-    }, [activeConversation, appendMessage, updateMessage, updateMessageContent, inputValue, sendingConversationId, currentLlmConfig, imageModelProfile]);
+    }, [
+        activeConversation,
+        appendMessage,
+        updateMessage,
+        updateMessageContent,
+        sendingConversationId,
+        currentLlmConfig,
+        imageModelProfile,
+    ]);
+
+    const handleStopStreaming = useCallback(() => {
+        if (!sendingConversationId) return;
+        streamAbortControllerRef.current?.abort();
+    }, [sendingConversationId]);
+
+    const handleRegenerateLastResponse = useCallback(() => {
+        if (!activeConversation || !canRegenerateLastResponse) return;
+        const messages = activeConversation.messages;
+        if (messages.length < 2) return;
+
+        let lastUserIndex = -1;
+        for (let index = messages.length - 2; index >= 0; index -= 1) {
+            if (messages[index].role === 'user') {
+                lastUserIndex = index;
+                break;
+            }
+        }
+
+        if (lastUserIndex < 0) return;
+
+        const lastUserMessage = messages[lastUserIndex];
+        if (!lastUserMessage.content.trim()) return;
+
+        updateConversation(activeConversation.id, (prev) => ({
+            ...prev,
+            messages: prev.messages.slice(0, lastUserIndex),
+            updatedAt: Date.now(),
+        }));
+
+        void sendMessage(lastUserMessage.content);
+    }, [activeConversation, canRegenerateLastResponse, sendMessage, updateConversation]);
+
+    const handleSendMessage = useCallback(() => {
+        void sendMessage(inputValue);
+    }, [inputValue, sendMessage]);
+
+    const handlePromptClick = useCallback((prompt: string) => {
+        void sendMessage(prompt);
+    }, [sendMessage]);
 
     const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -2251,6 +2578,7 @@ const InsightChatSectionComponent = () => {
     }, [handleSendMessage]);
 
     const isSending = sendingConversationId === activeConversationId;
+    const canStopStreaming = isSending && !!streamAbortControllerRef.current;
 
     return (
         <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb] relative">
@@ -2323,9 +2651,11 @@ const InsightChatSectionComponent = () => {
                                     </div>
                                     {llmKeys[provider] ? (
                                         <p className="text-[10px] text-emerald-600">키 설정됨</p>
+                                    ) : provider === 'gemini' && hasServerGeminiKey ? (
+                                        <p className="text-[10px] text-emerald-700">서버 키 사용</p>
                                     ) : (
                                         <p className="text-[10px] text-[#9ca3af]">
-                                            {provider === 'gemini' ? '서버 키 로드 중...' : '미설정'}
+                                            {provider === 'gemini' ? '서버 키 미설정' : '미설정'}
                                         </p>
                                     )}
                                 </div>
@@ -2513,7 +2843,7 @@ const InsightChatSectionComponent = () => {
                                 type="button"
                                 className={cn(
                                     'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white',
-                                    activeProviderKey
+                                    activeProviderHasKey
                                         ? 'border-emerald-300 text-emerald-700'
                                         : 'border-[#fca5a5] text-[#ef4444]',
                                 )}
@@ -2590,12 +2920,13 @@ const InsightChatSectionComponent = () => {
                             ) : null}
                         </div>
 
-                        {SUGGESTED_PROMPTS.map((prompt) => (
+                        {suggestedPrompts.map((prompt) => (
                             <button
                                 key={prompt}
                                 type="button"
                                 className="text-xs px-2.5 py-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#fff7ed]"
-                                onClick={() => setInputValue(prompt)}
+                                onClick={() => handlePromptClick(prompt)}
+                                aria-label={`빠른 질문: ${prompt}`}
                                 disabled={!!activeConversation?.isBooting || !!sendingConversationId}
                             >
                                 {prompt}
@@ -2610,6 +2941,30 @@ const InsightChatSectionComponent = () => {
                         }}
                         className="flex gap-2"
                     >
+                        <div className="shrink-0 flex items-center gap-1">
+                            {canRegenerateLastResponse ? (
+                                <Button
+                                    type="button"
+                                    className="h-11 px-2"
+                                    variant="outline"
+                                    onClick={handleRegenerateLastResponse}
+                                    title="마지막 답변 다시 생성"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                </Button>
+                            ) : null}
+                            {canStopStreaming ? (
+                                <Button
+                                    type="button"
+                                    className="h-11 px-2 border-[#ef4444] text-[#ef4444] hover:bg-[#fef2f2]"
+                                    variant="outline"
+                                    onClick={handleStopStreaming}
+                                    title="스트리밍 응답 중단"
+                                >
+                                    <Square className="h-4 w-4" />
+                                </Button>
+                            ) : null}
+                        </div>
                         <Input
                             ref={inputRef}
                             value={inputValue}

@@ -112,7 +112,8 @@ export type LlmModelOption = {
 export type LlmRequestConfig = {
   provider: LlmProvider;
   model: string;
-  apiKey: string;
+  apiKey?: string;
+  useServerKey?: boolean;
   storyboardModelProfile?: StoryboardModelProfile;
   imageModelProfile?: StoryboardModelProfile;
 };
