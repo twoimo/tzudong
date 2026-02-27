@@ -12,7 +12,9 @@
     "analyze": "set ANALYZE=true&& next build --webpack",
     "supabase:gen-types": "node scripts/supabase-gen-types.mjs",
     "test:unit": "bun test tests-unit",
-    "test:responsive": "playwright test tests/responsive-overflow.spec.ts"
+    "test:responsive": "playwright test tests/responsive-overflow.spec.ts",
+    "qa:insights-chat": "bun run scripts/insight-chat-qa.mjs",
+    "qa:insights-chat:db": "bun run scripts/insight-chat-db-ops.mjs"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

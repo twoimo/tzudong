@@ -1,81 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { streamAdminInsightChat } from '@/lib/insight/chat';
+import {
+    CHAT_ROUTE_NO_STORE_HEADERS,
+    INSIGHT_CHAT_FALLBACK_CONTENTS,
+    buildInsightChatFallbackResponse,
+    logInsightChatRouteEvent,
+} from '@/lib/insight/insight-chat-route-utils';
+import { parseInsightChatRequestBody } from '@/lib/insight/insight-chat-request';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+    let requestId: string | undefined;
     try {
         const auth = await requireAdmin();
         if (!auth.ok) return auth.response;
 
-        const body = await request.json().catch(() => null);
-        const message = typeof body?.message === 'string' ? body.message : '';
+        const { message, requestId: parsedRequestId, llmConfig } = parseInsightChatRequestBody(await request.json().catch(() => null));
+        requestId = parsedRequestId;
+        logInsightChatRouteEvent('stream', 'request.parsed', {
+            requestId,
+            hasLlmConfig: !!llmConfig,
+        });
+
         if (!message.trim()) {
+            logInsightChatRouteEvent('stream', 'request.empty_input', { requestId });
             return NextResponse.json(
-                { error: 'empty_input', content: '질문을 입력해 주세요.' },
-                { status: 400, headers: { 'Cache-Control': 'no-store' } },
+                buildInsightChatFallbackResponse({
+                    requestId,
+                    fallbackReason: 'empty_input',
+                    error: 'empty_input',
+                    content: INSIGHT_CHAT_FALLBACK_CONTENTS.emptyInput,
+                }),
+                {
+                    status: 400,
+                    headers: CHAT_ROUTE_NO_STORE_HEADERS,
+                },
             );
         }
 
-        const provider = typeof body?.provider === 'string' ? body.provider : undefined;
-        const model = typeof body?.model === 'string' ? body.model : undefined;
-        const apiKey = typeof body?.apiKey === 'string' ? body.apiKey : undefined;
-        const useServerKey = body?.useServerKey === true;
-        const storyboardModelProfile = typeof body?.storyboardModelProfile === 'string'
-            ? body.storyboardModelProfile
-            : undefined;
-        const imageModelProfile = typeof body?.imageModelProfile === 'string'
-            ? body.imageModelProfile
-            : undefined;
-        const resolvedImageModelProfile = imageModelProfile === 'nanobanana_pro' || imageModelProfile === 'nanobanana'
-            ? imageModelProfile
-            : undefined;
-
-        const normalizedProvider = provider === 'gemini' || provider === 'openai' || provider === 'anthropic'
-            ? provider
-            : undefined;
-        const shouldUseServerKey = useServerKey || (normalizedProvider === 'gemini' && !apiKey);
-        const llmConfig = normalizedProvider && model
-            ? {
-                provider: normalizedProvider,
-                model,
-                apiKey,
-                useServerKey: shouldUseServerKey,
-                storyboardModelProfile:
-                    storyboardModelProfile === 'nanobanana_pro' || storyboardModelProfile === 'nanobanana'
-                        ? storyboardModelProfile
-                        : undefined,
-                imageModelProfile: resolvedImageModelProfile,
-            }
-            : undefined;
-
-        const result = await streamAdminInsightChat(message, llmConfig, request.signal);
+        const result = await streamAdminInsightChat(message, llmConfig, request.signal, requestId);
 
         if ('local' in result) {
+            logInsightChatRouteEvent('stream', 'response.local_fallback', { requestId });
             return NextResponse.json(result.local, {
-                headers: { 'Cache-Control': 'no-store' },
+                headers: CHAT_ROUTE_NO_STORE_HEADERS,
             });
         }
 
+        logInsightChatRouteEvent('stream', 'response.stream', { requestId });
         return new Response(result.stream, {
             headers: {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Connection': 'keep-alive',
+                Connection: 'keep-alive',
                 'X-Accel-Buffering': 'no',
             },
         });
     } catch (error) {
+        logInsightChatRouteEvent('stream', 'request.failed', {
+            requestId,
+            error: error instanceof Error ? error.message : 'unknown',
+        });
         console.error('[admin/insight/chat/stream] failed:', error);
         return NextResponse.json(
-            {
-                asOf: new Date().toISOString(),
-                content: '스트리밍 응답 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-                meta: { source: 'fallback', fallbackReason: 'stream_error' },
-                sources: [],
-            },
-            { status: 200, headers: { 'Cache-Control': 'no-store' } },
+            buildInsightChatFallbackResponse({
+                requestId,
+                fallbackReason: 'stream_error',
+                content: INSIGHT_CHAT_FALLBACK_CONTENTS.streamError,
+            }),
+            { status: 200, headers: CHAT_ROUTE_NO_STORE_HEADERS },
         );
     }
 }

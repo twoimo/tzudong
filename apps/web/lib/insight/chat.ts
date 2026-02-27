@@ -212,6 +212,7 @@ function createLocalResponse(
   content: string,
   options: {
     fallbackReason?: string;
+    requestId?: string;
     sources?: InsightChatSource[];
     visualComponent?: AdminInsightChatResponse['visualComponent'];
   } = {},
@@ -224,8 +225,15 @@ function createLocalResponse(
     meta: {
       source: 'local',
       fallbackReason: options.fallbackReason,
+      ...(options.requestId ? { requestId: options.requestId } : {}),
     },
   };
+}
+
+function normalizeRequestId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim().slice(0, 64);
+  return normalized || undefined;
 }
 
 function clampFiniteInteger(value: number, fallback: number): number {
@@ -921,9 +929,10 @@ function extractFetchErrorCode(error: unknown): string | null {
   return null;
 }
 
-function createStoryboardUnavailableResponse(asOf: string): AdminInsightChatResponse {
+function createStoryboardUnavailableResponse(asOf: string, requestId?: string): AdminInsightChatResponse {
   return createLocalResponse(asOf, '스토리보드 에이전트 연결이 일시적으로 불안정합니다. 잠시 뒤 다시 시도해 주세요.', {
     fallbackReason: 'storyboard_agent_unavailable',
+    ...(requestId ? { requestId } : {}),
   });
 }
 
@@ -1223,6 +1232,7 @@ async function askStoryboardViaLlm(
   storyboardModelProfile: StoryboardModelProfile,
   llmConfig?: LlmRequestConfig,
   bgeContext: StoryboardBgeResult[] = [],
+  requestId?: string,
   stateContext?: {
     transcriptDocs?: StoryboardBgeResult[];
     webDocs?: StoryboardWebSearchResult[];
@@ -1246,11 +1256,12 @@ async function askStoryboardViaLlm(
 
   switch (provider) {
     case 'openai': {
-      const response = await askOpenAI(prompt, model, apiKey, asOf);
+      const response = await askOpenAI(prompt, model, apiKey, asOf, requestId);
       return response ? {
         ...response,
         meta: {
           ...response.meta,
+          ...(requestId ? { requestId } : {}),
           source: 'agent',
           fallbackReason: response.meta?.fallbackReason,
         },
@@ -1258,11 +1269,12 @@ async function askStoryboardViaLlm(
       } : null;
     }
     case 'anthropic': {
-      const response = await askAnthropic(prompt, model, apiKey, asOf);
+      const response = await askAnthropic(prompt, model, apiKey, asOf, requestId);
       return response ? {
         ...response,
         meta: {
           ...response.meta,
+          ...(requestId ? { requestId } : {}),
           source: 'agent',
           fallbackReason: response.meta?.fallbackReason,
         },
@@ -1271,11 +1283,12 @@ async function askStoryboardViaLlm(
     }
     case 'gemini':
     default: {
-      const response = await askGemini(prompt, model, apiKey, asOf);
+      const response = await askGemini(prompt, model, apiKey, asOf, requestId);
       return response ? {
         ...response,
         meta: {
           ...response.meta,
+          ...(requestId ? { requestId } : {}),
           source: 'agent',
           fallbackReason: response.meta?.fallbackReason,
         },
@@ -1285,9 +1298,15 @@ async function askStoryboardViaLlm(
   }
 }
 
-function createLocalStoryboardResponse(message: string, asOf: string, profile: StoryboardModelProfile): AdminInsightChatResponse {
+function createLocalStoryboardResponse(
+  message: string,
+  asOf: string,
+  profile: StoryboardModelProfile,
+  requestId?: string,
+): AdminInsightChatResponse {
   return createLocalResponse(asOf, buildStoryboardFallbackContent(message, profile), {
     fallbackReason: 'storyboard_internal_fallback',
+    ...(requestId ? { requestId } : {}),
   });
 }
 
@@ -1362,6 +1381,7 @@ async function runStoryboardOrchestrator(
   profile: StoryboardModelProfile,
   bgeContext: StoryboardBgeResult[],
   llmConfig?: LlmRequestConfig,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse> {
   const initialQuery = message.trim();
   const normalizedIntent = normalizeStoryboardAgentIntent(initialQuery);
@@ -1493,6 +1513,7 @@ async function runStoryboardOrchestrator(
       return createLocalResponse(asOf, buildStoryboardHumanRequest(state), {
         sources: buildStoryboardSourcesFromState(state),
         fallbackReason: 'storyboard_need_human',
+        ...(requestId ? { requestId } : {}),
       });
     }
 
@@ -1500,10 +1521,11 @@ async function runStoryboardOrchestrator(
   }
 
   const responseSources = buildStoryboardSourcesFromState(state);
-  if (state.validationStatus !== 'pass' && state.transcriptDocs.length === 0) {
+    if (state.validationStatus !== 'pass' && state.transcriptDocs.length === 0) {
     const fallback = createLocalResponse(asOf, buildStoryboardFallbackContent(initialQuery, profile), {
       sources: responseSources,
       fallbackReason: state.validationStatus === 'need_human' ? 'storyboard_need_human' : 'storyboard_internal_fallback',
+      ...(requestId ? { requestId } : {}),
     });
     return fallback;
   }
@@ -1514,6 +1536,7 @@ async function runStoryboardOrchestrator(
     profile,
     llmConfig,
     state.transcriptDocs.slice(0, 10),
+    requestId,
     {
       transcriptDocs: state.transcriptDocs,
       webDocs: state.webDocs,
@@ -1531,6 +1554,7 @@ async function runStoryboardOrchestrator(
   const localFallback = createLocalResponse(asOf, buildStoryboardFallbackContent(initialQuery, profile), {
     sources: responseSources,
     fallbackReason: 'storyboard_local_fallback',
+    ...(requestId ? { requestId } : {}),
   });
   return localFallback;
 }
@@ -1677,6 +1701,7 @@ async function askStoryboardAgent(
   asOf: string,
   storyboardModelProfile: StoryboardModelProfile = DEFAULT_STORYBOARD_MODEL_PROFILE,
   llmConfig?: LlmRequestConfig,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse | null> {
   const normalizedProfile = storyboardModelProfile === 'nanobanana_pro' ? 'nanobanana_pro' : 'nanobanana';
   const fallbackProfile = normalizedProfile;
@@ -1685,6 +1710,7 @@ async function askStoryboardAgent(
   if (intent === 'simple_chat') {
     return createLocalResponse(asOf, buildStoryboardSimpleChatResponse(message), {
       fallbackReason: 'storyboard_simple_chat',
+      ...(requestId ? { requestId } : {}),
     });
   }
 
@@ -1693,12 +1719,20 @@ async function askStoryboardAgent(
     if (qnaReply) return qnaReply;
     return createLocalResponse(asOf, '데이터 질의는 현재 수집 가능한 항목 기반으로만 답변 가능합니다. 상호명/영상/조회와 같은 구체 키워드로 다시 질문해 주세요.', {
       fallbackReason: 'storyboard_qna_unavailable',
+      ...(requestId ? { requestId } : {}),
     });
   }
 
   const bgeContext = await getStoryboardBgeContext(message);
   try {
-    const orchestratedResponse = await runStoryboardOrchestrator(message, asOf, fallbackProfile, bgeContext, llmConfig);
+    const orchestratedResponse = await runStoryboardOrchestrator(
+      message,
+      asOf,
+      fallbackProfile,
+      bgeContext,
+      llmConfig,
+      requestId,
+    );
     if (orchestratedResponse) {
       return orchestratedResponse;
     }
@@ -1708,7 +1742,7 @@ async function askStoryboardAgent(
 
   const endpoint = STORYBOARD_AGENT_REMOTE_ENABLED ? getStoryboardAgentEndpoint() : null;
   if (!endpoint) {
-    const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile);
+    const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
     return bgeContext.length > 0
       ? { ...fallbackResponse, sources: storyboardSourcesFromBgeResults(bgeContext) }
       : fallbackResponse;
@@ -1716,7 +1750,7 @@ async function askStoryboardAgent(
 
   const cooldownUntil = getStoryboardEndpointCooldownUntil(endpoint);
   if (cooldownUntil) {
-    return createStoryboardUnavailableResponse(asOf);
+    return createStoryboardUnavailableResponse(asOf, requestId);
   }
 
   const timeoutMs = Number.isFinite(STORYBOARD_AGENT_TIMEOUT_MS) && STORYBOARD_AGENT_TIMEOUT_MS > 0
@@ -1767,7 +1801,7 @@ async function askStoryboardAgent(
       const content = extractStoryboardContent(data);
       if (!content) {
         setStoryboardEndpointCooldown(endpoint);
-        const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile);
+        const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
         if (bgeContext.length > 0) {
           return {
             ...fallbackResponse,
@@ -1783,6 +1817,7 @@ async function askStoryboardAgent(
         sources: toStoryboardSources(data),
         meta: {
           source: 'agent',
+          ...(requestId ? { requestId } : {}),
         },
       };
       if (!(remoteResponse.sources?.length) && bgeContext.length > 0) {
@@ -1811,11 +1846,11 @@ async function askStoryboardAgent(
           errorCode,
         });
         setStoryboardEndpointCooldown(endpoint);
-        return createStoryboardUnavailableResponse(asOf);
+        return createStoryboardUnavailableResponse(asOf, requestId);
       }
 
       console.error('[admin/insight/chat] storyboard agent request failed:', error);
-      const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile);
+      const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
       if (bgeContext.length > 0) {
         return {
           ...fallbackResponse,
@@ -1828,7 +1863,7 @@ async function askStoryboardAgent(
     }
   }
 
-  const finalFallback = createLocalStoryboardResponse(message, asOf, fallbackProfile);
+  const finalFallback = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
   if (bgeContext.length > 0) {
     return {
       ...finalFallback,
@@ -1877,30 +1912,34 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
 export async function answerAdminInsightChat(
   message: string,
   llmConfig?: LlmRequestConfig,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse> {
   const asOf = new Date().toISOString();
   const input = message.trim();
+  const resolvedRequestId = normalizeRequestId(requestId);
 
   if (!input) {
     return createLocalResponse(asOf, '질문을 입력해 주세요.', {
       fallbackReason: 'empty_input',
+      requestId: resolvedRequestId,
     });
   }
 
-  const localResponse = await resolveLocalInsightResponse(asOf, input);
+  const localResponse = await resolveLocalInsightResponse(asOf, input, resolvedRequestId);
   if (localResponse) return localResponse;
 
   if (isStoryboardIntent(input)) {
     const storyboardProfile = resolveStoryboardImageProfile(llmConfig);
-    const storyboardReply = await askStoryboardAgent(input, asOf, storyboardProfile, llmConfig);
+    const storyboardReply = await askStoryboardAgent(input, asOf, storyboardProfile, llmConfig, resolvedRequestId);
     if (storyboardReply) return storyboardReply;
   }
 
-  const llmReply = await routeLlmRequest(input, asOf, llmConfig);
+  const llmReply = await routeLlmRequest(input, asOf, llmConfig, resolvedRequestId);
   if (llmReply) return llmReply;
 
   return createLocalResponse(asOf, buildLocalInsightResponseFailureMessage('llm_unavailable'), {
     fallbackReason: 'llm_unavailable',
+    requestId: resolvedRequestId,
   });
 }
 
@@ -1916,7 +1955,11 @@ const LLM_SYSTEM_PROMPT = [
   '- 기획안, 분석, 추천 등 창의적 요청에 적극 응답',
 ].join('\n');
 
-async function resolveLocalInsightResponse(asOf: string, input: string): Promise<AdminInsightChatResponse | null> {
+async function resolveLocalInsightResponse(
+  asOf: string,
+  input: string,
+  requestId?: string,
+): Promise<AdminInsightChatResponse | null> {
   if (isStoryboardIntent(input)) {
     return null;
   }
@@ -1929,6 +1972,7 @@ async function resolveLocalInsightResponse(asOf: string, input: string): Promise
       .join('\n');
 
     return createLocalResponse(asOf, `## 인기 키워드 TOP 12\n\n${list || '- 데이터 없음'}`, {
+      requestId,
       visualComponent: 'wordcloud',
     });
   }
@@ -1943,6 +1987,7 @@ async function resolveLocalInsightResponse(asOf: string, input: string): Promise
       .join('\n');
 
     return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, {
+      requestId,
       visualComponent: 'calendar',
     });
   }
@@ -1996,6 +2041,7 @@ async function resolveLocalInsightResponse(asOf: string, input: string): Promise
       '',
       '> 아래 트리맵에서 **지표·기간·모드**를 자유롭게 전환하여 분석할 수 있습니다.',
     ].join('\n'), {
+      requestId,
       visualComponent: 'treemap',
     });
   }
@@ -2007,6 +2053,7 @@ async function routeLlmRequest(
   message: string,
   asOf: string,
   config?: LlmRequestConfig,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse | null> {
   const provider = config?.provider || 'gemini';
   const apiKey = config?.apiKey || (config?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
@@ -2016,11 +2063,11 @@ async function routeLlmRequest(
 
   switch (provider) {
     case 'gemini':
-      return askGemini(message, model, apiKey, asOf);
+      return askGemini(message, model, apiKey, asOf, requestId);
     case 'openai':
-      return askOpenAI(message, model, apiKey, asOf);
+      return askOpenAI(message, model, apiKey, asOf, requestId);
     case 'anthropic':
-      return askAnthropic(message, model, apiKey, asOf);
+      return askAnthropic(message, model, apiKey, asOf, requestId);
     default:
       return null;
   }
@@ -2034,8 +2081,11 @@ export async function streamAdminInsightChat(
   message: string,
   llmConfig?: LlmRequestConfig,
   requestSignal?: AbortSignal,
+  requestId?: string,
 ): Promise<{ stream: ReadableStream<Uint8Array> } | { local: AdminInsightChatResponse }> {
-  const localResult = await tryLocalAnswer(message, llmConfig);
+  const resolvedRequestId = normalizeRequestId(requestId);
+
+  const localResult = await tryLocalAnswer(message, llmConfig, resolvedRequestId);
   if (localResult) return { local: localResult };
 
   const provider = llmConfig?.provider || 'gemini';
@@ -2048,34 +2098,42 @@ export async function streamAdminInsightChat(
         '가능한 질문 예시:',
         '- "트리맵으로 조회수 분포 보여줘"',
         '- "먹방 스토리보드 기획안 만들어줘"',
-      ].join('\n'), { fallbackReason: 'llm_unavailable' }),
+      ].join('\n'), {
+        fallbackReason: 'llm_unavailable',
+        requestId: resolvedRequestId,
+      }),
     };
   }
 
-  const stream = createLlmStream(message, provider, model, apiKey, requestSignal);
+  const stream = createLlmStream(message, provider, model, apiKey, resolvedRequestId, requestSignal);
   return { stream };
 }
 
 async function tryLocalAnswer(
   message: string,
   llmConfig?: LlmRequestConfig,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse | null> {
   const asOf = new Date().toISOString();
   const input = message.trim();
-  if (!input) return createLocalResponse(asOf, '질문을 입력해 주세요.', { fallbackReason: 'empty_input' });
+  if (!input) return createLocalResponse(asOf, '질문을 입력해 주세요.', {
+    fallbackReason: 'empty_input',
+    requestId,
+  });
 
   if (isStoryboardIntent(input)) {
     const storyboardProfile = resolveStoryboardImageProfile(llmConfig);
-    const reply = await askStoryboardAgent(input, asOf, storyboardProfile, llmConfig);
+    const reply = await askStoryboardAgent(input, asOf, storyboardProfile, llmConfig, requestId);
     if (reply) return reply;
   }
 
-  return resolveLocalInsightResponse(asOf, input);
+  return resolveLocalInsightResponse(asOf, input, requestId);
 }
 
 function createLlmStream(
 
   message: string, provider: string, model: string, apiKey: string,
+  requestId?: string,
   requestSignal?: AbortSignal,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -2083,14 +2141,34 @@ function createLlmStream(
     async start(ctrl) {
       try {
         switch (provider) {
-          case 'gemini': await streamGemini(message, model, apiKey, ctrl, encoder, requestSignal); break;
-          case 'openai': await streamOpenAI(message, model, apiKey, ctrl, encoder, requestSignal); break;
-          case 'anthropic': await streamAnthropic(message, model, apiKey, ctrl, encoder, requestSignal); break;
-          default: ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'unknown_provider' })}\n\n`));
+          case 'gemini':
+            await streamGemini(message, model, apiKey, ctrl, encoder, requestId, requestSignal);
+            break;
+          case 'openai':
+            await streamOpenAI(message, model, apiKey, ctrl, encoder, requestId, requestSignal);
+            break;
+          case 'anthropic':
+            await streamAnthropic(message, model, apiKey, ctrl, encoder, requestId, requestSignal);
+            break;
+          default:
+            ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({
+              error: 'unknown_provider',
+              requestId,
+              cancellationReason: 'stream_error',
+            })}\n\n`));
         }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'stream_error';
-        try { ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errMsg })}\n\n`)); } catch { /* closed */ }
+        const cancellationReason = requestSignal?.aborted || (error instanceof DOMException && error.name === 'AbortError')
+          ? 'request_cancelled'
+          : 'stream_error';
+        try {
+          ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({
+            error: errMsg,
+            requestId,
+            cancellationReason,
+          })}\n\n`));
+        } catch { /* closed */ }
       } finally {
         try { ctrl.enqueue(encoder.encode('data: [DONE]\n\n')); } catch { /* closed */ }
         ctrl.close();
@@ -2102,6 +2180,7 @@ function createLlmStream(
 async function streamGemini(
   message: string, model: string, apiKey: string,
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+  requestId?: string,
   requestSignal?: AbortSignal,
 ) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
@@ -2141,7 +2220,9 @@ async function streamGemini(
         try {
           const p = JSON.parse(js);
           const t = p?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (typeof t === 'string' && t) ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t })}\n\n`));
+          if (typeof t === 'string' && t) {
+            ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t, requestId })}\n\n`));
+          }
         } catch { /* skip */ }
       }
     }
@@ -2156,6 +2237,7 @@ async function streamGemini(
 async function streamOpenAI(
   message: string, model: string, apiKey: string,
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+  requestId?: string,
   requestSignal?: AbortSignal,
 ) {
   const ac = new AbortController();
@@ -2194,7 +2276,9 @@ async function streamOpenAI(
         try {
           const p = JSON.parse(js);
           const t = p?.choices?.[0]?.delta?.content;
-          if (typeof t === 'string' && t) ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t })}\n\n`));
+          if (typeof t === 'string' && t) {
+            ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t, requestId })}\n\n`));
+          }
         } catch { /* skip */ }
       }
     }
@@ -2209,6 +2293,7 @@ async function streamOpenAI(
 async function streamAnthropic(
   message: string, model: string, apiKey: string,
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
+  requestId?: string,
   requestSignal?: AbortSignal,
 ) {
   const ac = new AbortController();
@@ -2247,7 +2332,10 @@ async function streamAnthropic(
         try {
           const p = JSON.parse(js);
           if (p?.type === 'content_block_delta' && p?.delta?.text) {
-            ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: p.delta.text })}\n\n`));
+            ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({
+              text: p.delta.text,
+              requestId,
+            })}\n\n`));
           }
         } catch { /* skip */ }
       }
@@ -2265,6 +2353,7 @@ async function askGemini(
   model: string,
   apiKey: string,
   asOf: string,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse | null> {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -2297,7 +2386,11 @@ async function askGemini(
       asOf,
       content: content.trim(),
       sources: [],
-      meta: { source: 'gemini', model },
+      meta: {
+        source: 'gemini',
+        model,
+        ...(requestId ? { requestId } : {}),
+      },
     };
   } catch (error) {
     console.error('[insight/chat] Gemini request failed:', error);
@@ -2312,6 +2405,7 @@ async function askOpenAI(
   model: string,
   apiKey: string,
   asOf: string,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
@@ -2349,7 +2443,11 @@ async function askOpenAI(
       asOf,
       content: content.trim(),
       sources: [],
-      meta: { source: 'openai', model },
+      meta: {
+        source: 'openai',
+        model,
+        ...(requestId ? { requestId } : {}),
+      },
     };
   } catch (error) {
     console.error('[insight/chat] OpenAI request failed:', error);
@@ -2364,6 +2462,7 @@ async function askAnthropic(
   model: string,
   apiKey: string,
   asOf: string,
+  requestId?: string,
 ): Promise<AdminInsightChatResponse | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
@@ -2403,7 +2502,11 @@ async function askAnthropic(
       asOf,
       content: content.trim(),
       sources: [],
-      meta: { source: 'anthropic', model },
+      meta: {
+        source: 'anthropic',
+        model,
+        ...(requestId ? { requestId } : {}),
+      },
     };
   } catch (error) {
     console.error('[insight/chat] Anthropic request failed:', error);

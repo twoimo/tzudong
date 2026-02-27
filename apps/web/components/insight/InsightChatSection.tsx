@@ -4,7 +4,6 @@ import {
     type ComponentPropsWithoutRef,
     type KeyboardEvent,
     type PointerEvent,
-    type ReactNode,
     memo,
     useCallback,
     useEffect,
@@ -17,6 +16,7 @@ import {
     AlertCircle,
     Bot,
     Check,
+    Pencil,
     RefreshCw,
     Square,
     Copy,
@@ -35,9 +35,11 @@ import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { parseInsightChatStreamLine, type InsightChatStreamState } from '@/lib/insight/insight-chat-stream';
 import type {
     AdminInsightChatBootstrapResponse,
     AdminInsightChatResponse,
+    InsightChatFollowUpPrompt,
     AdminInsightChatMeta,
     InsightChatSource,
     LlmProvider,
@@ -51,6 +53,7 @@ type ChatMessage = {
     content: string;
     sources?: InsightChatSource[];
     createdAt: Date;
+    followUpPrompts?: InsightChatFollowUpPrompt[];
     meta?: AdminInsightChatResponse['meta'];
     visualComponent?: AdminInsightChatResponse['visualComponent'];
 };
@@ -110,6 +113,11 @@ const META_FALLBACK_REASON_LABELS: Record<string, string> = {
     storyboard_qna_unavailable: '스토리보드 Q&A 불가',
 };
 
+function sanitizeMetaValue(value: string | undefined): string {
+    if (!value) return '';
+    return value.trim().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 180);
+}
+
 function getSourceLabel(source: AdminInsightChatMeta['source'] | undefined): string {
     if (!source) return '출처 미정';
     return META_SOURCE_PANEL_LABELS[source] ?? source;
@@ -117,12 +125,72 @@ function getSourceLabel(source: AdminInsightChatMeta['source'] | undefined): str
 
 function getFallbackReasonLabel(reason: string | undefined): string | null {
     if (!reason) return null;
-    return META_FALLBACK_REASON_LABELS[reason] ?? reason;
+    const sanitized = sanitizeMetaValue(reason);
+    if (!sanitized) return null;
+    return META_FALLBACK_REASON_LABELS[sanitized] ?? sanitized;
 }
 
 function getModelLabel(model: string | undefined): string | null {
-    if (!model || !model.trim()) return null;
-    return model.trim();
+    const sanitized = sanitizeMetaValue(model);
+    if (!sanitized) return null;
+    return sanitized;
+}
+
+function getRequestIdLabel(requestId: string | undefined): string | null {
+    const sanitized = sanitizeMetaValue(requestId);
+    if (!sanitized) return null;
+    return sanitized;
+}
+
+const MAX_FOLLOW_UP_PROMPTS = 4;
+const MAX_FOLLOW_UP_PROMPT_LENGTH = 120;
+
+function sanitizeFollowUpPromptText(value: string | undefined | null): string {
+    if (!value) return '';
+    return value
+        .trim()
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .replace(/\s+/g, ' ')
+        .slice(0, MAX_FOLLOW_UP_PROMPT_LENGTH);
+}
+
+function normalizeFollowUpPromptItem(raw: unknown): InsightChatFollowUpPrompt | null {
+    if (!raw) return null;
+
+    if (typeof raw === 'string') {
+        const prompt = sanitizeFollowUpPromptText(raw);
+        if (!prompt) return null;
+        return { prompt };
+    }
+
+    if (typeof raw !== 'object') return null;
+
+    const candidate = raw as Partial<InsightChatFollowUpPrompt>;
+    const prompt = sanitizeFollowUpPromptText(candidate.prompt);
+    if (!prompt) return null;
+
+    const label = sanitizeFollowUpPromptText(candidate.label);
+    return {
+        prompt,
+        ...(label ? { label } : {}),
+    };
+}
+
+function normalizeFollowUpPrompts(raw: unknown): InsightChatFollowUpPrompt[] {
+    if (!Array.isArray(raw)) return [];
+    const out: InsightChatFollowUpPrompt[] = [];
+    const seen = new Set<string>();
+
+    for (const item of raw) {
+        const normalized = normalizeFollowUpPromptItem(item);
+        if (!normalized) continue;
+        if (seen.has(normalized.prompt)) continue;
+        seen.add(normalized.prompt);
+        out.push(normalized);
+        if (out.length >= MAX_FOLLOW_UP_PROMPTS) break;
+    }
+
+    return out;
 }
 
 const LLM_MODELS: LlmModelOption[] = [
@@ -192,36 +260,298 @@ const chatResponseCache = new Map<string, CachedEntry<AdminInsightChatResponse>>
 const inFlightBootstrapRequest = new Map<string, Promise<AdminInsightChatBootstrapResponse>>();
 const inFlightChatRequest = new Map<string, Promise<AdminInsightChatResponse>>();
 
-const DEFAULT_SUGGESTED_PROMPTS: string[] = [
-    '최근 7일 매출 추이를 한 번에 요약해줘',
-    '어제 대비 오늘 전환율이 떨어진 이유를 분석해줘',
-    '성과가 낮은 캠페인 상위 3개를 찾아줘',
-    '고객 세그먼트별 전환 패턴을 비교해줘',
-    '방금 분석한 내용을 실행 액션으로 정리해줘',
+type InsightPromptCommand = {
+    id: string;
+    command: string;
+    label: string;
+    prompt: string;
+    description: string;
+    groupId: string;
+};
+
+type InsightPromptCommandGroup = {
+    id: string;
+    title: string;
+    description: string;
+    prompts: InsightPromptCommand[];
+};
+
+type ParsedPromptInput = {
+    command: string;
+    tail: string;
+};
+
+const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
+    {
+        id: 'analysis',
+        title: '분석',
+        description: '핵심 지표와 흐름을 빠르게 파악',
+        prompts: [
+            {
+                id: 'summary',
+                command: '/summary',
+                label: '요약',
+                prompt: '최근 7일 성과를 핵심 지표 중심으로 간단하고 실행 가능한 형식으로 요약해줘.',
+                description: '요약형 리포트, 핵심 인사이트, 다음 액션 포함',
+                groupId: 'analysis',
+            },
+            {
+                id: 'trend',
+                command: '/trend',
+                label: '추세',
+                prompt: '최근 30일 주요 지표(매출·조회수·전환율)의 추세를 비교하고 상승/하락 요인을 정리해줘.',
+                description: '기간별 추세 변화와 임팩트 높은 지표 강조',
+                groupId: 'analysis',
+            },
+            {
+                id: 'snapshot',
+                command: '/snapshot',
+                label: '현황 스냅샷',
+                prompt: '전체 현황을 한 번에 보여줘. 주요 성과 지표, 변동성, 리스크 항목, 권장 액션을 항목별로 정리해줘.',
+                description: '운영자 브리핑에 바로 쓸 수 있는 1페이지 요약',
+                groupId: 'analysis',
+            },
+        ],
+    },
+    {
+        id: 'compare',
+        title: '비교',
+        description: '군집, 기간, 채널 기준 비교 분석',
+        prompts: [
+            {
+                id: 'compare',
+                command: '/compare',
+                label: '비교',
+                prompt: '최근 구간과 이전 구간(예: 전주/전월)을 캠페인·카테고리별로 비교해 성과 차이를 정리해줘.',
+                description: '시차/기간 비교를 통한 개선 지점 추출',
+                groupId: 'compare',
+            },
+            {
+                id: 'segment',
+                command: '/segment',
+                label: '세그먼트',
+                prompt: '고객 세그먼트별 전환 패턴을 비교하고 세그먼트별로 이탈 원인과 리텐션 개선 포인트를 제안해줘.',
+                description: '세그먼트별 약점·강점 파악',
+                groupId: 'compare',
+            },
+            {
+                id: 'kpi',
+                command: '/kpi',
+                label: '지표 교차',
+                prompt: '조회수·좋아요·댓글·전환율 지표를 교차해서 핵심 상관 신호를 찾아줘.',
+                description: '상관 신호로 우선순위 개선 포인트 제안',
+                groupId: 'compare',
+            },
+        ],
+    },
+    {
+        id: 'ops',
+        title: '운영 액션',
+        description: '즉시 실행 가능한 행동 제안',
+        prompts: [
+            {
+                id: 'anomaly',
+                command: '/anomaly',
+                label: '이상 탐지',
+                prompt: '성과가 비정상적으로 변한 항목을 찾아 원인 가설을 3개 이상 제시해줘.',
+                description: '이탈 징후를 빠르게 식별하고 대응책 제안',
+                groupId: 'ops',
+            },
+            {
+                id: 'improve',
+                command: '/improve',
+                label: '개선 계획',
+                prompt: '다음 30일 액션 플랜으로 실행 우선순위를 나눠 제안해줘. (오늘, 7일, 30일 단위)',
+                description: '바로 실행 가능한 일정 기반 제안',
+                groupId: 'ops',
+            },
+            {
+                id: 'topbottom',
+                command: '/topbottom',
+                label: '상·하위 분석',
+                prompt: '성과 상위/하위 항목 3개씩을 뽑아 공통 요소를 비교하고, 하위권 회복 전략을 제안해줘.',
+                description: '성과 편차 요인 분석 및 운영 가이드',
+                groupId: 'ops',
+            },
+        ],
+    },
 ];
 
-function normalizeSuggestedPrompt(prompt: string): string {
-    return prompt.trim().replace(/\s+/g, ' ').toLowerCase();
+const CONTEXT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
+    {
+        id: 'context-sales',
+        title: '매출 맥락',
+        description: '매출·수익성 관련 대화 후 우선 추천',
+        prompts: [
+            {
+                id: 'sales-cause',
+                command: '/revenue-cause',
+                label: '매출 원인',
+                prompt: '현재 매출 하락의 주요 원인을 지표별로 분해해서 원인 가설과 우선 점검 항목을 제시해줘.',
+                description: '매출 하락 대응용 분석',
+                groupId: 'context-sales',
+            },
+            {
+                id: 'sales-action',
+                command: '/revenue-action',
+                label: '매출 액션',
+                prompt: '매출 회복을 위한 14일 액션 플랜을 제안해줘. 운영 우선순위와 실패 지표도 함께.',
+                description: '단기 매출 반등 중심 제안',
+                groupId: 'context-sales',
+            },
+        ],
+    },
+    {
+        id: 'context-campaign',
+        title: '캠페인 맥락',
+        description: '캠페인 질문 후 우선 추천',
+        prompts: [
+            {
+                id: 'campaign-rework',
+                command: '/campaign-rework',
+                label: '캠페인 재배치',
+                prompt: '캠페인 성과 하락 구간을 골라 리배치/최적화 제안을 1차안으로 정리해줘.',
+                description: '캠페인별 문제구간 집중 대응',
+                groupId: 'context-campaign',
+            },
+            {
+                id: 'campaign-compare',
+                command: '/campaign-compare',
+                label: '고성능 대조군',
+                prompt: '현재 캠페인 중 고성능 상위 3개와 저성과 3개를 비교해 최적화 기준을 정리해줘.',
+                description: '성공 패턴의 운영 반영 포인트 제시',
+                groupId: 'context-campaign',
+            },
+        ],
+    },
+];
+
+function getPromptLibraryText(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-function dedupePrompts(prompts: string[]): string[] {
+const QUICK_PROMPT_COMMAND_MAP = new Map<string, InsightPromptCommand>();
+for (const group of INSIGHT_PROMPT_LIBRARY) {
+    for (const command of group.prompts) {
+        QUICK_PROMPT_COMMAND_MAP.set(normalizePromptCommand(command.command), command);
+    }
+}
+for (const group of CONTEXT_PROMPT_LIBRARY) {
+    for (const command of group.prompts) {
+        QUICK_PROMPT_COMMAND_MAP.set(normalizePromptCommand(command.command), command);
+    }
+}
+
+function normalizePromptCommand(value: string): string {
+    const normalized = value.trim().toLowerCase();
+    return normalized.startsWith('/') ? normalized : `/${normalized}`;
+}
+
+function splitPromptInput(input: string): ParsedPromptInput | null {
+    const trimmed = input.trim();
+    if (!trimmed.startsWith('/')) return null;
+
+    const payload = trimmed.slice(1).trim();
+    if (!payload) return null;
+
+    const [rawCommand, ...rest] = payload.split(/\s+/);
+    if (!rawCommand) return null;
+
+    return {
+        command: normalizePromptCommand(rawCommand),
+        tail: rest.join(' ').trim(),
+    };
+}
+
+export function resolvePromptInput(input: string): string {
+    const parsed = splitPromptInput(input);
+    if (!parsed) return input.trim();
+
+    const template = QUICK_PROMPT_COMMAND_MAP.get(parsed.command);
+    if (!template) return input.trim();
+
+    return parsed.tail ? `${template.prompt} ${parsed.tail}` : template.prompt;
+}
+
+function buildResolvedPromptValue(input: string, prompt: InsightPromptCommand): string {
+    const parsed = splitPromptInput(input);
+    const suffix = parsed?.tail;
+    return suffix ? `${prompt.prompt} ${suffix}` : prompt.prompt;
+}
+
+function flattenPromptCommands(groups: InsightPromptCommandGroup[]): InsightPromptCommand[] {
+    const prompts: InsightPromptCommand[] = [];
+    for (const group of groups) {
+        prompts.push(...group.prompts);
+    }
+    return dedupePromptCommands(prompts);
+}
+
+function filterPromptCommandGroups(groups: InsightPromptCommandGroup[], query: string): InsightPromptCommandGroup[] {
+    const normalized = getPromptLibraryText(query);
+    if (!normalized) return groups;
+
+    return groups
+        .map((group) => {
+            const prompts = group.prompts.filter((prompt) => {
+                const haystack = getPromptLibraryText(`${prompt.command} ${prompt.label} ${prompt.prompt} ${prompt.description}`);
+                return haystack.includes(normalized);
+            });
+            return {
+                ...group,
+                prompts,
+            };
+        })
+            .filter((group) => group.prompts.length > 0);
+}
+
+function deriveFollowUpPromptSuggestions(
+    prompts: InsightChatFollowUpPrompt[] | undefined,
+    contextMessage: string,
+    groups: InsightPromptCommandGroup[],
+): InsightChatFollowUpPrompt[] {
+    if (prompts?.length) {
+        return prompts.slice(0, MAX_FOLLOW_UP_PROMPTS);
+    }
+
+    const normalizedContext = contextMessage.trim().toLowerCase();
+    const baseGroups = groups.filter((group) => group.prompts.length > 0);
+    const candidates = flattenPromptCommands(baseGroups);
+
+    if (!normalizedContext) {
+        return candidates
+            .slice(0, MAX_FOLLOW_UP_PROMPTS)
+            .map((prompt) => ({ label: prompt.label, prompt: prompt.prompt }));
+    }
+
+    const matched = filterPromptCommandGroups(baseGroups, normalizedContext)
+        .flatMap((group) => group.prompts)
+        .map((prompt) => ({ label: prompt.label, prompt: prompt.prompt }));
+
+    if (matched.length) {
+        return matched.slice(0, MAX_FOLLOW_UP_PROMPTS);
+    }
+
+    return candidates
+        .slice(0, MAX_FOLLOW_UP_PROMPTS)
+        .map((prompt) => ({ label: prompt.label, prompt: prompt.prompt }));
+}
+
+function dedupePromptCommands(prompts: InsightPromptCommand[]): InsightPromptCommand[] {
     const seen = new Set<string>();
-    const result: string[] = [];
+    const result: InsightPromptCommand[] = [];
 
     for (const prompt of prompts) {
-        const normalized = normalizeSuggestedPrompt(prompt);
-        if (!normalized || seen.has(normalized)) {
+        const normalized = normalizePromptCommand(prompt.command);
+        if (seen.has(normalized)) {
             continue;
         }
-
         seen.add(normalized);
-        result.push(prompt.trim().replace(/\s+/g, ' '));
+        result.push(prompt);
     }
 
     return result;
 }
-
-const BASE_SUGGESTED_PROMPTS = dedupePrompts(DEFAULT_SUGGESTED_PROMPTS);
 
 function makeId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -229,6 +559,10 @@ function makeId(prefix: string): string {
 
 function makeConversationId(): string {
     return makeId('conversation');
+}
+
+function makeRequestId(): string {
+    return `req-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
 function shortText(input: string, max: number): string {
@@ -344,6 +678,7 @@ async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> 
 
 async function postChatMessage(
     message: string,
+    requestId: string,
     llmConfig?: {
         provider: LlmProvider;
         model: string;
@@ -379,6 +714,7 @@ async function postChatMessage(
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message,
+                        requestId,
                     ...(llmConfig
                             ? {
                                 provider: llmConfig.provider,
@@ -436,6 +772,7 @@ async function postChatMessage(
 
 async function postStreamChat(
     message: string,
+    requestId: string,
     llmConfig: {
         provider: LlmProvider;
         model: string;
@@ -453,6 +790,7 @@ async function postStreamChat(
         signal: abortSignal,
         body: JSON.stringify({
             message,
+            requestId,
             provider: llmConfig.provider,
             model: llmConfig.model,
             ...(llmConfig.apiKey ? { apiKey: llmConfig.apiKey } : {}),
@@ -479,8 +817,7 @@ async function postStreamChat(
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    let accumulated = '';
-    let streamError: string | null = null;
+    let streamState: InsightChatStreamState = { accumulated: '', streamError: null };
 
     while (true) {
         const { done, value } = await reader.read();
@@ -491,39 +828,31 @@ async function postStreamChat(
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const payload = line.slice(6).trim();
-            if (!payload || payload === '[DONE]') continue;
-            let parsed: { text?: string; error?: string };
-            try {
-                parsed = JSON.parse(payload) as { text?: string; error?: string };
-            } catch {
-                continue;
-            }
-
-            if (parsed.error) {
-                streamError = parsed.error;
-                break;
-            }
-
-            if (parsed.text) {
-                accumulated += parsed.text;
-                onToken(parsed.text);
-            }
+            streamState = parseInsightChatStreamLine(line, streamState, onToken);
+            if (streamState.streamError) break;
         }
 
-        if (streamError) break;
+        if (streamState.streamError) break;
     }
 
-    if (streamError || !accumulated) {
-        const streamFailed = streamError ? '스트리밍 응답 중 오류가 발생했습니다.' : '스트리밍 응답을 받지 못했습니다.';
+    const fallbackReason = streamState.cancellationReason === 'request_cancelled' ? 'request_cancelled' : 'stream_error';
+
+    if (streamState.streamError || !streamState.accumulated) {
+        const streamFailed = streamState.streamError
+            ? '스트리밍 응답 중 오류가 발생했습니다.'
+            : '스트리밍 응답을 받지 못했습니다.';
         return {
             asOf: new Date().toISOString(),
-            content: `${accumulated ? `${accumulated}\n\n` : ''}${streamFailed} ${streamError ? `(${streamError})` : '잠시 후 다시 시도해 주세요.'}`.trim(),
+            content: streamState.streamError
+                ? streamState.cancellationReason === 'request_cancelled'
+                    ? ''
+                    : `${streamFailed} (${streamState.streamError})`
+                : `${streamFailed} 잠시 후 다시 시도해 주세요.`,
             sources: [],
             meta: {
                 source: 'fallback',
-                fallbackReason: streamError ? 'stream_error' : 'stream_no_data',
+                fallbackReason: streamState.streamError ? fallbackReason : 'stream_no_data',
+                ...(streamState.requestId ? { requestId: streamState.requestId } : {}),
             },
         };
     }
@@ -556,11 +885,11 @@ type InsightChatTreemapResponse = {
     availablePeriods?: string[];
 };
 
-type ChatTreemapMetricMode = 'views' | 'likes' | 'comments' | 'duration';
-type ChatTreemapViewMode = 'all' | 'category' | 'change';
+export type ChatTreemapMetricMode = 'views' | 'likes' | 'comments' | 'duration';
+export type ChatTreemapViewMode = 'all' | 'category' | 'change';
 type ChatTreemapPeriod = 'ALL' | '1D' | '1W' | '2W' | '1M' | '3M' | '6M' | '1Y';
 
-type ChatTreemapLeaf = {
+export type ChatTreemapLeaf = {
     id: string;
     name: string;
     title: string;
@@ -580,19 +909,19 @@ type ChatTreemapLeaf = {
 
 type ChatTreemapHierarchyLeaf = ChatTreemapLeaf;
 
-type ChatTreemapGroup = {
+export type ChatTreemapGroup = {
     name: string;
     children: ChatTreemapLeaf[];
     value: number;
 };
 
-type ChatTreemapNode = ChatTreemapLeaf | ChatTreemapGroup | ChatTreemapRoot;
-type ChatTreemapRoot = {
+export type ChatTreemapNode = ChatTreemapLeaf | ChatTreemapGroup | ChatTreemapRoot;
+export type ChatTreemapRoot = {
     name: string;
     children: ChatTreemapNode[];
 };
 
-type ChatTreemapAnyNode = ChatTreemapNode;
+export type ChatTreemapAnyNode = ChatTreemapNode;
 
 type TreemapCell = {
     node: ChatTreemapLeaf;
@@ -679,21 +1008,27 @@ const CHAT_TREEMAP_VIEW_MODE_OPTIONS: { value: ChatTreemapViewMode; label: strin
     { value: 'change', label: '증감률' },
 ];
 
-function chatTreemapGetMetricValue(video: InsightChatTreemapResponse['videos'][number], mode: ChatTreemapMetricMode): number {
+export function chatTreemapGetMetricValue(
+    video: InsightChatTreemapResponse['videos'][number],
+    mode: ChatTreemapMetricMode,
+): number {
     if (mode === 'views') return video.viewCount;
     if (mode === 'likes') return video.likeCount;
     if (mode === 'comments') return video.commentCount;
     return video.duration;
 }
 
-function chatTreemapGetPreviousMetric(video: InsightChatTreemapResponse['videos'][number], mode: ChatTreemapMetricMode): number | null {
+export function chatTreemapGetPreviousMetric(
+    video: InsightChatTreemapResponse['videos'][number],
+    mode: ChatTreemapMetricMode,
+): number | null {
     if (mode === 'views') return video.previousViewCount;
     if (mode === 'likes') return video.previousLikeCount;
     if (mode === 'comments') return video.previousCommentCount;
     return video.previousDuration;
 }
 
-function chatTreemapCalcChange(current: number, previous: number | null): number {
+export function chatTreemapCalcChange(current: number, previous: number | null): number {
     if (!Number.isFinite(current) || previous == null || previous <= 0) return 0;
     return ((current - previous) / previous) * 100;
 }
@@ -738,6 +1073,72 @@ function chatTreemapFormatPercent(value: number): string {
 function chatTreemapFormatNonNegativePercent(value: number): string {
     if (!Number.isFinite(value)) return '0%';
     return `${value.toFixed(2)}%`;
+}
+
+export function buildInsightChatTreemapRows(
+    rows: InsightChatTreemapResponse['videos'] | null,
+    metricMode: ChatTreemapMetricMode,
+    viewMode: ChatTreemapViewMode,
+): ChatTreemapNode[] {
+    if (!rows || rows.length === 0) return [];
+
+    const isChangeMode = viewMode === 'change';
+    const totalMetric = rows.reduce((sum, row) => sum + Math.max(0, chatTreemapGetMetricValue(row, metricMode)), 0);
+
+    const leafRows: ChatTreemapLeaf[] = [];
+    for (let i = 0; i < rows.length; i += 1) {
+        const row = rows[i];
+        const metricRaw = Math.max(chatTreemapGetMetricValue(row, metricMode), 0);
+        const previousMetricRaw = chatTreemapGetPreviousMetric(row, metricMode);
+        const rowPercent = isChangeMode ? chatTreemapCalcChange(metricRaw, previousMetricRaw) : 0;
+
+        leafRows.push({
+            id: row.id,
+            name: row.title,
+            title: row.title,
+            category: row.category?.trim() || '기타',
+            value: Math.max(metricRaw, 0.25),
+            metricRaw,
+            previousMetricRaw,
+            viewCount: row.viewCount,
+            likeCount: row.likeCount,
+            commentCount: row.commentCount,
+            duration: row.duration,
+            metricText: chatTreemapFormatMetric(metricMode, metricRaw),
+            percent: rowPercent,
+            percentText: isChangeMode ? chatTreemapFormatPercent(rowPercent) : '0%',
+            color: chatTreemapGetColorByPercent(rowPercent),
+        });
+    }
+
+    if (!isChangeMode) {
+        for (const row of leafRows) {
+            row.percent = totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0;
+            row.percentText = chatTreemapFormatPercent(row.percent);
+            row.color = chatTreemapGetColorByPercent(row.percent);
+        }
+    }
+
+    leafRows.sort((a, b) => b.metricRaw - a.metricRaw);
+
+    if (viewMode === 'category') {
+        const grouped = new Map<string, { children: ChatTreemapLeaf[]; totalMetric: number }>();
+        for (const item of leafRows) {
+            const bucket = grouped.get(item.category) ?? { children: [], totalMetric: 0 };
+            bucket.children.push(item);
+            bucket.totalMetric += item.metricRaw;
+            grouped.set(item.category, bucket);
+        }
+        return [...grouped.entries()]
+            .map(([name, group]) => ({
+                name,
+                value: Math.max(group.totalMetric, 0.25),
+                children: [...group.children].sort((a, b) => b.metricRaw - a.metricRaw),
+            }))
+            .sort((a, b) => b.value - a.value);
+    }
+
+    return leafRows;
 }
 
 function chatTreemapGetColorByPercent(percent: number): string {
@@ -976,68 +1377,8 @@ const InsightChatTreemap = memo(() => {
     const rows = useMemo(() => {
         if (dimensions.width <= 0 || dimensions.height <= 0) return [];
         if (!data) return [];
-
-        const rawRows = data.videos;
-        if (rawRows.length === 0) return [];
-
-        const totalMetric = rawRows.reduce((sum, row) => sum + Math.max(0, chatTreemapGetMetricValue(row, metricMode)), 0);
-
-        const leafRows: ChatTreemapLeaf[] = [];
-        for (let i = 0; i < rawRows.length; i += 1) {
-            const row = rawRows[i];
-            const metricRaw = Math.max(chatTreemapGetMetricValue(row, metricMode), 0);
-            const previousMetricRaw = chatTreemapGetPreviousMetric(row, metricMode);
-            const rowPercent = isChangeMode ? chatTreemapCalcChange(metricRaw, previousMetricRaw) : 0;
-
-            leafRows.push({
-                id: row.id,
-                name: row.title,
-                title: row.title,
-                category: row.category?.trim() || '기타',
-                value: Math.max(metricRaw, 0.25),
-                metricRaw,
-                previousMetricRaw,
-                viewCount: row.viewCount,
-                likeCount: row.likeCount,
-                commentCount: row.commentCount,
-                duration: row.duration,
-                metricText: chatTreemapFormatMetric(metricMode, metricRaw),
-                percent: rowPercent,
-                percentText: isChangeMode ? chatTreemapFormatPercent(rowPercent) : '0%',
-                color: chatTreemapGetColorByPercent(rowPercent),
-            });
-        }
-
-        if (!isChangeMode) {
-            for (const row of leafRows) {
-                row.percent = totalMetric > 0 ? (row.metricRaw / totalMetric) * 100 : 0;
-                row.percentText = chatTreemapFormatPercent(row.percent);
-                row.color = chatTreemapGetColorByPercent(row.percent);
-            }
-        }
-
-        leafRows.sort((a, b) => b.metricRaw - a.metricRaw);
-
-        if (viewMode === 'category') {
-            const grouped = new Map<string, { children: ChatTreemapLeaf[]; totalMetric: number }>();
-            for (const item of leafRows) {
-                const bucket = grouped.get(item.category) ?? { children: [], totalMetric: 0 };
-                bucket.children.push(item);
-                bucket.totalMetric += item.metricRaw;
-                grouped.set(item.category, bucket);
-            }
-            const groupNodes = [...grouped.entries()]
-                .map(([name, group]) => ({
-                    name,
-                    value: Math.max(group.totalMetric, 0.25),
-                    children: [...group.children].sort((a, b) => b.metricRaw - a.metricRaw),
-                }))
-                .sort((a, b) => b.value - a.value);
-            return groupNodes;
-        }
-
-        return leafRows;
-    }, [data, dimensions.width, dimensions.height, metricMode, isChangeMode, viewMode]);
+        return buildInsightChatTreemapRows(data.videos, metricMode, viewMode);
+    }, [data, dimensions.width, dimensions.height, metricMode, viewMode]);
 
     const treemapCells = useMemo(
         () => buildTreemapLayout(rows, dimensions.width, dimensions.height),
@@ -1388,6 +1729,7 @@ function deserializeConversationList(raw: PersistedChatState | null): {
                         role: message.role,
                         content: message.content,
                         sources: mapSources(message.sources),
+                        followUpPrompts: normalizeFollowUpPrompts(message.followUpPrompts),
                         createdAt: Number.isNaN(parsedCreatedAt.getTime()) ? new Date() : parsedCreatedAt,
                         meta: message.meta,
                         visualComponent: message.visualComponent,
@@ -1430,6 +1772,7 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
                 role: message.role,
                 content: message.content,
                 sources: message.sources,
+                followUpPrompts: message.followUpPrompts,
                 createdAt: message.createdAt.toISOString(),
                 meta: message.meta,
                 visualComponent: message.visualComponent,
@@ -1766,6 +2109,7 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
     const sourceLabel = getSourceLabel(meta.source);
     const modelLabel = getModelLabel(meta.model);
     const fallbackReasonLabel = getFallbackReasonLabel(meta.fallbackReason);
+    const requestIdLabel = getRequestIdLabel(meta.requestId);
 
     return (
         <div className="mt-2 border-t border-[#e5e7eb] pt-2">
@@ -1783,11 +2127,62 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
                         사유: {fallbackReasonLabel}
                     </span>
                 ) : null}
+                {requestIdLabel ? (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#f3f4f6] text-[#4b5563]">
+                        요청ID: {requestIdLabel}
+                    </span>
+                ) : null}
             </div>
         </div>
     );
 });
 MessageMetaPanel.displayName = 'MessageMetaPanel';
+
+const FollowUpPromptChips = memo(({
+    prompts,
+    onSelectPrompt,
+    disabled,
+}: {
+    prompts: InsightChatFollowUpPrompt[];
+    onSelectPrompt: (prompt: string) => void;
+    disabled?: boolean;
+}) => {
+    const visiblePrompts = prompts
+        .slice()
+        .filter((prompt, index, self) => {
+            if (prompt.prompt.trim().length === 0) return false;
+            return self.findIndex((item) => item.prompt === prompt.prompt) === index;
+        })
+        .slice(0, MAX_FOLLOW_UP_PROMPTS);
+
+    if (visiblePrompts.length === 0) return null;
+
+    return (
+        <div className="mt-2">
+            <p className="text-[10px] text-[#6b7280] font-semibold mb-1.5">추천 후속 질문</p>
+            <div className="flex flex-wrap gap-1.5">
+                {visiblePrompts.map((prompt, index) => (
+                    <button
+                        key={`${prompt.prompt}-${index}`}
+                        type="button"
+                        onClick={() => onSelectPrompt(prompt.prompt)}
+                        disabled={disabled}
+                        className={cn(
+                            'inline-flex items-center rounded-full border px-2.5 py-1 text-xs text-[#374151] transition',
+                            disabled ? 'border-[#d1d5db] text-[#9ca3af] cursor-not-allowed' : 'border-[#e5e7eb] hover:bg-[#f9fafb] hover:border-[#cbd5e1]',
+                        )}
+                        aria-label={`${prompt.label || prompt.prompt} 바로 보내기`}
+                    >
+                        {prompt.label || prompt.prompt}
+                    </button>
+                    ,
+                ))}
+            </div>
+        </div>
+    );
+});
+FollowUpPromptChips.displayName = 'FollowUpPromptChips';
+
 const MarkdownRenderer = memo(({
     content,
     components,
@@ -1837,12 +2232,27 @@ MarkdownRenderer.displayName = 'MarkdownRenderer';
 
 
 
-const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
+type ChatBubbleProps = {
+  message: ChatMessage;
+  canEdit?: boolean;
+  onEditMessage?: (message: ChatMessage) => void;
+  onFollowUpPrompt?: (prompt: string) => void;
+  isFollowUpDisabled?: boolean;
+};
+
+const ChatBubble = memo(({
+  message,
+  canEdit,
+  onEditMessage,
+  onFollowUpPrompt,
+  isFollowUpDisabled,
+}: ChatBubbleProps) => {
     const isUser = message.role === 'user';
     const isTreemapMessage = message.visualComponent === 'treemap';
     const maxWidthClass = isUser ? 'max-w-[84%]' : isTreemapMessage ? 'w-full max-w-full' : 'max-w-[84%]';
     const textWrapClass = isTreemapMessage ? 'w-full' : 'w-full';
     const [isCopied, setIsCopied] = useState(false);
+    const [isMetaVisible, setIsMetaVisible] = useState(false);
     const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -1869,6 +2279,26 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
             setIsCopied(false);
         }
     }, [message.content]);
+
+    const hasMessageMeta = Boolean(message.meta);
+    const toggleMeta = useCallback(() => {
+        setIsMetaVisible((prev) => !prev);
+    }, []);
+    const followUpPrompts = useMemo(() => {
+        if (!message.followUpPrompts?.length) return [];
+        const seen = new Set<string>();
+        return message.followUpPrompts
+            .map((entry) => ({
+                prompt: sanitizeFollowUpPromptText(entry.prompt),
+                label: sanitizeFollowUpPromptText(entry.label),
+            }))
+            .filter((entry) => {
+                if (!entry.prompt) return false;
+                if (seen.has(entry.prompt)) return false;
+                seen.add(entry.prompt);
+                return true;
+            });
+    }, [message.followUpPrompts]);
 
     return (
         <div className={cn(
@@ -1911,7 +2341,7 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                 {message.visualComponent === 'treemap' ? <InsightChatTreemap /> : null}
                 {!isTreemapMessage ? (
                     <div className={cn(textWrapClass)}>
-                        <div className="mt-2 flex items-center justify-end">
+                        <div className="mt-2 flex items-center justify-end gap-1.5">
                             <button
                                 type="button"
                                 className={cn(
@@ -1927,8 +2357,37 @@ const ChatBubble = memo(({ message }: { message: ChatMessage }) => {
                                 {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                                 {isCopied ? COPY_SUCCESS_MESSAGE : '복사'}
                             </button>
+                            {hasMessageMeta ? (
+                                <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
+                                    onClick={toggleMeta}
+                                    aria-label={isMetaVisible ? '근거 패널 닫기' : '근거 패널 열기'}
+                                >
+                                    {isMetaVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                    근거
+                                </button>
+                            ) : null}
+                            {isUser && canEdit && onEditMessage ? (
+                                <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
+                                    onClick={() => onEditMessage(message)}
+                                    aria-label="마지막 사용자 메시지 수정"
+                                >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    수정
+                                </button>
+                            ) : null}
                         </div>
-                        {message.meta ? <MessageMetaPanel meta={message.meta} /> : null}
+                        {followUpPrompts.length > 0 ? (
+                            <FollowUpPromptChips
+                                prompts={followUpPrompts}
+                                disabled={isUser || isTreemapMessage || !!isFollowUpDisabled}
+                                onSelectPrompt={(prompt) => onFollowUpPrompt?.(prompt)}
+                            />
+                        ) : null}
+                        {hasMessageMeta && isMetaVisible ? <MessageMetaPanel meta={message.meta} /> : null}
                         {message.sources ? <SourceList sources={message.sources} /> : null}
                     </div>
                 ) : message.sources ? (
@@ -1966,6 +2425,8 @@ const InsightChatSectionComponent = () => {
     const [inputValue, setInputValue] = useState('');
     const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [activeCommandIndex, setActiveCommandIndex] = useState(0);
     const bootstrapRequestRef = useRef(new Map<string, number>());
     const streamAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -2055,6 +2516,9 @@ const InsightChatSectionComponent = () => {
     const activeProviderHasServerKey = activeModel.provider === 'gemini' && hasServerGeminiKey;
     const activeProviderHasKey = activeProviderHasUserKey || activeProviderHasServerKey;
     const activeProviderUsesServerKey = activeModel.provider === 'gemini' && !activeProviderHasUserKey && hasServerGeminiKey;
+    const hasProviderServerOrUserKey = useCallback((provider: LlmProvider) => {
+        return provider === 'gemini' ? Boolean(llmKeys[provider]) || hasServerGeminiKey : Boolean(llmKeys[provider]);
+    }, [hasServerGeminiKey, llmKeys]);
     const activeImageModelProfile = useMemo(
         () => IMAGE_MODEL_PROFILES.find((profile) => profile.id === imageModelProfile) ?? IMAGE_MODEL_PROFILES[0],
         [imageModelProfile],
@@ -2139,39 +2603,117 @@ const InsightChatSectionComponent = () => {
         return last?.role === 'assistant' && prev?.role === 'user' && !sendingConversationId && prev.content.trim();
     }, [activeConversation, sendingConversationId]);
 
-    const suggestedPrompts = useMemo(() => {
-        if (!activeConversation) {
-            return BASE_SUGGESTED_PROMPTS;
+    const latestEditableUserMessageId = useMemo(() => {
+        if (!activeConversation || !activeConversation.messages.length) {
+            return null;
         }
 
-        const latestUserMessage = [...activeConversation.messages]
+        const messages = activeConversation.messages;
+        const latestUserIndex = (() => {
+            for (let index = messages.length - 1; index >= 0; index -= 1) {
+                if (messages[index].role === 'user') return index;
+            }
+            return -1;
+        })();
+
+        if (latestUserIndex < 0 || latestUserIndex === messages.length - 1) {
+            return null;
+        }
+
+        const candidate = messages[latestUserIndex];
+        if (!candidate?.content.trim()) {
+            return null;
+        }
+
+        return candidate.id;
+    }, [activeConversation]);
+
+    const promptLibraryGroups = useMemo(() => {
+        const groupedLibrary = INSIGHT_PROMPT_LIBRARY.map((group) => ({
+            ...group,
+            prompts: [...group.prompts],
+        }));
+
+        const latestUserMessage = [...activeConversation?.messages ?? []]
             .reverse()
             .find((message) => message.role === 'user')?.content
             ?? '';
-
         const normalizedLatestMessage = latestUserMessage.trim().toLowerCase();
+
         if (!normalizedLatestMessage) {
-            return BASE_SUGGESTED_PROMPTS;
+            return groupedLibrary;
         }
 
-        const contextPrompts: string[] = [];
+        const isSalesTopic = normalizedLatestMessage.includes('매출') || normalizedLatestMessage.includes('매입') || normalizedLatestMessage.includes('수익');
+        const isCampaignTopic = normalizedLatestMessage.includes('캠페인') || normalizedLatestMessage.includes('광고');
 
-        if (normalizedLatestMessage.includes('매출') || normalizedLatestMessage.includes('매입') || normalizedLatestMessage.includes('수익')) {
-            contextPrompts.push('이 매출 하락의 주 원인을 지표별로 더 자세히 나눠줘');
-            contextPrompts.push('매출 개선을 위한 다음 30일 액션을 제안해줘');
+        if (!isSalesTopic && !isCampaignTopic) {
+            return groupedLibrary;
         }
 
-        if (normalizedLatestMessage.includes('캠페인') || normalizedLatestMessage.includes('광고')) {
-            contextPrompts.push('캠페인 성과 하락 구간만 골라 재배치 방안을 제안해줘');
-            contextPrompts.push('같은 카테고리의 고성능 캠페인 3개를 찾아 비교해줘');
-        }
+        const contextGroups: InsightPromptCommandGroup[] = CONTEXT_PROMPT_LIBRARY.map((group) => {
+            const matchedPrompts = isSalesTopic && group.id === 'context-sales'
+                ? group.prompts
+                : isCampaignTopic && group.id === 'context-campaign'
+                    ? group.prompts
+                    : [];
 
-        if (contextPrompts.length === 0) {
-            return BASE_SUGGESTED_PROMPTS;
-        }
+            return {
+                ...group,
+                prompts: matchedPrompts,
+            };
+        }).filter((group) => group.prompts.length > 0);
 
-        return dedupePrompts([...BASE_SUGGESTED_PROMPTS, ...contextPrompts]);
+        return groupedLibrary.map((group) => ({ ...group }))
+            .concat(contextGroups.map((group) => ({ ...group })));
     }, [activeConversation]);
+
+    const isCommandMode = useMemo(() => {
+        const trimmed = inputValue.trimStart();
+        return trimmed.startsWith('/');
+    }, [inputValue]);
+
+    const commandInput = useMemo(() => splitPromptInput(inputValue), [inputValue]);
+    const commandPaletteQuery = commandInput?.command ?? '';
+    const normalizedCommandPaletteQuery = commandPaletteQuery.replace(/^\//, '').trim();
+
+    const filteredPromptPaletteGroups = useMemo<InsightPromptCommandGroup[]>(
+        () => filterPromptCommandGroups(promptLibraryGroups, normalizedCommandPaletteQuery),
+        [promptLibraryGroups, normalizedCommandPaletteQuery],
+    );
+
+    const activePromptGroups = useMemo(
+        () => (isCommandMode ? filteredPromptPaletteGroups : promptLibraryGroups),
+        [filteredPromptPaletteGroups, isCommandMode, promptLibraryGroups],
+    );
+
+    const commandSuggestions = useMemo(() => {
+        if (!isCommandMode) return [];
+
+        const flattened = flattenPromptCommands(filteredPromptPaletteGroups);
+        return flattened.map((prompt) => {
+            const group = filteredPromptPaletteGroups.find((group: InsightPromptCommandGroup) =>
+                group.prompts.some((entry: InsightPromptCommand) => entry.id === prompt.id),
+            );
+            return {
+                groupId: group?.id ?? prompt.groupId,
+                groupTitle: group?.title ?? '',
+                prompt,
+                id: `${group?.id ?? prompt.groupId}-${prompt.id}`,
+            };
+        });
+    }, [filteredPromptPaletteGroups, isCommandMode]);
+
+    const hasPromptSuggestions = isCommandMode && commandSuggestions.length > 0;
+
+    useEffect(() => {
+        if (!hasPromptSuggestions) {
+            setActiveCommandIndex(0);
+            return;
+        }
+
+        setActiveCommandIndex((index) => (index >= commandSuggestions.length ? 0 : index));
+    }, [commandSuggestions, hasPromptSuggestions]);
 
     const persistConversationState = useCallback(() => {
         if (typeof window === 'undefined') return;
@@ -2357,6 +2899,13 @@ const InsightChatSectionComponent = () => {
     }, [activeConversationId]);
 
     useEffect(() => {
+        if (!editingMessageId) return;
+        if (!activeConversation?.messages.some((message) => message.id === editingMessageId)) {
+            setEditingMessageId(null);
+        }
+    }, [activeConversation, editingMessageId]);
+
+    useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [activeConversation?.messages.length, activeConversationId]);
 
@@ -2419,22 +2968,54 @@ const InsightChatSectionComponent = () => {
         ));
     }, [activeConversation]);
 
-    const sendMessage = useCallback(async (input: string) => {
-        const content = input.trim();
-        if (!activeConversation || !content || sendingConversationId === activeConversation.id) return;
-
-        const userMessage: ChatMessage = {
-            id: makeId('user'),
-            role: 'user',
-            content,
-            createdAt: new Date(),
-        };
-
-        appendMessage(activeConversation.id, userMessage);
-        setInputValue('');
-        setSendingConversationId(activeConversation.id);
-
+    const sendMessage = useCallback(async (input: string, options?: { replaceUserMessageId?: string }) => {
+        const content = resolvePromptInput(input);
+        if (!activeConversation || !content || sendingConversationId) return;
+        const requestId = makeRequestId();
         const convId = activeConversation.id;
+        const replaceUserMessageId = options?.replaceUserMessageId;
+        const replaceIndex = replaceUserMessageId
+            ? activeConversation.messages.findIndex((message) => message.id === replaceUserMessageId && message.role === 'user')
+            : -1;
+        const isReplacingMessage = !!replaceUserMessageId;
+        if (isReplacingMessage) {
+            setEditingMessageId(null);
+        }
+
+        if (replaceIndex >= 0) {
+            updateConversation(convId, (prev) => {
+                const latestIndex = prev.messages.findIndex((message) => message.id === replaceUserMessageId && message.role === 'user');
+                if (latestIndex < 0) return prev;
+
+                const userMeta = prev.messages[latestIndex];
+                const nextMessages = [...prev.messages.slice(0, latestIndex + 1)];
+                nextMessages[latestIndex] = {
+                    ...userMeta,
+                    content,
+                    createdAt: new Date(),
+                };
+
+                return {
+                    ...prev,
+                    messages: nextMessages,
+                    title: prev.title === EMPTY_TITLE && latestIndex === 0
+                        ? makeConversationTitle(content)
+                        : prev.title,
+                    updatedAt: Date.now(),
+                };
+            });
+        } else {
+            appendMessage(convId, {
+                id: makeId('user'),
+                role: 'user',
+                content,
+                createdAt: new Date(),
+            });
+        }
+
+        setInputValue('');
+        setSendingConversationId(convId);
+
         let assistantMessageId: string | null = null;
         let assistantProfile: ChatMessage['meta'] | null = null;
         let streamController: AbortController | null = null;
@@ -2456,38 +3037,53 @@ const InsightChatSectionComponent = () => {
 
                 const localResponse = await postStreamChat(
                     content,
+                    requestId,
                     currentLlmConfig,
                     (token) => updateMessageContent(convId, assistantId, (prev) => prev + token),
                     streamController.signal,
                 );
 
                 if (localResponse) {
+                    if (localResponse.meta?.fallbackReason === 'request_cancelled') {
+                        updateMessage(convId, assistantId, (message) => ({
+                            ...message,
+                            content: `${message.content}\n\n${STREAM_STOP_MESSAGE}`,
+                            meta: message.meta ?? assistantProfile ?? localResponse.meta,
+                        }));
+                        return;
+                    }
+
                     updateMessage(convId, assistantId, (message) => ({
                         ...message,
                         content: localResponse.content,
                         sources: mapSources(localResponse.sources),
                         visualComponent: localResponse.visualComponent,
+                        followUpPrompts: normalizeFollowUpPrompts(localResponse.followUpPrompts),
                         meta: localResponse.meta,
                     }));
                 }
             } else {
                 const resolvedImageModelProfile = imageModelProfile === 'none' ? undefined : imageModelProfile;
-                const response = await postChatMessage(content, undefined, resolvedImageModelProfile);
+                const response = await postChatMessage(content, requestId, undefined, resolvedImageModelProfile);
                 appendMessage(convId, {
                     id: makeId('assistant'),
                     role: 'assistant',
                     content: response.content,
                     sources: mapSources(response.sources),
                     visualComponent: response.visualComponent,
+                    followUpPrompts: normalizeFollowUpPrompts(response.followUpPrompts),
                     createdAt: new Date(),
                     meta: response.meta,
                 });
             }
         } catch (error) {
             if (error instanceof DOMException && error.name === 'AbortError' && assistantMessageId) {
+                const stopSuffix = STREAM_STOP_MESSAGE;
                 updateMessage(convId, assistantMessageId, (message) => ({
                     ...message,
-                    content: message.content || STREAM_STOP_MESSAGE,
+                    content: message.content && !message.content.includes(stopSuffix)
+                        ? `${message.content}\n\n${stopSuffix}`
+                        : message.content || stopSuffix,
                     meta: message.meta ?? assistantProfile ?? { source: 'fallback', fallbackReason: 'request_cancelled' },
                 }));
                 return;
@@ -2523,6 +3119,7 @@ const InsightChatSectionComponent = () => {
     }, [
         activeConversation,
         appendMessage,
+        updateConversation,
         updateMessage,
         updateMessageContent,
         sendingConversationId,
@@ -2562,23 +3159,89 @@ const InsightChatSectionComponent = () => {
         void sendMessage(lastUserMessage.content);
     }, [activeConversation, canRegenerateLastResponse, sendMessage, updateConversation]);
 
-    const handleSendMessage = useCallback(() => {
-        void sendMessage(inputValue);
-    }, [inputValue, sendMessage]);
+    const handleEditMessage = useCallback((message: ChatMessage) => {
+        if (!activeConversation || message.role !== 'user') return;
+        if (sendingConversationId) return;
+        if (message.id !== latestEditableUserMessageId) return;
+        setEditingMessageId(message.id);
+        setInputValue(message.content);
+        window.requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    }, [activeConversation, latestEditableUserMessageId, sendingConversationId]);
 
-    const handlePromptClick = useCallback((prompt: string) => {
-        void sendMessage(prompt);
-    }, [sendMessage]);
+    const handleSendMessage = useCallback(() => {
+        if (!inputValue.trim()) {
+            return;
+        }
+        const replaceUserMessageId = editingMessageId;
+        if (replaceUserMessageId) {
+            void sendMessage(inputValue, { replaceUserMessageId });
+            return;
+        }
+        void sendMessage(inputValue);
+    }, [editingMessageId, inputValue, sendMessage]);
+
+    const resolvePromptFromTemplate = useCallback((prompt: InsightPromptCommand) => {
+        return buildResolvedPromptValue(inputValue, prompt);
+    }, [inputValue]);
+
+    const handlePromptTemplateApply = useCallback((prompt: InsightPromptCommand, options?: { autoSend?: boolean }) => {
+        const resolvedPrompt = resolvePromptFromTemplate(prompt);
+        if (options?.autoSend) {
+            void sendMessage(resolvedPrompt);
+            return;
+        }
+        setInputValue(resolvedPrompt);
+        window.requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    }, [resolvePromptFromTemplate, sendMessage]);
 
     const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'ArrowDown' && hasPromptSuggestions) {
+            event.preventDefault();
+            setActiveCommandIndex((index) => (index + 1) % commandSuggestions.length);
+            return;
+        }
+
+        if (event.key === 'ArrowUp' && hasPromptSuggestions) {
+            event.preventDefault();
+            setActiveCommandIndex((index) => (index - 1 + commandSuggestions.length) % commandSuggestions.length);
+            return;
+        }
+
+        if (event.key === 'Tab' && hasPromptSuggestions) {
+            const activeSuggestion = commandSuggestions[activeCommandIndex];
+            if (!activeSuggestion) return;
+            event.preventDefault();
+            handlePromptTemplateApply(activeSuggestion.prompt);
+            return;
+        }
+
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
+            if (isCommandMode) {
+                const activeSuggestion = commandSuggestions[activeCommandIndex];
+                if (activeSuggestion) {
+                    handlePromptTemplateApply(activeSuggestion.prompt, { autoSend: true });
+                    return;
+                }
+            }
             void handleSendMessage();
         }
-    }, [handleSendMessage]);
+    }, [
+        activeCommandIndex,
+        commandSuggestions,
+        hasPromptSuggestions,
+        handlePromptTemplateApply,
+        handleSendMessage,
+        isCommandMode,
+    ]);
 
     const isSending = sendingConversationId === activeConversationId;
-    const canStopStreaming = isSending && !!streamAbortControllerRef.current;
+    const isStreamingInFlight = sendingConversationId !== null;
+    const canStopStreaming = isStreamingInFlight && !!streamAbortControllerRef.current;
 
     return (
         <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb] relative">
@@ -2814,9 +3477,42 @@ const InsightChatSectionComponent = () => {
                                         </div>
                                     ) : null}
 
-                                    {visibleMessages.map((message) => (
-                                        <ChatBubble key={message.id} message={message} />
-                                    ))}
+                                    {visibleMessages.map((message) => {
+                                        const visibleIndex = activeConversation?.messages.findIndex((entry) => entry.id === message.id) ?? -1;
+                                        const previousMessages = visibleIndex > 0
+                                            ? (activeConversation?.messages.slice(0, visibleIndex) ?? [])
+                                            : [];
+                                        const previousUserMessage = previousMessages
+                                            .slice()
+                                            .reverse()
+                                            .find((entry) => entry.role === 'user');
+                                            : null;
+
+                                        const followUpPrompts = message.role === 'assistant'
+                                            ? deriveFollowUpPromptSuggestions(
+                                                message.followUpPrompts,
+                                                previousUserMessage?.content ?? '',
+                                                promptLibraryGroups,
+                                            )
+                                            : [];
+
+                                        return (
+                                            <ChatBubble
+                                                key={message.id}
+                                                message={{
+                                                    ...message,
+                                                    followUpPrompts,
+                                                }}
+                                                canEdit={message.id === latestEditableUserMessageId}
+                                                onEditMessage={handleEditMessage}
+                                                onFollowUpPrompt={(prompt) => {
+                                                    if (!prompt.trim() || isStreamingInFlight) return;
+                                                    void sendMessage(prompt);
+                                                }}
+                                                isFollowUpDisabled={isStreamingInFlight}
+                                            />
+                                        );
+                                    })}
                                 </>
                             )}
 
@@ -2857,11 +3553,12 @@ const InsightChatSectionComponent = () => {
                                 <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
                                     {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
                                         const providerModels = availableModels.filter((m) => m.provider === provider);
+                                        const providerHasKey = hasProviderServerOrUserKey(provider);
                                         return (
                                             <div key={provider}>
                                                 <p className="px-3 py-1.5 text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider">
                                                     {LLM_PROVIDER_LABELS[provider]}
-                                                    {!llmKeys[provider] && <span className="ml-1 text-[#fca5a5]">키 미설정</span>}
+                                                    {!providerHasKey && <span className="ml-1 text-[#fca5a5]">키 미설정</span>}
                                                 </p>
                                                 {providerModels.map((model) => (
                                                     <button
@@ -2920,18 +3617,126 @@ const InsightChatSectionComponent = () => {
                             ) : null}
                         </div>
 
-                        {suggestedPrompts.map((prompt) => (
-                            <button
-                                key={prompt}
-                                type="button"
-                                className="text-xs px-2.5 py-1.5 rounded-lg border border-[#e5e7eb] bg-white text-[#374151] hover:bg-[#fff7ed]"
-                                onClick={() => handlePromptClick(prompt)}
-                                aria-label={`빠른 질문: ${prompt}`}
-                                disabled={!!activeConversation?.isBooting || !!sendingConversationId}
-                            >
-                                {prompt}
-                            </button>
-                        ))}
+                        {isCommandMode ? (
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[10px] uppercase tracking-wider text-[#6b7280] font-semibold mb-1">명령어 제안</p>
+                                {hasPromptSuggestions ? (
+                                    <div
+                                        className="grid gap-1"
+                                        role="listbox"
+                                        aria-label="프롬프트 명령어 제안"
+                                        aria-live="polite"
+                                    >
+                                        {commandSuggestions.map((suggestion, index) => {
+                                            const isActive = index === activeCommandIndex;
+                                            const resolvedPromptPreview = resolvePromptFromTemplate(suggestion.prompt);
+                                            return (
+                                                <div
+                                                    key={suggestion.id}
+                                                    role="option"
+                                                    aria-selected={isActive}
+                                                    tabIndex={0}
+                                                    className={cn(
+                                                        'w-full text-left rounded-lg border px-2.5 py-1.5',
+                                                        isActive ? 'border-[#2563eb] bg-[#eff6ff]' : 'border-[#e5e7eb] bg-white',
+                                                        'hover:border-[#93c5fd]'
+                                                    )}
+                                                    onMouseEnter={() => setActiveCommandIndex(index)}
+                                                    onMouseDown={(event) => {
+                                                        event.preventDefault();
+                                                    }}
+                                                    onClick={() => handlePromptTemplateApply(suggestion.prompt)}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-semibold text-[#111827] truncate">
+                                                                {suggestion.prompt.command} · {suggestion.groupTitle || suggestion.prompt.label}
+                                                            </p>
+                                                            <p className="text-[11px] text-[#6b7280] truncate" title={suggestion.prompt.description}>
+                                                                {suggestion.prompt.description}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    handlePromptTemplateApply(suggestion.prompt);
+                                                                }}
+                                                                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb]"
+                                                                aria-label={`${suggestion.prompt.label} 명령어 삽입`}
+                                                            >
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    handlePromptTemplateApply(suggestion.prompt, { autoSend: true });
+                                                                }}
+                                                                className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-[#e5e7eb] text-[#f97316] hover:bg-[#fff7ed]"
+                                                                aria-label={`${suggestion.prompt.label} 즉시 전송`}
+                                                            >
+                                                                <Send className="h-3.5 w-3.5" />
+                                                            </button>
+                                                            <span className="sr-only">
+                                                                미리보기: {resolvedPromptPreview}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-[#6b7280]">일치하는 명령어가 없습니다.</p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="w-full space-y-2">
+                                {activePromptGroups.map((group: InsightPromptCommandGroup) => {
+                                    const showGroup = group.prompts.length > 0;
+                                    if (!showGroup) return null;
+                                    return (
+                                        <div key={group.id} className="rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-2">
+                                            <p className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280] mb-1.5">
+                                                {group.title}
+                                                <span className="ml-1.5 text-[#9ca3af] font-normal">({group.prompts.length})</span>
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {group.prompts.map((prompt: InsightPromptCommand) => (
+                                                    <span
+                                                        key={`${group.id}-${prompt.id}`}
+                                                        className="inline-flex items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
+                                                    >
+                                                        <span className="px-2 py-1.5 text-[#374151] font-medium">{prompt.label}</span>
+                                                        <span className="h-4 w-px bg-[#e5e7eb]" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handlePromptTemplateApply(prompt)}
+                                                            className="px-2 py-1.5 text-[#4b5563] hover:bg-[#f3f4f6] inline-flex items-center gap-1"
+                                                            aria-label={`삽입: ${prompt.label}`}
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">입력창에 삽입</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
+                                                            className="px-2 py-1.5 rounded-r-md bg-amber-50 text-[#f97316] hover:bg-[#ffedd5] inline-flex items-center gap-1"
+                                                            aria-label={`즉시 전송: ${prompt.label}`}
+                                                        >
+                                                            <Send className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">즉시 전송</span>
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     <form
@@ -2970,14 +3775,14 @@ const InsightChatSectionComponent = () => {
                             value={inputValue}
                             onChange={(event) => setInputValue(event.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="질문을 입력해 주세요"
-                            disabled={!!activeConversation?.isBooting || !!isSending}
+                            placeholder={editingMessageId ? '수정한 메시지를 입력해 주세요' : '질문을 입력해 주세요'}
+                            disabled={!!activeConversation?.isBooting || !!isStreamingInFlight}
                             className="h-11 border-[#e5e7eb] focus-visible:ring-[#f87171]"
                         />
                         <Button
                             type="submit"
                             className="h-11"
-                            disabled={!inputValue.trim() || !!activeConversation?.isBooting || !!isSending}
+                            disabled={!inputValue.trim() || !!activeConversation?.isBooting || !!isStreamingInFlight}
                         >
                             <Send className="h-4 w-4" />
                         </Button>

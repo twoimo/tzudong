@@ -1,0 +1,61 @@
+export type InsightChatStreamState = {
+    accumulated: string;
+    streamError: string | null;
+    cancellationReason?: 'request_cancelled' | 'stream_error';
+    requestId?: string;
+};
+
+export function parseInsightChatStreamLine(
+    line: string,
+    state: InsightChatStreamState,
+    onToken: (token: string) => void,
+): InsightChatStreamState {
+    if (!line.startsWith('data: ')) {
+        return state;
+    }
+
+    const payload = line.slice(6).trim();
+    if (!payload || payload === '[DONE]') {
+        return state;
+    }
+
+    let parsed: {
+        text?: string;
+        error?: string;
+        requestId?: string;
+        cancellationReason?: 'request_cancelled' | 'stream_error';
+    };
+    try {
+        parsed = JSON.parse(payload) as {
+            text?: string;
+            error?: string;
+            requestId?: string;
+            cancellationReason?: 'request_cancelled' | 'stream_error';
+        };
+    } catch {
+        return state;
+    }
+
+    if (parsed.error) {
+        return {
+            ...state,
+            streamError: parsed.error,
+            cancellationReason: parsed.cancellationReason ?? undefined,
+            requestId: parsed.requestId ?? state.requestId,
+        };
+    }
+
+    if (typeof parsed.text === 'string' && parsed.text) {
+        onToken(parsed.text);
+        return {
+            ...state,
+            requestId: parsed.requestId ?? state.requestId,
+            accumulated: state.accumulated + parsed.text,
+        };
+    }
+
+    return {
+        ...state,
+        requestId: parsed.requestId ?? state.requestId,
+    };
+}

@@ -99,6 +99,11 @@ export type InsightChatSource = {
   text: string;
 };
 
+export type InsightChatFollowUpPrompt = {
+  label?: string;
+  prompt: string;
+};
+
 export type LlmProvider = 'gemini' | 'openai' | 'anthropic';
 
 export type StoryboardModelProfile = 'nanobanana' | 'nanobanana_pro';
@@ -122,6 +127,7 @@ export type AdminInsightChatMeta = {
   source: 'local' | 'agent' | 'gemini' | 'openai' | 'anthropic' | 'fallback';
   fallbackReason?: string;
   model?: string;
+  requestId?: string;
 };
 
 export type AdminInsightChatResponse = {
@@ -129,6 +135,7 @@ export type AdminInsightChatResponse = {
   content: string;
   sources?: InsightChatSource[];
   visualComponent?: InsightVisualComponentType;
+  followUpPrompts?: (InsightChatFollowUpPrompt | string)[];
   meta?: AdminInsightChatMeta;
 };
 
