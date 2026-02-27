@@ -1,3 +1,5 @@
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
 import { Page } from '@playwright/test';
 
 /**
@@ -12,6 +14,77 @@ export async function hidePopupOverlay(page: Page): Promise<void> {
             [data-nextjs-dev-overlay] { display: none !important; }
         `
     });
+}
+
+type StorageCookie = {
+    name: string;
+    value?: string;
+};
+
+type StorageState = {
+    cookies?: StorageCookie[];
+};
+
+const CANDIDATE_AUTH_PATHS = [
+    resolvePath(process.cwd(), 'tests', '.auth', 'admin.json'),
+    resolvePath(process.cwd(), 'apps', 'web', 'tests', '.auth', 'admin.json'),
+    resolvePath(process.cwd(), '..', 'tests', '.auth', 'admin.json'),
+] as const;
+
+function resolveAdminSessionCookie(): string | null {
+    const envCookie = process.env.INSIGHTS_CHAT_ADMIN_COOKIE?.trim();
+    if (envCookie) {
+        return envCookie;
+    }
+
+    for (const statePath of CANDIDATE_AUTH_PATHS) {
+        try {
+            if (!existsSync(statePath)) {
+                continue;
+            }
+
+            const raw = readFileSync(statePath, 'utf8');
+            const state = JSON.parse(raw) as StorageState;
+            const adminCookies = (state.cookies || []).filter((cookie) => cookie?.name?.startsWith('sb-'));
+            if (adminCookies.length === 0) {
+                continue;
+            }
+
+            const cookieHeader = adminCookies
+                .filter((cookie) => Boolean(cookie.name) && typeof cookie.value === 'string')
+                .map((cookie) => `${cookie.name}=${cookie.value}`)
+                .join('; ');
+
+            if (cookieHeader) {
+                return cookieHeader;
+            }
+        } catch {
+            continue;
+        }
+    }
+
+    return null;
+}
+
+const ADMIN_COOKIE = resolveAdminSessionCookie();
+
+export function hasAdminSession(): boolean {
+    return Boolean(ADMIN_COOKIE);
+}
+
+export function getAdminRequestHeaders(overrides: Record<string, string> = {}): Record<string, string> {
+    if (!ADMIN_COOKIE) {
+        return { ...overrides };
+    }
+
+    return {
+        ...overrides,
+        Cookie: ADMIN_COOKIE,
+    };
+}
+
+export function getAdminSessionCookie(): string | null {
+    return ADMIN_COOKIE;
 }
 
 /**
