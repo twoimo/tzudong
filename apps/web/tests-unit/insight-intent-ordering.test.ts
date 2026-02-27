@@ -1,4 +1,7 @@
-import { beforeAll, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import type { AdminInsightChatResponse } from '@/types/insight';
+
+mock.restore();
 
 mock.module('@/lib/insight/wordcloud', () => ({
     getAdminInsightWordcloud: async () => ({
@@ -33,11 +36,18 @@ mock.module('@/lib/insight/treemap', () => ({
     }),
 }));
 
-let answerAdminInsightChat: (message: string, config?: unknown) => Promise<any>;
+const CHAT_MODULE_PATH = '@/lib/insight/chat?intent-intent-ordering-spec';
+
+let answerAdminInsightChat: (message: string, config?: unknown) => Promise<AdminInsightChatResponse>;
 
 beforeAll(async () => {
-    const chat = await import('@/lib/insight/chat');
+    mock.restore();
+    const chat = await import(CHAT_MODULE_PATH);
     answerAdminInsightChat = chat.answerAdminInsightChat;
+});
+
+afterAll(() => {
+    mock.restore();
 });
 
 describe('insight chat intent ordering', () => {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { resolveAdminSessionCookie } from './admin-session.mjs';
 
 const args = new Set(process.argv.slice(2));
 const runLive = args.has('--live');
@@ -8,7 +9,9 @@ const runDbAudit = args.has('--db') || args.has('--db-audit');
 const runOnlyLive = runLive && !args.has('--mock');
 
 const BASE_URL = process.env.INSIGHT_CHAT_QA_BASE_URL ?? 'http://localhost:8080';
-const ADMIN_COOKIE = process.env.INSIGHTS_CHAT_ADMIN_COOKIE ?? '';
+function getAdminCookie() {
+    return resolveAdminSessionCookie() ?? '';
+}
 
 const qaRunSummary = {
     startedAt: new Date().toISOString(),
@@ -228,9 +231,10 @@ function addEvidence(evidenceStore, entry) {
 }
 
 async function runLiveChecks() {
-    if (!ADMIN_COOKIE) {
+    const adminCookie = getAdminCookie();
+    if (!adminCookie) {
         const details = {
-            env: 'INSIGHTS_CHAT_ADMIN_COOKIE',
+            env: 'INSIGHTS_CHAT_ADMIN_COOKIE 또는 tests/.auth/admin.json',
             description: 'Admin cookie is required for live endpoint checks.',
             command: 'INSIGHTS_CHAT_ADMIN_COOKIE="sb-xxx=...;" bun run qa:insights-chat -- --live',
         };
@@ -243,7 +247,7 @@ async function runLiveChecks() {
 
         recordSkip('live', 'missing admin session cookie', details);
 
-        console.log('[qa][SKIP] live checks: skipping /admin endpoint checks because INSIGHTS_CHAT_ADMIN_COOKIE is not set.');
+        console.log('[qa][SKIP] live checks: skipping /admin endpoint checks because admin 세션 쿠키를 찾지 못했습니다.');
         console.log('[qa][SKIP] To enable live checks, run: INSIGHTS_CHAT_ADMIN_COOKIE="sb-xxx=...;" bun run qa:insights-chat -- --live');
 
         return true;
@@ -251,7 +255,7 @@ async function runLiveChecks() {
 
     const headers = {
         'Content-Type': 'application/json',
-        Cookie: ADMIN_COOKIE,
+        Cookie: adminCookie,
     };
 
     const evidence = [];

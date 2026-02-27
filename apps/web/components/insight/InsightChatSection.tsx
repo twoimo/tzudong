@@ -154,6 +154,22 @@ function sanitizeFollowUpPromptText(value: string | undefined | null): string {
         .slice(0, MAX_FOLLOW_UP_PROMPT_LENGTH);
 }
 
+function sanitizeSourceValue(value: string | undefined | null): string {
+    if (!value) return '';
+    return value
+        .trim()
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 260);
+}
+
+function normalizeSourceLink(value: string | undefined | null): string {
+    const sanitized = sanitizeSourceValue(value);
+    if (!sanitized) return '';
+    if (!/^https?:\/\//i.test(sanitized)) return '';
+    return sanitized;
+}
+
 function normalizeFollowUpPromptItem(raw: unknown): InsightChatFollowUpPrompt | null {
     if (!raw) return null;
 
@@ -861,7 +877,30 @@ async function postStreamChat(
 }
 
 function mapSources(rawSources: InsightChatSource[] | undefined): InsightChatSource[] {
-    return (rawSources ?? []).filter((source) => Boolean(source.videoTitle || source.youtubeLink || source.timestamp || source.text));
+    const normalized: InsightChatSource[] = [];
+    const seen = new Set<string>();
+
+    for (const source of rawSources ?? []) {
+        const videoTitle = sanitizeSourceValue(source.videoTitle);
+        const youtubeLink = normalizeSourceLink(source.youtubeLink);
+        const timestamp = sanitizeSourceValue(source.timestamp);
+        const text = sanitizeSourceValue(source.text);
+
+        if (!videoTitle && !youtubeLink && !timestamp && !text) continue;
+
+        const key = `${videoTitle}||${youtubeLink}||${timestamp}||${text}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        normalized.push({
+            videoTitle,
+            youtubeLink,
+            timestamp,
+            text,
+        });
+    }
+
+    return normalized;
 }
 
 type InsightChatTreemapResponse = {
@@ -2080,22 +2119,25 @@ const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
             </p>
             <div className="space-y-1">
                 {sources.map((source, idx) => (
-                    <a
-                        key={`${source.videoTitle}-${idx}`}
-                        href={source.youtubeLink || '#'}
-                        target={source.youtubeLink ? '_blank' : undefined}
-                        rel={source.youtubeLink ? 'noopener noreferrer' : undefined}
-                        className={cn(
-                            'flex flex-wrap gap-1 text-xs leading-4 min-w-0 break-words',
-                            source.youtubeLink
-                                ? 'text-[#ef4444] hover:underline'
-                                : 'text-[#6b7280]',
-                        )}
+                    <div
+                        key={`${source.videoTitle}-${source.youtubeLink}-${idx}`}
+                        className="flex flex-wrap gap-1 text-xs leading-4 min-w-0 break-words text-[#6b7280]"
                     >
-                        <span className="font-medium break-words">{source.videoTitle || '스토리보드 참고 소스'}</span>
+                        {source.youtubeLink ? (
+                            <a
+                                href={source.youtubeLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#ef4444] hover:underline"
+                            >
+                                <span className="font-medium break-words">{source.videoTitle || '스토리보드 참고 소스'}</span>
+                            </a>
+                        ) : (
+                            <span className="font-medium break-words">{source.videoTitle || '스토리보드 참고 소스'}</span>
+                        )}
                         <span className="text-[#6b7280] break-words">({source.timestamp || '-'})</span>
                         {source.text ? <span className="text-[#374151] truncate">: {source.text}</span> : null}
-                    </a>
+                    </div>
                 ))}
             </div>
         </div>
@@ -2165,7 +2207,7 @@ const FollowUpPromptChips = memo(({
                     <button
                         key={`${prompt.prompt}-${index}`}
                         type="button"
-                        onClick={() => onSelectPrompt(prompt.prompt)}
+                        onClick={() => onSelectPrompt(sanitizeFollowUpPromptText(prompt.prompt))}
                         disabled={disabled}
                         className={cn(
                             'inline-flex items-center rounded-full border px-2.5 py-1 text-xs text-[#374151] transition',
@@ -2175,7 +2217,6 @@ const FollowUpPromptChips = memo(({
                     >
                         {prompt.label || prompt.prompt}
                     </button>
-                    ,
                 ))}
             </div>
         </div>
@@ -2388,11 +2429,11 @@ const ChatBubble = memo(({
                             />
                         ) : null}
                         {hasMessageMeta && isMetaVisible ? <MessageMetaPanel meta={message.meta} /> : null}
-                        {message.sources ? <SourceList sources={message.sources} /> : null}
+                        {message.sources?.length ? <SourceList sources={message.sources} /> : null}
                     </div>
                 ) : message.sources ? (
                     <div className={cn(textWrapClass, isTreemapMessage && 'px-1.5')}>
-                        <SourceList sources={message.sources} />
+                        {message.sources?.length ? <SourceList sources={message.sources} /> : null}
                     </div>
                 ) : null}
             </div>
@@ -2427,6 +2468,7 @@ const InsightChatSectionComponent = () => {
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+    const [isPromptPaletteExpanded, setIsPromptPaletteExpanded] = useState(false);
     const bootstrapRequestRef = useRef(new Map<string, number>());
     const streamAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -2600,7 +2642,12 @@ const InsightChatSectionComponent = () => {
         }
         const last = activeConversation.messages[activeConversation.messages.length - 1];
         const prev = activeConversation.messages[activeConversation.messages.length - 2];
-        return last?.role === 'assistant' && prev?.role === 'user' && !sendingConversationId && prev.content.trim();
+        return (
+            !sendingConversationId &&
+            last?.role === 'assistant' &&
+            prev?.role === 'user' &&
+            prev.content.trim()
+        );
     }, [activeConversation, sendingConversationId]);
 
     const latestEditableUserMessageId = useMemo(() => {
@@ -2705,6 +2752,15 @@ const InsightChatSectionComponent = () => {
     }, [filteredPromptPaletteGroups, isCommandMode]);
 
     const hasPromptSuggestions = isCommandMode && commandSuggestions.length > 0;
+    const totalQuickPromptCount = useMemo(
+        () => (isCommandMode ? 0 : activePromptGroups.reduce((acc, group) => acc + group.prompts.length, 0)),
+        [activePromptGroups, isCommandMode],
+    );
+
+    const compactQuickPrompts = useMemo(() => {
+        if (isCommandMode) return [];
+        return flattenPromptCommands(activePromptGroups).slice(0, 6);
+    }, [activePromptGroups, isCommandMode]);
 
     useEffect(() => {
         if (!hasPromptSuggestions) {
@@ -2896,7 +2952,7 @@ const InsightChatSectionComponent = () => {
         }
 
         setMessageWindowSize(Math.min(MESSAGE_WINDOW_INITIAL, activeConversation.messages.length || MESSAGE_WINDOW_INITIAL));
-    }, [activeConversationId]);
+    }, [activeConversation]);
 
     useEffect(() => {
         if (!editingMessageId) return;
@@ -3130,6 +3186,7 @@ const InsightChatSectionComponent = () => {
     const handleStopStreaming = useCallback(() => {
         if (!sendingConversationId) return;
         streamAbortControllerRef.current?.abort();
+        streamAbortControllerRef.current = null;
     }, [sendingConversationId]);
 
     const handleRegenerateLastResponse = useCallback(() => {
@@ -3150,14 +3207,8 @@ const InsightChatSectionComponent = () => {
         const lastUserMessage = messages[lastUserIndex];
         if (!lastUserMessage.content.trim()) return;
 
-        updateConversation(activeConversation.id, (prev) => ({
-            ...prev,
-            messages: prev.messages.slice(0, lastUserIndex),
-            updatedAt: Date.now(),
-        }));
-
-        void sendMessage(lastUserMessage.content);
-    }, [activeConversation, canRegenerateLastResponse, sendMessage, updateConversation]);
+        void sendMessage(lastUserMessage.content, { replaceUserMessageId: lastUserMessage.id });
+    }, [activeConversation, canRegenerateLastResponse, sendMessage]);
 
     const handleEditMessage = useCallback((message: ChatMessage) => {
         if (!activeConversation || message.role !== 'user') return;
@@ -3485,8 +3536,7 @@ const InsightChatSectionComponent = () => {
                                         const previousUserMessage = previousMessages
                                             .slice()
                                             .reverse()
-                                            .find((entry) => entry.role === 'user');
-                                            : null;
+                                            .find((entry) => entry.role === 'user') ?? null;
 
                                         const followUpPrompts = message.role === 'assistant'
                                             ? deriveFollowUpPromptSuggestions(
@@ -3506,8 +3556,11 @@ const InsightChatSectionComponent = () => {
                                                 canEdit={message.id === latestEditableUserMessageId}
                                                 onEditMessage={handleEditMessage}
                                                 onFollowUpPrompt={(prompt) => {
-                                                    if (!prompt.trim() || isStreamingInFlight) return;
-                                                    void sendMessage(prompt);
+                                                    const normalizedPrompt = sanitizeFollowUpPromptText(prompt);
+                                                    if (!normalizedPrompt || isStreamingInFlight) {
+                                                        return;
+                                                    }
+                                                    void sendMessage(normalizedPrompt);
                                                 }}
                                                 isFollowUpDisabled={isStreamingInFlight}
                                             />
@@ -3693,48 +3746,99 @@ const InsightChatSectionComponent = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className="w-full space-y-2">
-                                {activePromptGroups.map((group: InsightPromptCommandGroup) => {
-                                    const showGroup = group.prompts.length > 0;
-                                    if (!showGroup) return null;
-                                    return (
-                                        <div key={group.id} className="rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-2">
-                                            <p className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280] mb-1.5">
-                                                {group.title}
-                                                <span className="ml-1.5 text-[#9ca3af] font-normal">({group.prompts.length})</span>
-                                            </p>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {group.prompts.map((prompt: InsightPromptCommand) => (
-                                                    <span
-                                                        key={`${group.id}-${prompt.id}`}
-                                                        className="inline-flex items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
-                                                    >
-                                                        <span className="px-2 py-1.5 text-[#374151] font-medium">{prompt.label}</span>
-                                                        <span className="h-4 w-px bg-[#e5e7eb]" />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handlePromptTemplateApply(prompt)}
-                                                            className="px-2 py-1.5 text-[#4b5563] hover:bg-[#f3f4f6] inline-flex items-center gap-1"
-                                                            aria-label={`삽입: ${prompt.label}`}
-                                                        >
-                                                            <Pencil className="h-3.5 w-3.5" />
-                                                            <span className="sr-only">입력창에 삽입</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
-                                                            className="px-2 py-1.5 rounded-r-md bg-amber-50 text-[#f97316] hover:bg-[#ffedd5] inline-flex items-center gap-1"
-                                                            aria-label={`즉시 전송: ${prompt.label}`}
-                                                        >
-                                                            <Send className="h-3.5 w-3.5" />
-                                                            <span className="sr-only">즉시 전송</span>
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                            <div className="w-full rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-2 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280]">
+                                        빠른 프롬프트
+                                        <span className="ml-1.5 text-[#9ca3af] font-normal">({totalQuickPromptCount})</span>
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPromptPaletteExpanded((prev) => !prev)}
+                                        className="inline-flex items-center gap-1 rounded-md border border-[#e5e7eb] bg-white px-2 py-1 text-[11px] text-[#4b5563] hover:bg-[#f9fafb]"
+                                        aria-label={isPromptPaletteExpanded ? '프롬프트 그룹 접기' : '프롬프트 그룹 펼치기'}
+                                    >
+                                        {isPromptPaletteExpanded ? '접기' : '펼치기'}
+                                        <ChevronDown className={cn('h-3 w-3 transition-transform', isPromptPaletteExpanded && 'rotate-180')} />
+                                    </button>
+                                </div>
+
+                                {compactQuickPrompts.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {compactQuickPrompts.map((prompt: InsightPromptCommand) => (
+                                            <span
+                                                key={`compact-${prompt.groupId}-${prompt.id}`}
+                                                className="inline-flex items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handlePromptTemplateApply(prompt)}
+                                                    className="px-2 py-1 text-[#374151] font-medium hover:bg-[#f3f4f6] rounded-l-md"
+                                                    aria-label={`삽입: ${prompt.label}`}
+                                                >
+                                                    {prompt.label}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
+                                                    className="px-1.5 py-1 border-l border-[#e5e7eb] text-[#f97316] hover:bg-[#ffedd5] rounded-r-md inline-flex items-center justify-center"
+                                                    aria-label={`즉시 전송: ${prompt.label}`}
+                                                >
+                                                    <Send className="h-3.5 w-3.5" />
+                                                    <span className="sr-only">즉시 전송</span>
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-[#9ca3af]">추천 가능한 프롬프트가 없습니다.</p>
+                                )}
+
+                                {isPromptPaletteExpanded ? (
+                                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                                        {activePromptGroups.map((group: InsightPromptCommandGroup) => {
+                                            const showGroup = group.prompts.length > 0;
+                                            if (!showGroup) return null;
+                                            return (
+                                                <div key={group.id} className="rounded-lg border border-[#f3f4f6] bg-white px-2 py-1.5">
+                                                    <p className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280] mb-1">
+                                                        {group.title}
+                                                        <span className="ml-1.5 text-[#9ca3af] font-normal">({group.prompts.length})</span>
+                                                    </p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {group.prompts.map((prompt: InsightPromptCommand) => (
+                                                            <span
+                                                                key={`${group.id}-${prompt.id}`}
+                                                                className="inline-flex items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
+                                                            >
+                                                                <span className="px-2 py-1 text-[#374151] font-medium">{prompt.label}</span>
+                                                                <span className="h-3.5 w-px bg-[#e5e7eb]" />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handlePromptTemplateApply(prompt)}
+                                                                    className="px-1.5 py-1 text-[#4b5563] hover:bg-[#f3f4f6] inline-flex items-center gap-1"
+                                                                    aria-label={`삽입: ${prompt.label}`}
+                                                                >
+                                                                    <Pencil className="h-3 w-3" />
+                                                                    <span className="sr-only">입력창에 삽입</span>
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
+                                                                    className="px-1.5 py-1 rounded-r-md bg-amber-50 text-[#f97316] hover:bg-[#ffedd5] inline-flex items-center gap-1"
+                                                                    aria-label={`즉시 전송: ${prompt.label}`}
+                                                                >
+                                                                    <Send className="h-3 w-3" />
+                                                                    <span className="sr-only">즉시 전송</span>
+                                                                </button>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : null}
                             </div>
                         )}
                     </div>
