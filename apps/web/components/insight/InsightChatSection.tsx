@@ -2202,7 +2202,7 @@ const FollowUpPromptChips = memo(({
     return (
         <div className="mt-2">
             <p className="text-[10px] text-[#6b7280] font-semibold mb-1.5">추천 후속 질문</p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 min-w-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {visiblePrompts.map((prompt, index) => (
                     <button
                         key={`${prompt.prompt}-${index}`}
@@ -2340,6 +2340,7 @@ const ChatBubble = memo(({
                 return true;
             });
     }, [message.followUpPrompts]);
+    const actionRowAlignmentClass = isUser ? 'justify-end' : 'justify-start';
 
     return (
         <div className={cn(
@@ -2382,11 +2383,14 @@ const ChatBubble = memo(({
                 {message.visualComponent === 'treemap' ? <InsightChatTreemap /> : null}
                 {!isTreemapMessage ? (
                     <div className={cn(textWrapClass)}>
-                        <div className="mt-2 flex items-center justify-end gap-1.5">
+                        <div className={cn(
+                            'mt-2 flex w-full min-w-0 flex-nowrap items-center gap-1.5',
+                            actionRowAlignmentClass,
+                        )}>
                             <button
                                 type="button"
                                 className={cn(
-                                    'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs',
+                                    'inline-flex h-7 shrink-0 min-w-14 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs whitespace-nowrap',
                                     isCopied
                                         ? 'border-emerald-300 bg-[#ecfdf5] text-[#065f46]'
                                         : 'border-[#e5e7eb] hover:bg-[#f9fafb]',
@@ -2401,7 +2405,7 @@ const ChatBubble = memo(({
                             {hasMessageMeta ? (
                                 <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
+                                    className="inline-flex h-7 shrink-0 min-w-14 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs whitespace-nowrap border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
                                     onClick={toggleMeta}
                                     aria-label={isMetaVisible ? '근거 패널 닫기' : '근거 패널 열기'}
                                 >
@@ -2412,7 +2416,7 @@ const ChatBubble = memo(({
                             {isUser && canEdit && onEditMessage ? (
                                 <button
                                     type="button"
-                                    className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
+                                    className="inline-flex h-7 shrink-0 min-w-14 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs whitespace-nowrap border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
                                     onClick={() => onEditMessage(message)}
                                     aria-label="마지막 사용자 메시지 수정"
                                 >
@@ -3585,92 +3589,94 @@ const InsightChatSectionComponent = () => {
                 </div>
 
                 <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
-                    <div className="mb-2 flex flex-nowrap gap-2 items-center overflow-x-auto pb-1">
-                        <div ref={modelDropdownRef} className="relative shrink-0">
-                            <button
-                                type="button"
-                                className={cn(
-                                    'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white',
-                                    activeProviderHasKey
-                                        ? 'border-emerald-300 text-emerald-700'
-                                        : 'border-[#fca5a5] text-[#ef4444]',
-                                )}
-                                onClick={() => setShowModelDropdown((prev) => !prev)}
-                            >
-                                <span className="font-medium">{activeModel.name}</span>
-                                <ChevronDown className="h-3 w-3" />
-                            </button>
+                    <div className="mb-2 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 min-w-0">
+                        <div className="flex shrink-0 flex-nowrap items-center gap-2">
+                            <div ref={modelDropdownRef} className="relative shrink-0">
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white',
+                                        activeProviderHasKey
+                                            ? 'border-emerald-300 text-emerald-700'
+                                            : 'border-[#fca5a5] text-[#ef4444]',
+                                    )}
+                                    onClick={() => setShowModelDropdown((prev) => !prev)}
+                                >
+                                    <span className="font-medium">{activeModel.name}</span>
+                                    <ChevronDown className="h-3 w-3" />
+                                </button>
 
-                            {showModelDropdown ? (
-                                <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
-                                    {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
-                                        const providerModels = availableModels.filter((m) => m.provider === provider);
-                                        const providerHasKey = hasProviderServerOrUserKey(provider);
-                                        return (
-                                            <div key={provider}>
-                                                <p className="px-3 py-1.5 text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider">
-                                                    {LLM_PROVIDER_LABELS[provider]}
-                                                    {!providerHasKey && <span className="ml-1 text-[#fca5a5]">키 미설정</span>}
-                                                </p>
-                                                {providerModels.map((model) => (
-                                                    <button
-                                                        key={model.id}
-                                                        type="button"
-                                                        disabled={!model.hasKey}
-                                                        className={cn(
-                                                            'w-full text-left px-3 py-2 text-xs flex items-center justify-between',
-                                                            model.hasKey
-                                                                ? 'hover:bg-[#f9fafb] text-[#111827]'
-                                                                : 'text-[#d1d5db] cursor-not-allowed',
-                                                            model.id === activeModelId && 'bg-[#f0fdf4]',
-                                                        )}
-                                                        onClick={() => selectModel(model.id)}
-                                                    >
-                                                        <span>{model.name}</span>
-                                                        {model.id === activeModelId ? <Check className="h-3 w-3 text-emerald-600" /> : null}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : null}
-                        </div>
+                                {showModelDropdown ? (
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                        {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
+                                            const providerModels = availableModels.filter((m) => m.provider === provider);
+                                            const providerHasKey = hasProviderServerOrUserKey(provider);
+                                            return (
+                                                <div key={provider}>
+                                                    <p className="px-3 py-1.5 text-[10px] font-semibold text-[#9ca3af] uppercase tracking-wider">
+                                                        {LLM_PROVIDER_LABELS[provider]}
+                                                        {!providerHasKey && <span className="ml-1 text-[#fca5a5]">키 미설정</span>}
+                                                    </p>
+                                                    {providerModels.map((model) => (
+                                                        <button
+                                                            key={model.id}
+                                                            type="button"
+                                                            disabled={!model.hasKey}
+                                                            className={cn(
+                                                                'w-full text-left px-3 py-2 text-xs flex items-center justify-between',
+                                                                model.hasKey
+                                                                    ? 'hover:bg-[#f9fafb] text-[#111827]'
+                                                                    : 'text-[#d1d5db] cursor-not-allowed',
+                                                                model.id === activeModelId && 'bg-[#f0fdf4]',
+                                                            )}
+                                                            onClick={() => selectModel(model.id)}
+                                                        >
+                                                            <span>{model.name}</span>
+                                                            {model.id === activeModelId ? <Check className="h-3 w-3 text-emerald-600" /> : null}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : null}
+                            </div>
 
-                        <div ref={imageModelDropdownRef} className="relative shrink-0">
-                            <button
-                                type="button"
-                                className={cn(
-                                    'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white border-emerald-300 text-emerald-700',
-                                )}
-                                onClick={() => setShowImageModelDropdown((prev) => !prev)}
-                            >
-                                <span>{activeImageModelProfile.name}</span>
-                                <ChevronDown className="h-3 w-3" />
-                            </button>
+                            <div ref={imageModelDropdownRef} className="relative shrink-0">
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white border-emerald-300 text-emerald-700',
+                                    )}
+                                    onClick={() => setShowImageModelDropdown((prev) => !prev)}
+                                >
+                                    <span>{activeImageModelProfile.name}</span>
+                                    <ChevronDown className="h-3 w-3" />
+                                </button>
 
-                            {showImageModelDropdown ? (
-                                <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
-                                    {IMAGE_MODEL_PROFILES.map((profile) => (
-                                        <button
-                                            key={profile.id}
-                                            type="button"
-                                            className={cn(
-                                                'w-full text-left px-3 py-2 text-xs flex items-center justify-between',
-                                                profile.id === imageModelProfile ? 'bg-[#f0fdf4]' : 'hover:bg-[#f9fafb]',
-                                            )}
-                                            onClick={() => selectImageModelProfile(profile.id)}
-                                        >
-                                            <span>{profile.name}</span>
-                                            {profile.id === imageModelProfile ? <Check className="h-3 w-3 text-emerald-600" /> : null}
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : null}
+                                {showImageModelDropdown ? (
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                        {IMAGE_MODEL_PROFILES.map((profile) => (
+                                            <button
+                                                key={profile.id}
+                                                type="button"
+                                                className={cn(
+                                                    'w-full text-left px-3 py-2 text-xs flex items-center justify-between',
+                                                    profile.id === imageModelProfile ? 'bg-[#f0fdf4]' : 'hover:bg-[#f9fafb]',
+                                                )}
+                                                onClick={() => selectImageModelProfile(profile.id)}
+                                            >
+                                                <span>{profile.name}</span>
+                                                {profile.id === imageModelProfile ? <Check className="h-3 w-3 text-emerald-600" /> : null}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
                         </div>
 
                         {isCommandMode ? (
-                            <div className="flex-1 min-w-0">
+                            <div className="min-w-0 flex-1">
                                 <p className="text-[10px] uppercase tracking-wider text-[#6b7280] font-semibold mb-1">명령어 제안</p>
                                 {hasPromptSuggestions ? (
                                     <div
@@ -3745,24 +3751,27 @@ const InsightChatSectionComponent = () => {
                                 )}
                             </div>
                         ) : (
-                            <div className="min-w-[28rem] flex-1 rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-1.5">
+                            <div className="min-w-0 flex-1 rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-1.5">
                                 <div className="flex items-center gap-2 min-w-0">
-                                    <p className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280]">
+                                    <p className="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider font-semibold text-[#6b7280]">
                                         빠른 프롬프트
                                         <span className="ml-1.5 text-[#9ca3af] font-normal">({totalQuickPromptCount})</span>
                                     </p>
                                     <div className="min-w-0 flex-1">
                                         {compactQuickPrompts.length > 0 ? (
-                                            <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5">
+                                            <div
+                                                data-allow-horizontal-scroll="true"
+                                                className="flex flex-nowrap gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 min-w-0 whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                            >
                                                 {compactQuickPrompts.map((prompt: InsightPromptCommand) => (
                                                     <span
                                                         key={`compact-${prompt.groupId}-${prompt.id}`}
-                                                        className="inline-flex shrink-0 items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] min-w-0 text-xs text-[#111827]"
+                                                        className="inline-flex shrink-0 items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] text-xs text-[#111827]"
                                                     >
                                                         <button
                                                             type="button"
                                                             onClick={() => handlePromptTemplateApply(prompt)}
-                                                            className="px-2 py-1 text-[#374151] font-medium hover:bg-[#f3f4f6] rounded-l-md"
+                                                            className="px-2 py-1 text-[#374151] font-medium whitespace-nowrap hover:bg-[#f3f4f6] rounded-l-md"
                                                             aria-label={`삽입: ${prompt.label}`}
                                                         >
                                                             {prompt.label}
@@ -3776,18 +3785,17 @@ const InsightChatSectionComponent = () => {
                                                             <Send className="h-3.5 w-3.5" />
                                                             <span className="sr-only">즉시 전송</span>
                                                         </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-xs text-[#9ca3af] truncate">추천 가능한 프롬프트가 없습니다.</p>
-                                        )}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-[#9ca3af] truncate">추천 가능한 프롬프트가 없습니다.</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
                     </div>
-
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
