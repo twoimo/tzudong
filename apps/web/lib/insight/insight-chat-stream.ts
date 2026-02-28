@@ -1,6 +1,7 @@
 export type InsightChatStreamState = {
     accumulated: string;
     streamError: string | null;
+    toolTrace?: string[];
     cancellationReason?: 'request_cancelled' | 'stream_error';
     requestId?: string;
 };
@@ -22,6 +23,7 @@ export function parseInsightChatStreamLine(
     let parsed: {
         text?: string;
         error?: string;
+        toolTrace?: string[] | string;
         requestId?: string;
         cancellationReason?: 'request_cancelled' | 'stream_error';
     };
@@ -36,9 +38,18 @@ export function parseInsightChatStreamLine(
         return state;
     }
 
+    const parsedToolTrace = Array.isArray(parsed.toolTrace)
+        ? parsed.toolTrace
+        : typeof parsed.toolTrace === 'string'
+            ? [parsed.toolTrace]
+            : [];
+
     if (parsed.error) {
         return {
             ...state,
+            toolTrace: [...(state.toolTrace ?? []), ...parsedToolTrace].filter((value, index, values) =>
+                values.indexOf(value) === index && Boolean(value),
+            ),
             streamError: parsed.error,
             cancellationReason: parsed.cancellationReason ?? undefined,
             requestId: parsed.requestId ?? state.requestId,
@@ -49,6 +60,9 @@ export function parseInsightChatStreamLine(
         onToken(parsed.text);
         return {
             ...state,
+            toolTrace: [...(state.toolTrace ?? []), ...parsedToolTrace].filter((value, index, values) =>
+                values.indexOf(value) === index && Boolean(value),
+            ),
             requestId: parsed.requestId ?? state.requestId,
             accumulated: state.accumulated + parsed.text,
         };
@@ -56,6 +70,9 @@ export function parseInsightChatStreamLine(
 
     return {
         ...state,
+        toolTrace: [...(state.toolTrace ?? []), ...parsedToolTrace].filter((value, index, values) =>
+            values.indexOf(value) === index && Boolean(value),
+        ),
         requestId: parsed.requestId ?? state.requestId,
     };
 }

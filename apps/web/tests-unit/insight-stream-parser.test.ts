@@ -36,6 +36,21 @@ describe('insight chat stream parser', () => {
         expect(output).toBe('hello world');
     });
 
+    test('collects deduplicated toolTrace from stream messages', () => {
+        let output = '';
+        const startState: InsightChatStreamState = { accumulated: '', streamError: null, toolTrace: ['route:start'] };
+
+        const next = parseInsightChatStreamLine('data: {"text":"안녕","toolTrace":"route:openai"}', startState, (token) => {
+            output += token;
+        });
+        const nextWithArray = parseInsightChatStreamLine('data: {"text":"!","toolTrace":["route:openai","provider:openai"]}', next, (token) => {
+            output += token;
+        });
+
+        expect(output).toBe('안녕!');
+        expect(nextWithArray.toolTrace).toEqual(['route:start', 'route:openai', 'provider:openai']);
+    });
+
     test('records stream error and ignores subsequent tokens', () => {
         let onTokenCalls = 0;
         const state: InsightChatStreamState = { accumulated: '', streamError: null };
@@ -45,6 +60,19 @@ describe('insight chat stream parser', () => {
 
         expect(next.streamError).toBe('llm_unavailable');
         expect(onTokenCalls).toBe(0);
+    });
+
+    test('keeps toolTrace from stream error payload', () => {
+        const next = parseInsightChatStreamLine('data: {"error":"stream_error","toolTrace":["route:stream","provider:gemini"],"requestId":"req-stream"}', {
+            accumulated: '',
+            streamError: null,
+        }, () => {
+            throw new Error('should not emit token');
+        });
+
+        expect(next.streamError).toBe('stream_error');
+        expect(next.requestId).toBe('req-stream');
+        expect(next.toolTrace).toEqual(['route:stream', 'provider:gemini']);
     });
 
     test('tracks requestId from stream error payload', () => {
