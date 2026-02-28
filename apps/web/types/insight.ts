@@ -181,6 +181,55 @@ export type AdminInsightChatBootstrapResponse = {
   message: Pick<AdminInsightChatResponse, 'content' | 'sources' | 'visualComponent'>;
 };
 
+export type AdminInsightSystemStatusKeyFlags = {
+  supabaseUrl: boolean;
+  supabaseServiceRoleKey: boolean;
+  geminiServerKey: boolean;
+  openaiServerKey: boolean;
+  anthropicServerKey: boolean;
+  nanoBanana2Key: boolean;
+};
+
+export type AdminInsightSystemStatusChecklistSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+export type AdminInsightSystemStatusChecklistCategory =
+  | 'environment'
+  | 'integration'
+  | 'provider-key'
+  | 'general';
+
+export type AdminInsightSystemStatusChecklistSource =
+  | 'run_daily'
+  | 'storyboard-agent'
+  | 'bge-embedding'
+  | 'provider-key';
+
+export type AdminInsightSystemStatusChecklistItem = {
+  id: string;
+  title: string;
+  severity: AdminInsightSystemStatusChecklistSeverity;
+  category: AdminInsightSystemStatusChecklistCategory;
+  action: string;
+  source: AdminInsightSystemStatusChecklistSource;
+};
+
+export type AdminInsightSystemIntegrationStatus = {
+  enabled: boolean;
+  configured: boolean;
+  reachable: boolean;
+  endpoint?: string;
+  detail?: string;
+  checkedAt: string;
+};
+
+export type AdminInsightSystemStatusResponse = {
+  asOf: string;
+  keys: AdminInsightSystemStatusKeyFlags;
+  storyboardAgent: AdminInsightSystemIntegrationStatus;
+  bgeEmbedding: AdminInsightSystemIntegrationStatus;
+  checklist: AdminInsightSystemStatusChecklistItem[];
+};
+
 export type InsightChatGuardrailRouteName = 'chat' | 'stream';
 
 export type InsightChatGuardrailRouteMetricTotals = Record<string, number>;

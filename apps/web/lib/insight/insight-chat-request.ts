@@ -345,7 +345,7 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
             provider,
             model,
             apiKey,
-            useServerKey: useServerKey || (provider === 'gemini' && !apiKey),
+            useServerKey: useServerKey || !apiKey,
             ...(storyboardModelProfile ? { storyboardModelProfile } : {}),
             ...(imageModelProfile ? { imageModelProfile } : {}),
         }
