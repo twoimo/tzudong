@@ -18,6 +18,20 @@ describe('insight chat stream parser', () => {
         expect(next.streamError).toBeNull();
     });
 
+    test('accepts sse data line without trailing whitespace after colon', () => {
+        const state: InsightChatStreamState = { accumulated: '', streamError: null };
+        let captured = '';
+
+        const next = parseInsightChatStreamLine('data:{"text":"바로토큰","requestId":"req-no-space"}', state, (token) => {
+            captured += token;
+        });
+
+        expect(captured).toBe('바로토큰');
+        expect(next.accumulated).toBe('바로토큰');
+        expect(next.requestId).toBe('req-no-space');
+        expect(next.streamError).toBeNull();
+    });
+
     test('keeps latest text appended in a chain', () => {
         let output = '';
         let state: InsightChatStreamState = { accumulated: '', streamError: null };
@@ -58,7 +72,12 @@ describe('insight chat stream parser', () => {
             onTokenCalls += 1;
         });
 
+        const afterError = parseInsightChatStreamLine('data: {"text":"should-be-ignored"}', next, () => {
+            onTokenCalls += 1;
+        });
+
         expect(next.streamError).toBe('llm_unavailable');
+        expect(afterError.accumulated).toBe('');
         expect(onTokenCalls).toBe(0);
     });
 

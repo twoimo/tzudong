@@ -179,6 +179,35 @@ describe('insight chat request parser', () => {
         expect(parsed.invalidContextReason).toBe('invalid_context_payload');
     });
 
+    test('rejects contextMessages when count exceeds limit', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            contextMessages: Array.from({ length: 13 }, (_, index) => ({
+                role: index % 2 === 0 ? 'user' : 'assistant',
+                content: `msg-${index + 1}`,
+            })),
+        });
+
+        expect(parsed.contextMessages).toEqual([]);
+        expect(parsed.invalidContextReason).toBe('context_count_exceeded');
+    });
+
+    test('rejects contextMessages with invalid role or empty content', () => {
+        const invalidRole = parseInsightChatRequestBody({
+            message: '안녕',
+            contextMessages: [{ role: 'system', content: 'x' }] as unknown,
+        });
+        expect(invalidRole.contextMessages).toEqual([]);
+        expect(invalidRole.invalidContextReason).toBe('invalid_context_role');
+
+        const emptyContent = parseInsightChatRequestBody({
+            message: '안녕',
+            contextMessages: [{ role: 'user', content: '   ' }],
+        });
+        expect(emptyContent.contextMessages).toEqual([]);
+        expect(emptyContent.invalidContextReason).toBe('invalid_context_content');
+    });
+
     test('normalizes feedbackContext with supported rating', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',
