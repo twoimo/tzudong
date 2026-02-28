@@ -32,6 +32,20 @@ describe('insight chat stream parser', () => {
         expect(next.streamError).toBeNull();
     });
 
+    test('accepts sse lines with whitespace and CRLF formatting', () => {
+        const state: InsightChatStreamState = { accumulated: '', streamError: null };
+        let captured = '';
+
+        const next = parseInsightChatStreamLine('  data: { "text":"줄바꿈", "requestId":"req-whitespace" }\r', state, (token) => {
+            captured += token;
+        });
+
+        expect(captured).toBe('줄바꿈');
+        expect(next.accumulated).toBe('줄바꿈');
+        expect(next.requestId).toBe('req-whitespace');
+        expect(next.streamError).toBeNull();
+    });
+
     test('keeps latest text appended in a chain', () => {
         let output = '';
         let state: InsightChatStreamState = { accumulated: '', streamError: null };
@@ -48,6 +62,15 @@ describe('insight chat stream parser', () => {
 
         expect(state.accumulated).toBe('hello world');
         expect(output).toBe('hello world');
+    });
+
+    test('ignores [DONE] frames with CRLF-style endings', () => {
+        const state: InsightChatStreamState = { accumulated: '', streamError: null };
+        const next = parseInsightChatStreamLine('data: [DONE]\r', state, () => {
+            throw new Error('should not emit on DONE');
+        });
+
+        expect(next).toEqual(state);
     });
 
     test('collects deduplicated toolTrace from stream messages', () => {
