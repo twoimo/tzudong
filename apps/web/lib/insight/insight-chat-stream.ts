@@ -15,11 +15,12 @@ export function parseInsightChatStreamLine(
         return state;
     }
 
-    if (!line.startsWith('data:')) {
+    const match = line.match(/^\s*data:\s*(.*?)\s*$/);
+    if (!match) {
         return state;
     }
 
-    const payload = line.slice(5).trimStart();
+    const payload = (match[1] ?? '').trim();
     if (!payload || payload === '[DONE]') {
         return state;
     }

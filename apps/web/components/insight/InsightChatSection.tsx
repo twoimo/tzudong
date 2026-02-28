@@ -1427,7 +1427,22 @@ async function postStreamChat(
         if (streamState.streamError) break;
     }
 
+    if (buffer.trim()) {
+        streamState = parseInsightChatStreamLine(buffer, streamState, onToken);
+    }
+
     const fallbackReason = streamState.cancellationReason === 'request_cancelled' ? 'request_cancelled' : 'stream_error';
+
+    const streamToolTrace = [...(streamState.toolTrace ?? [])];
+    const appendTrace = (trace: string) => {
+        if (!trace || streamToolTrace.includes(trace)) return;
+        streamToolTrace.push(trace);
+    };
+    appendTrace('route:stream');
+    appendTrace('flow:stream');
+    appendTrace(`provider:${llmConfig.provider}`);
+    appendTrace(`responseMode:${normalizedResponseMode}`);
+    appendTrace(normalizedMemoryMode ? `memoryMode:${normalizedMemoryMode}` : 'memoryMode:off');
 
     if (streamState.streamError || !streamState.accumulated) {
         const streamFailed = streamState.streamError
@@ -1446,7 +1461,7 @@ async function postStreamChat(
                 fallbackReason: streamState.streamError ? fallbackReason : 'stream_no_data',
                 ...(streamState.requestId ? { requestId: streamState.requestId } : {}),
                 memoryMode: normalizedMemoryMode,
-                ...(streamState.toolTrace ? { toolTrace: streamState.toolTrace } : {}),
+                ...(streamToolTrace.length ? { toolTrace: streamToolTrace } : {}),
             },
         };
     }
