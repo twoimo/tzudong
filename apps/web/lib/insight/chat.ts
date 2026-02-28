@@ -8,6 +8,7 @@ import type {
   InsightChatResponseMode,
   InsightChatSource,
   LlmRequestConfig,
+  LlmProvider,
   StoryboardModelProfile,
 } from '@/types/insight';
 import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
@@ -70,7 +71,24 @@ const STORYBOARD_WEB_SEARCH_TOKEN = (
 const STORYBOARD_WEB_SEARCH_TIMEOUT_MS = Number(process.env.STORYBOARD_WEB_SEARCH_TIMEOUT_MS || '8000');
 const INSIGHT_QUERY_TTL_MS = Number(process.env.INSIGHT_QUERY_CACHE_TTL_MS || '45000');
 
-const GEMINI_API_KEY_ENV = process.env.GEMINI_OCR_YEON?.trim() || '';
+const GEMINI_API_KEY_ENV = (
+  process.env.GEMINI_OCR_YEON?.trim()
+  || process.env.STORYBOARD_AGENT_GEMINI_API_KEY?.trim()
+  || process.env.GEMINI_API_KEY?.trim()
+  || process.env.GOOGLE_API_KEY?.trim()
+  || process.env.NEXT_PUBLIC_GOOGLE_API_KEY?.trim()
+  || ''
+);
+const OPENAI_API_KEY_ENV = (
+  process.env.OPENAI_API_KEY?.trim()
+  || process.env.STORYBOARD_AGENT_OPENAI_API_KEY?.trim()
+  || ''
+);
+const ANTHROPIC_API_KEY_ENV = (
+  process.env.ANTHROPIC_API_KEY?.trim()
+  || process.env.STORYBOARD_AGENT_ANTHROPIC_API_KEY?.trim()
+  || ''
+);
 const GEMINI_MODEL_DEFAULT = 'gemini-3-flash-preview';
 const DEFAULT_STORYBOARD_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
 const DEFAULT_IMAGE_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
@@ -80,6 +98,18 @@ const LLM_MAX_TOKENS_FAST = 1200;
 const LLM_MAX_TOKENS_DEEP = 2048;
 const LLM_MAX_TOKENS_STRUCTURED = 2560;
 const FALLBACK_CONFIDENCE_MIN = 0.18;
+
+function resolveServerLlmApiKey(provider: LlmProvider): string {
+  switch (provider) {
+    case 'openai':
+      return OPENAI_API_KEY_ENV;
+    case 'anthropic':
+      return ANTHROPIC_API_KEY_ENV;
+    case 'gemini':
+    default:
+      return GEMINI_API_KEY_ENV;
+  }
+}
 
 type ResponseModeProfile = {
   maxOutputTokens: number;
@@ -1482,7 +1512,7 @@ async function askStoryboardViaLlm(
 ): Promise<AdminInsightChatResponse | null> {
   const provider = llmConfig?.provider || 'gemini';
   const apiKey = llmConfig?.apiKey
-    || (llmConfig?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+    || (llmConfig?.useServerKey ? resolveServerLlmApiKey(provider) : '');
   const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
   const resolvedResponseMode = normalizeResponseMode(responseMode);
   const responseProfile = resolveResponseModeProfile(resolvedResponseMode);
@@ -2197,20 +2227,29 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
   const content = [
     '안녕하세요! 쯔양 인사이트 챗봇입니다.',
     '',
-    '궁금한 점을 자유롭게 질문해 주세요.',
+    '**🎬 쯔양 스토리보드 운영 프리셋**',
+    '- "식당(레스토랑) 콘텐츠용 30초 숏폼 스토리보드 5컷 구조로 기획해줘"',
+    '- "오늘 업로드용 푸드·브이로그 영상 아이디어 3개를 콘티 기준으로 비교해줘"',
+    '- "피크 프레임 중심으로 후킹·클로징 연출 포인트를 정리해줘"',
     '',
-    '**📊 데이터 시각화**',
-    '- "트리맵으로 조회수 분포 보여줘"',
-    '- "카테고리별 영상 분포 분석해줘"',
-    '- "최근 1개월 증감률 트리맵 보여줘"',
+    '영상 성과·레스토랑 DB·피크 구간/프레임 정보를 함께 활용해 답변합니다.',
     '',
-    '**📈 채널 분석**',
-    '- "최근 조회수 상위 영상 알려줘"',
-    '- "대시보드 현황 요약해줘"',
+    '**📊 채널 성과 분석**',
+    '- "최근 30일 조회수/좋아요/댓글 추세와 원인을 요약해줘"',
+    '- "조회수 상위 영상 10개 공통 포맷을 뽑아줘"',
+    '- "레스토랑 카테고리별 성과 차이를 비교해줘"',
     '',
-    '**🎬 콘텐츠 기획**',
-    '- "먹방 스토리보드 기획안 만들어줘"',
-    '- "인기 영상 트렌드 분석해줘"',
+    '**🍽️ 레스토랑 인사이트**',
+    '- "쯔양이 다녀온 맛집 중 재방문 후보를 데이터로 추천해줘"',
+    '- "식당명 기준으로 관련 영상 성과와 댓글 반응을 정리해줘"',
+    '',
+    '**🎬 피크 구간/스토리보드**',
+    '- "구독자가 많이 본 구간 기준으로 다음 에피소드 스토리보드 짜줘"',
+    '- "피크 프레임 캡션 기반으로 후킹 씬 5개를 뽑아줘"',
+    '- "마지막 추천 씬을 Nano Banana 2 이미지 프롬프트로 변환해줘"',
+    '',
+    '**⚙️ 운영 점검**',
+    '- 설정 패널의 운영 상태에서 Storyboard/BGE/키 체크리스트를 먼저 확인해 주세요.',
   ].join('\n');
 
   return {
@@ -2445,7 +2484,7 @@ async function routeLlmRequest(
   toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   const provider = config?.provider || 'gemini';
-  const apiKey = config?.apiKey || (config?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const apiKey = config?.apiKey || (config?.useServerKey ? resolveServerLlmApiKey(provider) : '');
   const model = config?.model || GEMINI_MODEL_DEFAULT;
   const resolvedResponseMode = normalizeResponseMode(responseMode);
   const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
@@ -2533,7 +2572,7 @@ export async function streamAdminInsightChat(
   if (localResult) return { local: localResult };
 
   const provider = llmConfig?.provider || 'gemini';
-  const apiKey = llmConfig?.apiKey || (llmConfig?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
+  const apiKey = llmConfig?.apiKey || (llmConfig?.useServerKey ? resolveServerLlmApiKey(provider) : '');
   const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
 
   if (!apiKey) {
