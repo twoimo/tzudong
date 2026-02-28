@@ -11,11 +11,15 @@ export function parseInsightChatStreamLine(
     state: InsightChatStreamState,
     onToken: (token: string) => void,
 ): InsightChatStreamState {
-    if (!line.startsWith('data: ')) {
+    if (state.streamError) {
         return state;
     }
 
-    const payload = line.slice(6).trim();
+    if (!line.startsWith('data:')) {
+        return state;
+    }
+
+    const payload = line.slice(5).trimStart();
     if (!payload || payload === '[DONE]') {
         return state;
     }
