@@ -125,6 +125,8 @@ export type LlmRequestConfig = {
 
 export type InsightChatResponseMode = 'fast' | 'deep' | 'structured';
 
+export type InsightChatMemoryMode = 'off' | 'session' | 'pinned';
+
 export type InsightChatAttachmentInput = {
   name: string;
   mimeType?: string;
@@ -137,6 +139,11 @@ export type InsightChatAttachment = {
   mimeType: string;
   content: string;
   sizeBytes: number;
+};
+
+export type InsightChatContextMessage = {
+  role: 'user' | 'assistant';
+  content: string;
 };
 
 export type InsightChatFeedbackRating = 'up' | 'down';
@@ -153,6 +160,7 @@ export type AdminInsightChatMeta = {
   model?: string;
   requestId?: string;
   responseMode?: InsightChatResponseMode;
+  memoryMode?: InsightChatMemoryMode;
   confidence?: number;
   latencyMs?: number;
   toolTrace?: string[];
@@ -170,5 +178,31 @@ export type AdminInsightChatResponse = {
 export type AdminInsightChatBootstrapResponse = {
   asOf: string;
   message: Pick<AdminInsightChatResponse, 'content' | 'sources' | 'visualComponent'>;
+};
+
+export type InsightChatGuardrailRouteName = 'chat' | 'stream';
+
+export type InsightChatGuardrailRouteMetrics = {
+  latency_budget_exceeded: number;
+  reliability_fallback_streak_alerts: Record<string, number>;
+};
+
+export type InsightChatGuardrailConfig = {
+  enabled: boolean;
+  latencyBudgetMs: number;
+  fallbackStreakThreshold: number;
+  fallbackWindowMs: number;
+  fallbackAlertCooldownMs: number;
+};
+
+export type AdminInsightChatGuardrailMetricsResponse = {
+  timestamp: string;
+  routes: Record<InsightChatGuardrailRouteName, InsightChatGuardrailRouteMetrics>;
+  guardrailConfig: InsightChatGuardrailConfig;
+};
+
+export type AdminInsightChatGuardrailMetricsResetResponse = {
+  success: boolean;
+  message: string;
 };
 
