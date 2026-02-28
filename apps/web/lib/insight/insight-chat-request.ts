@@ -20,6 +20,7 @@ export type ParsedInsightChatRequest = {
     contextMessages: InsightChatContextMessage[];
     feedbackContext: InsightChatFeedbackContext | undefined;
     memoryMode?: InsightChatMemoryMode;
+    memoryProfileNote?: string;
     invalidFeedbackReason?: string;
     inputPolicyViolationReason?: string;
     invalidModelReason?: string;
@@ -34,6 +35,7 @@ const MAX_ATTACHMENT_CONTENT_LENGTH = 12_000;
 const MAX_ATTACHMENT_SIZE_BYTES = 200_000;
 const MAX_CONTEXT_MESSAGES_COUNT = 12;
 const MAX_CONTEXT_MESSAGE_CONTENT_LENGTH = 1_200;
+const MAX_MEMORY_PROFILE_NOTE_LENGTH = 600;
 const ALLOWED_ATTACHMENT_NAME = /\.(txt|csv)$/i;
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
     'text/plain',
@@ -175,6 +177,20 @@ function sanitizeContextMessageContent(raw: unknown): string {
         .slice(0, MAX_CONTEXT_MESSAGE_CONTENT_LENGTH);
 }
 
+function sanitizeMemoryProfileNote(raw: unknown): string | undefined {
+    if (typeof raw !== 'string') {
+        return undefined;
+    }
+
+    const normalized = raw
+        .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_MEMORY_PROFILE_NOTE_LENGTH);
+
+    return normalized || undefined;
+}
+
 function parseContextMessages(raw: unknown): {
     contextMessages: InsightChatContextMessage[];
     invalidContextReason?: string;
@@ -313,6 +329,7 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
     const storyboardModelProfile = normalizeStoryboardProfile(body?.storyboardModelProfile);
     const imageModelProfile = normalizeStoryboardProfile(body?.imageModelProfile);
     const responseMode = normalizeResponseMode(body?.responseMode);
+    const memoryProfileNote = sanitizeMemoryProfileNote(body?.memoryProfileNote);
     const { feedbackContext, invalidFeedbackReason } = normalizeFeedbackContext(body?.feedbackContext);
     const memoryMode = normalizeMemoryMode(body?.memoryMode);
     const { attachments, invalidAttachmentReason } = parseAttachments(body?.attachments);
@@ -347,6 +364,7 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
         ...(invalidModelReason ? { invalidModelReason } : {}),
         ...(invalidAttachmentReason ? { invalidAttachmentReason } : {}),
         ...(invalidContextReason ? { invalidContextReason } : {}),
+        ...(memoryProfileNote ? { memoryProfileNote } : {}),
         ...(memoryMode ? { memoryMode } : {}),
     };
 }

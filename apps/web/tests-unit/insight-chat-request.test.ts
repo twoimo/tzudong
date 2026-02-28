@@ -144,6 +144,38 @@ describe('insight chat request parser', () => {
         expect(parsed.memoryMode).toBe('pinned');
     });
 
+    test('accepts and sanitizes memoryProfileNote', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            memoryMode: 'session',
+            memoryProfileNote: '  프로젝트\n핵심\t요약  ',
+        });
+
+        expect(parsed.memoryProfileNote).toBe('프로젝트 핵심 요약');
+    });
+
+    test('drops memoryProfileNote in invalid types', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            memoryMode: 'session',
+            memoryProfileNote: 10 as unknown,
+        });
+
+        expect(parsed.memoryProfileNote).toBeUndefined();
+    });
+
+    test('truncates memoryProfileNote to max configured length', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            memoryMode: 'session',
+            memoryProfileNote: `x${'a'.repeat(700)}`,
+        });
+
+        expect(parsed.memoryProfileNote?.length).toBe(600);
+        expect(parsed.memoryProfileNote?.endsWith('a')).toBe(true);
+        expect(parsed.memoryProfileNote?.startsWith('x')).toBe(true);
+    });
+
     test('drops unsupported memoryMode values', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',

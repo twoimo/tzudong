@@ -311,6 +311,7 @@ type ResponseModeMetaPayload = {
 
 const MAX_PROMPT_ATTACHMENT_SNIPPETS = 4;
 const MAX_PROMPT_ATTACHMENT_SNIPPET_LENGTH = 1500;
+const MAX_MEMORY_PROFILE_NOTE_LENGTH = 600;
 
 function sanitizeFeedbackReason(raw: unknown): string | undefined {
   if (typeof raw !== 'string') return undefined;
@@ -364,6 +365,14 @@ function sanitizeMemoryContextContent(raw: string): string {
     .slice(0, MAX_MEMORY_CONTEXT_MESSAGE_LENGTH);
 }
 
+function sanitizeMemoryProfileNote(raw: string): string {
+  return raw
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_MEMORY_PROFILE_NOTE_LENGTH);
+}
+
 function buildMemoryContextBlock(
   memoryMode?: InsightChatMemoryMode,
   contextMessages?: InsightChatContextMessage[],
@@ -398,6 +407,27 @@ function buildMemoryContextBlock(
   ];
 }
 
+function buildMemoryProfileNoteBlock(
+  memoryMode?: InsightChatMemoryMode,
+  memoryProfileNote?: string,
+): string[] {
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+  if (!memoryProfileNote || !normalizedMemoryMode || normalizedMemoryMode === 'off') {
+    return [];
+  }
+
+  const normalizedNote = sanitizeMemoryProfileNote(memoryProfileNote);
+  if (!normalizedNote) {
+    return [];
+  }
+
+  return [
+    '',
+    '[대화 프로필 노트]',
+    normalizedNote,
+  ];
+}
+
 function buildPromptWithContext(
   message: string,
   responseMode?: InsightChatResponseMode,
@@ -405,11 +435,13 @@ function buildPromptWithContext(
   attachments?: InsightChatAttachment[],
   memoryMode?: InsightChatMemoryMode,
   contextMessages?: InsightChatContextMessage[],
+  memoryProfileNote?: string,
 ): { message: string; profile: ResponseModeProfile } {
   const profile = resolveResponseModeProfile(responseMode);
   const base = message.trim().replace(/[\u0000-\u001f\u007f]+/g, '').slice(0, 9000);
   const memoryContextLines = buildMemoryContextBlock(memoryMode, contextMessages);
   const attachmentLines = buildAttachmentContextBlock(attachments);
+  const memoryProfileNoteLines = buildMemoryProfileNoteBlock(memoryMode, memoryProfileNote);
   const feedbackLines = feedbackContext?.rating
     ? [
         '',
@@ -423,6 +455,9 @@ function buildPromptWithContext(
   const promptSections: string[] = [base];
   if (memoryContextLines.length > 0) {
     promptSections.push(...memoryContextLines);
+  }
+  if (memoryProfileNoteLines.length > 0) {
+    promptSections.push(...memoryProfileNoteLines);
   }
   if (attachmentLines.length > 0) {
     promptSections.push(...attachmentLines);
@@ -2196,6 +2231,7 @@ export async function answerAdminInsightChat(
   feedbackContext?: InsightChatFeedbackContext,
   attachments?: InsightChatAttachment[],
   contextMessages?: InsightChatContextMessage[],
+  memoryProfileNote?: string,
 ): Promise<AdminInsightChatResponse> {
   const asOf = new Date().toISOString();
   const input = message.trim();
@@ -2256,6 +2292,7 @@ export async function answerAdminInsightChat(
       feedbackContext,
       attachments,
       contextMessages,
+      memoryProfileNote,
       [...toolTrace, `provider:${llmConfig?.provider ?? 'gemini'}`],
     );
   if (llmReply) return llmReply;
@@ -2404,6 +2441,7 @@ async function routeLlmRequest(
   feedbackContext?: InsightChatFeedbackContext,
   attachments?: InsightChatAttachment[],
   contextMessages?: InsightChatContextMessage[],
+  memoryProfileNote?: string,
   toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   const provider = config?.provider || 'gemini';
@@ -2423,6 +2461,7 @@ async function routeLlmRequest(
         attachments,
         contextMessages,
         memoryMode: normalizedMemoryMode,
+        memoryProfileNote,
         toolTrace: [...toolTrace, 'provider:gemini'],
         responseProfile: profile,
       });
@@ -2433,6 +2472,7 @@ async function routeLlmRequest(
         attachments,
         contextMessages,
         memoryMode: normalizedMemoryMode,
+        memoryProfileNote,
         toolTrace: [...toolTrace, 'provider:openai'],
         responseProfile: profile,
       });
@@ -2443,6 +2483,7 @@ async function routeLlmRequest(
         attachments,
         contextMessages,
         memoryMode: normalizedMemoryMode,
+        memoryProfileNote,
         toolTrace: [...toolTrace, 'provider:anthropic'],
         responseProfile: profile,
       });
@@ -2465,6 +2506,7 @@ export async function streamAdminInsightChat(
   feedbackContext?: InsightChatFeedbackContext,
   attachments?: InsightChatAttachment[],
   contextMessages?: InsightChatContextMessage[],
+  memoryProfileNote?: string,
 ): Promise<{ stream: ReadableStream<Uint8Array> } | { local: AdminInsightChatResponse }> {
   const resolvedRequestId = normalizeRequestId(requestId);
   const resolvedResponseMode = normalizeResponseMode(responseMode);
@@ -2524,6 +2566,7 @@ export async function streamAdminInsightChat(
     attachments,
     contextMessages,
     toolTrace,
+    memoryProfileNote,
     localProfile,
     resolvedRequestId,
     requestSignal,
@@ -2592,6 +2635,7 @@ function createLlmStream(
   attachments: InsightChatAttachment[] | undefined,
   contextMessages: InsightChatContextMessage[] | undefined,
   toolTrace: string[],
+  memoryProfileNote: string | undefined,
   tokenDebugTrace: string[],
   requestId?: string,
   requestSignal?: AbortSignal,
@@ -2607,6 +2651,7 @@ function createLlmStream(
     attachments,
     normalizedMemoryMode,
     contextMessages,
+    memoryProfileNote,
   );
   const tracedTool = [
     ...toolTrace,
@@ -2920,6 +2965,7 @@ async function askGemini(
   options?: {
     responseMode?: InsightChatResponseMode;
     memoryMode?: InsightChatMemoryMode;
+    memoryProfileNote?: string;
     feedbackContext?: InsightChatFeedbackContext;
     attachments?: InsightChatAttachment[];
     contextMessages?: InsightChatContextMessage[];
@@ -2936,6 +2982,7 @@ async function askGemini(
     options?.attachments,
     options?.memoryMode,
     options?.contextMessages,
+    options?.memoryProfileNote,
   );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:gemini`, `responseMode:${responseMode}`];
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -2996,6 +3043,7 @@ async function askOpenAI(
   options?: {
     responseMode?: InsightChatResponseMode;
     memoryMode?: InsightChatMemoryMode;
+    memoryProfileNote?: string;
     feedbackContext?: InsightChatFeedbackContext;
     attachments?: InsightChatAttachment[];
     contextMessages?: InsightChatContextMessage[];
@@ -3012,6 +3060,7 @@ async function askOpenAI(
     options?.attachments,
     options?.memoryMode,
     options?.contextMessages,
+    options?.memoryProfileNote,
   );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:openai`, `responseMode:${responseMode}`];
   const controller = new AbortController();
@@ -3077,6 +3126,7 @@ async function askAnthropic(
   options?: {
     responseMode?: InsightChatResponseMode;
     memoryMode?: InsightChatMemoryMode;
+    memoryProfileNote?: string;
     feedbackContext?: InsightChatFeedbackContext;
     attachments?: InsightChatAttachment[];
     contextMessages?: InsightChatContextMessage[];
@@ -3093,6 +3143,7 @@ async function askAnthropic(
     options?.attachments,
     options?.memoryMode,
     options?.contextMessages,
+    options?.memoryProfileNote,
   );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:anthropic`, `responseMode:${responseMode}`];
   const controller = new AbortController();

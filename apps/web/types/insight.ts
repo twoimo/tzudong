@@ -156,6 +156,7 @@ export type InsightChatFeedbackContext = {
 
 export type AdminInsightChatMeta = {
   source: 'local' | 'agent' | 'gemini' | 'openai' | 'anthropic' | 'fallback';
+  citationQuality?: 'none' | 'low' | 'medium' | 'high';
   fallbackReason?: string;
   model?: string;
   requestId?: string;
@@ -182,9 +183,25 @@ export type AdminInsightChatBootstrapResponse = {
 
 export type InsightChatGuardrailRouteName = 'chat' | 'stream';
 
+export type InsightChatGuardrailRouteMetricTotals = Record<string, number>;
+
 export type InsightChatGuardrailRouteMetrics = {
   latency_budget_exceeded: number;
   reliability_fallback_streak_alerts: Record<string, number>;
+  total_requests?: number;
+  success_responses?: number;
+  fallback_responses?: number;
+  stream_responses?: number;
+  error_responses?: number;
+  citation_quality_counts?: InsightChatGuardrailRouteMetricTotals;
+  provider_request_counts?: InsightChatGuardrailRouteMetricTotals;
+  source_counts?: InsightChatGuardrailRouteMetricTotals;
+  fallback_totals?: InsightChatGuardrailRouteMetricTotals;
+  response_mode_counts?: InsightChatGuardrailRouteMetricTotals;
+  memory_mode_counts?: InsightChatGuardrailRouteMetricTotals;
+  feedback_rating_counts?: InsightChatGuardrailRouteMetricTotals;
+  feedback_has_reason_counts?: InsightChatGuardrailRouteMetricTotals;
+  feedback_reason_category_counts?: InsightChatGuardrailRouteMetricTotals;
 };
 
 export type InsightChatGuardrailConfig = {
