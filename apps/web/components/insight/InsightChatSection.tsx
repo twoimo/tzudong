@@ -46,16 +46,22 @@ import { cn } from '@/lib/utils';
 import { parseInsightChatStreamLine, type InsightChatStreamState } from '@/lib/insight/insight-chat-stream';
 import type {
     AdminInsightChatBootstrapResponse,
+    AdminInsightChatGuardrailMetricsResetResponse,
+    AdminInsightChatGuardrailMetricsResponse,
     AdminInsightChatResponse,
     InsightChatFollowUpPrompt,
     AdminInsightChatMeta,
+    InsightChatGuardrailConfig,
+    InsightChatGuardrailRouteMetrics,
     InsightChatSource,
     InsightChatResponseMode,
+    InsightChatMemoryMode,
     LlmProvider,
     LlmModelOption,
     InsightChatFeedbackContext,
     InsightChatFeedbackRating,
     InsightChatAttachmentInput,
+    InsightChatContextMessage,
     StoryboardModelProfile,
 } from '@/types/insight';
 
@@ -82,6 +88,7 @@ type ChatConversation = {
     pinned?: boolean;
     contextWindowSize?: number;
     responseMode?: InsightChatResponseMode;
+    memoryMode?: InsightChatMemoryMode;
 };
 
 const EMPTY_TITLE = '새로운 대화';
@@ -91,14 +98,22 @@ const CHAT_REQUEST_TIMEOUT_MS = 18_000;
 const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
 const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
 const CHAT_REQUEST_CACHE_LIMIT = 64;
+const CHAT_GUARDRAIL_METRICS_STALE_MS = 15_000;
+const CHAT_GUARDRAIL_METRICS_REFRESH_MS = 60_000;
 const MAX_CONVERSATIONS = 30;
 const MAX_MESSAGES_PER_CONVERSATION = 220;
 const MAX_FOLLOW_UP_PROMPT_LENGTH = 120;
 const DEFAULT_RESPONSE_MODE: InsightChatResponseMode = 'fast';
+const DEFAULT_MEMORY_MODE: InsightChatMemoryMode = 'off';
 const CHAT_RESPONSE_MODES: { value: InsightChatResponseMode; label: string; description: string }[] = [
     { value: 'fast', label: '빠른 응답', description: '짧고 실행 중심 요약' },
     { value: 'deep', label: '깊은 분석', description: '맥락과 근거 중심 심층 분석' },
     { value: 'structured', label: '구조화', description: '항목별 정형형 답변' },
+];
+const CHAT_MEMORY_MODES: { value: InsightChatMemoryMode; label: string; description: string }[] = [
+    { value: 'off', label: '기억 안함', description: '이전 대화 맥락을 사용하지 않습니다.' },
+    { value: 'session', label: '세션 기억', description: '현재 대화 기록을 참고해 답변합니다.' },
+    { value: 'pinned', label: '핀 고정', description: '중요 메시지를 우선 반영합니다.' },
 ];
 const RESPONSE_MODE_CONFIDENCE_SCORE: Record<InsightChatResponseMode, number> = {
     fast: 0.78,
@@ -110,10 +125,15 @@ const RESPONSE_MODE_BADGE_STYLES: Record<InsightChatResponseMode, string> = {
     deep: 'bg-[#eef2ff] text-[#3730a3]',
     structured: 'bg-[#fef3c7] text-[#92400e]',
 };
+const MEMORY_MODE_BADGE_STYLES: Record<InsightChatMemoryMode, string> = {
+    off: 'bg-[#f3f4f6] text-[#374151]',
+    session: 'bg-[#f0f9ff] text-[#0c4a6e]',
+    pinned: 'bg-[#fff7ed] text-[#9a3412]',
+};
 const MESSAGE_WINDOW_INITIAL = 80;
 const MESSAGE_WINDOW_BATCH = 80;
 const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
-const CHAT_STORAGE_SCHEMA_VERSION = 4;
+const CHAT_STORAGE_SCHEMA_VERSION = 5;
 const CHAT_PERSIST_DEBOUNCE_MS = 350;
 const LLM_KEYS_STORAGE_KEY = 'tzudong-admin-llm-keys';
 const LLM_MODEL_STORAGE_KEY = 'tzudong-admin-llm-active-model';
@@ -134,6 +154,8 @@ const META_SOURCE_PANEL_LABELS: Record<NonNullable<AdminInsightChatMeta['source'
 const META_FALLBACK_REASON_LABELS: Record<string, string> = {
     empty_input: '입력 없음',
     llm_unavailable: 'LLM 응답 불가',
+    invalid_feedback: '잘못된 피드백 형식',
+    invalid_context: '잘못된 기억 컨텍스트',
     invalid_model: '잘못된 모델 설정',
     invalid_attachment: '잘못된 첨부 파일',
     request_cancelled: '요청 중단',
@@ -188,6 +210,145 @@ function isInsightChatResponseMode(raw: unknown): raw is InsightChatResponseMode
 
 function normalizeResponseMode(raw: unknown): InsightChatResponseMode {
     return isInsightChatResponseMode(raw) ? raw : DEFAULT_RESPONSE_MODE;
+}
+
+function isInsightChatMemoryMode(raw: unknown): raw is InsightChatMemoryMode {
+    return raw === 'off' || raw === 'session' || raw === 'pinned';
+}
+
+function normalizeMemoryMode(raw: unknown): InsightChatMemoryMode {
+    return isInsightChatMemoryMode(raw) ? raw : DEFAULT_MEMORY_MODE;
+}
+
+type InsightChatGuardrailSummary = {
+    totalLatencyBudgetExceeded: number;
+    totalFallbackStreakAlerts: number;
+    dominantFallbackReason: string | null;
+    dominantFallbackCount: number;
+};
+
+const DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG: InsightChatGuardrailConfig = {
+    enabled: true,
+    latencyBudgetMs: 4_500,
+    fallbackStreakThreshold: 3,
+    fallbackWindowMs: 90_000,
+    fallbackAlertCooldownMs: 60_000,
+};
+
+function toNonNegativeInteger(value: unknown): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.floor(parsed);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeGuardrailRouteMetrics(raw: unknown): InsightChatGuardrailRouteMetrics {
+    if (!isRecord(raw)) {
+        return {
+            latency_budget_exceeded: 0,
+            reliability_fallback_streak_alerts: {},
+        };
+    }
+
+    const fallbackRaw = raw.reliability_fallback_streak_alerts;
+    const fallbackCounts: Record<string, number> = {};
+    if (isRecord(fallbackRaw)) {
+        for (const [reason, value] of Object.entries(fallbackRaw)) {
+            const normalizedReason = sanitizeMetaValue(reason).toLowerCase();
+            const count = toNonNegativeInteger(value);
+            if (!normalizedReason || count <= 0) continue;
+            fallbackCounts[normalizedReason] = (fallbackCounts[normalizedReason] ?? 0) + count;
+        }
+    }
+
+    return {
+        latency_budget_exceeded: toNonNegativeInteger(raw.latency_budget_exceeded),
+        reliability_fallback_streak_alerts: fallbackCounts,
+    };
+}
+
+function normalizeGuardrailConfig(raw: unknown): InsightChatGuardrailConfig {
+    if (!isRecord(raw)) {
+        return { ...DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG };
+    }
+
+    return {
+        enabled: typeof raw.enabled === 'boolean' ? raw.enabled : DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG.enabled,
+        latencyBudgetMs: toNonNegativeInteger(raw.latencyBudgetMs) || DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG.latencyBudgetMs,
+        fallbackStreakThreshold: toNonNegativeInteger(raw.fallbackStreakThreshold) || DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG.fallbackStreakThreshold,
+        fallbackWindowMs: toNonNegativeInteger(raw.fallbackWindowMs) || DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG.fallbackWindowMs,
+        fallbackAlertCooldownMs: toNonNegativeInteger(raw.fallbackAlertCooldownMs) || DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG.fallbackAlertCooldownMs,
+    };
+}
+
+function createEmptyGuardrailRouteMetrics(): InsightChatGuardrailRouteMetrics {
+    return {
+        latency_budget_exceeded: 0,
+        reliability_fallback_streak_alerts: {},
+    };
+}
+
+export function createEmptyInsightChatGuardrailMetricsResponse(): AdminInsightChatGuardrailMetricsResponse {
+    return {
+        timestamp: new Date(0).toISOString(),
+        routes: {
+            chat: createEmptyGuardrailRouteMetrics(),
+            stream: createEmptyGuardrailRouteMetrics(),
+        },
+        guardrailConfig: { ...DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG },
+    };
+}
+
+export function normalizeInsightChatGuardrailMetricsResponse(raw: unknown): AdminInsightChatGuardrailMetricsResponse {
+    const fallback = createEmptyInsightChatGuardrailMetricsResponse();
+    if (!isRecord(raw)) {
+        return fallback;
+    }
+
+    const routes = isRecord(raw.routes) ? raw.routes : {};
+    const timestamp = typeof raw.timestamp === 'string' && raw.timestamp.trim()
+        ? raw.timestamp
+        : fallback.timestamp;
+
+    return {
+        timestamp,
+        routes: {
+            chat: normalizeGuardrailRouteMetrics(routes.chat),
+            stream: normalizeGuardrailRouteMetrics(routes.stream),
+        },
+        guardrailConfig: normalizeGuardrailConfig(raw.guardrailConfig),
+    };
+}
+
+export function summarizeInsightChatGuardrailMetrics(
+    payload: AdminInsightChatGuardrailMetricsResponse | null | undefined,
+): InsightChatGuardrailSummary {
+    const normalized = payload ? normalizeInsightChatGuardrailMetricsResponse(payload) : createEmptyInsightChatGuardrailMetricsResponse();
+    const reasons = new Map<string, number>();
+    let totalLatencyBudgetExceeded = 0;
+
+    for (const routeMetrics of Object.values(normalized.routes)) {
+        totalLatencyBudgetExceeded += toNonNegativeInteger(routeMetrics.latency_budget_exceeded);
+        for (const [reason, count] of Object.entries(routeMetrics.reliability_fallback_streak_alerts)) {
+            const normalizedReason = sanitizeMetaValue(reason).toLowerCase();
+            const safeCount = toNonNegativeInteger(count);
+            if (!normalizedReason || safeCount <= 0) continue;
+            reasons.set(normalizedReason, (reasons.get(normalizedReason) ?? 0) + safeCount);
+        }
+    }
+
+    const sortedReasons = [...reasons.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+    return {
+        totalLatencyBudgetExceeded,
+        totalFallbackStreakAlerts: [...reasons.values()].reduce((sum, value) => sum + value, 0),
+        dominantFallbackReason: sortedReasons[0]?.[0] ?? null,
+        dominantFallbackCount: sortedReasons[0]?.[1] ?? 0,
+    };
 }
 
 function sanitizeConversationTag(value: unknown): string {
@@ -270,6 +431,8 @@ const MAX_FOLLOW_UP_PROMPTS = 4;
 const MAX_CHAT_ATTACHMENTS = 4;
 const MAX_CHAT_ATTACHMENT_BYTES = 200_000;
 const MAX_CHAT_ATTACHMENT_CONTENT_LENGTH = 12_000;
+const MAX_REQUEST_CONTEXT_MESSAGES = 12;
+const MAX_REQUEST_CONTEXT_MESSAGE_CONTENT_LENGTH = 700;
 const MAX_CONVERSATION_TAGS = 5;
 const MAX_CONVERSATION_TAG_LENGTH = 20;
 const CONVERSATION_FILTER_ALL = 'all';
@@ -303,6 +466,59 @@ function normalizeFeedbackInput(raw: InsightChatFeedbackContext | undefined): In
         ...(reason ? { reason } : {}),
         ...(targetAssistantMessageId ? { targetAssistantMessageId } : {}),
     };
+}
+
+function sanitizeContextMessageContent(raw: string): string {
+    return raw
+        .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_REQUEST_CONTEXT_MESSAGE_CONTENT_LENGTH);
+}
+
+type ContextSeedMessage = Pick<ChatMessage, 'role' | 'content'>;
+
+export function buildInsightChatContextMessages(
+    messages: ContextSeedMessage[],
+    memoryMode: InsightChatMemoryMode,
+): InsightChatContextMessage[] {
+    if (memoryMode === 'off' || !messages.length) {
+        return [];
+    }
+
+    const normalized = messages
+        .filter((message) => message.role === 'user' || message.role === 'assistant')
+        .map((message) => ({
+            role: message.role,
+            content: sanitizeContextMessageContent(message.content),
+        }))
+        .filter((message) => message.content.length > 0);
+
+    if (!normalized.length) {
+        return [];
+    }
+
+    if (memoryMode === 'session') {
+        return normalized.slice(-MAX_REQUEST_CONTEXT_MESSAGES);
+    }
+
+    const firstUser = normalized.find((message) => message.role === 'user');
+    const latestAssistant = [...normalized].reverse().find((message) => message.role === 'assistant');
+    const recent = normalized.slice(-MAX_REQUEST_CONTEXT_MESSAGES);
+    const combined = [firstUser, ...recent, latestAssistant].filter(Boolean) as InsightChatContextMessage[];
+    const deduped: InsightChatContextMessage[] = [];
+
+    for (const message of combined) {
+        if (deduped.some((item) => item.role === message.role && item.content === message.content)) {
+            continue;
+        }
+        deduped.push(message);
+        if (deduped.length >= MAX_REQUEST_CONTEXT_MESSAGES) {
+            break;
+        }
+    }
+
+    return deduped;
 }
 
 function sanitizeAttachmentName(raw: string): string {
@@ -438,7 +654,7 @@ type PersistedChatMessage = Omit<ChatMessage, 'createdAt' | 'meta'> & {
 };
 
 type PersistedChatState = {
-    version: 1 | 2 | 3 | 4;
+    version: 1 | 2 | 3 | 4 | 5;
     conversations: PersistedConversation[];
     activeConversationId: string;
 };
@@ -455,6 +671,7 @@ type PersistedConversation = {
     tags?: string[];
     contextWindowSize?: number;
     responseMode?: InsightChatResponseMode;
+    memoryMode?: InsightChatMemoryMode;
 };
 
 const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
@@ -864,8 +1081,10 @@ function buildConversationScopedCacheKey(
     },
     imageModelProfile?: StoryboardModelProfile,
     responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
+    memoryMode: InsightChatMemoryMode = DEFAULT_MEMORY_MODE,
     feedbackContext?: InsightChatFeedbackContext,
     attachments?: InsightChatAttachmentInput[],
+    contextMessages?: InsightChatContextMessage[],
 ): string {
     const normalizedMessage = normalizeCacheKey(message);
     const inferenceMode = llmConfig ? 'model' : 'local';
@@ -881,6 +1100,7 @@ function buildConversationScopedCacheKey(
         || imageModelProfile
         || 'none';
     const normalizedMode = normalizeResponseMode(responseMode);
+    const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
     const feedbackSignature = feedbackContext?.rating
         ? `feedback:${feedbackContext.rating}:${(feedbackContext.reason ?? '').replace(/\s+/g, ' ').slice(0, 120)}`
         : 'feedback:none';
@@ -890,8 +1110,14 @@ function buildConversationScopedCacheKey(
             .map((attachment) => `${attachment.name}:${attachment.content.slice(0, 80)}`)
             .join('|')
         : 'attachments:none';
+    const contextSignature = contextMessages?.length
+        ? contextMessages
+            .slice(-MAX_REQUEST_CONTEXT_MESSAGES)
+            .map((contextMessage) => `${contextMessage.role}:${contextMessage.content.slice(0, 80)}`)
+            .join('|')
+        : 'context:none';
 
-    return `${conversationId}|${inferenceMode}|${provider}|${model}|${keyMode}|${normalizedProfile}|${normalizedMode}|${feedbackSignature}|${attachmentSignature}|${normalizedMessage}`;
+    return `${conversationId}|${inferenceMode}|${provider}|${model}|${keyMode}|${normalizedProfile}|${normalizedMode}|${normalizedMemoryMode}|${feedbackSignature}|${attachmentSignature}|${contextSignature}|${normalizedMessage}`;
 }
 
 async function fetchJsonWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<T> {
@@ -978,6 +1204,33 @@ async function fetchChatBootstrap(conversationId: string): Promise<AdminInsightC
     }
 }
 
+async function fetchChatGuardrailMetrics(): Promise<AdminInsightChatGuardrailMetricsResponse> {
+    const payload = await fetchJsonWithTimeout<unknown>('/api/admin/insight/chat/metrics', {
+        method: 'GET',
+        cache: 'no-store',
+    }, CHAT_REQUEST_TIMEOUT_MS);
+    return normalizeInsightChatGuardrailMetricsResponse(payload);
+}
+
+async function postResetChatGuardrailMetrics(): Promise<AdminInsightChatGuardrailMetricsResetResponse> {
+    const payload = await fetchJsonWithTimeout<unknown>('/api/admin/insight/chat/metrics/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+    }, CHAT_REQUEST_TIMEOUT_MS);
+
+    if (!isRecord(payload) || payload.success !== true) {
+        throw new Error('가드레일 지표 초기화에 실패했습니다.');
+    }
+
+    return {
+        success: true,
+        message: typeof payload.message === 'string' && payload.message.trim()
+            ? payload.message
+            : '가드레일 지표를 초기화했습니다.',
+    };
+}
+
 async function postChatMessage(
     message: string,
     requestId: string,
@@ -992,8 +1245,10 @@ async function postChatMessage(
     },
     imageModelProfile?: StoryboardModelProfile,
     responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
+    memoryMode: InsightChatMemoryMode = DEFAULT_MEMORY_MODE,
     feedbackContext?: InsightChatFeedbackContext,
     attachments?: InsightChatAttachmentInput[],
+    contextMessages?: InsightChatContextMessage[],
 ): Promise<AdminInsightChatResponse> {
     const normalizedResponseMode = normalizeResponseMode(responseMode);
     const normalizedFeedbackContext = normalizeFeedbackInput(feedbackContext);
@@ -1006,8 +1261,10 @@ async function postChatMessage(
         llmConfig,
         resolvedImageModelProfile,
         normalizedResponseMode,
+        memoryMode,
         normalizedFeedbackContext,
         attachments,
+        contextMessages,
     );
     const now = Date.now();
 
@@ -1032,7 +1289,9 @@ async function postChatMessage(
                         message,
                         requestId,
                         responseMode: normalizedResponseMode,
+                        memoryMode: normalizeMemoryMode(memoryMode),
                         ...(attachments?.length ? { attachments } : {}),
+                        ...(contextMessages?.length ? { contextMessages } : {}),
                         ...(normalizedFeedbackContext ? { feedbackContext: normalizedFeedbackContext } : {}),
                         ...(llmConfig
                             ? {
@@ -1103,11 +1362,14 @@ async function postStreamChat(
     onToken: (token: string) => void,
     abortSignal?: AbortSignal,
     responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
+    memoryMode: InsightChatMemoryMode = DEFAULT_MEMORY_MODE,
     feedbackContext?: InsightChatFeedbackContext,
     attachments?: InsightChatAttachmentInput[],
+    contextMessages?: InsightChatContextMessage[],
 ): Promise<AdminInsightChatResponse | null> {
     const normalizedResponseMode = normalizeResponseMode(responseMode);
     const normalizedFeedbackContext = normalizeFeedbackInput(feedbackContext);
+    const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
 
     const resp = await fetch('/api/admin/insight/chat/stream', {
         method: 'POST',
@@ -1117,7 +1379,9 @@ async function postStreamChat(
             message,
             requestId,
             responseMode: normalizedResponseMode,
+            memoryMode: normalizedMemoryMode,
             ...(attachments?.length ? { attachments } : {}),
+            ...(contextMessages?.length ? { contextMessages } : {}),
             ...(normalizedFeedbackContext ? { feedbackContext: normalizedFeedbackContext } : {}),
             provider: llmConfig.provider,
             model: llmConfig.model,
@@ -1181,6 +1445,7 @@ async function postStreamChat(
                 source: 'fallback',
                 fallbackReason: streamState.streamError ? fallbackReason : 'stream_no_data',
                 ...(streamState.requestId ? { requestId: streamState.requestId } : {}),
+                memoryMode: normalizedMemoryMode,
                 ...(streamState.toolTrace ? { toolTrace: streamState.toolTrace } : {}),
             },
         };
@@ -2010,7 +2275,7 @@ function deserializeConversationList(raw: PersistedChatState | null): {
     conversations: ChatConversation[];
     activeConversationId: string;
 } | null {
-    if (!raw || (raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4) || !Array.isArray(raw.conversations) || raw.conversations.length === 0) {
+    if (!raw || (raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4 && raw.version !== 5) || !Array.isArray(raw.conversations) || raw.conversations.length === 0) {
         return null;
     }
 
@@ -2066,6 +2331,9 @@ function deserializeConversationList(raw: PersistedChatState | null): {
                     ? Math.max(1, Math.floor(conversation.contextWindowSize))
                     : undefined,
                 responseMode: normalizeResponseMode(conversation.responseMode),
+                memoryMode: raw.version >= 5
+                    ? normalizeMemoryMode(conversation.memoryMode)
+                    : DEFAULT_MEMORY_MODE,
             };
         })
         .filter((conversation): conversation is ChatConversation => conversation !== null)
@@ -2107,6 +2375,7 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
             tags: normalizeConversationTags(conversation.tags),
             contextWindowSize: conversation.contextWindowSize,
             responseMode: conversation.responseMode ?? DEFAULT_RESPONSE_MODE,
+            memoryMode: conversation.memoryMode ?? DEFAULT_MEMORY_MODE,
         })),
     };
 }
@@ -2124,11 +2393,16 @@ function createInitialConversation(id: string): ChatConversation {
         pinned: false,
         contextWindowSize: MESSAGE_WINDOW_INITIAL,
         responseMode: DEFAULT_RESPONSE_MODE,
+        memoryMode: DEFAULT_MEMORY_MODE,
     };
 }
 
 function getConversationResponseMode(conversation: ChatConversation | null | undefined): InsightChatResponseMode {
     return normalizeResponseMode(conversation?.responseMode);
+}
+
+function getConversationMemoryMode(conversation: ChatConversation | null | undefined): InsightChatMemoryMode {
+    return normalizeMemoryMode(conversation?.memoryMode);
 }
 
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
@@ -2452,6 +2726,11 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
         deep: '깊은 분석',
         structured: '구조화',
     }[meta.responseMode] ?? null : null;
+    const memoryModeLabel = meta.memoryMode ? {
+        off: '기억 안함',
+        session: '세션 기억',
+        pinned: '핀 고정',
+    }[meta.memoryMode] ?? null : null;
     const confidenceLabel = getConfidenceLabel(meta.confidence);
     const latencyLabel = getLatencyLabel(meta.latencyMs);
     const toolTrace = Array.isArray(meta.toolTrace) ? meta.toolTrace.filter(Boolean) : [];
@@ -2462,6 +2741,11 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
                 {responseModeLabel ? (
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESPONSE_MODE_BADGE_STYLES[meta.responseMode!]}`}>
                         모드: {responseModeLabel}
+                    </span>
+                ) : null}
+                {memoryModeLabel ? (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${MEMORY_MODE_BADGE_STYLES[meta.memoryMode!]}`}>
+                        기억: {memoryModeLabel}
                     </span>
                 ) : null}
                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#eef2ff] text-[#3730a3]">
@@ -2905,7 +3189,11 @@ const InsightChatSectionComponent = () => {
     const [showModelDropdown, setShowModelDropdown] = useState(false);
     const [showImageModelDropdown, setShowImageModelDropdown] = useState(false);
     const [showResponseModeDropdown, setShowResponseModeDropdown] = useState(false);
+    const [showMemoryModeDropdown, setShowMemoryModeDropdown] = useState(false);
     const [showConversationList, setShowConversationList] = useState(false);
+    const [showGuardrailPanel, setShowGuardrailPanel] = useState(false);
+    const [isResettingGuardrailMetrics, setIsResettingGuardrailMetrics] = useState(false);
+    const [guardrailActionMessage, setGuardrailActionMessage] = useState<string | null>(null);
     const [conversationSearchQuery, setConversationSearchQuery] = useState('');
     const [conversationQuickFilter, setConversationQuickFilter] = useState<InsightConversationFilter>(CONVERSATION_FILTER_ALL);
     const [activeConversationTagInput, setActiveConversationTagInput] = useState('');
@@ -2915,6 +3203,7 @@ const InsightChatSectionComponent = () => {
     const modelDropdownRef = useRef<HTMLDivElement>(null);
     const imageModelDropdownRef = useRef<HTMLDivElement>(null);
     const responseModeDropdownRef = useRef<HTMLDivElement>(null);
+    const memoryModeDropdownRef = useRef<HTMLDivElement>(null);
     const [messageFeedbacks, setMessageFeedbacks] = useState<Record<string, {
         rating?: InsightChatFeedbackRating;
         reason?: string;
@@ -3039,12 +3328,16 @@ const InsightChatSectionComponent = () => {
             if (responseModeDropdownRef.current && !responseModeDropdownRef.current.contains(e.target as Node)) {
                 setShowResponseModeDropdown(false);
             }
+
+            if (memoryModeDropdownRef.current && !memoryModeDropdownRef.current.contains(e.target as Node)) {
+                setShowMemoryModeDropdown(false);
+            }
         };
-        if (showModelDropdown || showImageModelDropdown || showResponseModeDropdown) {
+        if (showModelDropdown || showImageModelDropdown || showResponseModeDropdown || showMemoryModeDropdown) {
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showModelDropdown, showImageModelDropdown, showResponseModeDropdown]);
+    }, [showModelDropdown, showImageModelDropdown, showResponseModeDropdown, showMemoryModeDropdown]);
 
     useEffect(() => {
         const updatePanelState = () => {
@@ -3064,6 +3357,51 @@ const InsightChatSectionComponent = () => {
         [conversations, activeConversationId],
     );
     const activeConversationResponseMode = getConversationResponseMode(activeConversation);
+    const activeConversationMemoryMode = getConversationMemoryMode(activeConversation);
+    const {
+        data: guardrailMetrics,
+        error: guardrailMetricsError,
+        isFetching: isGuardrailMetricsFetching,
+        refetch: refetchGuardrailMetrics,
+    } = useQuery({
+        queryKey: ['admin-insight-chat-guardrail-metrics'],
+        queryFn: fetchChatGuardrailMetrics,
+        enabled: showGuardrailPanel,
+        staleTime: CHAT_GUARDRAIL_METRICS_STALE_MS,
+        refetchInterval: showGuardrailPanel ? CHAT_GUARDRAIL_METRICS_REFRESH_MS : false,
+        refetchIntervalInBackground: false,
+        retry: 1,
+    });
+    const guardrailMetricsNormalized = useMemo(
+        () => normalizeInsightChatGuardrailMetricsResponse(guardrailMetrics),
+        [guardrailMetrics],
+    );
+    const guardrailSummary = useMemo(
+        () => summarizeInsightChatGuardrailMetrics(guardrailMetricsNormalized),
+        [guardrailMetricsNormalized],
+    );
+    const hasGuardrailMetricsData = Boolean(guardrailMetrics);
+    const guardrailErrorMessage = guardrailMetricsError instanceof Error
+        ? guardrailMetricsError.message
+        : null;
+    const guardrailUpdatedAtLabel = useMemo(() => {
+        if (!hasGuardrailMetricsData) return null;
+        const raw = guardrailMetricsNormalized.timestamp;
+        const date = new Date(raw);
+        if (!Number.isFinite(date.getTime())) return null;
+        return date.toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        });
+    }, [guardrailMetricsNormalized.timestamp, hasGuardrailMetricsData]);
+    const guardrailDominantFallbackLabel = useMemo(() => {
+        if (!guardrailSummary.dominantFallbackReason) return null;
+        return getFallbackReasonLabel(guardrailSummary.dominantFallbackReason) ?? guardrailSummary.dominantFallbackReason;
+    }, [guardrailSummary.dominantFallbackReason]);
+    const hasGuardrailSignals = guardrailSummary.totalLatencyBudgetExceeded > 0
+        || guardrailSummary.totalFallbackStreakAlerts > 0;
 
     const normalizedConversationQuery = conversationSearchQuery.trim().toLowerCase();
     const availableConversationTags = useMemo(() => {
@@ -3154,6 +3492,8 @@ const InsightChatSectionComponent = () => {
 
     const activeConversationResponseModeLabel = CHAT_RESPONSE_MODES.find((mode) => mode.value === activeConversationResponseMode)?.label
         ?? '빠른 응답';
+    const activeConversationMemoryModeLabel = CHAT_MEMORY_MODES.find((mode) => mode.value === activeConversationMemoryMode)?.label
+        ?? '기억 안함';
 
     const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
         setConversations((prev) => {
@@ -3177,6 +3517,50 @@ const InsightChatSectionComponent = () => {
         }));
         setShowResponseModeDropdown(false);
     }, [activeConversation, updateConversation]);
+
+    const setActiveConversationMemoryMode = useCallback((nextMode: InsightChatMemoryMode) => {
+        if (!activeConversation) return;
+
+        updateConversation(activeConversation.id, (prev) => ({
+            ...prev,
+            memoryMode: normalizeMemoryMode(nextMode),
+            updatedAt: Date.now(),
+        }));
+        setShowMemoryModeDropdown(false);
+    }, [activeConversation, updateConversation]);
+
+    useEffect(() => {
+        if (!guardrailActionMessage) return;
+        const timer = setTimeout(() => {
+            setGuardrailActionMessage(null);
+        }, 5000);
+        return () => clearTimeout(timer);
+    }, [guardrailActionMessage]);
+
+    const handleRefreshGuardrailMetrics = useCallback(() => {
+        if (!showGuardrailPanel) {
+            setShowGuardrailPanel(true);
+        }
+        setGuardrailActionMessage(null);
+        void refetchGuardrailMetrics();
+    }, [refetchGuardrailMetrics, showGuardrailPanel]);
+
+    const handleResetGuardrailMetrics = useCallback(async () => {
+        if (isResettingGuardrailMetrics) return;
+        setIsResettingGuardrailMetrics(true);
+        setGuardrailActionMessage(null);
+
+        try {
+            const payload = await postResetChatGuardrailMetrics();
+            setGuardrailActionMessage(payload.message);
+            await refetchGuardrailMetrics();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '가드레일 지표 초기화에 실패했습니다.';
+            setGuardrailActionMessage(message);
+        } finally {
+            setIsResettingGuardrailMetrics(false);
+        }
+    }, [isResettingGuardrailMetrics, refetchGuardrailMetrics]);
 
     const feedbackForMessage = useCallback((messageId: string) => messageFeedbacks[messageId], [messageFeedbacks]);
     const handleFeedback = useCallback((messageId: string, rating: InsightChatFeedbackRating | null, reason = '') => {
@@ -3273,6 +3657,25 @@ const InsightChatSectionComponent = () => {
         return groupedLibrary.map((group) => ({ ...group }))
             .concat(contextGroups.map((group) => ({ ...group })));
     }, [activeConversation]);
+    const followUpPromptsByMessageId = useMemo(() => {
+        const map = new Map<string, InsightChatFollowUpPrompt[]>();
+        if (!visibleMessages.length) return map;
+
+        for (const message of visibleMessages) {
+            if (message.role !== 'assistant') continue;
+            const previousUserMessage = previousUserMessageById.get(message.id) ?? null;
+            map.set(
+                message.id,
+                deriveFollowUpPromptSuggestions(
+                    message.followUpPrompts,
+                    previousUserMessage?.content ?? '',
+                    promptLibraryGroups,
+                ),
+            );
+        }
+
+        return map;
+    }, [visibleMessages, previousUserMessageById, promptLibraryGroups]);
 
     const isCommandMode = useMemo(() => {
         const trimmed = inputValue.trimStart();
@@ -3330,15 +3733,20 @@ const InsightChatSectionComponent = () => {
         setActiveCommandIndex((index) => (index >= commandSuggestions.length ? 0 : index));
     }, [commandSuggestions, hasPromptSuggestions]);
 
-    useEffect(() => {
-        latestPersistConversationsRef.current = conversations;
-        latestPersistActiveConversationIdRef.current = activeConversationId;
-    }, [activeConversationId, conversations]);
+    latestPersistConversationsRef.current = conversations;
+    latestPersistActiveConversationIdRef.current = activeConversationId;
 
     const persistConversationStateNow = useCallback(() => {
         if (typeof window === 'undefined') return;
         const latestConversations = latestPersistConversationsRef.current;
-        if (latestConversations.length === 0) return;
+        if (latestConversations.length === 0) {
+            try {
+                localStorage.removeItem(CHAT_STORAGE_KEY);
+            } catch {
+                // localStorage unavailable
+            }
+            return;
+        }
 
         try {
             const payload = serializeConversationList(
@@ -3449,6 +3857,7 @@ const InsightChatSectionComponent = () => {
             pinned: false,
             contextWindowSize: MESSAGE_WINDOW_INITIAL,
             responseMode: DEFAULT_RESPONSE_MODE,
+            memoryMode: DEFAULT_MEMORY_MODE,
         };
 
         setConversations((prev) => [nextConversation, ...prev].slice(0, MAX_CONVERSATIONS));
@@ -3780,8 +4189,10 @@ const InsightChatSectionComponent = () => {
         const requestId = makeRequestId();
         const convId = activeConversation.id;
         const responseMode = activeConversationResponseMode;
+        const memoryMode = activeConversationMemoryMode;
         const feedbackContext = normalizeFeedbackInput(options?.feedbackContext);
         const attachments = normalizeAttachmentPayload(options?.attachments);
+        const contextMessages = buildInsightChatContextMessages(activeConversation.messages, memoryMode);
         const replaceUserMessageId = options?.replaceUserMessageId;
         const replaceIndex = replaceUserMessageId
             ? activeConversation.messages.findIndex((message) => message.id === replaceUserMessageId && message.role === 'user')
@@ -3840,6 +4251,7 @@ const InsightChatSectionComponent = () => {
                     source: currentLlmConfig.provider as 'gemini' | 'openai' | 'anthropic',
                     model: currentLlmConfig.model,
                     responseMode,
+                    memoryMode,
                     confidence: RESPONSE_MODE_CONFIDENCE_SCORE[responseMode],
                     toolTrace: [`responseMode:${responseMode}`, `provider:${currentLlmConfig.provider}`, 'flow:stream'],
                 };
@@ -3858,8 +4270,10 @@ const InsightChatSectionComponent = () => {
                     (token) => updateMessageContent(convId, assistantId, (prev) => prev + token),
                     streamController.signal,
                     responseMode,
+                    memoryMode,
                     feedbackContext,
                     attachments,
+                    contextMessages,
                 );
 
                 if (localResponse) {
@@ -3900,8 +4314,10 @@ const InsightChatSectionComponent = () => {
                     undefined,
                     resolvedImageModelProfile,
                     responseMode,
+                    memoryMode,
                     feedbackContext,
                     attachments,
+                    contextMessages,
                 );
                 appendMessage(convId, {
                     id: makeId('assistant'),
@@ -3961,6 +4377,7 @@ const InsightChatSectionComponent = () => {
         updateMessage,
         updateMessageContent,
         activeConversationResponseMode,
+        activeConversationMemoryMode,
         sendingConversationId,
         currentLlmConfig,
         imageModelProfile,
@@ -4446,6 +4863,134 @@ const InsightChatSectionComponent = () => {
                         새 대화
                     </Button>
                 </div>
+                <div className="border-b border-[#e5e7eb] bg-[#fcfcfd] px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[11px] font-semibold text-[#374151]">가드레일</span>
+                            <span
+                                className={cn(
+                                    'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                                    !guardrailMetricsNormalized.guardrailConfig.enabled
+                                        ? 'border-[#e5e7eb] bg-[#f3f4f6] text-[#6b7280]'
+                                        : hasGuardrailSignals
+                                            ? 'border-[#fecaca] bg-[#fff1f2] text-[#be123c]'
+                                            : 'border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]',
+                                )}
+                            >
+                                {!guardrailMetricsNormalized.guardrailConfig.enabled
+                                    ? '비활성'
+                                    : hasGuardrailSignals
+                                        ? '주의 필요'
+                                        : hasGuardrailMetricsData
+                                            ? '정상'
+                                            : '대기'}
+                            </span>
+                            <span className="text-[11px] text-[#6b7280]">
+                                지연 초과 {guardrailSummary.totalLatencyBudgetExceeded}
+                            </span>
+                            <span className="text-[11px] text-[#6b7280]">
+                                폴백 경고 {guardrailSummary.totalFallbackStreakAlerts}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => {
+                                    setShowGuardrailPanel((prev) => !prev);
+                                    if (!showGuardrailPanel) {
+                                        void refetchGuardrailMetrics();
+                                    }
+                                }}
+                            >
+                                {showGuardrailPanel ? '지표 숨기기' : '지표 보기'}
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0"
+                                onClick={handleRefreshGuardrailMetrics}
+                                disabled={isGuardrailMetricsFetching}
+                                title="지표 새로고침"
+                            >
+                                <RefreshCw className={cn('h-3.5 w-3.5', isGuardrailMetricsFetching && 'animate-spin')} />
+                            </Button>
+                        </div>
+                    </div>
+                    {showGuardrailPanel ? (
+                        <div className="mt-2 rounded-lg border border-[#e5e7eb] bg-white p-2.5 space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="text-[11px] text-[#6b7280]">
+                                    {guardrailUpdatedAtLabel ? `최근 업데이트 ${guardrailUpdatedAtLabel}` : '업데이트 정보 없음'}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 px-2 text-[11px]"
+                                        onClick={handleResetGuardrailMetrics}
+                                        disabled={isResettingGuardrailMetrics}
+                                    >
+                                        {isResettingGuardrailMetrics ? '초기화 중...' : '지표 초기화'}
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {([
+                                    { key: 'chat', label: 'Chat 라우트' },
+                                    { key: 'stream', label: 'Stream 라우트' },
+                                ] as const).map((route) => {
+                                    const metrics = guardrailMetricsNormalized.routes[route.key];
+                                    const reasonEntries = Object.entries(metrics.reliability_fallback_streak_alerts)
+                                        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                                        .slice(0, 3);
+                                    return (
+                                        <div
+                                            key={route.key}
+                                            className="rounded-md border border-[#f1f5f9] bg-[#f8fafc] p-2 text-[11px] text-[#334155]"
+                                        >
+                                            <p className="font-semibold text-[#0f172a]">{route.label}</p>
+                                            <p className="mt-1">지연 초과: {metrics.latency_budget_exceeded}</p>
+                                            {reasonEntries.length > 0 ? (
+                                                <ul className="mt-1 space-y-0.5 text-[#475569]">
+                                                    {reasonEntries.map(([reason, count]) => (
+                                                        <li key={`${route.key}-${reason}`}>
+                                                            {getFallbackReasonLabel(reason) ?? reason}: {count}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <p className="mt-1 text-[#64748b]">폴백 연속 경고 없음</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="rounded-md border border-dashed border-[#e5e7eb] bg-[#fafafa] px-2 py-1.5 text-[11px] text-[#6b7280]">
+                                <p>
+                                    가드레일: {guardrailMetricsNormalized.guardrailConfig.enabled ? 'ON' : 'OFF'} ·
+                                    지연 예산 {guardrailMetricsNormalized.guardrailConfig.latencyBudgetMs}ms ·
+                                    연속 임계치 {guardrailMetricsNormalized.guardrailConfig.fallbackStreakThreshold}회
+                                </p>
+                                {guardrailDominantFallbackLabel ? (
+                                    <p className="mt-1">
+                                        최다 폴백 원인: {guardrailDominantFallbackLabel} ({guardrailSummary.dominantFallbackCount}회)
+                                    </p>
+                                ) : null}
+                            </div>
+                            {guardrailErrorMessage ? (
+                                <p className="text-[11px] text-[#dc2626]">{guardrailErrorMessage}</p>
+                            ) : null}
+                            {guardrailActionMessage ? (
+                                <p className="text-[11px] text-[#166534]">{guardrailActionMessage}</p>
+                            ) : null}
+                        </div>
+                    ) : null}
+                </div>
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
                     {activeConversation?.bootstrapFailed ? (
                         <div className="h-full flex flex-col items-center justify-center text-center px-4 gap-2">
@@ -4513,13 +5058,7 @@ const InsightChatSectionComponent = () => {
                                     {visibleMessages.map((message) => {
                                         const previousUserMessage = previousUserMessageById.get(message.id) ?? null;
 
-                                        const followUpPrompts = message.role === 'assistant'
-                                            ? deriveFollowUpPromptSuggestions(
-                                                message.followUpPrompts,
-                                                previousUserMessage?.content ?? '',
-                                                promptLibraryGroups,
-                                            )
-                                            : [];
+                                        const followUpPrompts = followUpPromptsByMessageId.get(message.id) ?? [];
 
                                         return (
                                             <ChatBubble
@@ -4667,6 +5206,40 @@ const InsightChatSectionComponent = () => {
                                                         : 'hover:bg-[#f9fafb] text-[#111827]',
                                                 )}
                                                 onClick={() => setActiveConversationResponseMode(mode.value)}
+                                            >
+                                                <span className="font-medium">{mode.label}</span>
+                                                <span className="text-[11px] text-[#6b7280]">{mode.description}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <div ref={memoryModeDropdownRef} className="relative shrink-0">
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white border-emerald-300 text-emerald-700',
+                                    )}
+                                    onClick={() => setShowMemoryModeDropdown((prev) => !prev)}
+                                >
+                                    <span>{activeConversationMemoryModeLabel}</span>
+                                    <ChevronDown className="h-3 w-3" />
+                                </button>
+
+                                {showMemoryModeDropdown ? (
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                        {CHAT_MEMORY_MODES.map((mode) => (
+                                            <button
+                                                key={mode.value}
+                                                type="button"
+                                                className={cn(
+                                                    'w-full text-left px-3 py-2 text-xs flex flex-col',
+                                                    mode.value === activeConversationMemoryMode
+                                                        ? 'bg-[#f0fdf4] text-[#065f46]'
+                                                        : 'hover:bg-[#f9fafb] text-[#111827]',
+                                                )}
+                                                onClick={() => setActiveConversationMemoryMode(mode.value)}
                                             >
                                                 <span className="font-medium">{mode.label}</span>
                                                 <span className="text-[11px] text-[#6b7280]">{mode.description}</span>
