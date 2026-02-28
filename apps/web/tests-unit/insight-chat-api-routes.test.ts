@@ -322,19 +322,28 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         });
 
         // invalid context payload should be rejected
+        lastChatCall = null;
         response = await chatPOST(createRequest('/api/admin/insight/chat', {
             message: '안녕',
             requestId: 'req-invalid-context',
+            memoryMode: 'session',
             contextMessages: 'bad-context' as unknown,
         }));
         expect(response.status).toBe(400);
-        expect(await response.json()).toMatchObject({
+        const invalidContextPayload = await response.json();
+        expect(invalidContextPayload).toMatchObject({
             meta: {
                 source: 'fallback',
                 fallbackReason: 'invalid_context',
                 requestId: 'req-invalid-context',
             },
         });
+        expect(invalidContextPayload.meta.toolTrace ?? []).toEqual([
+            'route:chat',
+            'request.invalid_context',
+            'memoryMode:session',
+        ]);
+        expect(lastChatCall).toBeNull();
 
         // happy path uses mocked service and keeps requestId
         response = await chatPOST(createRequest('/api/admin/insight/chat', {
@@ -556,20 +565,29 @@ test('insight chat API routes (mocked runtime harness)', async () => {
             },
         });
 
+        lastStreamCall = null;
         response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
             message: '조회수',
             requestId: 'stream-invalid-context',
+            memoryMode: 'pinned',
             contextMessages: 'bad-context' as unknown,
         }));
         expect(response.status).toBe(400);
         expect(response.headers.get('content-type')).toContain('application/json');
-        expect(await response.json()).toMatchObject({
+        const streamInvalidContextPayload = await response.json();
+        expect(streamInvalidContextPayload).toMatchObject({
             meta: {
                 source: 'fallback',
                 fallbackReason: 'invalid_context',
                 requestId: 'stream-invalid-context',
             },
         });
+        expect(streamInvalidContextPayload.meta.toolTrace ?? []).toEqual([
+            'route:stream',
+            'request.invalid_context',
+            'memoryMode:pinned',
+        ]);
+        expect(lastStreamCall).toBeNull();
 
         response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
             message: '맥락 있는 스트림 요청',
