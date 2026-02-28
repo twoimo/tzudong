@@ -46,6 +46,30 @@ describe('insight chat request parser', () => {
         });
     });
 
+    test('infers server key usage for openai/anthropic when apiKey is omitted', () => {
+        const openaiParsed = parseInsightChatRequestBody({
+            message: '안녕',
+            provider: 'openai',
+            model: 'gpt-4o',
+        });
+        const anthropicParsed = parseInsightChatRequestBody({
+            message: '안녕',
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-6',
+        });
+
+        expect(openaiParsed.llmConfig).toMatchObject({
+            provider: 'openai',
+            model: 'gpt-4o',
+            useServerKey: true,
+        });
+        expect(anthropicParsed.llmConfig).toMatchObject({
+            provider: 'anthropic',
+            model: 'claude-sonnet-4-6',
+            useServerKey: true,
+        });
+    });
+
     test('accepts allow-listed storyboard and image profile fields', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',

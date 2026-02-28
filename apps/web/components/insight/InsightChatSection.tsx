@@ -50,6 +50,10 @@ import type {
     AdminInsightChatGuardrailMetricsResetResponse,
     AdminInsightChatGuardrailMetricsResponse,
     AdminInsightChatResponse,
+    AdminInsightSystemStatusChecklistItem,
+    AdminInsightSystemStatusChecklistSource,
+    AdminInsightSystemStatusChecklistSeverity,
+    AdminInsightSystemStatusResponse,
     InsightChatFollowUpPrompt,
     AdminInsightChatMeta,
     InsightChatGuardrailConfig,
@@ -1244,6 +1248,11 @@ const LLM_PROVIDER_LABELS: Record<LlmProvider, string> = {
     openai: 'OpenAI',
     anthropic: 'Anthropic',
 };
+const LLM_PROVIDER_SERVER_KEY_HINTS: Record<LlmProvider, string> = {
+    gemini: 'GEMINI_OCR_YEON / STORYBOARD_AGENT_GEMINI_API_KEY / GOOGLE_API_KEY',
+    openai: 'OPENAI_API_KEY / STORYBOARD_AGENT_OPENAI_API_KEY',
+    anthropic: 'ANTHROPIC_API_KEY / STORYBOARD_AGENT_ANTHROPIC_API_KEY',
+};
 
 type ImageModelSelection = StoryboardModelProfile | 'none';
 
@@ -1252,6 +1261,159 @@ const IMAGE_MODEL_PROFILES: Array<{ id: ImageModelSelection; name: string }> = [
     { id: 'nanobanana', name: '나노 바나나' },
     { id: 'nanobanana_pro', name: '나노 바나나 프로' },
 ];
+const SYSTEM_STATUS_CHECKLIST_SOURCE_LABELS: Record<AdminInsightSystemStatusChecklistSource, string> = {
+    run_daily: 'run_daily',
+    'storyboard-agent': '스토리보드 에이전트',
+    'bge-embedding': 'BGE 임베딩',
+    'provider-key': 'Provider Key',
+};
+const SYSTEM_STATUS_CHECKLIST_CATEGORY_LABELS: Record<
+    Exclude<AdminInsightSystemStatusChecklistItem['category'], undefined>,
+    string
+> = {
+    environment: '환경',
+    integration: '연동',
+    'provider-key': '키',
+    general: '기타',
+};
+const SYSTEM_STATUS_CHECKLIST_CATEGORY_ORDER: Exclude<AdminInsightSystemStatusChecklistItem['category'], undefined>[] = [
+    'environment',
+    'integration',
+    'provider-key',
+    'general',
+];
+const SYSTEM_STATUS_CHECKLIST_SEVERITY_LABELS: Record<AdminInsightSystemStatusChecklistSeverity, string> = {
+    critical: '상',
+    high: '중',
+    medium: '보',
+    low: '하',
+};
+const SYSTEM_STATUS_CHECKLIST_SEVERITY_RANK: Record<AdminInsightSystemStatusChecklistSeverity, number> = {
+    critical: 3,
+    high: 2,
+    medium: 1,
+    low: 0,
+};
+const SYSTEM_STATUS_CHECKLIST_SEVERITY_STYLES: Record<
+    AdminInsightSystemStatusChecklistSeverity,
+    { badge: string; label: string }
+> = {
+    critical: {
+        badge: 'bg-rose-100 text-rose-700',
+        label: '긴급',
+    },
+    high: {
+        badge: 'bg-orange-100 text-orange-700',
+        label: '높음',
+    },
+    medium: {
+        badge: 'bg-amber-100 text-amber-700',
+        label: '보통',
+    },
+    low: {
+        badge: 'bg-zinc-100 text-zinc-700',
+        label: '낮음',
+    },
+};
+
+const KEY_SOURCE_MATRIX_LABELS = {
+    provider: '키 소스',
+    browser: '브라우저',
+    server: '서버',
+    unavailable: '미설정',
+    available: '설정됨',
+};
+
+type KeySourceMatrixRow = {
+    key: 'gemini' | 'openai' | 'anthropic' | 'nanobanana2';
+    provider?: LlmProvider;
+    label: string;
+    browserKey: boolean;
+    serverKey: boolean;
+};
+
+function getSystemStatusKeyMatrixRows(systemStatus: AdminInsightSystemStatusResponse | null, llmKeys: StoredLlmKeys): KeySourceMatrixRow[] {
+    if (!systemStatus) return [];
+
+    return [
+        {
+            key: 'gemini',
+            provider: 'gemini',
+            label: 'Google Gemini',
+            browserKey: Boolean(llmKeys.gemini),
+            serverKey: Boolean(systemStatus.keys?.geminiServerKey),
+        },
+        {
+            key: 'openai',
+            provider: 'openai',
+            label: 'OpenAI',
+            browserKey: Boolean(llmKeys.openai),
+            serverKey: Boolean(systemStatus.keys?.openaiServerKey),
+        },
+        {
+            key: 'anthropic',
+            provider: 'anthropic',
+            label: 'Anthropic',
+            browserKey: Boolean(llmKeys.anthropic),
+            serverKey: Boolean(systemStatus.keys?.anthropicServerKey),
+        },
+        {
+            key: 'nanobanana2',
+            label: 'Nano Banana 2',
+            browserKey: false,
+            serverKey: Boolean(systemStatus.keys?.nanoBanana2Key),
+        },
+    ];
+}
+
+type ChecklistGroup = {
+    severity: AdminInsightSystemStatusChecklistSeverity;
+    category: Exclude<AdminInsightSystemStatusChecklistItem['category'], undefined>;
+    items: AdminInsightSystemStatusChecklistItem[];
+};
+
+function groupChecklistItemsBySeverityAndCategory(
+    checklist: ReadonlyArray<AdminInsightSystemStatusChecklistItem> | undefined,
+): ChecklistGroup[] {
+    const map = new Map<string, AdminInsightSystemStatusChecklistItem[]>();
+    const sourceRank: Record<AdminInsightSystemStatusChecklistSource, number> = {
+        'storyboard-agent': 0,
+        'bge-embedding': 1,
+        'provider-key': 2,
+        run_daily: 3,
+    };
+
+    for (const item of checklist ?? []) {
+        const category = item.category ?? 'general';
+        const key = `${item.severity}|||${category}`;
+        const list = map.get(key) ?? [];
+        list.push(item);
+        map.set(key, list);
+    }
+
+    const groups: ChecklistGroup[] = [];
+    for (const severity of Object.keys(SYSTEM_STATUS_CHECKLIST_SEVERITY_RANK) as AdminInsightSystemStatusChecklistSeverity[]) {
+        for (const category of SYSTEM_STATUS_CHECKLIST_CATEGORY_ORDER) {
+            const key = `${severity}|||${category}`;
+            const items = map.get(key) ?? [];
+            if (items.length === 0) continue;
+
+            groups.push({
+                severity,
+                category,
+                items: items
+                    .slice()
+                    .sort((a, b) =>
+                        sourceRank[a.source] - sourceRank[b.source],
+                    ),
+            });
+        }
+    }
+
+    return groups;
+}
+
+type ServerKeyAvailability = Partial<Record<LlmProvider, boolean>>;
 
 type StoredLlmKeys = Partial<Record<LlmProvider, string>>;
 type CachedEntry<T> = {
@@ -1387,14 +1549,14 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
     {
         id: 'analysis',
         title: '분석',
-        description: '핵심 지표와 흐름을 빠르게 파악',
+        description: '쯔양 채널 핵심 지표와 흐름 파악',
         prompts: [
             {
                 id: 'summary',
                 command: '/summary',
                 label: '요약',
-                prompt: '최근 7일 성과를 핵심 지표 중심으로 간단하고 실행 가능한 형식으로 요약해줘.',
-                description: '요약형 리포트, 핵심 인사이트, 다음 액션 포함',
+                prompt: '최근 7일 쯔양 채널 성과를 조회수·좋아요·댓글·영상 수 기준으로 요약하고 다음 액션 3가지를 제안해줘.',
+                description: '주간 운영 리포트용 요약',
                 groupId: 'analysis',
                 version: 1,
             },
@@ -1402,8 +1564,8 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 id: 'trend',
                 command: '/trend',
                 label: '추세',
-                prompt: '최근 30일 주요 지표(매출·조회수·전환율)의 추세를 비교하고 상승/하락 요인을 정리해줘.',
-                description: '기간별 추세 변화와 임팩트 높은 지표 강조',
+                prompt: '최근 30일 영상 지표(조회수·좋아요·댓글) 추세를 비교하고 상승/하락 요인을 정리해줘.',
+                description: '월간 추세와 원인 분석',
                 groupId: 'analysis',
                 version: 1,
             },
@@ -1411,8 +1573,8 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 id: 'snapshot',
                 command: '/snapshot',
                 label: '현황 스냅샷',
-                prompt: '전체 현황을 한 번에 보여줘. 주요 성과 지표, 변동성, 리스크 항목, 권장 액션을 항목별로 정리해줘.',
-                description: '운영자 브리핑에 바로 쓸 수 있는 1페이지 요약',
+                prompt: '쯔양 채널 전체 현황을 한 번에 보여줘. 성과 지표, 변동성, 리스크, 권장 액션을 항목별로 정리해줘.',
+                description: '관계자 브리핑용 1페이지 요약',
                 groupId: 'analysis',
                 version: 1,
             },
@@ -1421,14 +1583,14 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
     {
         id: 'compare',
         title: '비교',
-        description: '군집, 기간, 채널 기준 비교 분석',
+        description: '기간/카테고리/레스토랑 기준 비교 분석',
         prompts: [
             {
                 id: 'compare',
                 command: '/compare',
                 label: '비교',
-                prompt: '최근 구간과 이전 구간(예: 전주/전월)을 캠페인·카테고리별로 비교해 성과 차이를 정리해줘.',
-                description: '시차/기간 비교를 통한 개선 지점 추출',
+                prompt: '최근 구간과 이전 구간(전주/전월)을 영상 카테고리별로 비교해 성과 차이를 정리해줘.',
+                description: '기간 비교로 개선 지점 추출',
                 groupId: 'compare',
                 version: 1,
             },
@@ -1436,8 +1598,8 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 id: 'segment',
                 command: '/segment',
                 label: '세그먼트',
-                prompt: '고객 세그먼트별 전환 패턴을 비교하고 세그먼트별로 이탈 원인과 리텐션 개선 포인트를 제안해줘.',
-                description: '세그먼트별 약점·강점 파악',
+                prompt: '식당 카테고리/지역별 영상 성과 패턴을 비교하고 약점·강점을 정리해줘.',
+                description: '레스토랑 세그먼트별 강약점 파악',
                 groupId: 'compare',
                 version: 1,
             },
@@ -1459,13 +1621,13 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
     {
         id: 'ops',
         title: '운영 액션',
-        description: '즉시 실행 가능한 행동 제안',
+        description: '즉시 실행 가능한 채널 운영 행동 제안',
         prompts: [
             {
                 id: 'anomaly',
                 command: '/anomaly',
                 label: '이상 탐지',
-                prompt: '성과가 비정상적으로 변한 항목을 찾아 원인 가설을 3개 이상 제시해줘.',
+                prompt: '성과가 비정상적으로 변한 영상/카테고리를 찾아 원인 가설을 3개 이상 제시해줘.',
                 description: '이탈 징후를 빠르게 식별하고 대응책 제안',
                 groupId: 'ops',
                 version: 1,
@@ -1483,9 +1645,43 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 id: 'topbottom',
                 command: '/topbottom',
                 label: '상·하위 분석',
-                prompt: '성과 상위/하위 항목 3개씩을 뽑아 공통 요소를 비교하고, 하위권 회복 전략을 제안해줘.',
+                prompt: '성과 상위/하위 영상 3개씩을 뽑아 공통 요소를 비교하고, 하위권 회복 전략을 제안해줘.',
                 description: '성과 편차 요인 분석 및 운영 가이드',
                 groupId: 'ops',
+                version: 1,
+            },
+        ],
+    },
+    {
+        id: 'storyboard',
+        title: '쯔양 스토리보드',
+        description: '영상·레스토랑·피크 프레임 기반 기획 UX',
+        prompts: [
+            {
+                id: 'tzuyang-video',
+                command: '/tzuyang-video',
+                label: '쯔양 숏폼',
+                prompt: '레스토랑/푸드 숏폼 기획안으로 후킹 훅, 장면 전환, 클로징 멘트까지 3~5개 아이디어로 제시해줘.',
+                description: '식음료 콘텐츠용 시나리오 기획용 템플릿',
+                groupId: 'storyboard',
+                version: 1,
+            },
+            {
+                id: 'tzuyang-restaurant',
+                command: '/tzuyang-restaurant',
+                label: '레스토랑 브리핑',
+                prompt: '레스토랑 촬영 기획을 위해 메뉴 하이라이트, 셋업, 촬영 포인트, 편집 타이밍을 8개 항목으로 정리해줘.',
+                description: '레스토랑 영상 제작 운영 체크포인트',
+                groupId: 'storyboard',
+                version: 1,
+            },
+            {
+                id: 'tzuyang-peak-frame',
+                command: '/tzuyang-peak-frame',
+                label: '피크프레임',
+                prompt: '피크 프레임 기준으로 영상의 몰입 구간(바로잡기 포인트)과 보강 컷 제안을 해줘.',
+                description: '최대 시청 집중 구간 중심 편집 제안',
+                groupId: 'storyboard',
                 version: 1,
             },
         ],
@@ -1494,51 +1690,51 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
 
 const CONTEXT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
     {
-        id: 'context-sales',
-        title: '매출 맥락',
-        description: '매출·수익성 관련 대화 후 우선 추천',
+        id: 'context-channel',
+        title: '채널 맥락',
+        description: '채널 성과 대화 후 우선 추천',
         prompts: [
             {
-                id: 'sales-cause',
-                command: '/revenue-cause',
-                label: '매출 원인',
-                prompt: '현재 매출 하락의 주요 원인을 지표별로 분해해서 원인 가설과 우선 점검 항목을 제시해줘.',
-                description: '매출 하락 대응용 분석',
-                groupId: 'context-sales',
+                id: 'channel-cause',
+                command: '/channel-cause',
+                label: '성과 원인',
+                prompt: '현재 채널 성과 하락의 주요 원인을 지표별로 분해해서 원인 가설과 우선 점검 항목을 제시해줘.',
+                description: '성과 하락 대응용 분석',
+                groupId: 'context-channel',
                 version: 1,
             },
             {
-                id: 'sales-action',
-                command: '/revenue-action',
-                label: '매출 액션',
-                prompt: '매출 회복을 위한 14일 액션 플랜을 제안해줘. 운영 우선순위와 실패 지표도 함께.',
-                description: '단기 매출 반등 중심 제안',
-                groupId: 'context-sales',
+                id: 'channel-action',
+                command: '/channel-action',
+                label: '성과 액션',
+                prompt: '채널 성과 회복을 위한 14일 액션 플랜을 제안해줘. 운영 우선순위와 실패 지표도 함께.',
+                description: '단기 채널 반등 중심 제안',
+                groupId: 'context-channel',
                 version: 1,
             },
         ],
     },
     {
-        id: 'context-campaign',
-        title: '캠페인 맥락',
-        description: '캠페인 질문 후 우선 추천',
+        id: 'context-storyboard',
+        title: '스토리보드 맥락',
+        description: '스토리보드/피크 구간 관련 대화 후 우선 추천',
         prompts: [
             {
-                id: 'campaign-rework',
-                command: '/campaign-rework',
-                label: '캠페인 재배치',
-                prompt: '캠페인 성과 하락 구간을 골라 리배치/최적화 제안을 1차안으로 정리해줘.',
-                description: '캠페인별 문제구간 집중 대응',
-                groupId: 'context-campaign',
+                id: 'storyboard-peak',
+                command: '/storyboard-peak',
+                label: '피크 기반 씬',
+                prompt: '피크 구간/프레임을 기반으로 다음 영상에서 유지해야 할 씬과 보강할 씬을 정리해줘.',
+                description: '피크 구간 기반 편집 개선안',
+                groupId: 'context-storyboard',
                 version: 1,
             },
             {
-                id: 'campaign-compare',
-                command: '/campaign-compare',
-                label: '고성능 대조군',
-                prompt: '현재 캠페인 중 고성능 상위 3개와 저성과 3개를 비교해 최적화 기준을 정리해줘.',
-                description: '성공 패턴의 운영 반영 포인트 제시',
-                groupId: 'context-campaign',
+                id: 'storyboard-image-prompt',
+                command: '/storyboard-image',
+                label: '이미지 프롬프트',
+                prompt: '추천된 마지막 씬을 Nano Banana 2 이미지 생성용 프롬프트로 변환해줘.',
+                description: '스토리보드 씬 → 이미지 프롬프트 변환',
+                groupId: 'context-storyboard',
                 version: 1,
             },
         ],
@@ -4059,7 +4255,12 @@ const InsightChatSectionComponent = () => {
     const [conversationQuickFilter, setConversationQuickFilter] = useState<InsightConversationFilter>(CONVERSATION_FILTER_ALL);
     const [activeConversationTagInput, setActiveConversationTagInput] = useState('');
     const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
-    const [hasServerGeminiKey, setHasServerGeminiKey] = useState(false);
+    const [serverKeyAvailability, setServerKeyAvailability] = useState<ServerKeyAvailability>({});
+    const [systemStatus, setSystemStatus] = useState<AdminInsightSystemStatusResponse | null>(null);
+    const systemStatusChecklistGroups = useMemo(() => groupChecklistItemsBySeverityAndCategory(systemStatus?.checklist), [systemStatus]);
+    const systemStatusKeySourceMatrix = useMemo(() => getSystemStatusKeyMatrixRows(systemStatus, llmKeys), [systemStatus, llmKeys]);
+    const [isSystemStatusLoading, setIsSystemStatusLoading] = useState(false);
+    const [systemStatusError, setSystemStatusError] = useState<string | null>(null);
     const conversationImportInputRef = useRef<HTMLInputElement>(null);
     const attachmentInputRef = useRef<HTMLInputElement>(null);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -4073,6 +4274,33 @@ const InsightChatSectionComponent = () => {
         rating?: InsightChatFeedbackRating;
         reason?: string;
     }>>({});
+
+    const loadSystemStatus = useCallback(async () => {
+        setIsSystemStatusLoading(true);
+        setSystemStatusError(null);
+
+        try {
+            const response = await fetch('/api/admin/insight/system-status', {
+                cache: 'no-store',
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = (await response.json()) as AdminInsightSystemStatusResponse;
+            setSystemStatus(data);
+            setServerKeyAvailability({
+                gemini: Boolean(data?.keys?.geminiServerKey),
+                openai: Boolean(data?.keys?.openaiServerKey),
+                anthropic: Boolean(data?.keys?.anthropicServerKey),
+            });
+        } catch {
+            setSystemStatusError('운영 상태를 불러오지 못했습니다.');
+        } finally {
+            setIsSystemStatusLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         try {
@@ -4091,16 +4319,8 @@ const InsightChatSectionComponent = () => {
             }
         } catch { /* ignore */ }
 
-        // 서버 환경변수 Gemini 키 로드
-        void (async () => {
-            try {
-                const resp = await fetch('/api/admin/insight/llm-config');
-                if (!resp.ok) return;
-                const data = (await resp.json()) as { hasGeminiServerKey?: boolean };
-                if (data?.hasGeminiServerKey) setHasServerGeminiKey(true);
-            } catch { /* ignore */ }
-        })();
-    }, []);
+        void loadSystemStatus();
+    }, [loadSystemStatus]);
 
     useEffect(() => {
         setDraftAttachments([]);
@@ -4149,12 +4369,21 @@ const InsightChatSectionComponent = () => {
 
     const activeModel = useMemo(() => LLM_MODELS.find((m) => m.id === activeModelId) ?? LLM_MODELS[0], [activeModelId]);
     const activeProviderHasUserKey = Boolean(llmKeys[activeModel.provider]);
-    const activeProviderHasServerKey = activeModel.provider === 'gemini' && hasServerGeminiKey;
+    const hasProviderServerKey = useCallback((provider: LlmProvider): boolean => {
+        if (provider === 'gemini') return Boolean(serverKeyAvailability.gemini);
+        if (provider === 'openai') return Boolean(serverKeyAvailability.openai);
+        if (provider === 'anthropic') return Boolean(serverKeyAvailability.anthropic);
+        return false;
+    }, [serverKeyAvailability]);
+    const hasProviderUsableServerKey = useCallback((provider: LlmProvider): boolean => (
+        hasProviderServerKey(provider)
+    ), [hasProviderServerKey]);
+    const activeProviderHasServerKey = hasProviderUsableServerKey(activeModel.provider);
     const activeProviderHasKey = activeProviderHasUserKey || activeProviderHasServerKey;
-    const activeProviderUsesServerKey = activeModel.provider === 'gemini' && !activeProviderHasUserKey && hasServerGeminiKey;
-    const hasProviderServerOrUserKey = useCallback((provider: LlmProvider) => {
-        return provider === 'gemini' ? Boolean(llmKeys[provider]) || hasServerGeminiKey : Boolean(llmKeys[provider]);
-    }, [hasServerGeminiKey, llmKeys]);
+    const activeProviderUsesServerKey = !activeProviderHasUserKey && hasProviderUsableServerKey(activeModel.provider);
+    const hasProviderServerOrUserKey = useCallback((provider: LlmProvider) => (
+        Boolean(llmKeys[provider]) || hasProviderUsableServerKey(provider)
+    ), [hasProviderUsableServerKey, llmKeys]);
     const activeImageModelProfile = useMemo(
         () => IMAGE_MODEL_PROFILES.find((profile) => profile.id === imageModelProfile) ?? IMAGE_MODEL_PROFILES[0],
         [imageModelProfile],
@@ -4163,9 +4392,9 @@ const InsightChatSectionComponent = () => {
     const availableModels = useMemo(() => {
         return LLM_MODELS.filter((m) => enabledModelIds.has(m.id)).map((model) => ({
             ...model,
-            hasKey: Boolean(llmKeys[model.provider]) || (model.provider === 'gemini' && hasServerGeminiKey),
+            hasKey: hasProviderServerOrUserKey(model.provider),
         }));
-    }, [hasServerGeminiKey, llmKeys, enabledModelIds]);
+    }, [enabledModelIds, hasProviderServerOrUserKey]);
 
     const currentLlmConfig = useMemo(() => {
         if (!activeProviderHasKey) return undefined;
@@ -5579,6 +5808,15 @@ const InsightChatSectionComponent = () => {
                         <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">API 키 설정</p>
                         {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
                             const isVisible = keyVisibility[provider] ?? false;
+                            const hasBrowserKey = Boolean(llmKeys[provider]);
+                            const hasServerKey = hasProviderServerKey(provider);
+                            const serverHint = LLM_PROVIDER_SERVER_KEY_HINTS[provider];
+                            const keyStatusMessage = hasBrowserKey
+                                ? (hasServerKey ? '브라우저 키 + 서버 키 모두 준비' : '브라우저 키 설정됨')
+                                : hasServerKey
+                                    ? '서버 키 연동됨'
+                                    : '브라우저/서버 키 미설정';
+
                             return (
                                 <div key={provider} className="space-y-1.5">
                                     <label className="text-xs font-medium text-[#374151]">
@@ -5601,18 +5839,201 @@ const InsightChatSectionComponent = () => {
                                             {isVisible ? <EyeOff className="h-3 w-3 text-[#6b7280]" /> : <Eye className="h-3 w-3 text-[#6b7280]" />}
                                         </button>
                                     </div>
-                                    {llmKeys[provider] ? (
-                                        <p className="text-[10px] text-emerald-600">키 설정됨</p>
-                                    ) : provider === 'gemini' && hasServerGeminiKey ? (
-                                        <p className="text-[10px] text-emerald-700">서버 키 사용</p>
-                                    ) : (
-                                        <p className="text-[10px] text-[#9ca3af]">
-                                            {provider === 'gemini' ? '서버 키 미설정' : '미설정'}
-                                        </p>
-                                    )}
+                                    <p className={cn(
+                                        'text-[10px]',
+                                        hasBrowserKey || hasServerKey ? 'text-emerald-700' : 'text-[#9ca3af]',
+                                    )}>
+                                        {keyStatusMessage}
+                                    </p>
+                                    {!hasBrowserKey && hasServerKey ? (
+                                        <p className="text-[10px] text-[#6b7280]">서버 키 변수: {serverHint}</p>
+                                    ) : null}
+                                    {hasBrowserKey ? (
+                                        <p className="text-[10px] text-[#6b7280]">브라우저 저장 키가 우선 적용됩니다.</p>
+                                    ) : null}
                                 </div>
                             );
                         })}
+
+                        <div className="pt-3 border-t border-[#e5e7eb] space-y-2">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">운영 상태</p>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[10px] border-[#d1d5db]"
+                                    onClick={() => {
+                                        void loadSystemStatus();
+                                    }}
+                                    disabled={isSystemStatusLoading}
+                                >
+                                    <RefreshCw className={cn('h-3 w-3 mr-1', isSystemStatusLoading && 'animate-spin')} />
+                                    새로고침
+                                </Button>
+                            </div>
+
+                            {systemStatusError ? (
+                                <p className="text-[10px] text-rose-600">{systemStatusError}</p>
+                            ) : null}
+
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2 py-1.5">
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-medium text-[#111827]">스토리보드 에이전트</p>
+                                        <p className="text-[10px] text-[#6b7280] truncate">{systemStatus?.storyboardAgent.endpoint ?? '엔드포인트 미설정'}</p>
+                                    </div>
+                                    <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
+                                        <span className={cn(
+                                            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                                            systemStatus?.storyboardAgent.enabled && systemStatus?.storyboardAgent.reachable
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-amber-100 text-amber-700',
+                                        )}>
+                                            {systemStatus?.storyboardAgent.enabled
+                                                ? (systemStatus?.storyboardAgent.reachable ? '정상' : '확인 필요')
+                                                : '비활성'}
+                                        </span>
+                                        <p className="text-[10px] text-[#6b7280] text-right">
+                                            {systemStatus?.storyboardAgent.enabled
+                                                ? (systemStatus?.storyboardAgent.detail ? `헬스체크: ${systemStatus.storyboardAgent.detail}` : '헬스체크: 미실행')
+                                                : '헬스체크: 비활성화'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2 py-1.5">
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-medium text-[#111827]">BGE 임베딩 서버</p>
+                                        <p className="text-[10px] text-[#6b7280] truncate">{systemStatus?.bgeEmbedding.endpoint ?? '엔드포인트 미설정'}</p>
+                                    </div>
+                                    <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
+                                        <span className={cn(
+                                            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                                            systemStatus?.bgeEmbedding.enabled && systemStatus?.bgeEmbedding.reachable
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : 'bg-amber-100 text-amber-700',
+                                        )}>
+                                            {systemStatus?.bgeEmbedding.enabled
+                                                ? (systemStatus?.bgeEmbedding.reachable ? '정상' : '확인 필요')
+                                                : '비활성'}
+                                        </span>
+                                        <p className="text-[10px] text-[#6b7280] text-right">
+                                            {systemStatus?.bgeEmbedding.enabled
+                                                ? (systemStatus?.bgeEmbedding.detail ? `헬스체크: ${systemStatus.bgeEmbedding.detail}` : '헬스체크: 미실행')
+                                                : '헬스체크: 비활성화'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {systemStatus ? (
+                                <div className="space-y-2">
+                                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-2 space-y-2">
+                                        <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">운영 체크리스트</p>
+
+                                        {systemStatusChecklistGroups.length ? (
+                                            <div className="space-y-1.5">
+                                                {systemStatusChecklistGroups.map((group) => {
+                                                    const countText = `${group.items.length}건`;
+                                                    const severityStyle = SYSTEM_STATUS_CHECKLIST_SEVERITY_STYLES[group.severity];
+                                                    return (
+                                                        <div
+                                                            key={`${group.severity}-${group.category}`}
+                                                            className="rounded border border-[#fde68a] bg-white px-2 py-1.5"
+                                                        >
+                                                            <p className="text-[10px] font-semibold text-[#92400e] flex items-center justify-between">
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <span>{severityStyle.label}</span>
+                                                                    <span className={cn('rounded px-1 py-0.5', severityStyle.badge)}>
+                                                                        {SYSTEM_STATUS_CHECKLIST_SEVERITY_LABELS[group.severity]} ({group.severity})
+                                                                    </span>
+                                                                    <span className="rounded bg-[#f3f4f6] px-1 py-0.5">
+                                                                        {SYSTEM_STATUS_CHECKLIST_CATEGORY_LABELS[group.category]}
+                                                                    </span>
+                                                                </span>
+                                                                <span className="rounded-full bg-[#fee2a5] text-[9px] px-1.5 py-0.5">{countText}</span>
+                                                            </p>
+                                                            <ul className="mt-1 space-y-1">
+                                                                {group.items.map((item) => {
+                                                                    return (
+                                                                        <li key={item.id} className="text-[10px] text-amber-900 leading-relaxed">
+                                                                            <div className="flex gap-1 items-start">
+                                                                                <AlertCircle className="h-3 w-3 mt-[1px] shrink-0 text-amber-600" />
+                                                                                <span className="min-w-0">
+                                                                                    <span className="font-semibold">{item.title}</span>
+                                                                                    <div className="mt-0.5 flex items-center gap-1 flex-wrap">
+                                                                                        <span className="rounded bg-[#f3f4f6] px-1 py-0.5 text-[#4b5563]">
+                                                                                            Source: {SYSTEM_STATUS_CHECKLIST_SOURCE_LABELS[item.source]}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <p className="mt-0.5 text-[#6b7280]">{item.action}</p>
+                                                                                </span>
+                                                                            </div>
+                                                                        </li>
+                                                                    );
+                                                                })}
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[10px] text-emerald-700">핵심 연동 준비가 확인되었습니다.</p>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-3 border-t border-[#e5e7eb] space-y-1.5">
+                                        <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">키 소스 매트릭스</p>
+                                        {systemStatusKeySourceMatrix.length ? (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full border border-[#e5e7eb] text-[10px]">
+                                                    <thead>
+                                                        <tr className="bg-[#f9fafb] text-[#6b7280]">
+                                                            <th className="w-32 border border-[#e5e7eb] px-2 py-1.5 text-left font-medium">항목</th>
+                                                            <th className="w-20 border border-[#e5e7eb] px-2 py-1.5 text-left font-medium">브라우저</th>
+                                                            <th className="w-20 border border-[#e5e7eb] px-2 py-1.5 text-left font-medium">서버</th>
+                                                            <th className="border border-[#e5e7eb] px-2 py-1.5 text-left font-medium">{KEY_SOURCE_MATRIX_LABELS.provider}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {systemStatusKeySourceMatrix.map((row) => {
+                                                            const browserText = row.browserKey ? KEY_SOURCE_MATRIX_LABELS.available : KEY_SOURCE_MATRIX_LABELS.unavailable;
+                                                            const browserClass = row.browserKey
+                                                                ? 'text-emerald-700 bg-emerald-50'
+                                                                : 'text-[#9ca3af] bg-[#f3f4f6]';
+                                                            const serverText = row.serverKey ? KEY_SOURCE_MATRIX_LABELS.available : KEY_SOURCE_MATRIX_LABELS.unavailable;
+                                                            const serverClass = row.serverKey
+                                                                ? 'text-emerald-700 bg-emerald-50'
+                                                                : 'text-[#9ca3af] bg-[#f3f4f6]';
+
+                                                            return (
+                                                                <tr key={row.key}>
+                                                                    <td className="border border-[#e5e7eb] px-2 py-1.5 font-medium text-[#374151]">{row.label}</td>
+                                                                    <td className={cn('border border-[#e5e7eb] px-2 py-1.5', browserClass)}>{browserText}</td>
+                                                                    <td className={cn('border border-[#e5e7eb] px-2 py-1.5', serverClass)}>{serverText}</td>
+                                                                    <td className="border border-[#e5e7eb] px-2 py-1.5 text-[#6b7280]">
+                                                                        {row.provider
+                                                                            ? hasProviderUsableServerKey(row.provider)
+                                                                                ? '서버 키 우선 사용 가능'
+                                                                                : Boolean(llmKeys[row.provider])
+                                                                                    ? '브라우저 키 우선 사용'
+                                                                                    : '키 미설정'
+                                                                            : '서버 키만 확인 가능'}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-[10px] text-[#9ca3af]">운영 상태를 불러오는 중입니다.</p>
+                            )}
+                        </div>
 
                         <div className="pt-3 border-t border-[#e5e7eb] space-y-2">
                             <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">모델 활성화</p>
