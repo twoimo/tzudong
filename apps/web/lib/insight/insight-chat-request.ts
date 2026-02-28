@@ -1,8 +1,10 @@
 import type {
     InsightChatAttachment,
     InsightChatAttachmentInput,
+    InsightChatContextMessage,
     InsightChatFeedbackContext,
     InsightChatResponseMode,
+    InsightChatMemoryMode,
     LlmRequestConfig,
     StoryboardModelProfile,
 } from '@/types/insight';
@@ -15,10 +17,14 @@ export type ParsedInsightChatRequest = {
     llmConfig: LlmRequestConfig | undefined;
     responseMode: InsightChatResponseMode | undefined;
     attachments: InsightChatAttachment[];
+    contextMessages: InsightChatContextMessage[];
     feedbackContext: InsightChatFeedbackContext | undefined;
+    memoryMode?: InsightChatMemoryMode;
+    invalidFeedbackReason?: string;
     inputPolicyViolationReason?: string;
     invalidModelReason?: string;
     invalidAttachmentReason?: string;
+    invalidContextReason?: string;
 };
 
 const MAX_REQUEST_ID_LENGTH = 64;
@@ -26,6 +32,8 @@ const MAX_MESSAGE_LENGTH = 8_000;
 const MAX_ATTACHMENTS_COUNT = 4;
 const MAX_ATTACHMENT_CONTENT_LENGTH = 12_000;
 const MAX_ATTACHMENT_SIZE_BYTES = 200_000;
+const MAX_CONTEXT_MESSAGES_COUNT = 12;
+const MAX_CONTEXT_MESSAGE_CONTENT_LENGTH = 1_200;
 const ALLOWED_ATTACHMENT_NAME = /\.(txt|csv)$/i;
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
     'text/plain',
@@ -34,9 +42,14 @@ const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
     'application/vnd.ms-excel',
 ]);
 const ALLOWED_RESPONSE_MODES = new Set<InsightChatResponseMode>(['fast', 'deep', 'structured']);
+const ALLOWED_MEMORY_MODES = new Set<InsightChatMemoryMode>(['off', 'session', 'pinned']);
 
 function normalizeResponseMode(raw: unknown): InsightChatResponseMode | undefined {
     return raw === 'fast' || raw === 'deep' || raw === 'structured' ? raw : undefined;
+}
+
+function normalizeMemoryMode(raw: unknown): InsightChatMemoryMode | undefined {
+    return ALLOWED_MEMORY_MODES.has(raw as InsightChatMemoryMode) ? raw as InsightChatMemoryMode : undefined;
 }
 
 function sanitizeFeedbackReason(raw: unknown): string | undefined {
@@ -45,26 +58,48 @@ function sanitizeFeedbackReason(raw: unknown): string | undefined {
     return normalized || undefined;
 }
 
-function normalizeFeedbackContext(raw: unknown): InsightChatFeedbackContext | undefined {
-    if (!raw || typeof raw !== 'object') {
-        return undefined;
+function normalizeFeedbackContext(raw: unknown): {
+    feedbackContext?: InsightChatFeedbackContext;
+    invalidFeedbackReason?: string;
+} {
+    if (raw === undefined) {
+        return {};
+    }
+
+    if (raw === null || typeof raw !== 'object') {
+        return { invalidFeedbackReason: 'invalid_feedback_context' };
     }
 
     const payload = raw as Partial<InsightChatFeedbackContext>;
     const rating = payload.rating === 'up' || payload.rating === 'down' ? payload.rating : undefined;
     if (!rating) {
-        return undefined;
+        return { invalidFeedbackReason: 'invalid_feedback_rating' };
+    }
+
+    if (payload.reason !== undefined && typeof payload.reason !== 'string') {
+        return { invalidFeedbackReason: 'invalid_feedback_reason' };
+    }
+
+    if (
+        payload.targetAssistantMessageId !== undefined
+        && (typeof payload.targetAssistantMessageId !== 'string'
+            || !payload.targetAssistantMessageId.trim()
+        )
+    ) {
+        return { invalidFeedbackReason: 'invalid_feedback_target_id' };
     }
 
     const reason = sanitizeFeedbackReason(payload.reason);
     const targetAssistantMessageId = typeof payload.targetAssistantMessageId === 'string'
-        ? payload.targetAssistantMessageId.trim() || undefined
+        ? payload.targetAssistantMessageId.trim()
         : undefined;
 
     return {
-        rating,
-        ...(reason ? { reason } : {}),
-        ...(targetAssistantMessageId ? { targetAssistantMessageId } : {}),
+        feedbackContext: {
+            rating,
+            ...(reason ? { reason } : {}),
+            ...(targetAssistantMessageId ? { targetAssistantMessageId } : {}),
+        },
     };
 }
 
@@ -127,6 +162,61 @@ function sanitizeAttachmentContent(raw: unknown): string {
     return raw
         .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+/g, '')
         .slice(0, MAX_ATTACHMENT_CONTENT_LENGTH);
+}
+
+function sanitizeContextMessageContent(raw: unknown): string {
+    if (typeof raw !== 'string') {
+        return '';
+    }
+    return raw
+        .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_CONTEXT_MESSAGE_CONTENT_LENGTH);
+}
+
+function parseContextMessages(raw: unknown): {
+    contextMessages: InsightChatContextMessage[];
+    invalidContextReason?: string;
+} {
+    if (raw === undefined || raw === null) {
+        return { contextMessages: [] };
+    }
+
+    if (!Array.isArray(raw)) {
+        return { contextMessages: [], invalidContextReason: 'invalid_context_payload' };
+    }
+
+    if (raw.length > MAX_CONTEXT_MESSAGES_COUNT) {
+        return { contextMessages: [], invalidContextReason: 'context_count_exceeded' };
+    }
+
+    const parsed: InsightChatContextMessage[] = [];
+
+    for (const entry of raw) {
+        if (!entry || typeof entry !== 'object') {
+            return { contextMessages: [], invalidContextReason: 'invalid_context_entry' };
+        }
+
+        const role = (entry as { role?: unknown }).role;
+        const content = sanitizeContextMessageContent((entry as { content?: unknown }).content);
+        if (role !== 'user' && role !== 'assistant') {
+            return { contextMessages: [], invalidContextReason: 'invalid_context_role' };
+        }
+
+        if (!content) {
+            return { contextMessages: [], invalidContextReason: 'invalid_context_content' };
+        }
+
+        parsed.push({
+            role,
+            content,
+        });
+    }
+
+    return {
+        contextMessages: parsed,
+    };
 }
 
 function parseAttachments(raw: unknown): { attachments: InsightChatAttachment[]; invalidAttachmentReason?: string } {
@@ -223,8 +313,10 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
     const storyboardModelProfile = normalizeStoryboardProfile(body?.storyboardModelProfile);
     const imageModelProfile = normalizeStoryboardProfile(body?.imageModelProfile);
     const responseMode = normalizeResponseMode(body?.responseMode);
-    const feedbackContext = normalizeFeedbackContext(body?.feedbackContext);
+    const { feedbackContext, invalidFeedbackReason } = normalizeFeedbackContext(body?.feedbackContext);
+    const memoryMode = normalizeMemoryMode(body?.memoryMode);
     const { attachments, invalidAttachmentReason } = parseAttachments(body?.attachments);
+    const { contextMessages, invalidContextReason } = parseContextMessages(body?.contextMessages);
 
     const policyViolation = message ? isPotentialInjectionPayload(message) : undefined;
     const invalidModelReason = rawModel.length > 0 && provider !== undefined && model === undefined
@@ -248,9 +340,13 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
         llmConfig,
         responseMode,
         attachments,
+        contextMessages,
         feedbackContext,
+        ...(invalidFeedbackReason ? { invalidFeedbackReason } : {}),
         inputPolicyViolationReason: policyViolation,
         ...(invalidModelReason ? { invalidModelReason } : {}),
         ...(invalidAttachmentReason ? { invalidAttachmentReason } : {}),
+        ...(invalidContextReason ? { invalidContextReason } : {}),
+        ...(memoryMode ? { memoryMode } : {}),
     };
 }
