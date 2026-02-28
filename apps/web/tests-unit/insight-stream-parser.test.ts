@@ -104,6 +104,29 @@ describe('insight chat stream parser', () => {
         expect(onTokenCalls).toBe(0);
     });
 
+    test('tracks cancellationReason for stream error payload and preserves prior tokens', () => {
+        let output = '';
+        let state: InsightChatStreamState = { accumulated: '', streamError: null };
+
+        state = parseInsightChatStreamLine('data: {"text":"안녕"}', state, (token) => {
+            output += token;
+        });
+        const next = parseInsightChatStreamLine(
+            'data: {"error":"stream_error","requestId":"req-cancel","cancellationReason":"request_cancelled","toolTrace":"route:stream > provider:gemini"}',
+            state,
+            () => {
+                throw new Error('should not emit token');
+            },
+        );
+
+        expect(output).toBe('안녕');
+        expect(next.accumulated).toBe('안녕');
+        expect(next.cancellationReason).toBe('request_cancelled');
+        expect(next.requestId).toBe('req-cancel');
+        expect(next.toolTrace).toEqual(['route:stream', 'provider:gemini']);
+        expect(next.streamError).toBe('stream_error');
+    });
+
     test('keeps toolTrace from stream error payload', () => {
         const next = parseInsightChatStreamLine('data: {"error":"stream_error","toolTrace":["route:stream","provider:gemini"],"requestId":"req-stream"}', {
             accumulated: '',
@@ -126,6 +149,61 @@ describe('insight chat stream parser', () => {
         expect(next.streamError).toBe('stream_error');
         expect(next.cancellationReason).toBe('request_cancelled');
         expect(next.requestId).toBe('req-edit-test');
+    });
+
+    test('treats metadata-only frames as no-data and updates state without errors', () => {
+        let captured = '';
+        const next = parseInsightChatStreamLine(
+            'data: {"toolTrace":["route:stream",  "provider:openai", "memoryMode:session"],"requestId":"req-meta"}',
+            {
+                accumulated: 'prefix',
+                streamError: null,
+                toolTrace: ['route:chat'],
+            },
+            (token) => {
+                captured += token;
+            },
+        );
+
+        expect(captured).toBe('');
+        expect(next.streamError).toBeNull();
+        expect(next.requestId).toBe('req-meta');
+        expect(next.accumulated).toBe('prefix');
+        expect(next.toolTrace).toEqual(['route:chat', 'route:stream', 'provider:openai', 'memoryMode:session']);
+    });
+
+    test('splits toolTrace string payloads emitted as provider trace labels', () => {
+        const next = parseInsightChatStreamLine('data: {"text":"","toolTrace":"route:stream > provider:openai > memoryMode:session"}', {
+            accumulated: '',
+            streamError: null,
+        }, () => {
+            throw new Error('should not emit token');
+        });
+
+        expect(next.toolTrace).toEqual(['route:stream', 'provider:openai', 'memoryMode:session']);
+    });
+
+    test('parses no-data heartbeat frames without mutating accumulated text', () => {
+        const state: InsightChatStreamState = { accumulated: '', streamError: null };
+        const next = parseInsightChatStreamLine('data: {"text":"","requestId":"req-heartbeat","toolTrace":"memoryMode:session"}', state, () => {
+            throw new Error('should not emit');
+        });
+
+        expect(next.accumulated).toEqual('');
+        expect(next.requestId).toBe('req-heartbeat');
+        expect(next.streamError).toBeNull();
+        expect(next.toolTrace).toEqual(['memoryMode:session']);
+    });
+
+    test('drops malformed toolTrace values and preserves whitespace-trimmed entries', () => {
+        const next = parseInsightChatStreamLine('data: {"text":"","toolTrace":["  route:stream ", 42, "", "provider:openai"]}', {
+            accumulated: '',
+            streamError: null,
+        }, () => {
+            throw new Error('should not emit token');
+        });
+
+        expect(next.toolTrace).toEqual(['route:stream', 'provider:openai']);
     });
 
     test('ignores malformed lines or non-data rows', () => {

@@ -19,13 +19,31 @@ type CapturedCall = {
     message: string;
     requestId?: string;
     memoryMode?: string;
+    memoryProfileNote?: string;
     contextMessages?: unknown;
+    feedbackContext?: unknown;
 };
 
 let lastChatCall: CapturedCall | null = null;
 let lastStreamCall: CapturedCall | null = null;
 
 function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode: StreamResponseMode) {
+    const mockSourcePool = [
+        { videoTitle: '자료A', youtubeLink: 'https://youtu.be/a', timestamp: '00:10', text: 'A' },
+        { videoTitle: '자료B', youtubeLink: 'https://youtu.be/b', timestamp: '00:20', text: 'B' },
+        { videoTitle: '자료C', youtubeLink: 'https://youtu.be/c', timestamp: '00:30', text: 'C' },
+        { videoTitle: '자료D', youtubeLink: 'https://youtu.be/d', timestamp: '00:40', text: 'D' },
+        { videoTitle: '자료E', youtubeLink: 'https://youtu.be/e', timestamp: '00:50', text: 'E' },
+    ] as const;
+
+    const resolveMockSources = (messageText: string): unknown[] => {
+        if (messageText === 'chat-citation-medium') return mockSourcePool.slice(0, 3);
+        if (messageText === 'chat-citation-high') return mockSourcePool.slice(0, 5);
+        if (messageText === 'stream-citation-medium') return mockSourcePool.slice(0, 3);
+        if (messageText === 'stream-citation-high') return mockSourcePool.slice(0, 5);
+        return [];
+    };
+
     mock.module('@/lib/auth/require-admin', () => ({
         requireAdmin: async () => {
             if (requireAdminState === 'ok') {
@@ -55,14 +73,17 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
             requestId?: string,
             _responseMode?: unknown,
             memoryMode?: unknown,
-            _feedbackContext?: unknown,
+            feedbackContext?: unknown,
             _attachments?: unknown,
             contextMessages?: unknown,
+            memoryProfileNote?: unknown,
         ) => {
             lastChatCall = {
                 message,
                 requestId,
                 memoryMode: typeof memoryMode === 'string' ? memoryMode : undefined,
+                memoryProfileNote: typeof memoryProfileNote === 'string' ? memoryProfileNote : undefined,
+                feedbackContext,
                 contextMessages,
             };
             if (message === '__chat_throw__') {
@@ -75,7 +96,7 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
             return {
                 asOf: '2026-02-27T00:00:00.000Z',
                 content: `chat-response:${message}`,
-                sources: [],
+                sources: resolveMockSources(message),
                 meta: {
                     source: 'mock',
                     requestId: requestId || message.slice(0, 64) || undefined,
@@ -89,14 +110,17 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
             requestId?: string,
             _responseMode?: unknown,
             memoryMode?: unknown,
-            _feedbackContext?: unknown,
+            feedbackContext?: unknown,
             _attachments?: unknown,
             contextMessages?: unknown,
+            memoryProfileNote?: unknown,
         ) => {
             lastStreamCall = {
                 message: _message,
                 requestId,
                 memoryMode: typeof memoryMode === 'string' ? memoryMode : undefined,
+                memoryProfileNote: typeof memoryProfileNote === 'string' ? memoryProfileNote : undefined,
+                feedbackContext,
                 contextMessages,
             };
             if (_message === '__stream_delay__') {
@@ -123,7 +147,7 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
                 local: {
                     asOf: '2026-02-27T00:00:00.000Z',
                     content: 'stream-local-fallback',
-                    sources: [],
+                    sources: resolveMockSources(_message),
                     meta: {
                         source: 'fallback',
                         fallbackReason: 'llm_unavailable',
@@ -218,7 +242,8 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         installChatRouteMocks(requireAdminState, streamResponseMode);
         response = await chatPOST(createRequest('/api/admin/insight/chat', { message: '   ', requestId: 'req-abc' }));
         expect(response.status).toBe(400);
-        expect(await response.json()).toMatchObject({
+        const emptyPayload = await response.json();
+        expect(emptyPayload).toMatchObject({
             content: '질문을 입력해 주세요.',
             meta: {
                 source: 'fallback',
@@ -226,6 +251,7 @@ test('insight chat API routes (mocked runtime harness)', async () => {
                 requestId: 'req-abc',
             },
         });
+        expect(emptyPayload.meta.citationQuality).toBe('none');
 
         response = await chatPOST(createRequest('/api/admin/insight/chat', { message: '   ', requestId: 'req-memory', memoryMode: 'session' }));
         expect(response.status).toBe(400);
@@ -358,7 +384,24 @@ test('insight chat API routes (mocked runtime harness)', async () => {
                 requestId: 'req-123',
             },
         });
+        expect(chatSuccessPayload.meta.citationQuality).toBe('none');
         expect(chatSuccessPayload.meta.toolTrace).toContain('memoryMode:off');
+
+        response = await chatPOST(createRequest('/api/admin/insight/chat', {
+            message: 'chat-citation-medium',
+            requestId: 'req-citation-medium',
+        }));
+        expect(response.status).toBe(200);
+        const chatCitationMediumPayload = await response.json();
+        expect(chatCitationMediumPayload.meta.citationQuality).toBe('medium');
+
+        response = await chatPOST(createRequest('/api/admin/insight/chat', {
+            message: 'chat-citation-high',
+            requestId: 'req-citation-high',
+        }));
+        expect(response.status).toBe(200);
+        const chatCitationHighPayload = await response.json();
+        expect(chatCitationHighPayload.meta.citationQuality).toBe('high');
 
         // contextMessages should be forwarded when memory mode is enabled
         response = await chatPOST(createRequest('/api/admin/insight/chat', {
@@ -375,11 +418,86 @@ test('insight chat API routes (mocked runtime harness)', async () => {
             message: '맥락 반영 질문',
             requestId: 'req-context-forward',
             memoryMode: 'session',
+            memoryProfileNote: undefined,
             contextMessages: [
                 { role: 'user', content: '이전 질문' },
                 { role: 'assistant', content: '이전 답변' },
             ],
         });
+        expect(lastChatCall.feedbackContext).toBeUndefined();
+        const chatContextPayload = await response.json();
+        expect(chatContextPayload.meta.toolTrace).toContain('memoryMode:session');
+
+        lastChatCall = null;
+        response = await chatPOST(createRequest('/api/admin/insight/chat', {
+            message: '맥락 연결 재생성',
+            requestId: 'req-context-feedback',
+            memoryMode: 'pinned',
+            feedbackContext: {
+                rating: 'down',
+                reason: '관련 답변이 부족해요',
+                targetAssistantMessageId: 'assistant-2',
+            },
+            contextMessages: [
+                { role: 'user', content: '초기 질문' },
+                { role: 'assistant', content: '초기 답변' },
+                { role: 'user', content: '후속 질문' },
+                { role: 'assistant', content: '후속 답변' },
+            ],
+        }));
+        expect(response.status).toBe(200);
+        expect(lastChatCall).toMatchObject({
+            message: '맥락 연결 재생성',
+            requestId: 'req-context-feedback',
+            memoryMode: 'pinned',
+            memoryProfileNote: undefined,
+            contextMessages: [
+                { role: 'user', content: '초기 질문' },
+                { role: 'assistant', content: '초기 답변' },
+                { role: 'user', content: '후속 질문' },
+                { role: 'assistant', content: '후속 답변' },
+            ],
+            feedbackContext: {
+                rating: 'down',
+                reason: '관련 답변이 부족해요',
+                targetAssistantMessageId: 'assistant-2',
+            },
+        });
+        const chatFeedbackPayload = await response.json();
+        expect(chatFeedbackPayload.meta.toolTrace).toContain('memoryMode:pinned');
+
+        lastChatCall = null;
+        response = await chatPOST(createRequest('/api/admin/insight/chat', {
+            message: '메모 노트 세션',
+            requestId: 'req-memory-profile-session',
+            memoryMode: 'session',
+            memoryProfileNote: '  세션\n핵심  ',
+        }));
+        expect(response.status).toBe(200);
+        expect(lastChatCall).toMatchObject({
+            message: '메모 노트 세션',
+            requestId: 'req-memory-profile-session',
+            memoryMode: 'session',
+            memoryProfileNote: '세션 핵심',
+        });
+        const chatMemoryProfilePayload = await response.json();
+        expect(chatMemoryProfilePayload.meta.toolTrace).toContain('memoryMode:session');
+
+        response = await chatPOST(createRequest('/api/admin/insight/chat', {
+            message: '메모 노트 오프',
+            requestId: 'req-memory-profile-off',
+            memoryMode: 'off',
+            memoryProfileNote: '  오프 모드 노트  ',
+        }));
+        expect(response.status).toBe(200);
+        expect(lastChatCall).toMatchObject({
+            message: '메모 노트 오프',
+            requestId: 'req-memory-profile-off',
+            memoryMode: 'off',
+            memoryProfileNote: '오프 모드 노트',
+        });
+        const chatMemoryProfileOffPayload = await response.json();
+        expect(chatMemoryProfileOffPayload.meta.toolTrace).toContain('memoryMode:off');
 
         // route-level exception should map to server_error fallback
         response = await chatPOST(createRequest('/api/admin/insight/chat', { message: '__chat_throw__' }));
@@ -434,8 +552,27 @@ test('insight chat API routes (mocked runtime harness)', async () => {
                 requestId: 'stream-local',
             },
         });
+        expect(streamLocalPayload.meta.citationQuality).toBe('none');
         expect(streamLocalPayload.meta.memoryMode).toBe('session');
         expect(streamLocalPayload.meta.toolTrace).toContain('memoryMode:session');
+
+        response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+            message: 'stream-citation-medium',
+            requestId: 'stream-citation-medium',
+            memoryMode: 'session',
+        }));
+        expect(response.status).toBe(200);
+        const streamCitationMediumPayload = await response.json();
+        expect(streamCitationMediumPayload.meta.citationQuality).toBe('medium');
+
+        response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+            message: 'stream-citation-high',
+            requestId: 'stream-citation-high',
+            memoryMode: 'session',
+        }));
+        expect(response.status).toBe(200);
+        const streamCitationHighPayload = await response.json();
+        expect(streamCitationHighPayload.meta.citationQuality).toBe('high');
 
         process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS = '10';
         response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
@@ -460,6 +597,27 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         expect(streamTimeoutPayload.meta.toolTrace).toContain('request.timeout');
         expect(streamTimeoutPayload.meta.toolTrace).toContain('guardrail:latency_budget_exceeded');
         expect(streamTimeoutPayload.meta.toolTrace).toContain('memoryMode:off');
+        response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+            message: '__stream_delay__',
+            requestId: 'stream-timeout-session',
+            responseMode: 'structured',
+            memoryMode: 'session',
+        }));
+        expect(response.status).toBe(200);
+        const streamTimeoutSessionPayload = await response.json();
+        expect(streamTimeoutSessionPayload).toMatchObject({
+            meta: {
+                source: 'fallback',
+                fallbackReason: 'route_timeout',
+                requestId: 'stream-timeout-session',
+                responseMode: 'structured',
+                memoryMode: 'session',
+            },
+        });
+        expect(streamTimeoutSessionPayload.meta.toolTrace).toContain('route:stream');
+        expect(streamTimeoutSessionPayload.meta.toolTrace).toContain('request.timeout');
+        expect(streamTimeoutSessionPayload.meta.toolTrace).toContain('guardrail:latency_budget_exceeded');
+        expect(streamTimeoutSessionPayload.meta.toolTrace).toContain('memoryMode:session');
         process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS = originalStreamRouteTimeout;
 
         // stream passthrough should send SSE-formatted bytes
@@ -603,10 +761,67 @@ test('insight chat API routes (mocked runtime harness)', async () => {
             message: '맥락 있는 스트림 요청',
             requestId: 'stream-context-forward',
             memoryMode: 'pinned',
+            memoryProfileNote: undefined,
             contextMessages: [
                 { role: 'user', content: '지난주 핵심 지표 알려줘' },
                 { role: 'assistant', content: '지난주 핵심은 전환율 상승입니다.' },
             ],
+            feedbackContext: undefined,
+        });
+        expect(lastStreamCall).toMatchObject({
+            memoryMode: 'pinned',
+            memoryProfileNote: undefined,
+        });
+
+        lastStreamCall = null;
+        response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+            message: '맥락 연결 재생성 스트림',
+            requestId: 'stream-context-feedback',
+            memoryMode: 'session',
+            feedbackContext: {
+                rating: 'up',
+                reason: '정확도 개선 됨',
+                targetAssistantMessageId: 'assistant-4',
+            },
+            contextMessages: [
+                { role: 'user', content: '첫 질문' },
+                { role: 'assistant', content: '첫 답변' },
+                { role: 'user', content: '둘째 질문' },
+                { role: 'assistant', content: '둘째 답변' },
+            ],
+        }));
+        expect(response.status).toBe(200);
+        expect(lastStreamCall).toMatchObject({
+            message: '맥락 연결 재생성 스트림',
+            requestId: 'stream-context-feedback',
+            memoryMode: 'session',
+            memoryProfileNote: undefined,
+            contextMessages: [
+                { role: 'user', content: '첫 질문' },
+                { role: 'assistant', content: '첫 답변' },
+                { role: 'user', content: '둘째 질문' },
+                { role: 'assistant', content: '둘째 답변' },
+            ],
+            feedbackContext: {
+                rating: 'up',
+                reason: '정확도 개선 됨',
+                targetAssistantMessageId: 'assistant-4',
+            },
+        });
+
+        lastStreamCall = null;
+        response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+            message: '스트림 노트',
+            requestId: 'stream-memory-profile-pinned',
+            memoryMode: 'pinned',
+            memoryProfileNote: '\n\t스트림 노트',
+        }));
+        expect(response.status).toBe(200);
+        expect(lastStreamCall).toMatchObject({
+            message: '스트림 노트',
+            requestId: 'stream-memory-profile-pinned',
+            memoryMode: 'pinned',
+            memoryProfileNote: '스트림 노트',
         });
 
         // stream handler error -> fallback payload

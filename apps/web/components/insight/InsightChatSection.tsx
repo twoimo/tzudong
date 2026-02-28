@@ -18,6 +18,7 @@ import {
     Bot,
     Check,
     Download,
+    Upload,
     Pencil,
     Pin,
     PinOff,
@@ -89,6 +90,7 @@ type ChatConversation = {
     contextWindowSize?: number;
     responseMode?: InsightChatResponseMode;
     memoryMode?: InsightChatMemoryMode;
+    memoryProfileNote?: string;
 };
 
 const EMPTY_TITLE = '새로운 대화';
@@ -103,6 +105,9 @@ const CHAT_GUARDRAIL_METRICS_REFRESH_MS = 60_000;
 const MAX_CONVERSATIONS = 30;
 const MAX_MESSAGES_PER_CONVERSATION = 220;
 const MAX_FOLLOW_UP_PROMPT_LENGTH = 120;
+const MAX_EXPORT_FILE_NAME_PART_LENGTH = 80;
+const CHAT_DELETE_UNDO_TIMEOUT_MS = 8000;
+const CHAT_DELETE_CONFIRM_LABEL = '삭제할 대화를 정말 삭제할까요?\n삭제하면 8초 안에 복구할 수 있습니다.';
 const DEFAULT_RESPONSE_MODE: InsightChatResponseMode = 'fast';
 const DEFAULT_MEMORY_MODE: InsightChatMemoryMode = 'off';
 const CHAT_RESPONSE_MODES: { value: InsightChatResponseMode; label: string; description: string }[] = [
@@ -130,10 +135,57 @@ const MEMORY_MODE_BADGE_STYLES: Record<InsightChatMemoryMode, string> = {
     session: 'bg-[#f0f9ff] text-[#0c4a6e]',
     pinned: 'bg-[#fff7ed] text-[#9a3412]',
 };
+const META_CITATION_QUALITY_LABELS: Record<NonNullable<AdminInsightChatMeta['citationQuality']>, string> = {
+    none: '없음',
+    low: '낮음',
+    medium: '보통',
+    high: '높음',
+};
+const META_CITATION_QUALITY_BADGE_STYLES: Record<NonNullable<AdminInsightChatMeta['citationQuality']>, string> = {
+    none: 'bg-[#f3f4f6] text-[#4b5563]',
+    low: 'bg-[#fff7ed] text-[#9a3412]',
+    medium: 'bg-[#fef3c7] text-[#92400e]',
+    high: 'bg-[#dcfce7] text-[#166534]',
+};
+const VALID_CITATION_QUALITY_BUCKETS = new Set<NonNullable<AdminInsightChatMeta['citationQuality']>>([
+    'none',
+    'low',
+    'medium',
+    'high',
+]);
+const CHAT_RESPONSE_MODE_PANEL_LABELS: Record<InsightChatResponseMode, string> = {
+    fast: '빠른 응답',
+    deep: '깊은 분석',
+    structured: '구조화',
+};
+const CHAT_MEMORY_MODE_PANEL_LABELS: Record<InsightChatMemoryMode, string> = {
+    off: '기억 안함',
+    session: '세션 기억',
+    pinned: '핀 고정',
+};
+const FEEDBACK_RATING_PANEL_LABELS: Record<InsightChatFeedbackRating, string> = {
+    up: '좋아요',
+    down: '싫어요',
+};
+const FEEDBACK_HAS_REASON_PANEL_LABELS: Record<'with_reason' | 'without_reason', string> = {
+    with_reason: '사유 있음',
+    without_reason: '사유 없음',
+};
+const FEEDBACK_REASON_CATEGORY_PANEL_LABELS: Record<
+    'accuracy' | 'relevance' | 'completeness' | 'tone' | 'latency' | 'other',
+    string
+> = {
+    accuracy: '정확성',
+    relevance: '관련성',
+    completeness: '완전성',
+    tone: '톤',
+    latency: '지연',
+    other: '기타',
+};
 const MESSAGE_WINDOW_INITIAL = 80;
 const MESSAGE_WINDOW_BATCH = 80;
 const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
-const CHAT_STORAGE_SCHEMA_VERSION = 5;
+const CHAT_STORAGE_SCHEMA_VERSION = 6;
 const CHAT_PERSIST_DEBOUNCE_MS = 350;
 const LLM_KEYS_STORAGE_KEY = 'tzudong-admin-llm-keys';
 const LLM_MODEL_STORAGE_KEY = 'tzudong-admin-llm-active-model';
@@ -174,6 +226,17 @@ const META_FALLBACK_REASON_LABELS: Record<string, string> = {
     storyboard_simple_chat: '스토리보드 단순 채팅',
     storyboard_qna_unavailable: '스토리보드 Q&A 불가',
 };
+const GUARDRAIL_METRIC_OTHER_LABEL = '기타';
+const GUARDRAIL_METRIC_BADGE_MAX_LABEL_CHARS = 16;
+const VALID_GUARDRAIL_FEEDBACK_REASON_CATEGORIES = new Set(
+    ['accuracy', 'relevance', 'completeness', 'tone', 'latency', 'other'] as const,
+);
+
+function isFeedbackReasonCategoryBucket(
+    value: string,
+): value is keyof typeof FEEDBACK_REASON_CATEGORY_PANEL_LABELS {
+    return VALID_GUARDRAIL_FEEDBACK_REASON_CATEGORIES.has(value as keyof typeof FEEDBACK_REASON_CATEGORY_PANEL_LABELS);
+}
 
 function sanitizeMetaValue(value: string | undefined): string {
     if (!value) return '';
@@ -185,11 +248,15 @@ function getSourceLabel(source: AdminInsightChatMeta['source'] | undefined): str
     return META_SOURCE_PANEL_LABELS[source] ?? source;
 }
 
-function getFallbackReasonLabel(reason: string | undefined): string | null {
+export function getFallbackReasonLabel(reason: string | undefined): string | null {
     if (!reason) return null;
     const sanitized = sanitizeMetaValue(reason);
     if (!sanitized) return null;
-    return META_FALLBACK_REASON_LABELS[sanitized] ?? sanitized;
+    const normalized = sanitized.toLowerCase();
+    if (normalized === 'other') {
+        return GUARDRAIL_METRIC_OTHER_LABEL;
+    }
+    return META_FALLBACK_REASON_LABELS[normalized as keyof typeof META_FALLBACK_REASON_LABELS] ?? GUARDRAIL_METRIC_OTHER_LABEL;
 }
 
 function getModelLabel(model: string | undefined): string | null {
@@ -202,6 +269,46 @@ function getRequestIdLabel(requestId: string | undefined): string | null {
     const sanitized = sanitizeMetaValue(requestId);
     if (!sanitized) return null;
     return sanitized;
+}
+
+function getCitationQualityLabel(quality: AdminInsightChatMeta['citationQuality']): string | null {
+    if (!quality) return null;
+    return META_CITATION_QUALITY_LABELS[quality] ?? quality;
+}
+
+export function getCitationQualityMetricLabel(quality: string): string {
+    const normalized = sanitizeMetaValue(quality).toLowerCase();
+    if (!normalized) return '';
+    if (normalized === 'other') return GUARDRAIL_METRIC_OTHER_LABEL;
+    return META_CITATION_QUALITY_LABELS[normalized as NonNullable<AdminInsightChatMeta['citationQuality']>] ?? GUARDRAIL_METRIC_OTHER_LABEL;
+}
+
+export function getCitationQualityMetricBadgeStyle(quality: string): string {
+    const normalized = sanitizeMetaValue(quality).toLowerCase();
+    if (!normalized) return 'bg-[#f3f4f6] text-[#4b5563]';
+    if (normalized === 'other') return 'bg-[#f3f4f6] text-[#4b5563]';
+    return META_CITATION_QUALITY_BADGE_STYLES[normalized as NonNullable<AdminInsightChatMeta['citationQuality']>] ?? 'bg-[#f3f4f6] text-[#4b5563]';
+}
+
+function getCitationQualityFromSources(
+    sources: InsightChatSource[] | undefined,
+): NonNullable<AdminInsightChatMeta['citationQuality']> {
+    const uniqueSourceKeys = new Set<string>();
+
+    for (const source of sources ?? []) {
+        if (!source || typeof source !== 'object') continue;
+        const text = sanitizeMetaValue(source.text);
+        if (!text) continue;
+
+        const key = `${sanitizeMetaValue(source.videoTitle) || 'unknown'}|${sanitizeMetaValue(source.youtubeLink) || 'unknown'}|${sanitizeMetaValue(source.timestamp) || 'unknown'}`
+            .toLowerCase();
+        uniqueSourceKeys.add(key);
+    }
+
+    if (uniqueSourceKeys.size <= 0) return 'none';
+    if (uniqueSourceKeys.size <= 2) return 'low';
+    if (uniqueSourceKeys.size <= 4) return 'medium';
+    return 'high';
 }
 
 function isInsightChatResponseMode(raw: unknown): raw is InsightChatResponseMode {
@@ -227,6 +334,22 @@ type InsightChatGuardrailSummary = {
     dominantFallbackCount: number;
 };
 
+type InsightChatGuardrailRouteOutcomeTotals = {
+    totalRequests: number;
+    successResponses: number;
+    fallbackResponses: number;
+    streamResponses: number;
+    errorResponses: number;
+};
+
+type InsightChatGuardrailRouteOutcomeRateSummary = {
+    totalRequests: number;
+    successRate: number;
+    fallbackRate: number;
+    errorRate: number;
+};
+type InsightChatGuardrailRouteMetricEntries = Array<[string, number]>;
+
 const DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG: InsightChatGuardrailConfig = {
     enabled: true,
     latencyBudgetMs: 4_500,
@@ -245,13 +368,245 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function normalizeMetricCount(raw: unknown): number {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.floor(parsed);
+}
+
+function normalizeMetricCounts(raw: unknown): Record<string, number> {
+    if (!isRecord(raw)) return {};
+    const counts: Record<string, number> = {};
+    for (const [key, value] of Object.entries(raw)) {
+        const sanitizedKey = sanitizeMetaValue(key).toLowerCase();
+        const count = normalizeMetricCount(value);
+        if (!sanitizedKey || count <= 0) continue;
+        counts[sanitizedKey] = (counts[sanitizedKey] ?? 0) + count;
+    }
+    return counts;
+}
+
+function getTopMetricEntries(
+    raw: unknown,
+    limit = 3,
+): InsightChatGuardrailRouteMetricEntries {
+    const counts = normalizeMetricCounts(raw);
+    return Object.entries(counts)
+        .filter(([, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, limit);
+}
+
+export function getGuardrailMetricLabel(value: string): string {
+    const normalized = sanitizeMetaValue(value);
+    if (!normalized) return '';
+    const lower = normalized.toLowerCase();
+    if (lower === 'other') {
+        return GUARDRAIL_METRIC_OTHER_LABEL;
+    }
+
+    return META_SOURCE_PANEL_LABELS[lower as keyof typeof META_SOURCE_PANEL_LABELS]
+        ?? LLM_PROVIDER_LABELS[normalized as LlmProvider]
+        ?? GUARDRAIL_METRIC_OTHER_LABEL;
+}
+
+export function getResponseModeMetricLabel(value: string): string {
+    const normalized = sanitizeMetaValue(value).toLowerCase();
+    if (!normalized) return '';
+    if (normalized === 'other') return GUARDRAIL_METRIC_OTHER_LABEL;
+    return CHAT_RESPONSE_MODE_PANEL_LABELS[normalized as InsightChatResponseMode] ?? GUARDRAIL_METRIC_OTHER_LABEL;
+}
+
+export function getMemoryModeMetricLabel(value: string): string {
+    const normalized = sanitizeMetaValue(value).toLowerCase();
+    if (!normalized) return '';
+    if (normalized === 'other') return GUARDRAIL_METRIC_OTHER_LABEL;
+    return CHAT_MEMORY_MODE_PANEL_LABELS[normalized as InsightChatMemoryMode] ?? GUARDRAIL_METRIC_OTHER_LABEL;
+}
+
+export function getFeedbackRatingMetricLabel(value: string): string {
+    const normalized = sanitizeMetaValue(value).toLowerCase();
+    if (!normalized) return '';
+    if (normalized === 'other') return GUARDRAIL_METRIC_OTHER_LABEL;
+    return FEEDBACK_RATING_PANEL_LABELS[normalized as InsightChatFeedbackRating] ?? GUARDRAIL_METRIC_OTHER_LABEL;
+}
+
+export function getFeedbackHasReasonMetricLabel(value: string): string {
+    const normalized = sanitizeMetaValue(value).toLowerCase();
+    if (!normalized) return '';
+    if (normalized === 'other') return GUARDRAIL_METRIC_OTHER_LABEL;
+    return FEEDBACK_HAS_REASON_PANEL_LABELS[normalized as 'with_reason' | 'without_reason'] ?? GUARDRAIL_METRIC_OTHER_LABEL;
+}
+
+export function getFeedbackReasonCategoryMetricLabel(value: string): string {
+    const normalized = sanitizeMetaValue(value).toLowerCase();
+    if (!normalized) return '';
+    if (normalized === 'other') return GUARDRAIL_METRIC_OTHER_LABEL;
+    return FEEDBACK_REASON_CATEGORY_PANEL_LABELS[normalized as keyof typeof FEEDBACK_REASON_CATEGORY_PANEL_LABELS]
+        ?? GUARDRAIL_METRIC_OTHER_LABEL;
+}
+
+function getCompactGuardrailMetricLabel(label: string): string {
+    return label.length <= GUARDRAIL_METRIC_BADGE_MAX_LABEL_CHARS ? label : `${label.slice(0, GUARDRAIL_METRIC_BADGE_MAX_LABEL_CHARS - 1)}…`;
+}
+
+function renderGuardrailMetricBadge(
+    label: string,
+    count: number,
+    className: string,
+    suffix = '',
+){
+    const compactLabel = getCompactGuardrailMetricLabel(label);
+    return (
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${className}`}>
+            <span className="max-w-[8.5rem] min-w-0 truncate" title={label}>
+                {compactLabel}
+            </span>
+            <span className="ml-1">: {count}{suffix}</span>
+        </span>
+    );
+}
+
+function toNonNegativeRate(value: number, denominator: number): number {
+    if (!Number.isFinite(value) || !Number.isFinite(denominator) || denominator <= 0) return 0;
+    return Math.max(0, Math.round((value / denominator) * 1000) / 10);
+}
+
+function normalizeGuardrailRouteOutcomeTotals(raw: unknown): InsightChatGuardrailRouteOutcomeTotals {
+    const totals = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+
+    const totalRequests = normalizeMetricCount(
+        totals.total_requests ?? totals.totalRequests,
+    );
+    const successResponses = normalizeMetricCount(
+        totals.success_responses ?? totals.successResponses,
+    );
+    const fallbackResponses = normalizeMetricCount(
+        totals.fallback_responses ?? totals.fallbackResponses,
+    );
+    const streamResponses = normalizeMetricCount(
+        totals.stream_responses ?? totals.streamResponses,
+    );
+    const errorResponses = normalizeMetricCount(
+        totals.error_responses ?? totals.errorResponses,
+    );
+    const derivedTotal = successResponses + fallbackResponses + streamResponses + errorResponses;
+
+    return {
+        totalRequests: totalRequests > 0 ? totalRequests : derivedTotal,
+        successResponses,
+        fallbackResponses,
+        streamResponses,
+        errorResponses,
+    };
+}
+
+export function summarizeInsightChatGuardrailRouteOutcomeRates(
+    metrics: InsightChatGuardrailRouteMetrics | unknown,
+): InsightChatGuardrailRouteOutcomeRateSummary {
+    const totals = normalizeGuardrailRouteOutcomeTotals(
+        metrics instanceof Object ? metrics : null,
+    );
+
+    return {
+        totalRequests: totals.totalRequests,
+        successRate: toNonNegativeRate(totals.successResponses, totals.totalRequests),
+        fallbackRate: toNonNegativeRate(totals.fallbackResponses, totals.totalRequests),
+        errorRate: toNonNegativeRate(totals.errorResponses, totals.totalRequests),
+    };
+}
+
 function normalizeGuardrailRouteMetrics(raw: unknown): InsightChatGuardrailRouteMetrics {
     if (!isRecord(raw)) {
         return {
             latency_budget_exceeded: 0,
             reliability_fallback_streak_alerts: {},
+            total_requests: 0,
+            success_responses: 0,
+            fallback_responses: 0,
+            stream_responses: 0,
+            error_responses: 0,
+            citation_quality_counts: {},
+            provider_request_counts: {},
+            source_counts: {},
+            fallback_totals: {},
+            response_mode_counts: {},
+            memory_mode_counts: {},
+            feedback_rating_counts: {},
+            feedback_has_reason_counts: {},
         };
     }
+
+    const providerCounts = normalizeMetricCounts(
+        raw.provider_request_counts ?? raw.providerRequestCounts ?? raw.provider_counts ?? raw.providers,
+    );
+    const citationQualityCounts = (() => {
+        const rawCitationCounts = normalizeMetricCounts(
+            raw.citation_quality_counts ?? raw.citationQualityCounts ?? raw.citation_quality_distributions,
+        );
+
+        const validEntries: Record<string, number> = {};
+        for (const [quality, count] of Object.entries(rawCitationCounts)) {
+            const normalizedQuality = sanitizeMetaValue(quality).toLowerCase();
+            if (!normalizedQuality || count <= 0) {
+                continue;
+            }
+            const bucket = VALID_CITATION_QUALITY_BUCKETS.has(
+                normalizedQuality as NonNullable<AdminInsightChatMeta['citationQuality']>,
+            )
+                ? normalizedQuality
+                : 'other';
+
+            validEntries[bucket] = (validEntries[bucket] ?? 0) + count;
+        }
+
+        return validEntries;
+    })();
+    const sourceCounts = normalizeMetricCounts(
+        raw.source_counts ?? raw.sourceCounts ?? raw.response_source_counts ?? raw.responseSourceCounts ?? raw.sources,
+    );
+    const fallbackTotals = normalizeMetricCounts(
+        raw.fallback_totals ?? raw.fallbackTotals ?? raw.fallback_reason_totals ?? raw.fallbackReasonTotals ?? raw.reliability_fallback_streak_alerts,
+    );
+    const responseModeCounts = normalizeMetricCounts(
+        raw.response_mode_counts ?? raw.responseModeCounts ?? raw.response_modes ?? raw.responseModes,
+    );
+    const memoryModeCounts = normalizeMetricCounts(
+        raw.memory_mode_counts ?? raw.memoryModeCounts ?? raw.memory_modes ?? raw.memoryModes,
+    );
+    const feedbackRatingCounts = normalizeMetricCounts(
+        raw.feedback_rating_counts ?? raw.feedbackRatingCounts ?? raw.feedback_ratings ?? raw.feedbackRatings ?? raw.feedback_counts ?? raw.feedbackCounts,
+    );
+    const feedbackHasReasonCounts = normalizeMetricCounts(
+        raw.feedback_has_reason_counts
+            ?? raw.feedbackHasReasonCounts
+            ?? raw.feedback_has_reasons
+            ?? raw.feedback_hasReasonCounts
+            ?? raw.feedback_reason_counts
+            ?? raw.feedbackReasonCounts,
+    );
+    const feedbackReasonCategoryCounts = (() => {
+        const rawReasonCategoryCounts = normalizeMetricCounts(
+            raw.feedback_reason_category_counts
+                ?? raw.feedbackReasonCategoryCounts
+                ?? raw.feedback_reason_categories
+                ?? raw.feedbackReasonCategories,
+        );
+
+        const validEntries: Record<string, number> = {};
+        for (const [bucket, count] of Object.entries(rawReasonCategoryCounts)) {
+            const normalizedBucket = sanitizeMetaValue(bucket).toLowerCase();
+            if (!normalizedBucket || count <= 0) continue;
+
+            const effectiveBucket = isFeedbackReasonCategoryBucket(normalizedBucket)
+                ? normalizedBucket
+                : 'other';
+            validEntries[effectiveBucket] = (validEntries[effectiveBucket] ?? 0) + count;
+        }
+
+        return validEntries;
+    })();
+    const outcomeTotals = normalizeGuardrailRouteOutcomeTotals(raw);
 
     const fallbackRaw = raw.reliability_fallback_streak_alerts;
     const fallbackCounts: Record<string, number> = {};
@@ -267,7 +622,23 @@ function normalizeGuardrailRouteMetrics(raw: unknown): InsightChatGuardrailRoute
     return {
         latency_budget_exceeded: toNonNegativeInteger(raw.latency_budget_exceeded),
         reliability_fallback_streak_alerts: fallbackCounts,
-    };
+        total_requests: outcomeTotals.totalRequests,
+        success_responses: outcomeTotals.successResponses,
+        fallback_responses: outcomeTotals.fallbackResponses,
+        stream_responses: outcomeTotals.streamResponses,
+        error_responses: outcomeTotals.errorResponses,
+        citation_quality_counts: citationQualityCounts,
+        provider_request_counts: providerCounts,
+        source_counts: sourceCounts,
+        fallback_totals: fallbackTotals,
+        response_mode_counts: responseModeCounts,
+            memory_mode_counts: memoryModeCounts,
+            feedback_rating_counts: feedbackRatingCounts,
+            feedback_has_reason_counts: feedbackHasReasonCounts,
+            ...(Object.keys(feedbackReasonCategoryCounts).length > 0
+                ? { feedback_reason_category_counts: feedbackReasonCategoryCounts }
+                : {}),
+        };
 }
 
 function normalizeGuardrailConfig(raw: unknown): InsightChatGuardrailConfig {
@@ -288,6 +659,19 @@ function createEmptyGuardrailRouteMetrics(): InsightChatGuardrailRouteMetrics {
     return {
         latency_budget_exceeded: 0,
         reliability_fallback_streak_alerts: {},
+        total_requests: 0,
+        success_responses: 0,
+        fallback_responses: 0,
+        stream_responses: 0,
+        error_responses: 0,
+        citation_quality_counts: {},
+        provider_request_counts: {},
+        source_counts: {},
+        fallback_totals: {},
+        response_mode_counts: {},
+        memory_mode_counts: {},
+        feedback_rating_counts: {},
+        feedback_has_reason_counts: {},
     };
 }
 
@@ -332,11 +716,18 @@ export function summarizeInsightChatGuardrailMetrics(
 
     for (const routeMetrics of Object.values(normalized.routes)) {
         totalLatencyBudgetExceeded += toNonNegativeInteger(routeMetrics.latency_budget_exceeded);
-        for (const [reason, count] of Object.entries(routeMetrics.reliability_fallback_streak_alerts)) {
+        const fallbackTotals = routeMetrics.fallback_totals ?? routeMetrics.reliability_fallback_streak_alerts;
+        for (const [reason, count] of Object.entries(fallbackTotals)) {
             const normalizedReason = sanitizeMetaValue(reason).toLowerCase();
             const safeCount = toNonNegativeInteger(count);
             if (!normalizedReason || safeCount <= 0) continue;
-            reasons.set(normalizedReason, (reasons.get(normalizedReason) ?? 0) + safeCount);
+            const effectiveReason = META_FALLBACK_REASON_LABELS[
+                normalizedReason as keyof typeof META_FALLBACK_REASON_LABELS
+            ]
+                ? normalizedReason
+                : 'other';
+
+            reasons.set(effectiveReason, (reasons.get(effectiveReason) ?? 0) + safeCount);
         }
     }
 
@@ -373,6 +764,201 @@ export function normalizeConversationTags(raw: unknown): string[] {
 }
 
 export type InsightConversationFilter = typeof CONVERSATION_FILTER_ALL | typeof CONVERSATION_FILTER_PINNED | `tag:${string}`;
+
+export type ParsedConversationImport = {
+    conversations: ChatConversation[];
+    activeConversationId: string;
+};
+
+function normalizeImportedConversationId(raw: unknown): string {
+    return typeof raw === 'string' ? raw.trim().replace(/\s+/g, '').slice(0, 120) : '';
+}
+
+function sanitizeImportedConversationText(raw: unknown, preserveLineBreaks = false): string {
+    if (typeof raw !== 'string') return '';
+    const controlPattern = preserveLineBreaks ? /[\u0000-\b\f\u000e-\u001f\u007f]/g : /[\u0000-\u001f\u007f]+/g;
+    const normalized = raw
+        .replace(controlPattern, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return normalized;
+}
+
+function normalizeImportedMessageId(raw: unknown): string {
+    return typeof raw === 'string' ? raw.trim().slice(0, 120) : '';
+}
+
+function normalizeImportedDate(raw: unknown): Date {
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+        const fromTimestamp = new Date(raw);
+        return Number.isNaN(fromTimestamp.getTime()) ? new Date() : fromTimestamp;
+    }
+
+    const fromString = raw instanceof Date
+        ? raw
+        : typeof raw === 'string'
+            ? new Date(raw)
+            : null;
+    if (!fromString || Number.isNaN(fromString.getTime())) {
+        return new Date();
+    }
+    return fromString;
+}
+
+function normalizeImportedNumber(raw: unknown, defaultValue: number): number {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return defaultValue;
+    return Math.floor(parsed);
+}
+
+function normalizePersistedConversation(raw: unknown, schemaVersion: number): ChatConversation | null {
+    if (!isRecord(raw)) return null;
+
+    const rawConversation = raw as Partial<PersistedConversation>;
+    const id = normalizeImportedConversationId(rawConversation.id);
+    const title = sanitizeImportedConversationText(rawConversation.title, true);
+    if (!id || !title) {
+        return null;
+    }
+
+    if (!Array.isArray(rawConversation.messages)) {
+        return null;
+    }
+
+    const messages = rawConversation.messages
+        .filter((message): message is PersistedChatMessage => {
+            if (!isRecord(message)) return false;
+            const candidate = message as PersistedChatMessage;
+            const role = candidate.role;
+            if (role !== 'user' && role !== 'assistant') return false;
+            const content = sanitizeImportedConversationText(candidate.content, true);
+            return Boolean(content) || !!candidate.sources || !!candidate.followUpPrompts || !!candidate.meta || !!candidate.visualComponent;
+        })
+        .map((message) => {
+            const candidate = message as PersistedChatMessage;
+            return {
+                id: normalizeImportedMessageId(candidate.id) || makeId(candidate.role === 'assistant' ? 'assistant' : 'user'),
+                role: candidate.role,
+                content: sanitizeImportedConversationText(candidate.content, true),
+                sources: mapSources(candidate.sources as InsightChatSource[] | undefined),
+                followUpPrompts: normalizeFollowUpPrompts(candidate.followUpPrompts as unknown),
+                createdAt: normalizeImportedDate(candidate.createdAt),
+                meta: candidate.meta,
+                visualComponent: candidate.visualComponent,
+            };
+        })
+        .slice(-MAX_MESSAGES_PER_CONVERSATION);
+
+    const createdAt = normalizeImportedNumber(rawConversation.createdAt, Date.now());
+    const updatedAt = normalizeImportedNumber(rawConversation.updatedAt, createdAt);
+
+    return {
+        id,
+        title,
+        messages,
+        tags: normalizeConversationTags(rawConversation.tags),
+        createdAt,
+        updatedAt,
+        isBooting: false,
+        bootstrapFailed: Boolean(rawConversation.bootstrapFailed),
+        pinned: schemaVersion >= 2 ? Boolean(rawConversation.pinned) : false,
+        contextWindowSize: typeof rawConversation.contextWindowSize === 'number' && Number.isFinite(rawConversation.contextWindowSize)
+            ? Math.max(1, Math.floor(rawConversation.contextWindowSize))
+            : MESSAGE_WINDOW_INITIAL,
+        responseMode: normalizeResponseMode(rawConversation.responseMode),
+        memoryMode: schemaVersion >= 5
+            ? normalizeMemoryMode(rawConversation.memoryMode)
+            : DEFAULT_MEMORY_MODE,
+        memoryProfileNote: schemaVersion >= 6
+            ? sanitizeMemoryProfileNote(rawConversation.memoryProfileNote)
+            : undefined,
+    };
+}
+
+export function parseConversationImportPayload(raw: unknown): ParsedConversationImport | null {
+    if (!isRecord(raw)) return null;
+
+    const schemaVersionRaw = raw.schemaVersion ?? raw.version;
+    const schemaVersionCandidate = Number(schemaVersionRaw);
+    const schemaVersion = Number.isInteger(schemaVersionCandidate) && schemaVersionCandidate >= 1 && schemaVersionCandidate <= CHAT_STORAGE_SCHEMA_VERSION
+        ? schemaVersionCandidate
+        : CHAT_STORAGE_SCHEMA_VERSION;
+
+    if (raw.conversation !== undefined) {
+        const single = normalizePersistedConversation(raw.conversation as unknown, schemaVersion);
+        if (!single) return null;
+        return {
+            conversations: [single],
+            activeConversationId: single.id,
+        };
+    }
+
+    if (!Array.isArray(raw.conversations)) {
+        return null;
+    }
+
+    const conversations = raw.conversations
+        .map((item) => normalizePersistedConversation(item, schemaVersion))
+        .filter((conversation): conversation is ChatConversation => conversation !== null)
+        .slice(0, MAX_CONVERSATIONS);
+
+    if (conversations.length === 0) {
+        return null;
+    }
+
+    const activeConversationId = typeof raw.activeConversationId === 'string'
+        ? normalizeImportedConversationId(raw.activeConversationId)
+        : conversations[0].id;
+
+    return {
+        conversations,
+        activeConversationId: conversations.some((conversation) => conversation.id === activeConversationId)
+            ? activeConversationId
+            : conversations[0].id,
+    };
+}
+
+export function mergeImportedConversations(
+    existingConversations: readonly ChatConversation[],
+    importedConversations: readonly ChatConversation[],
+): ChatConversation[] {
+    const reservedConversationIds = new Set(existingConversations.map((conversation) => conversation.id));
+    const reservedMessageIds = new Set(
+        existingConversations.flatMap((conversation) => conversation.messages.map((message) => message.id)),
+    );
+
+    const normalizedImported = importedConversations
+        .map((conversation): ChatConversation | null => {
+            const conversationId = reservedConversationIds.has(conversation.id)
+                ? makeConversationId()
+                : conversation.id;
+
+            reservedConversationIds.add(conversationId);
+
+            const dedupedMessages = conversation.messages
+                .filter((message): message is ChatMessage => Boolean(message.role) && Boolean(message.id))
+                .map((message) => {
+                    const nextMessageId = reservedMessageIds.has(message.id) ? makeId(message.role === 'assistant' ? 'assistant' : 'user') : message.id;
+                    reservedMessageIds.add(nextMessageId);
+                    return {
+                        ...message,
+                        id: nextMessageId,
+                    };
+                });
+
+            return {
+                ...conversation,
+                id: conversationId,
+                messages: dedupedMessages,
+                title: sanitizeImportedConversationText(conversation.title),
+                isBooting: false,
+            };
+        })
+        .filter((conversation): conversation is ChatConversation => Boolean(conversation));
+
+    const merged = [...normalizedImported, ...existingConversations].slice(0, MAX_CONVERSATIONS);
+    return merged;
+}
 
 export function matchesInsightConversationFilter(
     conversation: Pick<ChatConversation, 'title' | 'messages' | 'pinned' | 'tags'>,
@@ -433,6 +1019,7 @@ const MAX_CHAT_ATTACHMENT_BYTES = 200_000;
 const MAX_CHAT_ATTACHMENT_CONTENT_LENGTH = 12_000;
 const MAX_REQUEST_CONTEXT_MESSAGES = 12;
 const MAX_REQUEST_CONTEXT_MESSAGE_CONTENT_LENGTH = 700;
+const MAX_MEMORY_PROFILE_NOTE_LENGTH = 120;
 const MAX_CONVERSATION_TAGS = 5;
 const MAX_CONVERSATION_TAG_LENGTH = 20;
 const CONVERSATION_FILTER_ALL = 'all';
@@ -447,6 +1034,15 @@ function sanitizeFollowUpPromptText(value: string | undefined | null): string {
         .replace(/[\u0000-\u001f\u007f]/g, '')
         .replace(/\s+/g, ' ')
         .slice(0, MAX_FOLLOW_UP_PROMPT_LENGTH);
+}
+
+export function sanitizeMemoryProfileNote(value: string | undefined | null): string {
+    if (!value) return '';
+    return value
+        .trim()
+        .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .slice(0, MAX_MEMORY_PROFILE_NOTE_LENGTH);
 }
 
 function normalizeFeedbackInput(raw: InsightChatFeedbackContext | undefined): InsightChatFeedbackContext | undefined {
@@ -476,37 +1072,52 @@ function sanitizeContextMessageContent(raw: string): string {
         .slice(0, MAX_REQUEST_CONTEXT_MESSAGE_CONTENT_LENGTH);
 }
 
-type ContextSeedMessage = Pick<ChatMessage, 'role' | 'content'>;
+type ContextSeedMessage = Pick<ChatMessage, 'role' | 'content' | 'id'>;
+type ContextMessageWithWindow = InsightChatContextMessage & { id: string };
 
 export function buildInsightChatContextMessages(
     messages: ContextSeedMessage[],
     memoryMode: InsightChatMemoryMode,
+    targetAssistantMessageId?: string,
 ): InsightChatContextMessage[] {
     if (memoryMode === 'off' || !messages.length) {
         return [];
     }
 
-    const normalized = messages
+    const normalizedMessages = messages
         .filter((message) => message.role === 'user' || message.role === 'assistant')
         .map((message) => ({
             role: message.role,
             content: sanitizeContextMessageContent(message.content),
+            id: message.id,
         }))
         .filter((message) => message.content.length > 0);
+
+    const normalized = typeof targetAssistantMessageId === 'string'
+        ? (() => {
+            const targetIndex = normalizedMessages.findIndex(
+                (message) => message.role === 'assistant' && message.id === targetAssistantMessageId,
+            );
+            return targetIndex >= 0 ? normalizedMessages.slice(0, targetIndex + 1) : normalizedMessages;
+        })()
+        : normalizedMessages;
+
+    const asContextMessages = (messages: ContextMessageWithWindow[]): InsightChatContextMessage[] =>
+        messages.map(({ role, content }) => ({ role, content }));
 
     if (!normalized.length) {
         return [];
     }
 
     if (memoryMode === 'session') {
-        return normalized.slice(-MAX_REQUEST_CONTEXT_MESSAGES);
+        return asContextMessages(normalized.slice(-MAX_REQUEST_CONTEXT_MESSAGES));
     }
 
     const firstUser = normalized.find((message) => message.role === 'user');
     const latestAssistant = [...normalized].reverse().find((message) => message.role === 'assistant');
     const recent = normalized.slice(-MAX_REQUEST_CONTEXT_MESSAGES);
-    const combined = [firstUser, ...recent, latestAssistant].filter(Boolean) as InsightChatContextMessage[];
-    const deduped: InsightChatContextMessage[] = [];
+    const combined = [firstUser, ...recent, latestAssistant].filter(Boolean) as ContextMessageWithWindow[];
+    const deduped: ContextMessageWithWindow[] = [];
 
     for (const message of combined) {
         if (deduped.some((item) => item.role === message.role && item.content === message.content)) {
@@ -518,7 +1129,7 @@ export function buildInsightChatContextMessages(
         }
     }
 
-    return deduped;
+    return asContextMessages(deduped);
 }
 
 function sanitizeAttachmentName(raw: string): string {
@@ -654,9 +1265,13 @@ type PersistedChatMessage = Omit<ChatMessage, 'createdAt' | 'meta'> & {
 };
 
 type PersistedChatState = {
-    version: 1 | 2 | 3 | 4 | 5;
+    version: 1 | 2 | 3 | 4 | 5 | 6;
     conversations: PersistedConversation[];
     activeConversationId: string;
+};
+type InsightConversationExportPayload = PersistedChatState & {
+    schemaVersion: number;
+    exportedAt: string;
 };
 
 type PersistedConversation = {
@@ -672,12 +1287,70 @@ type PersistedConversation = {
     contextWindowSize?: number;
     responseMode?: InsightChatResponseMode;
     memoryMode?: InsightChatMemoryMode;
+    memoryProfileNote?: string;
 };
 
 const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
 const chatResponseCache = new Map<string, CachedEntry<AdminInsightChatResponse>>();
 const inFlightBootstrapRequest = new Map<string, Promise<AdminInsightChatBootstrapResponse>>();
 const inFlightChatRequest = new Map<string, Promise<AdminInsightChatResponse>>();
+
+function sanitizeExportFileNamePart(value: string): string {
+    const normalized = value
+        .replace(/[\\\/:*?"<>|]/g, '-')
+        .replace(/\s+/g, '_')
+        .trim()
+        .slice(0, MAX_EXPORT_FILE_NAME_PART_LENGTH);
+
+    return normalized || 'conversation';
+}
+
+function buildExportFileName(base: string): string {
+    return `${sanitizeExportFileNamePart(base)}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+}
+
+function triggerJsonDownload(content: string, fileName: string): void {
+    if (typeof document === 'undefined') return;
+
+    const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+    const anchor = document.createElement('a');
+    const objectUrl = URL.createObjectURL(blob);
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    anchor.rel = 'noopener';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+}
+
+export function buildConversationBackupExportPayload(
+    conversations: ChatConversation[],
+    activeConversationId: string,
+    options?: { exportedAt?: string },
+): InsightConversationExportPayload | null {
+    if (conversations.length === 0) {
+        return null;
+    }
+
+    const resolvedActiveConversationId = conversations.some((conversation) => conversation.id === activeConversationId)
+        ? activeConversationId
+        : conversations[0]?.id;
+
+    if (!resolvedActiveConversationId) {
+        return null;
+    }
+
+    const serialized = serializeConversationList(conversations, resolvedActiveConversationId);
+    const exportedAt = options?.exportedAt ?? new Date().toISOString();
+
+    return {
+        ...serialized,
+        schemaVersion: serialized.version,
+        exportedAt,
+    };
+}
 
 type InsightPromptCommand = {
     id: string;
@@ -1029,6 +1702,143 @@ function dedupePromptCommands(prompts: InsightPromptCommand[]): InsightPromptCom
     return result;
 }
 
+function cloneDeep<T>(value: T): T {
+    if (typeof structuredClone === 'function') {
+        return structuredClone(value);
+    }
+    return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function makeSafeUniqueId(prefix: string, reserved: Set<string>): string {
+    let id = makeId(prefix);
+    while (reserved.has(id)) {
+        id = makeId(prefix);
+    }
+    return id;
+}
+
+export function duplicateConversationForSidebar(
+    sourceConversation: ChatConversation,
+    existingConversations: readonly ChatConversation[],
+): ChatConversation {
+    const reservedConversationIds = new Set(existingConversations.map((conversation) => conversation.id));
+    const reservedMessageIds = new Set(existingConversations.flatMap((conversation) => conversation.messages.map((message) => message.id)));
+
+    const conversationClone = cloneDeep(sourceConversation);
+    const source = conversationClone;
+    const nextConversationId = makeSafeUniqueId('conversation', reservedConversationIds);
+
+    const nextMessages = source.messages.map((message) => ({
+        ...cloneDeep(message),
+        id: makeSafeUniqueId(message.role === 'assistant' ? 'assistant' : 'user', reservedMessageIds),
+        createdAt: cloneDeep(message.createdAt),
+    }));
+
+    return {
+        ...source,
+        id: nextConversationId,
+        title: `${source.title} 복사본`,
+        messages: nextMessages,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isBooting: false,
+    };
+}
+
+export type ConversationDeleteSnapshot = {
+    conversation: ChatConversation;
+    removedAtIndex: number;
+    wasActive: boolean;
+};
+
+export type ConversationDeleteResult = {
+    conversations: ChatConversation[];
+    activeConversationId: string;
+    deleted: ConversationDeleteSnapshot | null;
+};
+
+export function normalizeActiveConversationId(
+    conversations: readonly ChatConversation[],
+    activeConversationId: string,
+): string {
+    if (!activeConversationId) return '';
+    const hasMatch = conversations.some((conversation) => conversation.id === activeConversationId);
+    return hasMatch ? activeConversationId : conversations[0]?.id ?? '';
+}
+
+export function deleteConversationFromList(
+    conversations: readonly ChatConversation[],
+    activeConversationId: string,
+    conversationId: string,
+): ConversationDeleteResult {
+    const removedAtIndex = conversations.findIndex((conversation) => conversation.id === conversationId);
+    if (removedAtIndex < 0) {
+        return {
+            conversations: [...conversations],
+            activeConversationId: normalizeActiveConversationId(conversations, activeConversationId),
+            deleted: null,
+        };
+    }
+
+    const deletedConversation = conversations[removedAtIndex] ?? null;
+    const nextConversations = conversations.filter((conversation) => conversation.id !== conversationId);
+    const isActiveDeleted = activeConversationId === conversationId;
+    const fallbackActiveId = isActiveDeleted
+        ? nextConversations[removedAtIndex]?.id
+            ?? nextConversations[removedAtIndex - 1]?.id
+            ?? ''
+        : activeConversationId;
+
+    return {
+        conversations: nextConversations,
+        activeConversationId: normalizeActiveConversationId(nextConversations, fallbackActiveId),
+        deleted: deletedConversation ? {
+            conversation: deletedConversation,
+            removedAtIndex,
+            wasActive: isActiveDeleted,
+        } : null,
+    };
+}
+
+export function restoreConversationFromList(
+    conversations: readonly ChatConversation[],
+    activeConversationId: string,
+    deletedConversation: ConversationDeleteSnapshot,
+): {
+    conversations: ChatConversation[];
+    activeConversationId: string;
+} {
+    if (!deletedConversation) {
+        return {
+            conversations: [...conversations],
+            activeConversationId: normalizeActiveConversationId(conversations, activeConversationId),
+        };
+    }
+
+    const alreadyRestored = conversations.some((conversation) => conversation.id === deletedConversation.conversation.id);
+    if (alreadyRestored) {
+        return {
+            conversations: [...conversations],
+            activeConversationId: normalizeActiveConversationId(conversations, activeConversationId),
+        };
+    }
+
+    const nextConversations = [...conversations];
+    const insertAtIndex = Math.max(0, Math.min(deletedConversation.removedAtIndex, nextConversations.length));
+
+    nextConversations.splice(insertAtIndex, 0, deletedConversation.conversation);
+    if (nextConversations.length > MAX_CONVERSATIONS) {
+        nextConversations.length = MAX_CONVERSATIONS;
+    }
+
+    return {
+        conversations: nextConversations,
+        activeConversationId: deletedConversation.wasActive
+            ? deletedConversation.conversation.id
+            : normalizeActiveConversationId(nextConversations, activeConversationId),
+    };
+}
+
 function makeId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -1082,6 +1892,7 @@ function buildConversationScopedCacheKey(
     imageModelProfile?: StoryboardModelProfile,
     responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
     memoryMode: InsightChatMemoryMode = DEFAULT_MEMORY_MODE,
+    memoryProfileNote?: string,
     feedbackContext?: InsightChatFeedbackContext,
     attachments?: InsightChatAttachmentInput[],
     contextMessages?: InsightChatContextMessage[],
@@ -1101,6 +1912,12 @@ function buildConversationScopedCacheKey(
         || 'none';
     const normalizedMode = normalizeResponseMode(responseMode);
     const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+    const normalizedMemoryProfileNote = normalizedMemoryMode === 'off'
+        ? ''
+        : sanitizeMemoryProfileNote(memoryProfileNote);
+    const memoryProfileSignature = normalizedMemoryProfileNote
+        ? `memory-profile:${normalizedMemoryProfileNote}`
+        : 'memory-profile:none';
     const feedbackSignature = feedbackContext?.rating
         ? `feedback:${feedbackContext.rating}:${(feedbackContext.reason ?? '').replace(/\s+/g, ' ').slice(0, 120)}`
         : 'feedback:none';
@@ -1117,7 +1934,7 @@ function buildConversationScopedCacheKey(
             .join('|')
         : 'context:none';
 
-    return `${conversationId}|${inferenceMode}|${provider}|${model}|${keyMode}|${normalizedProfile}|${normalizedMode}|${normalizedMemoryMode}|${feedbackSignature}|${attachmentSignature}|${contextSignature}|${normalizedMessage}`;
+    return `${conversationId}|${inferenceMode}|${provider}|${model}|${keyMode}|${normalizedProfile}|${normalizedMode}|${normalizedMemoryMode}|${memoryProfileSignature}|${feedbackSignature}|${attachmentSignature}|${contextSignature}|${normalizedMessage}`;
 }
 
 async function fetchJsonWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<T> {
@@ -1249,9 +2066,12 @@ async function postChatMessage(
     feedbackContext?: InsightChatFeedbackContext,
     attachments?: InsightChatAttachmentInput[],
     contextMessages?: InsightChatContextMessage[],
+    memoryProfileNote?: string,
 ): Promise<AdminInsightChatResponse> {
     const normalizedResponseMode = normalizeResponseMode(responseMode);
     const normalizedFeedbackContext = normalizeFeedbackInput(feedbackContext);
+    const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+    const normalizedMemoryProfileNote = normalizedMemoryMode === 'off' ? '' : sanitizeMemoryProfileNote(memoryProfileNote);
     const resolvedImageModelProfile = llmConfig?.imageModelProfile
         || llmConfig?.storyboardModelProfile
         || imageModelProfile;
@@ -1261,7 +2081,8 @@ async function postChatMessage(
         llmConfig,
         resolvedImageModelProfile,
         normalizedResponseMode,
-        memoryMode,
+        normalizedMemoryMode,
+        normalizedMemoryProfileNote,
         normalizedFeedbackContext,
         attachments,
         contextMessages,
@@ -1289,7 +2110,8 @@ async function postChatMessage(
                         message,
                         requestId,
                         responseMode: normalizedResponseMode,
-                        memoryMode: normalizeMemoryMode(memoryMode),
+                        memoryMode: normalizedMemoryMode,
+                        ...(normalizedMemoryProfileNote ? { memoryProfileNote: normalizedMemoryProfileNote } : {}),
                         ...(attachments?.length ? { attachments } : {}),
                         ...(contextMessages?.length ? { contextMessages } : {}),
                         ...(normalizedFeedbackContext ? { feedbackContext: normalizedFeedbackContext } : {}),
@@ -1366,10 +2188,12 @@ async function postStreamChat(
     feedbackContext?: InsightChatFeedbackContext,
     attachments?: InsightChatAttachmentInput[],
     contextMessages?: InsightChatContextMessage[],
+    memoryProfileNote?: string,
 ): Promise<AdminInsightChatResponse | null> {
     const normalizedResponseMode = normalizeResponseMode(responseMode);
     const normalizedFeedbackContext = normalizeFeedbackInput(feedbackContext);
     const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+    const normalizedMemoryProfileNote = normalizedMemoryMode === 'off' ? '' : sanitizeMemoryProfileNote(memoryProfileNote);
 
     const resp = await fetch('/api/admin/insight/chat/stream', {
         method: 'POST',
@@ -1380,6 +2204,7 @@ async function postStreamChat(
             requestId,
             responseMode: normalizedResponseMode,
             memoryMode: normalizedMemoryMode,
+            ...(normalizedMemoryProfileNote ? { memoryProfileNote: normalizedMemoryProfileNote } : {}),
             ...(attachments?.length ? { attachments } : {}),
             ...(contextMessages?.length ? { contextMessages } : {}),
             ...(normalizedFeedbackContext ? { feedbackContext: normalizedFeedbackContext } : {}),
@@ -2286,11 +3111,17 @@ const InsightChatTreemap = memo(() => {
 });
 InsightChatTreemap.displayName = 'InsightChatTreemap';
 
-function deserializeConversationList(raw: PersistedChatState | null): {
+export function deserializeConversationList(raw: PersistedChatState | null): {
     conversations: ChatConversation[];
     activeConversationId: string;
 } | null {
-    if (!raw || (raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4 && raw.version !== 5) || !Array.isArray(raw.conversations) || raw.conversations.length === 0) {
+    if (!raw
+        || !Number.isInteger(raw.version)
+        || raw.version < 1
+        || raw.version > CHAT_STORAGE_SCHEMA_VERSION
+        || !Array.isArray(raw.conversations)
+        || raw.conversations.length === 0
+    ) {
         return null;
     }
 
@@ -2349,6 +3180,9 @@ function deserializeConversationList(raw: PersistedChatState | null): {
                 memoryMode: raw.version >= 5
                     ? normalizeMemoryMode(conversation.memoryMode)
                     : DEFAULT_MEMORY_MODE,
+                memoryProfileNote: raw.version >= 6
+                    ? sanitizeMemoryProfileNote(conversation.memoryProfileNote)
+                    : undefined,
             };
         })
         .filter((conversation): conversation is ChatConversation => conversation !== null)
@@ -2365,7 +3199,10 @@ function deserializeConversationList(raw: PersistedChatState | null): {
     return { conversations, activeConversationId };
 }
 
-function serializeConversationList(conversations: ChatConversation[], activeConversationId: string): PersistedChatState {
+export function serializeConversationList(
+    conversations: ChatConversation[],
+    activeConversationId: string,
+): PersistedChatState {
     return {
         version: CHAT_STORAGE_SCHEMA_VERSION,
         activeConversationId,
@@ -2391,6 +3228,7 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
             contextWindowSize: conversation.contextWindowSize,
             responseMode: conversation.responseMode ?? DEFAULT_RESPONSE_MODE,
             memoryMode: conversation.memoryMode ?? DEFAULT_MEMORY_MODE,
+            memoryProfileNote: sanitizeMemoryProfileNote(conversation.memoryProfileNote),
         })),
     };
 }
@@ -2409,6 +3247,7 @@ function createInitialConversation(id: string): ChatConversation {
         contextWindowSize: MESSAGE_WINDOW_INITIAL,
         responseMode: DEFAULT_RESPONSE_MODE,
         memoryMode: DEFAULT_MEMORY_MODE,
+        memoryProfileNote: '',
     };
 }
 
@@ -2729,7 +3568,7 @@ const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
 });
 SourceList.displayName = 'SourceList';
 
-const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null }) => {
+const MessageMetaPanel = memo(({ meta, sources }: { meta?: AdminInsightChatMeta | null; sources?: InsightChatSource[] }) => {
     if (!meta) return null;
 
     const sourceLabel = getSourceLabel(meta.source);
@@ -2749,6 +3588,8 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
     const confidenceLabel = getConfidenceLabel(meta.confidence);
     const latencyLabel = getLatencyLabel(meta.latencyMs);
     const toolTrace = Array.isArray(meta.toolTrace) ? meta.toolTrace.filter(Boolean) : [];
+    const citationQuality = meta.citationQuality ?? getCitationQualityFromSources(sources);
+    const citationQualityLabel = getCitationQualityLabel(citationQuality);
 
     return (
         <div className="mt-2 border-t border-[#e5e7eb] pt-2">
@@ -2761,6 +3602,11 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
                 {memoryModeLabel ? (
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${MEMORY_MODE_BADGE_STYLES[meta.memoryMode!]}`}>
                         기억: {memoryModeLabel}
+                    </span>
+                ) : null}
+                {citationQualityLabel ? (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${META_CITATION_QUALITY_BADGE_STYLES[citationQuality]}`}>
+                        인용: {citationQualityLabel}
                     </span>
                 ) : null}
                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#eef2ff] text-[#3730a3]">
@@ -3149,7 +3995,7 @@ const ChatBubble = memo(({
                                 />
                             </div>
                         ) : null}
-                        {hasMessageMeta && isMetaVisible ? <MessageMetaPanel meta={message.meta} /> : null}
+                        {hasMessageMeta && isMetaVisible ? <MessageMetaPanel meta={message.meta} sources={message.sources} /> : null}
                         {message.sources?.length ? <SourceList sources={message.sources} /> : null}
                     </div>
                 ) : message.sources ? (
@@ -3214,11 +4060,15 @@ const InsightChatSectionComponent = () => {
     const [activeConversationTagInput, setActiveConversationTagInput] = useState('');
     const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
     const [hasServerGeminiKey, setHasServerGeminiKey] = useState(false);
+    const conversationImportInputRef = useRef<HTMLInputElement>(null);
     const attachmentInputRef = useRef<HTMLInputElement>(null);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
     const imageModelDropdownRef = useRef<HTMLDivElement>(null);
     const responseModeDropdownRef = useRef<HTMLDivElement>(null);
     const memoryModeDropdownRef = useRef<HTMLDivElement>(null);
+    const [pendingDeletedConversation, setPendingDeletedConversation] = useState<ConversationDeleteSnapshot | null>(null);
+    const deleteUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const deleteUndoTokenRef = useRef(0);
     const [messageFeedbacks, setMessageFeedbacks] = useState<Record<string, {
         rating?: InsightChatFeedbackRating;
         reason?: string;
@@ -3509,6 +4359,7 @@ const InsightChatSectionComponent = () => {
         ?? '빠른 응답';
     const activeConversationMemoryModeLabel = CHAT_MEMORY_MODES.find((mode) => mode.value === activeConversationMemoryMode)?.label
         ?? '기억 안함';
+    const activeConversationMemoryProfileNote = activeConversation?.memoryProfileNote ?? '';
 
     const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
         setConversations((prev) => {
@@ -3542,6 +4393,16 @@ const InsightChatSectionComponent = () => {
             updatedAt: Date.now(),
         }));
         setShowMemoryModeDropdown(false);
+    }, [activeConversation, updateConversation]);
+
+    const setActiveConversationMemoryProfileNote = useCallback((nextValue: string) => {
+        if (!activeConversation) return;
+
+        updateConversation(activeConversation.id, (prev) => ({
+            ...prev,
+            memoryProfileNote: sanitizeMemoryProfileNote(nextValue),
+            updatedAt: Date.now(),
+        }));
     }, [activeConversation, updateConversation]);
 
     useEffect(() => {
@@ -3861,18 +4722,9 @@ const InsightChatSectionComponent = () => {
 
     const createConversation = useCallback((title: string = EMPTY_TITLE) => {
         const nextConversation: ChatConversation = {
-            id: makeConversationId(),
+            ...createInitialConversation(makeConversationId()),
             title,
-            messages: [],
-            tags: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
             isBooting: true,
-            bootstrapFailed: false,
-            pinned: false,
-            contextWindowSize: MESSAGE_WINDOW_INITIAL,
-            responseMode: DEFAULT_RESPONSE_MODE,
-            memoryMode: DEFAULT_MEMORY_MODE,
         };
 
         setConversations((prev) => [nextConversation, ...prev].slice(0, MAX_CONVERSATIONS));
@@ -3989,6 +4841,30 @@ const InsightChatSectionComponent = () => {
     useEffect(() => () => {
         streamAbortControllerRef.current?.abort();
         streamAbortControllerRef.current = null;
+        if (deleteUndoTimerRef.current) {
+            clearTimeout(deleteUndoTimerRef.current);
+            deleteUndoTimerRef.current = null;
+        }
+    }, []);
+
+    const handleClearDeleteUndo = useCallback(() => {
+        if (deleteUndoTimerRef.current) {
+            clearTimeout(deleteUndoTimerRef.current);
+            deleteUndoTimerRef.current = null;
+        }
+        setPendingDeletedConversation(null);
+        deleteUndoTokenRef.current += 1;
+    }, []);
+
+    const handleScheduleDeleteUndoClear = useCallback((token: number) => {
+        if (deleteUndoTimerRef.current) {
+            clearTimeout(deleteUndoTimerRef.current);
+        }
+        deleteUndoTimerRef.current = setTimeout(() => {
+            if (deleteUndoTokenRef.current !== token) return;
+            setPendingDeletedConversation(null);
+            deleteUndoTimerRef.current = null;
+        }, CHAT_DELETE_UNDO_TIMEOUT_MS);
     }, []);
 
     const handleSelectConversation = useCallback((conversationId: string) => {
@@ -4002,20 +4878,43 @@ const InsightChatSectionComponent = () => {
     }, []);
 
     const handleDeleteConversation = useCallback((conversationId: string) => {
-        const remaining = conversations.filter((c) => c.id !== conversationId);
-        if (remaining.length === 0) {
+        if (!window.confirm(CHAT_DELETE_CONFIRM_LABEL)) {
+            return;
+        }
+
+        const deleteResult = deleteConversationFromList(conversations, activeConversationId, conversationId);
+        if (!deleteResult.deleted) {
+            return;
+        }
+
+        handleClearDeleteUndo();
+
+        setConversations(deleteResult.conversations);
+        if (deleteResult.activeConversationId) {
+            setActiveConversationId(deleteResult.activeConversationId);
+        } else {
             createConversation();
         }
-        setConversations((prev) => {
-            const next = prev.filter((c) => c.id !== conversationId);
-            return next.length > 0 ? next : prev;
-        });
-        if (activeConversationId === conversationId) {
-            if (remaining.length > 0) {
-                setActiveConversationId(remaining[0].id);
-            }
-        }
-    }, [activeConversationId, conversations, createConversation]);
+
+        setPendingDeletedConversation(deleteResult.deleted);
+        const token = deleteUndoTokenRef.current + 1;
+        deleteUndoTokenRef.current = token;
+        handleScheduleDeleteUndoClear(token);
+    }, [activeConversationId, conversations, createConversation, handleClearDeleteUndo, handleScheduleDeleteUndoClear]);
+
+    const handleUndoDeleteConversation = useCallback(() => {
+        if (!pendingDeletedConversation) return;
+
+        const restoreResult = restoreConversationFromList(
+            conversations,
+            activeConversationId,
+            pendingDeletedConversation,
+        );
+
+        handleClearDeleteUndo();
+        setConversations(restoreResult.conversations);
+        setActiveConversationId(restoreResult.activeConversationId);
+    }, [activeConversationId, conversations, handleClearDeleteUndo, pendingDeletedConversation]);
 
     const handleNewConversation = useCallback(() => {
         createConversation();
@@ -4060,6 +4959,15 @@ const InsightChatSectionComponent = () => {
             updatedAt: Date.now(),
         }));
     }, [updateConversation]);
+
+    const handleDuplicateConversation = useCallback((conversationId: string) => {
+        const target = conversations.find((conversation) => conversation.id === conversationId);
+        if (!target) return;
+
+        const duplicated = duplicateConversationForSidebar(target, conversations);
+        setConversations((prev) => [duplicated, ...prev].slice(0, MAX_CONVERSATIONS));
+        setActiveConversationId(duplicated.id);
+    }, [conversations]);
 
     const handleAddConversationTag = useCallback(() => {
         if (!activeConversation) return;
@@ -4112,18 +5020,76 @@ const InsightChatSectionComponent = () => {
             conversation,
             schemaVersion: CHAT_STORAGE_SCHEMA_VERSION,
         };
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8' });
-        const anchor = document.createElement('a');
-        const objectUrl = URL.createObjectURL(blob);
-        anchor.href = objectUrl;
-        anchor.download = `insight-chat-${conversation.title}-${conversation.id}.json`;
-        anchor.rel = 'noopener';
-        anchor.style.display = 'none';
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        URL.revokeObjectURL(objectUrl);
+        const fileName = buildExportFileName(`insight-chat-${conversation.title}-${conversation.id}`);
+        triggerJsonDownload(JSON.stringify(exportData, null, 2), fileName);
     }, [conversations]);
+
+    const handleExportAllConversations = useCallback(() => {
+        const payload = buildConversationBackupExportPayload(conversations, activeConversationId);
+        if (!payload) return;
+
+        const fileName = buildExportFileName('insight-chat-backup-all');
+        triggerJsonDownload(JSON.stringify(payload, null, 2), fileName);
+    }, [activeConversationId, conversations]);
+
+    const handleOpenConversationImportPicker = useCallback(() => {
+        if (!!activeConversation?.isBooting || !!sendingConversationId) return;
+        conversationImportInputRef.current?.click();
+    }, [activeConversation?.isBooting, sendingConversationId]);
+
+    const handleConversationImportFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+        const resetInput = () => {
+            event.target.value = '';
+        };
+        const file = event.target.files?.[0];
+        if (!file) {
+            resetInput();
+            return;
+        }
+
+        try {
+            const rawText = await file.text();
+            const rawPayload = JSON.parse(rawText) as unknown;
+            const parsed = parseConversationImportPayload(rawPayload);
+            if (!parsed) {
+                window.alert('가져오기 파일 형식이 올바르지 않습니다.');
+                return;
+            }
+            if (parsed.conversations.length === 0) {
+                window.alert('가져올 대화가 없습니다.');
+                return;
+            }
+
+            const mergedConversations = mergeImportedConversations(conversations, parsed.conversations);
+            if (mergedConversations.length === 0) {
+                window.alert('대화를 가져오지 못했습니다.');
+                return;
+            }
+
+            const parsedActiveIndex = parsed.conversations.findIndex(
+                (conversation) => conversation.id === parsed.activeConversationId,
+            );
+            const preferredActiveIndex = parsedActiveIndex >= 0 ? parsedActiveIndex : 0;
+            const nextActiveConversationId = mergedConversations[preferredActiveIndex]?.id
+                ?? mergedConversations[0]?.id
+                ?? activeConversationId;
+
+            setConversations(mergedConversations);
+            setActiveConversationId(nextActiveConversationId);
+            setInputValue('');
+            setEditingMessageId(null);
+            setDraftAttachments([]);
+            setConversationSearchQuery('');
+            setConversationQuickFilter(CONVERSATION_FILTER_ALL);
+
+            window.alert(`대화 ${parsed.conversations.length}개를 가져왔습니다.`);
+        } catch (error) {
+            console.error('[admin/insight/chat] conversation import failed', error);
+            window.alert('대화 파일을 읽지 못했습니다. JSON 파일인지 확인해 주세요.');
+        } finally {
+            resetInput();
+        }
+    }, [activeConversationId, conversations]);
 
     const handleOpenAttachmentPicker = useCallback(() => {
         if (!!activeConversation?.isBooting || !!sendingConversationId) return;
@@ -4205,9 +5171,9 @@ const InsightChatSectionComponent = () => {
         const convId = activeConversation.id;
         const responseMode = activeConversationResponseMode;
         const memoryMode = activeConversationMemoryMode;
+        const memoryProfileNote = activeConversationMemoryProfileNote;
         const feedbackContext = normalizeFeedbackInput(options?.feedbackContext);
         const attachments = normalizeAttachmentPayload(options?.attachments);
-        const contextMessages = buildInsightChatContextMessages(activeConversation.messages, memoryMode);
         const replaceUserMessageId = options?.replaceUserMessageId;
         const replaceIndex = replaceUserMessageId
             ? activeConversation.messages.findIndex((message) => message.id === replaceUserMessageId && message.role === 'user')
@@ -4257,6 +5223,12 @@ const InsightChatSectionComponent = () => {
         let streamController: AbortController | null = null;
 
         try {
+            const contextMessages = buildInsightChatContextMessages(
+                activeConversation.messages,
+                memoryMode,
+                feedbackContext?.targetAssistantMessageId,
+            );
+
             if (currentLlmConfig) {
                 streamController = new AbortController();
                 streamAbortControllerRef.current = streamController;
@@ -4289,6 +5261,7 @@ const InsightChatSectionComponent = () => {
                     feedbackContext,
                     attachments,
                     contextMessages,
+                    memoryProfileNote,
                 );
 
                 if (localResponse) {
@@ -4333,6 +5306,7 @@ const InsightChatSectionComponent = () => {
                     feedbackContext,
                     attachments,
                     contextMessages,
+                    memoryProfileNote,
                 );
                 appendMessage(convId, {
                     id: makeId('assistant'),
@@ -4393,6 +5367,7 @@ const InsightChatSectionComponent = () => {
         updateMessageContent,
         activeConversationResponseMode,
         activeConversationMemoryMode,
+        activeConversationMemoryProfileNote,
         sendingConversationId,
         currentLlmConfig,
         imageModelProfile,
@@ -4559,6 +5534,28 @@ const InsightChatSectionComponent = () => {
                             type="button"
                             size="sm"
                             variant="outline"
+                            className="mt-2 h-9 w-9 p-0 border-[#e5e7eb]"
+                            onClick={handleOpenConversationImportPicker}
+                            disabled={!!sendingConversationId || !!activeConversation?.isBooting}
+                            title="대화 가져오기"
+                        >
+                            <Upload className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 h-9 w-9 p-0 border-[#e5e7eb]"
+                            onClick={handleExportAllConversations}
+                            disabled={conversations.length === 0 || !!sendingConversationId || !!activeConversation?.isBooting}
+                            title="전체 대화 백업 내보내기"
+                        >
+                            <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
                             className={cn('mt-2 h-9 w-9 p-0 border-[#e5e7eb]', showSettings && 'bg-[#f3f4f6]')}
                             onClick={() => setShowSettings((prev) => !prev)}
                             title="LLM 설정"
@@ -4566,6 +5563,15 @@ const InsightChatSectionComponent = () => {
                             <Settings className="h-4 w-4" />
                         </Button>
                     </div>
+                    <input
+                        ref={conversationImportInputRef}
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={(event) => {
+                            void handleConversationImportFileChange(event);
+                        }}
+                        className="hidden"
+                    />
                 </div>
 
                 {showSettings ? (
@@ -4656,6 +5662,19 @@ const InsightChatSectionComponent = () => {
                                 className="h-8 text-xs bg-white border-[#e5e7eb] focus-visible:ring-[#f87171]"
                             />
                         </div>
+                        {pendingDeletedConversation ? (
+                            <div className="mx-2 rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] p-2 text-xs text-[#166534] flex items-center justify-between gap-2">
+                                <span className="truncate">삭제한 대화를 복구할 수 있습니다.</span>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-7 px-2 bg-[#166534] hover:bg-[#14532d] text-white"
+                                    onClick={handleUndoDeleteConversation}
+                                >
+                                    되돌리기
+                                </Button>
+                            </div>
+                        ) : null}
                         <div className="px-2 pb-2">
                             <div className="flex flex-wrap gap-1">
                                 <button
@@ -4831,6 +5850,17 @@ const InsightChatSectionComponent = () => {
                                             type="button"
                                             onClick={(event) => {
                                                 event.stopPropagation();
+                                                handleDuplicateConversation(conversation.id);
+                                            }}
+                                            className="h-6 w-6 grid place-items-center rounded-md text-[#6b7280] hover:bg-[#f3f4f6]"
+                                            title="대화 복제"
+                                        >
+                                            <Copy className="h-3 w-3" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
                                                 handleExportConversation(conversation.id);
                                             }}
                                             className="h-6 w-6 grid place-items-center rounded-md text-[#6b7280] hover:bg-[#f3f4f6]"
@@ -4960,9 +5990,19 @@ const InsightChatSectionComponent = () => {
                                     { key: 'stream', label: 'Stream 라우트' },
                                 ] as const).map((route) => {
                                     const metrics = guardrailMetricsNormalized.routes[route.key];
-                                    const reasonEntries = Object.entries(metrics.reliability_fallback_streak_alerts)
-                                        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-                                        .slice(0, 3);
+                                    const outcomeRates = summarizeInsightChatGuardrailRouteOutcomeRates(metrics);
+                                    const providerEntries = getTopMetricEntries(metrics.provider_request_counts, 3);
+                                    const sourceEntries = getTopMetricEntries(metrics.source_counts, 3);
+                                    const reasonEntries = getTopMetricEntries(metrics.fallback_totals ?? metrics.reliability_fallback_streak_alerts, 3);
+                                    const citationQualityEntries = getTopMetricEntries(metrics.citation_quality_counts, 3);
+                                    const responseModeEntries = getTopMetricEntries(metrics.response_mode_counts, 3);
+                                    const memoryModeEntries = getTopMetricEntries(metrics.memory_mode_counts, 3);
+                                    const feedbackRatingEntries = getTopMetricEntries(metrics.feedback_rating_counts, 3);
+                                    const feedbackHasReasonEntries = getTopMetricEntries(metrics.feedback_has_reason_counts, 3);
+                                    const feedbackReasonCategoryEntries = getTopMetricEntries(
+                                        metrics.feedback_reason_category_counts,
+                                        3,
+                                    );
                                     return (
                                         <div
                                             key={route.key}
@@ -4970,17 +6010,231 @@ const InsightChatSectionComponent = () => {
                                         >
                                             <p className="font-semibold text-[#0f172a]">{route.label}</p>
                                             <p className="mt-1">지연 초과: {metrics.latency_budget_exceeded}</p>
-                                            {reasonEntries.length > 0 ? (
-                                                <ul className="mt-1 space-y-0.5 text-[#475569]">
-                                                    {reasonEntries.map(([reason, count]) => (
-                                                        <li key={`${route.key}-${reason}`}>
-                                                            {getFallbackReasonLabel(reason) ?? reason}: {count}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <p className="mt-1 text-[#64748b]">폴백 연속 경고 없음</p>
-                                            )}
+                                            <p className="mt-1">총 요청: {outcomeRates.totalRequests}</p>
+                                            <div className="mt-1">
+                                                <div className="text-[#475569]">요청 결과율</div>
+                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                    {outcomeRates.totalRequests > 0 ? (
+                                                        <>
+                                                            <span>
+                                                                {renderGuardrailMetricBadge(
+                                                                    '성공',
+                                                                    outcomeRates.successRate,
+                                                                    'border border-[#dcfce7] bg-[#f0fdf4] text-[#166534]',
+                                                                    '%',
+                                                                )}
+                                                            </span>
+                                                            <span>
+                                                                {renderGuardrailMetricBadge(
+                                                                    '폴백',
+                                                                    outcomeRates.fallbackRate,
+                                                                    'border border-[#ffe4e6] bg-[#fff1f2] text-[#9f1239]',
+                                                                    '%',
+                                                                )}
+                                                            </span>
+                                                            <span>
+                                                                {renderGuardrailMetricBadge(
+                                                                    '오류',
+                                                                    outcomeRates.errorRate,
+                                                                    'border border-[#fee2e2] bg-[#fef2f2] text-[#991b1b]',
+                                                                    '%',
+                                                                )}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-[11px] text-[#64748b]">요청 결과 데이터 없음</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="mt-1">
+                                                <div className="text-[#475569]">상위 공급자</div>
+                                               <div className="mt-1 flex flex-wrap gap-1">
+                                                    {providerEntries.length > 0 ? (
+                                                        providerEntries.map(([provider, count]) => {
+                                                            const label = getGuardrailMetricLabel(provider);
+                                                            return (
+                                                                <span key={`${route.key}-${provider}`}>
+                                                                    {renderGuardrailMetricBadge(
+                                                                        label,
+                                                                        count,
+                                                                        'border border-[#e0e7ff] bg-[#eef2ff] text-[#3730a3]',
+                                                                    )}
+                                                                </span>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <span className="text-[11px] text-[#64748b]">공급자 데이터 없음</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="mt-2">
+                                                <div className="text-[#475569]">상위 출처</div>
+                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                    {sourceEntries.length > 0 ? (
+                                                        sourceEntries.map(([source, count]) => {
+                                                            const label = getGuardrailMetricLabel(source);
+                                                            return (
+                                                                <span key={`${route.key}-${source}`}>
+                                                                    {renderGuardrailMetricBadge(
+                                                                        label,
+                                                                        count,
+                                                                        'border border-[#dcfce7] bg-[#f0fdf4] text-[#166534]',
+                                                                    )}
+                                                                </span>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <span className="text-[11px] text-[#64748b]">출처 데이터 없음</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                                <div className="mt-2">
+                                                    <div className="text-[#475569]">상위 인용 품질</div>
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {citationQualityEntries.length > 0 ? (
+                                                            citationQualityEntries.map(([quality, count]) => {
+                                                                const label = getCitationQualityMetricLabel(quality);
+                                                                return (
+                                                                    <span key={`${route.key}-${quality}`}>
+                                                                        {renderGuardrailMetricBadge(
+                                                                            label,
+                                                                            count,
+                                                                            `border border-[#ddd6fe] bg-[#ede9fe] ${getCitationQualityMetricBadgeStyle(quality)}`,
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#64748b]">인용 품질 데이터 없음</span>
+                                                        )}
+                                                    </div>
+                                            </div>
+                                                <div className="mt-2">
+                                                    <div className="text-[#475569]">상위 폴백 원인</div>
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {reasonEntries.length > 0 ? (
+                                                            reasonEntries.map(([reason, count]) => {
+                                                                const label = getFallbackReasonLabel(reason);
+                                                                return (
+                                                                    <span key={`${route.key}-${reason}`}>
+                                                                        {renderGuardrailMetricBadge(
+                                                                            label || reason,
+                                                                            count,
+                                                                            'border border-[#ffe4e6] bg-[#fff1f2] text-[#9f1239]',
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#64748b]">폴백 연속 경고 없음</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2">
+                                                    <div className="text-[#475569]">상위 피드백 사유 카테고리</div>
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {feedbackReasonCategoryEntries.length > 0 ? (
+                                                            feedbackReasonCategoryEntries.map(([category, count]) => {
+                                                                const label = getFeedbackReasonCategoryMetricLabel(category);
+                                                                return (
+                                                                    <span key={`${route.key}-${category}`}>
+                                                                        {renderGuardrailMetricBadge(
+                                                                            label,
+                                                                            count,
+                                                                            'border border-[#ffedd5] bg-[#fff7ed] text-[#c2410c]',
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#64748b]">피드백 사유 카테고리 데이터 없음</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2">
+                                                    <div className="text-[#475569]">상위 응답 모드</div>
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {responseModeEntries.length > 0 ? (
+                                                            responseModeEntries.map(([mode, count]) => {
+                                                                const label = getResponseModeMetricLabel(mode);
+                                                                return (
+                                                                    <span key={`${route.key}-${mode}`}>
+                                                                        {renderGuardrailMetricBadge(
+                                                                            label,
+                                                                            count,
+                                                                            'border border-[#f5f3ff] bg-[#f8fafc] text-[#4c1d95]',
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#64748b]">응답 모드 데이터 없음</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2">
+                                                    <div className="text-[#475569]">상위 기억 모드</div>
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {memoryModeEntries.length > 0 ? (
+                                                            memoryModeEntries.map(([mode, count]) => {
+                                                                const label = getMemoryModeMetricLabel(mode);
+                                                                return (
+                                                                    <span key={`${route.key}-${mode}`}>
+                                                                        {renderGuardrailMetricBadge(
+                                                                            label,
+                                                                            count,
+                                                                            'border border-[#fef3c7] bg-[#fffbeb] text-[#92400e]',
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#64748b]">기억 모드 데이터 없음</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2">
+                                                    <div className="text-[#475569]">상위 피드백</div>
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {feedbackRatingEntries.length > 0 ? (
+                                                            feedbackRatingEntries.map(([rating, count]) => {
+                                                                const label = getFeedbackRatingMetricLabel(rating);
+                                                                return (
+                                                                    <span key={`${route.key}-${rating}`}>
+                                                                        {renderGuardrailMetricBadge(
+                                                                            label,
+                                                                            count,
+                                                                            'border border-[#ccfbf1] bg-[#ecfeff] text-[#155e75]',
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#64748b]">피드백 데이터 없음</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="mt-2">
+                                                    <div className="text-[#475569]">상위 피드백 사유 포함</div>
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                        {feedbackHasReasonEntries.length > 0 ? (
+                                                            feedbackHasReasonEntries.map(([reason, count]) => {
+                                                                const label = getFeedbackHasReasonMetricLabel(reason);
+                                                                return (
+                                                                    <span key={`${route.key}-${reason}`}>
+                                                                        {renderGuardrailMetricBadge(
+                                                                            label,
+                                                                            count,
+                                                                            'border border-[#fee2e2] bg-[#fef2f2] text-[#991b1b]',
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <span className="text-[11px] text-[#64748b]">피드백 사유 데이터 없음</span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                         </div>
                                     );
                                 })}
@@ -5262,6 +6516,17 @@ const InsightChatSectionComponent = () => {
                                         ))}
                                     </div>
                                 ) : null}
+                            </div>
+
+                            <div className="relative shrink-0 min-w-0 max-w-[16rem]">
+                                <Input
+                                    value={activeConversationMemoryProfileNote}
+                                    onChange={(event) => setActiveConversationMemoryProfileNote(event.target.value)}
+                                    placeholder="기억 프로필 메모"
+                                    maxLength={MAX_MEMORY_PROFILE_NOTE_LENGTH}
+                                    aria-label="기억 프로필 메모"
+                                    className="h-8 text-xs bg-white border-[#e5e7eb] focus-visible:ring-[#f87171]"
+                                />
                             </div>
                         </div>
 
