@@ -123,11 +123,39 @@ export type LlmRequestConfig = {
   imageModelProfile?: StoryboardModelProfile;
 };
 
+export type InsightChatResponseMode = 'fast' | 'deep' | 'structured';
+
+export type InsightChatAttachmentInput = {
+  name: string;
+  mimeType?: string;
+  content: string;
+  sizeBytes?: number;
+};
+
+export type InsightChatAttachment = {
+  name: string;
+  mimeType: string;
+  content: string;
+  sizeBytes: number;
+};
+
+export type InsightChatFeedbackRating = 'up' | 'down';
+
+export type InsightChatFeedbackContext = {
+  targetAssistantMessageId?: string;
+  rating: InsightChatFeedbackRating;
+  reason?: string;
+};
+
 export type AdminInsightChatMeta = {
   source: 'local' | 'agent' | 'gemini' | 'openai' | 'anthropic' | 'fallback';
   fallbackReason?: string;
   model?: string;
   requestId?: string;
+  responseMode?: InsightChatResponseMode;
+  confidence?: number;
+  latencyMs?: number;
+  toolTrace?: string[];
 };
 
 export type AdminInsightChatResponse = {

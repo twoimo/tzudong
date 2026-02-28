@@ -1,6 +1,9 @@
 import type {
   AdminInsightChatBootstrapResponse,
   AdminInsightChatResponse,
+  InsightChatAttachment,
+  InsightChatFeedbackContext,
+  InsightChatResponseMode,
   InsightChatSource,
   LlmRequestConfig,
   StoryboardModelProfile,
@@ -71,6 +74,38 @@ const DEFAULT_STORYBOARD_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
 const DEFAULT_IMAGE_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
 const LLM_TIMEOUT_MS = 30_000;
 const LLM_MAX_TOKENS = 4096;
+const LLM_MAX_TOKENS_FAST = 1200;
+const LLM_MAX_TOKENS_DEEP = 2048;
+const LLM_MAX_TOKENS_STRUCTURED = 2560;
+const FALLBACK_CONFIDENCE_MIN = 0.18;
+
+type ResponseModeProfile = {
+  maxOutputTokens: number;
+  temperature: number;
+  promptAddendum: string;
+  confidenceBase: number;
+};
+
+const RESPONSE_MODE_PROFILES: Record<InsightChatResponseMode, ResponseModeProfile> = {
+  fast: {
+    maxOutputTokens: LLM_MAX_TOKENS_FAST,
+    temperature: 0.75,
+    promptAddendum: '짧고 실행 중심으로 핵심만 요약해줘. (긴 문장은 피하고 즉시 실행 가능 포인트를 먼저 제시)',
+    confidenceBase: 0.78,
+  },
+  deep: {
+    maxOutputTokens: LLM_MAX_TOKENS_DEEP,
+    temperature: 0.55,
+    promptAddendum: '근거, 한계, 대안, 실행 체크포인트를 포함해 충분히 자세하게 분석해줘. 필요하면 번호 목록으로 정리.',
+    confidenceBase: 0.85,
+  },
+  structured: {
+    maxOutputTokens: LLM_MAX_TOKENS_STRUCTURED,
+    temperature: 0.4,
+    promptAddendum: '반드시 아래 형식으로 구조화해줘. 1) 핵심 요약 2) 근거/인사이트 3) 다음 액션 4) 검증 포인트',
+    confidenceBase: 0.83,
+  },
+};
 
 const STORYBOARD_KEYWORDS = [
   '스토리보드',
@@ -215,17 +250,32 @@ function createLocalResponse(
     requestId?: string;
     sources?: InsightChatSource[];
     visualComponent?: AdminInsightChatResponse['visualComponent'];
+    source?: 'local' | 'agent' | 'fallback';
+    responseMode?: InsightChatResponseMode;
+    confidence?: number;
+    toolTrace?: string[];
   } = {},
 ): AdminInsightChatResponse {
+  const resolvedSource = options.source || 'local';
+  const responseMode = options.responseMode || 'fast';
+  const toolTrace = options.toolTrace ?? [];
+  const confidence = clampFiniteFloat(
+    options.confidence ?? (resolvedSource === 'local' ? 0.84 : resolvedSource === 'agent' ? 0.78 : 0.45),
+    0.45,
+  );
+
   return {
     asOf,
     content,
     sources: options.sources ?? [],
     visualComponent: options.visualComponent,
     meta: {
-      source: 'local',
+      source: resolvedSource,
       fallbackReason: options.fallbackReason,
       ...(options.requestId ? { requestId: options.requestId } : {}),
+      responseMode,
+      confidence,
+      toolTrace,
     },
   };
 }
@@ -234,6 +284,88 @@ function normalizeRequestId(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim().slice(0, 64);
   return normalized || undefined;
+}
+
+function normalizeResponseMode(raw: unknown): InsightChatResponseMode {
+  return raw === 'fast' || raw === 'deep' || raw === 'structured' ? raw : 'fast';
+}
+
+function resolveResponseModeProfile(responseMode?: InsightChatResponseMode): ResponseModeProfile {
+  return RESPONSE_MODE_PROFILES[normalizeResponseMode(responseMode)] ?? RESPONSE_MODE_PROFILES.fast;
+}
+
+type ResponseModeMetaPayload = {
+  responseMode?: InsightChatResponseMode;
+  toolTrace?: string[];
+  feedbackContext?: InsightChatFeedbackContext;
+};
+
+const MAX_PROMPT_ATTACHMENT_SNIPPETS = 4;
+const MAX_PROMPT_ATTACHMENT_SNIPPET_LENGTH = 1500;
+
+function sanitizeFeedbackReason(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const normalized = raw.trim().replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').slice(0, 300);
+  return normalized || undefined;
+}
+
+function sanitizePromptAttachmentName(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[\u0000-\u001f\u007f]+/g, '')
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .slice(0, 120);
+}
+
+function buildAttachmentContextBlock(attachments?: InsightChatAttachment[]): string[] {
+  if (!attachments?.length) {
+    return [];
+  }
+
+  const snippets = attachments
+    .slice(0, MAX_PROMPT_ATTACHMENT_SNIPPETS)
+    .map((attachment, index) => {
+      const safeName = sanitizePromptAttachmentName(attachment.name) || `attachment-${index + 1}.txt`;
+      const safeMimeType = (attachment.mimeType || 'text/plain').trim().slice(0, 80);
+      const safeContent = attachment.content
+        .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+/g, '')
+        .slice(0, MAX_PROMPT_ATTACHMENT_SNIPPET_LENGTH);
+
+      return [
+        `파일 ${index + 1}: ${safeName} (${safeMimeType})`,
+        '```text',
+        safeContent,
+        '```',
+      ].join('\n');
+    });
+
+  return snippets.length
+    ? ['', '[첨부 파일 컨텍스트]', ...snippets]
+    : [];
+}
+
+function buildPromptWithContext(
+  message: string,
+  responseMode?: InsightChatResponseMode,
+  feedbackContext?: InsightChatFeedbackContext,
+  attachments?: InsightChatAttachment[],
+): { message: string; profile: ResponseModeProfile } {
+  const profile = resolveResponseModeProfile(responseMode);
+  const base = message.trim().replace(/[\u0000-\u001f\u007f]+/g, '').slice(0, 9000);
+  const attachmentLines = buildAttachmentContextBlock(attachments);
+  const feedbackLines = feedbackContext?.rating
+    ? [
+        '',
+        '[다시 생성 피드백]',
+        `이전 응답에 대한 평가: ${feedbackContext.rating === 'up' ? '좋음' : '개선 필요'}`,
+        ...(feedbackContext.reason ? [`사유: ${sanitizeFeedbackReason(feedbackContext.reason)}`] : []),
+        '위 피드백을 반영해 답변을 새롭게 생성해 주세요.',
+      ]
+    : [];
+  return {
+    profile,
+    message: [base, ...attachmentLines, feedbackLines.length ? '' : '', ...feedbackLines].join('\n').trim(),
+  };
 }
 
 function clampFiniteInteger(value: number, fallback: number): number {
@@ -1233,6 +1365,9 @@ async function askStoryboardViaLlm(
   llmConfig?: LlmRequestConfig,
   bgeContext: StoryboardBgeResult[] = [],
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  toolTrace: string[] = [],
   stateContext?: {
     transcriptDocs?: StoryboardBgeResult[];
     webDocs?: StoryboardWebSearchResult[];
@@ -1244,6 +1379,8 @@ async function askStoryboardViaLlm(
   const apiKey = llmConfig?.apiKey
     || (llmConfig?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
   const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
+  const resolvedResponseMode = normalizeResponseMode(responseMode);
+  const responseProfile = resolveResponseModeProfile(resolvedResponseMode);
   if (!apiKey) return null;
 
   const prompt = createStoryboardLlmPrompt(message, storyboardModelProfile, bgeContext, stateContext);
@@ -1254,9 +1391,23 @@ async function askStoryboardViaLlm(
     ? contextSources
     : storyboardSourcesFromBgeResults(stateContext?.transcriptDocs ?? []);
 
+  const askOptions = {
+    responseMode: resolvedResponseMode,
+    feedbackContext,
+    responseProfile,
+  } as {
+    responseMode: InsightChatResponseMode;
+    feedbackContext?: InsightChatFeedbackContext;
+    responseProfile?: ResponseModeProfile;
+    toolTrace?: string[];
+  };
+
   switch (provider) {
     case 'openai': {
-      const response = await askOpenAI(prompt, model, apiKey, asOf, requestId);
+      const response = await askOpenAI(prompt, model, apiKey, asOf, requestId, {
+        ...askOptions,
+        toolTrace: [...toolTrace, 'provider:openai', `storyboardMode:${resolvedResponseMode}`],
+      });
       return response ? {
         ...response,
         meta: {
@@ -1269,7 +1420,10 @@ async function askStoryboardViaLlm(
       } : null;
     }
     case 'anthropic': {
-      const response = await askAnthropic(prompt, model, apiKey, asOf, requestId);
+      const response = await askAnthropic(prompt, model, apiKey, asOf, requestId, {
+        ...askOptions,
+        toolTrace: [...toolTrace, 'provider:anthropic', `storyboardMode:${resolvedResponseMode}`],
+      });
       return response ? {
         ...response,
         meta: {
@@ -1283,7 +1437,10 @@ async function askStoryboardViaLlm(
     }
     case 'gemini':
     default: {
-      const response = await askGemini(prompt, model, apiKey, asOf, requestId);
+      const response = await askGemini(prompt, model, apiKey, asOf, requestId, {
+        ...askOptions,
+        toolTrace: [...toolTrace, 'provider:gemini', `storyboardMode:${resolvedResponseMode}`],
+      });
       return response ? {
         ...response,
         meta: {
@@ -1382,6 +1539,9 @@ async function runStoryboardOrchestrator(
   bgeContext: StoryboardBgeResult[],
   llmConfig?: LlmRequestConfig,
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse> {
   const initialQuery = message.trim();
   const normalizedIntent = normalizeStoryboardAgentIntent(initialQuery);
@@ -1402,6 +1562,9 @@ async function runStoryboardOrchestrator(
     videoMetadataDocs: [],
     candidateVideoIds: [],
   };
+
+  const normalizedResponseMode = normalizeResponseMode(responseMode);
+  const profileTrace = [...toolTrace, `responseMode:${normalizedResponseMode}`];
 
   if (isPopularityIntent && state.videoMetadataDocs.length === 0) {
     state.videoMetadataDocs = await getVideoMetadataFilteredTool({
@@ -1514,6 +1677,9 @@ async function runStoryboardOrchestrator(
         sources: buildStoryboardSourcesFromState(state),
         fallbackReason: 'storyboard_need_human',
         ...(requestId ? { requestId } : {}),
+        responseMode: normalizedResponseMode,
+        confidence: 0.45,
+        toolTrace: [...toolTrace, 'route:storyboard', 'human-fallback'],
       });
     }
 
@@ -1521,11 +1687,14 @@ async function runStoryboardOrchestrator(
   }
 
   const responseSources = buildStoryboardSourcesFromState(state);
-    if (state.validationStatus !== 'pass' && state.transcriptDocs.length === 0) {
+  if (state.validationStatus !== 'pass' && state.transcriptDocs.length === 0) {
     const fallback = createLocalResponse(asOf, buildStoryboardFallbackContent(initialQuery, profile), {
       sources: responseSources,
       fallbackReason: state.validationStatus === 'need_human' ? 'storyboard_need_human' : 'storyboard_internal_fallback',
       ...(requestId ? { requestId } : {}),
+      responseMode: normalizedResponseMode,
+      confidence: 0.46,
+      toolTrace: [...toolTrace, 'route:storyboard', `validation:${state.validationStatus}`],
     });
     return fallback;
   }
@@ -1537,6 +1706,9 @@ async function runStoryboardOrchestrator(
     llmConfig,
     state.transcriptDocs.slice(0, 10),
     requestId,
+    normalizedResponseMode,
+    feedbackContext,
+    [...profileTrace, 'route:storyboard'],
     {
       transcriptDocs: state.transcriptDocs,
       webDocs: state.webDocs,
@@ -1702,7 +1874,12 @@ async function askStoryboardAgent(
   storyboardModelProfile: StoryboardModelProfile = DEFAULT_STORYBOARD_MODEL_PROFILE,
   llmConfig?: LlmRequestConfig,
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
+  const normalizedResponseMode = normalizeResponseMode(responseMode);
+  const profileTrace = [...toolTrace, `responseMode:${normalizedResponseMode}`];
   const normalizedProfile = storyboardModelProfile === 'nanobanana_pro' ? 'nanobanana_pro' : 'nanobanana';
   const fallbackProfile = normalizedProfile;
   const intent = normalizeStoryboardAgentIntent(message);
@@ -1711,6 +1888,9 @@ async function askStoryboardAgent(
     return createLocalResponse(asOf, buildStoryboardSimpleChatResponse(message), {
       fallbackReason: 'storyboard_simple_chat',
       ...(requestId ? { requestId } : {}),
+      responseMode: normalizedResponseMode,
+      confidence: 0.48,
+      toolTrace: [...profileTrace, 'route:storyboard', 'bootstrap-human-request'],
     });
   }
 
@@ -1732,6 +1912,9 @@ async function askStoryboardAgent(
       bgeContext,
       llmConfig,
       requestId,
+      responseMode,
+      feedbackContext,
+      [...profileTrace, 'route:storyboard'],
     );
     if (orchestratedResponse) {
       return orchestratedResponse;
@@ -1913,33 +2096,62 @@ export async function answerAdminInsightChat(
   message: string,
   llmConfig?: LlmRequestConfig,
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  attachments?: InsightChatAttachment[],
 ): Promise<AdminInsightChatResponse> {
   const asOf = new Date().toISOString();
   const input = message.trim();
   const resolvedRequestId = normalizeRequestId(requestId);
+  const profile = resolveResponseModeProfile(responseMode);
+  const toolTrace = [`responseMode:${normalizeResponseMode(responseMode)}`, 'flow:non-stream'];
 
   if (!input) {
     return createLocalResponse(asOf, '질문을 입력해 주세요.', {
       fallbackReason: 'empty_input',
       requestId: resolvedRequestId,
+      responseMode,
+      toolTrace,
+      confidence: 0.85,
     });
   }
 
-  const localResponse = await resolveLocalInsightResponse(asOf, input, resolvedRequestId);
+  const localResponse = await resolveLocalInsightResponse(asOf, input, resolvedRequestId, responseMode, feedbackContext, toolTrace);
   if (localResponse) return localResponse;
 
   if (isStoryboardIntent(input)) {
     const storyboardProfile = resolveStoryboardImageProfile(llmConfig);
-    const storyboardReply = await askStoryboardAgent(input, asOf, storyboardProfile, llmConfig, resolvedRequestId);
+    const storyboardReply = await askStoryboardAgent(
+      input,
+      asOf,
+      storyboardProfile,
+      llmConfig,
+      resolvedRequestId,
+      responseMode,
+      feedbackContext,
+      [...toolTrace, 'route:storyboard'],
+    );
     if (storyboardReply) return storyboardReply;
   }
 
-  const llmReply = await routeLlmRequest(input, asOf, llmConfig, resolvedRequestId);
+  const llmReply = await routeLlmRequest(
+    input,
+    asOf,
+    llmConfig,
+    resolvedRequestId,
+    responseMode,
+    feedbackContext,
+    attachments,
+    [...toolTrace, `provider:${llmConfig?.provider ?? 'gemini'}`],
+  );
   if (llmReply) return llmReply;
 
   return createLocalResponse(asOf, buildLocalInsightResponseFailureMessage('llm_unavailable'), {
     fallbackReason: 'llm_unavailable',
     requestId: resolvedRequestId,
+    responseMode,
+    toolTrace: [...toolTrace, 'provider-unavailable'],
+    confidence: 0.35,
   });
 }
 
@@ -1959,6 +2171,9 @@ async function resolveLocalInsightResponse(
   asOf: string,
   input: string,
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   if (isStoryboardIntent(input)) {
     return null;
@@ -1974,6 +2189,9 @@ async function resolveLocalInsightResponse(
     return createLocalResponse(asOf, `## 인기 키워드 TOP 12\n\n${list || '- 데이터 없음'}`, {
       requestId,
       visualComponent: 'wordcloud',
+      responseMode,
+      confidence: 0.96,
+      toolTrace: [...toolTrace, 'local:wordcloud'],
     });
   }
 
@@ -1989,6 +2207,9 @@ async function resolveLocalInsightResponse(
     return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, {
       requestId,
       visualComponent: 'calendar',
+      responseMode,
+      confidence: 0.93,
+      toolTrace: [...toolTrace, 'local:season'],
     });
   }
 
@@ -2040,9 +2261,12 @@ async function resolveLocalInsightResponse(
       ...(topCategories.length > 0 ? topCategories : ['- 데이터가 없습니다.']),
       '',
       '> 아래 트리맵에서 **지표·기간·모드**를 자유롭게 전환하여 분석할 수 있습니다.',
-    ].join('\n'), {
+      ].join('\n'), {
       requestId,
       visualComponent: 'treemap',
+      responseMode,
+      confidence: 0.95,
+      toolTrace: [...toolTrace, 'local:treemap'],
     });
   }
 
@@ -2054,20 +2278,44 @@ async function routeLlmRequest(
   asOf: string,
   config?: LlmRequestConfig,
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  attachments?: InsightChatAttachment[],
+  toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   const provider = config?.provider || 'gemini';
   const apiKey = config?.apiKey || (config?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
   const model = config?.model || GEMINI_MODEL_DEFAULT;
+  const resolvedResponseMode = normalizeResponseMode(responseMode);
+  const profile = resolveResponseModeProfile(resolvedResponseMode);
 
   if (!apiKey) return null;
 
   switch (provider) {
     case 'gemini':
-      return askGemini(message, model, apiKey, asOf, requestId);
+      return askGemini(message, model, apiKey, asOf, requestId, {
+        responseMode: resolvedResponseMode,
+        feedbackContext,
+        attachments,
+        toolTrace: [...toolTrace, 'provider:gemini'],
+        responseProfile: profile,
+      });
     case 'openai':
-      return askOpenAI(message, model, apiKey, asOf, requestId);
+      return askOpenAI(message, model, apiKey, asOf, requestId, {
+        responseMode: resolvedResponseMode,
+        feedbackContext,
+        attachments,
+        toolTrace: [...toolTrace, 'provider:openai'],
+        responseProfile: profile,
+      });
     case 'anthropic':
-      return askAnthropic(message, model, apiKey, asOf, requestId);
+      return askAnthropic(message, model, apiKey, asOf, requestId, {
+        responseMode: resolvedResponseMode,
+        feedbackContext,
+        attachments,
+        toolTrace: [...toolTrace, 'provider:anthropic'],
+        responseProfile: profile,
+      });
     default:
       return null;
   }
@@ -2082,10 +2330,18 @@ export async function streamAdminInsightChat(
   llmConfig?: LlmRequestConfig,
   requestSignal?: AbortSignal,
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  attachments?: InsightChatAttachment[],
 ): Promise<{ stream: ReadableStream<Uint8Array> } | { local: AdminInsightChatResponse }> {
   const resolvedRequestId = normalizeRequestId(requestId);
+  const resolvedResponseMode = normalizeResponseMode(responseMode);
+  const profile = resolveResponseModeProfile(resolvedResponseMode);
+  const toolTrace = [`responseMode:${resolvedResponseMode}`, `provider:${llmConfig?.provider ?? 'gemini'}`, 'flow:stream'];
+  const localTrace = [...toolTrace, 'stream:local-fallback'];
+  const localProfile = [...toolTrace, 'stream:api-call'];
 
-  const localResult = await tryLocalAnswer(message, llmConfig, resolvedRequestId);
+  const localResult = await tryLocalAnswer(message, llmConfig, resolvedRequestId, resolvedResponseMode, feedbackContext, localTrace);
   if (localResult) return { local: localResult };
 
   const provider = llmConfig?.provider || 'gemini';
@@ -2101,11 +2357,28 @@ export async function streamAdminInsightChat(
       ].join('\n'), {
         fallbackReason: 'llm_unavailable',
         requestId: resolvedRequestId,
+        responseMode: resolvedResponseMode,
+        confidence: 0.52,
+        toolTrace: [...toolTrace, 'provider-unavailable'],
       }),
     };
   }
 
-  const stream = createLlmStream(message, provider, model, apiKey, resolvedRequestId, requestSignal);
+  const stream = createLlmStream(
+    message,
+    provider,
+    model,
+    apiKey,
+    resolvedResponseMode,
+    responseMode,
+    profile,
+    feedbackContext,
+    attachments,
+    toolTrace,
+    localProfile,
+    resolvedRequestId,
+    requestSignal,
+  );
   return { stream };
 }
 
@@ -2113,42 +2386,109 @@ async function tryLocalAnswer(
   message: string,
   llmConfig?: LlmRequestConfig,
   requestId?: string,
+  responseMode: InsightChatResponseMode = 'fast',
+  feedbackContext?: InsightChatFeedbackContext,
+  toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   const asOf = new Date().toISOString();
   const input = message.trim();
   if (!input) return createLocalResponse(asOf, '질문을 입력해 주세요.', {
     fallbackReason: 'empty_input',
     requestId,
+    responseMode,
+    confidence: 0.85,
+    toolTrace,
   });
 
   if (isStoryboardIntent(input)) {
     const storyboardProfile = resolveStoryboardImageProfile(llmConfig);
-    const reply = await askStoryboardAgent(input, asOf, storyboardProfile, llmConfig, requestId);
+    const reply = await askStoryboardAgent(
+      input,
+      asOf,
+      storyboardProfile,
+      llmConfig,
+      requestId,
+      responseMode,
+      feedbackContext,
+      [...toolTrace, 'route:storyboard'],
+    );
     if (reply) return reply;
   }
 
-  return resolveLocalInsightResponse(asOf, input, requestId);
+  return resolveLocalInsightResponse(asOf, input, requestId, responseMode, feedbackContext, [...toolTrace, 'route:local']);
 }
 
 function createLlmStream(
-
-  message: string, provider: string, model: string, apiKey: string,
+  message: string,
+  provider: string,
+  model: string,
+  apiKey: string,
+  responseMode: InsightChatResponseMode,
+  rawResponseMode: InsightChatResponseMode,
+  responseProfile: ResponseModeProfile,
+  feedbackContext: InsightChatFeedbackContext | undefined,
+  attachments: InsightChatAttachment[] | undefined,
+  toolTrace: string[],
+  tokenDebugTrace: string[],
   requestId?: string,
   requestSignal?: AbortSignal,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
+  const profile = responseProfile ?? resolveResponseModeProfile(responseMode);
+  const safeModePrompt = profile.promptAddendum;
+  const response = buildPromptWithContext(message, responseMode, feedbackContext, attachments);
+  const tracedTool = [
+    ...toolTrace,
+    `responseMode:${normalizeResponseMode(rawResponseMode)}`,
+    `maxTokens:${profile.maxOutputTokens}`,
+    `temperature:${profile.temperature}`,
+    ...tokenDebugTrace,
+  ];
   return new ReadableStream({
     async start(ctrl) {
       try {
         switch (provider) {
           case 'gemini':
-            await streamGemini(message, model, apiKey, ctrl, encoder, requestId, requestSignal);
+            await streamGemini(
+              response.message,
+              model,
+              apiKey,
+              safeModePrompt,
+              profile,
+              tracedTool,
+              ctrl,
+              encoder,
+              requestId,
+              requestSignal,
+            );
             break;
           case 'openai':
-            await streamOpenAI(message, model, apiKey, ctrl, encoder, requestId, requestSignal);
+            await streamOpenAI(
+              response.message,
+              model,
+              apiKey,
+              safeModePrompt,
+              profile,
+              tracedTool,
+              ctrl,
+              encoder,
+              requestId,
+              requestSignal,
+            );
             break;
           case 'anthropic':
-            await streamAnthropic(message, model, apiKey, ctrl, encoder, requestId, requestSignal);
+            await streamAnthropic(
+              response.message,
+              model,
+              apiKey,
+              safeModePrompt,
+              profile,
+              tracedTool,
+              ctrl,
+              encoder,
+              requestId,
+              requestSignal,
+            );
             break;
           default:
             ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -2178,11 +2518,17 @@ function createLlmStream(
 }
 
 async function streamGemini(
-  message: string, model: string, apiKey: string,
+  message: string,
+  model: string,
+  apiKey: string,
+  responsePromptAddon: string,
+  profile: ResponseModeProfile,
+  toolTrace: string[],
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
   requestId?: string,
   requestSignal?: AbortSignal,
 ) {
+  const toolTraceLabel = toolTrace.join(' > ');
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
@@ -2199,8 +2545,8 @@ async function streamGemini(
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: LLM_SYSTEM_PROMPT }] },
-        contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { maxOutputTokens: LLM_MAX_TOKENS, temperature: 0.7 },
+        contents: [{ role: 'user', parts: [{ text: `${LLM_SYSTEM_PROMPT}\n\n${responsePromptAddon}\n\n${message}` }] }],
+        generationConfig: { maxOutputTokens: profile.maxOutputTokens, temperature: profile.temperature },
       }),
       signal: ac.signal,
     });
@@ -2218,9 +2564,12 @@ async function streamGemini(
         const js = line.slice(6).trim();
         if (!js || js === '[DONE]') continue;
         try {
-          const p = JSON.parse(js);
+        const p = JSON.parse(js);
           const t = p?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (typeof t === 'string' && t) {
+            if (toolTraceLabel) {
+              ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: ``, requestId, toolTrace: toolTraceLabel })}\n\n`));
+            }
             ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t, requestId })}\n\n`));
           }
         } catch { /* skip */ }
@@ -2236,10 +2585,14 @@ async function streamGemini(
 
 async function streamOpenAI(
   message: string, model: string, apiKey: string,
+  responsePromptAddon: string,
+  profile: ResponseModeProfile,
+  toolTrace: string[],
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
   requestId?: string,
   requestSignal?: AbortSignal,
 ) {
+  const toolTraceLabel = toolTrace.join(' > ');
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
   const onAbort = () => {
@@ -2255,8 +2608,11 @@ async function streamOpenAI(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model, max_tokens: LLM_MAX_TOKENS, temperature: 0.7, stream: true,
-        messages: [{ role: 'system', content: LLM_SYSTEM_PROMPT }, { role: 'user', content: message }],
+        model,
+        max_tokens: profile.maxOutputTokens,
+        temperature: profile.temperature,
+        stream: true,
+        messages: [{ role: 'system', content: `${LLM_SYSTEM_PROMPT}\n\n${responsePromptAddon}` }, { role: 'user', content: message }],
       }),
       signal: ac.signal,
     });
@@ -2277,6 +2633,9 @@ async function streamOpenAI(
           const p = JSON.parse(js);
           const t = p?.choices?.[0]?.delta?.content;
           if (typeof t === 'string' && t) {
+            if (toolTraceLabel) {
+              ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: '', requestId, toolTrace: toolTraceLabel })}\n\n`));
+            }
             ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: t, requestId })}\n\n`));
           }
         } catch { /* skip */ }
@@ -2292,10 +2651,14 @@ async function streamOpenAI(
 
 async function streamAnthropic(
   message: string, model: string, apiKey: string,
+  responsePromptAddon: string,
+  profile: ResponseModeProfile,
+  toolTrace: string[],
   ctrl: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder,
   requestId?: string,
   requestSignal?: AbortSignal,
 ) {
+  const toolTraceLabel = toolTrace.join(' > ');
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
   const onAbort = () => {
@@ -2311,7 +2674,11 @@ async function streamAnthropic(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model, max_tokens: LLM_MAX_TOKENS, system: LLM_SYSTEM_PROMPT, stream: true,
+        model,
+        max_tokens: profile.maxOutputTokens,
+        temperature: profile.temperature,
+        system: `${LLM_SYSTEM_PROMPT}\n\n${responsePromptAddon}`,
+        stream: true,
         messages: [{ role: 'user', content: message }],
       }),
       signal: ac.signal,
@@ -2332,6 +2699,9 @@ async function streamAnthropic(
         try {
           const p = JSON.parse(js);
           if (p?.type === 'content_block_delta' && p?.delta?.text) {
+            if (toolTraceLabel) {
+              ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({ text: '', requestId, toolTrace: toolTraceLabel })}\n\n`));
+            }
             ctrl.enqueue(encoder.encode(`data: ${JSON.stringify({
               text: p.delta.text,
               requestId,
@@ -2354,7 +2724,18 @@ async function askGemini(
   apiKey: string,
   asOf: string,
   requestId?: string,
+  options?: {
+    responseMode?: InsightChatResponseMode;
+    feedbackContext?: InsightChatFeedbackContext;
+    attachments?: InsightChatAttachment[];
+    toolTrace?: string[];
+    responseProfile?: ResponseModeProfile;
+  },
 ): Promise<AdminInsightChatResponse | null> {
+  const responseMode = normalizeResponseMode(options?.responseMode);
+  const profile = options?.responseProfile ?? resolveResponseModeProfile(responseMode);
+  const payload = buildPromptWithContext(message, responseMode, options?.feedbackContext, options?.attachments);
+  const toolTrace = [...(options?.toolTrace ?? []), `llm:gemini`, `responseMode:${responseMode}`];
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const controller = new AbortController();
@@ -2365,9 +2746,9 @@ async function askGemini(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: LLM_SYSTEM_PROMPT }] },
-        contents: [{ role: 'user', parts: [{ text: message }] }],
-        generationConfig: { maxOutputTokens: LLM_MAX_TOKENS, temperature: 0.7 },
+        system_instruction: { parts: [{ text: `${LLM_SYSTEM_PROMPT}\n\n${profile.promptAddendum}` }] },
+        contents: [{ role: 'user', parts: [{ text: payload.message }] }],
+        generationConfig: { maxOutputTokens: profile.maxOutputTokens, temperature: profile.temperature },
       }),
       signal: controller.signal,
       cache: 'no-store',
@@ -2389,6 +2770,9 @@ async function askGemini(
       meta: {
         source: 'gemini',
         model,
+        responseMode,
+        confidence: clampFiniteFloat(profile.confidenceBase, 0.77),
+        toolTrace,
         ...(requestId ? { requestId } : {}),
       },
     };
@@ -2406,7 +2790,18 @@ async function askOpenAI(
   apiKey: string,
   asOf: string,
   requestId?: string,
+  options?: {
+    responseMode?: InsightChatResponseMode;
+    feedbackContext?: InsightChatFeedbackContext;
+    attachments?: InsightChatAttachment[];
+    toolTrace?: string[];
+    responseProfile?: ResponseModeProfile;
+  },
 ): Promise<AdminInsightChatResponse | null> {
+  const responseMode = normalizeResponseMode(options?.responseMode);
+  const profile = options?.responseProfile ?? resolveResponseModeProfile(responseMode);
+  const payload = buildPromptWithContext(message, responseMode, options?.feedbackContext, options?.attachments);
+  const toolTrace = [...(options?.toolTrace ?? []), `llm:openai`, `responseMode:${responseMode}`];
   const controller = new AbortController();
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
 
@@ -2419,11 +2814,11 @@ async function askOpenAI(
       },
       body: JSON.stringify({
         model,
-        max_tokens: LLM_MAX_TOKENS,
-        temperature: 0.7,
+        max_tokens: profile.maxOutputTokens,
+        temperature: profile.temperature,
         messages: [
-          { role: 'system', content: LLM_SYSTEM_PROMPT },
-          { role: 'user', content: message },
+          { role: 'system', content: `${LLM_SYSTEM_PROMPT}\n\n${profile.promptAddendum}` },
+          { role: 'user', content: payload.message },
         ],
       }),
       signal: controller.signal,
@@ -2446,6 +2841,9 @@ async function askOpenAI(
       meta: {
         source: 'openai',
         model,
+        responseMode,
+        confidence: clampFiniteFloat(profile.confidenceBase, 0.78),
+        toolTrace,
         ...(requestId ? { requestId } : {}),
       },
     };
@@ -2463,7 +2861,18 @@ async function askAnthropic(
   apiKey: string,
   asOf: string,
   requestId?: string,
+  options?: {
+    responseMode?: InsightChatResponseMode;
+    feedbackContext?: InsightChatFeedbackContext;
+    attachments?: InsightChatAttachment[];
+    toolTrace?: string[];
+    responseProfile?: ResponseModeProfile;
+  },
 ): Promise<AdminInsightChatResponse | null> {
+  const responseMode = normalizeResponseMode(options?.responseMode);
+  const profile = options?.responseProfile ?? resolveResponseModeProfile(responseMode);
+  const payload = buildPromptWithContext(message, responseMode, options?.feedbackContext, options?.attachments);
+  const toolTrace = [...(options?.toolTrace ?? []), `llm:anthropic`, `responseMode:${responseMode}`];
   const controller = new AbortController();
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
 
@@ -2478,9 +2887,10 @@ async function askAnthropic(
       },
       body: JSON.stringify({
         model,
-        max_tokens: LLM_MAX_TOKENS,
-        system: LLM_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: message }],
+        max_tokens: profile.maxOutputTokens,
+        temperature: profile.temperature,
+        system: `${LLM_SYSTEM_PROMPT}\n\n${profile.promptAddendum}`,
+        messages: [{ role: 'user', content: payload.message }],
       }),
       signal: controller.signal,
       cache: 'no-store',
@@ -2505,6 +2915,9 @@ async function askAnthropic(
       meta: {
         source: 'anthropic',
         model,
+        responseMode,
+        confidence: clampFiniteFloat(profile.confidenceBase, 0.8),
+        toolTrace,
         ...(requestId ? { requestId } : {}),
       },
     };

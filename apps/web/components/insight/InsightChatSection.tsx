@@ -1,6 +1,7 @@
 'use client';
 
 import {
+    type ChangeEvent,
     type ComponentPropsWithoutRef,
     type KeyboardEvent,
     type PointerEvent,
@@ -16,9 +17,13 @@ import {
     AlertCircle,
     Bot,
     Check,
+    Download,
     Pencil,
+    Pin,
+    PinOff,
     RefreshCw,
     Square,
+    Paperclip,
     Copy,
     Send,
     User,
@@ -28,6 +33,9 @@ import {
     EyeOff,
     ChevronDown,
     Trash2,
+    ThumbsUp,
+    ThumbsDown,
+    X,
 } from 'lucide-react';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import ReactMarkdown from 'react-markdown';
@@ -42,8 +50,12 @@ import type {
     InsightChatFollowUpPrompt,
     AdminInsightChatMeta,
     InsightChatSource,
+    InsightChatResponseMode,
     LlmProvider,
     LlmModelOption,
+    InsightChatFeedbackContext,
+    InsightChatFeedbackRating,
+    InsightChatAttachmentInput,
     StoryboardModelProfile,
 } from '@/types/insight';
 
@@ -62,10 +74,14 @@ type ChatConversation = {
     id: string;
     title: string;
     messages: ChatMessage[];
+    tags: string[];
     createdAt: number;
     updatedAt: number;
     isBooting: boolean;
     bootstrapFailed: boolean;
+    pinned?: boolean;
+    contextWindowSize?: number;
+    responseMode?: InsightChatResponseMode;
 };
 
 const EMPTY_TITLE = '새로운 대화';
@@ -77,15 +93,35 @@ const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
 const CHAT_REQUEST_CACHE_LIMIT = 64;
 const MAX_CONVERSATIONS = 30;
 const MAX_MESSAGES_PER_CONVERSATION = 220;
+const MAX_FOLLOW_UP_PROMPT_LENGTH = 120;
+const DEFAULT_RESPONSE_MODE: InsightChatResponseMode = 'fast';
+const CHAT_RESPONSE_MODES: { value: InsightChatResponseMode; label: string; description: string }[] = [
+    { value: 'fast', label: '빠른 응답', description: '짧고 실행 중심 요약' },
+    { value: 'deep', label: '깊은 분석', description: '맥락과 근거 중심 심층 분석' },
+    { value: 'structured', label: '구조화', description: '항목별 정형형 답변' },
+];
+const RESPONSE_MODE_CONFIDENCE_SCORE: Record<InsightChatResponseMode, number> = {
+    fast: 0.78,
+    deep: 0.86,
+    structured: 0.83,
+};
+const RESPONSE_MODE_BADGE_STYLES: Record<InsightChatResponseMode, string> = {
+    fast: 'bg-[#ecfeff] text-[#155e75]',
+    deep: 'bg-[#eef2ff] text-[#3730a3]',
+    structured: 'bg-[#fef3c7] text-[#92400e]',
+};
 const MESSAGE_WINDOW_INITIAL = 80;
 const MESSAGE_WINDOW_BATCH = 80;
 const CHAT_STORAGE_KEY = 'tzudong-admin-insight-conversations-v1';
+const CHAT_STORAGE_SCHEMA_VERSION = 4;
+const CHAT_PERSIST_DEBOUNCE_MS = 350;
 const LLM_KEYS_STORAGE_KEY = 'tzudong-admin-llm-keys';
 const LLM_MODEL_STORAGE_KEY = 'tzudong-admin-llm-active-model';
 const LLM_ENABLED_MODELS_KEY = 'tzudong-admin-llm-enabled-models';
 const STORYBOARD_PROFILE_STORAGE_KEY = 'tzudong-admin-storyboard-profile';
 const STREAM_STOP_MESSAGE = '답변 생성을 중단했습니다. 재생성 버튼으로 다시 요청해 주세요.';
 const COPY_SUCCESS_MESSAGE = '복사했습니다';
+const CONTEXT_WINDOW_CHOICES = [20, 40, 80, 120];
 const META_SOURCE_PANEL_LABELS: Record<NonNullable<AdminInsightChatMeta['source']> & string, string> = {
     local: '로컬 분석',
     agent: '에이전트',
@@ -98,10 +134,14 @@ const META_SOURCE_PANEL_LABELS: Record<NonNullable<AdminInsightChatMeta['source'
 const META_FALLBACK_REASON_LABELS: Record<string, string> = {
     empty_input: '입력 없음',
     llm_unavailable: 'LLM 응답 불가',
+    invalid_model: '잘못된 모델 설정',
+    invalid_attachment: '잘못된 첨부 파일',
     request_cancelled: '요청 중단',
     request_failed: '요청 실패',
+    policy_rejection: '정책 위반',
     stream_error: '스트리밍 오류',
     stream_no_data: '스트리밍 응답 없음',
+    route_timeout: '요청 시간 초과',
     bootstrap_failed: '초기화 실패',
     server_error: '서버 오류',
     storyboard_agent_unavailable: '스토리보드 에이전트 응답 없음',
@@ -142,8 +182,100 @@ function getRequestIdLabel(requestId: string | undefined): string | null {
     return sanitized;
 }
 
+function isInsightChatResponseMode(raw: unknown): raw is InsightChatResponseMode {
+    return raw === 'fast' || raw === 'deep' || raw === 'structured';
+}
+
+function normalizeResponseMode(raw: unknown): InsightChatResponseMode {
+    return isInsightChatResponseMode(raw) ? raw : DEFAULT_RESPONSE_MODE;
+}
+
+function sanitizeConversationTag(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    return value
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .slice(0, MAX_CONVERSATION_TAG_LENGTH);
+}
+
+export function normalizeConversationTags(raw: unknown): string[] {
+    if (!Array.isArray(raw)) return [];
+    const out: string[] = [];
+    for (const value of raw) {
+        const normalized = sanitizeConversationTag(value);
+        if (!normalized || out.includes(normalized)) continue;
+        out.push(normalized);
+        if (out.length >= MAX_CONVERSATION_TAGS) break;
+    }
+    return out;
+}
+
+export type InsightConversationFilter = typeof CONVERSATION_FILTER_ALL | typeof CONVERSATION_FILTER_PINNED | `tag:${string}`;
+
+export function matchesInsightConversationFilter(
+    conversation: Pick<ChatConversation, 'title' | 'messages' | 'pinned' | 'tags'>,
+    query: string,
+    filter: InsightConversationFilter = CONVERSATION_FILTER_ALL,
+): boolean {
+    const tags = normalizeConversationTags(conversation.tags);
+    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedFilter = filter.trim().toLowerCase();
+    const isPinnedFilter = normalizedFilter === CONVERSATION_FILTER_PINNED;
+    const filterTag = normalizedFilter.startsWith('tag:')
+        ? sanitizeConversationTag(normalizedFilter.slice(4))
+        : '';
+
+    if (isPinnedFilter && !conversation.pinned) {
+        return false;
+    }
+    if (filterTag && !tags.includes(filterTag)) {
+        return false;
+    }
+
+    if (!normalizedQuery) {
+        return true;
+    }
+
+    const title = (conversation.title || '').toLowerCase();
+    const preview = conversation.messages
+        .map((message) => message.content)
+        .join('\n')
+        .toLowerCase();
+    const pinKeywords = conversation.pinned ? 'pin 고정 pinned' : '';
+    const tagText = tags.join(' ');
+
+    return (
+        title.includes(normalizedQuery)
+        || preview.includes(normalizedQuery)
+        || pinKeywords.includes(normalizedQuery)
+        || tagText.includes(normalizedQuery)
+    );
+}
+
+function getConfidenceLabel(confidence: number | undefined): string | null {
+    if (!Number.isFinite(confidence as number)) return null;
+    const normalized = Math.min(1, Math.max(0, confidence as number));
+    const asPercent = Math.round(normalized * 100);
+    return `${asPercent}%`;
+}
+
+function getLatencyLabel(latencyMs: number | undefined): string | null {
+    if (!Number.isFinite(latencyMs as number)) return null;
+    const normalized = Math.max(0, Math.round(latencyMs as number));
+    return `${normalized}ms`;
+}
+
 const MAX_FOLLOW_UP_PROMPTS = 4;
-const MAX_FOLLOW_UP_PROMPT_LENGTH = 120;
+const MAX_CHAT_ATTACHMENTS = 4;
+const MAX_CHAT_ATTACHMENT_BYTES = 200_000;
+const MAX_CHAT_ATTACHMENT_CONTENT_LENGTH = 12_000;
+const MAX_CONVERSATION_TAGS = 5;
+const MAX_CONVERSATION_TAG_LENGTH = 20;
+const CONVERSATION_FILTER_ALL = 'all';
+const CONVERSATION_FILTER_PINNED = 'pinned';
+
+type DraftChatAttachment = InsightChatAttachmentInput & { id: string };
 
 function sanitizeFollowUpPromptText(value: string | undefined | null): string {
     if (!value) return '';
@@ -152,6 +284,56 @@ function sanitizeFollowUpPromptText(value: string | undefined | null): string {
         .replace(/[\u0000-\u001f\u007f]/g, '')
         .replace(/\s+/g, ' ')
         .slice(0, MAX_FOLLOW_UP_PROMPT_LENGTH);
+}
+
+function normalizeFeedbackInput(raw: InsightChatFeedbackContext | undefined): InsightChatFeedbackContext | undefined {
+    if (!raw) return undefined;
+    const rating = raw.rating === 'up' || raw.rating === 'down' ? raw.rating : undefined;
+    if (!rating) return undefined;
+
+    const reason = typeof raw.reason === 'string'
+        ? raw.reason.trim().replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').slice(0, 280)
+        : undefined;
+    const targetAssistantMessageId = typeof raw.targetAssistantMessageId === 'string'
+        ? raw.targetAssistantMessageId.trim()
+        : undefined;
+
+    return {
+        rating,
+        ...(reason ? { reason } : {}),
+        ...(targetAssistantMessageId ? { targetAssistantMessageId } : {}),
+    };
+}
+
+function sanitizeAttachmentName(raw: string): string {
+    return raw
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .replace(/[\u0000-\u001f\u007f]+/g, '')
+        .slice(0, 120);
+}
+
+function sanitizeAttachmentContent(raw: string): string {
+    return raw
+        .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+/g, '')
+        .slice(0, MAX_CHAT_ATTACHMENT_CONTENT_LENGTH);
+}
+
+function normalizeAttachmentPayload(attachments: InsightChatAttachmentInput[] | undefined): InsightChatAttachmentInput[] {
+    if (!attachments?.length) return [];
+
+    return attachments
+        .slice(0, MAX_CHAT_ATTACHMENTS)
+        .map((attachment) => ({
+            name: sanitizeAttachmentName(attachment.name),
+            mimeType: (attachment.mimeType || 'text/plain').trim().toLowerCase().slice(0, 80),
+            content: sanitizeAttachmentContent(attachment.content),
+            sizeBytes: Math.min(
+                MAX_CHAT_ATTACHMENT_BYTES,
+                Math.max(0, Math.floor(attachment.sizeBytes ?? attachment.content.length)),
+            ),
+        }))
+        .filter((attachment) => !!attachment.name && !!attachment.content.trim());
 }
 
 function sanitizeSourceValue(value: string | undefined | null): string {
@@ -256,7 +438,7 @@ type PersistedChatMessage = Omit<ChatMessage, 'createdAt' | 'meta'> & {
 };
 
 type PersistedChatState = {
-    version: 1;
+    version: 1 | 2 | 3 | 4;
     conversations: PersistedConversation[];
     activeConversationId: string;
 };
@@ -269,6 +451,10 @@ type PersistedConversation = {
     updatedAt: number;
     isBooting?: boolean;
     bootstrapFailed?: boolean;
+    pinned?: boolean;
+    tags?: string[];
+    contextWindowSize?: number;
+    responseMode?: InsightChatResponseMode;
 };
 
 const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
@@ -283,6 +469,11 @@ type InsightPromptCommand = {
     prompt: string;
     description: string;
     groupId: string;
+    version: number;
+    deprecated?: {
+        replacedBy?: string;
+        migrationHint?: string;
+    };
 };
 
 type InsightPromptCommandGroup = {
@@ -295,6 +486,11 @@ type InsightPromptCommandGroup = {
 type ParsedPromptInput = {
     command: string;
     tail: string;
+};
+
+type PromptInputResolution = {
+    content: string;
+    migrationHint: string | null;
 };
 
 const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
@@ -310,6 +506,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '최근 7일 성과를 핵심 지표 중심으로 간단하고 실행 가능한 형식으로 요약해줘.',
                 description: '요약형 리포트, 핵심 인사이트, 다음 액션 포함',
                 groupId: 'analysis',
+                version: 1,
             },
             {
                 id: 'trend',
@@ -318,6 +515,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '최근 30일 주요 지표(매출·조회수·전환율)의 추세를 비교하고 상승/하락 요인을 정리해줘.',
                 description: '기간별 추세 변화와 임팩트 높은 지표 강조',
                 groupId: 'analysis',
+                version: 1,
             },
             {
                 id: 'snapshot',
@@ -326,6 +524,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '전체 현황을 한 번에 보여줘. 주요 성과 지표, 변동성, 리스크 항목, 권장 액션을 항목별로 정리해줘.',
                 description: '운영자 브리핑에 바로 쓸 수 있는 1페이지 요약',
                 groupId: 'analysis',
+                version: 1,
             },
         ],
     },
@@ -341,6 +540,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '최근 구간과 이전 구간(예: 전주/전월)을 캠페인·카테고리별로 비교해 성과 차이를 정리해줘.',
                 description: '시차/기간 비교를 통한 개선 지점 추출',
                 groupId: 'compare',
+                version: 1,
             },
             {
                 id: 'segment',
@@ -349,6 +549,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '고객 세그먼트별 전환 패턴을 비교하고 세그먼트별로 이탈 원인과 리텐션 개선 포인트를 제안해줘.',
                 description: '세그먼트별 약점·강점 파악',
                 groupId: 'compare',
+                version: 1,
             },
             {
                 id: 'kpi',
@@ -357,6 +558,11 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '조회수·좋아요·댓글·전환율 지표를 교차해서 핵심 상관 신호를 찾아줘.',
                 description: '상관 신호로 우선순위 개선 포인트 제안',
                 groupId: 'compare',
+                version: 1,
+                deprecated: {
+                    replacedBy: '/segment',
+                    migrationHint: '기존 /kpi 명령어는 유지되지만 곧 제거될 예정입니다. 앞으로는 /segment를 사용해 주세요.',
+                },
             },
         ],
     },
@@ -372,6 +578,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '성과가 비정상적으로 변한 항목을 찾아 원인 가설을 3개 이상 제시해줘.',
                 description: '이탈 징후를 빠르게 식별하고 대응책 제안',
                 groupId: 'ops',
+                version: 1,
             },
             {
                 id: 'improve',
@@ -380,6 +587,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '다음 30일 액션 플랜으로 실행 우선순위를 나눠 제안해줘. (오늘, 7일, 30일 단위)',
                 description: '바로 실행 가능한 일정 기반 제안',
                 groupId: 'ops',
+                version: 1,
             },
             {
                 id: 'topbottom',
@@ -388,6 +596,7 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '성과 상위/하위 항목 3개씩을 뽑아 공통 요소를 비교하고, 하위권 회복 전략을 제안해줘.',
                 description: '성과 편차 요인 분석 및 운영 가이드',
                 groupId: 'ops',
+                version: 1,
             },
         ],
     },
@@ -406,6 +615,7 @@ const CONTEXT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '현재 매출 하락의 주요 원인을 지표별로 분해해서 원인 가설과 우선 점검 항목을 제시해줘.',
                 description: '매출 하락 대응용 분석',
                 groupId: 'context-sales',
+                version: 1,
             },
             {
                 id: 'sales-action',
@@ -414,6 +624,7 @@ const CONTEXT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '매출 회복을 위한 14일 액션 플랜을 제안해줘. 운영 우선순위와 실패 지표도 함께.',
                 description: '단기 매출 반등 중심 제안',
                 groupId: 'context-sales',
+                version: 1,
             },
         ],
     },
@@ -429,6 +640,7 @@ const CONTEXT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '캠페인 성과 하락 구간을 골라 리배치/최적화 제안을 1차안으로 정리해줘.',
                 description: '캠페인별 문제구간 집중 대응',
                 groupId: 'context-campaign',
+                version: 1,
             },
             {
                 id: 'campaign-compare',
@@ -437,6 +649,7 @@ const CONTEXT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
                 prompt: '현재 캠페인 중 고성능 상위 3개와 저성과 3개를 비교해 최적화 기준을 정리해줘.',
                 description: '성공 패턴의 운영 반영 포인트 제시',
                 groupId: 'context-campaign',
+                version: 1,
             },
         ],
     },
@@ -480,13 +693,43 @@ function splitPromptInput(input: string): ParsedPromptInput | null {
 }
 
 export function resolvePromptInput(input: string): string {
+    return resolvePromptInputWithGovernance(input).content;
+}
+
+function buildPromptMigrationHint(command: InsightPromptCommand): string | null {
+    if (!command.deprecated) return null;
+    if (command.deprecated.migrationHint?.trim()) {
+        return command.deprecated.migrationHint.trim();
+    }
+
+    if (command.deprecated.replacedBy?.trim()) {
+        return `${command.command} 명령어는 곧 제거될 예정입니다. ${command.deprecated.replacedBy.trim()} 명령어를 사용해 주세요.`;
+    }
+
+    return `${command.command} 명령어는 곧 제거될 예정입니다.`;
+}
+
+export function resolvePromptInputWithGovernance(input: string): PromptInputResolution {
     const parsed = splitPromptInput(input);
-    if (!parsed) return input.trim();
+    if (!parsed) {
+        return {
+            content: input.trim(),
+            migrationHint: null,
+        };
+    }
 
     const template = QUICK_PROMPT_COMMAND_MAP.get(parsed.command);
-    if (!template) return input.trim();
+    if (!template) {
+        return {
+            content: input.trim(),
+            migrationHint: null,
+        };
+    }
 
-    return parsed.tail ? `${template.prompt} ${parsed.tail}` : template.prompt;
+    return {
+        content: parsed.tail ? `${template.prompt} ${parsed.tail}` : template.prompt,
+        migrationHint: buildPromptMigrationHint(template),
+    };
 }
 
 function buildResolvedPromptValue(input: string, prompt: InsightPromptCommand): string {
@@ -608,6 +851,49 @@ function trimCacheSize<T>(cache: Map<string, CachedEntry<T>>, maxEntries: number
     }
 }
 
+function buildConversationScopedCacheKey(
+    conversationId: string,
+    message: string,
+    llmConfig?: {
+        provider: LlmProvider;
+        model: string;
+        apiKey?: string;
+        useServerKey?: boolean;
+        storyboardModelProfile?: StoryboardModelProfile;
+        imageModelProfile?: StoryboardModelProfile;
+    },
+    imageModelProfile?: StoryboardModelProfile,
+    responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
+    feedbackContext?: InsightChatFeedbackContext,
+    attachments?: InsightChatAttachmentInput[],
+): string {
+    const normalizedMessage = normalizeCacheKey(message);
+    const inferenceMode = llmConfig ? 'model' : 'local';
+    const provider = llmConfig?.provider ?? 'none';
+    const model = llmConfig?.model ?? 'none';
+    const keyMode = llmConfig?.apiKey
+        ? 'client-key'
+        : llmConfig?.useServerKey || provider === 'gemini'
+            ? 'server-key'
+            : 'none';
+    const normalizedProfile = llmConfig?.imageModelProfile
+        || llmConfig?.storyboardModelProfile
+        || imageModelProfile
+        || 'none';
+    const normalizedMode = normalizeResponseMode(responseMode);
+    const feedbackSignature = feedbackContext?.rating
+        ? `feedback:${feedbackContext.rating}:${(feedbackContext.reason ?? '').replace(/\s+/g, ' ').slice(0, 120)}`
+        : 'feedback:none';
+    const attachmentSignature = attachments?.length
+        ? attachments
+            .slice(0, MAX_CHAT_ATTACHMENTS)
+            .map((attachment) => `${attachment.name}:${attachment.content.slice(0, 80)}`)
+            .join('|')
+        : 'attachments:none';
+
+    return `${conversationId}|${inferenceMode}|${provider}|${model}|${keyMode}|${normalizedProfile}|${normalizedMode}|${feedbackSignature}|${attachmentSignature}|${normalizedMessage}`;
+}
+
 async function fetchJsonWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => {
@@ -656,8 +942,8 @@ function sleep(ms: number): Promise<void> {
     });
 }
 
-async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> {
-    const cacheKey = 'admin-insight-bootstrap';
+async function fetchChatBootstrap(conversationId: string): Promise<AdminInsightChatBootstrapResponse> {
+    const cacheKey = `admin-insight-bootstrap|${conversationId}`;
     const now = Date.now();
     const cached = chatBootstrapCache.get(cacheKey);
     if (cached && cached.expiresAt > now) {
@@ -695,6 +981,7 @@ async function fetchChatBootstrap(): Promise<AdminInsightChatBootstrapResponse> 
 async function postChatMessage(
     message: string,
     requestId: string,
+    conversationId: string,
     llmConfig?: {
         provider: LlmProvider;
         model: string;
@@ -704,11 +991,24 @@ async function postChatMessage(
         useServerKey?: boolean;
     },
     imageModelProfile?: StoryboardModelProfile,
+    responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
+    feedbackContext?: InsightChatFeedbackContext,
+    attachments?: InsightChatAttachmentInput[],
 ): Promise<AdminInsightChatResponse> {
+    const normalizedResponseMode = normalizeResponseMode(responseMode);
+    const normalizedFeedbackContext = normalizeFeedbackInput(feedbackContext);
     const resolvedImageModelProfile = llmConfig?.imageModelProfile
         || llmConfig?.storyboardModelProfile
         || imageModelProfile;
-    const normalizedMessage = `${normalizeCacheKey(message)}|${resolvedImageModelProfile || ''}`;
+    const normalizedMessage = buildConversationScopedCacheKey(
+        conversationId,
+        message,
+        llmConfig,
+        resolvedImageModelProfile,
+        normalizedResponseMode,
+        normalizedFeedbackContext,
+        attachments,
+    );
     const now = Date.now();
 
     if (!llmConfig) {
@@ -731,7 +1031,10 @@ async function postChatMessage(
                     body: JSON.stringify({
                         message,
                         requestId,
-                    ...(llmConfig
+                        responseMode: normalizedResponseMode,
+                        ...(attachments?.length ? { attachments } : {}),
+                        ...(normalizedFeedbackContext ? { feedbackContext: normalizedFeedbackContext } : {}),
+                        ...(llmConfig
                             ? {
                                 provider: llmConfig.provider,
                                 model: llmConfig.model,
@@ -799,7 +1102,13 @@ async function postStreamChat(
     },
     onToken: (token: string) => void,
     abortSignal?: AbortSignal,
+    responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
+    feedbackContext?: InsightChatFeedbackContext,
+    attachments?: InsightChatAttachmentInput[],
 ): Promise<AdminInsightChatResponse | null> {
+    const normalizedResponseMode = normalizeResponseMode(responseMode);
+    const normalizedFeedbackContext = normalizeFeedbackInput(feedbackContext);
+
     const resp = await fetch('/api/admin/insight/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -807,6 +1116,9 @@ async function postStreamChat(
         body: JSON.stringify({
             message,
             requestId,
+            responseMode: normalizedResponseMode,
+            ...(attachments?.length ? { attachments } : {}),
+            ...(normalizedFeedbackContext ? { feedbackContext: normalizedFeedbackContext } : {}),
             provider: llmConfig.provider,
             model: llmConfig.model,
             ...(llmConfig.apiKey ? { apiKey: llmConfig.apiKey } : {}),
@@ -869,6 +1181,7 @@ async function postStreamChat(
                 source: 'fallback',
                 fallbackReason: streamState.streamError ? fallbackReason : 'stream_no_data',
                 ...(streamState.requestId ? { requestId: streamState.requestId } : {}),
+                ...(streamState.toolTrace ? { toolTrace: streamState.toolTrace } : {}),
             },
         };
     }
@@ -968,10 +1281,6 @@ type TreemapCell = {
     y0: number;
     x1: number;
     y1: number;
-};
-
-type ChatTreemapSourceRow = ChatTreemapLeaf & {
-    metric: number;
 };
 
 type ChatTreemapTooltip = {
@@ -1109,11 +1418,6 @@ function chatTreemapFormatPercent(value: number): string {
     return `${value.toFixed(2)}%`;
 }
 
-function chatTreemapFormatNonNegativePercent(value: number): string {
-    if (!Number.isFinite(value)) return '0%';
-    return `${value.toFixed(2)}%`;
-}
-
 export function buildInsightChatTreemapRows(
     rows: InsightChatTreemapResponse['videos'] | null,
     metricMode: ChatTreemapMetricMode,
@@ -1198,33 +1502,6 @@ function chatTreemapGetPeriodLabel(period: ChatTreemapPeriod): string {
     if (period === '1Y') return '1년전';
     return '1년전';
 }
-
-const getTreemapAreaPerCell = (width: number): number => {
-    if (width < CHAT_TREEMAP_MOBILE_BP) return CHAT_TREEMAP_MOBILE_AREA_PER_CELL;
-    if (width < CHAT_TREEMAP_TABLET_BP) return CHAT_TREEMAP_TABLET_AREA_PER_CELL;
-    return CHAT_TREEMAP_AREA_PER_CELL;
-};
-
-const getTreemapLeafBounds = (width: number): { minLeaves: number; maxLeaves: number } => {
-    if (width < CHAT_TREEMAP_MOBILE_BP) {
-        return {
-            minLeaves: CHAT_TREEMAP_MOBILE_MIN_LEAVES,
-            maxLeaves: CHAT_TREEMAP_MOBILE_MAX_LEAVES,
-        };
-    }
-
-    if (width < CHAT_TREEMAP_TABLET_BP) {
-        return {
-            minLeaves: CHAT_TREEMAP_TABLET_MIN_LEAVES,
-            maxLeaves: CHAT_TREEMAP_TABLET_MAX_LEAVES,
-        };
-    }
-
-    return {
-        minLeaves: CHAT_TREEMAP_MIN_LEAVES,
-        maxLeaves: CHAT_TREEMAP_MAX_LEAVES,
-    };
-};
 
 const getTreemapMinDimensions = (width: number): { minWidth: number; minHeight: number } => {
     if (width < CHAT_TREEMAP_MOBILE_BP) {
@@ -1712,7 +1989,7 @@ const InsightChatTreemap = memo(() => {
                                             color: '#ffffff',
                                             textShadow: 'rgba(0, 0, 0, 0.25) 0px 1px 0px',
                                             fontSize: `${metricFont}px`,
-                                            lineHeight: 1,
+                                            lineHeight: '1',
                                             fontWeight: 700,
                                         }}
                                     >
@@ -1733,7 +2010,7 @@ function deserializeConversationList(raw: PersistedChatState | null): {
     conversations: ChatConversation[];
     activeConversationId: string;
 } | null {
-    if (!raw || raw.version !== 1 || !Array.isArray(raw.conversations) || raw.conversations.length === 0) {
+    if (!raw || (raw.version !== 1 && raw.version !== 2 && raw.version !== 3 && raw.version !== 4) || !Array.isArray(raw.conversations) || raw.conversations.length === 0) {
         return null;
     }
 
@@ -1779,10 +2056,16 @@ function deserializeConversationList(raw: PersistedChatState | null): {
                 id: conversation.id,
                 title: conversation.title,
                 messages,
+                tags: normalizeConversationTags(conversation.tags),
                 createdAt: conversation.createdAt ?? Date.now(),
                 updatedAt: conversation.updatedAt ?? Date.now(),
                 isBooting: false,
                 bootstrapFailed: Boolean(conversation.bootstrapFailed),
+                pinned: raw.version >= 2 ? Boolean(conversation.pinned) : false,
+                contextWindowSize: typeof conversation.contextWindowSize === 'number' && Number.isFinite(conversation.contextWindowSize)
+                    ? Math.max(1, Math.floor(conversation.contextWindowSize))
+                    : undefined,
+                responseMode: normalizeResponseMode(conversation.responseMode),
             };
         })
         .filter((conversation): conversation is ChatConversation => conversation !== null)
@@ -1801,7 +2084,7 @@ function deserializeConversationList(raw: PersistedChatState | null): {
 
 function serializeConversationList(conversations: ChatConversation[], activeConversationId: string): PersistedChatState {
     return {
-        version: 1,
+        version: CHAT_STORAGE_SCHEMA_VERSION,
         activeConversationId,
         conversations: conversations.slice(-MAX_CONVERSATIONS).map((conversation) => ({
             id: conversation.id,
@@ -1820,6 +2103,10 @@ function serializeConversationList(conversations: ChatConversation[], activeConv
             updatedAt: conversation.updatedAt,
             isBooting: conversation.isBooting,
             bootstrapFailed: conversation.bootstrapFailed,
+            pinned: Boolean(conversation.pinned),
+            tags: normalizeConversationTags(conversation.tags),
+            contextWindowSize: conversation.contextWindowSize,
+            responseMode: conversation.responseMode ?? DEFAULT_RESPONSE_MODE,
         })),
     };
 }
@@ -1829,11 +2116,19 @@ function createInitialConversation(id: string): ChatConversation {
         id,
         title: EMPTY_TITLE,
         messages: [],
+        tags: [],
         createdAt: Date.now(),
         updatedAt: Date.now(),
         isBooting: false,
         bootstrapFailed: false,
+        pinned: false,
+        contextWindowSize: MESSAGE_WINDOW_INITIAL,
+        responseMode: DEFAULT_RESPONSE_MODE,
     };
+}
+
+function getConversationResponseMode(conversation: ChatConversation | null | undefined): InsightChatResponseMode {
+    return normalizeResponseMode(conversation?.responseMode);
 }
 
 const CHAT_BUBBLE_MARKDOWN_COMPONENTS = {
@@ -2152,10 +2447,23 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
     const modelLabel = getModelLabel(meta.model);
     const fallbackReasonLabel = getFallbackReasonLabel(meta.fallbackReason);
     const requestIdLabel = getRequestIdLabel(meta.requestId);
+    const responseModeLabel = meta.responseMode ? {
+        fast: '빠른 응답',
+        deep: '깊은 분석',
+        structured: '구조화',
+    }[meta.responseMode] ?? null : null;
+    const confidenceLabel = getConfidenceLabel(meta.confidence);
+    const latencyLabel = getLatencyLabel(meta.latencyMs);
+    const toolTrace = Array.isArray(meta.toolTrace) ? meta.toolTrace.filter(Boolean) : [];
 
     return (
         <div className="mt-2 border-t border-[#e5e7eb] pt-2">
             <div className="flex flex-wrap items-center gap-1.5">
+                {responseModeLabel ? (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESPONSE_MODE_BADGE_STYLES[meta.responseMode!]}`}>
+                        모드: {responseModeLabel}
+                    </span>
+                ) : null}
                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#eef2ff] text-[#3730a3]">
                     출처: {sourceLabel}
                 </span>
@@ -2169,12 +2477,36 @@ const MessageMetaPanel = memo(({ meta }: { meta?: AdminInsightChatMeta | null })
                         사유: {fallbackReasonLabel}
                     </span>
                 ) : null}
+                {confidenceLabel ? (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#e0f2fe] text-[#075985]">
+                        신뢰도: {confidenceLabel}
+                    </span>
+                ) : null}
+                {latencyLabel ? (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#ecfeff] text-[#0e7490]">
+                        지연: {latencyLabel}
+                    </span>
+                ) : null}
                 {requestIdLabel ? (
                     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#f3f4f6] text-[#4b5563]">
                         요청ID: {requestIdLabel}
                     </span>
                 ) : null}
             </div>
+            {toolTrace.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    <span className="text-[10px] text-[#6b7280]">도구 추적:</span>
+                    {toolTrace.slice(0, 3).map((trace) => (
+                        <span
+                            key={trace}
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] bg-[#f8fafc] text-[#64748b]"
+                            title={trace}
+                        >
+                            {trace}
+                        </span>
+                    ))}
+                </div>
+            ) : null}
         </div>
     );
 });
@@ -2275,16 +2607,29 @@ MarkdownRenderer.displayName = 'MarkdownRenderer';
 
 type ChatBubbleProps = {
   message: ChatMessage;
+  followUpPrompts?: InsightChatFollowUpPrompt[];
   canEdit?: boolean;
   onEditMessage?: (message: ChatMessage) => void;
+  onRegenerate?: (messageId: string) => void;
+  canRegenerate?: boolean;
+  feedback?: {
+      rating?: InsightChatFeedbackRating;
+      reason?: string;
+  };
+  onFeedback?: (messageId: string, rating: InsightChatFeedbackRating | null, reason?: string) => void;
   onFollowUpPrompt?: (prompt: string) => void;
   isFollowUpDisabled?: boolean;
 };
 
 const ChatBubble = memo(({
   message,
+  followUpPrompts,
   canEdit,
   onEditMessage,
+  onRegenerate,
+  canRegenerate = false,
+  feedback,
+  onFeedback,
   onFollowUpPrompt,
   isFollowUpDisabled,
 }: ChatBubbleProps) => {
@@ -2325,10 +2670,10 @@ const ChatBubble = memo(({
     const toggleMeta = useCallback(() => {
         setIsMetaVisible((prev) => !prev);
     }, []);
-    const followUpPrompts = useMemo(() => {
-        if (!message.followUpPrompts?.length) return [];
+    const normalizedFollowUpPrompts = useMemo(() => {
+        if (!followUpPrompts?.length) return [];
         const seen = new Set<string>();
-        return message.followUpPrompts
+        return followUpPrompts
             .map((entry) => ({
                 prompt: sanitizeFollowUpPromptText(entry.prompt),
                 label: sanitizeFollowUpPromptText(entry.label),
@@ -2339,8 +2684,18 @@ const ChatBubble = memo(({
                 seen.add(entry.prompt);
                 return true;
             });
-    }, [message.followUpPrompts]);
+    }, [followUpPrompts]);
     const actionRowAlignmentClass = isUser ? 'justify-end' : 'justify-start';
+    const currentFeedback = message.id ? feedback : undefined;
+    const handleEditClick = useCallback(() => {
+        onEditMessage?.(message);
+    }, [message, onEditMessage]);
+    const handleRegenerateClick = useCallback(() => {
+        onRegenerate?.(message.id);
+    }, [message.id, onRegenerate]);
+    const handleFollowUpPromptSelect = useCallback((prompt: string) => {
+        onFollowUpPrompt?.(prompt);
+    }, [onFollowUpPrompt]);
 
     return (
         <div className={cn(
@@ -2417,20 +2772,83 @@ const ChatBubble = memo(({
                                 <button
                                     type="button"
                                     className="inline-flex h-7 shrink-0 min-w-14 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs whitespace-nowrap border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
-                                    onClick={() => onEditMessage(message)}
+                                    onClick={handleEditClick}
                                     aria-label="마지막 사용자 메시지 수정"
                                 >
                                     <Pencil className="h-3.5 w-3.5" />
                                     수정
                                 </button>
                             ) : null}
+                            {(!isUser && onFeedback) ? (
+                                <>
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            'inline-flex h-7 shrink-0 min-w-16 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs whitespace-nowrap',
+                                            currentFeedback?.rating === 'up'
+                                                ? 'border-emerald-300 bg-[#ecfdf5] text-[#065f46]'
+                                                : 'border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]',
+                                        )}
+                                        onClick={() => onFeedback(message.id, currentFeedback?.rating === 'up' ? null : 'up')}
+                                        aria-label="이 답변이 유용해요"
+                                    >
+                                        <ThumbsUp className="h-3.5 w-3.5" />
+                                        좋아요
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            'inline-flex h-7 shrink-0 min-w-16 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs whitespace-nowrap',
+                                            currentFeedback?.rating === 'down'
+                                                ? 'border-[#fda4af] bg-[#fff1f2] text-[#be123c]'
+                                                : 'border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]',
+                                        )}
+                                        onClick={() => onFeedback(message.id, currentFeedback?.rating === 'down' ? null : 'down')}
+                                        aria-label="이 답변이 개선이 필요해요"
+                                    >
+                                        <ThumbsDown className="h-3.5 w-3.5" />
+                                        개선 필요
+                                    </button>
+                                    {currentFeedback?.rating ? (
+                                        <span className="inline-flex w-full text-[10px] text-[#6b7280] px-1">
+                                            {currentFeedback.reason ? `사유: ${currentFeedback.reason}` : '사유를 입력해 주세요'}
+                                        </span>
+                                    ) : null}
+                                </>
+                            ) : null}
+                            {!isUser && canRegenerate && onRegenerate ? (
+                                <button
+                                    type="button"
+                                    className="inline-flex h-7 shrink-0 min-w-14 items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs whitespace-nowrap border-[#e5e7eb] hover:bg-[#f9fafb] text-[#4b5563]"
+                                    onClick={handleRegenerateClick}
+                                    aria-label="이 답변 다시 생성"
+                                >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                    다시 생성
+                                </button>
+                            ) : null}
                         </div>
-                        {followUpPrompts.length > 0 ? (
+                        {normalizedFollowUpPrompts.length > 0 ? (
                             <FollowUpPromptChips
-                                prompts={followUpPrompts}
+                                prompts={normalizedFollowUpPrompts}
                                 disabled={isUser || isTreemapMessage || !!isFollowUpDisabled}
-                                onSelectPrompt={(prompt) => onFollowUpPrompt?.(prompt)}
+                                onSelectPrompt={handleFollowUpPromptSelect}
                             />
+                        ) : null}
+                        {currentFeedback?.rating ? (
+                            <div className="mt-2 flex items-center gap-1.5">
+                                <span className="text-[10px] font-medium text-[#6b757f] w-14 shrink-0">
+                                    피드백 사유
+                                </span>
+                                <input
+                                    type="text"
+                                    value={currentFeedback.reason ?? ''}
+                                    onChange={(event) => onFeedback?.(message.id, currentFeedback.rating ?? null, event.target.value)}
+                                    placeholder="선택 입력 (최대 280자)"
+                                    maxLength={280}
+                                    className="flex-1 min-w-0 h-7 px-2 text-[11px] border border-[#e5e7eb] rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#f87171]"
+                                />
+                            </div>
                         ) : null}
                         {hasMessageMeta && isMetaVisible ? <MessageMetaPanel meta={message.meta} /> : null}
                         {message.sources?.length ? <SourceList sources={message.sources} /> : null}
@@ -2468,12 +2886,16 @@ const InsightChatSectionComponent = () => {
     ]);
     const [activeConversationId, setActiveConversationId] = useState<string>(initialConversationId);
     const [inputValue, setInputValue] = useState('');
+    const [draftAttachments, setDraftAttachments] = useState<DraftChatAttachment[]>([]);
     const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
     const bootstrapRequestRef = useRef(new Map<string, number>());
     const streamAbortControllerRef = useRef<AbortController | null>(null);
+    const persistDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const latestPersistConversationsRef = useRef(conversations);
+    const latestPersistActiveConversationIdRef = useRef(activeConversationId);
 
     const [llmKeys, setLlmKeys] = useState<StoredLlmKeys>({});
     const [activeModelId, setActiveModelId] = useState<string>('gemini-3-flash-preview');
@@ -2482,11 +2904,21 @@ const InsightChatSectionComponent = () => {
     const [showSettings, setShowSettings] = useState(false);
     const [showModelDropdown, setShowModelDropdown] = useState(false);
     const [showImageModelDropdown, setShowImageModelDropdown] = useState(false);
+    const [showResponseModeDropdown, setShowResponseModeDropdown] = useState(false);
     const [showConversationList, setShowConversationList] = useState(false);
+    const [conversationSearchQuery, setConversationSearchQuery] = useState('');
+    const [conversationQuickFilter, setConversationQuickFilter] = useState<InsightConversationFilter>(CONVERSATION_FILTER_ALL);
+    const [activeConversationTagInput, setActiveConversationTagInput] = useState('');
     const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
     const [hasServerGeminiKey, setHasServerGeminiKey] = useState(false);
+    const attachmentInputRef = useRef<HTMLInputElement>(null);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
     const imageModelDropdownRef = useRef<HTMLDivElement>(null);
+    const responseModeDropdownRef = useRef<HTMLDivElement>(null);
+    const [messageFeedbacks, setMessageFeedbacks] = useState<Record<string, {
+        rating?: InsightChatFeedbackRating;
+        reason?: string;
+    }>>({});
 
     useEffect(() => {
         try {
@@ -2515,6 +2947,11 @@ const InsightChatSectionComponent = () => {
             } catch { /* ignore */ }
         })();
     }, []);
+
+    useEffect(() => {
+        setDraftAttachments([]);
+        setActiveConversationTagInput('');
+    }, [activeConversationId]);
 
     const saveLlmKey = useCallback((provider: LlmProvider, key: string) => {
         setLlmKeys((prev) => {
@@ -2598,12 +3035,16 @@ const InsightChatSectionComponent = () => {
             if (imageModelDropdownRef.current && !imageModelDropdownRef.current.contains(e.target as Node)) {
                 setShowImageModelDropdown(false);
             }
+
+            if (responseModeDropdownRef.current && !responseModeDropdownRef.current.contains(e.target as Node)) {
+                setShowResponseModeDropdown(false);
+            }
         };
-        if (showModelDropdown || showImageModelDropdown) {
+        if (showModelDropdown || showImageModelDropdown || showResponseModeDropdown) {
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showModelDropdown, showImageModelDropdown]);
+    }, [showModelDropdown, showImageModelDropdown, showResponseModeDropdown]);
 
     useEffect(() => {
         const updatePanelState = () => {
@@ -2622,10 +3063,37 @@ const InsightChatSectionComponent = () => {
         () => conversations.find((conversation) => conversation.id === activeConversationId) ?? null,
         [conversations, activeConversationId],
     );
+    const activeConversationResponseMode = getConversationResponseMode(activeConversation);
+
+    const normalizedConversationQuery = conversationSearchQuery.trim().toLowerCase();
+    const availableConversationTags = useMemo(() => {
+        const tags = new Set<string>();
+        for (const conversation of conversations) {
+            for (const tag of normalizeConversationTags(conversation.tags)) {
+                tags.add(tag);
+            }
+        }
+        return [...tags].sort((a, b) => a.localeCompare(b));
+    }, [conversations]);
+
+    useEffect(() => {
+        if (!conversationQuickFilter.startsWith('tag:')) return;
+        const selectedTag = sanitizeConversationTag(conversationQuickFilter.slice(4));
+        if (!selectedTag || !availableConversationTags.includes(selectedTag)) {
+            setConversationQuickFilter(CONVERSATION_FILTER_ALL);
+        }
+    }, [availableConversationTags, conversationQuickFilter]);
 
     const conversationList = useMemo(
-        () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt),
-        [conversations],
+        () => [...conversations]
+            .filter((conversation) => matchesInsightConversationFilter(conversation, normalizedConversationQuery, conversationQuickFilter))
+            .sort((a, b) => {
+                if ((a.pinned ? 1 : 0) !== (b.pinned ? 1 : 0)) {
+                    return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+                }
+                return b.updatedAt - a.updatedAt;
+            }),
+        [conversations, conversationQuickFilter, normalizedConversationQuery],
     );
 
     const visibleMessages = useMemo(() => {
@@ -2636,8 +3104,39 @@ const InsightChatSectionComponent = () => {
         const start = Math.max(0, total - Math.min(total, messageWindowSize));
         return activeConversation.messages.slice(start, total);
     }, [activeConversation, messageWindowSize]);
+    const previousUserMessageById = useMemo(() => {
+        const map = new Map<string, ChatMessage | null>();
+        if (!activeConversation) return map;
+
+        let previousUserMessage: ChatMessage | null = null;
+        for (const message of activeConversation.messages) {
+            map.set(message.id, previousUserMessage);
+            if (message.role === 'user') {
+                previousUserMessage = message;
+            }
+        }
+        return map;
+    }, [activeConversation]);
 
     const canShowMoreMessages = !!activeConversation && activeConversation.messages.length > messageWindowSize;
+    const activeConversationMessageCount = activeConversation?.messages.length ?? 0;
+    const contextWindowOptions = useMemo(() => {
+        if (!activeConversationMessageCount) return CONTEXT_WINDOW_CHOICES;
+        const unique = new Set(CONTEXT_WINDOW_CHOICES);
+        unique.add(activeConversationMessageCount);
+        const allValues = [...unique]
+            .filter((value) => value > 0)
+            .sort((a, b) => a - b);
+        if (activeConversationMessageCount <= MESSAGE_WINDOW_INITIAL) {
+            return allValues;
+        }
+        return allValues;
+    }, [activeConversationMessageCount]);
+
+    const activeContextWindow = activeConversation?.contextWindowSize ?? MESSAGE_WINDOW_INITIAL;
+    const conversationContextWindowValue = activeConversation?.messages.length
+        ? Math.min(activeContextWindow, activeConversation.messages.length)
+        : activeContextWindow;
 
     const canRegenerateLastResponse = useMemo(() => {
         if (!activeConversation || !activeConversation.messages.length) {
@@ -2652,6 +3151,63 @@ const InsightChatSectionComponent = () => {
             prev.content.trim()
         );
     }, [activeConversation, sendingConversationId]);
+
+    const activeConversationResponseModeLabel = CHAT_RESPONSE_MODES.find((mode) => mode.value === activeConversationResponseMode)?.label
+        ?? '빠른 응답';
+
+    const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
+        setConversations((prev) => {
+            let changed = false;
+            const next = prev.map((item) => {
+                if (item.id !== conversationId) return item;
+                changed = true;
+                return update(item);
+            });
+            return changed ? next : prev;
+        });
+    }, []);
+
+    const setActiveConversationResponseMode = useCallback((nextMode: InsightChatResponseMode) => {
+        if (!activeConversation) return;
+
+        updateConversation(activeConversation.id, (prev) => ({
+            ...prev,
+            responseMode: normalizeResponseMode(nextMode),
+            updatedAt: Date.now(),
+        }));
+        setShowResponseModeDropdown(false);
+    }, [activeConversation, updateConversation]);
+
+    const feedbackForMessage = useCallback((messageId: string) => messageFeedbacks[messageId], [messageFeedbacks]);
+    const handleFeedback = useCallback((messageId: string, rating: InsightChatFeedbackRating | null, reason = '') => {
+        setMessageFeedbacks((prev) => {
+            const next = { ...prev };
+            if (!rating) {
+                delete next[messageId];
+                return next;
+            }
+
+            const nextReason = rating ? reason.trim().slice(0, 280) : '';
+            return {
+                ...next,
+                [messageId]: {
+                    ...(next[messageId] ?? {}),
+                    rating,
+                    reason: nextReason || undefined,
+                },
+            };
+        });
+    }, []);
+
+    const getFeedbackContextForMessage = useCallback((messageId: string): InsightChatFeedbackContext | undefined => {
+        const feedback = messageFeedbacks[messageId];
+        if (!feedback?.rating) return undefined;
+        return {
+            targetAssistantMessageId: messageId,
+            rating: feedback.rating,
+            ...(feedback.reason ? { reason: feedback.reason } : {}),
+        };
+    }, [messageFeedbacks]);
 
     const latestEditableUserMessageId = useMemo(() => {
         if (!activeConversation || !activeConversation.messages.length) {
@@ -2774,29 +3330,42 @@ const InsightChatSectionComponent = () => {
         setActiveCommandIndex((index) => (index >= commandSuggestions.length ? 0 : index));
     }, [commandSuggestions, hasPromptSuggestions]);
 
-    const persistConversationState = useCallback(() => {
+    useEffect(() => {
+        latestPersistConversationsRef.current = conversations;
+        latestPersistActiveConversationIdRef.current = activeConversationId;
+    }, [activeConversationId, conversations]);
+
+    const persistConversationStateNow = useCallback(() => {
         if (typeof window === 'undefined') return;
-        if (conversations.length === 0) return;
+        const latestConversations = latestPersistConversationsRef.current;
+        if (latestConversations.length === 0) return;
 
         try {
-            const payload = serializeConversationList(conversations, activeConversationId);
+            const payload = serializeConversationList(
+                latestConversations,
+                latestPersistActiveConversationIdRef.current,
+            );
             localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(payload));
         } catch {
             // localStorage unavailable or full
         }
-    }, [activeConversationId, conversations]);
-
-    const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
-        setConversations((prev) => {
-            let changed = false;
-            const next = prev.map((item) => {
-                if (item.id !== conversationId) return item;
-                changed = true;
-                return update(item);
-            });
-            return changed ? next : prev;
-        });
     }, []);
+    const flushPersistConversationState = useCallback(() => {
+        if (persistDebounceTimerRef.current) {
+            clearTimeout(persistDebounceTimerRef.current);
+            persistDebounceTimerRef.current = null;
+        }
+        persistConversationStateNow();
+    }, [persistConversationStateNow]);
+    const schedulePersistConversationState = useCallback(() => {
+        if (persistDebounceTimerRef.current) {
+            clearTimeout(persistDebounceTimerRef.current);
+        }
+        persistDebounceTimerRef.current = setTimeout(() => {
+            persistDebounceTimerRef.current = null;
+            persistConversationStateNow();
+        }, CHAT_PERSIST_DEBOUNCE_MS);
+    }, [persistConversationStateNow]);
 
     const loadBootstrap = useCallback(async (conversationId: string): Promise<void> => {
         const requestId = (bootstrapRequestRef.current.get(conversationId) ?? 0) + 1;
@@ -2809,7 +3378,7 @@ const InsightChatSectionComponent = () => {
         }));
 
         try {
-            const bootstrap = await fetchChatBootstrap();
+            const bootstrap = await fetchChatBootstrap(conversationId);
 
             setConversations((prev) => {
                 if ((bootstrapRequestRef.current.get(conversationId) ?? 0) !== requestId) {
@@ -2872,10 +3441,14 @@ const InsightChatSectionComponent = () => {
             id: makeConversationId(),
             title,
             messages: [],
+            tags: [],
             createdAt: Date.now(),
             updatedAt: Date.now(),
             isBooting: true,
             bootstrapFailed: false,
+            pinned: false,
+            contextWindowSize: MESSAGE_WINDOW_INITIAL,
+            responseMode: DEFAULT_RESPONSE_MODE,
         };
 
         setConversations((prev) => [nextConversation, ...prev].slice(0, MAX_CONVERSATIONS));
@@ -2954,7 +3527,12 @@ const InsightChatSectionComponent = () => {
             return;
         }
 
-        setMessageWindowSize(Math.min(MESSAGE_WINDOW_INITIAL, activeConversation.messages.length || MESSAGE_WINDOW_INITIAL));
+        const desiredWindow = activeConversation.contextWindowSize ?? MESSAGE_WINDOW_INITIAL;
+        const boundedWindow = Math.min(
+            Math.max(1, desiredWindow),
+            activeConversation.messages.length || Math.max(desiredWindow, MESSAGE_WINDOW_INITIAL),
+        );
+        setMessageWindowSize(boundedWindow);
     }, [activeConversation]);
 
     useEffect(() => {
@@ -2969,8 +3547,20 @@ const InsightChatSectionComponent = () => {
     }, [activeConversation?.messages.length, activeConversationId]);
 
     useEffect(() => {
-        persistConversationState();
-    }, [conversations, activeConversationId, persistConversationState]);
+        schedulePersistConversationState();
+    }, [activeConversationId, conversations, schedulePersistConversationState]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const handlePageHide = () => {
+            flushPersistConversationState();
+        };
+        window.addEventListener('pagehide', handlePageHide);
+        return () => {
+            window.removeEventListener('pagehide', handlePageHide);
+            flushPersistConversationState();
+        };
+    }, [flushPersistConversationState]);
 
     useEffect(() => () => {
         streamAbortControllerRef.current?.abort();
@@ -3027,11 +3617,171 @@ const InsightChatSectionComponent = () => {
         ));
     }, [activeConversation]);
 
-    const sendMessage = useCallback(async (input: string, options?: { replaceUserMessageId?: string }) => {
-        const content = resolvePromptInput(input);
+    const handleSetMessageWindow = useCallback((nextWindowSize: number) => {
+        if (!activeConversation) return;
+
+        const bounded = Math.max(1, Math.min(nextWindowSize, activeConversation.messages.length || MESSAGE_WINDOW_INITIAL));
+        setMessageWindowSize(bounded);
+        updateConversation(activeConversation.id, (prev) => ({
+            ...prev,
+            contextWindowSize: bounded,
+            updatedAt: Date.now(),
+        }));
+    }, [activeConversation, updateConversation]);
+
+    const handleTogglePinnedConversation = useCallback((conversationId: string) => {
+        updateConversation(conversationId, (prev) => ({
+            ...prev,
+            pinned: !prev.pinned,
+            updatedAt: Date.now(),
+        }));
+    }, [updateConversation]);
+
+    const handleAddConversationTag = useCallback(() => {
+        if (!activeConversation) return;
+        const normalizedTag = sanitizeConversationTag(activeConversationTagInput);
+        if (!normalizedTag) return;
+
+        updateConversation(activeConversation.id, (prev) => ({
+            ...prev,
+            tags: normalizeConversationTags([...normalizeConversationTags(prev.tags), normalizedTag]),
+            updatedAt: Date.now(),
+        }));
+        setActiveConversationTagInput('');
+    }, [activeConversation, activeConversationTagInput, updateConversation]);
+
+    const handleRemoveConversationTag = useCallback((tag: string) => {
+        if (!activeConversation) return;
+        const normalizedTag = sanitizeConversationTag(tag);
+        if (!normalizedTag) return;
+
+        updateConversation(activeConversation.id, (prev) => ({
+            ...prev,
+            tags: normalizeConversationTags(prev.tags).filter((item) => item !== normalizedTag),
+            updatedAt: Date.now(),
+        }));
+    }, [activeConversation, updateConversation]);
+
+    const handleRenameConversation = useCallback((conversationId: string) => {
+        const target = conversations.find((conversation) => conversation.id === conversationId);
+        if (!target) return;
+
+        const nextTitle = window.prompt('대화 제목을 입력해 주세요.', target.title === EMPTY_TITLE ? '' : target.title);
+        if (!nextTitle) return;
+
+        const normalizedTitle = nextTitle.trim();
+        if (!normalizedTitle) return;
+
+        updateConversation(conversationId, (prev) => ({
+            ...prev,
+            title: normalizedTitle,
+            updatedAt: Date.now(),
+        }));
+    }, [conversations, updateConversation]);
+
+    const handleExportConversation = useCallback((conversationId: string) => {
+        const conversation = conversations.find((item) => item.id === conversationId);
+        if (!conversation) return;
+
+        const exportData = {
+            exportedAt: new Date().toISOString(),
+            conversation,
+            schemaVersion: CHAT_STORAGE_SCHEMA_VERSION,
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json;charset=utf-8' });
+        const anchor = document.createElement('a');
+        const objectUrl = URL.createObjectURL(blob);
+        anchor.href = objectUrl;
+        anchor.download = `insight-chat-${conversation.title}-${conversation.id}.json`;
+        anchor.rel = 'noopener';
+        anchor.style.display = 'none';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+    }, [conversations]);
+
+    const handleOpenAttachmentPicker = useCallback(() => {
+        if (!!activeConversation?.isBooting || !!sendingConversationId) return;
+        attachmentInputRef.current?.click();
+    }, [activeConversation?.isBooting, sendingConversationId]);
+
+    const handleRemoveAttachment = useCallback((attachmentId: string) => {
+        setDraftAttachments((prev) => prev.filter((attachment) => attachment.id !== attachmentId));
+    }, []);
+
+    const handleAttachmentFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+        const { files } = event.target;
+        if (!files || files.length === 0) return;
+
+        const existingCount = draftAttachments.length;
+        const remaining = Math.max(0, MAX_CHAT_ATTACHMENTS - existingCount);
+        if (remaining <= 0) {
+            window.alert(`첨부 파일은 최대 ${MAX_CHAT_ATTACHMENTS}개까지 업로드할 수 있습니다.`);
+            event.target.value = '';
+            return;
+        }
+
+        const selectedFiles = [...files].slice(0, remaining);
+        const nextAttachments: DraftChatAttachment[] = [];
+        for (const file of selectedFiles) {
+            const normalizedName = sanitizeAttachmentName(file.name);
+            if (!/\.(txt|csv)$/i.test(normalizedName)) {
+                continue;
+            }
+
+            const mimeType = (file.type || '').toLowerCase();
+            if (mimeType && !mimeType.startsWith('text/') && mimeType !== 'application/csv' && mimeType !== 'application/vnd.ms-excel') {
+                continue;
+            }
+
+            if (file.size > MAX_CHAT_ATTACHMENT_BYTES) {
+                continue;
+            }
+
+            const content = sanitizeAttachmentContent(await file.text());
+            if (!content.trim()) {
+                continue;
+            }
+
+            nextAttachments.push({
+                id: makeId('attachment'),
+                name: normalizedName,
+                mimeType: mimeType || 'text/plain',
+                content,
+                sizeBytes: Math.min(MAX_CHAT_ATTACHMENT_BYTES, file.size || content.length),
+            });
+        }
+
+        if (nextAttachments.length === 0) {
+            window.alert('txt/csv 형식의 텍스트 파일만 첨부할 수 있습니다.');
+            event.target.value = '';
+            return;
+        }
+
+        setDraftAttachments((prev) => [...prev, ...nextAttachments].slice(0, MAX_CHAT_ATTACHMENTS));
+        event.target.value = '';
+    }, [draftAttachments.length]);
+
+    const sendMessage = useCallback(async (
+        input: string,
+        options?: {
+            replaceUserMessageId?: string;
+            feedbackContext?: InsightChatFeedbackContext;
+            attachments?: InsightChatAttachmentInput[];
+        },
+    ) => {
+        const resolvedInput = resolvePromptInputWithGovernance(input);
+        const content = resolvedInput.content;
+        const contentForDisplay = resolvedInput.migrationHint
+            ? `${content}\n\n${resolvedInput.migrationHint}`
+            : content;
         if (!activeConversation || !content || sendingConversationId) return;
         const requestId = makeRequestId();
         const convId = activeConversation.id;
+        const responseMode = activeConversationResponseMode;
+        const feedbackContext = normalizeFeedbackInput(options?.feedbackContext);
+        const attachments = normalizeAttachmentPayload(options?.attachments);
         const replaceUserMessageId = options?.replaceUserMessageId;
         const replaceIndex = replaceUserMessageId
             ? activeConversation.messages.findIndex((message) => message.id === replaceUserMessageId && message.role === 'user')
@@ -3050,7 +3800,7 @@ const InsightChatSectionComponent = () => {
                 const nextMessages = [...prev.messages.slice(0, latestIndex + 1)];
                 nextMessages[latestIndex] = {
                     ...userMeta,
-                    content,
+                    content: contentForDisplay,
                     createdAt: new Date(),
                 };
 
@@ -3058,7 +3808,7 @@ const InsightChatSectionComponent = () => {
                     ...prev,
                     messages: nextMessages,
                     title: prev.title === EMPTY_TITLE && latestIndex === 0
-                        ? makeConversationTitle(content)
+                        ? makeConversationTitle(contentForDisplay)
                         : prev.title,
                     updatedAt: Date.now(),
                 };
@@ -3067,16 +3817,17 @@ const InsightChatSectionComponent = () => {
             appendMessage(convId, {
                 id: makeId('user'),
                 role: 'user',
-                content,
+                content: contentForDisplay,
                 createdAt: new Date(),
             });
         }
 
         setInputValue('');
+        setDraftAttachments([]);
         setSendingConversationId(convId);
 
         let assistantMessageId: string | null = null;
-        let assistantProfile: ChatMessage['meta'] | null = null;
+        let assistantProfile: AdminInsightChatResponse['meta'] | null = null;
         let streamController: AbortController | null = null;
 
         try {
@@ -3085,7 +3836,13 @@ const InsightChatSectionComponent = () => {
                 streamAbortControllerRef.current = streamController;
                 const assistantId = makeId('assistant');
                 assistantMessageId = assistantId;
-                assistantProfile = { source: currentLlmConfig.provider as 'gemini' | 'openai' | 'anthropic', model: currentLlmConfig.model };
+                assistantProfile = {
+                    source: currentLlmConfig.provider as 'gemini' | 'openai' | 'anthropic',
+                    model: currentLlmConfig.model,
+                    responseMode,
+                    confidence: RESPONSE_MODE_CONFIDENCE_SCORE[responseMode],
+                    toolTrace: [`responseMode:${responseMode}`, `provider:${currentLlmConfig.provider}`, 'flow:stream'],
+                };
                 appendMessage(convId, {
                     id: assistantId,
                     role: 'assistant',
@@ -3100,6 +3857,9 @@ const InsightChatSectionComponent = () => {
                     currentLlmConfig,
                     (token) => updateMessageContent(convId, assistantId, (prev) => prev + token),
                     streamController.signal,
+                    responseMode,
+                    feedbackContext,
+                    attachments,
                 );
 
                 if (localResponse) {
@@ -3107,23 +3867,42 @@ const InsightChatSectionComponent = () => {
                         updateMessage(convId, assistantId, (message) => ({
                             ...message,
                             content: `${message.content}\n\n${STREAM_STOP_MESSAGE}`,
-                            meta: message.meta ?? assistantProfile ?? localResponse.meta,
+                            meta: message.meta
+                                ?? assistantProfile
+                                ?? localResponse.meta
+                                ?? {
+                                    source: currentLlmConfig.provider as 'gemini' | 'openai' | 'anthropic',
+                                    model: currentLlmConfig.model,
+                                    responseMode,
+                                },
                         }));
                         return;
                     }
 
-                    updateMessage(convId, assistantId, (message) => ({
-                        ...message,
-                        content: localResponse.content,
-                        sources: mapSources(localResponse.sources),
-                        visualComponent: localResponse.visualComponent,
-                        followUpPrompts: normalizeFollowUpPrompts(localResponse.followUpPrompts),
-                        meta: localResponse.meta,
-                    }));
-                }
+                        updateMessage(convId, assistantId, (message) => ({
+                            ...message,
+                            content: localResponse.content,
+                            sources: mapSources(localResponse.sources),
+                            visualComponent: localResponse.visualComponent,
+                            followUpPrompts: normalizeFollowUpPrompts(localResponse.followUpPrompts),
+                            meta: {
+                                ...assistantProfile,
+                                ...(localResponse.meta ?? {}),
+                            } as AdminInsightChatMeta,
+                        }));
+                    }
             } else {
                 const resolvedImageModelProfile = imageModelProfile === 'none' ? undefined : imageModelProfile;
-                const response = await postChatMessage(content, requestId, undefined, resolvedImageModelProfile);
+                const response = await postChatMessage(
+                    content,
+                    requestId,
+                    convId,
+                    undefined,
+                    resolvedImageModelProfile,
+                    responseMode,
+                    feedbackContext,
+                    attachments,
+                );
                 appendMessage(convId, {
                     id: makeId('assistant'),
                     role: 'assistant',
@@ -3181,6 +3960,7 @@ const InsightChatSectionComponent = () => {
         updateConversation,
         updateMessage,
         updateMessageContent,
+        activeConversationResponseMode,
         sendingConversationId,
         currentLlmConfig,
         imageModelProfile,
@@ -3192,26 +3972,36 @@ const InsightChatSectionComponent = () => {
         streamAbortControllerRef.current = null;
     }, [sendingConversationId]);
 
+    const handleRegenerateAssistantMessage = useCallback((assistantMessageId: string) => {
+        if (!activeConversation || !activeConversation.messages.length || sendingConversationId) return;
+
+        const assistantIndex = activeConversation.messages.findIndex((message) => message.id === assistantMessageId && message.role === 'assistant');
+        if (assistantIndex <= 0) return;
+
+        const previousUserMessage = (() => {
+            for (let index = assistantIndex - 1; index >= 0; index -= 1) {
+                if (activeConversation.messages[index].role === 'user') {
+                    return activeConversation.messages[index];
+                }
+            }
+            return null;
+        })();
+
+                if (!previousUserMessage?.content.trim()) return;
+        void sendMessage(previousUserMessage.content, {
+            replaceUserMessageId: previousUserMessage.id,
+            feedbackContext: getFeedbackContextForMessage(assistantMessageId),
+        });
+    }, [activeConversation, getFeedbackContextForMessage, sendMessage, sendingConversationId]);
+
     const handleRegenerateLastResponse = useCallback(() => {
         if (!activeConversation || !canRegenerateLastResponse) return;
         const messages = activeConversation.messages;
-        if (messages.length < 2) return;
+        const lastMessage = messages[messages.length - 1];
+        if (!lastMessage || lastMessage.role !== 'assistant') return;
 
-        let lastUserIndex = -1;
-        for (let index = messages.length - 2; index >= 0; index -= 1) {
-            if (messages[index].role === 'user') {
-                lastUserIndex = index;
-                break;
-            }
-        }
-
-        if (lastUserIndex < 0) return;
-
-        const lastUserMessage = messages[lastUserIndex];
-        if (!lastUserMessage.content.trim()) return;
-
-        void sendMessage(lastUserMessage.content, { replaceUserMessageId: lastUserMessage.id });
-    }, [activeConversation, canRegenerateLastResponse, sendMessage]);
+        handleRegenerateAssistantMessage(lastMessage.id);
+    }, [activeConversation, canRegenerateLastResponse, handleRegenerateAssistantMessage]);
 
     const handleEditMessage = useCallback((message: ChatMessage) => {
         if (!activeConversation || message.role !== 'user') return;
@@ -3230,11 +4020,11 @@ const InsightChatSectionComponent = () => {
         }
         const replaceUserMessageId = editingMessageId;
         if (replaceUserMessageId) {
-            void sendMessage(inputValue, { replaceUserMessageId });
+            void sendMessage(inputValue, { replaceUserMessageId, attachments: draftAttachments });
             return;
         }
-        void sendMessage(inputValue);
-    }, [editingMessageId, inputValue, sendMessage]);
+        void sendMessage(inputValue, { attachments: draftAttachments });
+    }, [draftAttachments, editingMessageId, inputValue, sendMessage]);
 
     const resolvePromptFromTemplate = useCallback((prompt: InsightPromptCommand) => {
         return buildResolvedPromptValue(inputValue, prompt);
@@ -3296,6 +4086,13 @@ const InsightChatSectionComponent = () => {
     const isSending = sendingConversationId === activeConversationId;
     const isStreamingInFlight = sendingConversationId !== null;
     const canStopStreaming = isStreamingInFlight && !!streamAbortControllerRef.current;
+    const handleFollowUpPromptSelect = useCallback((prompt: string) => {
+        const normalizedPrompt = sanitizeFollowUpPromptText(prompt);
+        if (!normalizedPrompt || isStreamingInFlight) {
+            return;
+        }
+        void sendMessage(normalizedPrompt);
+    }, [isStreamingInFlight, sendMessage]);
 
     return (
         <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb] relative">
@@ -3419,6 +4216,111 @@ const InsightChatSectionComponent = () => {
                     </div>
                 ) : (
                     <div className="flex-1 h-0 min-h-0 overflow-y-auto px-2 py-2 space-y-1">
+                        <div className="px-2 pb-1">
+                            <Input
+                                value={conversationSearchQuery}
+                                onChange={(event) => setConversationSearchQuery(event.target.value)}
+                                placeholder="대화 검색"
+                                className="h-8 text-xs bg-white border-[#e5e7eb] focus-visible:ring-[#f87171]"
+                            />
+                        </div>
+                        <div className="px-2 pb-2">
+                            <div className="flex flex-wrap gap-1">
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'h-6 px-2 rounded-full border text-[11px] transition-colors',
+                                        conversationQuickFilter === CONVERSATION_FILTER_ALL
+                                            ? 'border-[#fb7185] bg-[#fff1f2] text-[#be123c]'
+                                            : 'border-[#e5e7eb] bg-white text-[#6b7280] hover:bg-[#f9fafb]',
+                                    )}
+                                    onClick={() => setConversationQuickFilter(CONVERSATION_FILTER_ALL)}
+                                >
+                                    전체
+                                </button>
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'h-6 px-2 rounded-full border text-[11px] transition-colors',
+                                        conversationQuickFilter === CONVERSATION_FILTER_PINNED
+                                            ? 'border-[#fb7185] bg-[#fff1f2] text-[#be123c]'
+                                            : 'border-[#e5e7eb] bg-white text-[#6b7280] hover:bg-[#f9fafb]',
+                                    )}
+                                    onClick={() => setConversationQuickFilter(CONVERSATION_FILTER_PINNED)}
+                                >
+                                    고정
+                                </button>
+                                {availableConversationTags.map((tag) => {
+                                    const tagFilter: InsightConversationFilter = `tag:${tag}`;
+                                    return (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className={cn(
+                                                'h-6 px-2 rounded-full border text-[11px] transition-colors',
+                                                conversationQuickFilter === tagFilter
+                                                    ? 'border-[#fb7185] bg-[#fff1f2] text-[#be123c]'
+                                                    : 'border-[#e5e7eb] bg-white text-[#6b7280] hover:bg-[#f9fafb]',
+                                            )}
+                                            onClick={() => setConversationQuickFilter(tagFilter)}
+                                        >
+                                            #{tag}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {activeConversation ? (
+                            <div className="px-2 pb-2">
+                                <div className="rounded-lg border border-[#e5e7eb] bg-white p-2 space-y-2">
+                                    <p className="text-[11px] font-medium text-[#6b7280]">현재 대화 태그</p>
+                                    <div className="flex gap-1">
+                                        <Input
+                                            value={activeConversationTagInput}
+                                            onChange={(event) => setActiveConversationTagInput(event.target.value)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter') {
+                                                    event.preventDefault();
+                                                    handleAddConversationTag();
+                                                }
+                                            }}
+                                            maxLength={MAX_CONVERSATION_TAG_LENGTH}
+                                            placeholder="태그 추가"
+                                            className="h-7 text-xs bg-white border-[#e5e7eb] focus-visible:ring-[#f87171]"
+                                        />
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 px-2"
+                                            onClick={handleAddConversationTag}
+                                        >
+                                            추가
+                                        </Button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {activeConversation.tags.length === 0 ? (
+                                            <span className="text-[11px] text-[#9ca3af]">태그 없음</span>
+                                        ) : activeConversation.tags.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                className="inline-flex items-center gap-1 rounded-full border border-[#fbcfe8] bg-[#fff1f2] px-2 py-0.5 text-[11px] text-[#be185d]"
+                                            >
+                                                #{tag}
+                                                <button
+                                                    type="button"
+                                                    className="rounded-full p-0.5 hover:bg-[#ffe4e6]"
+                                                    onClick={() => handleRemoveConversationTag(tag)}
+                                                    aria-label={`태그 ${tag} 제거`}
+                                                >
+                                                    <X className="h-2.5 w-2.5" />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
                         {conversationList.length === 0 ? (
                             <p className="px-2 py-10 text-sm text-[#6b7280] text-center">새로운 대화를 준비 중입니다</p>
                         ) : (
@@ -3452,6 +4354,57 @@ const InsightChatSectionComponent = () => {
                                                 'text-sm truncate pr-5',
                                                 isActive ? 'font-semibold text-[#111827]' : 'font-medium text-[#374151]',
                                             )}>{label}</p>
+                                            {conversation.pinned ? (
+                                                <p className="mt-0.5 text-[10px] text-[#ef4444] flex items-center gap-1">
+                                                    <Pin className="h-3 w-3" />
+                                                    고정됨
+                                                </p>
+                                            ) : null}
+                                            {conversation.tags.length > 0 ? (
+                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                    {conversation.tags.map((tag) => (
+                                                        <span
+                                                            key={`${conversation.id}-${tag}`}
+                                                            className="inline-flex rounded-full border border-[#fbcfe8] bg-[#fff1f2] px-1.5 py-0.5 text-[10px] leading-none text-[#be185d]"
+                                                        >
+                                                            #{tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleTogglePinnedConversation(conversation.id);
+                                            }}
+                                            className="h-6 w-6 grid place-items-center rounded-md text-[#6b7280] hover:bg-[#f3f4f6]"
+                                            title={conversation.pinned ? '고정 해제' : '고정'}
+                                        >
+                                            {conversation.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleRenameConversation(conversation.id);
+                                            }}
+                                            className="h-6 w-6 grid place-items-center rounded-md text-[#6b7280] hover:bg-[#f3f4f6]"
+                                            title="이름 변경"
+                                        >
+                                            <Pencil className="h-3 w-3" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleExportConversation(conversation.id);
+                                            }}
+                                            className="h-6 w-6 grid place-items-center rounded-md text-[#6b7280] hover:bg-[#f3f4f6]"
+                                            title="대화 내보내기"
+                                        >
+                                            <Download className="h-3 w-3" />
                                         </button>
                                         <button
                                             type="button"
@@ -3459,7 +4412,7 @@ const InsightChatSectionComponent = () => {
                                                 e.stopPropagation();
                                                 handleDeleteConversation(conversation.id);
                                             }}
-                                            className="absolute top-1/2 -translate-y-1/2 right-2 h-6 w-6 grid place-items-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#fee2e2] transition-opacity"
+                                            className="h-6 w-6 grid place-items-center rounded-md text-[#ef4444] hover:bg-[#fee2e2] opacity-0 group-hover:opacity-100 transition-opacity"
                                             title="대화 삭제"
                                         >
                                             <Trash2 className="h-3 w-3 text-[#ef4444]" />
@@ -3518,12 +4471,38 @@ const InsightChatSectionComponent = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <>
-                                    {canShowMoreMessages ? (
-                                        <div className="px-1 py-2 text-center">
-                                            <button
-                                                type="button"
-                                                onClick={handleLoadMoreMessages}
+                                        <>
+                                            <div className="px-1 pb-2 flex flex-wrap items-center gap-2 justify-end">
+                                                <span className="text-xs text-[#6b7280]">컨텍스트 창:</span>
+                                                <select
+                                                    value={conversationContextWindowValue}
+                                                    onChange={(event) => handleSetMessageWindow(Number(event.target.value))}
+                                                    className="h-7 w-28 rounded-md border border-[#e5e7eb] px-2 text-xs"
+                                                >
+                                                    {contextWindowOptions.map((size) => (
+                                                        <option key={size} value={size}>
+                                                            {size >= activeConversationMessageCount ? '전체' : `${size}개`}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        if (!activeConversation) return;
+                                                        handleSetMessageWindow(activeConversation.messages.length || MESSAGE_WINDOW_INITIAL);
+                                                    }}
+                                                    className="h-7 px-2 text-xs"
+                                                >
+                                                    전체 보기
+                                                </Button>
+                                            </div>
+                                            {canShowMoreMessages ? (
+                                                <div className="px-1 py-2 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleLoadMoreMessages}
                                                 className="text-xs text-[#ef4444] underline underline-offset-2 hover:no-underline"
                                             >
                                                 이전 대화 더 보기
@@ -3532,14 +4511,7 @@ const InsightChatSectionComponent = () => {
                                     ) : null}
 
                                     {visibleMessages.map((message) => {
-                                        const visibleIndex = activeConversation?.messages.findIndex((entry) => entry.id === message.id) ?? -1;
-                                        const previousMessages = visibleIndex > 0
-                                            ? (activeConversation?.messages.slice(0, visibleIndex) ?? [])
-                                            : [];
-                                        const previousUserMessage = previousMessages
-                                            .slice()
-                                            .reverse()
-                                            .find((entry) => entry.role === 'user') ?? null;
+                                        const previousUserMessage = previousUserMessageById.get(message.id) ?? null;
 
                                         const followUpPrompts = message.role === 'assistant'
                                             ? deriveFollowUpPromptSuggestions(
@@ -3552,19 +4524,15 @@ const InsightChatSectionComponent = () => {
                                         return (
                                             <ChatBubble
                                                 key={message.id}
-                                                message={{
-                                                    ...message,
-                                                    followUpPrompts,
-                                                }}
+                                                message={message}
+                                                followUpPrompts={followUpPrompts}
                                                 canEdit={message.id === latestEditableUserMessageId}
                                                 onEditMessage={handleEditMessage}
-                                                onFollowUpPrompt={(prompt) => {
-                                                    const normalizedPrompt = sanitizeFollowUpPromptText(prompt);
-                                                    if (!normalizedPrompt || isStreamingInFlight) {
-                                                        return;
-                                                    }
-                                                    void sendMessage(normalizedPrompt);
-                                                }}
+                                                canRegenerate={!!(message.role === 'assistant' && previousUserMessage?.content.trim() && !isStreamingInFlight)}
+                                                onRegenerate={handleRegenerateAssistantMessage}
+                                                feedback={feedbackForMessage(message.id)}
+                                                onFeedback={handleFeedback}
+                                                onFollowUpPrompt={handleFollowUpPromptSelect}
                                                 isFollowUpDisabled={isStreamingInFlight}
                                             />
                                         );
@@ -3668,6 +4636,40 @@ const InsightChatSectionComponent = () => {
                                             >
                                                 <span>{profile.name}</span>
                                                 {profile.id === imageModelProfile ? <Check className="h-3 w-3 text-emerald-600" /> : null}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <div ref={responseModeDropdownRef} className="relative shrink-0">
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white border-emerald-300 text-emerald-700',
+                                    )}
+                                    onClick={() => setShowResponseModeDropdown((prev) => !prev)}
+                                >
+                                    <span>{activeConversationResponseModeLabel}</span>
+                                    <ChevronDown className="h-3 w-3" />
+                                </button>
+
+                                {showResponseModeDropdown ? (
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                        {CHAT_RESPONSE_MODES.map((mode) => (
+                                            <button
+                                                key={mode.value}
+                                                type="button"
+                                                className={cn(
+                                                    'w-full text-left px-3 py-2 text-xs flex flex-col',
+                                                    mode.value === activeConversationResponseMode
+                                                        ? 'bg-[#f0fdf4] text-[#065f46]'
+                                                        : 'hover:bg-[#f9fafb] text-[#111827]',
+                                                )}
+                                                onClick={() => setActiveConversationResponseMode(mode.value)}
+                                            >
+                                                <span className="font-medium">{mode.label}</span>
+                                                <span className="text-[11px] text-[#6b7280]">{mode.description}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -3796,6 +4798,26 @@ const InsightChatSectionComponent = () => {
                                 </div>
                             )}
                     </div>
+                    {draftAttachments.length > 0 ? (
+                        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                            {draftAttachments.map((attachment) => (
+                                <span
+                                    key={attachment.id}
+                                    className="inline-flex items-center gap-1 rounded-full border border-[#d1d5db] bg-[#f9fafb] px-2 py-0.5 text-[11px] text-[#374151]"
+                                >
+                                    <span className="max-w-[180px] truncate" title={attachment.name}>{attachment.name}</span>
+                                    <button
+                                        type="button"
+                                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[#6b7280] hover:bg-[#e5e7eb]"
+                                        onClick={() => handleRemoveAttachment(attachment.id)}
+                                        aria-label={`${attachment.name} 첨부 제거`}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    ) : null}
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
@@ -3826,7 +4848,27 @@ const InsightChatSectionComponent = () => {
                                     <Square className="h-4 w-4" />
                                 </Button>
                             ) : null}
+                            <Button
+                                type="button"
+                                className="h-11 px-2"
+                                variant="outline"
+                                onClick={handleOpenAttachmentPicker}
+                                disabled={draftAttachments.length >= MAX_CHAT_ATTACHMENTS || !!activeConversation?.isBooting || !!isStreamingInFlight}
+                                title="txt/csv 첨부"
+                            >
+                                <Paperclip className="h-4 w-4" />
+                            </Button>
                         </div>
+                        <input
+                            ref={attachmentInputRef}
+                            type="file"
+                            accept=".txt,.csv,text/plain,text/csv,application/csv,application/vnd.ms-excel"
+                            multiple
+                            onChange={(event) => {
+                                void handleAttachmentFileChange(event);
+                            }}
+                            className="hidden"
+                        />
                         <Input
                             ref={inputRef}
                             value={inputValue}

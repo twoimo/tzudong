@@ -7,6 +7,10 @@ type FallbackResponseOptions = {
     error?: string;
     sources?: InsightChatSource[];
     asOf?: string;
+    responseMode?: 'fast' | 'deep' | 'structured';
+    confidence?: number;
+    latencyMs?: number;
+    toolTrace?: string[];
 };
 
 export const INSIGHT_CHAT_FALLBACK_CONTENTS = {
@@ -26,6 +30,10 @@ export function buildInsightChatFallbackResponse(options: FallbackResponseOption
         meta: {
             source: 'fallback',
             fallbackReason: options.fallbackReason,
+            responseMode: options.responseMode,
+            confidence: options.confidence,
+            latencyMs: options.latencyMs,
+            toolTrace: options.toolTrace,
             ...(options.requestId ? { requestId: options.requestId } : {}),
         },
         sources: options.sources || [],

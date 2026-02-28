@@ -9,6 +9,18 @@ const runDbAudit = args.has('--db') || args.has('--db-audit');
 const runOnlyLive = runLive && !args.has('--mock');
 
 const BASE_URL = process.env.INSIGHT_CHAT_QA_BASE_URL ?? 'http://localhost:8080';
+function resolveBaseUrlPort(baseUrl) {
+    try {
+        const parsed = new URL(baseUrl);
+        if (parsed.port) {
+            return parsed.port;
+        }
+        return parsed.protocol === 'https:' ? '443' : '80';
+    } catch {
+        return '8080';
+    }
+}
+const BASE_URL_PORT = resolveBaseUrlPort(BASE_URL);
 function getAdminCookie() {
     return resolveAdminSessionCookie() ?? '';
 }
@@ -22,6 +34,7 @@ const qaRunSummary = {
     },
     baseUrl: BASE_URL,
     checks: {
+        occupancy: { status: 'PENDING' },
         mocked: { status: runOnlyLive ? 'SKIP' : 'PENDING' },
         db: { status: runDbAudit ? 'PENDING' : 'SKIP' },
         live: { status: 'PENDING' },
@@ -115,6 +128,122 @@ function recordSkip(checkName, reason, details) {
     const entry = { check: checkName, reason, details };
     qaRunSummary.skipReasons.push(entry);
     return entry;
+}
+
+function checkSingleDevServerPolicy() {
+    const command = `lsof -i :${BASE_URL_PORT} -nP -sTCP:LISTEN | awk 'NR > 1 {print $2}'`;
+    const result = spawnSync('bash', ['-lc', command], {
+        stdio: 'pipe',
+        encoding: 'utf8',
+    });
+
+    if (result.error) {
+        return {
+            ok: false,
+            reason: 'lsof command failed',
+            details: String(result.error),
+        };
+    }
+
+    const output = result.stdout?.toString?.() ?? '';
+    const pids = output
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    const uniquePids = new Set(pids);
+    if (uniquePids.size === 0) {
+        return {
+            ok: false,
+            reason: `no-listening-process-on-${BASE_URL_PORT}`,
+            details: `${BASE_URL_PORT} 포트에 바인딩된 실행 프로세스가 없습니다.`,
+        };
+    }
+
+    if (uniquePids.size > 1) {
+        return {
+            ok: false,
+            reason: `multiple-processes-on-${BASE_URL_PORT}`,
+            details: `동시 실행 감지: ${[...uniquePids].join(', ')} 총 ${uniquePids.size}개`,
+        };
+    }
+
+    return { ok: true };
+}
+
+function checkNoConcurrentPlaywrightSessions() {
+    const result = spawnSync('bash', ['-lc', 'ps -ef | grep -i "[Pp]laywright" | grep -v grep | awk \'{print $2}\''], {
+        stdio: 'pipe',
+        encoding: 'utf8',
+    });
+
+    if (result.error) {
+        return {
+            ok: false,
+            reason: 'playwright-process-check-failed',
+            details: String(result.error),
+        };
+    }
+
+    const pids = (result.stdout?.toString?.() ?? '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (pids.length > 0) {
+        return {
+            ok: false,
+            reason: 'concurrent-playwright-processes',
+            details: `동일 호스트에서 Playwright 프로세스가 감지됨: ${pids.join(', ')}`,
+        };
+    }
+
+    return { ok: true };
+}
+
+function runOccupancyGuards() {
+    const occupancyChecks = [];
+
+    const devServerCheck = checkSingleDevServerPolicy();
+    if (!devServerCheck.ok) {
+        occupancyChecks.push({
+            ok: false,
+            check: 'single-dev-server',
+            name: 'single-dev-server',
+            reason: devServerCheck.reason,
+            details: devServerCheck.details,
+        });
+    }
+
+    const playwrightCheck = checkNoConcurrentPlaywrightSessions();
+    if (!playwrightCheck.ok) {
+        occupancyChecks.push({
+            ok: false,
+            check: 'no-concurrent-playwright',
+            name: 'no-concurrent-playwright',
+            reason: playwrightCheck.reason,
+            details: playwrightCheck.details,
+        });
+    }
+
+    if (occupancyChecks.length > 0) {
+        for (const entry of occupancyChecks) {
+            console.error(`[qa][FAIL] ${entry.check}: ${entry.reason} - ${entry.details}`);
+            qaRunSummary.checks[entry.check] = {
+                status: 'FAIL',
+                reason: entry.reason,
+                details: entry.details,
+            };
+        }
+        qaRunSummary.checks.occupancy = {
+            status: 'FAIL',
+            checks: occupancyChecks,
+        };
+        return { ok: false };
+    }
+
+    qaRunSummary.checks.occupancy = { status: 'PASS' };
+    return { ok: true };
 }
 
 function runCommand(label, command, commandArgs, checkName) {
@@ -435,13 +564,35 @@ async function runLiveChecks() {
         };
     }
 
-    if (runLive || !runOnlyLive) {
+    if (runOnlyLive || runLive) {
+        const adminCookie = getAdminCookie();
+        if (!adminCookie) {
+            qaRunSummary.checks.occupancy = {
+                status: 'SKIP',
+                reason: 'missing admin session cookie',
+            };
+        } else {
+            const occupancy = runOccupancyGuards();
+            if (!occupancy.ok) {
+                qaRunSummary.result = 'FAIL';
+                qaRunSummary.endedAt = new Date().toISOString();
+                console.error('[qa][FAIL] occupancy guardrails failed before live execution.');
+                process.exitCode = 1;
+                console.log('[qa] ===== QA run summary =====');
+                console.log(JSON.stringify(qaRunSummary, null, 2));
+                return;
+            }
+        }
         const livePassed = await runLiveChecks();
         passed = passed && livePassed;
     } else {
         qaRunSummary.checks.live = {
             status: 'SKIP',
             reason: 'not requested',
+        };
+        qaRunSummary.checks.occupancy = {
+            status: 'SKIP',
+            reason: 'live checks not requested',
         };
     }
 
