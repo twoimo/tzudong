@@ -4,7 +4,19 @@ import { streamAdminInsightChat } from '@/lib/insight/chat';
 import {
     CHAT_ROUTE_NO_STORE_HEADERS,
     INSIGHT_CHAT_FALLBACK_CONTENTS,
+    buildInsightChatRouteToolTrace,
     buildInsightChatFallbackResponse,
+    recordInsightChatRouteRequest,
+    deriveInsightChatCitationQuality,
+    recordInsightChatRouteProviderRequest,
+    recordInsightChatRouteResponseMode,
+    recordInsightChatRouteMemoryMode,
+    recordInsightChatRouteFeedback,
+    recordInsightChatRouteCitationQuality,
+    recordInsightChatRouteResponseSource,
+    recordInsightChatRouteFallbackResponse,
+    recordInsightChatRouteStreamResponse,
+    recordInsightChatRouteErrorResponse,
     evaluateInsightChatRouteGuardrails,
     logInsightChatRouteEvent,
 } from '@/lib/insight/insight-chat-route-utils';
@@ -38,6 +50,7 @@ export async function POST(request: NextRequest) {
             llmConfig,
             responseMode: parsedResponseMode,
             memoryMode: parsedMemoryMode,
+            memoryProfileNote,
             attachments,
             contextMessages,
             feedbackContext,
@@ -46,9 +59,15 @@ export async function POST(request: NextRequest) {
             invalidAttachmentReason,
             invalidContextReason,
         } = parseInsightChatRequestBody(await request.json().catch(() => null));
-            responseMode = parsedResponseMode;
-            memoryMode = parsedMemoryMode ?? 'off';
+        responseMode = parsedResponseMode;
+        memoryMode = parsedMemoryMode ?? 'off';
         requestId = parsedRequestId;
+        recordInsightChatRouteRequest('stream');
+        recordInsightChatRouteResponseMode('stream', responseMode);
+        recordInsightChatRouteMemoryMode('stream', memoryMode);
+        recordInsightChatRouteFeedback('stream', feedbackContext);
+        const provider = llmConfig?.provider;
+        recordInsightChatRouteProviderRequest('stream', provider);
         logInsightChatRouteEvent('stream', 'request.parsed', {
             requestId,
             hasLlmConfig: !!llmConfig,
@@ -65,9 +84,12 @@ export async function POST(request: NextRequest) {
                 requestId,
                 latencyMs,
                 fallbackReason: 'invalid_attachment',
-                toolTrace: ['route:stream', 'request.invalid_attachment', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+                toolTrace: buildInsightChatRouteToolTrace('stream', 'request.invalid_attachment', memoryMode),
                 skipLatencyBudgetCheck: true,
             });
+            recordInsightChatRouteResponseSource('stream', 'fallback');
+            recordInsightChatRouteCitationQuality('stream', []);
+            recordInsightChatRouteFallbackResponse('stream');
 
             return NextResponse.json(
                 buildInsightChatFallbackResponse({
@@ -97,9 +119,12 @@ export async function POST(request: NextRequest) {
                 requestId,
                 latencyMs,
                 fallbackReason: 'invalid_feedback',
-                toolTrace: ['route:stream', 'request.invalid_feedback', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+                toolTrace: buildInsightChatRouteToolTrace('stream', 'request.invalid_feedback', memoryMode),
                 skipLatencyBudgetCheck: true,
             });
+            recordInsightChatRouteResponseSource('stream', 'fallback');
+            recordInsightChatRouteCitationQuality('stream', []);
+            recordInsightChatRouteFallbackResponse('stream');
 
             return NextResponse.json(
                 buildInsightChatFallbackResponse({
@@ -129,9 +154,12 @@ export async function POST(request: NextRequest) {
                 requestId,
                 latencyMs,
                 fallbackReason: 'invalid_context',
-                toolTrace: ['route:stream', 'request.invalid_context', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+                toolTrace: buildInsightChatRouteToolTrace('stream', 'request.invalid_context', memoryMode),
                 skipLatencyBudgetCheck: true,
             });
+            recordInsightChatRouteResponseSource('stream', 'fallback');
+            recordInsightChatRouteCitationQuality('stream', []);
+            recordInsightChatRouteFallbackResponse('stream');
 
             return NextResponse.json(
                 buildInsightChatFallbackResponse({
@@ -161,9 +189,12 @@ export async function POST(request: NextRequest) {
                 requestId,
                 latencyMs,
                 fallbackReason: 'policy_rejection',
-                toolTrace: ['route:stream', 'request.policy_blocked', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+                toolTrace: buildInsightChatRouteToolTrace('stream', 'request.policy_blocked', memoryMode),
                 skipLatencyBudgetCheck: true,
             });
+            recordInsightChatRouteResponseSource('stream', 'fallback');
+            recordInsightChatRouteCitationQuality('stream', []);
+            recordInsightChatRouteFallbackResponse('stream');
 
             return NextResponse.json(
                 buildInsightChatFallbackResponse({
@@ -190,9 +221,12 @@ export async function POST(request: NextRequest) {
                 requestId,
                 latencyMs,
                 fallbackReason: 'empty_input',
-                toolTrace: ['route:stream', 'request.empty_input', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+                toolTrace: buildInsightChatRouteToolTrace('stream', 'request.empty_input', memoryMode),
                 skipLatencyBudgetCheck: true,
             });
+            recordInsightChatRouteResponseSource('stream', 'fallback');
+            recordInsightChatRouteCitationQuality('stream', []);
+            recordInsightChatRouteFallbackResponse('stream');
             return NextResponse.json(
                 buildInsightChatFallbackResponse({
                     requestId,
@@ -225,6 +259,7 @@ export async function POST(request: NextRequest) {
                 feedbackContext,
                 attachments,
                 contextMessages,
+                memoryProfileNote,
             ),
             new Promise<typeof timedOut>((resolve) => {
                 setTimeout(() => resolve(timedOut), timeoutMs);
@@ -239,8 +274,11 @@ export async function POST(request: NextRequest) {
                 requestId,
                 latencyMs,
                 fallbackReason: 'route_timeout',
-                toolTrace: ['route:stream', 'request.timeout', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+                toolTrace: buildInsightChatRouteToolTrace('stream', 'request.timeout', memoryMode),
             });
+            recordInsightChatRouteErrorResponse('stream');
+            recordInsightChatRouteResponseSource('stream', 'fallback');
+            recordInsightChatRouteCitationQuality('stream', []);
             return NextResponse.json(
                 buildInsightChatFallbackResponse({
                     requestId,
@@ -261,12 +299,15 @@ export async function POST(request: NextRequest) {
             const fallbackReason = result.local.meta?.source === 'fallback'
                 ? result.local.meta?.fallbackReason
                 : undefined;
+            recordInsightChatRouteFallbackResponse('stream');
+            recordInsightChatRouteResponseSource('stream', 'local');
+            recordInsightChatRouteCitationQuality('stream', result.local.sources);
             const { toolTrace } = evaluateInsightChatRouteGuardrails({
                 route: 'stream',
                 requestId,
                 latencyMs,
                 fallbackReason,
-                toolTrace: [...(result.local.meta?.toolTrace ?? []), ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+                toolTrace: [...(result.local.meta?.toolTrace ?? []), `memoryMode:${memoryMode}`],
             });
         return NextResponse.json({
                 ...result.local,
@@ -274,6 +315,7 @@ export async function POST(request: NextRequest) {
                     ...(result.local.meta ?? { source: 'fallback' }),
                     latencyMs,
                     ...(memoryMode ? { memoryMode } : {}),
+                    citationQuality: deriveInsightChatCitationQuality(result.local.sources),
                     ...(toolTrace.length > 0 ? { toolTrace } : {}),
                 },
             }, {
@@ -282,13 +324,15 @@ export async function POST(request: NextRequest) {
         }
 
         logInsightChatRouteEvent('stream', 'response.stream', { requestId });
+        recordInsightChatRouteStreamResponse('stream');
+        recordInsightChatRouteResponseSource('stream', 'agent');
         evaluateInsightChatRouteGuardrails({
             route: 'stream',
-                requestId,
-                latencyMs: getElapsedMs(startedAt),
-                toolTrace: ['route:stream', 'response.stream', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
-            });
-        return new Response(result.stream, {
+            requestId,
+            latencyMs: getElapsedMs(startedAt),
+            toolTrace: buildInsightChatRouteToolTrace('stream', 'response.stream', memoryMode),
+        });
+            return new Response(result.stream, {
             headers: {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -308,8 +352,11 @@ export async function POST(request: NextRequest) {
             requestId,
             latencyMs,
             fallbackReason: 'stream_error',
-            toolTrace: ['route:stream', 'request.failed', ...(memoryMode ? [`memoryMode:${memoryMode}`] : [])],
+            toolTrace: buildInsightChatRouteToolTrace('stream', 'request.failed', memoryMode),
         });
+        recordInsightChatRouteErrorResponse('stream');
+        recordInsightChatRouteResponseSource('stream', 'fallback');
+        recordInsightChatRouteCitationQuality('stream', []);
         return NextResponse.json(
             buildInsightChatFallbackResponse({
                 requestId,

@@ -94,12 +94,44 @@ describe('insight chat metrics endpoint', () => {
                     reliability_fallback_streak_alerts: {
                         route_timeout: 1,
                     },
+                    total_requests: 0,
+                    success_responses: 0,
+                    fallback_responses: 0,
+                    stream_responses: 0,
+                    error_responses: 0,
+                    provider_request_counts: {},
+                    source_counts: {},
+                    fallback_totals: {
+                        route_timeout: 1,
+                    },
+                    citation_quality_counts: {},
+                    feedback_reason_category_counts: {},
+                    response_mode_counts: {},
+                    memory_mode_counts: {},
+                    feedback_rating_counts: {},
+                    feedback_has_reason_counts: {},
                 },
                 stream: {
                     latency_budget_exceeded: 1,
                     reliability_fallback_streak_alerts: {
                         server_error: 1,
                     },
+                    total_requests: 0,
+                    success_responses: 0,
+                    fallback_responses: 0,
+                    stream_responses: 0,
+                    error_responses: 0,
+                    provider_request_counts: {},
+                    source_counts: {},
+                    fallback_totals: {
+                        server_error: 1,
+                    },
+                    citation_quality_counts: {},
+                    feedback_reason_category_counts: {},
+                    response_mode_counts: {},
+                    memory_mode_counts: {},
+                    feedback_rating_counts: {},
+                    feedback_has_reason_counts: {},
                 },
             });
 
@@ -108,6 +140,32 @@ describe('insight chat metrics endpoint', () => {
             expect(snapshot.routes.chat.reliability_fallback_streak_alerts.route_timeout).toBe(1);
             expect(snapshot.routes.stream.latency_budget_exceeded).toBe(1);
             expect(snapshot.routes.stream.reliability_fallback_streak_alerts.server_error).toBe(1);
+            expect(snapshot.routes.chat.total_requests).toBe(0);
+            expect(snapshot.routes.chat.success_responses).toBe(0);
+            expect(snapshot.routes.chat.fallback_responses).toBe(0);
+            expect(snapshot.routes.chat.stream_responses).toBe(0);
+            expect(snapshot.routes.chat.error_responses).toBe(0);
+            expect(snapshot.routes.stream.total_requests).toBe(0);
+            expect(snapshot.routes.stream.success_responses).toBe(0);
+            expect(snapshot.routes.stream.fallback_responses).toBe(0);
+            expect(snapshot.routes.stream.stream_responses).toBe(0);
+            expect(snapshot.routes.stream.error_responses).toBe(0);
+            expect(snapshot.routes.chat.provider_request_counts).toEqual({});
+            expect(snapshot.routes.chat.source_counts).toEqual({});
+            expect(snapshot.routes.chat.fallback_totals).toEqual({ route_timeout: 1 });
+            expect(snapshot.routes.chat.citation_quality_counts).toEqual({});
+            expect(snapshot.routes.chat.response_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.memory_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_rating_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({});
+            expect(snapshot.routes.stream.provider_request_counts).toEqual({});
+            expect(snapshot.routes.stream.source_counts).toEqual({});
+            expect(snapshot.routes.stream.fallback_totals).toEqual({ server_error: 1 });
+            expect(snapshot.routes.stream.citation_quality_counts).toEqual({});
+            expect(snapshot.routes.stream.response_mode_counts).toEqual({});
+            expect(snapshot.routes.stream.memory_mode_counts).toEqual({});
+            expect(snapshot.routes.stream.feedback_rating_counts).toEqual({});
+            expect(snapshot.routes.stream.feedback_has_reason_counts).toEqual({});
         } finally {
             if (typeof originalEnv.guardrailsEnabled === 'undefined') {
                 delete process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED;
@@ -194,13 +252,52 @@ describe('insight chat metrics endpoint', () => {
             let snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
             expect(snapshot.routes.chat.latency_budget_exceeded).toBe(1);
             expect(snapshot.routes.chat.reliability_fallback_streak_alerts.route_timeout).toBe(1);
+            expect(snapshot.routes.chat.total_requests).toBe(0);
+            expect(snapshot.routes.chat.success_responses).toBe(0);
+            expect(snapshot.routes.chat.fallback_responses).toBe(0);
+            expect(snapshot.routes.chat.stream_responses).toBe(0);
+            expect(snapshot.routes.chat.error_responses).toBe(0);
+            expect(snapshot.routes.chat.provider_request_counts).toEqual({});
+            expect(snapshot.routes.chat.source_counts).toEqual({});
+            expect(snapshot.routes.chat.fallback_totals).toEqual({ route_timeout: 1 });
+            expect(snapshot.routes.chat.citation_quality_counts).toEqual({});
+            expect(snapshot.routes.chat.response_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.memory_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_rating_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({});
 
             resetInsightChatRouteGuardrails();
             snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
             expect(snapshot.routes.chat.latency_budget_exceeded).toBe(0);
             expect(snapshot.routes.chat.reliability_fallback_streak_alerts).toEqual({});
+            expect(snapshot.routes.chat.total_requests).toBe(0);
+            expect(snapshot.routes.chat.success_responses).toBe(0);
+            expect(snapshot.routes.chat.fallback_responses).toBe(0);
+            expect(snapshot.routes.chat.stream_responses).toBe(0);
+            expect(snapshot.routes.chat.error_responses).toBe(0);
+            expect(snapshot.routes.chat.provider_request_counts).toEqual({});
+            expect(snapshot.routes.chat.source_counts).toEqual({});
+            expect(snapshot.routes.chat.fallback_totals).toEqual({});
+            expect(snapshot.routes.chat.citation_quality_counts).toEqual({});
+            expect(snapshot.routes.chat.response_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.memory_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_rating_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({});
             expect(snapshot.routes.stream.latency_budget_exceeded).toBe(0);
             expect(snapshot.routes.stream.reliability_fallback_streak_alerts).toEqual({});
+            expect(snapshot.routes.stream.total_requests).toBe(0);
+            expect(snapshot.routes.stream.success_responses).toBe(0);
+            expect(snapshot.routes.stream.fallback_responses).toBe(0);
+            expect(snapshot.routes.stream.stream_responses).toBe(0);
+            expect(snapshot.routes.stream.error_responses).toBe(0);
+            expect(snapshot.routes.stream.provider_request_counts).toEqual({});
+            expect(snapshot.routes.stream.source_counts).toEqual({});
+            expect(snapshot.routes.stream.fallback_totals).toEqual({});
+            expect(snapshot.routes.stream.citation_quality_counts).toEqual({});
+            expect(snapshot.routes.stream.response_mode_counts).toEqual({});
+            expect(snapshot.routes.stream.memory_mode_counts).toEqual({});
+            expect(snapshot.routes.stream.feedback_rating_counts).toEqual({});
+            expect(snapshot.routes.stream.feedback_has_reason_counts).toEqual({});
         } finally {
             delete process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED;
             delete process.env.INSIGHT_CHAT_LATENCY_BUDGET_MS;
@@ -248,8 +345,18 @@ describe('insight chat metrics endpoint', () => {
             let snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
             expect(snapshot.routes.chat.latency_budget_exceeded).toBe(1);
             expect(snapshot.routes.chat.reliability_fallback_streak_alerts.route_timeout).toBe(1);
+            expect(snapshot.routes.chat.total_requests).toBe(0);
+            expect(snapshot.routes.chat.success_responses).toBe(0);
+            expect(snapshot.routes.chat.fallback_responses).toBe(0);
+            expect(snapshot.routes.chat.stream_responses).toBe(0);
+            expect(snapshot.routes.chat.error_responses).toBe(0);
             expect(snapshot.routes.stream.latency_budget_exceeded).toBe(1);
             expect(snapshot.routes.stream.reliability_fallback_streak_alerts.server_error).toBe(1);
+            expect(snapshot.routes.stream.total_requests).toBe(0);
+            expect(snapshot.routes.stream.success_responses).toBe(0);
+            expect(snapshot.routes.stream.fallback_responses).toBe(0);
+            expect(snapshot.routes.stream.stream_responses).toBe(0);
+            expect(snapshot.routes.stream.error_responses).toBe(0);
 
             const response = await postMetricsReset(createMetricsRequest('POST', '/reset'));
             expect(response.status).toBe(200);
@@ -261,14 +368,66 @@ describe('insight chat metrics endpoint', () => {
             snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
             expect(snapshot.routes.chat.latency_budget_exceeded).toBe(0);
             expect(snapshot.routes.chat.reliability_fallback_streak_alerts).toEqual({});
+            expect(snapshot.routes.chat.total_requests).toBe(0);
+            expect(snapshot.routes.chat.success_responses).toBe(0);
+            expect(snapshot.routes.chat.fallback_responses).toBe(0);
+            expect(snapshot.routes.chat.stream_responses).toBe(0);
+            expect(snapshot.routes.chat.error_responses).toBe(0);
+            expect(snapshot.routes.chat.provider_request_counts).toEqual({});
+            expect(snapshot.routes.chat.source_counts).toEqual({});
+            expect(snapshot.routes.chat.fallback_totals).toEqual({});
+            expect(snapshot.routes.chat.citation_quality_counts).toEqual({});
+            expect(snapshot.routes.chat.response_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.memory_mode_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_rating_counts).toEqual({});
+            expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({});
             expect(snapshot.routes.stream.latency_budget_exceeded).toBe(0);
             expect(snapshot.routes.stream.reliability_fallback_streak_alerts).toEqual({});
+            expect(snapshot.routes.stream.total_requests).toBe(0);
+            expect(snapshot.routes.stream.success_responses).toBe(0);
+            expect(snapshot.routes.stream.fallback_responses).toBe(0);
+            expect(snapshot.routes.stream.stream_responses).toBe(0);
+            expect(snapshot.routes.stream.error_responses).toBe(0);
+            expect(snapshot.routes.stream.provider_request_counts).toEqual({});
+            expect(snapshot.routes.stream.source_counts).toEqual({});
+            expect(snapshot.routes.stream.fallback_totals).toEqual({});
+            expect(snapshot.routes.stream.citation_quality_counts).toEqual({});
+            expect(snapshot.routes.stream.response_mode_counts).toEqual({});
+            expect(snapshot.routes.stream.memory_mode_counts).toEqual({});
+            expect(snapshot.routes.stream.feedback_rating_counts).toEqual({});
+            expect(snapshot.routes.stream.feedback_has_reason_counts).toEqual({});
 
             const metricsResponse = await getMetrics(createMetricsRequest());
             expect(metricsResponse.status).toBe(200);
             const payload = await metricsResponse.json();
             expect(payload.routes.chat.latency_budget_exceeded).toBe(0);
             expect(payload.routes.stream.latency_budget_exceeded).toBe(0);
+            expect(payload.routes.chat.total_requests).toBe(0);
+            expect(payload.routes.chat.success_responses).toBe(0);
+            expect(payload.routes.chat.fallback_responses).toBe(0);
+            expect(payload.routes.chat.stream_responses).toBe(0);
+            expect(payload.routes.chat.error_responses).toBe(0);
+            expect(payload.routes.stream.total_requests).toBe(0);
+            expect(payload.routes.stream.success_responses).toBe(0);
+            expect(payload.routes.stream.fallback_responses).toBe(0);
+            expect(payload.routes.stream.stream_responses).toBe(0);
+            expect(payload.routes.stream.error_responses).toBe(0);
+            expect(payload.routes.chat.provider_request_counts).toEqual({});
+            expect(payload.routes.chat.source_counts).toEqual({});
+            expect(payload.routes.chat.fallback_totals).toEqual({});
+            expect(payload.routes.chat.citation_quality_counts).toEqual({});
+            expect(payload.routes.chat.response_mode_counts).toEqual({});
+            expect(payload.routes.chat.memory_mode_counts).toEqual({});
+            expect(payload.routes.chat.feedback_rating_counts).toEqual({});
+            expect(payload.routes.chat.feedback_has_reason_counts).toEqual({});
+            expect(payload.routes.stream.provider_request_counts).toEqual({});
+            expect(payload.routes.stream.source_counts).toEqual({});
+            expect(payload.routes.stream.fallback_totals).toEqual({});
+            expect(payload.routes.stream.citation_quality_counts).toEqual({});
+            expect(payload.routes.stream.response_mode_counts).toEqual({});
+            expect(payload.routes.stream.memory_mode_counts).toEqual({});
+            expect(payload.routes.stream.feedback_rating_counts).toEqual({});
+            expect(payload.routes.stream.feedback_has_reason_counts).toEqual({});
             expect(payload.guardrailConfig).toEqual({
                 enabled: true,
                 latencyBudgetMs: 5,
@@ -282,6 +441,483 @@ describe('insight chat metrics endpoint', () => {
             delete process.env.INSIGHT_CHAT_FALLBACK_STREAK_THRESHOLD;
             delete process.env.INSIGHT_CHAT_FALLBACK_STREAK_WINDOW_MS;
             delete process.env.INSIGHT_CHAT_FALLBACK_ALERT_COOLDOWN_MS;
+            mock.restore();
+        }
+    });
+
+    test('chat and stream routes increment provider/source/fallback metrics independently', async () => {
+        const originalChatRouteTimeout = process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS;
+        const originalStreamRouteTimeout = process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS;
+        const originalGuardrailsEnabled = process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED;
+        const originalLatencyBudget = process.env.INSIGHT_CHAT_LATENCY_BUDGET_MS;
+        const originalFallbackThreshold = process.env.INSIGHT_CHAT_FALLBACK_STREAK_THRESHOLD;
+        const originalFallbackWindow = process.env.INSIGHT_CHAT_FALLBACK_STREAK_WINDOW_MS;
+        const originalFallbackCooldown = process.env.INSIGHT_CHAT_FALLBACK_ALERT_COOLDOWN_MS;
+
+        mock.restore();
+        setAuthMock('ok');
+        process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED = 'true';
+        process.env.INSIGHT_CHAT_FALLBACK_STREAK_THRESHOLD = '5';
+        process.env.INSIGHT_CHAT_FALLBACK_STREAK_WINDOW_MS = '120000';
+        process.env.INSIGHT_CHAT_FALLBACK_ALERT_COOLDOWN_MS = '1';
+        process.env.INSIGHT_CHAT_LATENCY_BUDGET_MS = '10000';
+        process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS = '10';
+        process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS = '10';
+
+        mock.module('@/lib/insight/chat', () => ({
+            answerAdminInsightChat: async (
+                message: string,
+                _llmConfig: unknown,
+                requestId: string | undefined,
+            ) => {
+                if (message === 'chat-timeout') {
+                    await new Promise((resolve) => setTimeout(resolve, 40));
+                }
+                const source = message === 'chat-success-openai' ? 'openai' : 'gemini';
+                const fallbackReason = message === 'chat-fallback' ? 'llm_unavailable' : undefined;
+                const sources = message === 'chat-success-gemini'
+                    ? [
+                        { sourceName: 'manual', text: 'A', videoTitle: 'video-a', youtubeLink: 'https://a', timestamp: '00:00' },
+                        { sourceName: 'manual', text: 'B', videoTitle: 'video-b', youtubeLink: 'https://b', timestamp: '00:01' },
+                        { sourceName: 'manual', text: 'C', videoTitle: 'video-c', youtubeLink: 'https://c', timestamp: '00:02' },
+                        { sourceName: 'manual', text: 'D', videoTitle: 'video-d', youtubeLink: 'https://d', timestamp: '00:03' },
+                        { sourceName: 'manual', text: 'E', videoTitle: 'video-e', youtubeLink: 'https://e', timestamp: '00:04' },
+                    ]
+                    : [];
+                return {
+                    asOf: '2026-02-27T00:00:00.000Z',
+                    content: `chat-response:${message}`,
+                    sources: [],
+                    ...(sources.length > 0 ? { sources } : {}),
+                    meta: {
+                        source: message === 'chat-fallback' ? 'fallback' : source,
+                        requestId,
+                        ...(fallbackReason ? { fallbackReason } : {}),
+                    },
+                };
+            },
+            streamAdminInsightChat: async (
+                message: string,
+                _llmConfig: unknown,
+                _signal: AbortSignal | undefined,
+                requestId: string | undefined,
+            ) => {
+                if (message === 'stream-timeout') {
+                    await new Promise((resolve) => setTimeout(resolve, 40));
+                }
+                if (message === 'stream-local') {
+                    return {
+                        local: {
+                            asOf: '2026-02-27T00:00:00.000Z',
+                            content: 'stream-local',
+                            sources: [
+                                {
+                                    sourceName: 'manual',
+                                    text: 'stream source 1',
+                                    videoTitle: 'video-x',
+                                    youtubeLink: 'https://x',
+                                    timestamp: '00:01',
+                                },
+                                {
+                                    sourceName: 'manual',
+                                    text: 'stream source 2',
+                                    videoTitle: 'video-y',
+                                    youtubeLink: 'https://y',
+                                    timestamp: '00:02',
+                                },
+                            ],
+                            meta: {
+                                source: 'fallback',
+                                requestId,
+                                fallbackReason: 'llm_unavailable',
+                            },
+                        },
+                    };
+                }
+
+                const encoder = new TextEncoder();
+                return {
+                    stream: new ReadableStream({
+                        start(controller) {
+                            controller.enqueue(encoder.encode('data: [DONE]\\n\\n'));
+                            controller.close();
+                        },
+                    }),
+                };
+            },
+            getAdminInsightChatBootstrap: async () => ({
+                asOf: '2026-02-27T00:00:00.000Z',
+                message: {
+                    content: 'mock bootstrap',
+                    sources: [],
+                },
+            }),
+        }));
+
+        const {
+            resetInsightChatRouteGuardrails,
+            getInsightChatRouteGuardrailMetricsSnapshot,
+        } = await import('@/lib/insight/insight-chat-route-utils');
+        const { POST: chatPOST } = await import('@/app/api/admin/insight/chat/route');
+        const { POST: streamPOST } = await import('@/app/api/admin/insight/chat/stream/route');
+
+        const createRequest = (path: string, body?: Record<string, unknown>) => new NextRequest(
+            `http://localhost:8080${path}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body ? JSON.stringify(body) : undefined,
+            },
+        );
+
+        try {
+            resetInsightChatRouteGuardrails();
+
+            await chatPOST(createRequest('/api/admin/insight/chat', {
+                message: 'chat-success-gemini',
+                requestId: 'chat-success-gemini',
+                provider: 'gemini',
+                model: 'gemini-pro',
+                responseMode: 'fast',
+                memoryMode: 'session',
+                feedbackContext: {
+                    rating: 'up',
+                    reason: 'concise',
+                },
+            }));
+            await chatPOST(createRequest('/api/admin/insight/chat', {
+                message: '   ',
+                requestId: 'chat-invalid-input',
+                provider: 'openai',
+                model: 'gpt-4',
+                responseMode: 'deep',
+                memoryMode: 'pinned',
+                feedbackContext: {
+                    rating: 'down',
+                },
+            }));
+            await chatPOST(createRequest('/api/admin/insight/chat', {
+                message: 'chat-timeout',
+                requestId: 'chat-timeout',
+                provider: 'gemini',
+                model: 'gemini-pro',
+                responseMode: 'structured',
+                memoryMode: 'off',
+            }));
+            await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+                message: 'stream-local',
+                requestId: 'stream-local',
+                provider: 'anthropic',
+                model: 'claude-3',
+                responseMode: 'fast',
+                memoryMode: 'session',
+                feedbackContext: {
+                    rating: 'up',
+                    reason: 'local-fallback',
+                },
+            }));
+            await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+                message: 'stream-timeout',
+                requestId: 'stream-timeout',
+                provider: 'openai',
+                model: 'gpt-4',
+                responseMode: 'deep',
+                memoryMode: 'pinned',
+                feedbackContext: {
+                    rating: 'down',
+                },
+            }));
+            const streamSuccess = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+                message: 'stream-success',
+                requestId: 'stream-success',
+                provider: 'openai',
+                model: 'gpt-4',
+                responseMode: 'structured',
+                memoryMode: 'off',
+                feedbackContext: {
+                    rating: 'up',
+                },
+            }));
+            expect(streamSuccess.status).toBe(200);
+
+            const snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
+            expect(snapshot.routes.chat.provider_request_counts).toEqual({
+                gemini: 2,
+                openai: 1,
+            });
+            expect(snapshot.routes.chat.total_requests).toBe(3);
+            expect(snapshot.routes.chat.success_responses).toBe(1);
+            expect(snapshot.routes.chat.fallback_responses).toBe(1);
+            expect(snapshot.routes.chat.stream_responses).toBe(0);
+            expect(snapshot.routes.chat.error_responses).toBe(1);
+            expect(snapshot.routes.chat.source_counts).toEqual({
+                gemini: 1,
+                fallback: 2,
+            });
+            expect(snapshot.routes.chat.response_mode_counts).toEqual({
+                fast: 1,
+                deep: 1,
+                structured: 1,
+            });
+            expect(snapshot.routes.chat.memory_mode_counts).toEqual({
+                session: 1,
+                pinned: 1,
+                off: 1,
+            });
+            expect(snapshot.routes.chat.feedback_rating_counts).toEqual({
+                up: 1,
+                down: 1,
+            });
+            expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({
+                with_reason: 1,
+                without_reason: 1,
+            });
+            expect(snapshot.routes.chat.fallback_totals).toEqual({
+                empty_input: 1,
+                route_timeout: 1,
+            });
+            expect(snapshot.routes.chat.citation_quality_counts).toEqual({
+                high: 1,
+                none: 2,
+            });
+            expect(snapshot.routes.stream.provider_request_counts).toEqual({
+                anthropic: 1,
+                openai: 2,
+            });
+            expect(snapshot.routes.stream.total_requests).toBe(3);
+            expect(snapshot.routes.stream.success_responses).toBe(0);
+            expect(snapshot.routes.stream.fallback_responses).toBe(1);
+            expect(snapshot.routes.stream.stream_responses).toBe(1);
+            expect(snapshot.routes.stream.error_responses).toBe(1);
+            expect(snapshot.routes.stream.source_counts).toEqual({
+                local: 1,
+                fallback: 1,
+                agent: 1,
+            });
+            expect(snapshot.routes.stream.response_mode_counts).toEqual({
+                fast: 1,
+                deep: 1,
+                structured: 1,
+            });
+            expect(snapshot.routes.stream.memory_mode_counts).toEqual({
+                session: 1,
+                pinned: 1,
+                off: 1,
+            });
+            expect(snapshot.routes.stream.feedback_rating_counts).toEqual({
+                up: 2,
+                down: 1,
+            });
+            expect(snapshot.routes.stream.feedback_has_reason_counts).toEqual({
+                with_reason: 1,
+                without_reason: 2,
+            });
+            expect(snapshot.routes.stream.fallback_totals).toEqual({
+                llm_unavailable: 1,
+                route_timeout: 1,
+            });
+            expect(snapshot.routes.stream.citation_quality_counts).toEqual({
+                low: 1,
+                none: 1,
+            });
+        } finally {
+            if (typeof originalChatRouteTimeout === 'undefined') {
+                delete process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS;
+            } else {
+                process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS = originalChatRouteTimeout;
+            }
+            if (typeof originalStreamRouteTimeout === 'undefined') {
+                delete process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS;
+            } else {
+                process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS = originalStreamRouteTimeout;
+            }
+            if (typeof originalGuardrailsEnabled === 'undefined') {
+                delete process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED;
+            } else {
+                process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED = originalGuardrailsEnabled;
+            }
+            if (typeof originalLatencyBudget === 'undefined') {
+                delete process.env.INSIGHT_CHAT_LATENCY_BUDGET_MS;
+            } else {
+                process.env.INSIGHT_CHAT_LATENCY_BUDGET_MS = originalLatencyBudget;
+            }
+            if (typeof originalFallbackThreshold === 'undefined') {
+                delete process.env.INSIGHT_CHAT_FALLBACK_STREAK_THRESHOLD;
+            } else {
+                process.env.INSIGHT_CHAT_FALLBACK_STREAK_THRESHOLD = originalFallbackThreshold;
+            }
+            if (typeof originalFallbackWindow === 'undefined') {
+                delete process.env.INSIGHT_CHAT_FALLBACK_STREAK_WINDOW_MS;
+            } else {
+                process.env.INSIGHT_CHAT_FALLBACK_STREAK_WINDOW_MS = originalFallbackWindow;
+            }
+            if (typeof originalFallbackCooldown === 'undefined') {
+                delete process.env.INSIGHT_CHAT_FALLBACK_ALERT_COOLDOWN_MS;
+            } else {
+                process.env.INSIGHT_CHAT_FALLBACK_ALERT_COOLDOWN_MS = originalFallbackCooldown;
+            }
+            mock.restore();
+        }
+    });
+
+    test('collapses unknown metric values into bounded "other" buckets', async () => {
+        const originalChatRouteTimeout = process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS;
+        const originalStreamRouteTimeout = process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS;
+        const originalGuardrailsEnabled = process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED;
+
+        mock.restore();
+        setAuthMock('ok');
+        process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED = 'true';
+        process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS = '10';
+        process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS = '10';
+
+        mock.module('@/lib/insight/chat', () => ({
+            answerAdminInsightChat: async (_message: string, _llmConfig: unknown, requestId: string | undefined) => ({
+                asOf: '2026-02-27T00:00:00.000Z',
+                content: `chat-response:${requestId}`,
+                sources: [],
+                meta: {
+                    source: 'fallback',
+                    requestId,
+                    fallbackReason: 'mystery_fallback',
+                },
+            }),
+            streamAdminInsightChat: async (message: string, _llmConfig: unknown, _signal: AbortSignal | undefined, requestId: string | undefined) => {
+                if (message === 'stream-local-unknown') {
+                    return {
+                        local: {
+                            asOf: '2026-02-27T00:00:00.000Z',
+                            content: 'stream-local',
+                            sources: [],
+                            meta: {
+                                source: 'fallback',
+                                requestId,
+                                fallbackReason: 'mystery-stream-fallback',
+                            },
+                        },
+                    };
+                }
+
+                const encoder = new TextEncoder();
+                return {
+                    stream: new ReadableStream({
+                        start(controller) {
+                            controller.enqueue(encoder.encode('data: [DONE]\\n\\n'));
+                            controller.close();
+                        },
+                    }),
+                };
+            },
+            getAdminInsightChatBootstrap: async () => ({
+                asOf: '2026-02-27T00:00:00.000Z',
+                message: {
+                    content: 'mock bootstrap',
+                    sources: [],
+                },
+            }),
+        }));
+
+        const {
+            resetInsightChatRouteGuardrails,
+            getInsightChatRouteGuardrailMetricsSnapshot,
+            recordInsightChatRouteResponseSource,
+            recordInsightChatRouteResponseMode,
+            recordInsightChatRouteMemoryMode,
+            recordInsightChatRouteFeedback,
+        } = await import('@/lib/insight/insight-chat-route-utils');
+        const { POST: chatPOST } = await import('@/app/api/admin/insight/chat/route');
+        const { POST: streamPOST } = await import('@/app/api/admin/insight/chat/stream/route');
+
+        const createRequest = (path: string, body: Record<string, unknown>) => new NextRequest(
+            `http://localhost:8080${path}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            },
+        );
+
+        try {
+            resetInsightChatRouteGuardrails();
+            await chatPOST(createRequest('/api/admin/insight/chat', {
+                message: 'chat-unknown-provider',
+                requestId: 'chat-unknown-provider',
+                provider: 'unbounded-provider',
+                model: 'mystery-model',
+                responseMode: 'fast',
+                memoryMode: 'off',
+                feedbackContext: {
+                    rating: 'up',
+                },
+            }));
+
+            await streamPOST(createRequest('/api/admin/insight/chat/stream', {
+                message: 'stream-local-unknown',
+                requestId: 'stream-local-unknown',
+                provider: 'unbounded-provider',
+                model: 'mystery-model',
+                responseMode: 'structured',
+                memoryMode: 'off',
+                feedbackContext: {
+                    rating: 'down',
+                    reason: 'something',
+                },
+            }));
+
+            recordInsightChatRouteResponseMode('chat', 'unbounded-mode');
+            recordInsightChatRouteResponseSource('chat', 'mystery-provider');
+            recordInsightChatRouteMemoryMode('stream', 'weird-memory');
+            recordInsightChatRouteFeedback('chat', {
+                rating: 'surprising',
+                reason: 'unexpected',
+            });
+            recordInsightChatRouteFeedback('stream', {
+                rating: 'surprising',
+            });
+
+            const snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
+            expect(snapshot.routes.chat.provider_request_counts).toEqual({ other: 1 });
+            expect(snapshot.routes.chat.total_requests).toBe(1);
+            expect(snapshot.routes.chat.success_responses).toBe(0);
+            expect(snapshot.routes.chat.fallback_responses).toBe(1);
+            expect(snapshot.routes.chat.stream_responses).toBe(0);
+            expect(snapshot.routes.chat.error_responses).toBe(0);
+            expect(snapshot.routes.chat.source_counts).toEqual({
+                fallback: 1,
+                other: 1,
+            });
+            expect(snapshot.routes.chat.fallback_totals).toEqual({ other: 1 });
+            expect(snapshot.routes.chat.response_mode_counts).toEqual({ other: 1, fast: 1 });
+            expect(snapshot.routes.stream.provider_request_counts).toEqual({ other: 1 });
+            expect(snapshot.routes.stream.total_requests).toBe(1);
+            expect(snapshot.routes.stream.success_responses).toBe(0);
+            expect(snapshot.routes.stream.fallback_responses).toBe(1);
+            expect(snapshot.routes.stream.stream_responses).toBe(0);
+            expect(snapshot.routes.stream.error_responses).toBe(0);
+            expect(snapshot.routes.stream.source_counts).toEqual({ local: 1 });
+            expect(snapshot.routes.stream.response_mode_counts).toEqual({ structured: 1 });
+            expect(snapshot.routes.stream.memory_mode_counts).toEqual({ off: 1, other: 1 });
+            expect(snapshot.routes.chat.feedback_rating_counts).toEqual({ up: 1, other: 1 });
+            expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({ without_reason: 1, with_reason: 1 });
+            expect(snapshot.routes.stream.feedback_rating_counts).toEqual({ down: 1, other: 1 });
+            expect(snapshot.routes.stream.feedback_has_reason_counts).toEqual({ with_reason: 1, without_reason: 1 });
+            expect(snapshot.routes.stream.fallback_totals).toEqual({ other: 1 });
+        } finally {
+            if (typeof originalChatRouteTimeout === 'undefined') {
+                delete process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS;
+            } else {
+                process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS = originalChatRouteTimeout;
+            }
+            if (typeof originalStreamRouteTimeout === 'undefined') {
+                delete process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS;
+            } else {
+                process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS = originalStreamRouteTimeout;
+            }
+            if (typeof originalGuardrailsEnabled === 'undefined') {
+                delete process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED;
+            } else {
+                process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED = originalGuardrailsEnabled;
+            }
             mock.restore();
         }
     });
