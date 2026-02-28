@@ -2700,6 +2700,14 @@ async function streamGemini(
   requestId?: string,
   requestSignal?: AbortSignal,
 ) {
+  const parseSseLinePayload = (line: string): string | undefined => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) return undefined;
+    const payload = trimmed.slice(5).trimStart();
+    if (!payload || payload === '[DONE]') return undefined;
+    return payload;
+  };
+
   const toolTraceLabel = toolTrace.join(' > ');
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
   const ac = new AbortController();
@@ -2732,9 +2740,8 @@ async function streamGemini(
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n'); buf = lines.pop() || '';
       for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const js = line.slice(6).trim();
-        if (!js || js === '[DONE]') continue;
+        const js = parseSseLinePayload(line);
+        if (!js) continue;
         try {
         const p = JSON.parse(js);
           const t = p?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -2765,6 +2772,14 @@ async function streamOpenAI(
   requestSignal?: AbortSignal,
 ) {
   const toolTraceLabel = toolTrace.join(' > ');
+  const parseSseLinePayload = (line: string): string | undefined => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) return undefined;
+    const payload = trimmed.slice(5).trimStart();
+    if (!payload || payload === '[DONE]') return undefined;
+    return payload;
+  };
+
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
   const onAbort = () => {
@@ -2798,9 +2813,8 @@ async function streamOpenAI(
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n'); buf = lines.pop() || '';
       for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const js = line.slice(6).trim();
-        if (!js || js === '[DONE]') continue;
+        const js = parseSseLinePayload(line);
+        if (!js) continue;
         try {
           const p = JSON.parse(js);
           const t = p?.choices?.[0]?.delta?.content;
@@ -2831,6 +2845,14 @@ async function streamAnthropic(
   requestSignal?: AbortSignal,
 ) {
   const toolTraceLabel = toolTrace.join(' > ');
+  const parseSseLinePayload = (line: string): string | undefined => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) return undefined;
+    const payload = trimmed.slice(5).trimStart();
+    if (!payload || payload === '[DONE]') return undefined;
+    return payload;
+  };
+
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
   const onAbort = () => {
@@ -2865,9 +2887,8 @@ async function streamAnthropic(
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n'); buf = lines.pop() || '';
       for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const js = line.slice(6).trim();
-        if (!js || js === '[DONE]') continue;
+        const js = parseSseLinePayload(line);
+        if (!js) continue;
         try {
           const p = JSON.parse(js);
           if (p?.type === 'content_block_delta' && p?.delta?.text) {
