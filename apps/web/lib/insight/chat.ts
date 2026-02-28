@@ -2,7 +2,9 @@ import type {
   AdminInsightChatBootstrapResponse,
   AdminInsightChatResponse,
   InsightChatAttachment,
+  InsightChatContextMessage,
   InsightChatFeedbackContext,
+  InsightChatMemoryMode,
   InsightChatResponseMode,
   InsightChatSource,
   LlmRequestConfig,
@@ -252,12 +254,14 @@ function createLocalResponse(
     visualComponent?: AdminInsightChatResponse['visualComponent'];
     source?: 'local' | 'agent' | 'fallback';
     responseMode?: InsightChatResponseMode;
+    memoryMode?: InsightChatMemoryMode;
     confidence?: number;
     toolTrace?: string[];
   } = {},
 ): AdminInsightChatResponse {
   const resolvedSource = options.source || 'local';
   const responseMode = options.responseMode || 'fast';
+  const memoryMode = normalizeMemoryMode(options.memoryMode);
   const toolTrace = options.toolTrace ?? [];
   const confidence = clampFiniteFloat(
     options.confidence ?? (resolvedSource === 'local' ? 0.84 : resolvedSource === 'agent' ? 0.78 : 0.45),
@@ -273,6 +277,7 @@ function createLocalResponse(
       source: resolvedSource,
       fallbackReason: options.fallbackReason,
       ...(options.requestId ? { requestId: options.requestId } : {}),
+      ...(memoryMode ? { memoryMode } : {}),
       responseMode,
       confidence,
       toolTrace,
@@ -288,6 +293,10 @@ function normalizeRequestId(value: unknown): string | undefined {
 
 function normalizeResponseMode(raw: unknown): InsightChatResponseMode {
   return raw === 'fast' || raw === 'deep' || raw === 'structured' ? raw : 'fast';
+}
+
+function normalizeMemoryMode(raw: unknown): InsightChatMemoryMode | undefined {
+  return raw === 'off' || raw === 'session' || raw === 'pinned' ? raw : undefined;
 }
 
 function resolveResponseModeProfile(responseMode?: InsightChatResponseMode): ResponseModeProfile {
@@ -344,14 +353,62 @@ function buildAttachmentContextBlock(attachments?: InsightChatAttachment[]): str
     : [];
 }
 
+const MAX_MEMORY_CONTEXT_MESSAGES = 12;
+const MAX_MEMORY_CONTEXT_MESSAGE_LENGTH = 900;
+
+function sanitizeMemoryContextContent(raw: string): string {
+  return raw
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_MEMORY_CONTEXT_MESSAGE_LENGTH);
+}
+
+function buildMemoryContextBlock(
+  memoryMode?: InsightChatMemoryMode,
+  contextMessages?: InsightChatContextMessage[],
+): string[] {
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+  if (!contextMessages?.length || !normalizedMemoryMode || normalizedMemoryMode === 'off') {
+    return [];
+  }
+
+  const normalizedEntries = contextMessages
+    .slice(-MAX_MEMORY_CONTEXT_MESSAGES)
+    .map((entry) => ({
+      role: entry.role,
+      content: sanitizeMemoryContextContent(entry.content),
+    }))
+    .filter((entry) => entry.content.length > 0);
+
+  if (!normalizedEntries.length) {
+    return [];
+  }
+
+  const lines = normalizedEntries.map((entry, index) => {
+    const roleLabel = entry.role === 'assistant' ? '어시스턴트' : '사용자';
+    return `${index + 1}. ${roleLabel}: ${entry.content}`;
+  });
+
+  return [
+    '',
+    `[대화 기억 모드: ${normalizedMemoryMode}]`,
+    '아래는 이전 대화 맥락입니다. 현재 질문에 필요한 범위에서만 반영해 답변해 주세요.',
+    ...lines,
+  ];
+}
+
 function buildPromptWithContext(
   message: string,
   responseMode?: InsightChatResponseMode,
   feedbackContext?: InsightChatFeedbackContext,
   attachments?: InsightChatAttachment[],
+  memoryMode?: InsightChatMemoryMode,
+  contextMessages?: InsightChatContextMessage[],
 ): { message: string; profile: ResponseModeProfile } {
   const profile = resolveResponseModeProfile(responseMode);
   const base = message.trim().replace(/[\u0000-\u001f\u007f]+/g, '').slice(0, 9000);
+  const memoryContextLines = buildMemoryContextBlock(memoryMode, contextMessages);
   const attachmentLines = buildAttachmentContextBlock(attachments);
   const feedbackLines = feedbackContext?.rating
     ? [
@@ -362,9 +419,21 @@ function buildPromptWithContext(
         '위 피드백을 반영해 답변을 새롭게 생성해 주세요.',
       ]
     : [];
+
+  const promptSections: string[] = [base];
+  if (memoryContextLines.length > 0) {
+    promptSections.push(...memoryContextLines);
+  }
+  if (attachmentLines.length > 0) {
+    promptSections.push(...attachmentLines);
+  }
+  if (feedbackLines.length > 0) {
+    promptSections.push(...feedbackLines);
+  }
+
   return {
     profile,
-    message: [base, ...attachmentLines, feedbackLines.length ? '' : '', ...feedbackLines].join('\n').trim(),
+    message: promptSections.join('\n').trim(),
   };
 }
 
@@ -1061,10 +1130,11 @@ function extractFetchErrorCode(error: unknown): string | null {
   return null;
 }
 
-function createStoryboardUnavailableResponse(asOf: string, requestId?: string): AdminInsightChatResponse {
+function createStoryboardUnavailableResponse(asOf: string, requestId?: string, memoryMode?: InsightChatMemoryMode): AdminInsightChatResponse {
   return createLocalResponse(asOf, '스토리보드 에이전트 연결이 일시적으로 불안정합니다. 잠시 뒤 다시 시도해 주세요.', {
     fallbackReason: 'storyboard_agent_unavailable',
     ...(requestId ? { requestId } : {}),
+    ...(memoryMode ? { memoryMode } : {}),
   });
 }
 
@@ -1460,10 +1530,12 @@ function createLocalStoryboardResponse(
   asOf: string,
   profile: StoryboardModelProfile,
   requestId?: string,
+  memoryMode?: InsightChatMemoryMode,
 ): AdminInsightChatResponse {
   return createLocalResponse(asOf, buildStoryboardFallbackContent(message, profile), {
     fallbackReason: 'storyboard_internal_fallback',
     ...(requestId ? { requestId } : {}),
+    ...(memoryMode ? { memoryMode } : {}),
   });
 }
 
@@ -1875,10 +1947,12 @@ async function askStoryboardAgent(
   llmConfig?: LlmRequestConfig,
   requestId?: string,
   responseMode: InsightChatResponseMode = 'fast',
+  memoryMode?: InsightChatMemoryMode,
   feedbackContext?: InsightChatFeedbackContext,
   toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   const normalizedResponseMode = normalizeResponseMode(responseMode);
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
   const profileTrace = [...toolTrace, `responseMode:${normalizedResponseMode}`];
   const normalizedProfile = storyboardModelProfile === 'nanobanana_pro' ? 'nanobanana_pro' : 'nanobanana';
   const fallbackProfile = normalizedProfile;
@@ -1889,6 +1963,7 @@ async function askStoryboardAgent(
       fallbackReason: 'storyboard_simple_chat',
       ...(requestId ? { requestId } : {}),
       responseMode: normalizedResponseMode,
+      ...(normalizedMemoryMode ? { memoryMode: normalizedMemoryMode } : {}),
       confidence: 0.48,
       toolTrace: [...profileTrace, 'route:storyboard', 'bootstrap-human-request'],
     });
@@ -1896,16 +1971,27 @@ async function askStoryboardAgent(
 
   if (intent === 'qna_about_data') {
     const qnaReply = await answerStoryboardQnaWithContext(message, asOf);
-    if (qnaReply) return qnaReply;
+    if (qnaReply) {
+      return normalizedMemoryMode
+        ? {
+            ...qnaReply,
+            meta: {
+              ...(qnaReply.meta ?? { source: 'local' }),
+              memoryMode: normalizedMemoryMode,
+            },
+          }
+        : qnaReply;
+    }
     return createLocalResponse(asOf, '데이터 질의는 현재 수집 가능한 항목 기반으로만 답변 가능합니다. 상호명/영상/조회와 같은 구체 키워드로 다시 질문해 주세요.', {
       fallbackReason: 'storyboard_qna_unavailable',
       ...(requestId ? { requestId } : {}),
+      ...(normalizedMemoryMode ? { memoryMode: normalizedMemoryMode } : {}),
     });
   }
 
   const bgeContext = await getStoryboardBgeContext(message);
   try {
-    const orchestratedResponse = await runStoryboardOrchestrator(
+      const orchestratedResponse = await runStoryboardOrchestrator(
       message,
       asOf,
       fallbackProfile,
@@ -1916,16 +2002,24 @@ async function askStoryboardAgent(
       feedbackContext,
       [...profileTrace, 'route:storyboard'],
     );
-    if (orchestratedResponse) {
-      return orchestratedResponse;
-    }
+      if (orchestratedResponse) {
+        return normalizedMemoryMode
+          ? {
+            ...orchestratedResponse,
+            meta: {
+              ...(orchestratedResponse.meta ?? { source: 'agent' }),
+              memoryMode: normalizedMemoryMode,
+            },
+          }
+          : orchestratedResponse;
+      }
   } catch (error) {
     console.error('[admin/insight/chat] storyboard orchestrator failed:', error);
   }
 
   const endpoint = STORYBOARD_AGENT_REMOTE_ENABLED ? getStoryboardAgentEndpoint() : null;
   if (!endpoint) {
-    const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
+    const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
     return bgeContext.length > 0
       ? { ...fallbackResponse, sources: storyboardSourcesFromBgeResults(bgeContext) }
       : fallbackResponse;
@@ -1933,7 +2027,7 @@ async function askStoryboardAgent(
 
   const cooldownUntil = getStoryboardEndpointCooldownUntil(endpoint);
   if (cooldownUntil) {
-    return createStoryboardUnavailableResponse(asOf, requestId);
+    return createStoryboardUnavailableResponse(asOf, requestId, normalizedMemoryMode);
   }
 
   const timeoutMs = Number.isFinite(STORYBOARD_AGENT_TIMEOUT_MS) && STORYBOARD_AGENT_TIMEOUT_MS > 0
@@ -1984,7 +2078,7 @@ async function askStoryboardAgent(
       const content = extractStoryboardContent(data);
       if (!content) {
         setStoryboardEndpointCooldown(endpoint);
-        const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
+        const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
         if (bgeContext.length > 0) {
           return {
             ...fallbackResponse,
@@ -2001,6 +2095,7 @@ async function askStoryboardAgent(
         meta: {
           source: 'agent',
           ...(requestId ? { requestId } : {}),
+          ...(normalizedMemoryMode ? { memoryMode: normalizedMemoryMode } : {}),
         },
       };
       if (!(remoteResponse.sources?.length) && bgeContext.length > 0) {
@@ -2029,11 +2124,11 @@ async function askStoryboardAgent(
           errorCode,
         });
         setStoryboardEndpointCooldown(endpoint);
-        return createStoryboardUnavailableResponse(asOf, requestId);
+        return createStoryboardUnavailableResponse(asOf, requestId, normalizedMemoryMode);
       }
 
       console.error('[admin/insight/chat] storyboard agent request failed:', error);
-      const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
+      const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
       if (bgeContext.length > 0) {
         return {
           ...fallbackResponse,
@@ -2046,7 +2141,7 @@ async function askStoryboardAgent(
     }
   }
 
-  const finalFallback = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId);
+  const finalFallback = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
   if (bgeContext.length > 0) {
     return {
       ...finalFallback,
@@ -2097,26 +2192,42 @@ export async function answerAdminInsightChat(
   llmConfig?: LlmRequestConfig,
   requestId?: string,
   responseMode: InsightChatResponseMode = 'fast',
+  memoryMode?: InsightChatMemoryMode,
   feedbackContext?: InsightChatFeedbackContext,
   attachments?: InsightChatAttachment[],
+  contextMessages?: InsightChatContextMessage[],
 ): Promise<AdminInsightChatResponse> {
   const asOf = new Date().toISOString();
   const input = message.trim();
   const resolvedRequestId = normalizeRequestId(requestId);
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
   const profile = resolveResponseModeProfile(responseMode);
-  const toolTrace = [`responseMode:${normalizeResponseMode(responseMode)}`, 'flow:non-stream'];
+  const toolTrace = [
+    `responseMode:${normalizeResponseMode(responseMode)}`,
+    ...(normalizedMemoryMode ? [`memoryMode:${normalizedMemoryMode}`] : []),
+    'flow:non-stream',
+  ];
 
   if (!input) {
     return createLocalResponse(asOf, '질문을 입력해 주세요.', {
       fallbackReason: 'empty_input',
       requestId: resolvedRequestId,
+      memoryMode: normalizedMemoryMode,
       responseMode,
       toolTrace,
       confidence: 0.85,
     });
   }
 
-  const localResponse = await resolveLocalInsightResponse(asOf, input, resolvedRequestId, responseMode, feedbackContext, toolTrace);
+  const localResponse = await resolveLocalInsightResponse(
+    asOf,
+    input,
+    resolvedRequestId,
+    responseMode,
+    normalizedMemoryMode,
+    feedbackContext,
+    toolTrace,
+  );
   if (localResponse) return localResponse;
 
   if (isStoryboardIntent(input)) {
@@ -2128,27 +2239,31 @@ export async function answerAdminInsightChat(
       llmConfig,
       resolvedRequestId,
       responseMode,
+      normalizedMemoryMode,
       feedbackContext,
       [...toolTrace, 'route:storyboard'],
     );
     if (storyboardReply) return storyboardReply;
   }
 
-  const llmReply = await routeLlmRequest(
-    input,
-    asOf,
-    llmConfig,
-    resolvedRequestId,
-    responseMode,
-    feedbackContext,
-    attachments,
-    [...toolTrace, `provider:${llmConfig?.provider ?? 'gemini'}`],
-  );
+    const llmReply = await routeLlmRequest(
+      input,
+      asOf,
+      llmConfig,
+      resolvedRequestId,
+      responseMode,
+      normalizedMemoryMode,
+      feedbackContext,
+      attachments,
+      contextMessages,
+      [...toolTrace, `provider:${llmConfig?.provider ?? 'gemini'}`],
+    );
   if (llmReply) return llmReply;
 
   return createLocalResponse(asOf, buildLocalInsightResponseFailureMessage('llm_unavailable'), {
     fallbackReason: 'llm_unavailable',
     requestId: resolvedRequestId,
+    memoryMode: normalizedMemoryMode,
     responseMode,
     toolTrace: [...toolTrace, 'provider-unavailable'],
     confidence: 0.35,
@@ -2172,9 +2287,12 @@ async function resolveLocalInsightResponse(
   input: string,
   requestId?: string,
   responseMode: InsightChatResponseMode = 'fast',
+  memoryMode?: InsightChatMemoryMode,
   feedbackContext?: InsightChatFeedbackContext,
   toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+
   if (isStoryboardIntent(input)) {
     return null;
   }
@@ -2188,6 +2306,7 @@ async function resolveLocalInsightResponse(
 
     return createLocalResponse(asOf, `## 인기 키워드 TOP 12\n\n${list || '- 데이터 없음'}`, {
       requestId,
+      memoryMode: normalizedMemoryMode,
       visualComponent: 'wordcloud',
       responseMode,
       confidence: 0.96,
@@ -2206,6 +2325,7 @@ async function resolveLocalInsightResponse(
 
     return createLocalResponse(asOf, `## ${month}월 시즌 키워드\n\n${list || '- 데이터 없음'}`, {
       requestId,
+      memoryMode: normalizedMemoryMode,
       visualComponent: 'calendar',
       responseMode,
       confidence: 0.93,
@@ -2261,9 +2381,10 @@ async function resolveLocalInsightResponse(
       ...(topCategories.length > 0 ? topCategories : ['- 데이터가 없습니다.']),
       '',
       '> 아래 트리맵에서 **지표·기간·모드**를 자유롭게 전환하여 분석할 수 있습니다.',
-      ].join('\n'), {
+    ].join('\n'), {
       requestId,
       visualComponent: 'treemap',
+      memoryMode: normalizedMemoryMode,
       responseMode,
       confidence: 0.95,
       toolTrace: [...toolTrace, 'local:treemap'],
@@ -2279,14 +2400,17 @@ async function routeLlmRequest(
   config?: LlmRequestConfig,
   requestId?: string,
   responseMode: InsightChatResponseMode = 'fast',
+  memoryMode?: InsightChatMemoryMode,
   feedbackContext?: InsightChatFeedbackContext,
   attachments?: InsightChatAttachment[],
+  contextMessages?: InsightChatContextMessage[],
   toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   const provider = config?.provider || 'gemini';
   const apiKey = config?.apiKey || (config?.useServerKey && provider === 'gemini' ? GEMINI_API_KEY_ENV : '');
   const model = config?.model || GEMINI_MODEL_DEFAULT;
   const resolvedResponseMode = normalizeResponseMode(responseMode);
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
   const profile = resolveResponseModeProfile(resolvedResponseMode);
 
   if (!apiKey) return null;
@@ -2297,6 +2421,8 @@ async function routeLlmRequest(
         responseMode: resolvedResponseMode,
         feedbackContext,
         attachments,
+        contextMessages,
+        memoryMode: normalizedMemoryMode,
         toolTrace: [...toolTrace, 'provider:gemini'],
         responseProfile: profile,
       });
@@ -2305,6 +2431,8 @@ async function routeLlmRequest(
         responseMode: resolvedResponseMode,
         feedbackContext,
         attachments,
+        contextMessages,
+        memoryMode: normalizedMemoryMode,
         toolTrace: [...toolTrace, 'provider:openai'],
         responseProfile: profile,
       });
@@ -2313,6 +2441,8 @@ async function routeLlmRequest(
         responseMode: resolvedResponseMode,
         feedbackContext,
         attachments,
+        contextMessages,
+        memoryMode: normalizedMemoryMode,
         toolTrace: [...toolTrace, 'provider:anthropic'],
         responseProfile: profile,
       });
@@ -2331,17 +2461,33 @@ export async function streamAdminInsightChat(
   requestSignal?: AbortSignal,
   requestId?: string,
   responseMode: InsightChatResponseMode = 'fast',
+  memoryMode?: InsightChatMemoryMode,
   feedbackContext?: InsightChatFeedbackContext,
   attachments?: InsightChatAttachment[],
+  contextMessages?: InsightChatContextMessage[],
 ): Promise<{ stream: ReadableStream<Uint8Array> } | { local: AdminInsightChatResponse }> {
   const resolvedRequestId = normalizeRequestId(requestId);
   const resolvedResponseMode = normalizeResponseMode(responseMode);
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
   const profile = resolveResponseModeProfile(resolvedResponseMode);
-  const toolTrace = [`responseMode:${resolvedResponseMode}`, `provider:${llmConfig?.provider ?? 'gemini'}`, 'flow:stream'];
+  const toolTrace = [
+    `responseMode:${resolvedResponseMode}`,
+    ...(normalizedMemoryMode ? [`memoryMode:${normalizedMemoryMode}`] : []),
+    `provider:${llmConfig?.provider ?? 'gemini'}`,
+    'flow:stream',
+  ];
   const localTrace = [...toolTrace, 'stream:local-fallback'];
   const localProfile = [...toolTrace, 'stream:api-call'];
 
-  const localResult = await tryLocalAnswer(message, llmConfig, resolvedRequestId, resolvedResponseMode, feedbackContext, localTrace);
+  const localResult = await tryLocalAnswer(
+    message,
+    llmConfig,
+    resolvedRequestId,
+    resolvedResponseMode,
+    normalizedMemoryMode,
+    feedbackContext,
+    localTrace,
+  );
   if (localResult) return { local: localResult };
 
   const provider = llmConfig?.provider || 'gemini';
@@ -2349,17 +2495,18 @@ export async function streamAdminInsightChat(
   const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
 
   if (!apiKey) {
-    return {
-      local: createLocalResponse(new Date().toISOString(), [
+      return {
+        local: createLocalResponse(new Date().toISOString(), [
         '가능한 질문 예시:',
         '- "트리맵으로 조회수 분포 보여줘"',
         '- "먹방 스토리보드 기획안 만들어줘"',
-      ].join('\n'), {
-        fallbackReason: 'llm_unavailable',
-        requestId: resolvedRequestId,
-        responseMode: resolvedResponseMode,
-        confidence: 0.52,
-        toolTrace: [...toolTrace, 'provider-unavailable'],
+        ].join('\n'), {
+          fallbackReason: 'llm_unavailable',
+          requestId: resolvedRequestId,
+          memoryMode: normalizedMemoryMode,
+          responseMode: resolvedResponseMode,
+          confidence: 0.52,
+          toolTrace: [...toolTrace, 'provider-unavailable'],
       }),
     };
   }
@@ -2372,8 +2519,10 @@ export async function streamAdminInsightChat(
     resolvedResponseMode,
     responseMode,
     profile,
+    normalizedMemoryMode,
     feedbackContext,
     attachments,
+    contextMessages,
     toolTrace,
     localProfile,
     resolvedRequestId,
@@ -2387,14 +2536,17 @@ async function tryLocalAnswer(
   llmConfig?: LlmRequestConfig,
   requestId?: string,
   responseMode: InsightChatResponseMode = 'fast',
+  memoryMode?: InsightChatMemoryMode,
   feedbackContext?: InsightChatFeedbackContext,
   toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
   const asOf = new Date().toISOString();
   const input = message.trim();
   if (!input) return createLocalResponse(asOf, '질문을 입력해 주세요.', {
     fallbackReason: 'empty_input',
     requestId,
+    memoryMode: normalizedMemoryMode,
     responseMode,
     confidence: 0.85,
     toolTrace,
@@ -2409,13 +2561,22 @@ async function tryLocalAnswer(
       llmConfig,
       requestId,
       responseMode,
+      normalizedMemoryMode,
       feedbackContext,
       [...toolTrace, 'route:storyboard'],
     );
     if (reply) return reply;
   }
 
-  return resolveLocalInsightResponse(asOf, input, requestId, responseMode, feedbackContext, [...toolTrace, 'route:local']);
+  return resolveLocalInsightResponse(
+    asOf,
+    input,
+    requestId,
+    responseMode,
+    normalizedMemoryMode,
+    feedbackContext,
+    [...toolTrace, 'route:local'],
+  );
 }
 
 function createLlmStream(
@@ -2426,8 +2587,10 @@ function createLlmStream(
   responseMode: InsightChatResponseMode,
   rawResponseMode: InsightChatResponseMode,
   responseProfile: ResponseModeProfile,
+  memoryMode: InsightChatMemoryMode | undefined,
   feedbackContext: InsightChatFeedbackContext | undefined,
   attachments: InsightChatAttachment[] | undefined,
+  contextMessages: InsightChatContextMessage[] | undefined,
   toolTrace: string[],
   tokenDebugTrace: string[],
   requestId?: string,
@@ -2436,10 +2599,19 @@ function createLlmStream(
   const encoder = new TextEncoder();
   const profile = responseProfile ?? resolveResponseModeProfile(responseMode);
   const safeModePrompt = profile.promptAddendum;
-  const response = buildPromptWithContext(message, responseMode, feedbackContext, attachments);
+  const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+  const response = buildPromptWithContext(
+    message,
+    responseMode,
+    feedbackContext,
+    attachments,
+    normalizedMemoryMode,
+    contextMessages,
+  );
   const tracedTool = [
     ...toolTrace,
     `responseMode:${normalizeResponseMode(rawResponseMode)}`,
+    ...(normalizedMemoryMode ? [`memoryMode:${normalizedMemoryMode}`] : []),
     `maxTokens:${profile.maxOutputTokens}`,
     `temperature:${profile.temperature}`,
     ...tokenDebugTrace,
@@ -2726,15 +2898,24 @@ async function askGemini(
   requestId?: string,
   options?: {
     responseMode?: InsightChatResponseMode;
+    memoryMode?: InsightChatMemoryMode;
     feedbackContext?: InsightChatFeedbackContext;
     attachments?: InsightChatAttachment[];
+    contextMessages?: InsightChatContextMessage[];
     toolTrace?: string[];
     responseProfile?: ResponseModeProfile;
   },
 ): Promise<AdminInsightChatResponse | null> {
   const responseMode = normalizeResponseMode(options?.responseMode);
   const profile = options?.responseProfile ?? resolveResponseModeProfile(responseMode);
-  const payload = buildPromptWithContext(message, responseMode, options?.feedbackContext, options?.attachments);
+  const payload = buildPromptWithContext(
+    message,
+    responseMode,
+    options?.feedbackContext,
+    options?.attachments,
+    options?.memoryMode,
+    options?.contextMessages,
+  );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:gemini`, `responseMode:${responseMode}`];
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -2770,6 +2951,7 @@ async function askGemini(
       meta: {
         source: 'gemini',
         model,
+        ...(options?.memoryMode ? { memoryMode: options.memoryMode } : {}),
         responseMode,
         confidence: clampFiniteFloat(profile.confidenceBase, 0.77),
         toolTrace,
@@ -2792,15 +2974,24 @@ async function askOpenAI(
   requestId?: string,
   options?: {
     responseMode?: InsightChatResponseMode;
+    memoryMode?: InsightChatMemoryMode;
     feedbackContext?: InsightChatFeedbackContext;
     attachments?: InsightChatAttachment[];
+    contextMessages?: InsightChatContextMessage[];
     toolTrace?: string[];
     responseProfile?: ResponseModeProfile;
   },
 ): Promise<AdminInsightChatResponse | null> {
   const responseMode = normalizeResponseMode(options?.responseMode);
   const profile = options?.responseProfile ?? resolveResponseModeProfile(responseMode);
-  const payload = buildPromptWithContext(message, responseMode, options?.feedbackContext, options?.attachments);
+  const payload = buildPromptWithContext(
+    message,
+    responseMode,
+    options?.feedbackContext,
+    options?.attachments,
+    options?.memoryMode,
+    options?.contextMessages,
+  );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:openai`, `responseMode:${responseMode}`];
   const controller = new AbortController();
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
@@ -2841,6 +3032,7 @@ async function askOpenAI(
       meta: {
         source: 'openai',
         model,
+        ...(options?.memoryMode ? { memoryMode: options.memoryMode } : {}),
         responseMode,
         confidence: clampFiniteFloat(profile.confidenceBase, 0.78),
         toolTrace,
@@ -2863,15 +3055,24 @@ async function askAnthropic(
   requestId?: string,
   options?: {
     responseMode?: InsightChatResponseMode;
+    memoryMode?: InsightChatMemoryMode;
     feedbackContext?: InsightChatFeedbackContext;
     attachments?: InsightChatAttachment[];
+    contextMessages?: InsightChatContextMessage[];
     toolTrace?: string[];
     responseProfile?: ResponseModeProfile;
   },
 ): Promise<AdminInsightChatResponse | null> {
   const responseMode = normalizeResponseMode(options?.responseMode);
   const profile = options?.responseProfile ?? resolveResponseModeProfile(responseMode);
-  const payload = buildPromptWithContext(message, responseMode, options?.feedbackContext, options?.attachments);
+  const payload = buildPromptWithContext(
+    message,
+    responseMode,
+    options?.feedbackContext,
+    options?.attachments,
+    options?.memoryMode,
+    options?.contextMessages,
+  );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:anthropic`, `responseMode:${responseMode}`];
   const controller = new AbortController();
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
@@ -2915,6 +3116,7 @@ async function askAnthropic(
       meta: {
         source: 'anthropic',
         model,
+        ...(options?.memoryMode ? { memoryMode: options.memoryMode } : {}),
         responseMode,
         confidence: clampFiniteFloat(profile.confidenceBase, 0.8),
         toolTrace,

@@ -135,6 +135,50 @@ describe('insight chat request parser', () => {
         expect(parsed.responseMode).toBe('deep');
     });
 
+    test('normalizes memoryMode when provided', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            memoryMode: 'pinned',
+        });
+
+        expect(parsed.memoryMode).toBe('pinned');
+    });
+
+    test('drops unsupported memoryMode values', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            memoryMode: 'all',
+        } as unknown);
+
+        expect(parsed.memoryMode).toBeUndefined();
+    });
+
+    test('normalizes valid contextMessages payload', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            contextMessages: [
+                { role: 'user', content: '  이전 질문  ' },
+                { role: 'assistant', content: '이전 답변\n요약' },
+            ],
+        });
+
+        expect(parsed.invalidContextReason).toBeUndefined();
+        expect(parsed.contextMessages).toEqual([
+            { role: 'user', content: '이전 질문' },
+            { role: 'assistant', content: '이전 답변 요약' },
+        ]);
+    });
+
+    test('rejects malformed contextMessages payload', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            contextMessages: 'bad-payload' as unknown,
+        });
+
+        expect(parsed.contextMessages).toEqual([]);
+        expect(parsed.invalidContextReason).toBe('invalid_context_payload');
+    });
+
     test('normalizes feedbackContext with supported rating', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',
@@ -150,9 +194,10 @@ describe('insight chat request parser', () => {
             rating: 'down',
             reason: '다시 답변이 더 구체적이면 좋겠어요',
         });
+        expect(parsed.invalidFeedbackReason).toBeUndefined();
     });
 
-    test('drops unsupported feedbackContext rating', () => {
+    test('flags unsupported feedbackContext rating as invalid', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',
             feedbackContext: {
@@ -162,6 +207,60 @@ describe('insight chat request parser', () => {
             } as unknown,
         });
 
+        expect(parsed.invalidFeedbackReason).toBe('invalid_feedback_rating');
+        expect(parsed.feedbackContext).toBeUndefined();
+    });
+
+    test('flags feedbackContext without rating as invalid', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            feedbackContext: {
+                targetAssistantMessageId: 'msg-1',
+                reason: '좋아요',
+            } as unknown as {
+                targetAssistantMessageId: string;
+                reason: string;
+            },
+        });
+
+        expect(parsed.invalidFeedbackReason).toBe('invalid_feedback_rating');
+        expect(parsed.feedbackContext).toBeUndefined();
+    });
+
+    test('rejects feedbackContext when feedback payload type is invalid', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            feedbackContext: 42 as unknown,
+        });
+
+        expect(parsed.invalidFeedbackReason).toBe('invalid_feedback_context');
+        expect(parsed.feedbackContext).toBeUndefined();
+    });
+
+    test('rejects feedbackContext with non-string reason', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            feedbackContext: {
+                targetAssistantMessageId: 'msg-1',
+                rating: 'up',
+                reason: 128 as unknown,
+            },
+        });
+
+        expect(parsed.invalidFeedbackReason).toBe('invalid_feedback_reason');
+        expect(parsed.feedbackContext).toBeUndefined();
+    });
+
+    test('rejects feedbackContext with invalid targetAssistantMessageId', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            feedbackContext: {
+                targetAssistantMessageId: '   ',
+                rating: 'down',
+            },
+        });
+
+        expect(parsed.invalidFeedbackReason).toBe('invalid_feedback_target_id');
         expect(parsed.feedbackContext).toBeUndefined();
     });
 
