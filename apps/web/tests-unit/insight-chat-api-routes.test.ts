@@ -22,6 +22,7 @@ type CapturedCall = {
     memoryProfileNote?: string;
     contextMessages?: unknown;
     feedbackContext?: unknown;
+    llmConfig?: unknown;
 };
 
 let lastChatCall: CapturedCall | null = null;
@@ -69,7 +70,7 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
     mock.module('@/lib/insight/chat', () => ({
         answerAdminInsightChat: async (
             message: string,
-            _llmConfig: unknown,
+            llmConfig: unknown,
             requestId?: string,
             _responseMode?: unknown,
             memoryMode?: unknown,
@@ -85,6 +86,7 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
                 memoryProfileNote: typeof memoryProfileNote === 'string' ? memoryProfileNote : undefined,
                 feedbackContext,
                 contextMessages,
+                llmConfig,
             };
             if (message === '__chat_throw__') {
                 throw new Error('mocked chat error');
@@ -105,7 +107,7 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
         },
         streamAdminInsightChat: async (
             _message: string,
-            _llmConfig: unknown,
+            llmConfig: unknown,
             _signal: AbortSignal | undefined,
             requestId?: string,
             _responseMode?: unknown,
@@ -116,13 +118,14 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
             memoryProfileNote?: unknown,
         ) => {
             lastStreamCall = {
-                message: _message,
-                requestId,
-                memoryMode: typeof memoryMode === 'string' ? memoryMode : undefined,
-                memoryProfileNote: typeof memoryProfileNote === 'string' ? memoryProfileNote : undefined,
-                feedbackContext,
-                contextMessages,
-            };
+            message: _message,
+            requestId,
+            memoryMode: typeof memoryMode === 'string' ? memoryMode : undefined,
+            memoryProfileNote: typeof memoryProfileNote === 'string' ? memoryProfileNote : undefined,
+            feedbackContext,
+            contextMessages,
+            llmConfig,
+        };
             if (_message === '__stream_delay__') {
                 await new Promise((resolve) => setTimeout(resolve, 40));
             }
@@ -427,6 +430,25 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         expect(lastChatCall.feedbackContext).toBeUndefined();
         const chatContextPayload = await response.json();
         expect(chatContextPayload.meta.toolTrace).toContain('memoryMode:session');
+
+        lastChatCall = null;
+        response = await chatPOST(createRequest('/api/admin/insight/chat', {
+            message: '스토리보드 의존성 테스트',
+            requestId: 'req-storyboard-key-forward',
+            provider: 'openai',
+            model: 'gpt-5.3',
+            nanoBanana2Key: '  nb2-server-key  ',
+            storyboardModelProfile: 'nanobanana_pro',
+            imageModelProfile: 'nanobanana',
+        }));
+        expect(response.status).toBe(200);
+        expect(lastChatCall?.llmConfig).toMatchObject({
+            provider: 'openai',
+            model: 'gpt-5.3',
+            storyboardModelProfile: 'nanobanana_pro',
+            imageModelProfile: 'nanobanana',
+            nanoBanana2Key: 'nb2-server-key',
+        });
 
         lastChatCall = null;
         response = await chatPOST(createRequest('/api/admin/insight/chat', {

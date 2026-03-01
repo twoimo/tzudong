@@ -5,14 +5,81 @@ import {
     deserializeConversationList,
     buildConversationBackupExportPayload,
     mergeImportedConversations,
+    buildLlmKeysExportPayload,
     parseConversationImportPayload,
+    parseLlmKeysImportPayload,
+    parseLlmKeyPayload,
     serializeConversationList,
+    serializeLlmKeyPayload,
     sanitizeMemoryProfileNote,
+    sanitizeStoredLlmKeys,
+    sanitizeLlmKeyValue,
 } from '@/components/insight/InsightChatSection';
 
 const createDateString = (iso: string) => iso;
 
 describe('insight chat conversation storage helpers', () => {
+    describe('LLM key import/export helpers', () => {
+        test('sanitizes raw key value by trimming control chars and whitespace', () => {
+            expect(sanitizeLlmKeyValue('  ab cd\n123\t ')).toBe('abcd123');
+            expect(sanitizeLlmKeyValue('\u0007abc')).toBe('abc');
+            expect(sanitizeLlmKeyValue(123 as unknown)).toBe('');
+        });
+
+        test('serializes a sanitized export payload with configured timestamp', () => {
+            const payload = serializeLlmKeyPayload(
+                {
+                    gemini: '  gem ',
+                    openai: '\nopenai-key ',
+                    anthropic: '',
+                },
+                { exportedAt: '2026-03-01T00:00:00.000Z' },
+            );
+
+            expect(payload.schemaVersion).toBe(1);
+            expect(payload.exportedAt).toBe('2026-03-01T00:00:00.000Z');
+            expect(payload.keys).toEqual({
+                gemini: 'gem',
+                openai: 'openai-key',
+            });
+        });
+
+        test('parses envelope payload into sanitized key map', () => {
+            const payload = parseLlmKeyPayload({
+                schemaVersion: 1,
+                keys: {
+                    gemini: ' g1 ',
+                    openai: 123,
+                    nanobanana2: ' nano ',
+                },
+            });
+
+            expect(payload).not.toBeNull();
+            expect(payload?.keys).toEqual({
+                gemini: 'g1',
+                nanobanana2: 'nano',
+            });
+        });
+
+        test('parses legacy payload shape with direct provider keys', () => {
+            const payload = parseLlmKeyPayload({ gemini: ' abc ', openai: 'xyz' });
+            expect(payload).not.toBeNull();
+            expect(payload?.keys).toEqual({
+                gemini: 'abc',
+                openai: 'xyz',
+            });
+        });
+
+        test('rejects unrelated payload without provider keys', () => {
+            expect(parseLlmKeyPayload({ conversationId: 'conv-1', messages: [] })).toBeNull();
+        });
+
+        test('keeps legacy plain object parsing stable', () => {
+            expect(parseLlmKeysImportPayload({})).toEqual({});
+            expect(sanitizeStoredLlmKeys({})).toEqual({});
+        });
+    });
+
     test('sanitizes memory profile note', () => {
         expect(sanitizeMemoryProfileNote('  프로젝트\n핵심\t요약  ')).toBe('프로젝트 핵심 요약');
         expect(sanitizeMemoryProfileNote(undefined)).toBe('');
@@ -114,6 +181,74 @@ describe('insight chat conversation storage helpers', () => {
         expect(parsed?.conversations[0]?.title).toBe('가져오기 테스트');
         expect(parsed?.conversations[0]?.tags).toEqual(['a', 'b']);
         expect(parsed?.conversations[0]?.memoryProfileNote).toBe('핵심 메모');
+    });
+
+    test('dedupes and sanitizes source asset/frame links while importing conversation payload', () => {
+        const parsed = parseConversationImportPayload({
+            schemaVersion: 6,
+            exportedAt: '2026-02-28T00:00:00.000Z',
+            conversation: {
+                id: 'conv-import-with-links',
+                title: '링크 테스트',
+                createdAt: 10,
+                updatedAt: 20,
+                messages: [
+                    {
+                        id: 'msg-import-1',
+                        role: 'assistant',
+                        content: '피크 프레임 근거 테스트',
+                        createdAt: createDateString('2026-01-01T00:00:00.000Z'),
+                        sources: [
+                            {
+                                videoTitle: '피크 구간',
+                                youtubeLink: 'https://youtu.be/abc',
+                                timestamp: '00:10',
+                                text: '근거',
+                                assetLink: ' https://drive.google.com/file/d/asset1 ',
+                                frameLink: ' https://drive.google.com/file/d/frame1 ',
+                            },
+                            {
+                                videoTitle: '피크 구간',
+                                youtubeLink: 'https://youtu.be/abc',
+                                timestamp: '00:10',
+                                text: '근거',
+                                assetLink: 'https://drive.google.com/file/d/asset1',
+                                frameLink: 'https://drive.google.com/file/d/frame1',
+                            },
+                            {
+                                videoTitle: '피크 구간',
+                                youtubeLink: 'javascript:alert(1)',
+                                timestamp: '00:20',
+                                text: '근거2',
+                                assetLink: ' https://drive.google.com/file/d/asset2 ',
+                                frameLink: 'not-a-url',
+                            },
+                        ],
+                    },
+                ],
+            },
+        });
+
+        expect(parsed).not.toBeNull();
+        const sources = parsed?.conversations[0]?.messages[0]?.sources;
+
+        expect(sources).toHaveLength(2);
+        expect(sources?.[0]).toMatchObject({
+            videoTitle: '피크 구간',
+            youtubeLink: 'https://youtu.be/abc',
+            assetLink: 'https://drive.google.com/file/d/asset1',
+            frameLink: 'https://drive.google.com/file/d/frame1',
+            text: '근거',
+            timestamp: '00:10',
+        });
+        expect(sources?.[1]).toMatchObject({
+            videoTitle: '피크 구간',
+            youtubeLink: '',
+            assetLink: 'https://drive.google.com/file/d/asset2',
+            frameLink: '',
+            text: '근거2',
+            timestamp: '00:20',
+        });
     });
 
     test('parses multi-conversation backup payload with active conversation id', () => {
@@ -460,5 +595,79 @@ describe('insight chat conversation storage helpers', () => {
         expect(duplicated.title).toBe('원본 대화 복사본');
         expect(duplicated.createdAt).toBeGreaterThan(0);
         expect(duplicated.updatedAt).toBeGreaterThanOrEqual(duplicated.createdAt);
+    });
+});
+
+describe('insight chat llm key payload helpers', () => {
+    test('sanitizes llm keys and drops unknown providers', () => {
+        const raw = {
+            gemini: '   sk-gemini-123   ',
+            openai: '\t',
+            anthropic: '  sk-claude-456\r\n  ',
+            nanobanana2: '  \u0000abc  ',
+            unknown: 'should-not-appear',
+            version: 1,
+        };
+
+        expect(sanitizeStoredLlmKeys(raw)).toEqual({
+            gemini: 'sk-gemini-123',
+            anthropic: 'sk-claude-456',
+            nanobanana2: 'abc',
+        });
+    });
+
+    test('serializes llm keys into import-ready payload', () => {
+        const payload = buildLlmKeysExportPayload(
+            {
+                gemini: '   sk-gemini-123   ',
+                openai: '  ',
+                anthropic: '\u0001abc',
+            },
+            { exportedAt: '2026-03-01T00:00:00.000Z' },
+        );
+
+        expect(payload).toMatchObject({
+            schemaVersion: 1,
+            exportedAt: '2026-03-01T00:00:00.000Z',
+            keys: {
+                gemini: 'sk-gemini-123',
+                anthropic: 'abc',
+            },
+        });
+        expect(payload.keys.openai).toBeUndefined();
+    });
+
+    test('parses export payload', () => {
+        const parsed = parseLlmKeysImportPayload({
+            schemaVersion: 1,
+            exportedAt: '2026-03-01T00:00:00.000Z',
+            keys: {
+                gemini: '   sk-gemini-123   ',
+                openai: '\n',
+            },
+        });
+
+        expect(parsed).toEqual({
+            gemini: 'sk-gemini-123',
+        });
+    });
+
+    test('parses legacy direct provider map payload', () => {
+        const parsed = parseLlmKeysImportPayload({
+            gemini: '   sk-gemini-123   ',
+            openai: '\t',
+            random: 'ignore-me',
+        });
+
+        expect(parsed).toEqual({
+            gemini: 'sk-gemini-123',
+        });
+    });
+
+    test('rejects malformed llm key payload', () => {
+        expect(parseLlmKeysImportPayload({ random: 'not-a-key' })).toBeNull();
+        expect(parseLlmKeysImportPayload([])).toBeNull();
+        expect(parseLlmKeysImportPayload('bad')).toBeNull();
+        expect(parseLlmKeysImportPayload({ schemaVersion: 1, keys: [] })).toBeNull();
     });
 });

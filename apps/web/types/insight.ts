@@ -97,6 +97,8 @@ export type InsightChatSource = {
   youtubeLink: string;
   timestamp: string;
   text: string;
+  assetLink?: string;
+  frameLink?: string;
 };
 
 export type InsightChatFollowUpPrompt = {
@@ -121,6 +123,7 @@ export type LlmRequestConfig = {
   useServerKey?: boolean;
   storyboardModelProfile?: StoryboardModelProfile;
   imageModelProfile?: StoryboardModelProfile;
+  nanoBanana2Key?: string;
 };
 
 export type InsightChatResponseMode = 'fast' | 'deep' | 'structured';
@@ -164,6 +167,7 @@ export type AdminInsightChatMeta = {
   memoryMode?: InsightChatMemoryMode;
   confidence?: number;
   latencyMs?: number;
+  systemStatusHints?: string[];
   toolTrace?: string[];
 };
 
@@ -178,7 +182,7 @@ export type AdminInsightChatResponse = {
 
 export type AdminInsightChatBootstrapResponse = {
   asOf: string;
-  message: Pick<AdminInsightChatResponse, 'content' | 'sources' | 'visualComponent'>;
+  message: Pick<AdminInsightChatResponse, 'content' | 'sources' | 'visualComponent' | 'followUpPrompts'>;
 };
 
 export type AdminInsightSystemStatusKeyFlags = {
@@ -202,7 +206,8 @@ export type AdminInsightSystemStatusChecklistSource =
   | 'run_daily'
   | 'storyboard-agent'
   | 'bge-embedding'
-  | 'provider-key';
+  | 'provider-key'
+  | 'frame-caption-storage';
 
 export type AdminInsightSystemStatusChecklistItem = {
   id: string;
@@ -211,6 +216,8 @@ export type AdminInsightSystemStatusChecklistItem = {
   category: AdminInsightSystemStatusChecklistCategory;
   action: string;
   source: AdminInsightSystemStatusChecklistSource;
+  command?: string;
+  commandSnippet?: string;
 };
 
 export type AdminInsightSystemIntegrationStatus = {
@@ -222,11 +229,34 @@ export type AdminInsightSystemIntegrationStatus = {
   checkedAt: string;
 };
 
+export type AdminInsightSystemFrameCaptionStatus = {
+  configured: boolean;
+  localPathConfigured: boolean;
+  localPathAvailable: boolean;
+  gdrivePathConfigured: boolean;
+  reachable: boolean;
+  localPath?: string;
+  gdrivePath?: string;
+  detail?: string;
+  checkedAt: string;
+};
+
+export type AdminInsightSystemRunDailyStatus = {
+  scriptPath?: string;
+  executable: boolean;
+  latestLogPath?: string;
+  latestLogUpdatedAt?: string;
+  stale: boolean;
+  checkedAt: string;
+};
+
 export type AdminInsightSystemStatusResponse = {
   asOf: string;
   keys: AdminInsightSystemStatusKeyFlags;
   storyboardAgent: AdminInsightSystemIntegrationStatus;
   bgeEmbedding: AdminInsightSystemIntegrationStatus;
+  frameCaption: AdminInsightSystemFrameCaptionStatus;
+  runDaily?: AdminInsightSystemRunDailyStatus;
   checklist: AdminInsightSystemStatusChecklistItem[];
 };
 
