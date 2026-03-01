@@ -27,6 +27,21 @@ describe('insight prompt library resolution', () => {
         );
     });
 
+    test('supports operator todo prompt aliases', () => {
+        expect(resolvePromptInput('/operator-todo')).toBe('운영자 TODO를 조회해줘.');
+        expect(resolvePromptInput('/ops-todo')).toBe('운영자 TODO를 조회해줘.');
+        expect(resolvePromptInput('/setup-checklist')).toBe('운영 체크리스트를 조회해줘.');
+        expect(resolvePromptInput('/setup-keys')).toBe('운영 키 체크리스트를 조회해줘.');
+        expect(resolvePromptInput('/ops-keys')).toBe('운영 키 체크리스트를 조회해줘.');
+        expect(resolvePromptInput('/ops-checklist')).toBe('운영 체크리스트를 조회해줘.');
+        expect(resolvePromptInput('/setup-owner')).toBe('setup-owner 체크리스트를 조회해줘.');
+    });
+
+    test('supports operator status aliases', () => {
+        expect(resolvePromptInput('/ops-status')).toBe('운영 상태 요약을 알려줘.');
+        expect(resolvePromptInput('/system-status')).toBe('운영 상태 요약을 알려줘.');
+    });
+
     test('deprecated command returns migration hint while preserving prompt output', () => {
         const result = resolvePromptInputWithGovernance('/kpi 이번달 댓글과 전환율 연관성까지 같이 봐줘');
 

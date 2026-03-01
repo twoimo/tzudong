@@ -191,6 +191,13 @@ function sanitizeMemoryProfileNote(raw: unknown): string | undefined {
     return normalized || undefined;
 }
 
+function sanitizeApiKey(raw: unknown): string | undefined {
+    if (typeof raw !== 'string') return undefined;
+    const normalized = raw.trim();
+    if (!normalized) return undefined;
+    return normalized.slice(0, 512);
+}
+
 function parseContextMessages(raw: unknown): {
     contextMessages: InsightChatContextMessage[];
     invalidContextReason?: string;
@@ -323,7 +330,8 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
     const requestId = normalizeRequestId(body?.requestId);
     const provider = normalizeProvider(body?.provider);
     const model = normalizeModel(body?.model, provider);
-    const apiKey = typeof body?.apiKey === 'string' ? body.apiKey.trim() : undefined;
+    const apiKey = sanitizeApiKey(body?.apiKey);
+    const nanoBanana2Key = sanitizeApiKey(body?.nanoBanana2Key);
     const rawModel = typeof body?.model === 'string' ? body.model.trim() : '';
     const useServerKey = body?.useServerKey === true;
     const storyboardModelProfile = normalizeStoryboardProfile(body?.storyboardModelProfile);
@@ -348,6 +356,7 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
             useServerKey: useServerKey || !apiKey,
             ...(storyboardModelProfile ? { storyboardModelProfile } : {}),
             ...(imageModelProfile ? { imageModelProfile } : {}),
+            ...(nanoBanana2Key ? { nanoBanana2Key } : {}),
         }
         : undefined;
 

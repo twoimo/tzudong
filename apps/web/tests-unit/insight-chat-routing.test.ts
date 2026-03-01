@@ -68,4 +68,5 @@ describe('insight chat routing', () => {
     expect(result.meta?.fallbackReason).not.toBe('storyboard_qna_unavailable');
     expect(result.meta?.fallbackReason).toMatch(/^storyboard_/);
   });
+
 });

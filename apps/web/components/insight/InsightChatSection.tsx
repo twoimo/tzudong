@@ -275,6 +275,28 @@ function getRequestIdLabel(requestId: string | undefined): string | null {
     return sanitized;
 }
 
+function normalizeSystemStatusHintText(raw: unknown): string {
+    if (typeof raw !== 'string') return '';
+    return sanitizeMetaValue(raw).replace(/\s+/g, ' ');
+}
+
+export function normalizeSystemStatusHints(raw: unknown): string[] {
+    if (!Array.isArray(raw)) return [];
+
+    const deduped = new Set<string>();
+    const hints: string[] = [];
+    for (const entry of raw) {
+        const normalized = normalizeSystemStatusHintText(entry);
+        if (!normalized) continue;
+        const key = normalized.toLowerCase();
+        if (deduped.has(key)) continue;
+        deduped.add(key);
+        hints.push(normalized);
+        if (hints.length >= 4) break;
+    }
+    return hints;
+}
+
 function getCitationQualityLabel(quality: AdminInsightChatMeta['citationQuality']): string | null {
     if (!quality) return null;
     return META_CITATION_QUALITY_LABELS[quality] ?? quality;
@@ -1266,6 +1288,7 @@ const SYSTEM_STATUS_CHECKLIST_SOURCE_LABELS: Record<AdminInsightSystemStatusChec
     'storyboard-agent': '스토리보드 에이전트',
     'bge-embedding': 'BGE 임베딩',
     'provider-key': 'Provider Key',
+    'frame-caption-storage': '피크 프레임',
 };
 const SYSTEM_STATUS_CHECKLIST_CATEGORY_LABELS: Record<
     Exclude<AdminInsightSystemStatusChecklistItem['category'], undefined>,
@@ -1316,6 +1339,258 @@ const SYSTEM_STATUS_CHECKLIST_SEVERITY_STYLES: Record<
     },
 };
 
+export type AdminInsightSystemReadinessCard = {
+    title: string;
+    path: string;
+    statusText: string;
+    statusTone: 'good' | 'warning' | 'critical' | 'unknown';
+    detail: string;
+};
+
+const SYSTEM_READINESS_UNKNOWN_PATH = '경로 미확인';
+const FRAME_CAPTION_STATUS_KEY_CANDIDATES = [
+    'frameCaptionData',
+    'frameCaptionReadiness',
+    'frameCaption',
+    'frameCaptionStatus',
+    'frameCaptionDataReadiness',
+];
+const GDRIVE_CAPTION_STATUS_KEY_CANDIDATES = [
+    'gdriveFrameCaptionReadiness',
+    'gdriveFrameCaption',
+    'gdriveReadiness',
+    'gdriveFrameCaptionStatus',
+    'gdriveCaptionReadiness',
+];
+
+function normalizeBooleanValue(value: unknown): boolean | undefined {
+    if (typeof value === 'boolean') return value;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return undefined;
+}
+
+function normalizeStringValue(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+}
+
+function pickStatusPayload(
+    status: AdminInsightSystemStatusResponse | null,
+    keys: readonly string[],
+): Record<string, unknown> | undefined {
+    if (!status) return undefined;
+    const raw = status as Record<string, unknown>;
+    for (const key of keys) {
+        const candidate = raw[key];
+        if (isRecord(candidate)) return candidate;
+    }
+    return undefined;
+}
+
+function readBooleanCandidates(
+    payload: Record<string, unknown> | undefined,
+    keys: readonly string[],
+): boolean | undefined {
+    if (!payload) return undefined;
+    for (const key of keys) {
+        const candidate = normalizeBooleanValue(payload[key]);
+        if (typeof candidate === 'boolean') return candidate;
+    }
+    return undefined;
+}
+
+function readStringCandidates(
+    payload: Record<string, unknown> | undefined,
+    keys: readonly string[],
+): string | undefined {
+    if (!payload) return undefined;
+    for (const key of keys) {
+        const candidate = normalizeStringValue(payload[key]);
+        if (candidate) return candidate;
+    }
+    return undefined;
+}
+
+function hasChecklistKeywordMatch(
+    checklist: AdminInsightSystemStatusChecklistItem[] | undefined,
+    terms: readonly string[],
+): boolean {
+    if (!Array.isArray(checklist) || checklist.length === 0) return false;
+    const loweredTerms = terms.map((term) => term.toLowerCase());
+    return checklist.some((item) => {
+        const haystack = `${item?.id ?? ''} ${item?.title ?? ''} ${item?.action ?? ''}`.toLowerCase();
+        return loweredTerms.some((term) => haystack.includes(term));
+    });
+}
+
+function summarizeReadinessFromPayload(
+    status: AdminInsightSystemStatusResponse | null,
+    config: {
+        title: string;
+        statusKeys: readonly string[];
+        checklistTerms: readonly string[];
+        fallbackPath: string;
+    },
+): AdminInsightSystemReadinessCard | null {
+    const payload = pickStatusPayload(status, config.statusKeys);
+    const hasPayload = Boolean(payload);
+    const hasChecklistIssue = hasChecklistKeywordMatch(status?.checklist, config.checklistTerms);
+
+    if (!hasPayload && !hasChecklistIssue) return null;
+
+    const configured = readBooleanCandidates(payload, ['configured', 'enabled', 'pathConfigured', 'pathEnabled']);
+    const ready = readBooleanCandidates(payload, ['ready', 'exists', 'reachable', 'available']);
+    const path = readStringCandidates(payload, ['path', 'basePath', 'evidencePath', 'gdrivePath', 'frameCaptionPath']);
+    const detail = readStringCandidates(payload, ['detail', 'message', 'statusDetail', 'status', 'hint', 'note']);
+
+    const statusText = ready
+        ? '정상'
+        : configured === false
+            ? '미설정'
+            : hasChecklistIssue || hasPayload
+                ? '점검 필요'
+                : '미확인';
+
+    const statusTone: AdminInsightSystemReadinessCard['statusTone'] = ready
+        ? 'good'
+        : configured === false
+            ? 'critical'
+            : hasChecklistIssue || hasPayload
+                ? 'warning'
+                : 'unknown';
+
+    const detailText = detail
+        ? detail
+        : configured === false
+            ? '환경 변수를 확인해 주세요.'
+            : hasChecklistIssue
+                ? '운영 체크리스트 점검 필요 항목이 존재합니다.'
+                : hasPayload
+                    ? '상태가 확인되지 않습니다.'
+                    : '설정이 감지되지 않았습니다.';
+
+    return {
+        title: config.title,
+        path: path || config.fallbackPath,
+        statusText,
+        statusTone,
+        detail: detailText,
+    };
+}
+
+export function summarizeFrameCaptionReadiness(
+    status: AdminInsightSystemStatusResponse | null,
+): AdminInsightSystemReadinessCard | null {
+    return summarizeReadinessFromPayload(status, {
+        title: '피크 프레임 데이터',
+        statusKeys: FRAME_CAPTION_STATUS_KEY_CANDIDATES,
+        checklistTerms: ['frame', 'caption', 'peak', 'jsonl'],
+        fallbackPath: SYSTEM_READINESS_UNKNOWN_PATH,
+    });
+}
+
+export function summarizeRunDailyReadiness(
+    status: AdminInsightSystemStatusResponse | null,
+): AdminInsightSystemReadinessCard | null {
+    const runDaily = status?.runDaily;
+    const checklistEntries = status?.checklist ?? [];
+    const hasChecklistIssue = hasChecklistKeywordMatch(checklistEntries, ['run_daily', 'run_daily_script', 'run daily', 'daily_']);
+    const hasLogStaleChecklistIssue = checklistEntries.some((entry) => typeof entry?.id === 'string' && entry.id === 'run-daily-log-stale');
+    const hasExecutableChecklistIssue = checklistEntries.some(
+        (entry) => typeof entry?.id === 'string' && entry.id === 'run-daily-script-not-executable',
+    );
+    const hasMissingChecklistIssue = checklistEntries.some(
+        (entry) => typeof entry?.id === 'string' && entry.id === 'run-daily-script-missing',
+    );
+
+    if (!runDaily && !hasChecklistIssue) return null;
+
+    if (!runDaily) {
+        const statusText = hasMissingChecklistIssue
+            ? '미설정'
+            : hasExecutableChecklistIssue
+                ? '실행 권한 필요'
+                : hasLogStaleChecklistIssue
+                    ? '로그 점검 필요'
+                    : '점검 필요';
+        const statusTone: AdminInsightSystemReadinessCard['statusTone'] = hasMissingChecklistIssue || hasExecutableChecklistIssue
+            ? 'warning'
+            : hasLogStaleChecklistIssue
+                ? 'warning'
+                : 'warning';
+        const detail = hasLogStaleChecklistIssue
+            ? '최신 로그를 점검해 주세요.'
+            : hasExecutableChecklistIssue
+                ? '실행 권한을 점검해 주세요.'
+                : hasMissingChecklistIssue
+                    ? 'run_daily 스크립트가 감지되지 않았습니다.'
+                    : '운영 체크리스트 점검 필요 항목이 존재합니다.';
+
+        return {
+            title: 'run_daily 수집',
+            path: SYSTEM_READINESS_UNKNOWN_PATH,
+            statusText,
+            statusTone,
+            detail,
+        };
+    }
+
+    const scriptReady = Boolean(runDaily.scriptPath && runDaily.executable && !runDaily.stale);
+    const statusTone: AdminInsightSystemReadinessCard['statusTone'] = !runDaily.scriptPath
+        ? 'critical'
+        : !runDaily.executable || runDaily.stale
+            ? 'warning'
+            : 'good';
+    const statusText = scriptReady
+        ? '정상'
+        : !runDaily.scriptPath
+            ? '미설정'
+            : !runDaily.executable
+                ? '실행 권한 필요'
+                : '로그 점검 필요';
+    const detail = runDaily.stale && runDaily.latestLogPath
+        ? `최신 로그 점검 필요: ${runDaily.latestLogPath}`
+        : !runDaily.scriptPath
+            ? 'run_daily 스크립트가 감지되지 않았습니다.'
+            : runDaily.scriptPath && !runDaily.executable
+                ? '스크립트 실행 권한을 설정해 주세요.'
+                : runDaily.stale
+                    ? '최신 로그가 오래되었거나 감지되지 않았습니다.'
+                    : runDaily.latestLogUpdatedAt
+                        ? `마지막 로그: ${runDaily.latestLogUpdatedAt}`
+                        : '정상 동작이 확인됨';
+
+    return {
+        title: 'run_daily 수집',
+        path: readStringCandidates(runDaily, ['scriptPath', 'path']) ?? SYSTEM_READINESS_UNKNOWN_PATH,
+        statusText,
+        statusTone,
+        detail,
+    };
+}
+
+export function summarizeGDriveCaptionReadiness(
+    status: AdminInsightSystemStatusResponse | null,
+): AdminInsightSystemReadinessCard | null {
+    return summarizeReadinessFromPayload(status, {
+        title: 'GDrive 증거 경로',
+        statusKeys: GDRIVE_CAPTION_STATUS_KEY_CANDIDATES,
+        checklistTerms: ['gdrive', 'google drive', 'gs://', 'frame-caption'],
+        fallbackPath: SYSTEM_READINESS_UNKNOWN_PATH,
+    });
+}
+
+function resolveReadinessBadgeClass(tone: AdminInsightSystemReadinessCard['statusTone']): string {
+    if (tone === 'good') return 'bg-emerald-100 text-emerald-700';
+    if (tone === 'warning') return 'bg-amber-100 text-amber-700';
+    if (tone === 'critical') return 'bg-rose-100 text-rose-700';
+    return 'bg-zinc-100 text-zinc-700';
+}
+
 const KEY_SOURCE_MATRIX_LABELS = {
     provider: '키 소스',
     browser: '브라우저',
@@ -1360,7 +1635,7 @@ function getSystemStatusKeyMatrixRows(systemStatus: AdminInsightSystemStatusResp
         {
             key: 'nanobanana2',
             label: 'Nano Banana 2',
-            browserKey: false,
+            browserKey: Boolean(llmKeys.nanobanana2),
             serverKey: Boolean(systemStatus.keys?.nanoBanana2Key),
         },
     ];
@@ -1372,18 +1647,122 @@ type ChecklistGroup = {
     items: AdminInsightSystemStatusChecklistItem[];
 };
 
-function groupChecklistItemsBySeverityAndCategory(
+export type SystemReadinessSummary = {
+    status: 'good' | 'warning' | 'critical';
+    readinessPercent: number;
+    blockers: string[];
+    reason: string;
+};
+
+function normalizeChecklistSeverity(raw: unknown): AdminInsightSystemStatusChecklistSeverity {
+    return raw === 'critical' || raw === 'high' || raw === 'medium' || raw === 'low'
+        ? raw
+        : 'low';
+}
+
+function normalizeChecklistCategory(raw: unknown): Exclude<AdminInsightSystemStatusChecklistItem['category'], undefined> {
+    return raw === 'environment' || raw === 'integration' || raw === 'provider-key' || raw === 'general'
+        ? raw
+        : 'general';
+}
+
+function normalizeChecklistSource(raw: unknown): AdminInsightSystemStatusChecklistSource {
+    return raw === 'run_daily'
+        || raw === 'storyboard-agent'
+        || raw === 'bge-embedding'
+        || raw === 'provider-key'
+        || raw === 'frame-caption-storage'
+        ? raw
+        : 'provider-key';
+}
+
+function normalizeChecklistText(raw: unknown, fallback: string): string {
+    if (typeof raw !== 'string') return fallback;
+    const normalized = raw.trim();
+    return normalized || fallback;
+}
+
+function normalizeChecklistCommandSnippet(raw: unknown): string | undefined {
+    if (typeof raw !== 'string') return undefined;
+    const normalized = raw.trim();
+    return normalized || undefined;
+}
+
+function normalizeChecklistItem(
+    raw: unknown,
+    index: number,
+): AdminInsightSystemStatusChecklistItem | null {
+    if (!raw || typeof raw !== 'object') return null;
+
+    const payload = raw as Partial<AdminInsightSystemStatusChecklistItem>;
+    const id = normalizeChecklistText(payload.id, `checklist-item-${index + 1}`);
+    const title = normalizeChecklistText(payload.title, '제목 없음');
+    const action = normalizeChecklistText(payload.action, '조치 항목을 확인해 주세요.');
+    const severity = normalizeChecklistSeverity(payload.severity);
+    const category = normalizeChecklistCategory(payload.category);
+    const source = normalizeChecklistSource(payload.source);
+    const commandSnippet = normalizeChecklistCommandSnippet(payload.commandSnippet ?? payload.command);
+
+    return {
+        id,
+        title,
+        action,
+        severity,
+        category,
+        source,
+        ...(commandSnippet ? { commandSnippet } : {}),
+    };
+}
+
+export function getSystemStatusChecklistSourceLabel(source: unknown): string {
+    if (
+        source === 'run_daily'
+        || source === 'storyboard-agent'
+        || source === 'bge-embedding'
+        || source === 'provider-key'
+        || source === 'frame-caption-storage'
+    ) {
+        return SYSTEM_STATUS_CHECKLIST_SOURCE_LABELS[source];
+    }
+
+    if (typeof source === 'string') {
+        const normalized = source.toLowerCase();
+        if (normalized.includes('frame')) {
+            return '피크 프레임';
+        }
+        if (normalized.includes('gdrive') || normalized.includes('drive')) {
+            return 'GDrive';
+        }
+    }
+
+    return '기타';
+}
+
+export function getSystemStatusChecklistCategoryLabel(category: unknown): string {
+    if (category === 'environment' || category === 'integration' || category === 'provider-key' || category === 'general') {
+        return SYSTEM_STATUS_CHECKLIST_CATEGORY_LABELS[category];
+    }
+
+    return '기타';
+}
+
+export function groupChecklistItemsBySeverityAndCategory(
     checklist: ReadonlyArray<AdminInsightSystemStatusChecklistItem> | undefined,
 ): ChecklistGroup[] {
     const map = new Map<string, AdminInsightSystemStatusChecklistItem[]>();
     const sourceRank: Record<AdminInsightSystemStatusChecklistSource, number> = {
         'storyboard-agent': 0,
         'bge-embedding': 1,
-        'provider-key': 2,
-        run_daily: 3,
+        'frame-caption-storage': 2,
+        'provider-key': 3,
+        run_daily: 4,
     };
 
-    for (const item of checklist ?? []) {
+    const normalizedChecklist = (checklist ?? [])
+        .map((item, index) => normalizeChecklistItem(item, index))
+        .filter(Boolean) as AdminInsightSystemStatusChecklistItem[];
+
+    for (const item of normalizedChecklist) {
         const category = item.category ?? 'general';
         const key = `${item.severity}|||${category}`;
         const list = map.get(key) ?? [];
@@ -1413,9 +1792,88 @@ function groupChecklistItemsBySeverityAndCategory(
     return groups;
 }
 
-type ServerKeyAvailability = Partial<Record<LlmProvider, boolean>>;
+export function summarizeSystemReadiness(status: AdminInsightSystemStatusResponse | null): SystemReadinessSummary {
+    if (!status) {
+        return {
+            status: 'warning',
+            readinessPercent: 0,
+            blockers: [],
+            reason: '운영 준비도 정보를 아직 불러오지 못했습니다.',
+        };
+    }
 
-type StoredLlmKeys = Partial<Record<LlmProvider, string>>;
+    const checks: boolean[] = [
+        Boolean(status.keys.supabaseUrl),
+        Boolean(status.keys.supabaseServiceRoleKey),
+        Boolean(status.keys.geminiServerKey),
+        Boolean(status.keys.openaiServerKey),
+        Boolean(status.keys.anthropicServerKey),
+        Boolean(status.keys.nanoBanana2Key),
+        Boolean(status.runDaily?.scriptPath && status.runDaily.executable && !status.runDaily.stale),
+        !status.storyboardAgent.enabled || (status.storyboardAgent.configured && status.storyboardAgent.reachable),
+        !status.bgeEmbedding.enabled || (status.bgeEmbedding.configured && status.bgeEmbedding.reachable),
+    ];
+
+    const readinessPercent = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+    const blockers: string[] = [];
+
+    if (!status.keys.supabaseUrl) blockers.push('Supabase URL');
+    if (!status.keys.supabaseServiceRoleKey) blockers.push('Supabase 서비스 키');
+    if (!status.keys.geminiServerKey) blockers.push('Gemini 서버 키');
+    if (!status.keys.openaiServerKey) blockers.push('OpenAI 서버 키');
+    if (!status.keys.anthropicServerKey) blockers.push('Anthropic 서버 키');
+    if (!status.keys.nanoBanana2Key) blockers.push('Nano Banana 2 키');
+    if (!status.runDaily || !status.runDaily.scriptPath) {
+        blockers.push('run_daily');
+    } else if (!status.runDaily.executable) {
+        blockers.push('run_daily 실행 권한');
+    } else if (status.runDaily.stale) {
+        blockers.push('run_daily 로그');
+    }
+    if (status.storyboardAgent.enabled && (!status.storyboardAgent.configured || !status.storyboardAgent.reachable)) {
+        blockers.push('스토리보드 에이전트');
+    }
+    if (status.bgeEmbedding.enabled && (!status.bgeEmbedding.configured || !status.bgeEmbedding.reachable)) {
+        blockers.push('BGE 임베딩 서버');
+    }
+
+    const hasCriticalChecklist = (status.checklist ?? [])
+        .some((item) => normalizeChecklistSeverity(item?.severity) === 'critical');
+
+    if (hasCriticalChecklist) {
+        return {
+            status: 'critical',
+            readinessPercent,
+            blockers,
+            reason: '즉시 점검이 필요한 운영 항목이 있습니다.',
+        };
+    }
+
+    if (blockers.length === 0) {
+        return {
+            status: 'good',
+            readinessPercent: 100,
+            blockers,
+            reason: '모든 핵심 의존성이 준비되어 있습니다.',
+        };
+    }
+
+    return {
+        status: 'warning',
+        readinessPercent,
+        blockers,
+        reason: '일부 의존성이 미준비 상태입니다.',
+    };
+}
+
+type ServerKeyAvailability = Partial<Record<LlmProvider, boolean>>;
+type ClientKeyProvider = LlmProvider | 'nanobanana2';
+type StoredLlmKeys = Partial<Record<ClientKeyProvider, string>>;
+type InsightChatLlmKeyExportPayload = {
+    schemaVersion: number;
+    exportedAt: string;
+    keys: StoredLlmKeys;
+};
 type CachedEntry<T> = {
     data: T;
     expiresAt: number;
@@ -1451,11 +1909,97 @@ type PersistedConversation = {
     memoryMode?: InsightChatMemoryMode;
     memoryProfileNote?: string;
 };
+const LLM_KEY_EXPORT_SCHEMA_VERSION = 1;
+const LLM_KEY_VALUE_MAX_LENGTH = 2048;
+const CLIENT_KEY_PROVIDERS: readonly ClientKeyProvider[] = ['gemini', 'openai', 'anthropic', 'nanobanana2'];
+
+export function sanitizeLlmKeyValue(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    return value
+        .replace(/[\u0000-\u001f\u007f]+/g, '')
+        .replace(/\s+/g, '')
+        .slice(0, LLM_KEY_VALUE_MAX_LENGTH);
+}
+
+function sanitizeLlmKeyPayloadValues(raw: unknown): StoredLlmKeys {
+    if (!isRecord(raw)) return {};
+
+    const out: StoredLlmKeys = {};
+    for (const provider of CLIENT_KEY_PROVIDERS) {
+        const candidate = sanitizeLlmKeyValue(raw[provider]);
+        if (!candidate) continue;
+        out[provider] = candidate;
+    }
+    return out;
+}
+
+function hasClientKeyShape(raw: Record<string, unknown>): boolean {
+    return CLIENT_KEY_PROVIDERS.some((provider) => Object.prototype.hasOwnProperty.call(raw, provider));
+}
+
+export type InsightChatLlmKeysPayload = {
+    schemaVersion: number;
+    exportedAt: string;
+    keys: StoredLlmKeys;
+};
+
+export function serializeLlmKeyPayload(
+    keys: StoredLlmKeys,
+    options?: { exportedAt?: string },
+): InsightChatLlmKeysPayload {
+    return {
+        schemaVersion: LLM_KEY_EXPORT_SCHEMA_VERSION,
+        exportedAt: options?.exportedAt ?? new Date().toISOString(),
+        keys: sanitizeLlmKeyPayloadValues(keys),
+    };
+}
+
+export function parseLlmKeyPayload(raw: unknown): InsightChatLlmKeysPayload | null {
+    if (!isRecord(raw)) return null;
+
+    const source = Object.prototype.hasOwnProperty.call(raw, 'keys') ? raw.keys : raw;
+    if (!isRecord(source)) return null;
+
+    const hasEnvelope = Object.prototype.hasOwnProperty.call(raw, 'keys');
+    const hasKnownKeys = hasClientKeyShape(source);
+
+    if (hasEnvelope) {
+        if (!hasKnownKeys && Object.keys(source).length > 0) return null;
+    } else if (!hasKnownKeys && Object.keys(source).length > 0) {
+        return null;
+    }
+
+    const schemaVersionRaw = raw.schemaVersion ?? raw.version;
+    const schemaVersionCandidate = Number(schemaVersionRaw);
+    const schemaVersion = Number.isInteger(schemaVersionCandidate) && schemaVersionCandidate > 0
+        ? schemaVersionCandidate
+        : LLM_KEY_EXPORT_SCHEMA_VERSION;
+
+    return {
+        schemaVersion,
+        exportedAt: typeof raw.exportedAt === 'string' ? raw.exportedAt : new Date().toISOString(),
+        keys: sanitizeLlmKeyPayloadValues(source),
+    };
+}
 
 const chatBootstrapCache = new Map<string, CachedEntry<AdminInsightChatBootstrapResponse>>();
 const chatResponseCache = new Map<string, CachedEntry<AdminInsightChatResponse>>();
 const inFlightBootstrapRequest = new Map<string, Promise<AdminInsightChatBootstrapResponse>>();
 const inFlightChatRequest = new Map<string, Promise<AdminInsightChatResponse>>();
+export function buildLlmKeysExportPayload(
+    rawKeys: StoredLlmKeys,
+    options?: { exportedAt?: string },
+): InsightChatLlmKeyExportPayload {
+    return serializeLlmKeyPayload(rawKeys, options);
+}
+
+export function parseLlmKeysImportPayload(raw: unknown): StoredLlmKeys | null {
+    return parseLlmKeyPayload(raw)?.keys ?? null;
+}
+
+export function sanitizeStoredLlmKeys(raw: unknown): StoredLlmKeys {
+    return sanitizeLlmKeyPayloadValues(raw);
+}
 
 function sanitizeExportFileNamePart(value: string): string {
     const normalized = value
@@ -1623,6 +2167,96 @@ const INSIGHT_PROMPT_LIBRARY: InsightPromptCommandGroup[] = [
         title: '운영 액션',
         description: '즉시 실행 가능한 채널 운영 행동 제안',
         prompts: [
+            {
+                id: 'setup',
+                command: '/setup',
+                label: '운영 체크리스트',
+                prompt: '운영 체크리스트를 조회해줘.',
+                description: '필수 키, run_daily, Storyboard, BGE 준비 상태를 빠르게 점검',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'setup-checklist',
+                command: '/setup-checklist',
+                label: '운영 체크리스트',
+                prompt: '운영 체크리스트를 조회해줘.',
+                description: 'setup-checklist 별칭',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'setup-keys',
+                command: '/setup-keys',
+                label: '운영 키 체크',
+                prompt: '운영 키 체크리스트를 조회해줘.',
+                description: 'Supabase/LLM/Nano Banana 2 키 준비 상태를 집중 점검',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'ops-keys',
+                command: '/ops-keys',
+                label: '운영 키 체크',
+                prompt: '운영 키 체크리스트를 조회해줘.',
+                description: 'ops-keys 별칭',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'ops-checklist',
+                command: '/ops-checklist',
+                label: '운영 체크리스트',
+                prompt: '운영 체크리스트를 조회해줘.',
+                description: 'ops-checklist 별칭',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'ops-status',
+                command: '/ops-status',
+                label: '운영 상태 요약',
+                prompt: '운영 상태 요약을 알려줘.',
+                description: 'run_daily/Storyboard/BGE/키 상태와 blocker를 한 번에 확인',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'system-status',
+                command: '/system-status',
+                label: '시스템 상태',
+                prompt: '운영 상태 요약을 알려줘.',
+                description: '시스템 운영 상태를 run_daily/Storyboard/BGE/키 기준으로 요약',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'operator-todo',
+                command: '/operator-todo',
+                label: '운영자 TODO',
+                prompt: '운영자 TODO를 조회해줘.',
+                description: 'Supabase/Storyboard/BGE/Nano Banana 2 실행 항목 체크',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'ops-todo',
+                command: '/ops-todo',
+                label: '운영자 TODO',
+                prompt: '운영자 TODO를 조회해줘.',
+                description: 'ops-todo 별칭',
+                groupId: 'ops',
+                version: 1,
+            },
+            {
+                id: 'setup-owner',
+                command: '/setup-owner',
+                label: '오너 셋업',
+                prompt: 'setup-owner 체크리스트를 조회해줘.',
+                description: 'owner용 운영자 점검 체크리스트',
+                groupId: 'ops',
+                version: 1,
+            },
             {
                 id: 'anomaly',
                 command: '/anomaly',
@@ -2084,6 +2718,7 @@ function buildConversationScopedCacheKey(
         useServerKey?: boolean;
         storyboardModelProfile?: StoryboardModelProfile;
         imageModelProfile?: StoryboardModelProfile;
+        nanoBanana2Key?: string;
     },
     imageModelProfile?: StoryboardModelProfile,
     responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
@@ -2255,6 +2890,7 @@ async function postChatMessage(
         storyboardModelProfile?: StoryboardModelProfile;
         imageModelProfile?: StoryboardModelProfile;
         useServerKey?: boolean;
+        nanoBanana2Key?: string;
     },
     imageModelProfile?: StoryboardModelProfile,
     responseMode: InsightChatResponseMode = DEFAULT_RESPONSE_MODE,
@@ -2319,6 +2955,7 @@ async function postChatMessage(
                                 ...(llmConfig.useServerKey ? { useServerKey: true } : {}),
                                 ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
                                 ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
+                                ...(llmConfig.nanoBanana2Key ? { nanoBanana2Key: llmConfig.nanoBanana2Key } : {}),
                             }
                             : {}),
                         ...(resolvedImageModelProfile && !llmConfig ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
@@ -2376,6 +3013,7 @@ async function postStreamChat(
         useServerKey?: boolean;
         storyboardModelProfile?: StoryboardModelProfile;
         imageModelProfile?: StoryboardModelProfile;
+        nanoBanana2Key?: string;
     },
     onToken: (token: string) => void,
     abortSignal?: AbortSignal,
@@ -2410,6 +3048,7 @@ async function postStreamChat(
             useServerKey: llmConfig.useServerKey,
             ...(llmConfig.imageModelProfile ? { imageModelProfile: llmConfig.imageModelProfile } : {}),
             ...(llmConfig.storyboardModelProfile ? { storyboardModelProfile: llmConfig.storyboardModelProfile } : {}),
+            ...(llmConfig.nanoBanana2Key ? { nanoBanana2Key: llmConfig.nanoBanana2Key } : {}),
         }),
     });
 
@@ -2495,26 +3134,67 @@ function mapSources(rawSources: InsightChatSource[] | undefined): InsightChatSou
     const seen = new Set<string>();
 
     for (const source of rawSources ?? []) {
+        const sourceRecord = source as Record<string, unknown>;
         const videoTitle = sanitizeSourceValue(source.videoTitle);
         const youtubeLink = normalizeSourceLink(source.youtubeLink);
+        const assetLink = normalizeSourceLink(
+            typeof source.assetLink === 'string'
+                ? source.assetLink
+                : typeof sourceRecord.asset_link === 'string'
+                    ? sourceRecord.asset_link
+                    : undefined,
+        );
+        const frameLink = normalizeSourceLink(
+            typeof source.frameLink === 'string'
+                ? source.frameLink
+                : typeof sourceRecord.frame_link === 'string'
+                    ? sourceRecord.frame_link
+                    : undefined,
+        );
         const timestamp = sanitizeSourceValue(source.timestamp);
         const text = sanitizeSourceValue(source.text);
 
-        if (!videoTitle && !youtubeLink && !timestamp && !text) continue;
+        if (!videoTitle && !youtubeLink && !assetLink && !frameLink && !timestamp && !text) continue;
 
-        const key = `${videoTitle}||${youtubeLink}||${timestamp}||${text}`;
+        const linkKey = [youtubeLink, assetLink, frameLink]
+            .filter(Boolean)
+            .sort()
+            .join('|');
+        const key = `${videoTitle}||${timestamp}||${text}||${linkKey}`;
         if (seen.has(key)) continue;
         seen.add(key);
 
         normalized.push({
             videoTitle,
             youtubeLink,
+            assetLink,
+            frameLink,
             timestamp,
             text,
         });
     }
 
     return normalized;
+}
+
+function getSourceEvidenceLinks(
+    source: Pick<InsightChatSource, 'assetLink' | 'frameLink'> & Partial<Pick<InsightChatSource, 'youtubeLink'>>,
+): Array<{ href: string; label: string }> {
+    const seen = new Set<string>();
+    const links: Array<{ href: string; label: string }> = [];
+
+    const addIfUnique = (href: string, label: string) => {
+        const safeHref = normalizeSourceLink(href);
+        if (!safeHref || seen.has(safeHref)) return;
+
+        seen.add(safeHref);
+        links.push({ href: safeHref, label });
+    };
+
+    addIfUnique(source.assetLink ?? '', '에셋 증거');
+    addIfUnique(source.frameLink ?? '', '피크 프레임 증거');
+
+    return links;
 }
 
 type InsightChatTreemapResponse = {
@@ -3737,27 +4417,46 @@ const SourceList = memo(({ sources }: { sources: InsightChatSource[] }) => {
                 <span className="ml-1 text-[#9ca3af]">({sources.length}건)</span>
             </p>
             <div className="space-y-1">
-                {sources.map((source, idx) => (
-                    <div
-                        key={`${source.videoTitle}-${source.youtubeLink}-${idx}`}
-                        className="flex flex-wrap gap-1 text-xs leading-4 min-w-0 break-words text-[#6b7280]"
-                    >
-                        {source.youtubeLink ? (
-                            <a
-                                href={source.youtubeLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#ef4444] hover:underline"
-                            >
+                {sources.map((source, idx) => {
+                    const evidenceLinks = getSourceEvidenceLinks(source);
+
+                    return (
+                        <div
+                            key={`${source.videoTitle}-${source.youtubeLink}-${idx}`}
+                            className="flex flex-wrap gap-1 text-xs leading-4 min-w-0 break-words text-[#6b7280]"
+                        >
+                            {source.youtubeLink ? (
+                                <a
+                                    href={source.youtubeLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[#ef4444] hover:underline"
+                                >
+                                    <span className="font-medium break-words">{source.videoTitle || '스토리보드 참고 소스'}</span>
+                                </a>
+                            ) : (
                                 <span className="font-medium break-words">{source.videoTitle || '스토리보드 참고 소스'}</span>
-                            </a>
-                        ) : (
-                            <span className="font-medium break-words">{source.videoTitle || '스토리보드 참고 소스'}</span>
-                        )}
-                        <span className="text-[#6b7280] break-words">({source.timestamp || '-'})</span>
-                        {source.text ? <span className="text-[#374151] truncate">: {source.text}</span> : null}
-                    </div>
-                ))}
+                            )}
+                            <span className="text-[#6b7280] break-words">({source.timestamp || '-'})</span>
+                            {source.text ? <span className="text-[#374151] truncate">: {source.text}</span> : null}
+                            {evidenceLinks.length > 0 ? (
+                                <div className="w-full flex flex-wrap gap-2 pt-1">
+                                    {evidenceLinks.map((link) => (
+                                        <a
+                                            key={`${source.videoTitle}-${link.href}-${link.label}`}
+                                            href={link.href}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[#4f46e5] hover:underline"
+                                        >
+                                            [{link.label}]
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -3784,6 +4483,7 @@ const MessageMetaPanel = memo(({ meta, sources }: { meta?: AdminInsightChatMeta 
     const confidenceLabel = getConfidenceLabel(meta.confidence);
     const latencyLabel = getLatencyLabel(meta.latencyMs);
     const toolTrace = Array.isArray(meta.toolTrace) ? meta.toolTrace.filter(Boolean) : [];
+    const systemStatusHints = normalizeSystemStatusHints(meta.systemStatusHints);
     const citationQuality = meta.citationQuality ?? getCitationQualityFromSources(sources);
     const citationQualityLabel = getCitationQualityLabel(citationQuality);
 
@@ -3844,6 +4544,20 @@ const MessageMetaPanel = memo(({ meta, sources }: { meta?: AdminInsightChatMeta 
                             title={trace}
                         >
                             {trace}
+                        </span>
+                    ))}
+                </div>
+            ) : null}
+            {systemStatusHints.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    <span className="text-[10px] text-[#6b7280]">운영 힌트:</span>
+                    {systemStatusHints.map((hint) => (
+                        <span
+                            key={hint}
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] bg-amber-50 text-amber-700 border border-amber-200"
+                            title={hint}
+                        >
+                            {hint}
                         </span>
                     ))}
                 </div>
@@ -4254,14 +4968,19 @@ const InsightChatSectionComponent = () => {
     const [conversationSearchQuery, setConversationSearchQuery] = useState('');
     const [conversationQuickFilter, setConversationQuickFilter] = useState<InsightConversationFilter>(CONVERSATION_FILTER_ALL);
     const [activeConversationTagInput, setActiveConversationTagInput] = useState('');
-    const [keyVisibility, setKeyVisibility] = useState<Partial<Record<LlmProvider, boolean>>>({});
+    const [keyVisibility, setKeyVisibility] = useState<Partial<Record<ClientKeyProvider, boolean>>>({});
     const [serverKeyAvailability, setServerKeyAvailability] = useState<ServerKeyAvailability>({});
     const [systemStatus, setSystemStatus] = useState<AdminInsightSystemStatusResponse | null>(null);
     const systemStatusChecklistGroups = useMemo(() => groupChecklistItemsBySeverityAndCategory(systemStatus?.checklist), [systemStatus]);
+    const systemReadinessSummary = useMemo(() => summarizeSystemReadiness(systemStatus), [systemStatus]);
     const systemStatusKeySourceMatrix = useMemo(() => getSystemStatusKeyMatrixRows(systemStatus, llmKeys), [systemStatus, llmKeys]);
+    const runDailyReadiness = useMemo(() => summarizeRunDailyReadiness(systemStatus), [systemStatus]);
+    const frameCaptionReadiness = useMemo(() => summarizeFrameCaptionReadiness(systemStatus), [systemStatus]);
+    const gdriveCaptionReadiness = useMemo(() => summarizeGDriveCaptionReadiness(systemStatus), [systemStatus]);
     const [isSystemStatusLoading, setIsSystemStatusLoading] = useState(false);
     const [systemStatusError, setSystemStatusError] = useState<string | null>(null);
     const conversationImportInputRef = useRef<HTMLInputElement>(null);
+    const keyImportInputRef = useRef<HTMLInputElement>(null);
     const attachmentInputRef = useRef<HTMLInputElement>(null);
     const modelDropdownRef = useRef<HTMLDivElement>(null);
     const imageModelDropdownRef = useRef<HTMLDivElement>(null);
@@ -4305,7 +5024,10 @@ const InsightChatSectionComponent = () => {
     useEffect(() => {
         try {
             const raw = localStorage.getItem(LLM_KEYS_STORAGE_KEY);
-            if (raw) setLlmKeys(JSON.parse(raw) as StoredLlmKeys);
+            if (raw) {
+                const parsed = parseLlmKeysImportPayload(JSON.parse(raw) as unknown);
+                if (parsed !== null) setLlmKeys(parsed);
+            }
             const savedModel = localStorage.getItem(LLM_MODEL_STORAGE_KEY);
             if (savedModel && LLM_MODELS.some((m) => m.id === savedModel)) setActiveModelId(savedModel);
             const savedEnabled = localStorage.getItem(LLM_ENABLED_MODELS_KEY);
@@ -4327,14 +5049,19 @@ const InsightChatSectionComponent = () => {
         setActiveConversationTagInput('');
     }, [activeConversationId]);
 
-    const saveLlmKey = useCallback((provider: LlmProvider, key: string) => {
+    const saveLlmKeys = useCallback((next: StoredLlmKeys) => {
+        try { localStorage.setItem(LLM_KEYS_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    }, []);
+
+    const saveLlmKey = useCallback((provider: ClientKeyProvider, key: string) => {
         setLlmKeys((prev) => {
-            const next = { ...prev, [provider]: key.trim() || undefined };
-            if (!key.trim()) delete next[provider];
-            try { localStorage.setItem(LLM_KEYS_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+            const sanitized = sanitizeLlmKeyValue(key);
+            const next = { ...prev, [provider]: sanitized };
+            if (!sanitized) delete next[provider];
+            saveLlmKeys(next);
             return next;
         });
-    }, []);
+    }, [saveLlmKeys]);
 
     const toggleModel = useCallback((modelId: string) => {
         setEnabledModelIds((prev) => {
@@ -4406,6 +5133,7 @@ const InsightChatSectionComponent = () => {
             useServerKey: activeProviderUsesServerKey,
             ...(resolvedImageModelProfile ? { storyboardModelProfile: resolvedImageModelProfile } : {}),
             ...(resolvedImageModelProfile ? { imageModelProfile: resolvedImageModelProfile } : {}),
+            ...(llmKeys.nanobanana2 ? { nanoBanana2Key: llmKeys.nanobanana2 } : {}),
         };
     }, [activeModel, activeProviderHasKey, activeProviderUsesServerKey, imageModelProfile, llmKeys]);
 
@@ -5266,6 +5994,56 @@ const InsightChatSectionComponent = () => {
         conversationImportInputRef.current?.click();
     }, [activeConversation?.isBooting, sendingConversationId]);
 
+    const handleExportLlmKeys = useCallback(() => {
+        const payload = buildLlmKeysExportPayload(llmKeys);
+        const fileName = buildExportFileName('insight-chat-llm-keys');
+        triggerJsonDownload(JSON.stringify(payload, null, 2), fileName);
+    }, [llmKeys]);
+
+    const handleOpenLlmKeyImportPicker = useCallback(() => {
+        keyImportInputRef.current?.click();
+    }, []);
+
+    const handleClearAllLlmKeys = useCallback(() => {
+        const shouldClear = window.confirm('브라우저 저장 키를 모두 삭제할까요?\n현재 설정한 모든 API 키가 제거되며 복구할 수 없습니다.');
+        if (!shouldClear) return;
+
+        setLlmKeys(() => {
+            saveLlmKeys({});
+            return {};
+        });
+    }, [saveLlmKeys]);
+
+    const handleLlmKeyImportFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+        const resetInput = () => {
+            event.target.value = '';
+        };
+        const file = event.target.files?.[0];
+        if (!file) {
+            resetInput();
+            return;
+        }
+
+        try {
+            const rawText = await file.text();
+            const rawPayload = JSON.parse(rawText) as unknown;
+            const parsed = parseLlmKeysImportPayload(rawPayload);
+            if (parsed === null) {
+                window.alert('가져오기 파일 형식이 올바르지 않습니다.');
+                return;
+            }
+
+            setLlmKeys(parsed);
+            saveLlmKeys(parsed);
+            window.alert(`키 ${Object.keys(parsed).length}개를 가져왔습니다.`);
+        } catch (error) {
+            console.error('[admin/insight/chat] llm key import failed', error);
+            window.alert('키 파일을 읽지 못했습니다. JSON 파일인지 확인해 주세요.');
+        } finally {
+            resetInput();
+        }
+    }, [saveLlmKeys]);
+
     const handleConversationImportFileChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
         const resetInput = () => {
             event.target.value = '';
@@ -5801,11 +6579,53 @@ const InsightChatSectionComponent = () => {
                         }}
                         className="hidden"
                     />
+                    <input
+                        ref={keyImportInputRef}
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={(event) => {
+                            void handleLlmKeyImportFileChange(event);
+                        }}
+                        className="hidden"
+                    />
                 </div>
 
                 {showSettings ? (
                     <div className="flex-1 h-0 min-h-0 overflow-y-auto px-3 py-3 space-y-4">
                         <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">API 키 설정</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            <Button
+                                type="button"
+                                size="sm"
+                                className="h-7 px-2 border-[#d1d5db]"
+                                variant="outline"
+                                onClick={handleExportLlmKeys}
+                            >
+                                <Download className="h-3 w-3 mr-1" />
+                                키 백업
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                className="h-7 px-2 border-[#d1d5db]"
+                                variant="outline"
+                                onClick={handleOpenLlmKeyImportPicker}
+                                title="브라우저 키 가져오기"
+                            >
+                                <Upload className="h-3 w-3 mr-1" />
+                                키 가져오기
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 border-[#fca5a5] text-[#b91c1c] hover:bg-[#fef2f2]"
+                                onClick={handleClearAllLlmKeys}
+                            >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                키 모두 삭제
+                            </Button>
+                        </div>
                         {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
                             const isVisible = keyVisibility[provider] ?? false;
                             const hasBrowserKey = Boolean(llmKeys[provider]);
@@ -5855,6 +6675,55 @@ const InsightChatSectionComponent = () => {
                             );
                         })}
 
+                        {(() => {
+                            const provider: ClientKeyProvider = 'nanobanana2';
+                            const isVisible = keyVisibility[provider] ?? false;
+                            const hasBrowserKey = Boolean(llmKeys[provider]);
+                            const hasServerKey = Boolean(systemStatus?.keys?.nanoBanana2Key);
+                            const keyStatusMessage = hasBrowserKey
+                                ? (hasServerKey ? '브라우저 키 + 서버 키 모두 준비' : '브라우저 키 설정됨')
+                                : hasServerKey
+                                    ? '서버 키 연동됨'
+                                    : '브라우저/서버 키 미설정';
+
+                            return (
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-[#374151]">
+                                        Nano Banana 2
+                                    </label>
+                                    <div className="flex gap-1">
+                                        <input
+                                            type={isVisible ? 'text' : 'password'}
+                                            placeholder="Nano Banana 2 API Key"
+                                            value={llmKeys[provider] ?? ''}
+                                            onChange={(e) => saveLlmKey(provider, e.target.value)}
+                                            className="flex-1 h-8 px-2 text-xs border border-[#e5e7eb] rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#f87171] font-mono"
+                                        />
+                                        <button
+                                            type="button"
+                                            className="h-8 w-8 grid place-items-center border border-[#e5e7eb] rounded-md hover:bg-[#f3f4f6]"
+                                            onClick={() => setKeyVisibility((prev) => ({ ...prev, [provider]: !isVisible }))}
+                                            title={isVisible ? '숨기기' : '보기'}
+                                        >
+                                            {isVisible ? <EyeOff className="h-3 w-3 text-[#6b7280]" /> : <Eye className="h-3 w-3 text-[#6b7280]" />}
+                                        </button>
+                                    </div>
+                                    <p className={cn(
+                                        'text-[10px]',
+                                        hasBrowserKey || hasServerKey ? 'text-emerald-700' : 'text-[#9ca3af]',
+                                    )}>
+                                        {keyStatusMessage}
+                                    </p>
+                                    {!hasBrowserKey && hasServerKey ? (
+                                        <p className="text-[10px] text-[#6b7280]">서버 키 변수: NANO_BANANA_2_API_KEY</p>
+                                    ) : null}
+                                    {hasBrowserKey ? (
+                                        <p className="text-[10px] text-[#6b7280]">스토리보드 이미지 생성 요청 시 브라우저 키를 우선 전달합니다.</p>
+                                    ) : null}
+                                </div>
+                            );
+                        })()}
+
                         <div className="pt-3 border-t border-[#e5e7eb] space-y-2">
                             <div className="flex items-center justify-between">
                                 <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider">운영 상태</p>
@@ -5878,6 +6747,60 @@ const InsightChatSectionComponent = () => {
                             ) : null}
 
                             <div className="space-y-1.5">
+                                {runDailyReadiness ? (
+                                    <div className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2 py-1.5">
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-medium text-[#111827]">{runDailyReadiness.title}</p>
+                                            <p className="text-[10px] text-[#6b7280] truncate">{runDailyReadiness.path}</p>
+                                        </div>
+                                        <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
+                                            <span className={cn(
+                                                'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                                                resolveReadinessBadgeClass(runDailyReadiness.statusTone),
+                                            )}>
+                                                {runDailyReadiness.statusText}
+                                            </span>
+                                            <p className="text-[10px] text-[#6b7280] text-right">{runDailyReadiness.detail}</p>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {frameCaptionReadiness ? (
+                                    <div className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2 py-1.5">
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-medium text-[#111827]">{frameCaptionReadiness.title}</p>
+                                            <p className="text-[10px] text-[#6b7280] truncate">{frameCaptionReadiness.path}</p>
+                                        </div>
+                                        <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
+                                            <span className={cn(
+                                                'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                                                resolveReadinessBadgeClass(frameCaptionReadiness.statusTone),
+                                            )}>
+                                                {frameCaptionReadiness.statusText}
+                                            </span>
+                                            <p className="text-[10px] text-[#6b7280] text-right">{frameCaptionReadiness.detail}</p>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {gdriveCaptionReadiness ? (
+                                    <div className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2 py-1.5">
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-medium text-[#111827]">{gdriveCaptionReadiness.title}</p>
+                                            <p className="text-[10px] text-[#6b7280] truncate">{gdriveCaptionReadiness.path}</p>
+                                        </div>
+                                        <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
+                                            <span className={cn(
+                                                'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                                                resolveReadinessBadgeClass(gdriveCaptionReadiness.statusTone),
+                                            )}>
+                                                {gdriveCaptionReadiness.statusText}
+                                            </span>
+                                            <p className="text-[10px] text-[#6b7280] text-right">{gdriveCaptionReadiness.detail}</p>
+                                        </div>
+                                    </div>
+                                ) : null}
+
                                 <div className="flex items-center justify-between rounded-md border border-[#e5e7eb] bg-white px-2 py-1.5">
                                     <div className="min-w-0">
                                         <p className="text-[11px] font-medium text-[#111827]">스토리보드 에이전트</p>
@@ -5929,6 +6852,35 @@ const InsightChatSectionComponent = () => {
 
                             {systemStatus ? (
                                 <div className="space-y-2">
+                                    <div className={cn(
+                                        'rounded-md border px-2 py-2',
+                                        systemReadinessSummary.status === 'good'
+                                            ? 'border-emerald-200 bg-emerald-50'
+                                            : systemReadinessSummary.status === 'critical'
+                                                ? 'border-rose-200 bg-rose-50'
+                                                : 'border-amber-200 bg-amber-50',
+                                    )}>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#374151]">운영 준비도</p>
+                                            <span className={cn(
+                                                'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                                                systemReadinessSummary.status === 'good'
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : systemReadinessSummary.status === 'critical'
+                                                        ? 'bg-rose-100 text-rose-700'
+                                                        : 'bg-amber-100 text-amber-700',
+                                            )}>
+                                                {systemReadinessSummary.readinessPercent}%
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 text-[10px] text-[#4b5563]">{systemReadinessSummary.reason}</p>
+                                        {systemReadinessSummary.blockers.length > 0 ? (
+                                            <p className="mt-1 text-[10px] text-[#6b7280]">
+                                                주요 블로커: {systemReadinessSummary.blockers.slice(0, 3).join(', ')}
+                                            </p>
+                                        ) : null}
+                                    </div>
+
                                     <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-2 space-y-2">
                                         <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">운영 체크리스트</p>
 
@@ -5949,7 +6901,7 @@ const InsightChatSectionComponent = () => {
                                                                         {SYSTEM_STATUS_CHECKLIST_SEVERITY_LABELS[group.severity]} ({group.severity})
                                                                     </span>
                                                                     <span className="rounded bg-[#f3f4f6] px-1 py-0.5">
-                                                                        {SYSTEM_STATUS_CHECKLIST_CATEGORY_LABELS[group.category]}
+                                                                        {getSystemStatusChecklistCategoryLabel(group.category)}
                                                                     </span>
                                                                 </span>
                                                                 <span className="rounded-full bg-[#fee2a5] text-[9px] px-1.5 py-0.5">{countText}</span>
@@ -5964,10 +6916,28 @@ const InsightChatSectionComponent = () => {
                                                                                     <span className="font-semibold">{item.title}</span>
                                                                                     <div className="mt-0.5 flex items-center gap-1 flex-wrap">
                                                                                         <span className="rounded bg-[#f3f4f6] px-1 py-0.5 text-[#4b5563]">
-                                                                                            Source: {SYSTEM_STATUS_CHECKLIST_SOURCE_LABELS[item.source]}
+                                                                                            Source: {getSystemStatusChecklistSourceLabel(item.source)}
                                                                                         </span>
                                                                                     </div>
                                                                                     <p className="mt-0.5 text-[#6b7280]">{item.action}</p>
+                                                                                    {item.commandSnippet ? (
+                                                                                        <div className="mt-1 rounded border border-[#fde68a] bg-[#fff7ed] p-1.5">
+                                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-[9px] font-semibold text-[#92400e] uppercase tracking-wider">명령어</span>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    className="inline-flex items-center rounded border border-[#fcd34d] px-1.5 py-0.5 text-[9px] text-[#92400e] hover:bg-[#fef3c7]"
+                                                                                                    onClick={() => {
+                                                                                                        if (typeof navigator === 'undefined') return;
+                                                                                                        void navigator.clipboard.writeText(item.commandSnippet!);
+                                                                                                    }}
+                                                                                                >
+                                                                                                    복사
+                                                                                                </button>
+                                                                                            </div>
+                                                                                            <pre className="mt-1 whitespace-pre-wrap break-all text-[9px] leading-4 text-[#78350f]">{item.commandSnippet}</pre>
+                                                                                        </div>
+                                                                                    ) : null}
                                                                                 </span>
                                                                             </div>
                                                                         </li>
@@ -6786,7 +7756,7 @@ const InsightChatSectionComponent = () => {
                 </div>
 
                 <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
-                    <div className="mb-2 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 min-w-0">
+                    <div className="mb-2 flex flex-nowrap items-center gap-2 pb-1 min-w-0">
                         <div className="flex shrink-0 flex-nowrap items-center gap-2">
                             <div ref={modelDropdownRef} className="relative shrink-0">
                                 <button
