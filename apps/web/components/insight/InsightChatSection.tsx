@@ -97,6 +97,441 @@ type ChatConversation = {
     memoryProfileNote?: string;
 };
 
+export const CHAT_BUBBLE_COLLAPSE_THRESHOLD = 1200;
+export const CHAT_BUBBLE_COLLAPSE_PREVIEW_MAX_HEIGHT_CLASS = 'max-h-52';
+export const CHAT_BUBBLE_COLLAPSE_PREVIEW_OVERLAY_CLASS = 'bg-gradient-to-b from-transparent to-white';
+export const SOURCE_LIST_COLLAPSE_LIMIT = 2;
+export const CHAT_COMPOSER_HINT_ID = 'insight-chat-composer-hint';
+export const CHAT_COMPOSER_HINT_TEXT = 'Enter로 전송, Shift+Enter로 줄바꿈';
+export const CHAT_COMPOSER_PREVIEW_ROWS_MIN = 1;
+export const CHAT_COMPOSER_PREVIEW_ROWS_MAX = 6;
+export const CHAT_COMPOSER_MIN_ROWS = 1;
+export const CHAT_COMPOSER_MAX_ROWS = 6;
+export const CHAT_COMPOSER_FALLBACK_LINE_HEIGHT_PX = 20;
+export const CHAT_COMPOSER_FALLBACK_PADDING_PX = 9;
+
+export type ChatBubbleContentCollapseState = {
+    isCollapsible: boolean;
+    isCollapsed: boolean;
+    shouldRenderToggle: boolean;
+    isExpanded: boolean;
+    toggleLabel: '더 보기' | '접기';
+    collapsedPreviewClassName: string;
+};
+
+export type ChatBubbleActionState = {
+    hasMetaAction: boolean;
+    hasFeedbackButtons: boolean;
+    hasFeedbackReasonInput: boolean;
+    hasEditAction: boolean;
+    hasMoreMenu: boolean;
+};
+
+type ChatBubbleActionInput = {
+    isUser: boolean;
+    hasMessageMeta: boolean;
+    canEdit: boolean;
+    hasFeedbackHandler: boolean;
+    hasFeedbackRating: boolean;
+};
+
+type SourceListVisibilityInput = {
+    sources: readonly InsightChatSource[];
+    isExpanded: boolean;
+    collapseLimit?: number;
+};
+
+type SourceListVisibility = {
+    visibleSources: InsightChatSource[];
+    collapsedCount: number;
+    hasMoreSources: boolean;
+};
+
+export type ConversationDraftMap = Record<string, string>;
+
+export type FeedbackReasonPreset = {
+    value: string;
+    label: string;
+};
+
+export type FeedbackReasonPresetState = {
+    presets: FeedbackReasonPreset[];
+    selectedPreset: string | undefined;
+};
+
+type FeedbackReasonPresetStateInput = {
+    rating?: InsightChatFeedbackRating | null;
+    reason?: string | null;
+};
+
+export type AttachmentSelectionRejectionReason = 'extension' | 'mime' | 'size' | 'empty' | 'max-count';
+
+export type AttachmentSelectionEntry = {
+    name: string;
+    accepted: boolean;
+    reason?: AttachmentSelectionRejectionReason;
+};
+
+export type AttachmentSelectionSummary = {
+    acceptedCount: number;
+    rejectedCount: number;
+    acceptedFileNames: string[];
+    rejectedFileNamesByReason: Record<AttachmentSelectionRejectionReason, string[]>;
+};
+
+export type ComposerShortcutAction = 'focusComposer' | 'cancelEdit' | 'toggleShortcutHelp' | 'noop';
+export type ComposeArrowUpAction = 'editLatestMessage' | 'navigateCommandSuggestion' | 'noop';
+
+export function getChatBubbleActionState({
+    isUser,
+    hasMessageMeta,
+    canEdit,
+    hasFeedbackHandler,
+    hasFeedbackRating,
+}: ChatBubbleActionInput): ChatBubbleActionState {
+    const hasMetaAction = Boolean(hasMessageMeta);
+    const hasFeedbackButtons = Boolean(!isUser && hasFeedbackHandler);
+    const hasFeedbackReasonInput = Boolean(hasFeedbackButtons && hasFeedbackRating);
+    const hasEditAction = Boolean(isUser && canEdit);
+    const hasMoreMenu = hasMetaAction || hasFeedbackButtons || hasFeedbackReasonInput || hasEditAction;
+
+    return {
+        hasMetaAction,
+        hasFeedbackButtons,
+        hasFeedbackReasonInput,
+        hasEditAction,
+        hasMoreMenu,
+    };
+}
+
+export function getChatBubbleMoreMenuId(messageId: string): string {
+    const safe = (messageId || '').trim().replace(/[^a-zA-Z0-9_-]/g, '-');
+    return `insight-chat-bubble-more-${safe || 'message'}`;
+}
+
+export function getSourceListVisibility({
+    sources,
+    isExpanded,
+    collapseLimit = SOURCE_LIST_COLLAPSE_LIMIT,
+}: SourceListVisibilityInput): SourceListVisibility {
+    const normalizedSources = Array.isArray(sources) ? sources : [];
+    const limit = Number.isFinite(collapseLimit) && collapseLimit > 0 ? Math.floor(collapseLimit) : SOURCE_LIST_COLLAPSE_LIMIT;
+
+    if (isExpanded) {
+        return {
+            visibleSources: normalizedSources,
+            collapsedCount: 0,
+            hasMoreSources: normalizedSources.length > 0,
+        };
+    }
+
+    if (normalizedSources.length <= limit) {
+        return {
+            visibleSources: normalizedSources,
+            collapsedCount: 0,
+            hasMoreSources: false,
+        };
+    }
+
+    return {
+        visibleSources: normalizedSources.slice(0, limit),
+        collapsedCount: normalizedSources.length - limit,
+        hasMoreSources: true,
+    };
+}
+
+const FEEDBACK_REASON_PRESETS: Record<InsightChatFeedbackRating, ReadonlyArray<FeedbackReasonPreset>> = {
+    up: [
+        { value: '정확하고 신뢰할 만해요', label: '정확하고 신뢰할 만해요' },
+        { value: '질문 맥락에 잘 맞아요', label: '질문 맥락에 잘 맞아요' },
+        { value: '설명이 충분하고 명확해요', label: '설명이 충분하고 명확해요' },
+        { value: '톤이 적절해요', label: '톤이 적절해요' },
+        { value: '답변이 빠르고 유용해요', label: '답변이 빠르고 유용해요' },
+        { value: '기타', label: '기타' },
+    ],
+    down: [
+        { value: '정확하지 않아요', label: '정확하지 않아요' },
+        { value: '관련성이 낮아요', label: '관련성이 낮아요' },
+        { value: '정보가 부족해요', label: '정보가 부족해요' },
+        { value: '톤이 부적절해요', label: '톤이 부적절해요' },
+        { value: '응답이 느려요', label: '응답이 느려요' },
+        { value: '기타', label: '기타' },
+    ],
+};
+
+const ATTACHMENT_REJECTION_REASON_ORDER: AttachmentSelectionRejectionReason[] = [
+    'extension',
+    'mime',
+    'size',
+    'empty',
+    'max-count',
+];
+
+const ATTACHMENT_REJECTION_REASON_LABELS: Record<AttachmentSelectionRejectionReason, string> = {
+    extension: '확장자 거부',
+    mime: 'MIME 거부',
+    size: '용량 거부',
+    empty: '비어 있음 거부',
+    'max-count': '개수 제한 거부',
+};
+
+function normalizeConversationDraftKey(conversationId: string | null | undefined): string {
+    return typeof conversationId === 'string' ? conversationId.trim() : '';
+}
+
+export function updateConversationDraftMap(
+    draftMap: ConversationDraftMap,
+    conversationId: string,
+    draftValue: string,
+): ConversationDraftMap {
+    const normalizedId = normalizeConversationDraftKey(conversationId);
+    if (!normalizedId) return draftMap;
+
+    const normalizedDraftValue = typeof draftValue === 'string' ? draftValue : '';
+    const currentValue = draftMap[normalizedId] ?? '';
+    const shouldClear = !normalizedDraftValue.trim();
+
+    if (!shouldClear && currentValue === normalizedDraftValue) {
+        return draftMap;
+    }
+
+    if (shouldClear) {
+        if (!(normalizedId in draftMap)) return draftMap;
+        const { [normalizedId]: _removed, ...rest } = draftMap;
+        return rest;
+    }
+
+    return {
+        ...draftMap,
+        [normalizedId]: normalizedDraftValue,
+    };
+}
+
+export function getConversationDraftForConversation(
+    draftMap: ConversationDraftMap,
+    conversationId: string | null | undefined,
+): string {
+    const normalizedId = normalizeConversationDraftKey(conversationId);
+    if (!normalizedId) return '';
+    return draftMap[normalizedId] ?? '';
+}
+
+export function getConversationDraftOnEditCancel({
+    draftMap,
+    conversationId,
+    fallbackDraft,
+}: {
+    draftMap: ConversationDraftMap;
+    conversationId: string | null | undefined;
+    fallbackDraft?: string | null;
+}): string {
+    const conversationDraft = getConversationDraftForConversation(draftMap, conversationId);
+    if (conversationDraft) return conversationDraft;
+    return typeof fallbackDraft === 'string' ? fallbackDraft : '';
+}
+
+export function getFeedbackReasonPresets(rating?: InsightChatFeedbackRating | null): FeedbackReasonPreset[] {
+    if (!rating) return [];
+    return [...(FEEDBACK_REASON_PRESETS[rating] ?? [])];
+}
+
+export function getFeedbackReasonPresetState({
+    rating,
+    reason,
+}: FeedbackReasonPresetStateInput): FeedbackReasonPresetState {
+    const presets = getFeedbackReasonPresets(rating ?? undefined);
+    const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
+    const selectedPreset = presets.find((preset) => preset.value === normalizedReason)?.value;
+    return {
+        presets,
+        selectedPreset,
+    };
+}
+
+function createAttachmentSelectionSummary(): AttachmentSelectionSummary {
+    return {
+        acceptedCount: 0,
+        rejectedCount: 0,
+        acceptedFileNames: [],
+        rejectedFileNamesByReason: {
+            extension: [],
+            mime: [],
+            size: [],
+            empty: [],
+            'max-count': [],
+        },
+    };
+}
+
+function normalizeAttachmentSelectionReason(reason: unknown): AttachmentSelectionRejectionReason | null {
+    if (
+        reason === 'extension'
+        || reason === 'mime'
+        || reason === 'size'
+        || reason === 'empty'
+        || reason === 'max-count'
+    ) {
+        return reason;
+    }
+    return null;
+}
+
+export function summarizeAttachmentSelection(entries: ReadonlyArray<AttachmentSelectionEntry>): AttachmentSelectionSummary {
+    const summary = createAttachmentSelectionSummary();
+
+    for (const entry of entries ?? []) {
+        const normalizedName = typeof entry?.name === 'string' ? entry.name.trim() : '';
+        if (entry?.accepted) {
+            summary.acceptedCount += 1;
+            if (normalizedName) {
+                summary.acceptedFileNames.push(normalizedName);
+            }
+            continue;
+        }
+
+        summary.rejectedCount += 1;
+        const reason = normalizeAttachmentSelectionReason(entry?.reason);
+        if (!reason || !normalizedName) continue;
+        summary.rejectedFileNamesByReason[reason].push(normalizedName);
+    }
+
+    return summary;
+}
+
+export function buildAttachmentSelectionNotice(summary: AttachmentSelectionSummary): string {
+    if (!summary || (summary.acceptedCount <= 0 && summary.rejectedCount <= 0)) {
+        return '';
+    }
+
+    const noticeParts: string[] = [];
+    if (summary.acceptedCount > 0) {
+        const acceptedNames = summary.acceptedFileNames.length > 0
+            ? `: ${summary.acceptedFileNames.join(', ')}`
+            : '';
+        noticeParts.push(`첨부됨 ${summary.acceptedCount}개${acceptedNames}`);
+    }
+
+    for (const reason of ATTACHMENT_REJECTION_REASON_ORDER) {
+        const rejectedNames = summary.rejectedFileNamesByReason[reason];
+        if (!rejectedNames?.length) continue;
+        noticeParts.push(`${ATTACHMENT_REJECTION_REASON_LABELS[reason]} (${rejectedNames.join(', ')})`);
+    }
+
+    return noticeParts.join(' · ');
+}
+
+export function getComposerHeightsForValues({
+    lineHeightPx,
+    paddingTopPx,
+    paddingBottomPx,
+}: {
+    lineHeightPx: number;
+    paddingTopPx: number;
+    paddingBottomPx: number;
+}): { minPx: number; maxPx: number } {
+    const normalizedLineHeight = Number.isFinite(lineHeightPx) ? lineHeightPx : CHAT_COMPOSER_FALLBACK_LINE_HEIGHT_PX;
+    const normalizedPaddingTop = Number.isFinite(paddingTopPx) ? paddingTopPx : CHAT_COMPOSER_FALLBACK_PADDING_PX;
+    const normalizedPaddingBottom = Number.isFinite(paddingBottomPx) ? paddingBottomPx : CHAT_COMPOSER_FALLBACK_PADDING_PX;
+    const totalPadding = normalizedPaddingTop + normalizedPaddingBottom;
+
+    return {
+        minPx: normalizedLineHeight * CHAT_COMPOSER_MIN_ROWS + totalPadding,
+        maxPx: normalizedLineHeight * CHAT_COMPOSER_MAX_ROWS + totalPadding,
+    };
+}
+
+export function getChatComposerRows(value: string): number {
+    const rows = (typeof value === 'string' ? value : '').split(/\r\n|\n|\r/).length;
+
+    if (rows < CHAT_COMPOSER_PREVIEW_ROWS_MIN) return CHAT_COMPOSER_PREVIEW_ROWS_MIN;
+    if (rows > CHAT_COMPOSER_PREVIEW_ROWS_MAX) return CHAT_COMPOSER_PREVIEW_ROWS_MAX;
+    return rows;
+}
+
+export function getChatComposerHintId(): string {
+    return CHAT_COMPOSER_HINT_ID;
+}
+
+export function getChatComposerHintText(): string {
+    return CHAT_COMPOSER_HINT_TEXT;
+}
+
+export function resolveInsightChatShortcutAction(event: {
+    key: string;
+    metaKey?: boolean;
+    ctrlKey?: boolean;
+    shiftKey?: boolean;
+    code?: string;
+    isComposing?: boolean;
+}): ComposerShortcutAction {
+    if ((event.ctrlKey || event.metaKey) && (event.code === 'KeyK' || event.key.toLowerCase() === 'k')) {
+        return event.isComposing ? 'noop' : 'focusComposer';
+    }
+
+    if (event.key === 'Escape' || event.key === 'Esc') {
+        return 'cancelEdit';
+    }
+
+    if ((event.key === 'Slash' || event.code === 'Slash' || event.key === '/') && event.shiftKey) {
+        return 'toggleShortcutHelp';
+    }
+
+    if (event.shiftKey && event.key === '?') {
+        return 'toggleShortcutHelp';
+    }
+
+    if ((event.ctrlKey || event.metaKey) && (event.key === '/' || event.code === 'Slash')) {
+        return 'toggleShortcutHelp';
+    }
+
+    return 'noop';
+}
+
+export function resolveInsightChatArrowUpAction(input: {
+    key: string;
+    isCommandMode: boolean;
+    composerValue: string;
+    hasPromptSuggestions: boolean;
+    latestEditableUserMessageId: string | null | undefined;
+}): ComposeArrowUpAction {
+    if (input.key !== 'ArrowUp') return 'noop';
+
+    if (input.isCommandMode && input.hasPromptSuggestions) {
+        return 'navigateCommandSuggestion';
+    }
+
+    if (!input.isCommandMode && !input.composerValue && input.latestEditableUserMessageId) {
+        return 'editLatestMessage';
+    }
+
+    return 'noop';
+}
+
+type ChatBubbleContentCollapseInput = {
+    message: Pick<ChatMessage, 'role' | 'content' | 'visualComponent'>;
+    isExpanded: boolean;
+    threshold?: number;
+};
+
+export function getChatBubbleContentCollapseState({
+    message,
+    isExpanded,
+    threshold = CHAT_BUBBLE_COLLAPSE_THRESHOLD,
+}: ChatBubbleContentCollapseInput): ChatBubbleContentCollapseState {
+    const isTreemapMessage = message.visualComponent === 'treemap';
+    const isCollapsible = message.role === 'assistant' && !isTreemapMessage && message.content.length > threshold;
+    const isCollapsed = isCollapsible && !isExpanded;
+
+    return {
+        isCollapsible,
+        isCollapsed,
+        shouldRenderToggle: isCollapsible,
+        isExpanded: !isCollapsed,
+        toggleLabel: isCollapsed ? '더 보기' : '접기',
+        collapsedPreviewClassName: isCollapsed ? CHAT_BUBBLE_COLLAPSE_PREVIEW_MAX_HEIGHT_CLASS : 'max-h-none',
+    };
+}
+
 const EMPTY_TITLE = '새로운 대화';
 const CHAT_BOOTSTRAP_TTL_MS = 4 * 60 * 1000;
 const CHAT_RESPONSE_TTL_MS = 3 * 60 * 1000;
@@ -4694,6 +5129,7 @@ const ChatBubble = memo(({
     const textWrapClass = isTreemapMessage ? 'w-full' : 'w-full';
     const [isCopied, setIsCopied] = useState(false);
     const [isMetaVisible, setIsMetaVisible] = useState(false);
+    const [isContentExpanded, setIsContentExpanded] = useState(false);
     const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -4742,15 +5178,34 @@ const ChatBubble = memo(({
     }, [followUpPrompts]);
     const actionRowAlignmentClass = isUser ? 'justify-end' : 'justify-start';
     const currentFeedback = message.id ? feedback : undefined;
+    const feedbackPresetState = useMemo(() => getFeedbackReasonPresetState({
+        rating: currentFeedback?.rating,
+        reason: currentFeedback?.reason,
+    }), [currentFeedback?.rating, currentFeedback?.reason]);
+    const feedbackPresetListId = useMemo(
+        () => `${getChatBubbleMoreMenuId(message.id)}-feedback-preset-list`,
+        [message.id],
+    );
     const handleEditClick = useCallback(() => {
         onEditMessage?.(message);
     }, [message, onEditMessage]);
     const handleRegenerateClick = useCallback(() => {
         onRegenerate?.(message.id);
     }, [message.id, onRegenerate]);
+    const handleFeedbackReasonPreset = useCallback((reason: string) => {
+        if (!currentFeedback?.rating) return;
+        onFeedback?.(message.id, currentFeedback.rating, reason);
+    }, [currentFeedback?.rating, message.id, onFeedback]);
     const handleFollowUpPromptSelect = useCallback((prompt: string) => {
         onFollowUpPrompt?.(prompt);
     }, [onFollowUpPrompt]);
+    const contentCollapseState = getChatBubbleContentCollapseState({
+        message,
+        isExpanded: isContentExpanded,
+    });
+    const handleToggleContent = useCallback(() => {
+        setIsContentExpanded((previous) => !previous);
+    }, []);
 
     return (
         <div className={cn(
@@ -4780,12 +5235,34 @@ const ChatBubble = memo(({
                     <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.content}</p>
                 ) : message.content ? (
                     <div className={cn(textWrapClass, isTreemapMessage && 'px-1.5')}>
-                        <MarkdownRenderer
-                            content={message.content}
-                            components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
-                            className="text-sm leading-6 break-words"
-                            plainTextClassName="whitespace-pre-wrap break-words text-sm leading-6"
-                        />
+                        <div className={cn('relative', contentCollapseState.shouldRenderToggle ? 'overflow-hidden' : undefined)}>
+                            <div className={cn(
+                                'text-sm leading-6 break-words',
+                                contentCollapseState.shouldRenderToggle ? contentCollapseState.collapsedPreviewClassName : '',
+                            )}>
+                                <MarkdownRenderer
+                                    content={message.content}
+                                    components={CHAT_BUBBLE_MARKDOWN_COMPONENTS}
+                                    className="text-sm leading-6 break-words"
+                                    plainTextClassName="whitespace-pre-wrap break-words text-sm leading-6"
+                                />
+                            </div>
+                            {contentCollapseState.shouldRenderToggle && contentCollapseState.isCollapsed ? (
+                                <div className={cn(
+                                    'pointer-events-none absolute inset-x-0 bottom-0 h-10',
+                                    CHAT_BUBBLE_COLLAPSE_PREVIEW_OVERLAY_CLASS,
+                                )} />
+                            ) : null}
+                        </div>
+                        {contentCollapseState.shouldRenderToggle ? (
+                            <button
+                                type="button"
+                                className="mt-2 inline-flex h-7 shrink-0 items-center rounded-lg border px-2.5 py-1 text-xs whitespace-nowrap border-[#e5e7eb] text-[#374151] hover:bg-[#f9fafb]"
+                                onClick={handleToggleContent}
+                            >
+                                {contentCollapseState.toggleLabel}
+                            </button>
+                        ) : null}
                     </div>
                 ) : (
                     <TypingIndicator />
@@ -4899,11 +5376,41 @@ const ChatBubble = memo(({
                                     type="text"
                                     value={currentFeedback.reason ?? ''}
                                     onChange={(event) => onFeedback?.(message.id, currentFeedback.rating ?? null, event.target.value)}
+                                    list={feedbackPresetListId}
                                     placeholder="선택 입력 (최대 280자)"
                                     maxLength={280}
                                     className="flex-1 min-w-0 h-7 px-2 text-[11px] border border-[#e5e7eb] rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#f87171]"
                                 />
                             </div>
+                        ) : null}
+                        {currentFeedback?.rating && feedbackPresetState.presets.length > 0 ? (
+                            <>
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                    {feedbackPresetState.presets.map((preset) => {
+                                        const isSelected = preset.value === feedbackPresetState.selectedPreset;
+                                        return (
+                                            <button
+                                                key={`${message.id}-${preset.value}`}
+                                                type="button"
+                                                className={cn(
+                                                    'inline-flex h-6 items-center rounded-md border px-2 text-[10px]',
+                                                    isSelected
+                                                        ? 'border-[#f87171] bg-[#fff1f2] text-[#be123c]'
+                                                        : 'border-[#e5e7eb] bg-white text-[#4b5563] hover:bg-[#f9fafb]',
+                                                )}
+                                                onClick={() => handleFeedbackReasonPreset(preset.value)}
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <datalist id={feedbackPresetListId}>
+                                    {feedbackPresetState.presets.map((preset) => (
+                                        <option key={`${message.id}-option-${preset.value}`} value={preset.value} />
+                                    ))}
+                                </datalist>
+                            </>
                         ) : null}
                         {hasMessageMeta && isMetaVisible ? <MessageMetaPanel meta={message.meta} sources={message.sources} /> : null}
                         {message.sources?.length ? <SourceList sources={message.sources} /> : null}
@@ -6119,25 +6626,53 @@ const InsightChatSectionComponent = () => {
             return;
         }
 
-        const selectedFiles = [...files].slice(0, remaining);
+        const selectedFiles = [...files];
+        const eligibleFiles = selectedFiles.slice(0, remaining);
+        const droppedByMaxCount = selectedFiles.slice(remaining);
         const nextAttachments: DraftChatAttachment[] = [];
-        for (const file of selectedFiles) {
+        const selectionEntries: AttachmentSelectionEntry[] = droppedByMaxCount.map((file) => ({
+            name: sanitizeAttachmentName(file.name) || file.name || '이름 없음',
+            accepted: false,
+            reason: 'max-count',
+        }));
+
+        for (const file of eligibleFiles) {
             const normalizedName = sanitizeAttachmentName(file.name);
             if (!/\.(txt|csv)$/i.test(normalizedName)) {
+                selectionEntries.push({
+                    name: normalizedName || file.name || '이름 없음',
+                    accepted: false,
+                    reason: 'extension',
+                });
                 continue;
             }
 
             const mimeType = (file.type || '').toLowerCase();
             if (mimeType && !mimeType.startsWith('text/') && mimeType !== 'application/csv' && mimeType !== 'application/vnd.ms-excel') {
+                selectionEntries.push({
+                    name: normalizedName || file.name || '이름 없음',
+                    accepted: false,
+                    reason: 'mime',
+                });
                 continue;
             }
 
             if (file.size > MAX_CHAT_ATTACHMENT_BYTES) {
+                selectionEntries.push({
+                    name: normalizedName || file.name || '이름 없음',
+                    accepted: false,
+                    reason: 'size',
+                });
                 continue;
             }
 
             const content = sanitizeAttachmentContent(await file.text());
             if (!content.trim()) {
+                selectionEntries.push({
+                    name: normalizedName || file.name || '이름 없음',
+                    accepted: false,
+                    reason: 'empty',
+                });
                 continue;
             }
 
@@ -6148,15 +6683,25 @@ const InsightChatSectionComponent = () => {
                 content,
                 sizeBytes: Math.min(MAX_CHAT_ATTACHMENT_BYTES, file.size || content.length),
             });
+            selectionEntries.push({
+                name: normalizedName,
+                accepted: true,
+            });
         }
 
+        const selectionSummary = summarizeAttachmentSelection(selectionEntries);
+        const selectionNotice = buildAttachmentSelectionNotice(selectionSummary);
+
         if (nextAttachments.length === 0) {
-            window.alert('txt/csv 형식의 텍스트 파일만 첨부할 수 있습니다.');
+            window.alert(selectionNotice || 'txt/csv 형식의 텍스트 파일만 첨부할 수 있습니다.');
             event.target.value = '';
             return;
         }
 
         setDraftAttachments((prev) => [...prev, ...nextAttachments].slice(0, MAX_CHAT_ATTACHMENTS));
+        if (selectionSummary.rejectedCount > 0 && selectionNotice) {
+            window.alert(selectionNotice);
+        }
         event.target.value = '';
     }, [draftAttachments.length]);
 
