@@ -5448,12 +5448,14 @@ const InsightChatSectionComponent = () => {
     ]);
     const [activeConversationId, setActiveConversationId] = useState<string>(initialConversationId);
     const [inputValue, setInputValue] = useState('');
+    const [conversationDraftMap, setConversationDraftMap] = useState<ConversationDraftMap>({});
     const [draftAttachments, setDraftAttachments] = useState<DraftChatAttachment[]>([]);
     const [messageWindowSize, setMessageWindowSize] = useState(MESSAGE_WINDOW_INITIAL);
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
     const bootstrapRequestRef = useRef(new Map<string, number>());
+    const conversationDraftMapRef = useRef<ConversationDraftMap>({});
     const streamAbortControllerRef = useRef<AbortController | null>(null);
     const persistDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const latestPersistConversationsRef = useRef(conversations);
@@ -5552,8 +5554,14 @@ const InsightChatSectionComponent = () => {
     }, [loadSystemStatus]);
 
     useEffect(() => {
+        conversationDraftMapRef.current = conversationDraftMap;
+    }, [conversationDraftMap]);
+
+    useEffect(() => {
         setDraftAttachments([]);
         setActiveConversationTagInput('');
+        setEditingMessageId(null);
+        setInputValue(getConversationDraftForConversation(conversationDraftMapRef.current, activeConversationId));
     }, [activeConversationId]);
 
     const saveLlmKeys = useCallback((next: StoredLlmKeys) => {
@@ -6332,6 +6340,9 @@ const InsightChatSectionComponent = () => {
     }, []);
 
     const handleSelectConversation = useCallback((conversationId: string) => {
+        if (!editingMessageId) {
+            setConversationDraftMap((prev) => updateConversationDraftMap(prev, activeConversationId, inputValue));
+        }
         setActiveConversationId(conversationId);
         if (!window.matchMedia('(min-width: 1024px)').matches) {
             setShowConversationList(false);
@@ -6339,7 +6350,7 @@ const InsightChatSectionComponent = () => {
         window.requestAnimationFrame(() => {
             inputRef.current?.focus();
         });
-    }, []);
+    }, [activeConversationId, editingMessageId, inputValue]);
 
     const handleDeleteConversation = useCallback((conversationId: string) => {
         if (!window.confirm(CHAT_DELETE_CONFIRM_LABEL)) {
@@ -6381,6 +6392,9 @@ const InsightChatSectionComponent = () => {
     }, [activeConversationId, conversations, handleClearDeleteUndo, pendingDeletedConversation]);
 
     const handleNewConversation = useCallback(() => {
+        if (!editingMessageId) {
+            setConversationDraftMap((prev) => updateConversationDraftMap(prev, activeConversationId, inputValue));
+        }
         createConversation();
         if (!window.matchMedia('(min-width: 1024px)').matches) {
             setShowConversationList(false);
@@ -6388,7 +6402,7 @@ const InsightChatSectionComponent = () => {
         window.requestAnimationFrame(() => {
             inputRef.current?.focus();
         });
-    }, [createConversation]);
+    }, [activeConversationId, createConversation, editingMessageId, inputValue]);
 
     const handleRetryBootstrap = useCallback(() => {
         if (!activeConversation) return;
@@ -6591,6 +6605,7 @@ const InsightChatSectionComponent = () => {
             setConversations(mergedConversations);
             setActiveConversationId(nextActiveConversationId);
             setInputValue('');
+            setConversationDraftMap({});
             setEditingMessageId(null);
             setDraftAttachments([]);
             setConversationSearchQuery('');
@@ -6767,6 +6782,7 @@ const InsightChatSectionComponent = () => {
         }
 
         setInputValue('');
+        setConversationDraftMap((prev) => updateConversationDraftMap(prev, convId, ''));
         setDraftAttachments([]);
         setSendingConversationId(convId);
 
@@ -6966,12 +6982,27 @@ const InsightChatSectionComponent = () => {
         if (!activeConversation || message.role !== 'user') return;
         if (sendingConversationId) return;
         if (message.id !== latestEditableUserMessageId) return;
+        setConversationDraftMap((prev) => updateConversationDraftMap(prev, activeConversation.id, inputValue));
         setEditingMessageId(message.id);
         setInputValue(message.content);
         window.requestAnimationFrame(() => {
             inputRef.current?.focus();
         });
-    }, [activeConversation, latestEditableUserMessageId, sendingConversationId]);
+    }, [activeConversation, inputValue, latestEditableUserMessageId, sendingConversationId]);
+
+    const handleCancelEditMessage = useCallback(() => {
+        if (!editingMessageId) return;
+        const restoredDraft = getConversationDraftOnEditCancel({
+            draftMap: conversationDraftMapRef.current,
+            conversationId: activeConversationId,
+            fallbackDraft: '',
+        });
+        setEditingMessageId(null);
+        setInputValue(restoredDraft);
+        window.requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    }, [activeConversationId, editingMessageId]);
 
     const handleSendMessage = useCallback(() => {
         if (!inputValue.trim()) {
@@ -6996,21 +7027,64 @@ const InsightChatSectionComponent = () => {
             return;
         }
         setInputValue(resolvedPrompt);
+        if (!editingMessageId) {
+            setConversationDraftMap((prev) => updateConversationDraftMap(prev, activeConversationId, resolvedPrompt));
+        }
         window.requestAnimationFrame(() => {
             inputRef.current?.focus();
         });
-    }, [resolvePromptFromTemplate, sendMessage]);
+    }, [activeConversationId, editingMessageId, resolvePromptFromTemplate, sendMessage]);
 
     const handleKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'ArrowDown' && hasPromptSuggestions) {
+        const shortcutAction = resolveInsightChatShortcutAction({
+            key: event.key,
+            metaKey: event.metaKey,
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            code: event.code,
+            isComposing: event.nativeEvent.isComposing,
+        });
+
+        if (shortcutAction === 'focusComposer') {
             event.preventDefault();
-            setActiveCommandIndex((index) => (index + 1) % commandSuggestions.length);
+            inputRef.current?.focus();
             return;
         }
 
-        if (event.key === 'ArrowUp' && hasPromptSuggestions) {
+        if (shortcutAction === 'cancelEdit' && editingMessageId) {
+            event.preventDefault();
+            handleCancelEditMessage();
+            return;
+        }
+
+        const arrowUpAction = resolveInsightChatArrowUpAction({
+            key: event.key,
+            isCommandMode,
+            composerValue: inputValue,
+            hasPromptSuggestions,
+            latestEditableUserMessageId,
+        });
+
+        if (arrowUpAction === 'navigateCommandSuggestion' && hasPromptSuggestions) {
             event.preventDefault();
             setActiveCommandIndex((index) => (index - 1 + commandSuggestions.length) % commandSuggestions.length);
+            return;
+        }
+
+        if (arrowUpAction === 'editLatestMessage' && latestEditableUserMessageId && activeConversation) {
+            const latestEditableMessage = activeConversation.messages.find(
+                (message) => message.id === latestEditableUserMessageId && message.role === 'user',
+            );
+            if (latestEditableMessage) {
+                event.preventDefault();
+                handleEditMessage(latestEditableMessage);
+                return;
+            }
+        }
+
+        if (event.key === 'ArrowDown' && hasPromptSuggestions) {
+            event.preventDefault();
+            setActiveCommandIndex((index) => (index + 1) % commandSuggestions.length);
             return;
         }
 
@@ -7034,12 +7108,18 @@ const InsightChatSectionComponent = () => {
             void handleSendMessage();
         }
     }, [
+        activeConversation,
         activeCommandIndex,
         commandSuggestions,
+        editingMessageId,
+        handleCancelEditMessage,
+        handleEditMessage,
         hasPromptSuggestions,
         handlePromptTemplateApply,
         handleSendMessage,
+        inputValue,
         isCommandMode,
+        latestEditableUserMessageId,
     ]);
 
     const isSending = sendingConversationId === activeConversationId;
@@ -8661,12 +8741,30 @@ const InsightChatSectionComponent = () => {
                         <Input
                             ref={inputRef}
                             value={inputValue}
-                            onChange={(event) => setInputValue(event.target.value)}
+                            onChange={(event) => {
+                                const nextValue = event.target.value;
+                                setInputValue(nextValue);
+                                if (!editingMessageId) {
+                                    setConversationDraftMap((prev) =>
+                                        updateConversationDraftMap(prev, activeConversationId, nextValue),
+                                    );
+                                }
+                            }}
                             onKeyDown={handleKeyDown}
                             placeholder={editingMessageId ? '수정한 메시지를 입력해 주세요' : '질문을 입력해 주세요'}
                             disabled={!!activeConversation?.isBooting || !!isStreamingInFlight}
                             className="h-11 border-[#e5e7eb] focus-visible:ring-[#f87171]"
                         />
+                        {editingMessageId ? (
+                            <Button
+                                type="button"
+                                className="h-11"
+                                variant="outline"
+                                onClick={handleCancelEditMessage}
+                            >
+                                취소
+                            </Button>
+                        ) : null}
                         <Button
                             type="submit"
                             className="h-11"
