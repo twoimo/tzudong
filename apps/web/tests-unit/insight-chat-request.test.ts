@@ -77,6 +77,7 @@ describe('insight chat request parser', () => {
             model: 'gpt-4o-mini',
             storyboardModelProfile: 'nanobanana',
             imageModelProfile: 'nanobanana_pro',
+            nanoBanana2Key: '  nb2-test-key  ',
         });
 
         expect(parsed.llmConfig).toMatchObject({
@@ -84,7 +85,20 @@ describe('insight chat request parser', () => {
             model: 'gpt-4o-mini',
             storyboardModelProfile: 'nanobanana',
             imageModelProfile: 'nanobanana_pro',
+            nanoBanana2Key: 'nb2-test-key',
         });
+    });
+
+    test('truncates nanoBanana2Key to safe max length', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            provider: 'gemini',
+            model: 'gemini-3-flash-preview',
+            nanoBanana2Key: ` ${'k'.repeat(700)} `,
+        });
+
+        expect(parsed.llmConfig?.nanoBanana2Key?.length).toBe(512);
+        expect(parsed.llmConfig?.nanoBanana2Key).toBe('k'.repeat(512));
     });
 
     test('normalizes unsupported storyboard and image profiles out', () => {
@@ -347,6 +361,24 @@ describe('insight chat request parser', () => {
 
         expect(parsed.invalidFeedbackReason).toBe('invalid_feedback_target_id');
         expect(parsed.feedbackContext).toBeUndefined();
+    });
+
+    test('keeps local command messages for setup/operator/ops-status/peak-frame requests', () => {
+        const setup = parseInsightChatRequestBody({ message: '  /setup  ' });
+        const operatorTodo = parseInsightChatRequestBody({ message: '/operator-todo' });
+        const opsStatus = parseInsightChatRequestBody({ message: '운영 상태 요약을 알려줘' });
+        const peakFrame = parseInsightChatRequestBody({
+            message: '/tzuyang-peak-frame 피크 프레임 구간에서 후킹/클로징 보강 컷을 제안해줘',
+        });
+
+        expect(setup.message).toBe('/setup');
+        expect(operatorTodo.message).toBe('/operator-todo');
+        expect(opsStatus.message).toBe('운영 상태 요약을 알려줘');
+        expect(peakFrame.message).toBe('/tzuyang-peak-frame 피크 프레임 구간에서 후킹/클로징 보강 컷을 제안해줘');
+        expect(setup.invalidContextReason).toBeUndefined();
+        expect(operatorTodo.invalidContextReason).toBeUndefined();
+        expect(opsStatus.invalidContextReason).toBeUndefined();
+        expect(peakFrame.invalidContextReason).toBeUndefined();
     });
 
     test('accepts and sanitizes txt/csv attachments', () => {

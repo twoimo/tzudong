@@ -1,6 +1,11 @@
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import type {
   AdminInsightChatBootstrapResponse,
   AdminInsightChatResponse,
+  AdminInsightSystemStatusResponse,
+  InsightChatFollowUpPrompt,
   InsightChatAttachment,
   InsightChatContextMessage,
   InsightChatFeedbackContext,
@@ -18,6 +23,207 @@ import { getAdminInsightHeatmap } from '@/lib/insight/heatmap';
 import { getAdminInsightSeason } from '@/lib/insight/season';
 import { getAdminInsightWordcloud } from '@/lib/insight/wordcloud';
 import { getInsightTreemapData } from '@/lib/insight/treemap';
+import { getAdminInsightSystemStatus } from '@/lib/insight/chat-system-status';
+
+const MAX_FOLLOW_UP_PROMPTS = 3;
+
+const TOPIC_FOLLOW_UP_PRESETS: InsightChatFollowUpPrompt[] = [
+  {
+    prompt: '/tzuyang-video 최근 조회가 잘 나온 숏폼 기획안을 3개 비교해줘',
+    label: '쯔양 숏폼 영상 확장',
+  },
+  {
+    prompt: '/tzuyang-restaurant 오늘 운영 영상용 상호 브리핑(메뉴·세팅·컷 추천)을 정리해줘',
+    label: '쯔양 레스토랑 디테일',
+  },
+  {
+    prompt: '/tzuyang-peak-frame 피크 프레임 구간에서 후킹/클로징 보강 컷을 제안해줘',
+    label: '쯔양 피크 프레임 보강',
+  },
+];
+
+const SETUP_FOLLOW_UP_PRESETS: InsightChatFollowUpPrompt[] = [
+  { prompt: '/setup', label: '운영 체크리스트 모드' },
+  { prompt: '/setup-checklist', label: '운영 체크리스트' },
+  { prompt: '/setup-keys', label: '운영 키 점검' },
+  { prompt: '/operator-todo', label: '운영자 TODO' },
+  { prompt: '/ops-status', label: '운영 상태 요약' },
+  { prompt: '/system-status', label: '운영 상태 요약' },
+];
+
+const SETUP_COMMAND_FOLLOW_UP_PRESETS: Record<string, InsightChatFollowUpPrompt[]> = {
+  '/setup': SETUP_FOLLOW_UP_PRESETS,
+  '/setup-checklist': SETUP_FOLLOW_UP_PRESETS,
+  '/setup-owner': SETUP_FOLLOW_UP_PRESETS,
+  '/setup-keys': SETUP_FOLLOW_UP_PRESETS,
+  '/operator-todo': SETUP_FOLLOW_UP_PRESETS,
+  '/ops-todo': SETUP_FOLLOW_UP_PRESETS,
+  '/ops-status': [
+    ...SETUP_FOLLOW_UP_PRESETS,
+    { prompt: '/system-status', label: '운영 상태 요약' },
+  ],
+  '/system-status': [
+    ...SETUP_FOLLOW_UP_PRESETS,
+    { prompt: '/ops-status', label: '운영 상태 요약' },
+  ],
+};
+
+const SETUP_COMMAND_ALIASES = new Map<string, string>([
+  ['/setup', '/setup'],
+  ['/setup-checklist', '/setup-checklist'],
+  ['/ops-checklist', '/setup-checklist'],
+  ['/setup-owner', '/operator-todo'],
+  ['/setup-keys', '/setup-keys'],
+  ['/ops-keys', '/setup-keys'],
+  ['/keys-check', '/setup-keys'],
+  ['/operator-todo', '/operator-todo'],
+  ['/ops-todo', '/operator-todo'],
+  ['/ops-status', '/ops-status'],
+  ['/system-status', '/ops-status'],
+]);
+
+const FOLLOW_UP_LABEL_BY_COMMAND: Record<string, string> = {
+  '/setup': '운영 체크리스트 모드',
+  '/setup-checklist': '운영 체크리스트',
+  '/setup-owner': '운영자 TODO',
+  '/setup-keys': '운영 키 점검',
+  '/operator-todo': '운영자 TODO',
+  '/ops-status': '운영 상태 요약',
+  '/system-status': '운영 상태 요약',
+};
+
+const SETUP_FOLLOW_UP_PROMPT_MATRIX: Record<string, string[]> = {
+  '/setup': ['/setup-checklist', '/setup-keys', '/operator-todo', '/ops-status', '/system-status'],
+  '/setup-checklist': ['/setup-keys', '/operator-todo', '/setup-owner', '/ops-status', '/system-status'],
+  '/setup-owner': ['/setup', '/setup-keys', '/operator-todo', '/ops-status', '/system-status'],
+  '/setup-keys': ['/setup', '/setup-checklist', '/operator-todo', '/ops-status', '/system-status'],
+  '/operator-todo': ['/setup', '/setup-keys', '/setup-checklist', '/ops-status', '/system-status'],
+  '/ops-status': ['/setup', '/setup-checklist', '/setup-keys', '/operator-todo', '/system-status'],
+};
+
+const FOLLOW_UP_TOPIC_KEYWORDS: string[][] = [
+  ['영상', '비디오', 'video', '숏폼', 'shorts', '조회', '조회수', '성과', '포맷', '트렌드'],
+  ['레스토랑', '식당', '맛집', '메뉴', '상호', 'restaurant', '매장'],
+  ['피크', '프레임', '후킹', '클로징', '보강', '연출', '씬', 'heatmap', '구간'],
+];
+
+function normalizeMatchText(input: string): string {
+  return input.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function extractSlashCommand(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed.startsWith('/')) return null;
+
+  const token = trimmed.split(/\s+/)[0];
+  if (!token) return null;
+  return token.toLowerCase();
+}
+
+function resolveSetupCommandAlias(input: string): string | null {
+  const command = extractSlashCommand(input);
+  if (command) {
+    return SETUP_COMMAND_ALIASES.get(command) ?? null;
+  }
+
+  const normalized = normalizeMatchText(input);
+  if (!normalized) return null;
+
+  if (normalized.includes('운영 상태') || normalized.includes('시스템 상태') || normalized.includes('ops status')) {
+    return '/ops-status';
+  }
+  if (normalized.includes('운영 체크리스트') || normalized.includes('setup checklist') || normalized.includes('ops checklist')) {
+    return '/setup';
+  }
+  if (normalized.includes('운영자 todo') || normalized.includes('operator todo')) {
+    return '/operator-todo';
+  }
+  if (normalized.includes('운영') && normalized.includes('키') && normalized.includes('점검')) {
+    return '/setup-keys';
+  }
+
+  return null;
+}
+
+function dedupeFollowUpPrompts(prompts: InsightChatFollowUpPrompt[]): InsightChatFollowUpPrompt[] {
+  const seen = new Set<string>();
+  const deduped: InsightChatFollowUpPrompt[] = [];
+  for (const prompt of prompts) {
+    const key = prompt.prompt.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(prompt);
+  }
+  return deduped;
+}
+
+function buildFollowUpPromptEntries(commands: string[]): InsightChatFollowUpPrompt[] {
+  return commands.map((command) => ({
+    prompt: command,
+    label: FOLLOW_UP_LABEL_BY_COMMAND[command] ?? undefined,
+  }));
+}
+
+function resolveSetupCommandFollowUpPrompts(command: string): InsightChatFollowUpPrompt[] {
+  const matrix = SETUP_FOLLOW_UP_PROMPT_MATRIX[command];
+  if (matrix?.length) {
+    return dedupeFollowUpPrompts(buildFollowUpPromptEntries(matrix));
+  }
+
+  const presets = SETUP_COMMAND_FOLLOW_UP_PRESETS[command] ?? SETUP_FOLLOW_UP_PRESETS;
+  return dedupeFollowUpPrompts(presets.map((item) => ({
+    prompt: item.prompt,
+    label: item.label ?? FOLLOW_UP_LABEL_BY_COMMAND[item.prompt],
+  })));
+}
+
+function scoreFollowUpTopic(normalizedQuery: string, topicIndex: number): number {
+  const keywords = FOLLOW_UP_TOPIC_KEYWORDS[topicIndex] ?? [];
+  let score = 0;
+  for (const keyword of keywords) {
+    if (normalizedQuery.includes(keyword)) {
+      score += 1;
+    }
+  }
+  return score;
+}
+
+export function normalizeFollowUpPromptsForQuery(query: string): InsightChatFollowUpPrompt[] {
+  const normalized = normalizeMatchText(query);
+  if (!normalized) return [];
+
+  const rawCommand = extractSlashCommand(query);
+  if (rawCommand && SETUP_FOLLOW_UP_PROMPT_MATRIX[rawCommand]) {
+    return resolveSetupCommandFollowUpPrompts(rawCommand);
+  }
+
+  const setupAlias = resolveSetupCommandAlias(query);
+  if (setupAlias) {
+    return resolveSetupCommandFollowUpPrompts(setupAlias);
+  }
+
+  const scored = TOPIC_FOLLOW_UP_PRESETS
+    .map((preset, index) => ({
+      preset,
+      index,
+      score: scoreFollowUpTopic(normalized, index),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.index - b.index;
+    });
+
+  const prioritized = scored.map((item) => item.preset);
+  return dedupeFollowUpPrompts(prioritized).slice(0, MAX_FOLLOW_UP_PROMPTS);
+}
+
+function getStoryboardDependencyTrace(): string[] {
+  const bgeEnabled = process.env.STORYBOARD_BGE_ENABLED === 'true';
+  const bgeUrl = process.env.STORYBOARD_BGE_EMBEDDING_URL?.trim();
+  return bgeEnabled && !bgeUrl
+    ? ['dependency:bge-embedding-unavailable']
+    : [];
+}
 
 function includesAny(message: string, words: string[]): boolean {
   return words.some((word) => message.includes(word));
@@ -30,6 +236,121 @@ function isWordcloudQuery(message: string): boolean {
 
 function isTreemapQuery(message: string): boolean {
   return includesAny(message, ['트리맵', 'treemap', '트리 맵', '분포', '영상 분포', '영상분포', '조회수 분포', '좋아요 분포', '카테고리별', '카테고리', '증감', '변화율']);
+}
+
+function isPeakFrameQuery(message: string): boolean {
+  const normalized = normalizeMatchText(message);
+  if (!normalized) return false;
+  return normalized.includes('피크 프레임')
+    || (normalized.includes('피크') && normalized.includes('프레임'))
+    || normalized.includes('peak-frame');
+}
+
+const FRAME_CAPTION_DEFAULT_RELATIVE_PATH = 'backend/restaurant-crawling/data/tzuyang/frame-caption';
+
+function resolveFrameCaptionBasePath(): string {
+  const explicit = process.env.INSIGHT_FRAME_CAPTION_BASE_PATH?.trim();
+  if (explicit) {
+    return path.isAbsolute(explicit) ? explicit : path.resolve(process.cwd(), explicit);
+  }
+  return path.resolve(process.cwd(), FRAME_CAPTION_DEFAULT_RELATIVE_PATH);
+}
+
+function resolveFrameCaptionGdriveHintPath(): string | null {
+  const raw = process.env.INSIGHT_GDRIVE_FRAME_CAPTION_PATH?.trim() || process.env.GDRIVE_REMOTE_PATH?.trim() || '';
+  return raw || null;
+}
+
+function normalizeEvidenceLink(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const value = raw.trim();
+  if (!/^https?:\/\//i.test(value)) return undefined;
+  return value;
+}
+
+function formatPeakFrameTimestamp(startSec: unknown, endSec: unknown): string {
+  const start = typeof startSec === 'number' && Number.isFinite(startSec) ? Math.max(0, Math.floor(startSec)) : null;
+  const end = typeof endSec === 'number' && Number.isFinite(endSec) ? Math.max(0, Math.floor(endSec)) : null;
+  if (start == null || end == null || end < start) return '-';
+
+  const toClock = (totalSeconds: number): string => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+  return `${toClock(start)}~${toClock(end)}`;
+}
+
+type PeakFrameEvidenceVideo = {
+  videoId: string;
+  title: string;
+  youtubeLink: string;
+};
+
+async function loadPeakFrameEvidenceSources(
+  videos: PeakFrameEvidenceVideo[],
+): Promise<{ sources: InsightChatSource[]; hasAnyFile: boolean }> {
+  const basePath = resolveFrameCaptionBasePath();
+  let hasAnyFile = false;
+  const sources: InsightChatSource[] = [];
+
+  for (const video of videos.slice(0, 4)) {
+    const filePath = path.resolve(basePath, `${video.videoId}.jsonl`);
+    if (!existsSync(filePath)) continue;
+    hasAnyFile = true;
+
+    let payload = '';
+    try {
+      payload = await readFile(filePath, 'utf-8');
+    } catch {
+      continue;
+    }
+
+    const lines = payload.split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      let row: Record<string, unknown> | null = null;
+      try {
+        row = JSON.parse(trimmed) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+      if (!row) continue;
+
+      const rowVideoId = typeof row.video_id === 'string' ? row.video_id : video.videoId;
+      if (rowVideoId !== video.videoId) continue;
+
+      const rawCaption = typeof row.raw_caption === 'string' ? row.raw_caption.trim() : '';
+      const parsedJson = row.parsed_json && typeof row.parsed_json === 'object'
+        ? row.parsed_json as Record<string, unknown>
+        : null;
+      const parsedCaption = parsedJson && typeof parsedJson.chronological_analysis === 'string'
+        ? parsedJson.chronological_analysis.trim()
+        : '';
+      const text = rawCaption || parsedCaption;
+      if (!text) continue;
+
+      const files = Array.isArray(row.file_names) ? row.file_names : [];
+      const frameLink = normalizeEvidenceLink(files[0]);
+      const assetLink = normalizeEvidenceLink(files[1]) || frameLink;
+
+      sources.push({
+        videoTitle: video.title || video.videoId,
+        youtubeLink: video.youtubeLink,
+        timestamp: formatPeakFrameTimestamp(row.start_sec, row.end_sec),
+        text: text.slice(0, 320),
+        ...(frameLink ? { frameLink } : {}),
+        ...(assetLink ? { assetLink } : {}),
+      });
+    }
+  }
+
+  return {
+    sources,
+    hasAnyFile,
+  };
 }
 
 function buildLocalInsightResponseFailureMessage(reason: string): string {
@@ -274,6 +595,279 @@ function withCachedQuery<T>(key: string, ttlMs: number, loader: () => Promise<T>
   return request;
 }
 
+function buildLlmUnavailableHints(provider: string): string[] {
+  return [`LLM 키 없음: ${provider}`];
+}
+
+function buildOperatorSystemStatusHints(status: AdminInsightSystemStatusResponse | null): string[] {
+  if (!status) {
+    return ['운영 상태 점검 정보를 불러오지 못했습니다.'];
+  }
+
+  const checklistIds = new Set(status.checklist.map((item) => item.id));
+  const storyboardEnabled = process.env.STORYBOARD_AGENT_ENABLED !== 'false';
+  const bgeEnabled = process.env.STORYBOARD_BGE_ENABLED === 'true';
+
+  const hints: string[] = [];
+  if (!status.keys.supabaseUrl || !status.keys.supabaseServiceRoleKey) {
+    hints.push('Supabase: NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 미설정');
+  }
+  const storyboardNeedsAttention = checklistIds.has('storyboard-url-missing')
+    || checklistIds.has('storyboard-health-failed')
+    || (storyboardEnabled && (!status.storyboardAgent.configured || !status.storyboardAgent.reachable));
+  if (storyboardNeedsAttention) {
+    hints.push('Storyboard: STORYBOARD_AGENT_ENABLED=true 및 STORYBOARD_AGENT_API_URL 점검 필요');
+  }
+  const bgeNeedsAttention = checklistIds.has('bge-url-missing')
+    || checklistIds.has('bge-health-failed')
+    || (bgeEnabled && (!status.bgeEmbedding.configured || !status.bgeEmbedding.reachable));
+  if (bgeNeedsAttention) {
+    hints.push('BGE 임베딩: STORYBOARD_BGE_ENABLED=true, STORYBOARD_BGE_EMBEDDING_URL/토큰 점검 필요');
+  }
+  if (!status.keys.nanoBanana2Key) {
+    hints.push('Nano Banana 2: NANO_BANANA_2_API_KEY 미설정');
+  }
+  return hints;
+}
+
+function toChecklistStatusLabel(ready: boolean): string {
+  return ready ? '완료' : '미확인';
+}
+
+function toOpsStateLabel(ready: boolean): string {
+  return ready ? '정상' : '점검 필요';
+}
+
+function countReadyKeys(status: AdminInsightSystemStatusResponse): number {
+  return Object.values(status.keys).reduce((acc, value) => acc + (value ? 1 : 0), 0);
+}
+
+function isRunDailyReady(status: AdminInsightSystemStatusResponse | null): boolean {
+  if (!status?.runDaily) return false;
+  return Boolean(status.runDaily.scriptPath) && status.runDaily.executable && !status.runDaily.stale;
+}
+
+function isStoryboardReady(status: AdminInsightSystemStatusResponse | null): boolean {
+  if (!status) return false;
+  if (!status.storyboardAgent.enabled) return true;
+  return status.storyboardAgent.configured && status.storyboardAgent.reachable;
+}
+
+function isBgeReady(status: AdminInsightSystemStatusResponse | null): boolean {
+  if (!status) return false;
+  if (!status.bgeEmbedding.enabled) return true;
+  return status.bgeEmbedding.configured && status.bgeEmbedding.reachable;
+}
+
+function isLikelySecretValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.includes('${')) return false;
+  return /secret|token|key|sk-|pk-|api/i.test(trimmed) || trimmed.length > 24;
+}
+
+function redactSecretAssignments(snippet: string): string {
+  return snippet.replace(
+    /\b([A-Z][A-Z0-9_]{2,})\s*=\s*("([^"]*)"|'([^']*)')/g,
+    (full, name: string, quoted: string, doubleValue: string, singleValue: string) => {
+      const value = typeof doubleValue === 'string' && doubleValue.length > 0 ? doubleValue : singleValue;
+      if (!value || !isLikelySecretValue(value)) return full;
+      return `${name}="<REDACTED>"`;
+    },
+  );
+}
+
+function resolveOpsSnippetTitle(item: NonNullable<AdminInsightSystemStatusResponse['checklist']>[number]): string {
+  if (item.source === 'run_daily' && item.severity !== 'medium') {
+    return 'run_daily 실행 권한 미설정';
+  }
+  return item.title;
+}
+
+function selectOpsStatusActionableItems(
+  status: AdminInsightSystemStatusResponse,
+): NonNullable<AdminInsightSystemStatusResponse['checklist']> {
+  const severityWeight = (severity: string): number => {
+    if (severity === 'critical') return 4;
+    if (severity === 'high') return 3;
+    if (severity === 'medium') return 2;
+    return 1;
+  };
+
+  return [...status.checklist]
+    .filter((item) => (item.severity === 'critical' || item.severity === 'high'))
+    .filter((item) => item.source !== 'frame-caption-storage')
+    .filter((item) => Boolean(item.commandSnippet?.trim() || item.command?.trim()))
+    .sort((a, b) => {
+      const bySeverity = severityWeight(b.severity) - severityWeight(a.severity);
+      if (bySeverity !== 0) return bySeverity;
+      return a.id.localeCompare(b.id);
+    })
+    .slice(0, 3);
+}
+
+function buildOpsStatusSnippetSection(status: AdminInsightSystemStatusResponse | null): string[] {
+  if (!status) {
+    return [
+      '### 운영 명령 스니펫',
+      '- 운영 상태 점검 실패 시 기본 진단',
+      '```bash',
+      'ls -l backend/run_daily.sh || true',
+      'curl -sf "${STORYBOARD_AGENT_API_URL:-https://your-storyboard-host/api}/health" || true',
+      '```',
+    ];
+  }
+
+  const actionable = selectOpsStatusActionableItems(status);
+  if (!actionable.length) {
+    return [
+      '### 운영 명령 스니펫',
+      '- 운영 상태 점검 실패 시 기본 진단',
+      '```bash',
+      'ls -l backend/run_daily.sh || true',
+      '```',
+    ];
+  }
+
+  const lines: string[] = ['### 운영 명령 스니펫'];
+  for (const item of actionable) {
+    const snippet = redactSecretAssignments((item.commandSnippet || item.command || '').trim());
+    if (!snippet) continue;
+    lines.push(`- ${resolveOpsSnippetTitle(item)}`);
+    lines.push('```bash');
+    lines.push(snippet);
+    lines.push('```');
+  }
+  return lines;
+}
+
+function buildSetupChecklistContent(status: AdminInsightSystemStatusResponse | null): string {
+  const runDailyReady = isRunDailyReady(status);
+  const storyboardReady = isStoryboardReady(status);
+  const bgeReady = isBgeReady(status);
+  const nanoReady = Boolean(status?.keys.nanoBanana2Key);
+
+  return [
+    '## 운영 체크리스트 모드',
+    '',
+    '현재 운영 상태 기준 필수 점검 항목입니다.',
+    '',
+    '### 운영 키 점검',
+    `- Supabase: ${toChecklistStatusLabel(Boolean(status?.keys.supabaseUrl && status?.keys.supabaseServiceRoleKey))}`,
+    `- Gemini/OpenAI/Anthropic: ${toChecklistStatusLabel(Boolean(status?.keys.geminiServerKey || status?.keys.openaiServerKey || status?.keys.anthropicServerKey))}`,
+    `- Nano Banana 2: ${toChecklistStatusLabel(nanoReady)}`,
+    '',
+    '### run_daily 수집 파이프라인',
+    `- 상태: ${toOpsStateLabel(runDailyReady)}`,
+    '- 수집 스크립트와 cron 로그를 함께 확인하세요.',
+    '',
+    '### Storyboard 연동',
+    `- 상태: ${toOpsStateLabel(storyboardReady)}`,
+    '- STORYBOARD_AGENT_API_URL 및 /health 응답을 확인하세요.',
+    '',
+    '### BGE 임베딩',
+    `- 상태: ${toOpsStateLabel(bgeReady)}`,
+    '- STORYBOARD_BGE_EMBEDDING_URL/토큰 및 서버 접근 가능 여부를 확인하세요.',
+    '',
+    '### ⚠️ Nano Banana 2 키',
+    `- 상태: ${toChecklistStatusLabel(nanoReady)}`,
+    '- 이미지 생성 연동 시 NANO_BANANA_2_API_KEY가 필요합니다.',
+  ].join('\n');
+}
+
+function buildSetupKeysChecklistContent(status: AdminInsightSystemStatusResponse | null): string {
+  return [
+    '## 운영 키 체크리스트',
+    '',
+    '### 준비 항목',
+    `- Supabase URL: ${toChecklistStatusLabel(Boolean(status?.keys.supabaseUrl))}`,
+    `- Supabase Service Role: ${toChecklistStatusLabel(Boolean(status?.keys.supabaseServiceRoleKey))}`,
+    `- Gemini 서버 키: ${toChecklistStatusLabel(Boolean(status?.keys.geminiServerKey))}`,
+    `- OpenAI 서버 키: ${toChecklistStatusLabel(Boolean(status?.keys.openaiServerKey))}`,
+    `- Anthropic 서버 키: ${toChecklistStatusLabel(Boolean(status?.keys.anthropicServerKey))}`,
+    `- Nano Banana 2 키: ${toChecklistStatusLabel(Boolean(status?.keys.nanoBanana2Key))}`,
+    '',
+    '### API 키 설정',
+    '```bash',
+    'NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://<project>.supabase.co}"',
+    'SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-<service-role-key>}"',
+    'GEMINI_OCR_YEON="${GEMINI_OCR_YEON:-<gemini-key>}"',
+    'OPENAI_API_KEY="${OPENAI_API_KEY:-<openai-key>}"',
+    'ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-<anthropic-key>}"',
+    'NANO_BANANA_2_API_KEY="${NANO_BANANA_2_API_KEY:-<nanobanana2-key>}"',
+    '```',
+  ].join('\n');
+}
+
+function buildOperatorTodoContent(status: AdminInsightSystemStatusResponse | null): string {
+  const runDailyReady = isRunDailyReady(status);
+  const storyboardReady = isStoryboardReady(status);
+  const bgeReady = isBgeReady(status);
+  const supabaseReady = Boolean(status?.keys.supabaseUrl && status?.keys.supabaseServiceRoleKey);
+  const nanoReady = Boolean(status?.keys.nanoBanana2Key);
+
+  return [
+    '## 운영자 TODO',
+    '',
+    `- Supabase: ${toChecklistStatusLabel(supabaseReady)}`,
+    `- run_daily: ${toChecklistStatusLabel(runDailyReady)}`,
+    `- Storyboard: ${toChecklistStatusLabel(storyboardReady)}`,
+    `- BGE: ${toChecklistStatusLabel(bgeReady)}`,
+    `- Nano Banana 2: ${toChecklistStatusLabel(nanoReady)}`,
+  ].join('\n');
+}
+
+function buildOpsStatusSummaryContent(status: AdminInsightSystemStatusResponse | null): string {
+  if (!status) {
+    return [
+      '## 운영 상태 요약',
+      '',
+      '- run_daily: 점검 필요',
+      '- Storyboard: 점검 필요',
+      '- BGE 임베딩: 점검 필요',
+      '- 키 준비 상태: 0/6',
+      '',
+      '### Blocker',
+      '- 운영 상태 점검 정보를 불러오지 못했습니다.',
+      '',
+      ...buildOpsStatusSnippetSection(null),
+    ].join('\n');
+  }
+
+  const runDailyReady = isRunDailyReady(status);
+  const storyboardReady = isStoryboardReady(status);
+  const bgeReady = isBgeReady(status);
+  const blockers = status.checklist
+    .filter((item) => item.severity === 'critical' || item.severity === 'high')
+    .filter((item) => item.source !== 'frame-caption-storage')
+    .slice(0, 5);
+
+  return [
+    '## 운영 상태 요약',
+    '',
+    `- run_daily: ${toOpsStateLabel(runDailyReady)}`,
+    `- Storyboard: ${toOpsStateLabel(storyboardReady)}`,
+    `- BGE 임베딩: ${toOpsStateLabel(bgeReady)}`,
+    `- 키 준비 상태: ${countReadyKeys(status)}/${Object.keys(status.keys).length}`,
+    '',
+    '### Blocker',
+    ...(blockers.length > 0
+      ? blockers.map((item) => `- ${resolveOpsSnippetTitle(item)}`)
+      : ['- Blocker 없음']),
+    '',
+    ...buildOpsStatusSnippetSection(status),
+  ].join('\n');
+}
+
+async function loadSystemStatusSafely(): Promise<AdminInsightSystemStatusResponse | null> {
+  try {
+    return await getAdminInsightSystemStatus();
+  } catch (error) {
+    console.error('[admin/insight/chat] failed to load system status:', error);
+    return null;
+  }
+}
+
 function createLocalResponse(
   asOf: string,
   content: string,
@@ -287,6 +881,8 @@ function createLocalResponse(
     memoryMode?: InsightChatMemoryMode;
     confidence?: number;
     toolTrace?: string[];
+    followUpPrompts?: InsightChatFollowUpPrompt[];
+    systemStatusHints?: string[];
   } = {},
 ): AdminInsightChatResponse {
   const resolvedSource = options.source || 'local';
@@ -303,6 +899,7 @@ function createLocalResponse(
     content,
     sources: options.sources ?? [],
     visualComponent: options.visualComponent,
+    followUpPrompts: options.followUpPrompts,
     meta: {
       source: resolvedSource,
       fallbackReason: options.fallbackReason,
@@ -310,6 +907,7 @@ function createLocalResponse(
       ...(memoryMode ? { memoryMode } : {}),
       responseMode,
       confidence,
+      systemStatusHints: options.systemStatusHints,
       toolTrace,
     },
   };
@@ -1596,11 +2194,13 @@ function createLocalStoryboardResponse(
   profile: StoryboardModelProfile,
   requestId?: string,
   memoryMode?: InsightChatMemoryMode,
+  toolTrace: string[] = [],
 ): AdminInsightChatResponse {
   return createLocalResponse(asOf, buildStoryboardFallbackContent(message, profile), {
     fallbackReason: 'storyboard_internal_fallback',
     ...(requestId ? { requestId } : {}),
     ...(memoryMode ? { memoryMode } : {}),
+    toolTrace,
   });
 }
 
@@ -1701,7 +2301,8 @@ async function runStoryboardOrchestrator(
   };
 
   const normalizedResponseMode = normalizeResponseMode(responseMode);
-  const profileTrace = [...toolTrace, `responseMode:${normalizedResponseMode}`];
+  const storyboardDependencyTrace = getStoryboardDependencyTrace();
+  const profileTrace = [...toolTrace, ...storyboardDependencyTrace, `responseMode:${normalizedResponseMode}`];
 
   if (isPopularityIntent && state.videoMetadataDocs.length === 0) {
     state.videoMetadataDocs = await getVideoMetadataFilteredTool({
@@ -1816,7 +2417,7 @@ async function runStoryboardOrchestrator(
         ...(requestId ? { requestId } : {}),
         responseMode: normalizedResponseMode,
         confidence: 0.45,
-        toolTrace: [...toolTrace, 'route:storyboard', 'human-fallback'],
+        toolTrace: [...profileTrace, 'route:storyboard', 'human-fallback'],
       });
     }
 
@@ -1831,7 +2432,7 @@ async function runStoryboardOrchestrator(
       ...(requestId ? { requestId } : {}),
       responseMode: normalizedResponseMode,
       confidence: 0.46,
-      toolTrace: [...toolTrace, 'route:storyboard', `validation:${state.validationStatus}`],
+      toolTrace: [...profileTrace, 'route:storyboard', `validation:${state.validationStatus}`],
     });
     return fallback;
   }
@@ -2022,6 +2623,7 @@ async function askStoryboardAgent(
   const normalizedProfile = storyboardModelProfile === 'nanobanana_pro' ? 'nanobanana_pro' : 'nanobanana';
   const fallbackProfile = normalizedProfile;
   const intent = normalizeStoryboardAgentIntent(message);
+  const storyboardDependencyTrace = getStoryboardDependencyTrace();
 
   if (intent === 'simple_chat') {
     return createLocalResponse(asOf, buildStoryboardSimpleChatResponse(message), {
@@ -2084,7 +2686,14 @@ async function askStoryboardAgent(
 
   const endpoint = STORYBOARD_AGENT_REMOTE_ENABLED ? getStoryboardAgentEndpoint() : null;
   if (!endpoint) {
-    const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
+    const fallbackResponse = createLocalStoryboardResponse(
+      message,
+      asOf,
+      fallbackProfile,
+      requestId,
+      normalizedMemoryMode,
+      [...profileTrace, ...storyboardDependencyTrace, 'route:storyboard', 'storyboard:fallback:local'],
+    );
     return bgeContext.length > 0
       ? { ...fallbackResponse, sources: storyboardSourcesFromBgeResults(bgeContext) }
       : fallbackResponse;
@@ -2143,7 +2752,14 @@ async function askStoryboardAgent(
       const content = extractStoryboardContent(data);
       if (!content) {
         setStoryboardEndpointCooldown(endpoint);
-        const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
+        const fallbackResponse = createLocalStoryboardResponse(
+          message,
+          asOf,
+          fallbackProfile,
+          requestId,
+          normalizedMemoryMode,
+          [...profileTrace, ...storyboardDependencyTrace, 'route:storyboard', 'storyboard:fallback:remote-empty'],
+        );
         if (bgeContext.length > 0) {
           return {
             ...fallbackResponse,
@@ -2193,7 +2809,14 @@ async function askStoryboardAgent(
       }
 
       console.error('[admin/insight/chat] storyboard agent request failed:', error);
-      const fallbackResponse = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
+      const fallbackResponse = createLocalStoryboardResponse(
+        message,
+        asOf,
+        fallbackProfile,
+        requestId,
+        normalizedMemoryMode,
+        [...profileTrace, ...storyboardDependencyTrace, 'route:storyboard', 'storyboard:fallback:remote-error'],
+      );
       if (bgeContext.length > 0) {
         return {
           ...fallbackResponse,
@@ -2206,7 +2829,14 @@ async function askStoryboardAgent(
     }
   }
 
-  const finalFallback = createLocalStoryboardResponse(message, asOf, fallbackProfile, requestId, normalizedMemoryMode);
+  const finalFallback = createLocalStoryboardResponse(
+    message,
+    asOf,
+    fallbackProfile,
+    requestId,
+    normalizedMemoryMode,
+    [...profileTrace, ...storyboardDependencyTrace, 'route:storyboard', 'storyboard:fallback:final'],
+  );
   if (bgeContext.length > 0) {
     return {
       ...finalFallback,
@@ -2257,6 +2887,7 @@ export async function getAdminInsightChatBootstrap(): Promise<AdminInsightChatBo
     message: {
       content,
       sources: [],
+      followUpPrompts: TOPIC_FOLLOW_UP_PRESETS.slice(0, MAX_FOLLOW_UP_PROMPTS),
     },
   };
 }
@@ -2321,7 +2952,7 @@ export async function answerAdminInsightChat(
     if (storyboardReply) return storyboardReply;
   }
 
-    const llmReply = await routeLlmRequest(
+  const llmReply = await routeLlmRequest(
       input,
       asOf,
       llmConfig,
@@ -2333,15 +2964,21 @@ export async function answerAdminInsightChat(
       contextMessages,
       memoryProfileNote,
       [...toolTrace, `provider:${llmConfig?.provider ?? 'gemini'}`],
-    );
+  );
   if (llmReply) return llmReply;
+
+  const fallbackProvider = llmConfig?.provider ?? 'gemini';
+  const fallbackFollowUps = normalizeFollowUpPromptsForQuery(input);
+  const fallbackHints = buildLlmUnavailableHints(fallbackProvider);
 
   return createLocalResponse(asOf, buildLocalInsightResponseFailureMessage('llm_unavailable'), {
     fallbackReason: 'llm_unavailable',
     requestId: resolvedRequestId,
     memoryMode: normalizedMemoryMode,
     responseMode,
-    toolTrace: [...toolTrace, 'provider-unavailable'],
+    followUpPrompts: fallbackFollowUps,
+    systemStatusHints: fallbackHints,
+    toolTrace: [...toolTrace, `dependency:llm-key-unavailable:${fallbackProvider}`, 'provider-unavailable'],
     confidence: 0.35,
   });
 }
@@ -2368,9 +3005,109 @@ async function resolveLocalInsightResponse(
   toolTrace: string[] = [],
 ): Promise<AdminInsightChatResponse | null> {
   const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
+  const setupCommand = resolveSetupCommandAlias(input);
 
   if (isStoryboardIntent(input)) {
     return null;
+  }
+
+  if (setupCommand) {
+    const status = await loadSystemStatusSafely();
+    const systemStatusHints = buildOperatorSystemStatusHints(status);
+    const rawSetupCommand = extractSlashCommand(input);
+    const followUpCommand = rawSetupCommand && SETUP_FOLLOW_UP_PROMPT_MATRIX[rawSetupCommand]
+      ? rawSetupCommand
+      : setupCommand;
+    const followUpPrompts = resolveSetupCommandFollowUpPrompts(followUpCommand);
+
+    if (setupCommand === '/setup-keys') {
+      return createLocalResponse(asOf, buildSetupKeysChecklistContent(status), {
+        requestId,
+        memoryMode: normalizedMemoryMode,
+        responseMode,
+        confidence: 0.9,
+        followUpPrompts,
+        systemStatusHints,
+        toolTrace: [...toolTrace, 'local:setup-keys'],
+      });
+    }
+
+    if (setupCommand === '/operator-todo') {
+      return createLocalResponse(asOf, buildOperatorTodoContent(status), {
+        requestId,
+        memoryMode: normalizedMemoryMode,
+        responseMode,
+        confidence: 0.88,
+        followUpPrompts,
+        systemStatusHints,
+        toolTrace: [...toolTrace, 'local:operator-todo'],
+      });
+    }
+
+    if (setupCommand === '/ops-status') {
+      return createLocalResponse(asOf, buildOpsStatusSummaryContent(status), {
+        requestId,
+        memoryMode: normalizedMemoryMode,
+        responseMode,
+        confidence: 0.89,
+        followUpPrompts,
+        systemStatusHints,
+        toolTrace: [...toolTrace, 'local:ops-status'],
+      });
+    }
+
+    return createLocalResponse(asOf, buildSetupChecklistContent(status), {
+      requestId,
+      memoryMode: normalizedMemoryMode,
+      responseMode,
+      confidence: 0.89,
+      followUpPrompts,
+      systemStatusHints,
+      toolTrace: [...toolTrace, 'local:setup-checklist'],
+    });
+  }
+
+  if (isPeakFrameQuery(input)) {
+    const heatmap = await withCachedQuery('admin-insight-heatmap', cacheTtl, () => getAdminInsightHeatmap(false));
+    const candidateVideos: PeakFrameEvidenceVideo[] = heatmap.videos.slice(0, 6).map((video) => ({
+      videoId: video.videoId,
+      title: video.title,
+      youtubeLink: `https://www.youtube.com/watch?v=${video.videoId}`,
+    }));
+    const { sources, hasAnyFile } = await loadPeakFrameEvidenceSources(candidateVideos);
+
+    const systemStatusHints: string[] = [];
+    if (!hasAnyFile) {
+      const gdrivePath = resolveFrameCaptionGdriveHintPath();
+      if (gdrivePath) {
+        systemStatusHints.push(`피크 프레임 JSONL을 찾지 못해 증거 첨부가 제한됩니다. GDrive 경로를 확인하세요: ${gdrivePath}`);
+      } else {
+        systemStatusHints.push('피크 프레임 JSONL을 찾지 못해 증거 첨부가 제한됩니다. INSIGHT_FRAME_CAPTION_BASE_PATH를 점검하세요.');
+      }
+    }
+
+    const topVideos = heatmap.videos.slice(0, 3).map((video, index) =>
+      `- ${index + 1}. ${video.title} (피크 ${video.peakSegment.start}%~${video.peakSegment.end}%)`
+    );
+
+    return createLocalResponse(asOf, [
+      '## 피크 프레임 분석',
+      '',
+      ...(topVideos.length > 0 ? topVideos : ['- 피크 구간 데이터가 없습니다.']),
+      '',
+      sources.length > 0
+        ? `- 피크 프레임 증거 ${sources.length}건을 연결했습니다.`
+        : '- 피크 프레임 증거를 찾지 못했습니다.',
+    ].join('\n'), {
+      requestId,
+      memoryMode: normalizedMemoryMode,
+      visualComponent: 'heatmap',
+      responseMode,
+      confidence: 0.92,
+      sources,
+      ...(systemStatusHints.length > 0 ? { systemStatusHints } : {}),
+      toolTrace: [...toolTrace, 'local:peak-frame'],
+    });
   }
 
   if (isWordcloudQuery(input)) {
@@ -2576,6 +3313,8 @@ export async function streamAdminInsightChat(
   const model = llmConfig?.model || GEMINI_MODEL_DEFAULT;
 
   if (!apiKey) {
+      const fallbackFollowUps = normalizeFollowUpPromptsForQuery(message);
+      const fallbackHints = buildLlmUnavailableHints(provider);
       return {
         local: createLocalResponse(new Date().toISOString(), [
         '가능한 질문 예시:',
@@ -2586,8 +3325,10 @@ export async function streamAdminInsightChat(
           requestId: resolvedRequestId,
           memoryMode: normalizedMemoryMode,
           responseMode: resolvedResponseMode,
+          followUpPrompts: fallbackFollowUps,
+          systemStatusHints: fallbackHints,
           confidence: 0.52,
-          toolTrace: [...toolTrace, 'provider-unavailable'],
+          toolTrace: [...toolTrace, `dependency:llm-key-unavailable:${provider}`, 'provider-unavailable'],
       }),
     };
   }
