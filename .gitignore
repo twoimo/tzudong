@@ -78,3 +78,6 @@ backend/supabase/backup_db/*.sql
 
 # omx
 .omx
+
+# codex
+.codex
