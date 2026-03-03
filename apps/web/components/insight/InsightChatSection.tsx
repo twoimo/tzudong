@@ -181,6 +181,10 @@ export type AttachmentSelectionSummary = {
 
 export type ComposerShortcutAction = 'focusComposer' | 'cancelEdit' | 'toggleShortcutHelp' | 'noop';
 export type ComposeArrowUpAction = 'editLatestMessage' | 'navigateCommandSuggestion' | 'noop';
+export type InsightChatShortcutHelpItem = {
+    keys: string;
+    description: string;
+};
 
 export function getChatBubbleActionState({
     isUser,
@@ -274,6 +278,16 @@ const ATTACHMENT_REJECTION_REASON_LABELS: Record<AttachmentSelectionRejectionRea
     empty: '비어 있음 거부',
     'max-count': '개수 제한 거부',
 };
+
+const CHAT_SHORTCUT_HELP_ITEMS: ReadonlyArray<InsightChatShortcutHelpItem> = [
+    { keys: 'Ctrl/Cmd + K', description: '입력창 포커스' },
+    { keys: 'Ctrl/Cmd + /', description: '단축키 도움말 열기/닫기' },
+    { keys: 'Shift + ?', description: '단축키 도움말 열기/닫기' },
+    { keys: 'ArrowUp', description: '입력창이 비어 있으면 마지막 사용자 메시지 수정' },
+    { keys: 'Esc', description: '메시지 수정 취소 또는 도움말 닫기' },
+    { keys: 'Enter', description: '메시지 전송' },
+    { keys: 'Shift + Enter', description: '줄바꿈' },
+];
 
 function normalizeConversationDraftKey(conversationId: string | null | undefined): string {
     return typeof conversationId === 'string' ? conversationId.trim() : '';
@@ -418,6 +432,10 @@ export function buildAttachmentSelectionNotice(summary: AttachmentSelectionSumma
     }
 
     return noticeParts.join(' · ');
+}
+
+export function getInsightChatShortcutHelpItems(): InsightChatShortcutHelpItem[] {
+    return [...CHAT_SHORTCUT_HELP_ITEMS];
 }
 
 export function getComposerHeightsForValues({
@@ -5454,6 +5472,7 @@ const InsightChatSectionComponent = () => {
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+    const [showShortcutHelp, setShowShortcutHelp] = useState(false);
     const bootstrapRequestRef = useRef(new Map<string, number>());
     const conversationDraftMapRef = useRef<ConversationDraftMap>({});
     const streamAbortControllerRef = useRef<AbortController | null>(null);
@@ -6071,6 +6090,7 @@ const InsightChatSectionComponent = () => {
         if (isCommandMode) return [];
         return flattenPromptCommands(activePromptGroups);
     }, [activePromptGroups, isCommandMode]);
+    const shortcutHelpItems = useMemo(() => getInsightChatShortcutHelpItems(), []);
 
     useEffect(() => {
         if (!hasPromptSuggestions) {
@@ -7051,9 +7071,21 @@ const InsightChatSectionComponent = () => {
             return;
         }
 
+        if (shortcutAction === 'toggleShortcutHelp') {
+            event.preventDefault();
+            setShowShortcutHelp((previous) => !previous);
+            return;
+        }
+
         if (shortcutAction === 'cancelEdit' && editingMessageId) {
             event.preventDefault();
             handleCancelEditMessage();
+            return;
+        }
+
+        if (shortcutAction === 'cancelEdit' && showShortcutHelp) {
+            event.preventDefault();
+            setShowShortcutHelp(false);
             return;
         }
 
@@ -7120,6 +7152,7 @@ const InsightChatSectionComponent = () => {
         inputValue,
         isCommandMode,
         latestEditableUserMessageId,
+        showShortcutHelp,
     ]);
 
     const isSending = sendingConversationId === activeConversationId;
@@ -7794,6 +7827,9 @@ const InsightChatSectionComponent = () => {
                             conversationList.map((conversation) => {
                                 const isActive = conversation.id === activeConversationId;
                                 const userMsg = conversation.messages.find((m) => m.role === 'user');
+                                const hasConversationDraft = Boolean(
+                                    getConversationDraftForConversation(conversationDraftMap, conversation.id).trim(),
+                                );
                                 const label = conversation.title !== EMPTY_TITLE
                                     ? conversation.title
                                     : userMsg
@@ -7825,6 +7861,12 @@ const InsightChatSectionComponent = () => {
                                                 <p className="mt-0.5 text-[10px] text-[#ef4444] flex items-center gap-1">
                                                     <Pin className="h-3 w-3" />
                                                     고정됨
+                                                </p>
+                                            ) : null}
+                                            {hasConversationDraft ? (
+                                                <p className="mt-0.5 text-[10px] text-[#2563eb] flex items-center gap-1">
+                                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#2563eb]" />
+                                                    임시 입력 있음
                                                 </p>
                                             ) : null}
                                             {conversation.tags.length > 0 ? (
@@ -8687,6 +8729,21 @@ const InsightChatSectionComponent = () => {
                             ))}
                         </div>
                     ) : null}
+                    {showShortcutHelp ? (
+                        <div className="mb-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] p-2">
+                            <p className="mb-1 text-[11px] font-semibold text-[#374151]">단축키 도움말</p>
+                            <ul className="space-y-1">
+                                {shortcutHelpItems.map((item) => (
+                                    <li key={`${item.keys}-${item.description}`} className="flex items-center gap-2 text-[11px] text-[#4b5563]">
+                                        <kbd className="rounded border border-[#d1d5db] bg-white px-1.5 py-0.5 text-[10px] font-medium text-[#111827]">
+                                            {item.keys}
+                                        </kbd>
+                                        <span>{item.description}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : null}
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
@@ -8726,6 +8783,16 @@ const InsightChatSectionComponent = () => {
                                 title="txt/csv 첨부"
                             >
                                 <Paperclip className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                type="button"
+                                className="h-11 px-2"
+                                variant="outline"
+                                onClick={() => setShowShortcutHelp((previous) => !previous)}
+                                disabled={!!activeConversation?.isBooting || !!isStreamingInFlight}
+                                title="단축키 도움말"
+                            >
+                                ?
                             </Button>
                         </div>
                         <input
