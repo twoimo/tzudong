@@ -91,8 +91,17 @@ describe('insight chat metrics endpoint', () => {
             expect(payload.routes).toEqual({
                 chat: {
                     latency_budget_exceeded: 1,
+                    latency_budget_breached: true,
                     reliability_fallback_streak_alerts: {
                         route_timeout: 1,
+                    },
+                    latency_stats: {
+                        count: 1,
+                        avg_ms: 20,
+                        p50_ms: 20,
+                        p95_ms: 20,
+                        max_ms: 20,
+                        last_ms: 20,
                     },
                     total_requests: 0,
                     success_responses: 0,
@@ -113,8 +122,17 @@ describe('insight chat metrics endpoint', () => {
                 },
                 stream: {
                     latency_budget_exceeded: 1,
+                    latency_budget_breached: true,
                     reliability_fallback_streak_alerts: {
                         server_error: 1,
+                    },
+                    latency_stats: {
+                        count: 1,
+                        avg_ms: 20,
+                        p50_ms: 20,
+                        p95_ms: 20,
+                        max_ms: 20,
+                        last_ms: 20,
                     },
                     total_requests: 0,
                     success_responses: 0,
@@ -137,8 +155,10 @@ describe('insight chat metrics endpoint', () => {
 
             const snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
             expect(snapshot.routes.chat.latency_budget_exceeded).toBe(1);
+            expect(snapshot.routes.chat.latency_budget_breached).toBe(true);
             expect(snapshot.routes.chat.reliability_fallback_streak_alerts.route_timeout).toBe(1);
             expect(snapshot.routes.stream.latency_budget_exceeded).toBe(1);
+            expect(snapshot.routes.stream.latency_budget_breached).toBe(true);
             expect(snapshot.routes.stream.reliability_fallback_streak_alerts.server_error).toBe(1);
             expect(snapshot.routes.chat.total_requests).toBe(0);
             expect(snapshot.routes.chat.success_responses).toBe(0);
@@ -158,6 +178,14 @@ describe('insight chat metrics endpoint', () => {
             expect(snapshot.routes.chat.memory_mode_counts).toEqual({});
             expect(snapshot.routes.chat.feedback_rating_counts).toEqual({});
             expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({});
+            expect(snapshot.routes.chat.latency_stats).toEqual({
+                count: 1,
+                avg_ms: 20,
+                p50_ms: 20,
+                p95_ms: 20,
+                max_ms: 20,
+                last_ms: 20,
+            });
             expect(snapshot.routes.stream.provider_request_counts).toEqual({});
             expect(snapshot.routes.stream.source_counts).toEqual({});
             expect(snapshot.routes.stream.fallback_totals).toEqual({ server_error: 1 });
@@ -166,6 +194,14 @@ describe('insight chat metrics endpoint', () => {
             expect(snapshot.routes.stream.memory_mode_counts).toEqual({});
             expect(snapshot.routes.stream.feedback_rating_counts).toEqual({});
             expect(snapshot.routes.stream.feedback_has_reason_counts).toEqual({});
+            expect(snapshot.routes.stream.latency_stats).toEqual({
+                count: 1,
+                avg_ms: 20,
+                p50_ms: 20,
+                p95_ms: 20,
+                max_ms: 20,
+                last_ms: 20,
+            });
         } finally {
             if (typeof originalEnv.guardrailsEnabled === 'undefined') {
                 delete process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED;
@@ -269,6 +305,7 @@ describe('insight chat metrics endpoint', () => {
             resetInsightChatRouteGuardrails();
             snapshot = getInsightChatRouteGuardrailMetricsSnapshot();
             expect(snapshot.routes.chat.latency_budget_exceeded).toBe(0);
+            expect(snapshot.routes.chat.latency_budget_breached).toBe(false);
             expect(snapshot.routes.chat.reliability_fallback_streak_alerts).toEqual({});
             expect(snapshot.routes.chat.total_requests).toBe(0);
             expect(snapshot.routes.chat.success_responses).toBe(0);
@@ -284,6 +321,7 @@ describe('insight chat metrics endpoint', () => {
             expect(snapshot.routes.chat.feedback_rating_counts).toEqual({});
             expect(snapshot.routes.chat.feedback_has_reason_counts).toEqual({});
             expect(snapshot.routes.stream.latency_budget_exceeded).toBe(0);
+            expect(snapshot.routes.stream.latency_budget_breached).toBe(false);
             expect(snapshot.routes.stream.reliability_fallback_streak_alerts).toEqual({});
             expect(snapshot.routes.stream.total_requests).toBe(0);
             expect(snapshot.routes.stream.success_responses).toBe(0);
@@ -407,11 +445,13 @@ describe('insight chat metrics endpoint', () => {
             expect(payload.routes.chat.fallback_responses).toBe(0);
             expect(payload.routes.chat.stream_responses).toBe(0);
             expect(payload.routes.chat.error_responses).toBe(0);
+            expect(payload.routes.chat.latency_budget_breached).toBe(false);
             expect(payload.routes.stream.total_requests).toBe(0);
             expect(payload.routes.stream.success_responses).toBe(0);
             expect(payload.routes.stream.fallback_responses).toBe(0);
             expect(payload.routes.stream.stream_responses).toBe(0);
             expect(payload.routes.stream.error_responses).toBe(0);
+            expect(payload.routes.stream.latency_budget_breached).toBe(false);
             expect(payload.routes.chat.provider_request_counts).toEqual({});
             expect(payload.routes.chat.source_counts).toEqual({});
             expect(payload.routes.chat.fallback_totals).toEqual({});

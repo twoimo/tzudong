@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
             inputPolicyViolationReason,
             invalidAttachmentReason,
             invalidContextReason,
+            invalidModelReason,
         } = parseInsightChatRequestBody(await request.json().catch(() => null));
         responseMode = parsedResponseMode;
         memoryMode = parsedMemoryMode ?? 'off';
@@ -175,6 +176,38 @@ export async function POST(request: NextRequest) {
                     status: 400,
                     headers: CHAT_ROUTE_NO_STORE_HEADERS,
                 },
+            );
+        }
+
+        if (invalidModelReason) {
+            logInsightChatRouteEvent('stream', 'request.invalid_model', {
+                requestId,
+                reason: invalidModelReason,
+            });
+            const latencyMs = getElapsedMs(startedAt);
+            const { toolTrace } = evaluateInsightChatRouteGuardrails({
+                route: 'stream',
+                requestId,
+                latencyMs,
+                fallbackReason: 'invalid_model',
+                toolTrace: buildInsightChatRouteToolTrace('stream', 'request.invalid_model', memoryMode),
+                skipLatencyBudgetCheck: true,
+            });
+            recordInsightChatRouteResponseSource('stream', 'fallback');
+            recordInsightChatRouteCitationQuality('stream', []);
+            recordInsightChatRouteFallbackResponse('stream');
+
+        return NextResponse.json(
+            buildInsightChatFallbackResponse({
+                requestId,
+                fallbackReason: 'invalid_model',
+                content: 'LLM 설정값이 올바르지 않습니다.',
+                responseMode,
+                ...(memoryMode ? { memoryMode } : {}),
+                latencyMs,
+                    toolTrace,
+                }),
+                { status: 400, headers: CHAT_ROUTE_NO_STORE_HEADERS },
             );
         }
 

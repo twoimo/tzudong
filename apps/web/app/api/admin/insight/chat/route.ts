@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
             inputPolicyViolationReason,
             invalidAttachmentReason,
             invalidContextReason,
+            invalidModelReason,
         } = parseInsightChatRequestBody(await request.json().catch(() => null));
         responseMode = parsedResponseMode;
         memoryMode = parsedMemoryMode ?? 'off';
@@ -166,6 +167,41 @@ export async function POST(request: NextRequest) {
                     requestId,
                     fallbackReason: 'invalid_context',
                     content: '대화 기억 컨텍스트 형식이 올바르지 않습니다.',
+                    responseMode,
+                    ...(memoryMode ? { memoryMode } : {}),
+                    latencyMs,
+                    toolTrace,
+                }),
+                {
+                    status: 400,
+                    headers: CHAT_ROUTE_NO_STORE_HEADERS,
+                },
+            );
+        }
+
+        if (invalidModelReason) {
+            logInsightChatRouteEvent('chat', 'request.invalid_model', {
+                requestId,
+                reason: invalidModelReason,
+            });
+            const latencyMs = getElapsedMs(startedAt);
+            const { toolTrace } = evaluateInsightChatRouteGuardrails({
+                route: 'chat',
+                requestId,
+                latencyMs,
+                fallbackReason: 'invalid_model',
+                toolTrace: buildInsightChatRouteToolTrace('chat', 'request.invalid_model', memoryMode),
+                skipLatencyBudgetCheck: true,
+            });
+            recordInsightChatRouteResponseSource('chat', 'fallback');
+            recordInsightChatRouteCitationQuality('chat', []);
+            recordInsightChatRouteFallbackResponse('chat');
+
+            return NextResponse.json(
+                buildInsightChatFallbackResponse({
+                    requestId,
+                    fallbackReason: 'invalid_model',
+                    content: 'LLM 설정값이 올바르지 않습니다.',
                     responseMode,
                     ...(memoryMode ? { memoryMode } : {}),
                     latencyMs,

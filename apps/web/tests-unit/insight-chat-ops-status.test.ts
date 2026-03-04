@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
-import { answerAdminInsightChat } from '@/lib/insight/chat';
 import type { AdminInsightSystemStatusResponse } from '@/types/insight';
+
+type InsightChatModule = typeof import('@/lib/insight/chat');
+
+async function loadInsightChatModule(tag: string): Promise<InsightChatModule> {
+  const nonce = `${tag}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return import(`@/lib/insight/chat?${nonce}`) as Promise<InsightChatModule>;
+}
 
 describe('admin insight chat ops status summary', () => {
   afterEach(() => {
@@ -8,6 +14,7 @@ describe('admin insight chat ops status summary', () => {
   });
 
   test('returns concise summary for /ops-status command', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('ops-status-summary');
     const prevEnv = {
       cacheTtl: process.env.INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS,
       storyboardEnabled: process.env.STORYBOARD_AGENT_ENABLED,
@@ -94,6 +101,7 @@ describe('admin insight chat ops status summary', () => {
   });
 
   test('renders up to 3 actionable snippets for critical/high checklist items', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('ops-status-snippets');
     const prevEnv = {
       cacheTtl: process.env.INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS,
       storyboardEnabled: process.env.STORYBOARD_AGENT_ENABLED,
@@ -290,6 +298,7 @@ describe('admin insight chat ops status summary', () => {
   });
 
   test('returns ops status summary for /system-status and Korean alias', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('ops-status-alias');
     const prevEnv = {
       cacheTtl: process.env.INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS,
       storyboardEnabled: process.env.STORYBOARD_AGENT_ENABLED,
