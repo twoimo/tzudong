@@ -131,6 +131,17 @@ describe('insight chat request parser', () => {
         expect(parsed.invalidModelReason).toBeUndefined();
     });
 
+    test('flags invalid model payload types as invalid model', () => {
+        const parsed = parseInsightChatRequestBody({
+            message: '안녕',
+            provider: 'gemini',
+            model: 12345 as unknown,
+        } as unknown);
+
+        expect(parsed.llmConfig).toBeUndefined();
+        expect(parsed.invalidModelReason).toBe('invalid_model');
+    });
+
     test('keeps legacy behavior for standalone model override without provider', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',

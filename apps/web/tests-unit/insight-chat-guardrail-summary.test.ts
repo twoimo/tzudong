@@ -22,15 +22,33 @@ describe('insight chat guardrail summary helpers', () => {
             routes: {
                 chat: {
                     latency_budget_exceeded: '3',
+                    latency_budget_breached: 'true',
                     reliability_fallback_streak_alerts: {
                         route_timeout: 2,
                         ' ': 9,
                         stream_error: '1',
                     },
+                    latency_stats: {
+                        count: '6',
+                        avg_ms: 120,
+                        p50_ms: '80',
+                        p95_ms: 300,
+                        max_ms: 500,
+                        last_ms: '400',
+                    },
                 },
                 stream: {
                     latency_budget_exceeded: -5,
+                    latency_budget_breached: 0,
                     reliability_fallback_streak_alerts: 'bad',
+                    latency_stats: {
+                        count: -2,
+                        avg_ms: null,
+                        p50_ms: 10,
+                        p95_ms: 'invalid',
+                        max_ms: 99,
+                        last_ms: undefined,
+                    },
                 },
             },
             guardrailConfig: {
@@ -43,12 +61,30 @@ describe('insight chat guardrail summary helpers', () => {
         });
 
         expect(normalized.routes.chat.latency_budget_exceeded).toBe(3);
+        expect(normalized.routes.chat.latency_budget_breached).toBe(true);
         expect(normalized.routes.chat.reliability_fallback_streak_alerts).toEqual({
             route_timeout: 2,
             stream_error: 1,
         });
         expect(normalized.routes.stream.latency_budget_exceeded).toBe(0);
+        expect(normalized.routes.stream.latency_budget_breached).toBe(false);
         expect(normalized.routes.stream.reliability_fallback_streak_alerts).toEqual({});
+        expect(normalized.routes.chat.latency_stats).toEqual({
+            count: 6,
+            avg_ms: 120,
+            p50_ms: 80,
+            p95_ms: 300,
+            max_ms: 500,
+            last_ms: 400,
+        });
+        expect(normalized.routes.stream.latency_stats).toEqual({
+            count: 0,
+            avg_ms: 0,
+            p50_ms: 10,
+            p95_ms: 0,
+            max_ms: 99,
+            last_ms: 0,
+        });
         expect(normalized.guardrailConfig).toEqual({
             enabled: false,
             latencyBudgetMs: 1200,
@@ -113,6 +149,7 @@ describe('insight chat guardrail summary helpers', () => {
             routes: {
                 chat: {
                     latency_budget_exceeded: 2,
+                    latency_budget_breached: false,
                     reliability_fallback_streak_alerts: {
                         route_timeout: 2,
                     },
@@ -130,6 +167,7 @@ describe('insight chat guardrail summary helpers', () => {
                 },
                 stream: {
                     latency_budget_exceeded: 5,
+                    latency_budget_breached: true,
                     reliability_fallback_streak_alerts: {
                         route_timeout: 1,
                         server_error: 4,

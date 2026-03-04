@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { getAdminInsightChatBootstrap } from '@/lib/insight/chat';
+
+type InsightChatModule = typeof import('@/lib/insight/chat');
+
+async function loadInsightChatModule(tag: string): Promise<InsightChatModule> {
+    const nonce = `${tag}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return import(`@/lib/insight/chat?${nonce}`) as Promise<InsightChatModule>;
+}
 
 describe('admin insight chat bootstrap', () => {
     test('includes Tzuyang video/restaurant/peak-frame storyboard presets', async () => {
+        const { getAdminInsightChatBootstrap } = await loadInsightChatModule('bootstrap-presets');
         const payload = await getAdminInsightChatBootstrap();
 
         expect(payload.message.content).toContain('쯔양 스토리보드 운영 프리셋');
@@ -12,6 +19,7 @@ describe('admin insight chat bootstrap', () => {
     });
 
     test('includes reusable Tzuyang follow-up prompts', async () => {
+        const { getAdminInsightChatBootstrap } = await loadInsightChatModule('bootstrap-followups');
         const payload = await getAdminInsightChatBootstrap();
 
         expect(Array.isArray(payload.message.followUpPrompts)).toBe(true);

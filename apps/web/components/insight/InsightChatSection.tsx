@@ -843,6 +843,19 @@ function toNonNegativeInteger(value: unknown): number {
     return Math.floor(parsed);
 }
 
+function normalizeBoolean(value: unknown): boolean {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (!normalized) return false;
+        return ['1', 'true', 'yes', 'on'].includes(normalized);
+    }
+
+    return false;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -999,6 +1012,7 @@ function normalizeGuardrailRouteMetrics(raw: unknown): InsightChatGuardrailRoute
     if (!isRecord(raw)) {
         return {
             latency_budget_exceeded: 0,
+            latency_budget_breached: false,
             reliability_fallback_streak_alerts: {},
             total_requests: 0,
             success_responses: 0,
@@ -1086,6 +1100,21 @@ function normalizeGuardrailRouteMetrics(raw: unknown): InsightChatGuardrailRoute
         return validEntries;
     })();
     const outcomeTotals = normalizeGuardrailRouteOutcomeTotals(raw);
+    const rawLatencyStats = isRecord(raw.latency_stats)
+        ? raw.latency_stats
+        : isRecord(raw.latencyStats)
+            ? raw.latencyStats
+            : undefined;
+    const latencyStats = rawLatencyStats
+        ? {
+            count: toNonNegativeInteger(rawLatencyStats.count),
+            avg_ms: toNonNegativeInteger(rawLatencyStats.avg_ms),
+            p50_ms: toNonNegativeInteger(rawLatencyStats.p50_ms),
+            p95_ms: toNonNegativeInteger(rawLatencyStats.p95_ms),
+            max_ms: toNonNegativeInteger(rawLatencyStats.max_ms),
+            last_ms: toNonNegativeInteger(rawLatencyStats.last_ms),
+        }
+        : undefined;
 
     const fallbackRaw = raw.reliability_fallback_streak_alerts;
     const fallbackCounts: Record<string, number> = {};
@@ -1100,6 +1129,7 @@ function normalizeGuardrailRouteMetrics(raw: unknown): InsightChatGuardrailRoute
 
     return {
         latency_budget_exceeded: toNonNegativeInteger(raw.latency_budget_exceeded),
+        latency_budget_breached: normalizeBoolean(raw.latency_budget_breached),
         reliability_fallback_streak_alerts: fallbackCounts,
         total_requests: outcomeTotals.totalRequests,
         success_responses: outcomeTotals.successResponses,
@@ -1111,12 +1141,13 @@ function normalizeGuardrailRouteMetrics(raw: unknown): InsightChatGuardrailRoute
         source_counts: sourceCounts,
         fallback_totals: fallbackTotals,
         response_mode_counts: responseModeCounts,
-            memory_mode_counts: memoryModeCounts,
-            feedback_rating_counts: feedbackRatingCounts,
-            feedback_has_reason_counts: feedbackHasReasonCounts,
-            ...(Object.keys(feedbackReasonCategoryCounts).length > 0
-                ? { feedback_reason_category_counts: feedbackReasonCategoryCounts }
-                : {}),
+        memory_mode_counts: memoryModeCounts,
+        feedback_rating_counts: feedbackRatingCounts,
+        feedback_has_reason_counts: feedbackHasReasonCounts,
+        ...(latencyStats ? { latency_stats: latencyStats } : {}),
+        ...(Object.keys(feedbackReasonCategoryCounts).length > 0
+            ? { feedback_reason_category_counts: feedbackReasonCategoryCounts }
+            : {}),
         };
 }
 
@@ -1137,6 +1168,7 @@ function normalizeGuardrailConfig(raw: unknown): InsightChatGuardrailConfig {
 function createEmptyGuardrailRouteMetrics(): InsightChatGuardrailRouteMetrics {
     return {
         latency_budget_exceeded: 0,
+        latency_budget_breached: false,
         reliability_fallback_streak_alerts: {},
         total_requests: 0,
         success_responses: 0,

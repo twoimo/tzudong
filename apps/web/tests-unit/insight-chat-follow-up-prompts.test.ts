@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { answerAdminInsightChat, normalizeFollowUpPromptsForQuery, streamAdminInsightChat } from '@/lib/insight/chat';
+
+type InsightChatModule = typeof import('@/lib/insight/chat');
+
+async function loadInsightChatModule(tag: string): Promise<InsightChatModule> {
+    const nonce = `${tag}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return import(`@/lib/insight/chat?${nonce}`) as Promise<InsightChatModule>;
+}
 
 describe('admin insight chat follow-up prompt mapping', () => {
-    test('returns prompt set for video keyword', () => {
+    test('returns prompt set for video keyword', async () => {
+        const { normalizeFollowUpPromptsForQuery } = await loadInsightChatModule('followup-video-keyword');
         const prompts = normalizeFollowUpPromptsForQuery('최근 숏폼 조회 성과가 궁금해');
 
         expect(prompts).toHaveLength(3);
@@ -11,7 +18,8 @@ describe('admin insight chat follow-up prompt mapping', () => {
         expect(prompts[0].label).toBe('쯔양 숏폼 영상 확장');
     });
 
-    test('returns combined prompts for multi-topic query', () => {
+    test('returns combined prompts for multi-topic query', async () => {
+        const { normalizeFollowUpPromptsForQuery } = await loadInsightChatModule('followup-multi-topic');
         const prompts = normalizeFollowUpPromptsForQuery('식당과 피크 구간, 그리고 숏폼 관련 인사이트를 보려면');
         const promptSet = new Set(prompts.map((item) => item.prompt));
 
@@ -22,6 +30,7 @@ describe('admin insight chat follow-up prompt mapping', () => {
     });
 
     test('adds video-focused follow-up prompts on llm_unavailable fallback', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('followup-video-fallback');
         const response = await answerAdminInsightChat('영상 조회가 잘 나온 최근 포맷의 특징을 정리해줘', {
             provider: 'gemini',
             model: 'gemini-test',
@@ -36,6 +45,7 @@ describe('admin insight chat follow-up prompt mapping', () => {
     });
 
     test('adds restaurant-focused follow-up prompts on llm_unavailable fallback', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('followup-restaurant-fallback');
         const response = await answerAdminInsightChat('레스토랑 성과가 잘 나오는 영상 운영 데이터를 분석해줘', {
             provider: 'openai',
             model: 'gpt-4o-mini',
@@ -48,6 +58,7 @@ describe('admin insight chat follow-up prompt mapping', () => {
     });
 
     test('stream fallback returns topic-aware follow-up prompts', async () => {
+        const { streamAdminInsightChat } = await loadInsightChatModule('followup-stream-topic');
         const result = await streamAdminInsightChat(
             '조회 수치가 높은 영상의 공통점이 뭘까',
             {
@@ -63,7 +74,8 @@ describe('admin insight chat follow-up prompt mapping', () => {
         expect(prompts).toContain('/tzuyang-video 최근 조회가 잘 나온 숏폼 기획안을 3개 비교해줘');
     });
 
-    test('ranked follow-up prompts prioritize strongest intent match first', () => {
+    test('ranked follow-up prompts prioritize strongest intent match first', async () => {
+        const { normalizeFollowUpPromptsForQuery } = await loadInsightChatModule('followup-ranked');
         const prompts = normalizeFollowUpPromptsForQuery('조회수가 잘 나온 숏폼 영상의 연출 보완점이 궁금해');
 
         expect(prompts.map((item) => item.prompt)).toEqual([
@@ -73,7 +85,8 @@ describe('admin insight chat follow-up prompt mapping', () => {
         ]);
     });
 
-    test('fallback coverage keeps up to MAX prompts even when single intent matches', () => {
+    test('fallback coverage keeps up to MAX prompts even when single intent matches', async () => {
+        const { normalizeFollowUpPromptsForQuery } = await loadInsightChatModule('followup-max-prompts');
         const prompts = normalizeFollowUpPromptsForQuery('숏폼 성과 요약');
 
         expect(prompts.map((item) => item.label)).toEqual([
@@ -84,11 +97,13 @@ describe('admin insight chat follow-up prompt mapping', () => {
         expect(prompts).toHaveLength(3);
     });
 
-    test('empty query returns empty follow-up list', () => {
+    test('empty query returns empty follow-up list', async () => {
+        const { normalizeFollowUpPromptsForQuery } = await loadInsightChatModule('followup-empty-query');
         expect(normalizeFollowUpPromptsForQuery('')).toEqual([]);
     });
 
     test('non-stream llm_unavailable fallback adds llm dependency trace', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('followup-nonstream-trace');
         const response = await answerAdminInsightChat('영상 조회가 잘 나온 최근 포맷의 특징을 정리해줘', {
             provider: 'openai',
             model: 'gpt-4o-mini',
@@ -100,6 +115,7 @@ describe('admin insight chat follow-up prompt mapping', () => {
     });
 
     test('stream llm_unavailable fallback adds llm dependency trace', async () => {
+        const { streamAdminInsightChat } = await loadInsightChatModule('followup-stream-trace');
         const result = await streamAdminInsightChat(
             'Could you summarize the recent growth momentum by the most relevant performance signals?',
             {
@@ -115,6 +131,7 @@ describe('admin insight chat follow-up prompt mapping', () => {
     });
 
     test('generic peak keyword remains in llm path without forcing peak-frame routing', async () => {
+        const { streamAdminInsightChat } = await loadInsightChatModule('followup-generic-peak');
         const result = await streamAdminInsightChat(
             'Peak response trends are improving this quarter',
             {
@@ -131,6 +148,7 @@ describe('admin insight chat follow-up prompt mapping', () => {
     });
 
     test('storyboard-local fallback adds BGE dependency trace when embedding URL is missing', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('followup-storyboard-bge');
         const previousBgeEnabled = process.env.STORYBOARD_BGE_ENABLED;
         const previousBgeUrl = process.env.STORYBOARD_BGE_EMBEDDING_URL;
         const previousRemoteEnabled = process.env.STORYBOARD_AGENT_REMOTE_ENABLED;
@@ -167,6 +185,7 @@ describe('admin insight chat follow-up prompt mapping', () => {
     });
 
     test('setup command flow uses setup-aware follow-up prompts', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('followup-setup-flow');
         const originalFetch = global.fetch;
         const previousCacheTtl = process.env.INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS;
         const previousStoryboardEnabled = process.env.STORYBOARD_AGENT_ENABLED;

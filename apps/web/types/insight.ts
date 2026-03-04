@@ -264,8 +264,18 @@ export type InsightChatGuardrailRouteName = 'chat' | 'stream';
 
 export type InsightChatGuardrailRouteMetricTotals = Record<string, number>;
 
+export type InsightChatGuardrailLatencyStats = {
+  count: number;
+  avg_ms: number;
+  p50_ms: number;
+  p95_ms: number;
+  max_ms: number;
+  last_ms: number;
+};
+
 export type InsightChatGuardrailRouteMetrics = {
   latency_budget_exceeded: number;
+  latency_budget_breached: boolean;
   reliability_fallback_streak_alerts: Record<string, number>;
   total_requests?: number;
   success_responses?: number;
@@ -281,6 +291,7 @@ export type InsightChatGuardrailRouteMetrics = {
   feedback_rating_counts?: InsightChatGuardrailRouteMetricTotals;
   feedback_has_reason_counts?: InsightChatGuardrailRouteMetricTotals;
   feedback_reason_category_counts?: InsightChatGuardrailRouteMetricTotals;
+  latency_stats?: InsightChatGuardrailLatencyStats;
 };
 
 export type InsightChatGuardrailConfig = {
