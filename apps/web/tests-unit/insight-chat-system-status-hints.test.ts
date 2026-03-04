@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { answerAdminInsightChat, streamAdminInsightChat } from '@/lib/insight/chat';
+
+type InsightChatModule = typeof import('@/lib/insight/chat');
+
+async function loadInsightChatModule(tag: string): Promise<InsightChatModule> {
+    const nonce = `${tag}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return import(`@/lib/insight/chat?${nonce}`) as Promise<InsightChatModule>;
+}
 
 describe('admin insight chat system-status hints', () => {
     test('adds LLM key readiness hint to fallback meta', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('system-hints-nonstream');
         const response = await answerAdminInsightChat('최근 트렌드 추천해줘', {
             provider: 'openai',
             model: 'gpt-4o-mini',
@@ -15,6 +22,7 @@ describe('admin insight chat system-status hints', () => {
     });
 
     test('adds system-status hints on stream fallback when provider key is unavailable', async () => {
+        const { streamAdminInsightChat } = await loadInsightChatModule('system-hints-stream');
         const result = await streamAdminInsightChat(
             '요약해줘',
             {
@@ -35,6 +43,7 @@ describe('admin insight chat system-status hints', () => {
     });
 
     test('returns dependency hints for operator onboarding commands', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('system-hints-operator');
         const originalFetch = global.fetch;
         global.fetch = async () => new Response('', { status: 204 });
 
@@ -130,6 +139,7 @@ describe('admin insight chat system-status hints', () => {
     });
 
     test('normalizes /ops-todo operator alias and keeps secret-like values out of meta', async () => {
+        const { answerAdminInsightChat } = await loadInsightChatModule('system-hints-ops-todo-alias');
         const originalFetch = global.fetch;
         global.fetch = async (input: RequestInfo | URL): Promise<Response> => {
             const endpoint = String(input);

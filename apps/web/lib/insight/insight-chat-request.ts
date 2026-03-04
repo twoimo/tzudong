@@ -47,7 +47,7 @@ const ALLOWED_RESPONSE_MODES = new Set<InsightChatResponseMode>(['fast', 'deep',
 const ALLOWED_MEMORY_MODES = new Set<InsightChatMemoryMode>(['off', 'session', 'pinned']);
 
 function normalizeResponseMode(raw: unknown): InsightChatResponseMode | undefined {
-    return raw === 'fast' || raw === 'deep' || raw === 'structured' ? raw : undefined;
+    return ALLOWED_RESPONSE_MODES.has(raw as InsightChatResponseMode) ? raw as InsightChatResponseMode : undefined;
 }
 
 function normalizeMemoryMode(raw: unknown): InsightChatMemoryMode | undefined {
@@ -333,6 +333,7 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
     const apiKey = sanitizeApiKey(body?.apiKey);
     const nanoBanana2Key = sanitizeApiKey(body?.nanoBanana2Key);
     const rawModel = typeof body?.model === 'string' ? body.model.trim() : '';
+    const isModelValueProvided = body?.model !== undefined && body?.model !== null;
     const useServerKey = body?.useServerKey === true;
     const storyboardModelProfile = normalizeStoryboardProfile(body?.storyboardModelProfile);
     const imageModelProfile = normalizeStoryboardProfile(body?.imageModelProfile);
@@ -344,7 +345,9 @@ export function parseInsightChatRequestBody(body: ParsedBodyValue): ParsedInsigh
     const { contextMessages, invalidContextReason } = parseContextMessages(body?.contextMessages);
 
     const policyViolation = message ? isPotentialInjectionPayload(message) : undefined;
-    const invalidModelReason = rawModel.length > 0 && provider !== undefined && model === undefined
+    const invalidModelReason = isModelValueProvided && provider !== undefined && (
+        typeof body.model !== 'string' || (rawModel.length > 0 && model === undefined)
+    )
         ? 'invalid_model'
         : undefined;
 

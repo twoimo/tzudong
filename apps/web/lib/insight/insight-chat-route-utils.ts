@@ -34,6 +34,7 @@ export type InsightChatRouteEvent =
     | 'request.invalid_attachment'
     | 'request.invalid_feedback'
     | 'request.invalid_context'
+    | 'request.invalid_model'
     | 'request.policy_blocked'
     | 'request.empty_input'
     | 'request.timeout'
@@ -79,6 +80,7 @@ type FallbackStreakState = {
 
 type InsightChatRouteGuardrailMetrics = {
     latency_budget_exceeded: number;
+    latency_budget_breached: boolean;
     reliability_fallback_streak_alerts: Record<string, number>;
     total_requests: number;
     success_responses: number;
@@ -94,6 +96,14 @@ type InsightChatRouteGuardrailMetrics = {
     feedback_rating_counts: Record<string, number>;
     feedback_has_reason_counts: Record<string, number>;
     feedback_reason_category_counts: Record<string, number>;
+    latency_stats?: {
+        count: number;
+        avg_ms: number;
+        p50_ms: number;
+        p95_ms: number;
+        max_ms: number;
+        last_ms: number;
+    };
 };
 
 type InsightChatRouteGuardrailConfig = {
@@ -114,6 +124,7 @@ const DEFAULT_LATENCY_BUDGET_MS = 4_500;
 const DEFAULT_FALLBACK_STREAK_THRESHOLD = 3;
 const DEFAULT_FALLBACK_STREAK_WINDOW_MS = 90_000;
 const DEFAULT_FALLBACK_ALERT_COOLDOWN_MS = 60_000;
+const MAX_LATENCY_SAMPLES_PER_ROUTE = 256;
 const OUTCOME_BUCKETS = {
     total_requests: 'total_requests',
     success_responses: 'success_responses',
@@ -133,6 +144,7 @@ const INSIGHT_RELIABILITY_FALLBACK_REASONS = new Set([
 ]);
 const fallbackStreakStateByKey = new Map<string, FallbackStreakState>();
 const latencyBudgetExceededCountsByRoute = new Map<InsightChatRouteName, number>();
+const latestLatencyBudgetBreachedByRoute = new Map<InsightChatRouteName, boolean>();
 const requestOutcomeCountsByRouteAndType = new Map<string, number>();
 const fallbackStreakAlertCountsByRouteAndReason = new Map<string, number>();
 const providerRequestCountsByRouteAndProvider = new Map<string, number>();
@@ -144,6 +156,7 @@ const memoryModeCountsByRouteAndMode = new Map<string, number>();
 const feedbackRatingCountsByRouteAndRating = new Map<string, number>();
 const feedbackHasReasonCountsByRouteAndState = new Map<string, number>();
 const feedbackReasonCategoryCountsByRouteAndCategory = new Map<string, number>();
+const latencySamplesByRoute = new Map<InsightChatRouteName, number[]>();
 const FALLBACK_SOURCE_BUCKETS = new Set<InsightChatResponseSourceForMetrics>([
     'local',
     'agent',
@@ -169,10 +182,30 @@ const FALLBACK_REASON_BUCKETS = new Set([
     'invalid_attachment',
     'invalid_feedback',
     'invalid_context',
+    'invalid_model',
     'policy_rejection',
     'empty_input',
 ]);
 const UNKNOWN_METRIC_BUCKET = 'other';
+const LOG_SENSITIVE_KEY_HINTS = new Set([
+    'authorization',
+    'api-key',
+    'apikey',
+    'api_key',
+    'bearer',
+    'cookie',
+    'password',
+    'secret',
+    'session',
+    'token',
+    'access-token',
+    'refresh-token',
+    'access_token',
+    'refresh_token',
+    'api_token',
+    'service_key',
+    'private_key',
+]);
 const VALID_PROVIDERS = new Set<InsightChatProviderForMetrics>([
     'gemini',
     'openai',
@@ -204,6 +237,84 @@ const VALID_FEEDBACK_REASON_CATEGORIES = new Set<InsightChatFeedbackReasonCatego
     'latency',
     'other',
 ]);
+const MAX_LOG_RECURSION_DEPTH = 6;
+const PATTERN_SECRET_KEY_VALUE = /\b([a-zA-Z0-9_-]*(?:api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|secret|password|bearer)[a-zA-Z0-9_-]*)\s*[:=]?\s*["']?([^\s"']+)/gi;
+const PATTERN_SECRET_PLAIN = /\b(?:sk-|pk-|AIza|glc_|ghp_|xoxb-|xoxa-|gho_)[A-Za-z0-9._\/-]{16,}\b/g;
+
+function isLogSensitiveKey(key: string): boolean {
+    const normalized = key.trim().toLowerCase();
+    for (const hint of LOG_SENSITIVE_KEY_HINTS) {
+        if (normalized === hint || normalized.includes(hint)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function sanitizeLogString(raw: string): string {
+    const withLabeledValuesRedacted = raw.replace(
+        PATTERN_SECRET_KEY_VALUE,
+        (_, key) => `${key}="<redacted>"`,
+    );
+
+    const withBareSecretsRedacted = withLabeledValuesRedacted.replace(
+        PATTERN_SECRET_PLAIN,
+        () => '<redacted>',
+    );
+
+    return withBareSecretsRedacted;
+}
+
+function sanitizeLogValue(value: unknown, depth = 0, visited = new WeakSet<object>()): unknown {
+    if (depth > MAX_LOG_RECURSION_DEPTH) {
+        return '<redacted-depth-limit>';
+    }
+
+    if (value == null) {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        return sanitizeLogString(value);
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+        return value;
+    }
+
+    if (value instanceof Error) {
+        return {
+            name: value.name,
+            message: sanitizeLogString(value.message),
+        };
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((entry) => sanitizeLogValue(entry, depth + 1, visited));
+    }
+
+    if (typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        if (visited.has(record)) {
+            return '<redacted-circular>';
+        }
+        visited.add(record);
+
+        const sanitized: Record<string, unknown> = {};
+        for (const [key, keyValue] of Object.entries(record)) {
+            sanitized[key] = isLogSensitiveKey(key)
+                ? '<redacted>'
+                : sanitizeLogValue(keyValue, depth + 1, visited);
+        }
+        return sanitized;
+    }
+
+    return typeof value === 'bigint' ? Number.MAX_SAFE_INTEGER : String(value);
+}
+
+export function __sanitizeLogDetailsForEvent(details: Record<string, unknown>): Record<string, unknown> {
+    return sanitizeLogValue(details) as Record<string, unknown>;
+}
 
 const METRIC_ROUTES: InsightChatRouteName[] = ['chat', 'stream'];
 type InsightChatRouteOutcome = typeof OUTCOME_BUCKETS[keyof typeof OUTCOME_BUCKETS];
@@ -219,6 +330,34 @@ function normalizeMetricBucket(
 
 function getFallbackStreakAlertMetricKey(route: InsightChatRouteName, reason: string): string {
     return `${route}:${reason}`;
+}
+
+function calculatePercentileFromSorted(values: number[], percentile: number): number {
+    if (!values.length) return 0;
+    const clamped = Math.max(0, Math.min(1, percentile));
+    const index = Math.max(0, Math.min(values.length - 1, Math.ceil(values.length * clamped) - 1));
+    return values[index] ?? 0;
+}
+
+function buildLatencyStatsForRoute(
+    route: InsightChatRouteName,
+): InsightChatRouteGuardrailMetrics['latency_stats'] | undefined {
+    const samples = latencySamplesByRoute.get(route);
+    if (!samples?.length) {
+        return undefined;
+    }
+
+    const sorted = [...samples].sort((a, b) => a - b);
+    const count = sorted.length;
+    const sum = sorted.reduce((acc, value) => acc + value, 0);
+    return {
+        count,
+        avg_ms: Math.round(sum / count),
+        p50_ms: calculatePercentileFromSorted(sorted, 0.5),
+        p95_ms: calculatePercentileFromSorted(sorted, 0.95),
+        max_ms: sorted[count - 1] ?? 0,
+        last_ms: samples[samples.length - 1] ?? 0,
+    };
 }
 
 function getMetricsRouteTemplate(route: InsightChatRouteName): InsightChatRouteGuardrailMetrics {
@@ -252,9 +391,11 @@ function getMetricsRouteTemplate(route: InsightChatRouteName): InsightChatRouteG
     const feedbackReasonCategoryEntries = [...feedbackReasonCategoryCountsByRouteAndCategory]
         .filter(([key]) => key.startsWith(`${route}:`))
         .map(([key, count]) => [key.slice(route.length + 1), count]);
+    const latencyStats = buildLatencyStatsForRoute(route);
 
     return {
         latency_budget_exceeded: latencyBudgetExceededCountsByRoute.get(route) ?? 0,
+        latency_budget_breached: latestLatencyBudgetBreachedByRoute.get(route) ?? false,
         reliability_fallback_streak_alerts: Object.fromEntries(fallbackStreakEntries),
         total_requests: requestOutcomeCountsByRouteAndType.get(`${route}:${OUTCOME_BUCKETS.total_requests}`) ?? 0,
         success_responses: requestOutcomeCountsByRouteAndType.get(`${route}:${OUTCOME_BUCKETS.success_responses}`) ?? 0,
@@ -270,12 +411,17 @@ function getMetricsRouteTemplate(route: InsightChatRouteName): InsightChatRouteG
         feedback_rating_counts: Object.fromEntries(feedbackRatingEntries),
         feedback_has_reason_counts: Object.fromEntries(feedbackHasReasonEntries),
         feedback_reason_category_counts: Object.fromEntries(feedbackReasonCategoryEntries),
+        ...(latencyStats ? { latency_stats: latencyStats } : {}),
     };
 }
 
 function incrementLatencyBudgetExceededMetric(route: InsightChatRouteName): void {
     const current = latencyBudgetExceededCountsByRoute.get(route) ?? 0;
     latencyBudgetExceededCountsByRoute.set(route, current + 1);
+}
+
+function setLatestLatencyBudgetBreach(route: InsightChatRouteName, breached: boolean): void {
+    latestLatencyBudgetBreachedByRoute.set(route, breached);
 }
 
 function getOutcomeMetricKey(route: InsightChatRouteName, outcome: InsightChatRouteOutcome): string {
@@ -464,6 +610,20 @@ export function recordInsightChatRouteFallbackReason(
     incrementFallbackReasonMetric(route, normalized);
 }
 
+export function recordInsightChatRouteLatency(
+    route: InsightChatRouteName,
+    latencyMs: number | undefined,
+): void {
+    if (typeof latencyMs !== 'number' || !Number.isFinite(latencyMs)) return;
+    const safeLatency = Math.max(0, Math.round(latencyMs));
+    const samples = latencySamplesByRoute.get(route) ?? [];
+    if (samples.length >= MAX_LATENCY_SAMPLES_PER_ROUTE) {
+        samples.shift();
+    }
+    samples.push(safeLatency);
+    latencySamplesByRoute.set(route, samples);
+}
+
 export function recordInsightChatRouteResponseMode(
     route: InsightChatRouteName,
     responseMode: string | undefined,
@@ -620,7 +780,7 @@ export function logInsightChatRouteEvent(
 ): void {
     console.info(`[admin/insight/${route}] ${event}`, {
         ts: new Date().toISOString(),
-        ...details,
+        ...__sanitizeLogDetailsForEvent(details),
     });
 }
 
@@ -645,15 +805,22 @@ export function evaluateInsightChatRouteGuardrails(input: InsightChatRouteGuardr
     const latencyMs = typeof input.latencyMs === 'number' && Number.isFinite(input.latencyMs)
         ? Math.max(0, Math.round(input.latencyMs))
         : undefined;
+    recordInsightChatRouteLatency(input.route, latencyMs);
 
-    if (!input.skipLatencyBudgetCheck && typeof latencyMs === 'number' && latencyMs > config.latencyBudgetMs) {
-        maybeAppendTrace('guardrail:latency_budget_exceeded');
-        incrementLatencyBudgetExceededMetric(input.route);
-        logInsightChatRouteEvent(input.route, 'guardrail.latency_budget_exceeded', {
-            requestId: input.requestId,
-            latencyMs,
-            budgetMs: config.latencyBudgetMs,
-        });
+    if (!input.skipLatencyBudgetCheck && typeof latencyMs === 'number') {
+        const breachedLatencyBudget = latencyMs > config.latencyBudgetMs;
+        setLatestLatencyBudgetBreach(input.route, breachedLatencyBudget);
+        if (breachedLatencyBudget) {
+            maybeAppendTrace('guardrail:latency_budget_exceeded');
+            incrementLatencyBudgetExceededMetric(input.route);
+            logInsightChatRouteEvent(input.route, 'guardrail.latency_budget_exceeded', {
+                requestId: input.requestId,
+                latencyMs,
+                budgetMs: config.latencyBudgetMs,
+            });
+        }
+    } else {
+        setLatestLatencyBudgetBreach(input.route, false);
     }
 
     if (fallbackReason && INSIGHT_RELIABILITY_FALLBACK_REASONS.has(fallbackReason)) {
@@ -697,6 +864,7 @@ export function getInsightChatRouteGuardrailMetricsSnapshot(): InsightChatRouteG
 export function resetInsightChatRouteGuardrails(): void {
     fallbackStreakStateByKey.clear();
     latencyBudgetExceededCountsByRoute.clear();
+    latestLatencyBudgetBreachedByRoute.clear();
     requestOutcomeCountsByRouteAndType.clear();
     fallbackStreakAlertCountsByRouteAndReason.clear();
     providerRequestCountsByRouteAndProvider.clear();
@@ -708,6 +876,7 @@ export function resetInsightChatRouteGuardrails(): void {
     feedbackRatingCountsByRouteAndRating.clear();
     feedbackHasReasonCountsByRouteAndState.clear();
     feedbackReasonCategoryCountsByRouteAndCategory.clear();
+    latencySamplesByRoute.clear();
 }
 
 export function __resetInsightChatRouteGuardrailsForTest(): void {
