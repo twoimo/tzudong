@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { answerAdminInsightChat } from '@/lib/insight/chat';
+
+type InsightChatModule = typeof import('@/lib/insight/chat');
+
+async function loadInsightChatModule(tag: string): Promise<InsightChatModule> {
+  const nonce = `${tag}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return import(`@/lib/insight/chat?${nonce}`) as Promise<InsightChatModule>;
+}
 
 describe('admin insight chat setup checklist mode', () => {
   test('returns concise operator todo checklist for /operator-todo command', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-operator-todo');
     const originalFetch = global.fetch;
     global.fetch = async (input: RequestInfo | URL) => {
       const endpoint = String(input);
@@ -90,6 +97,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('returns concise checklist for /setup-owner command', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-owner');
     const originalFetch = global.fetch;
     global.fetch = async (input: RequestInfo | URL) => {
       const endpoint = String(input);
@@ -165,6 +173,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('returns setup checklist text for /setup command', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-main');
     const originalFetch = global.fetch;
     global.fetch = async (input: RequestInfo | URL) => {
       const endpoint = String(input);
@@ -281,6 +290,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('never exposes configured secret values in setup checklist responses', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-secret-redaction');
     const originalFetch = global.fetch;
     global.fetch = async (input: RequestInfo | URL) => {
       const endpoint = String(input);
@@ -401,6 +411,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('treats /setup-checklist alias as setup checklist request', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-checklist-alias');
     const originalFetch = global.fetch;
     global.fetch = async (input: RequestInfo | URL) => {
       const endpoint = String(input);
@@ -513,6 +524,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('returns key-focused checklist for /setup-keys command', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-keys');
     const originalFetch = global.fetch;
     global.fetch = async (input: RequestInfo | URL) => {
       const endpoint = String(input);
@@ -622,6 +634,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('treats /ops-checklist as setup checklist alias', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('ops-checklist-alias');
     const originalFetch = global.fetch;
     global.fetch = async (input: RequestInfo | URL) => {
       const endpoint = String(input);
@@ -734,6 +747,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('treats Korean checklist phrase as setup request', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-korean-phrase');
     const response = await answerAdminInsightChat('운영 체크리스트 확인해줘', {
       provider: 'gemini',
       model: 'gemini-3-flash-preview',
@@ -746,6 +760,7 @@ describe('admin insight chat setup checklist mode', () => {
   });
 
   test('setup/operator commands include operator-aware follow-up prompts', async () => {
+    const { answerAdminInsightChat } = await loadInsightChatModule('setup-followup-prompts');
     const testCases: Array<{
       command: string;
       expectedFollowUps: string[];
