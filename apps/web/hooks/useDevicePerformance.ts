@@ -25,6 +25,10 @@ export interface DevicePerformance {
     isHighEndDevice: boolean;
 }
 
+type NavigatorWithDeviceMemory = Navigator & {
+    deviceMemory?: number;
+};
+
 /**
  * iPhone 모델별 성능 티어 매핑
  * User-Agent에서 iPhone 버전 추출 후 매핑
@@ -202,7 +206,7 @@ function calculateDevicePerformance(): DevicePerformance {
     // 브라우저 환경 - 즉시 계산
     const userAgent = navigator.userAgent;
     const cpuCores = navigator.hardwareConcurrency || 4;
-    const memoryGB = (navigator as any).deviceMemory ?? null;
+    const memoryGB = (navigator as NavigatorWithDeviceMemory).deviceMemory ?? null;
     const deviceModel = detectDeviceModel(userAgent);
 
     // 1순위: 디바이스 모델 기반 티어

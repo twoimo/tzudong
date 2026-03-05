@@ -1,7 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -16,7 +16,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -58,7 +57,7 @@ interface HeaderProps {
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
-const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
+const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const isHydrated = useHydration();
   const { isMobileOrTablet } = useDeviceType();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
@@ -79,7 +78,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [visibleBookmarkCount, setVisibleBookmarkCount] = useState(20); // [New] 북마크 무한 스크롤 상태
 
   // 공지사항 바텀시트 상태
@@ -194,12 +192,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     e.stopPropagation();
     setCurrentBannerIndex(prev => (prev + 1) % bannerAnnouncements.length);
   }, [bannerAnnouncements.length]);
-
-  const handleBannerDismiss = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsBannerDismissed(true);
-    sessionStorage.setItem('announcementBannerDismissed', 'true');
-  }, []);
 
   const handleBannerClick = useCallback(() => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
@@ -320,34 +312,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     }
   }, []);
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'admin_announcement':
-        return '📢';
-      case 'new_restaurant':
-      case 'new_restaurants_batch':
-        return '🍽️';
-      case 'submission_approved':
-        return '📝✅';
-      case 'submission_rejected':
-        return '📝❌';
-      case 'review_approved':
-        return '✅';
-      case 'review_rejected':
-        return '❌';
-      case 'recommendation_approved':
-        return '💖✅';
-      case 'recommendation_rejected':
-        return '💖❌';
-      case 'user_ranking':
-        return '🏆';
-      case 'review_like':
-        return '❤️';
-      default:
-        return '🔔';
-    }
-  };
-
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'admin_announcement':
@@ -426,6 +390,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           <Button
             variant="ghost"
             size="icon"
+            type="button"
+            aria-label="사이드바 토글"
             onClick={onToggleSidebar}
             className="hover:bg-accent text-foreground font-serif transition-colors"
           >
@@ -439,6 +405,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {/* 중앙: 공지 배너 - 남은 공간 최대 활용, 내용 길이와 무관하게 고정 */}
       {currentBanner && (
         <div
+          aria-live="polite"
+          role="button"
+          tabIndex={0}
+          aria-label={currentBanner?.title ? `공지: ${currentBanner.title}` : "공지사항 배너"}
           className={cn(
             "flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
             // 모바일/데스크탑 모두 flex-1로 남은 공간 활용
@@ -446,6 +416,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
           )}
           onClick={handleBannerClick}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleBannerClick();
+            }
+          }}
           onMouseEnter={() => setIsBannerPaused(true)}
           onMouseLeave={() => setIsBannerPaused(false)}
         >
@@ -453,6 +429,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             <Button
               variant="ghost"
               size="icon"
+              type="button"
+              aria-label="이전 공지 보기"
               onClick={handleBannerPrev}
               className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0"
             >
@@ -467,6 +445,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             <Button
               variant="ghost"
               size="icon"
+              type="button"
+              aria-label="다음 공지 보기"
               onClick={handleBannerNext}
               className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0"
             >
@@ -495,7 +475,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {shouldShowHeaderIcons && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground relative transition-colors">
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                aria-label="알림"
+                className="hover:bg-accent text-foreground relative transition-colors"
+              >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <Badge
@@ -517,6 +503,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <Button
                     variant="ghost"
                     size="sm"
+                    type="button"
+                    aria-label="모든 알림 읽음 처리"
                     onClick={markAllAsRead}
                     className="h-6 px-2 text-xs hover:bg-accent text-foreground"
                   >
@@ -564,6 +552,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         <Button
                           variant="ghost"
                           size="sm"
+                          type="button"
+                          aria-label={`${notification.title} 알림 삭제`}
                           className="h-6 w-6 p-0 opacity-50 hover:opacity-100 flex-shrink-0"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -583,14 +573,20 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 북마크 - 드롭다운 */}
         {shouldShowHeaderIcons && (
-          <DropdownMenu onOpenChange={(open) => {
-            if (!open) {
+            <DropdownMenu onOpenChange={(open) => {
+              if (!open) {
               // 닫힐 때 초기화 (300ms 지연) - 다시 열 때 스크롤 상단 등 UX 고려
               setTimeout(() => setVisibleBookmarkCount(20), 300);
             }
           }}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground relative transition-colors">
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                aria-label="북마크"
+                className="hover:bg-accent text-foreground relative transition-colors"
+              >
                 <Bookmark className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -603,6 +599,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <Button
                   variant="ghost"
                   size="icon"
+                  type="button"
+                  aria-label="북마크 관리 페이지로 이동"
                   onClick={() => router.push('/mypage/bookmarks')}
                   className="h-6 w-6 hover:bg-accent text-foreground"
                 >
@@ -690,6 +688,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           <Button
             variant="ghost"
             size="icon"
+            type="button"
+            aria-label="전체화면 토글"
             onClick={toggleFullscreen}
             className="hidden md:flex hover:bg-accent text-foreground transition-colors"
           >
@@ -701,7 +701,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {shouldShowHeaderIcons && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground transition-colors">
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                aria-label="내 계정 메뉴"
+                className="hover:bg-accent text-foreground transition-colors"
+              >
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -746,7 +752,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
-                    <Image className="mr-2 h-4 w-4" />
+                    <ImageIcon className="mr-2 h-4 w-4" />
                     배너관리
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border my-1" />
@@ -768,6 +774,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               <DropdownMenuSeparator className="bg-border my-1" />
               <div className="px-2 py-1">
                 <button
+                  type="button"
+                  aria-label="사업자 정보 펼치기/접기"
                   onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
                   className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
                 >
@@ -796,6 +804,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           !isLoggedIn && (
             <Button
               onClick={onOpenAuth}
+              type="button"
+              aria-label="로그인"
               className={cn(
                 "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
                 "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
@@ -817,6 +827,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <Button
                   variant="ghost"
                   size="sm"
+                  type="button"
+                  aria-label="공지사항 목록으로 돌아가기"
                   onClick={() => setAnnouncementViewMode('list')}
                   className="p-0 h-auto hover:bg-transparent"
                 >
@@ -861,9 +873,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       return (
                         <>
                           {paginatedAnnouncements.map((announcement) => (
-                            <div
+                            <button
                               key={announcement.id}
-                              className="p-4 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors"
+                              type="button"
+                              className="p-4 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors w-full text-left"
+                              aria-label={`${announcement.title} 공지사항 상세 보기`}
                               onClick={() => {
                                 setSelectedAnnouncement(announcement);
                                 setAnnouncementViewMode('detail');
@@ -877,7 +891,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                                   locale: ko
                                 })}
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </>
                       );
@@ -891,6 +905,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     <Button
                       variant="outline"
                       size="sm"
+                      type="button"
+                      aria-label="이전 페이지로 이동"
                       onClick={() => setAnnouncementPage(p => Math.max(1, p - 1))}
                       disabled={announcementPage === 1}
                       className="h-8"
@@ -903,6 +919,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     <Button
                       variant="outline"
                       size="sm"
+                      type="button"
+                      aria-label="다음 페이지로 이동"
                       onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
                       disabled={announcementPage === Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
                       className="h-8"
@@ -927,6 +945,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       <Button
                         variant="outline"
                         size="sm"
+                        type="button"
+                        aria-label={selectedAnnouncement.isActive ? "공지사항 비활성화" : "공지사항 활성화"}
                         onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
                         disabled={isAnnouncementMutationPending}
                         className="gap-1 text-xs"
@@ -946,6 +966,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       <Button
                         variant="outline"
                         size="sm"
+                        type="button"
+                        aria-label={selectedAnnouncement.showOnBanner ? "배너에서 숨기기" : "배너로 노출"}
                         onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
                         disabled={isAnnouncementMutationPending}
                         className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
@@ -965,6 +987,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       <Button
                         variant="outline"
                         size="sm"
+                        type="button"
+                        aria-label={`${selectedAnnouncement.title ?? ""} 공지사항 삭제`}
                         onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
                         disabled={isAnnouncementMutationPending}
                         className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"

@@ -5,7 +5,7 @@ declare namespace google.maps {
         setZoom(zoom: number): void;
         getBounds(): LatLngBounds | null;
         setCenter(latLng: LatLng | LatLngLiteral): void;
-        addListener(eventName: string, handler: Function): MapsEventListener;
+        addListener(eventName: string, handler: (...args: unknown[]) => void): MapsEventListener;
     }
 
     class LatLngBounds {
@@ -56,7 +56,7 @@ declare namespace google.maps {
     }
 
     namespace event {
-        function trigger(instance: any, eventName: string, ...args: any[]): void;
+        function trigger(instance: unknown, eventName: string, ...args: unknown[]): void;
         function removeListener(listener: MapsEventListener): void;
     }
 }

@@ -102,6 +102,21 @@ const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR
 }
 `;
 
+type OcrResultPayload = Record<string, unknown>;
+
+type OcrLogMetadata = {
+    ocr_result?: OcrResultPayload;
+    error?: string;
+};
+
+function getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    return String(error);
+}
+
 export async function POST(req: Request) {
     let buffer: Buffer | null = null;
 
@@ -130,7 +145,11 @@ export async function POST(req: Request) {
 
         // [보안] 1. 사용자 인증 확인
         const supabase = await createClient();
-        let { data: { user }, error: authError } = await supabase.auth.getUser();
+        const {
+            data: { user: initialUser },
+            error: authError
+        } = await supabase.auth.getUser();
+        let user = initialUser;
 
         if (authError || !user) {
             const authHeader = req.headers.get('Authorization');
@@ -151,8 +170,8 @@ export async function POST(req: Request) {
         const imageHash = hashBuffer.toString('hex');
 
         // [비용 절감] 3. 캐시 확인 - 동일 이미지 재사용
-        const { data: cachedResult } = await (supabase
-            .from('ocr_logs') as any)
+        const ocrLogsTable = supabase.from('ocr_logs' as never);
+        const { data: cachedResultRaw } = await ocrLogsTable
             .select('metadata')
             .eq('image_hash', imageHash)
             .eq('success', true)
@@ -160,10 +179,12 @@ export async function POST(req: Request) {
             .limit(1)
             .single();
 
-        if (cachedResult?.metadata?.ocr_result) {
+        const cachedResult = cachedResultRaw as { metadata?: OcrLogMetadata | null } | null;
+        const cachedMetadata = cachedResult?.metadata as OcrLogMetadata | null;
+        if (cachedMetadata?.ocr_result) {
             console.log('[OCR] 캐시 히트! API 호출 생략');
             return NextResponse.json({
-                ...cachedResult.metadata.ocr_result,
+                ...cachedMetadata.ocr_result,
                 cached: true
             });
         }
@@ -173,8 +194,7 @@ export async function POST(req: Request) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const { count, error: countError } = await (supabase
-            .from('ocr_logs') as any)
+        const { count, error: countError } = await ocrLogsTable
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .gte('created_at', today.toISOString());
@@ -210,7 +230,7 @@ export async function POST(req: Request) {
         const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
 
         // 성공 로그 (캐싱용 결과 포함)
-        const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
+        const { error: logError } = await ocrLogsTable.insert({
             user_id: user.id,
             image_hash: imageHash,
             model_used: 'gemini-2.0-flash',
@@ -222,13 +242,14 @@ export async function POST(req: Request) {
                 store_found: !!data.store_name,
                 ocr_result: data  // 캐싱용 결과 저장
             }
-        });
+        } as never);
         if (logError) console.error('OCR Log Insert Error:', logError);
 
         return NextResponse.json(data);
 
-    } catch (error: any) {
-        console.error('OCR 처리 오류:', error.message);
+    } catch (error: unknown) {
+        const errorMessage = getErrorMessage(error);
+        console.error('OCR 처리 오류:', errorMessage);
 
         // 실패 로그 기록
         try {
@@ -237,21 +258,22 @@ export async function POST(req: Request) {
             if (user && buffer) {
                 const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
                 const imageHash = hashBuffer.toString('hex');
-                await (supabase.from('ocr_logs') as any).insert({
+                const ocrLogsTable = supabase.from('ocr_logs' as never);
+                await ocrLogsTable.insert({
                     user_id: user.id,
                     image_hash: imageHash,
                     model_used: 'fail',
                     success: false,
-                    metadata: { error: error.message }
-                });
+                    metadata: { error: errorMessage }
+                } as never);
             }
-        } catch (logError) {
+        } catch {
             // 무시
         }
 
         return NextResponse.json({
             error: 'OCR 처리 중 오류가 발생했습니다.',
-            details: error.message
+            details: errorMessage
         }, { status: 500 });
     }
 }

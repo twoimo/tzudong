@@ -16,13 +16,21 @@ export function useRestaurantPopupListener(props: UseRestaurantPopupListenerProp
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        const handleRestaurantSelected = (event: any) => {
-            const { restaurant, region } = event.detail;
+        type RestaurantSelectedDetail = {
+            restaurant?: Restaurant;
+            region?: Region | null;
+        };
+
+        const handleRestaurantSelected = (event: Event) => {
+            const customEvent = event as CustomEvent<RestaurantSelectedDetail>;
+            const { restaurant, region } = customEvent.detail || {};
+
+            if (!restaurant) return;
 
 
             // 국내 맛집인 경우만 처리
             if (mapMode === 'domestic' && region) {
-                setSelectedRegion(region as Region);
+                setSelectedRegion(region);
                 setSelectedRestaurant(restaurant);
                 setSearchedRestaurant(restaurant);
 

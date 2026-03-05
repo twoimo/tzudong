@@ -2,8 +2,8 @@ interface Window {
     naver: typeof naver;
     google: typeof google;
 }
-declare var naver: typeof naver;
-declare var google: typeof google;
+declare let naver: typeof naver;
+declare let google: typeof google;
 
 declare namespace naver {
     namespace maps {
@@ -30,8 +30,16 @@ declare namespace naver {
             setIcon(icon: HtmlIcon | ImageIcon | SymbolIcon | string): void;
         }
 
+        interface MapsEventListener {
+            remove(): void;
+        }
+
         class Event {
-            static addListener(target: any, eventName: string, listener: (event: any) => void): any;
+            static addListener(
+                target: object,
+                eventName: string,
+                listener: (event: unknown) => void
+            ): MapsEventListener;
         }
 
         class Point {
@@ -121,11 +129,14 @@ declare namespace google {
     namespace maps {
         class Map {
             constructor(mapDiv: Element | null, opts?: MapOptions);
-            addListener(eventName: string, handler: Function): any;
+            addListener(eventName: string, handler: (...args: unknown[]) => void): MapsEventListener;
             getBounds(): LatLngBounds | null;
             panTo(latLng: LatLng | LatLngLiteral): void;
             setZoom(zoom: number): void;
             setCenter(latLng: LatLng | LatLngLiteral): void;
+        }
+        interface MapsEventListener {
+            remove(): void;
         }
         namespace marker {
             class AdvancedMarkerElement {
@@ -137,8 +148,8 @@ declare namespace google {
             }
         }
         namespace event {
-            function trigger(instance: any, eventName: string, ...args: any[]): void;
-            function removeListener(listener: any): void;
+            function trigger(instance: unknown, eventName: string, ...args: unknown[]): void;
+            function removeListener(listener: MapsEventListener): void;
         }
         class Marker {
             constructor(opts?: MarkerOptions);

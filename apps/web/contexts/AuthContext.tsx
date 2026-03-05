@@ -52,10 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .eq("user_id", userId)
                 .maybeSingle();
 
+            const profileData = data as { nickname?: string } | null;
+            const nickname = profileData?.nickname;
+
             if (error) {
                 console.error("Profile check error:", error);
                 setNeedsNicknameSetup(false);
-            } else if (!data || (data as any).nickname === "탈퇴한 사용자") {
+            } else if (!profileData || nickname === "탈퇴한 사용자") {
                 setNeedsNicknameSetup(true);
             } else {
                 setNeedsNicknameSetup(false);

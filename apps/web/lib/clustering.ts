@@ -13,7 +13,7 @@ import { getPerformanceBasedClusterOptions } from './device-performance';
 
 // Supercluster 타입 정의 (패키지에서 export하지 않으므로 직접 정의)
 type BBox = [number, number, number, number];
-type GeoJsonProperties = Record<string, any>;
+type GeoJsonProperties = Record<string, unknown>;
 
 /**
  * 클러스터 포인트 속성 인터페이스
@@ -23,6 +23,8 @@ export interface ClusterProperties extends GeoJsonProperties {
     name: string;
     category: string;
     categories?: string[];
+    address?: string | null;
+    reviewCount?: number | null;
     cluster?: boolean;
     point_count?: number;
     point_count_abbreviated?: string | number;

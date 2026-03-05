@@ -1,11 +1,11 @@
 'use client'; // [CSR] 사용자 입력 및 상호작용 처리
 
 import { useRef, useEffect, useState, useCallback, memo } from 'react';
-import { Region } from '@/types/restaurant';
+import { Region, Restaurant } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { useDeviceType } from '@/hooks/useDeviceType';
+import type { User } from '@supabase/supabase-js';
 
 // [OPTIMIZATION] 사용자 요청으로 동시 로딩을 위해 lazy 제거 (번들 크기는 조금 커지지만 UX 개선)
 import RegionSelector from "@/components/region/RegionSelector";
@@ -24,8 +24,8 @@ interface HomeControlPanelProps {
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
-    onRestaurantSelect: (restaurant: any) => void;
-    onRestaurantSearch: (restaurant: any) => void;
+    onRestaurantSelect: (restaurant: Restaurant) => void;
+    onRestaurantSearch: (restaurant: Restaurant) => void;
     onSearchExecute: (region?: Region | null) => void;
     activePanel?: 'map' | 'detail' | 'control';
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
@@ -33,7 +33,7 @@ interface HomeControlPanelProps {
     rightPanelWidth?: number;
     isAdmin?: boolean;
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
-    user?: any;
+    user?: User | null;
     onSubmissionClick?: () => void;
 }
 
@@ -52,7 +52,6 @@ const HomeControlPanelComponent = ({
     onRestaurantSelect,
     onRestaurantSearch,
     onSearchExecute,
-    activePanel,
     onPanelClick,
     leftSidebarWidth = 64,
     rightPanelWidth = 0,
@@ -79,7 +78,7 @@ const HomeControlPanelComponent = ({
 
         updateLayout();
         window.addEventListener('resize', updateLayout, { passive: true });
-        return () => window.removeEventListener('resize', updateLayout, { passive: true } as any);
+        return () => window.removeEventListener('resize', updateLayout);
     }, [isDesktop, updateLayout]);
 
     // [OPTIMIZATION] 클릭 핸들러 메모이제이션
@@ -161,7 +160,7 @@ const HomeControlPanelComponent = ({
                     onRestaurantSearch={onRestaurantSearch}
                     onSearchExecute={onSearchExecute}
                     filters={filters}
-                    selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
+                    selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
                     isKoreanOnly={mapMode === 'domestic'}
                     maxItems={3}
                 />

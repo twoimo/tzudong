@@ -21,14 +21,11 @@ import {
     getClusters,
     getClusterCategories,
     isCluster,
-    getClusterCount,
     getClusterMaxZoom,
     getRegionalClusters,
-    type RestaurantFeature,
     type ClusterProperties,
     type RegionalCluster,
     type SeoulDistrictCluster,
-    type SeoulDistrictClusterResult,
     getSeoulDistrictClusters,
     SEOUL_DISTRICT_CENTERS,
     getDistance
@@ -44,6 +41,7 @@ import {
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateHoverAnchoredCenter } from "@/lib/map-hover-anchor";
 
 // 상수 정의
 const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
@@ -53,12 +51,14 @@ const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
 const VIEWPORT_PADDING = 0.05; // 가시영역 여백 (5% 확장)
-const PERFORMANCE_LOG_ENABLED = false; // 성능 로깅 활성화 (개발용)
 
 // 클러스터링 상수 (네이버 지도 스타일)
 const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
-const CLUSTER_MAX_ZOOM = 16; // 이 줌 레벨까지 클러스터링 (16 초과 시 모든 개별 마커 표시)
 // [OPTIMIZATION] 클러스터 반경, 최소 포인트, 애니메이션은 useMapOptimization 훅에서 동적으로 결정
+
+// [Zoom Control] 지도 최소/최대 줌 레벨
+const MIN_ZOOM = 6;
+const MAX_ZOOM = 18;
 
 // [OPTIMIZATION] 서울 경계 확인 헬퍼 (최적화: 컴포넌트 외부로 이동)
 // [OPTIMIZATION] 서울 경계 확인 헬퍼 (개선된 로직: 단순 BBox 대신 거리 기반 체크)
@@ -100,48 +100,6 @@ interface NaverMapViewProps {
     isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
 }
-
-/**
- * 카테고리별 아이콘 매핑
- * 컴포넌트 외부에서 정의하여 불필요한 재생성을 방지합니다.
- */
-// 카테고리별 이미지 경로 매핑
-const CATEGORY_IMAGE_MAP: Record<string, string> = {
-    '고기': '/images/maker-images/meat_bbq.png',
-    '치킨': '/images/maker-images/chicken.png',
-    '한식': '/images/maker-images/korean.png',
-    '중식': '/images/maker-images/chinese.png',
-    '일식': '/images/maker-images/cutlet_sashimi.png', // 일식, 돈까스/회 공유
-    '양식': '/images/maker-images/western.png',
-    '분식': '/images/maker-images/snack_bar.png',
-    '카페·디저트': '/images/maker-images/cafe_dessert.png',
-    '아시안': '/images/maker-images/asian.png',
-    '패스트푸드': '/images/maker-images/fastfood.png',
-    '족발·보쌈': '/images/maker-images/pork_feet.png',
-    '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
-    '피자': '/images/maker-images/pizza.png',
-    '찜·탕': '/images/maker-images/stew.png',
-    '야식': '/images/maker-images/late_night.png',
-    '도시락': '/images/maker-images/lunch_box.png'
-};
-
-/**
- * 카테고리 아이콘 반환 함수
- * 
- * @param category 카테고리 문자열 또는 배열
- * @returns 매핑된 이모지 아이콘
- */
-/**
- * 카테고리 이미지 경로 반환 함수
- * 
- * @param category 카테고리 문자열 또는 배열
- * @returns 매핑된 이미지 경로 (없을 경우 기본값 없음, 호출처에서 처리)
- */
-const getCategoryIsImage = (category: string | string[] | null | undefined): string => {
-    if (!category) return '/images/maker-images/korean.png'; // 기본값 (임시)
-    const categoryStr = Array.isArray(category) ? category[0] : category;
-    return CATEGORY_IMAGE_MAP[categoryStr] || '/images/maker-images/korean.png';
-};
 
 /**
  * [OPTIMIZATION] LRU 캐시 구현
@@ -209,85 +167,6 @@ class LRUCache<K, V> {
  * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
  */
 const markerContentCache = new LRUCache<string, string>(500);
-
-/**
- * [OPTIMIZATION] 마커 콘텐츠 생성 함수 - 캐싱 + 스타일 외부화 버전
- * 
- * @param restaurant 레스토랑 정보
- * @param isSelected 선택 여부
- * @returns HTML 문자열 (캐시된 콘텐츠 또는 새로 생성)
- */
-const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): string => {
-    // 캐시 키: "restaurantId-categoryIcon_selected" 또는 "restaurantId-categoryIcon_normal"
-    const imagePath = getCategoryIsImage(restaurant.categories || restaurant.category);
-    const cacheKey = `${restaurant.id}-${imagePath}_${isSelected ? 'sel' : 'nor'}`;
-
-    // 캐시에서 조회
-    if (markerContentCache.has(cacheKey)) {
-        return markerContentCache.get(cacheKey)!;
-    }
-
-    // 캐시 미스: 새로 생성
-    // 이미지 마커: 선택 시 42px, 기본 32px (사이즈 축소)
-    const size = isSelected ? 42 : 32;
-
-    // 그림자 효과: 선택 시 더 강하게
-    const dropShadow = isSelected
-        ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 0 2px rgba(255, 255, 255, 0.9))'
-        : 'drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 1px rgba(255, 255, 255, 0.8))';
-
-    const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
-    // [최적화] 스타일 외부화: animation은 CSS 클래스명만 참조
-    const animationClass = isSelected ? 'marker-bounce' : '';
-    const zIndex = isSelected ? '100' : '1';
-
-    const content = `
-        <div 
-            class="${animationClass}"
-            style="
-                width: ${size}px;
-                height: ${size}px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                transform: ${transform};
-                filter: ${dropShadow};
-                position: relative;
-                z-index: ${zIndex};
-                user-select: none;
-                -webkit-tap-highlight-color: transparent;
-            "
-            role="button"
-            aria-label="${restaurant.name}"
-            title="${restaurant.name}"
-        >
-            <img 
-                src="${imagePath}" 
-                alt="${restaurant.name}"
-                style="
-                    width: 100%;
-                    height: 100%;
-                    object-fit: contain;
-                "
-                draggable="false"
-            />
-        </div>
-    `;
-
-    // 캐시에 저장 (LRU 방지: 최대 1000개로 제한)
-    if (markerContentCache.size > 1000) {
-        // 가장 오래된 항목 삭제
-        const firstKey = markerContentCache.keys().next().value;
-        if (firstKey) {
-            markerContentCache.delete(firstKey);
-        }
-    }
-    markerContentCache.set(cacheKey, content);
-
-    return content;
-};
 
 /**
  * 지도 로딩 상태 표시 컴포넌트
@@ -392,12 +271,6 @@ const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: any): bo
     return bounds.hasLatLng(latLng);
 };
 
-// [Zoom Control] 줌 레벨 <-> 슬라이더 값(0-100) 매핑
-const MIN_ZOOM = 6;
-const MAX_ZOOM = 18;
-const mapZoomToSlider = (zoom: number) => Math.round(((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100);
-const sliderToMapZoom = (val: number) => MIN_ZOOM + (val / 100) * (MAX_ZOOM - MIN_ZOOM);
-
 const NaverMapView = memo(({
     mapFocusZoom,
     filters,
@@ -424,9 +297,7 @@ const NaverMapView = memo(({
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
-    const prevPanelOpenRef = useRef<boolean>(false); // 이전 패널 열림 상태 추적 (오프셋 델타 계산용)
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
-    const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
     const isInitialLoadFromUrlRef = useRef<boolean>(false); // URL 파라미터로 초기화되었는지 추적 (공유 URL 지원)
 
@@ -440,7 +311,6 @@ const NaverMapView = memo(({
     const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
     const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
     const [isSeoulDistrictMode, setIsSeoulDistrictMode] = useState(false); // 서울 자치구 모드
-    const clusterMarkersRef = useRef<Map<number | string, any>>(new Map()); // 클러스터 마커 Map
 
     // 사이드바 상태 가져오기
     const { isSidebarOpen } = useLayout();
@@ -602,7 +472,7 @@ const NaverMapView = memo(({
     // ... (중략) ...
 
     // [OPTIMIZATION] 외부에 정의된 함수 참조 사용 - useMemo 오버헤드 제거
-    const createMarkerContent = createMarkerContentFn;
+    void refreshTrigger;
 
 
     // [커스텀 토스트] 지도 상단 중앙 알림 상태
@@ -809,7 +679,6 @@ const NaverMapView = memo(({
         let targetLng: number;
         // [UX 개선] 기본 줌 레벨 설정 로직 변경
         let targetZoom: number;
-        let isRestaurantSelected = false;
 
         const currentMapZoom = map.getZoom();
 
@@ -821,7 +690,6 @@ const NaverMapView = memo(({
         if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
             targetLat = selectedRestaurant.lat;
             targetLng = selectedRestaurant.lng;
-            isRestaurantSelected = true;
 
             if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
                 // URL에 좌표가 있으면 현재 상태 유지 (이동하지 않음)
@@ -1100,18 +968,9 @@ const NaverMapView = memo(({
             // 우리가 원하는 '오프셋이 적용된 중심'은 컨테이너 크기가 변함에 따라 계속 변해야 함.
 
             // 패널 상태
-            const { externalPanelOpen, isPanelCollapsed } = currentStateRef.current;
-            const isExternalPanelOpen = externalPanelOpen === false;
-
             // 여기서는 Ref에 'effectivePanelOffset'을 저장해서 가져오는 방식으로 변경.
             const { effectivePanelOffset } = currentStateRef.current;
             const rightPanelWidth = effectivePanelOffset;
-
-            // 사이드바 너비 - 여기서는 논리적 너비(state)를 사용하지만, 
-            // 실제 중심점 계산은 "남은 공간"의 중앙이어야 함.
-            // map.getSize()를 사용하면 현재 지도 컨테이너의 픽셀 크기를 알 수 있음.
-            const mapSize = map.getSize();
-            const mapWidth = mapSize.width; // 현재 지도 너비 (사이드바 제외한 나머지)
 
             // 우리가 원하는 마커의 위치:
             // 지도 왼쪽 끝에서 (mapWidth - rightPanelWidth) / 2 지점
@@ -1493,7 +1352,7 @@ const NaverMapView = memo(({
 
         // [Logic] 줌 8 이하에서는 17개 행정구역 중앙 클러스터링 사용
         // [Fix] 사용자가 기능 동작을 원하므로 다시 활성화
-        let shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
+        const shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
 
         // [Logic] 서울 자치구 클러스터링 (줌 9-12에서 활성화)
         // 줌 9-10: 모든 자치구 25개를 클러스터로 표시 (seoulDistrictClusters 사용)
@@ -1684,7 +1543,7 @@ const NaverMapView = memo(({
                             let categories: string[];
                             try {
                                 categories = getClusterCategories(clusterIndexRef.current!, clusterId);
-                            } catch (e) { categories = []; }
+                            } catch { categories = []; }
 
                             renderClusterHelper(
                                 markerId,
@@ -1865,7 +1724,7 @@ const NaverMapView = memo(({
                             let categories: string[] = [];
                             try {
                                 categories = getClusterCategories(clusterIndexRef.current, clusterId);
-                            } catch (e) {
+                            } catch {
                                 // ignore
                             }
 
@@ -2096,6 +1955,9 @@ const NaverMapView = memo(({
 
             mapInstanceRef.current = map;
             setIsMapInitialized(true);
+            if (process.env.NODE_ENV !== 'production') {
+                (window as any).__TZUDONG_DEBUG_MAP__ = map;
+            }
 
             // [Fix] URL 파라미터로 초기화된 경우 플래그 설정 (centering effect에서 줌 오버라이드 방지)
             if (hasValidUrlState) {
@@ -2120,7 +1982,7 @@ const NaverMapView = memo(({
         }
     }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // [New] 커스텀 스크롤 휠 핸들러 (0.5 단위 줌 -> 1단위 슬라이더 줌) - 별도 Effect로 분리
+    // [New] 커스텀 스크롤 휠 핸들러 (마우스 호버 위치 기준 줌 고정)
     useEffect(() => {
         if (!isMapInitialized || !mapRef.current || !mapInstanceRef.current) return;
 
@@ -2130,6 +1992,7 @@ const NaverMapView = memo(({
         // 연속 스크롤 시 목표 줌 레벨 추적 변수 (Effect 클로저 내 유지)
         let targetZoomLevel = map.getZoom();
         let lastWheelTime = 0;
+        let pendingAnchorAdjustListener: any = null;
 
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
@@ -2158,9 +2021,93 @@ const NaverMapView = memo(({
             if (nextZoom !== targetZoomLevel) {
                 targetZoomLevel = nextZoom;
 
-                // [UX] 즉각적인 슬라이더 UI 갱신 (애니메이션 대기 없음)
-                // 줌 변경 시 부드럽게 이동 (깜빡임 방지)
-                map.setZoom(nextZoom, true);
+                try {
+                    const { naver } = window;
+                    const projection = map.getProjection();
+
+                    if (!naver || !projection) {
+                        map.setZoom(nextZoom, true);
+                        return;
+                    }
+
+                    const rect = mapElement.getBoundingClientRect();
+                    const mousePoint = new naver.maps.Point(
+                        e.clientX - rect.left,
+                        e.clientY - rect.top
+                    );
+                    const viewportCenterPoint = new naver.maps.Point(rect.width / 2, rect.height / 2);
+
+                    // 컨테이너 바깥 휠 이벤트는 기본 중심 줌 처리
+                    if (
+                        mousePoint.x < 0 ||
+                        mousePoint.y < 0 ||
+                        mousePoint.x > rect.width ||
+                        mousePoint.y > rect.height
+                    ) {
+                        map.setZoom(nextZoom, true);
+                        return;
+                    }
+
+                    // 네이버 Projection offset은 "뷰포트 픽셀"이 아니라 "투영 좌표계 offset"이므로
+                    // 마우스 뷰포트 좌표를 현재 center offset 기준으로 변환해 사용
+                    const centerOffsetBeforeZoom = projection.fromCoordToOffset(map.getCenter());
+                    const mouseOffsetBeforeZoom = new naver.maps.Point(
+                        centerOffsetBeforeZoom.x + (mousePoint.x - viewportCenterPoint.x),
+                        centerOffsetBeforeZoom.y + (mousePoint.y - viewportCenterPoint.y)
+                    );
+
+                    // 줌 전: 마우스 포인터 아래의 좌표
+                    const beforeCoord = projection.fromOffsetToCoord(mouseOffsetBeforeZoom);
+
+                    // 기존 대기 중 보정 리스너는 취소 (최신 휠 이벤트 우선)
+                    if (pendingAnchorAdjustListener) {
+                        naver.maps.Event.removeListener(pendingAnchorAdjustListener);
+                        pendingAnchorAdjustListener = null;
+                    }
+
+                    // 줌 반영 후( idle ) 투영이 갱신된 시점에 중심 보정
+                    pendingAnchorAdjustListener = naver.maps.Event.addListener(map, 'idle', () => {
+                        if (pendingAnchorAdjustListener) {
+                            naver.maps.Event.removeListener(pendingAnchorAdjustListener);
+                            pendingAnchorAdjustListener = null;
+                        }
+
+                        const updatedProjection = map.getProjection();
+                        if (!updatedProjection) return;
+
+                        const currentCenter = map.getCenter();
+                        const centerOffsetAfterZoom = updatedProjection.fromCoordToOffset(currentCenter);
+                        const mouseOffsetAfterZoom = {
+                            x: centerOffsetAfterZoom.x + (mousePoint.x - viewportCenterPoint.x),
+                            y: centerOffsetAfterZoom.y + (mousePoint.y - viewportCenterPoint.y),
+                        };
+                        const adjustedCenter = calculateHoverAnchoredCenter({
+                            projection: {
+                                fromCoordToOffset: (coord) =>
+                                    updatedProjection.fromCoordToOffset(
+                                        new naver.maps.LatLng(coord.lat, coord.lng)
+                                    ),
+                                fromOffsetToCoord: (offset) => {
+                                    const coord = updatedProjection.fromOffsetToCoord(
+                                        new naver.maps.Point(offset.x, offset.y)
+                                    );
+                                    return { lat: coord.lat(), lng: coord.lng() };
+                                },
+                            },
+                            anchorCoordBeforeZoom: { lat: beforeCoord.lat(), lng: beforeCoord.lng() },
+                            currentCenter: { lat: currentCenter.lat(), lng: currentCenter.lng() },
+                            mouseOffset: mouseOffsetAfterZoom,
+                        });
+
+                        map.setCenter(new naver.maps.LatLng(adjustedCenter.lat, adjustedCenter.lng));
+                    });
+
+                    // 줌 적용 (보정은 idle 리스너에서 수행)
+                    map.setZoom(nextZoom, false);
+                } catch (error) {
+                    console.error("휠 줌 포인터 고정 처리 실패:", error);
+                    map.setZoom(nextZoom, true);
+                }
             }
         };
 
@@ -2168,6 +2115,10 @@ const NaverMapView = memo(({
         mapElement.addEventListener('wheel', handleWheel, { passive: false });
 
         return () => {
+            if (pendingAnchorAdjustListener && window.naver?.maps?.Event) {
+                window.naver.maps.Event.removeListener(pendingAnchorAdjustListener);
+                pendingAnchorAdjustListener = null;
+            }
             mapElement.removeEventListener('wheel', handleWheel);
         };
     }, [isMapInitialized]);
@@ -2197,8 +2148,6 @@ const NaverMapView = memo(({
                     restaurantsToShow.push(searchedRestaurant);
                 }
             }
-
-            const perfStart = PERFORMANCE_LOG_ENABLED ? performance.now() : 0;
 
             const extendedBounds = getExtendedBounds(map);
             const visibleRestaurants = restaurantsToShow.filter(r => {

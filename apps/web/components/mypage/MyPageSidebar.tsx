@@ -83,8 +83,8 @@ export function MyPageSidebar() {
             const baseUrl = supabase.storage.from('profile-avatars').getPublicUrl(filePath).data.publicUrl;
             const publicUrl = `${baseUrl}?t=${Date.now()}`;
 
-            const { error: updateError } = await (supabase.from('profiles') as any)
-                .update({ avatar_url: publicUrl })
+            const { error: updateError } = await supabase.from('profiles')
+                .update({ avatar_url: publicUrl } as never)
                 .eq('user_id', user.id);
 
             if (updateError) throw updateError;
@@ -114,8 +114,8 @@ export function MyPageSidebar() {
                 }
             }
 
-            const { error: updateError } = await (supabase.from('profiles') as any)
-                .update({ avatar_url: null })
+            const { error: updateError } = await supabase.from('profiles')
+                .update({ avatar_url: null } as never)
                 .eq('user_id', user.id);
 
             if (updateError) throw updateError;
