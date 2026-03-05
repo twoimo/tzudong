@@ -11,10 +11,7 @@ import {
     Stamp,
     Heart,
     MessageSquare,
-    CheckCircle2,
-    Calendar,
     Users,
-    MapPin,
     User,
     X
 } from "lucide-react";
@@ -24,13 +21,10 @@ import {
     useUserReviews,
     useUserLikers,
     useUserStamps,
-    UserReview,
     Liker
 } from "@/hooks/useUserProfile";
 import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { ko } from "date-fns/locale";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { StampCard } from "@/components/stamp/StampCard";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
@@ -38,6 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import type { Restaurant } from "@/types/restaurant";
 
 // [최적화] 빈 상태 컴포넌트 - memo로 래핑
 interface EmptyStateProps {
@@ -113,7 +108,7 @@ interface UserProfilePanelProps {
     onClose?: () => void;
     showBackButton?: boolean;
     onUserClick?: (userId: string) => void;
-    onRestaurantClick?: (restaurant: any) => void;
+    onRestaurantClick?: (restaurant: Restaurant) => void;
 }
 
 const USER_PROFILE_PAGE_SIZE = 15;
@@ -148,15 +143,6 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
         return leaderboard.findIndex((u: LeaderboardUser) => u.id === userId) + 1;
     }, [leaderboard, userId]);
 
-    // [최적화] useCallback으로 날짜 포맷 함수 메모이제이션
-    const formatDate = useCallback((dateStr: string) => {
-        try {
-            return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: ko });
-        } catch {
-            return dateStr;
-        }
-    }, []);
-
     // [최적화] useCallback으로 뒤로가기 핸들러 메모이제이션
     const handleBack = useCallback(() => {
         if (onClose) {
@@ -183,7 +169,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     }, []);
 
     // [핸들러] 맛집 클릭 - 메인으로 이동
-    const handleRestaurantClick = useCallback((restaurant: any) => {
+    const handleRestaurantClick = useCallback((restaurant: Restaurant) => {
         if (onRestaurantClick) {
             onRestaurantClick(restaurant);
             return;
@@ -213,7 +199,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
             if (currentIsLiked) {
                 await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
             } else {
-                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as any);
+                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as never);
             }
             // 쿼리 무효화로 UI 업데이트
             queryClient.invalidateQueries({ queryKey: ['user-reviews', userId] });
@@ -503,10 +489,14 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                         onLike={handleLike}
                                         currentUserId={user?.id}
                                         onUserClick={onUserClick}
-                                        onRestaurantClick={() => handleRestaurantClick(review.restaurant || {
-                                            id: review.restaurantId,
-                                            name: review.restaurantName
-                                        })}
+                                        onRestaurantClick={() => {
+                                            if (review.restaurant) {
+                                                handleRestaurantClick(review.restaurant);
+                                                return;
+                                            }
+                                            if (onClose) onClose();
+                                            router.push(`/?restaurant=${review.restaurantId}`);
+                                        }}
                                     />
                                 ))}
                                 <div ref={reviewLoadMoreRef} />

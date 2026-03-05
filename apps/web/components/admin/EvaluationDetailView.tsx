@@ -32,6 +32,11 @@ interface EvaluationDetailViewProps {
     autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
 }
 
+interface LocationMatchEvalResult {
+    matched_name?: string;
+    name?: string;
+}
+
 export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
 
     const [embedError, setEmbedError] = useState(false);
@@ -110,6 +115,8 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
         );
     }
 
+    const locationMatchResult = record.evaluation_results?.location_match_TF as LocationMatchEvalResult | undefined;
+
     const RightContent = () => (
         <div className="p-4 space-y-4 text-sm">
             {/* 1. 평가 상세 내역 */}
@@ -137,10 +144,10 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Naver Name:</span>
                                 <span className="font-bold text-blue-700 break-all">
                                     {record.naver_name ||
-                                        (record.evaluation_results?.location_match_TF as any)?.matched_name ||
-                                        ((record.evaluation_results?.location_match_TF as any)?.name &&
-                                            !['Location Match', '주소 정합성', 'location_match_TF'].includes((record.evaluation_results?.location_match_TF as any)?.name)
-                                            ? (record.evaluation_results?.location_match_TF as any)?.name
+                                        locationMatchResult?.matched_name ||
+                                        (locationMatchResult?.name &&
+                                            !['Location Match', '주소 정합성', 'location_match_TF'].includes(locationMatchResult.name)
+                                            ? locationMatchResult.name
                                             : '-')
                                     }
                                 </span>

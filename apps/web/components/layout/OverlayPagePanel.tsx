@@ -136,7 +136,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
 
     if (!activePanel) return null;
 
-    let maxWidth = PANEL_WIDTHS[activePanel];
+    const maxWidth = PANEL_WIDTHS[activePanel];
     const showInlineReviewPanel = activePanel === 'feed' && isReviewPanelOpen && isDesktop;
     // [수정] leaderboard 탭 및 feed 탭에서도 맛집 상세 패널 표시 허용
     const showRestaurantDetail = (activePanel === 'stamp' || activePanel === 'leaderboard' || activePanel === 'feed') && selectedRestaurant && isDesktop;

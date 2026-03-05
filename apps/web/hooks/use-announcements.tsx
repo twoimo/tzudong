@@ -74,7 +74,7 @@ export function useAnnouncementsAdmin() {
     return useQuery({
         queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'admin'],
         queryFn: async (): Promise<Announcement[]> => {
-            const { data, error } = await (supabase as any)
+            const { data, error } = await supabase
                 .from('announcements')
                 .select('*')
                 .order('priority', { ascending: false })
@@ -100,7 +100,7 @@ export function useActiveAnnouncements() {
         queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'active'],
         queryFn: async (): Promise<Announcement[]> => {
             try {
-                const { data, error } = await (supabase as any)
+                const { data, error } = await supabase
                     .from('announcements')
                     .select('*')
                     .eq('is_active', true)
@@ -131,7 +131,7 @@ export function useBannerAnnouncements() {
         queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'banner'],
         queryFn: async (): Promise<Announcement[]> => {
             try {
-                const { data, error } = await (supabase as any)
+                const { data, error } = await supabase
                     .from('announcements')
                     .select('*')
                     .eq('is_active', true)
@@ -164,12 +164,12 @@ export function useCreateAnnouncement() {
 
     return useMutation({
         mutationFn: async (data: AnnouncementFormData): Promise<Announcement> => {
-            const { data: result, error } = await (supabase as any)
+            const { data: result, error } = await supabase
                 .from('announcements')
                 .insert({
                     ...mapFormDataToPayload(data),
                     created_by: user?.id ?? null,
-                })
+                } as never)
                 .select('*')
                 .single();
 
@@ -198,9 +198,9 @@ export function useUpdateAnnouncement() {
 
     return useMutation({
         mutationFn: async ({ id, data }: { id: string; data: AnnouncementFormData }): Promise<Announcement> => {
-            const { data: result, error } = await (supabase as any)
+            const { data: result, error } = await supabase
                 .from('announcements')
-                .update(mapFormDataToPayload(data))
+                .update(mapFormDataToPayload(data) as never)
                 .eq('id', id)
                 .select('*')
                 .single();
@@ -230,7 +230,7 @@ export function useDeleteAnnouncement() {
 
     return useMutation({
         mutationFn: async (id: string): Promise<void> => {
-            const { error } = await (supabase as any)
+            const { error } = await supabase
                 .from('announcements')
                 .delete()
                 .eq('id', id);
@@ -258,9 +258,9 @@ export function useToggleAnnouncementActive() {
 
     return useMutation({
         mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }): Promise<Announcement> => {
-            const { data: result, error } = await (supabase as any)
+            const { data: result, error } = await supabase
                 .from('announcements')
-                .update({ is_active: isActive })
+                .update({ is_active: isActive } as never)
                 .eq('id', id)
                 .select('*')
                 .single();
@@ -290,9 +290,9 @@ export function useToggleAnnouncementBanner() {
 
     return useMutation({
         mutationFn: async ({ id, showOnBanner }: { id: string; showOnBanner: boolean }): Promise<Announcement> => {
-            const { data: result, error } = await (supabase as any)
+            const { data: result, error } = await supabase
                 .from('announcements')
-                .update({ show_on_banner: showOnBanner })
+                .update({ show_on_banner: showOnBanner } as never)
                 .eq('id', id)
                 .select('*')
                 .single();

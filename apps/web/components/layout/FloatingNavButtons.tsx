@@ -93,6 +93,8 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                 <Button
                     variant="ghost"
                     size="sm"
+                    type="button"
+                    aria-label="국내 지도 모드로 전환"
                     onClick={() => handleModeChange('domestic')}
                     className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'domestic'
                         ? 'bg-primary text-primary-foreground shadow-sm'
@@ -104,6 +106,8 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                 <Button
                     variant="ghost"
                     size="sm"
+                    type="button"
+                    aria-label="해외 지도 모드로 전환"
                     onClick={() => handleModeChange('overseas')}
                     className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'overseas'
                         ? 'bg-primary text-primary-foreground shadow-sm'
@@ -121,6 +125,9 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                         key={item.id}
                         variant="secondary"
                         size="sm"
+                        type="button"
+                        aria-current={isActive ? 'page' : undefined}
+                        aria-label={`${item.label} 패널 ${isActive ? '선택됨' : '열기'}`}
                         onClick={() => handlePanelClick(item.id)}
                         className={cn(
                             'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',

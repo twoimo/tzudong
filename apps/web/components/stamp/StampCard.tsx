@@ -8,6 +8,10 @@ import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { parseCategory, getYouTubeThumbnailUrl } from './stamp-utils';
 
+type StampCardRestaurant = Restaurant & {
+    verified_review_count?: number | null;
+};
+
 export interface StampCardProps {
     restaurant: Restaurant;
     isVisited: boolean;
@@ -44,12 +48,13 @@ export const StampCard = memo(function StampCard({
     onGuideClose,
     isGuideCard = false,
 }: StampCardProps) {
+    const typedRestaurant = restaurant as StampCardRestaurant;
     const showStamp = isUserStampsReady && isVisited;
-    const youtubeLinks = (restaurant as any).mergedYoutubeLinks || (restaurant.youtube_link ? [restaurant.youtube_link] : []);
+    const youtubeLinks = typedRestaurant.mergedYoutubeLinks ?? (typedRestaurant.youtube_link ? [typedRestaurant.youtube_link] : []);
     const currentIndex = currentThumbnailIndex % (youtubeLinks.length || 1);
     const thumbnailUrl = youtubeLinks[currentIndex] ? getYouTubeThumbnailUrl(youtubeLinks[currentIndex]) : null;
-    const category = parseCategory(restaurant.category || (restaurant as any).categories);
-    const reviewCount = (restaurant as any).verified_review_count ?? restaurant.review_count ?? 0;
+    const category = parseCategory(typedRestaurant.category ?? typedRestaurant.categories);
+    const reviewCount = typedRestaurant.verified_review_count ?? typedRestaurant.review_count ?? 0;
 
     const handlePrevThumbnail = (e: React.MouseEvent) => {
         e.stopPropagation();

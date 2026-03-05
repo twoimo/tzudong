@@ -6,7 +6,9 @@ Storyboard Agent Tools - Supabase RPC 함수 호출 도구 모음
 """
 
 import os
-from typing import Optional
+import json
+import logging
+from typing import Any, Optional
 import numpy as np
 from langchain_core.tools import tool
 from supabase import create_client, Client
@@ -14,13 +16,87 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL")
+SUPABASE_KEY = (
+    os.getenv("PUBLIC_SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+)
+LOGGER = logging.getLogger(__name__)
 
 # 전역 클라이언트 (연결 재사용)
 _supabase_client: Optional[Client] = None
-_bge_model = None
-_reranker = None
+_bge_model: Optional[Any] = None
+_reranker: Optional[Any] = None
+
+EMBEDDING_DENOMINATOR_EPSILON = 1e-8
+
+
+def _parse_embedding(value: Any) -> list[float]:
+    """Parse an embedding payload into a numeric vector."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+
+    if not isinstance(value, list):
+        return []
+
+    parsed: list[float] = []
+    for item in value:
+        try:
+            parsed.append(float(item))
+        except (TypeError, ValueError):
+            continue
+    return parsed
+
+
+def _as_sparse_query_map(raw_sparse: Any) -> dict[str, float]:
+    if not isinstance(raw_sparse, dict):
+        return {}
+    parsed: dict[str, float] = {}
+    for key, value in raw_sparse.items():
+        try:
+            parsed[str(key)] = float(value)
+        except (TypeError, ValueError):
+            continue
+    return parsed
+
+
+def _ensure_payload_data(payload: Any) -> list[dict[str, Any]]:
+    """Normalize Supabase RPC payload data into a list of dict-like rows."""
+    if not payload:
+        return []
+
+    if hasattr(payload, "data"):
+        payload = {"data": payload.data}
+
+    if not isinstance(payload, dict):
+        return []
+
+    data = payload.get("data")
+    if not isinstance(data, list):
+        return []
+
+    return [item for item in data if isinstance(item, dict)]
+
+
+def _build_query_embeddings(query: str) -> tuple[list[float], dict[str, float]]:
+    """Build dense and sparse vectors used by vector search."""
+    model = get_bge_model()
+    encoded = model.encode([query], return_dense=True, return_sparse=True)
+
+    dense_payload = encoded.get("dense_vecs")
+    sparse_payload = encoded.get("lexical_weights")
+    if not isinstance(dense_payload, (list, tuple)) or not dense_payload:
+        raise ValueError("임베딩 dense 벡터 형식이 올바르지 않습니다.")
+    if not isinstance(sparse_payload, (list, tuple)) or not sparse_payload:
+        raise ValueError("임베딩 결과가 예상 형식이 아닙니다.")
+
+    dense_vector = dense_payload[0]
+    if hasattr(dense_vector, "tolist"):
+        dense_vector = dense_vector.tolist()
+
+    return list(dense_vector), _as_sparse_query_map(sparse_payload[0])
 
 
 def get_supabase() -> Client:
@@ -73,67 +149,66 @@ def apply_mmr(
     Returns:
         MMR 알고리즘으로 선택된 결과
     """
-    if not results:
+    if not results or not query_embedding:
         return []
 
-    selected = []
-    candidates = results.copy()
-    query_vec = np.array(query_embedding)
+    query_vec = np.array(query_embedding, dtype=float)
+    query_norm = float(np.linalg.norm(query_vec))
+    if query_norm <= 0:
+        return []
 
-    # Helper to parse embedding from potential JSON string
-    def parse_embedding(val):
-        if isinstance(val, str):
-            import json
+    prepared_candidates: list[tuple[dict, np.ndarray, float]] = []
+    for source_doc in results:
+        embedding = _parse_embedding(source_doc.get("embedding", []))
+        if not embedding:
+            continue
+        vector = np.array(embedding, dtype=float)
+        vector_norm = float(np.linalg.norm(vector))
+        if vector_norm <= 0:
+            continue
+        prepared_candidates.append((source_doc, vector, vector_norm))
 
-            try:
-                val = json.loads(val)
-            except:
-                return []
-        return val
+    if not prepared_candidates:
+        return []
 
-    while len(selected) < k and candidates:
+    selected: list[dict] = []
+    selected_vectors: list[tuple[np.ndarray, float]] = []
+
+    while len(selected) < k and prepared_candidates:
         best_score = -float("inf")
-        best_idx = 0
+        best_index = None
 
-        for i, cand in enumerate(candidates):
-            emb = parse_embedding(cand.get("embedding", []))
-            cand_vec = np.array(emb)
-
-            if len(cand_vec) == 0:
+        for index, (candidate, candidate_vec, candidate_norm) in enumerate(prepared_candidates):
+            try:
+                candidate_similarity = float(
+                    np.dot(query_vec, candidate_vec) / (query_norm * candidate_norm + EMBEDDING_DENOMINATOR_EPSILON)
+                )
+            except ValueError:
                 continue
 
-            # 쿼리와의 유사도
-            sim_query = np.dot(query_vec, cand_vec) / (
-                np.linalg.norm(query_vec) * np.linalg.norm(cand_vec) + 1e-8
-            )
-
-            # 이미 선택된 것들과의 최대 유사도
-            max_sim_selected = 0
-            for sel in selected:
-                s_emb = parse_embedding(sel.get("embedding", []))
-                sel_vec = np.array(s_emb)
-
-                if len(sel_vec) == 0:
+            max_similarity_to_selected = 0.0
+            for selected_vec, selected_norm in selected_vectors:
+                try:
+                    similarity = float(
+                        np.dot(candidate_vec, selected_vec)
+                        / (candidate_norm * selected_norm + EMBEDDING_DENOMINATOR_EPSILON)
+                    )
+                except ValueError:
                     continue
+                if similarity > max_similarity_to_selected:
+                    max_similarity_to_selected = similarity
 
-                sim = np.dot(cand_vec, sel_vec) / (
-                    np.linalg.norm(cand_vec) * np.linalg.norm(sel_vec) + 1e-8
-                )
-                max_sim_selected = max(max_sim_selected, sim)
-
-            # MMR 점수
-            mmr_score = (1 - diversity) * sim_query - diversity * max_sim_selected
-
+            mmr_score = (1 - diversity) * candidate_similarity - diversity * max_similarity_to_selected
             if mmr_score > best_score:
                 best_score = mmr_score
-                best_idx = i
+                best_index = index
 
-        if candidates:
-            # 안전장치: best_idx가 유효할 때만
-            if 0 <= best_idx < len(candidates):
-                selected.append(candidates.pop(best_idx))
-            else:
-                break
+        if best_index is None:
+            break
+
+        selected_doc, selected_vec, selected_norm = prepared_candidates.pop(best_index)
+        selected.append(selected_doc)
+        selected_vectors.append((selected_vec, selected_norm))
 
     return selected
 
@@ -179,7 +254,7 @@ def get_video_captions_for_range(
 @tool
 def search_transcripts_hybrid(
     query: str,
-    video_ids: list[str] = None,
+    video_ids: list[str] | None = None,
     dense_weight: float = 0.6,
     match_count: int = 20,
     mmr_k: int = 10,
@@ -219,10 +294,7 @@ def search_transcripts_hybrid(
         transcripts: 검색된 자막 목록 (video_id, page_content, metadata 포함)
     """
     # 1. 쿼리 임베딩 생성 (Dense + Sparse)
-    model = get_bge_model()
-    encoded = model.encode([query], return_dense=True, return_sparse=True)
-    query_dense = encoded["dense_vecs"][0].tolist()
-    query_sparse = {str(k): float(v) for k, v in encoded["lexical_weights"][0].items()}
+    query_dense, query_sparse = _build_query_embeddings(query)
 
     # 2. 하이브리드 검색 (Supabase RPC)
     client = get_supabase()
@@ -237,22 +309,24 @@ def search_transcripts_hybrid(
         },
     ).execute()
 
-    if not result.data:
+    search_results = _ensure_payload_data(result)
+    if not search_results:
         return {"transcripts": [], "message": "검색 결과 없음"}
 
     # video_ids 필터링 (지정된 경우)
     if video_ids:
-        result.data = [r for r in result.data if r.get("video_id") in video_ids]
+        requested_ids = set(video_ids)
+        search_results = [r for r in search_results if r.get("video_id") in requested_ids]
 
     # 3. MMR 적용 (다양성 확보)
-    mmr_results = apply_mmr(result.data, query_dense, k=mmr_k, diversity=mmr_diversity)
+    mmr_results = apply_mmr(search_results, query_dense, k=mmr_k, diversity=mmr_diversity)
 
     if not mmr_results:
         return {"transcripts": [], "message": "MMR 후 결과 없음"}
 
     # 4. Reranking (BGE-reranker-v2-m3)
     reranker = get_reranker()
-    pairs = [(query, r["page_content"]) for r in mmr_results]
+    pairs = [(query, r.get("page_content", "")) for r in mmr_results]
     scores = reranker.compute_score(pairs)
 
     # 점수가 단일 값이면 리스트로 변환
@@ -260,10 +334,13 @@ def search_transcripts_hybrid(
         scores = [scores]
 
     # 점수 할당 및 정렬
+    scored_results = []
     for i, r in enumerate(mmr_results):
-        r["rerank_score"] = float(scores[i]) if i < len(scores) else 0.0
+        scored_doc = dict(r)
+        scored_doc["rerank_score"] = float(scores[i]) if i < len(scores) else 0.0
+        scored_results.append(scored_doc)
 
-    reranked = sorted(mmr_results, key=lambda x: x["rerank_score"], reverse=True)[
+    reranked = sorted(scored_results, key=lambda x: x["rerank_score"], reverse=True)[
         :rerank_top_k
     ]
 
@@ -273,7 +350,7 @@ def search_transcripts_hybrid(
 
     # 5. 캡션 자동 보강 (Storyboard 모드일 때만 실행)
     if intent == "storyboard":
-        print("📸 Storyboard 모드 감지: Peak 구간 캡션 자동 조회 중...")
+        LOGGER.info("Storyboard 모드 감지: Peak 구간 캡션 자동 조회 중...")
         for doc in reranked:
             # 메타데이터에 is_peak가 있고 True인 경우
             meta = doc.get("metadata", {})
@@ -292,7 +369,11 @@ def search_transcripts_hybrid(
                         doc["metadata"]["caption"] = captions_result["captions"]
 
                 except Exception as e:
-                    print(f"⚠️ 캡션 조회 실패 ({doc['video_id']}): {e}")
+                    LOGGER.warning(
+                        "캡션 조회 실패 (%s): %s",
+                        doc.get("video_id"),
+                        e,
+                    )
 
     return {"transcripts": reranked}
 
@@ -459,10 +540,7 @@ def search_video_ids_by_query(
         video_ids: 관련 video_id 목록 (중복 제거됨)
     """
     # 쿼리 임베딩 생성
-    model = get_bge_model()
-    encoded = model.encode([query], return_dense=True, return_sparse=True)
-    query_dense = encoded["dense_vecs"][0].tolist()
-    query_sparse = {str(k): float(v) for k, v in encoded["lexical_weights"][0].items()}
+    query_dense, query_sparse = _build_query_embeddings(query)
 
     # Supabase RPC 호출
     client = get_supabase()
@@ -483,11 +561,6 @@ def search_video_ids_by_query(
 # =============================================================================
 # 10. 웹 검색 (Tavily)
 # =============================================================================
-import logging
-
-LOGGER = logging.getLogger(__name__)
-
-
 try:
     from langchain_teddynote.tools.tavily import TavilySearch
 

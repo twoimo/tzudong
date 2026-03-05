@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, RefreshCw, AlertCircle, X } from 'lucide-react';
+import { Loader2, RefreshCw, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,13 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,19 +33,6 @@ import {
   ADMIN_MODAL_FOOTER_DIVIDER,
   ADMIN_MODAL_SCROLL_BODY,
 } from './admin-modal-styles';
-
-// 해외 국가 목록
-const OVERSEAS_COUNTRIES = [
-  "미국", "USA", "United States",
-  "일본", "Japan",
-  "대만", "Taiwan",
-  "태국", "Thailand",
-  "인도네시아", "Indonesia",
-  "튀르키예", "Turkey", "Türkiye",
-  "헝가리", "Hungary",
-  "오스트레일리아", "Australia"
-];
-
 
 interface EditRestaurantModalProps {
   record: EvaluationRecord | null;
@@ -88,6 +68,11 @@ interface NaverGeocodingResponse {
 }
 
 type NaverGeocodingAddress = NonNullable<NaverGeocodingResponse['addresses']>[number];
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+};
 
 export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: EditRestaurantModalProps) {
   const { toast } = useToast();
@@ -192,13 +177,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         });
         setGeocodingError('주소를 찾을 수 없습니다.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('💥 네이버 지오코딩 에러:', error);
-      setGeocodingError(error.message || '네이버 지오코딩에 실패했습니다');
+      const message = getErrorMessage(error, '네이버 지오코딩에 실패했습니다');
+      setGeocodingError(message);
       toast({
         variant: 'destructive',
         title: '네이버 지오코딩 실패',
-        description: error.message || '네이버 지오코딩에 실패했습니다',
+        description: message,
       });
     } finally {
       setGeocodingNaver(false);
@@ -266,13 +252,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         });
         setGeocodingError('주소를 찾을 수 없습니다.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('💥 Google 지오코딩 에러:', error);
-      setGeocodingError(error.message || 'Google 지오코딩에 실패했습니다');
+      const message = getErrorMessage(error, 'Google 지오코딩에 실패했습니다');
+      setGeocodingError(message);
       toast({
         variant: 'destructive',
         title: 'Google 지오코딩 실패',
-        description: error.message || 'Google 지오코딩에 실패했습니다',
+        description: message,
       });
     } finally {
       setGeocodingGoogle(false);
@@ -313,12 +300,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     });
   };
 
-  // 해외 주소 감지 함수
-  const isOverseasAddress = (address: string, englishAddress?: string): boolean => {
-    const checkText = `${address} ${englishAddress || ''}`;
-    return OVERSEAS_COUNTRIES.some(country => checkText.includes(country));
-  };
-
   // Google Geocoding API 호출 함수
   const geocodeWithGoogle = async (address: string, limit: number = 3): Promise<Array<{
     road_address: string;
@@ -333,9 +314,9 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     // Client-side Geocoder (works with HTTP referer restricted browser keys)
     try {
       return await geocodeWithGoogleMapsJs(address, apiKey, limit);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Google Geocoding 에러:', error);
-      throw error as any;
+      throw error instanceof Error ? error : new Error('Google Geocoding 에러');
     }
   };
 
@@ -444,8 +425,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       }
 
       const trimmedName = formData.name.trim();
-      const trimmedPhone = formData.phone.trim();
-      const trimmedTzuyangReview = formData.tzuyang_review.trim();
 
       if (!trimmedName) {
         toast({
@@ -586,7 +565,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
 
 
-    const { data: updatedRestaurant, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('restaurants')
       // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update(updateData)

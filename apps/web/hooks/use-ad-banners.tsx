@@ -17,7 +17,7 @@ export function useAdBannersAdmin() {
     return useQuery({
         queryKey: [...AD_BANNERS_QUERY_KEY, 'admin'],
         queryFn: async (): Promise<AdBanner[]> => {
-            const { data, error } = await (supabase as any)
+            const { data, error } = await supabase
                 .from('ad_banners')
                 .select('*')
                 .order('priority', { ascending: false });
@@ -42,7 +42,7 @@ export function useActiveAdBanners(displayTarget?: DisplayTarget) {
         queryKey: [...AD_BANNERS_QUERY_KEY, 'active', displayTarget],
         queryFn: async (): Promise<AdBanner[]> => {
             try {
-                let query = (supabase as any)
+                let query = supabase
                     .from('ad_banners')
                     .select('*')
                     .eq('is_active', true)
@@ -113,12 +113,12 @@ export function useCreateAdBanner() {
 
     return useMutation({
         mutationFn: async (data: AdBannerFormData): Promise<AdBanner> => {
-            const { data: result, error } = await (supabase as any)
+            const { data: result, error } = await supabase
                 .from('ad_banners')
                 .insert({
                     ...data,
                     created_by: user?.id,
-                })
+                } as never)
                 .select()
                 .single();
 
@@ -154,9 +154,9 @@ export function useUpdateAdBanner() {
 
     return useMutation({
         mutationFn: async ({ id, data }: { id: string; data: Partial<AdBannerFormData> }): Promise<AdBanner> => {
-            const { data: result, error } = await (supabase as any)
+            const { data: result, error } = await supabase
                 .from('ad_banners')
-                .update(data)
+                .update(data as never)
                 .eq('id', id)
                 .select()
                 .single();
@@ -193,7 +193,7 @@ export function useDeleteAdBanner() {
 
     return useMutation({
         mutationFn: async (id: string): Promise<void> => {
-            const { error } = await (supabase as any)
+            const { error } = await supabase
                 .from('ad_banners')
                 .delete()
                 .eq('id', id);
@@ -228,9 +228,9 @@ export function useToggleAdBanner() {
 
     return useMutation({
         mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }): Promise<AdBanner> => {
-            const { data: result, error } = await (supabase as any)
+            const { data: result, error } = await supabase
                 .from('ad_banners')
-                .update({ is_active })
+                .update({ is_active } as never)
                 .eq('id', id)
                 .select()
                 .single();

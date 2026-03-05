@@ -12,6 +12,10 @@ const DialogPortal = DialogPrimitive.Portal;
 
 const DialogClose = DialogPrimitive.Close;
 
+type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>;
+type PointerDownOutsideEvent = Parameters<NonNullable<DialogContentProps['onPointerDownOutside']>>[0];
+type InteractOutsideEvent = Parameters<NonNullable<DialogContentProps['onInteractOutside']>>[0];
+
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
@@ -29,11 +33,11 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+  DialogContentProps
 >(({ className, children, onPointerDownOutside, onInteractOutside, ...props }, ref) => {
   // 광고 팝업 등 높은 z-index 요소에서 발생한 이벤트인지 확인
   const handlePointerDownOutside = React.useCallback(
-    (event: React.PointerEvent | PointerEvent | CustomEvent) => {
+    (event: PointerDownOutsideEvent) => {
       // CustomEvent의 경우 (Radix가 사용하는 형태)
       const target = 'target' in event ? event.target as HTMLElement : null;
 
@@ -44,13 +48,13 @@ const DialogContent = React.forwardRef<
       }
 
       // 사용자 정의 핸들러 호출
-      onPointerDownOutside?.(event as any);
+      onPointerDownOutside?.(event);
     },
     [onPointerDownOutside]
   );
 
   const handleInteractOutside = React.useCallback(
-    (event: React.FocusEvent | FocusEvent | CustomEvent) => {
+    (event: InteractOutsideEvent) => {
       const target = 'target' in event ? event.target as HTMLElement : null;
 
       if (target?.closest('[data-popup-overlay]')) {
@@ -58,7 +62,7 @@ const DialogContent = React.forwardRef<
         return;
       }
 
-      onInteractOutside?.(event as any);
+      onInteractOutside?.(event);
     },
     [onInteractOutside]
   );

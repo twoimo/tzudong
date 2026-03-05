@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -258,6 +258,33 @@ div[style*="z-index"]>div>.custom-marker {
 .text-wrap-anywhere {
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+/* ==========================
+   접근성/키보드 탐색 개선
+   ========================== */
+
+.skip-link {
+  position: fixed;
+  inset-inline: auto 0;
+  top: 0;
+  z-index: 9999;
+  transform: translateY(-150%);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 0.75rem 0.75rem;
+  font-weight: 700;
+  transition: transform 0.2s ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }
 
 /* [PERF] GPU 가속 레이어 프로모션 */

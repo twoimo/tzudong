@@ -67,7 +67,7 @@ export const extractRegion = (roadAddress: string | null, jibunAddress: string |
 };
 
 /** 카테고리 데이터 파싱 */
-export const parseCategory = (categoryData: any): string | null => {
+export const parseCategory = (categoryData: unknown): string | null => {
     const categories = parseCategoryList(categoryData);
     return categories[0] || null;
 };

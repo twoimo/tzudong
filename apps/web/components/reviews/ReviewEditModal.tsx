@@ -17,11 +17,10 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, Upload, X as XIcon, AlertCircle, CheckCircle2, Image, Trash2, Plus, Info } from "lucide-react";
+import { ChevronDown, X as XIcon, AlertCircle, CheckCircle2, Trash2, Plus, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
 import { saveDraft as saveEditDraft, getDraft as getEditDraft, deleteDraft as deleteEditDraft } from "@/lib/reviewDraftDB";
 import {
     AlertDialog,
@@ -330,8 +329,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             const finalFoodPhotos = [...existingFoodPhotos, ...uploadedNewPhotoPaths];
 
             // 3. Update review in database
-            const { error: updateError } = await (supabase
-                .from('reviews') as any)
+            const { error: updateError } = await supabase
+                .from('reviews')
                 .update({
                     content: content.trim(),
                     categories: categories,
@@ -339,7 +338,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     is_verified: false, // Require re-verification
                     admin_note: null, // Clear previous admin note
                     updated_at: new Date().toISOString(),
-                })
+                } as never)
                 .eq('id', review.id);
 
             if (updateError) {
@@ -383,8 +382,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
         try {
             // Delete review from database
-            const { error: deleteError } = await (supabase
-                .from('reviews') as any)
+            const { error: deleteError } = await supabase
+                .from('reviews')
                 .delete()
                 .eq('id', review.id)
                 .eq('user_id', user.id); // Ensure user owns the review

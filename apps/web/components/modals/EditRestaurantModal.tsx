@@ -94,7 +94,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     restaurant_phone: editFormData.phone.trim() || null,
                     restaurant_categories: editFormData.category,
                     // target_restaurant_id는 submission 레벨이 아닌 items 레벨에서 저장
-                } as any)
+                } as never)
                 .select('id')
                 .single();
 
@@ -112,7 +112,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
 
             const { error: itemsError } = await supabase
                 .from('restaurant_submission_items')
-                .insert(itemsToInsert as any);
+                .insert(itemsToInsert as never);
 
             if (itemsError) {
                 // 롤백: submission 삭제 (CASCADE로 items도 삭제됨)
@@ -123,9 +123,10 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             await clearDraft();
             toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('제출 실패:', error);
-            toast.error(error.message || '제출에 실패했습니다. 다시 시도해주세요.');
+            const message = error instanceof Error ? error.message : '제출에 실패했습니다. 다시 시도해주세요.';
+            toast.error(message);
         } finally {
             setIsSubmitting(false);
         }

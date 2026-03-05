@@ -13,8 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { Eye, EyeOff, User, Mail, Lock, Trash2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -70,7 +68,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
             // 프로필이 존재하는 경우
             if (data && data.length > 0) {
-                const profileData = data[0] as any;
+                const profileData = data[0] as Profile;
                 setProfile(profileData);
                 setNewNickname(profileData.nickname || "");
             } else {
@@ -97,11 +95,11 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
         setLoading(true);
         try {
-            const { error } = await (supabase
-                .from('profiles') as any)
+            const { error } = await supabase
+                .from('profiles' as never)
                 .update({
                     nickname: newNickname.trim()
-                })
+                } as never)
                 .eq('user_id', user.id);
 
             if (error) throw error;
@@ -166,9 +164,9 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         setLoading(true);
         try {
             // 1. 프로필 익명화 (삭제 대신 닉네임 변경)
-            const { error: profileError } = await (supabase
-                .from('profiles') as any)
-                .update({ nickname: '탈퇴한 사용자' })
+            const { error: profileError } = await supabase
+                .from('profiles' as never)
+                .update({ nickname: '탈퇴한 사용자' } as never)
                 .eq('user_id', user.id);
 
             if (profileError) {
@@ -410,7 +408,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         <AlertDialogTitle>정말로 계정을 삭제하시겠습니까?</AlertDialogTitle>
                                         <AlertDialogDescription>
                                             계정을 탈퇴하면:
-                                            <br />• 작성한 리뷰는 '탈퇴한 사용자'로 유지됩니다
+                                            <br />• 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
                                             <br />• 프로필이 익명화됩니다
                                             <br />• 랭킹에서 제외됩니다
                                             <br />• 자동으로 로그아웃됩니다

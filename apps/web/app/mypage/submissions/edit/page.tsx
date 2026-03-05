@@ -16,7 +16,6 @@ import {
   XCircle,
   AlertCircle,
   MapPin,
-  Store,
   Phone,
   Tag,
   Edit3,
@@ -61,6 +60,12 @@ interface Submission {
   } | null;
 }
 
+interface TargetRestaurantSummary {
+  id: string;
+  name: string;
+  road_address: string | null;
+}
+
 const PAGE_SIZE = 15;
 
 export default function EditSubmissionsPage() {
@@ -86,11 +91,12 @@ export default function EditSubmissionsPage() {
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
       if (error) throw error;
-      if (!submissions || submissions.length === 0) {
+      const typedSubmissions = (submissions ?? []) as Submission[];
+      if (typedSubmissions.length === 0) {
         return { data: [], nextCursor: null };
       }
 
-      const submissionIds = submissions.map((s: { id: string }) => s.id);
+      const submissionIds = typedSubmissions.map((submission) => submission.id);
 
       // 제보 항목 조회
       const { data: items, error: itemsError } = await supabase
@@ -100,12 +106,13 @@ export default function EditSubmissionsPage() {
         .order("created_at", { ascending: true });
 
       if (itemsError) throw itemsError;
+      const typedItems = (items ?? []) as SubmissionItem[];
 
       // 아이템에서 target_restaurant_id 추출
       const targetRestaurantIds = [...new Set(
-        (items || [])
-          .filter((item: any) => item.target_restaurant_id)
-          .map((item: any) => item.target_restaurant_id)
+        typedItems
+          .map((item) => item.target_restaurant_id)
+          .filter((restaurantId): restaurantId is string => Boolean(restaurantId))
       )];
 
       // 대상 맛집 정보 조회
@@ -116,16 +123,17 @@ export default function EditSubmissionsPage() {
           .select("id, name, road_address")
           .in("id", targetRestaurantIds);
 
-        if (restaurants) {
-          targetRestaurants = restaurants.reduce((acc: any, r: any) => {
-            acc[r.id] = { name: r.name, address: r.road_address };
+        const typedRestaurants = (restaurants ?? []) as TargetRestaurantSummary[];
+        if (typedRestaurants.length > 0) {
+          targetRestaurants = typedRestaurants.reduce<Record<string, { name: string; address: string | null }>>((acc, restaurant) => {
+            acc[restaurant.id] = { name: restaurant.name, address: restaurant.road_address };
             return acc;
           }, {});
         }
       }
 
-      const submissionsWithItems: Submission[] = submissions.map((submission: any) => {
-        const submissionItems = (items || []).filter((item: any) => item.submission_id === submission.id) as SubmissionItem[];
+      const submissionsWithItems: Submission[] = typedSubmissions.map((submission) => {
+        const submissionItems = typedItems.filter((item) => item.submission_id === submission.id);
         // 첫 번째 아이템의 target_restaurant 정보를 submission 수준에서 표시
         const firstItemTarget = submissionItems.length > 0 ? submissionItems[0].target_restaurant_id : null;
 
@@ -140,7 +148,7 @@ export default function EditSubmissionsPage() {
 
       return {
         data: submissionsWithItems,
-        nextCursor: submissions.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
+        nextCursor: typedSubmissions.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,

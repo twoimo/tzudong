@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ExternalLink,
   Youtube,
@@ -94,9 +94,12 @@ export default function NewSubmissionsPage() {
 
       if (itemsError) throw itemsError;
 
-      const submissionsWithItems: Submission[] = submissions.map((submission: any) => ({
+      const typedSubmissions = submissions as Submission[];
+      const typedItems = (items || []) as SubmissionItem[];
+
+      const submissionsWithItems: Submission[] = typedSubmissions.map((submission) => ({
         ...submission,
-        items: (items || []).filter((item: any) => item.submission_id === submission.id),
+        items: typedItems.filter((item) => item.submission_id === submission.id),
       }));
 
       return {

@@ -27,26 +27,28 @@ YouTube 자막 청크 생성 유틸리티
 """
 
 import re
-from typing import TypedDict
+from typing import Iterable, List, Optional, TypedDict
+
+
+KOREAN_CHAR_RE = re.compile(r"[가-힣]")
+NON_WHITESPACE_RE = re.compile(r"\S")
 
 
 class Segment(TypedDict):
     start: float
-    duration: float
+    duration: Optional[float]
     text: str
 
 
 class Chunk(TypedDict):
     chunk_index: int
-    segments: list[Segment]
+    segments: List[Segment]
     content: str  # 포맷팅된 텍스트
     char_count: int
     prev_overlap: str
     next_overlap: str
     start_time: float  # 청크 시작 시간 (초)
-    end_time: (
-        float | None
-    )  # 청크 끝 시간 (초), 마지막 세그먼트 duration이 null이면 None
+    end_time: Optional[float]  # 청크 끝 시간 (초), 마지막 세그먼트 duration이 null이면 None
 
 
 # 언어별 설정
@@ -68,6 +70,11 @@ CHUNK_CONFIG = {
         "overlap_fallback": 110,
     },
 }
+
+
+def _segment_to_text(segments: Iterable[Segment]) -> str:
+    """세그먼트 배열을 포맷팅 텍스트 블록으로 변환."""
+    return "\n".join(format_segment(seg) for seg in segments)
 
 
 def format_time(seconds: float) -> str:
@@ -93,8 +100,8 @@ def detect_language(text: str) -> str:
     """텍스트에서 한글 비율로 언어 판단 (30% 이상 → 한국어)"""
     if not text:
         return "other"
-    korean_chars = len(re.findall(r"[가-힣]", text))
-    total_chars = len(re.findall(r"\S", text))  # 공백 제외
+    korean_chars = len(KOREAN_CHAR_RE.findall(text))
+    total_chars = len(NON_WHITESPACE_RE.findall(text))
     if total_chars == 0:
         return "other"
     korean_ratio = korean_chars / total_chars
@@ -102,14 +109,14 @@ def detect_language(text: str) -> str:
 
 
 def create_initial_chunks(
-    segments: list[Segment], max_chars: int
-) -> list[list[Segment]]:
+    segments: List[Segment], max_chars: int
+) -> List[List[Segment]]:
     """
     1차 청크 생성: 세그먼트 단위로 병합하여 최대 글자수 이하로 유지
     세그먼트는 분할하지 않음
     """
-    chunks: list[list[Segment]] = []
-    current_chunk: list[Segment] = []
+    chunks: List[List[Segment]] = []
+    current_chunk: List[Segment] = []
     current_length = 0
 
     for segment in segments:
@@ -132,14 +139,17 @@ def create_initial_chunks(
     return chunks
 
 
-def get_chunk_length(segments: list[Segment]) -> int:
+def get_chunk_length(segments: List[Segment]) -> int:
     """청크의 총 글자수 계산"""
     return sum(len(format_segment(seg)) for seg in segments)
 
 
 def merge_small_chunks(
-    chunks: list[list[Segment]], min_chars: int, max_chars: int, hard_max: int = None
-) -> list[list[Segment]]:
+    chunks: List[List[Segment]],
+    min_chars: int,
+    max_chars: int,
+    hard_max: Optional[int] = None,
+) -> List[List[Segment]]:
     """
     반복적 병합: 모든 청크를 순회하며 최소 글자수 미달 청크 처리
     1. 다음 청크와 병합 가능하면 병합 (max_chars 기준)
@@ -160,7 +170,7 @@ def merge_small_chunks(
     while changed and iteration < max_iterations:
         changed = False
         iteration += 1
-        result: list[list[Segment]] = []
+        result: List[List[Segment]] = []
         skip_next = False
 
         for i, current in enumerate(chunks):
@@ -296,8 +306,8 @@ def generate_overlap(
 
 
 def calculate_segment_end_time(
-    segment: Segment, next_segment: Segment | None = None
-) -> float | None:
+    segment: Segment, next_segment: Optional[Segment] = None
+) -> Optional[float]:
     """
     세그먼트의 끝 시간 계산
     - duration이 있으면 start + duration
@@ -314,8 +324,8 @@ def calculate_segment_end_time(
 
 
 def create_chunks_with_overlap(
-    segments: list[Segment], language: str = None, video_duration: float = None
-) -> list[Chunk]:
+    segments: List[Segment], language: Optional[str] = None, video_duration: Optional[float] = None
+) -> List[Chunk]:
     """
     전체 청크 생성 파이프라인
     1. 언어 감지 (자동 또는 지정)
@@ -337,7 +347,7 @@ def create_chunks_with_overlap(
     if language is None:
         language = detect_language(all_text)
 
-    config = CHUNK_CONFIG[language]
+    config = CHUNK_CONFIG.get(language, CHUNK_CONFIG["other"])
 
     # 1차 청크 생성
     raw_chunks = create_initial_chunks(segments, config["max_chars"])
@@ -348,17 +358,15 @@ def create_chunks_with_overlap(
     )
 
     # 청크 객체 생성 및 오버랩 추가
-    result: list[Chunk] = []
+    result: List[Chunk] = []
 
     for i, chunk_segments in enumerate(merged_chunks):
-        content = "\n".join(format_segment(seg) for seg in chunk_segments)
+        content = _segment_to_text(chunk_segments)
 
         # 이전 청크에서 오버랩 가져오기
         prev_overlap = ""
         if i > 0:
-            prev_content = "\n".join(
-                format_segment(seg) for seg in merged_chunks[i - 1]
-            )
+            prev_content = _segment_to_text(merged_chunks[i - 1])
             prev_overlap = generate_overlap(
                 prev_content,
                 is_start=False,
@@ -370,9 +378,7 @@ def create_chunks_with_overlap(
         # 다음 청크에서 오버랩 가져오기
         next_overlap = ""
         if i < len(merged_chunks) - 1:
-            next_content = "\n".join(
-                format_segment(seg) for seg in merged_chunks[i + 1]
-            )
+            next_content = _segment_to_text(merged_chunks[i + 1])
             next_overlap = generate_overlap(
                 next_content,
                 is_start=True,
@@ -414,7 +420,7 @@ def create_chunks_with_overlap(
 
 
 # 테스트용 함수
-def print_chunks(chunks: list[Chunk]) -> None:
+def print_chunks(chunks: List[Chunk]) -> None:
     """청크 정보 출력 (테스트용)"""
     for chunk in chunks:
         print(f"\n{'='*60}")

@@ -78,7 +78,8 @@ export const compressVideo = async (
 
         // 압축된 파일 읽기
         const data = await ffmpegInstance.readFile(outputName);
-        const blob = new Blob([data as any], { type: 'video/mp4' });
+        const videoBytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
+        const blob = new Blob([videoBytes], { type: 'video/mp4' });
         const compressedFile = new File([blob], `${Date.now()}.mp4`, { type: 'video/mp4' });
 
         // 임시 파일 삭제

@@ -110,6 +110,7 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
     return (
         <nav
             ref={navRef}
+            aria-label="주요 탐색"
             data-testid="bottom-nav"
             style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))` }}
             className={cn(
@@ -136,6 +137,9 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
                     <button
                         key={item.path}
                         data-testid={`bottom-nav-${item.path === '/' ? 'home' : item.path.replace('/', '').replace('/profile', '')}`}
+                        type="button"
+                        aria-label={`${item.label} 페이지로 이동`}
+                        aria-current={isActive ? 'page' : undefined}
                         onClick={() => handleNavClick(item.path)}
                         onTouchStart={() => handleNavIntent(item.path, isActive)}
                         onMouseEnter={() => handleNavIntent(item.path, isActive)}

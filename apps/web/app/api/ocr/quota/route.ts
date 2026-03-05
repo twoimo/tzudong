@@ -15,8 +15,8 @@ export async function GET() {
 
         const MAX_DAILY_QUOTA = 5;
 
-        const { count, error: countError } = await (supabase
-            .from('ocr_logs') as any)
+        const { count, error: countError } = await supabase
+            .from('ocr_logs')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .gte('created_at', today.toISOString());
@@ -39,8 +39,9 @@ export async function GET() {
             resetAt: resetAt.toISOString()
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Quota check failed:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Quota check failed';
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

@@ -120,9 +120,15 @@ export default function BookmarksPage() {
             ) : (
                 <div className="space-y-4">
                     {visibleBookmarks.map((bookmark) => {
+                        const restaurantWithMergedLinks = bookmark.restaurant as typeof bookmark.restaurant & {
+                            mergedYoutubeLinks?: string[];
+                        };
+
                         // 병합된 YouTube 링크 배열 처리
-                        const youtubeLinks = (bookmark.restaurant as any).mergedYoutubeLinks ||
-                            (bookmark.restaurant.youtube_link ? [bookmark.restaurant.youtube_link] : []);
+                        const youtubeLinks = (
+                            restaurantWithMergedLinks.mergedYoutubeLinks
+                            ?? (bookmark.restaurant.youtube_link ? [bookmark.restaurant.youtube_link] : [])
+                        ).filter((link): link is string => typeof link === 'string' && link.length > 0);
 
                         // 첫 번째 유효한 썸네일 찾기
                         let thumbnailUrl = null;

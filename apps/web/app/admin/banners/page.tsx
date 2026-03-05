@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo, Suspense, useEffect } from 'react';
+import { useState, useRef, useMemo, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -57,8 +57,6 @@ import {
     Upload,
     X,
     ArrowLeft,
-    Eye,
-    EyeOff,
     Monitor,
     Smartphone,
     ExternalLink,
@@ -126,9 +124,6 @@ function BannerManagementPage() {
     // 삭제 확인 다이얼로그
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [bannerToDelete, setBannerToDelete] = useState<AdBanner | null>(null);
-
-    // 미리보기 모드
-    const [previewMode, setPreviewMode] = useState<'sidebar' | 'mobile' | null>(null);
 
     // 권한 체크
     useEffect(() => {
@@ -898,7 +893,7 @@ function BannerManagementPage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>배너 삭제</AlertDialogTitle>
                             <AlertDialogDescription>
-                                "{bannerToDelete?.title}" 배너를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+                                &quot;{bannerToDelete?.title}&quot; 배너를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

@@ -36,7 +36,6 @@ import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 
 import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
-import { useToast } from "@/hooks/use-toast";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPanel";
 import { REGIONS, extractRegion, parseCategory, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
@@ -221,12 +220,11 @@ RestaurantCard.displayName = 'RestaurantCard';
 
 interface RestaurantRowProps {
     restaurant: Restaurant;
-    visited: boolean;
     isSelected: boolean;
     onClick: (restaurant: Restaurant) => void;
 }
 
-const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: RestaurantRowProps) => {
+const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowProps) => {
     const category = parseCategory(restaurant.category || (restaurant as any).categories);
     const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
     const reviewCount = (restaurant as any).verified_review_count ?? restaurant.review_count ?? 0;
@@ -295,9 +293,6 @@ export default function StampPage() {
             window.removeEventListener('resize', redirectIfDesktop);
         };
     }, [router]);
-
-
-    const { toast } = useToast();
 
     // --- 상태 (State) ---
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -897,9 +892,7 @@ export default function StampPage() {
         setShowStampGuide(false);
     }, []);
 
-    const handleGuideThumbnailChange = useCallback((_id: string, _index: number) => {
-        return;
-    }, []);
+    const handleGuideThumbnailChange = useCallback(() => {}, []);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -1249,7 +1242,6 @@ export default function StampPage() {
                                                 <RestaurantRow
                                                     key={restaurant.id}
                                                     restaurant={restaurant}
-                                                    visited={isVisited(restaurant.id)}
                                                     isSelected={selectedRestaurant?.id === restaurant.id}
                                                     onClick={handleRestaurantClick}
                                                 />

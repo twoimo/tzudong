@@ -2,6 +2,27 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+interface SearchCountRpcArgs {
+    restaurant_id: string;
+    user_id: string | null;
+    session_id: string | null;
+    ip_address: string | null;
+    user_agent: string | null;
+}
+
+interface SearchCountRpcResponse {
+    success: boolean;
+    reason: string;
+    message: string;
+}
+
+interface SearchCountRpcClient {
+    rpc: (
+        fn: string,
+        args: SearchCountRpcArgs
+    ) => Promise<{ data: SearchCountRpcResponse | null; error: { message: string } | null }>;
+}
+
 // 세션 ID 생성 (비로그인 사용자용)
 function getSessionId(): string {
     if (typeof window === 'undefined') return '';
@@ -32,7 +53,8 @@ export async function incrementSearchCount(restaurantId: string): Promise<{
         const sessionId = user ? null : getSessionId();
 
         // RPC 호출
-        const { data, error } = await (supabase as any).rpc('increment_search_count', {
+        const rpcClient = supabase as unknown as SearchCountRpcClient;
+        const { data, error } = await rpcClient.rpc('increment_search_count', {
             restaurant_id: restaurantId,
             user_id: user?.id || null,
             session_id: sessionId,

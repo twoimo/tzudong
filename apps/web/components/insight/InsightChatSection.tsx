@@ -311,7 +311,8 @@ export function updateConversationDraftMap(
 
     if (shouldClear) {
         if (!(normalizedId in draftMap)) return draftMap;
-        const { [normalizedId]: _removed, ...rest } = draftMap;
+        const rest = { ...draftMap };
+        delete rest[normalizedId];
         return rest;
     }
 
@@ -3773,12 +3774,6 @@ type TreemapChartDimensions = {
 
 // 메인 트리맵과 동일한 녹색 그라데이션 — 일관된 시각 언어
 const CHAT_TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
-const CHAT_TREEMAP_MAX_LEAVES = 2000;
-const CHAT_TREEMAP_MIN_LEAVES = 5;
-const CHAT_TREEMAP_MOBILE_MAX_LEAVES = 2000;
-const CHAT_TREEMAP_MOBILE_MIN_LEAVES = 4;
-const CHAT_TREEMAP_TABLET_MAX_LEAVES = 2000;
-const CHAT_TREEMAP_TABLET_MIN_LEAVES = 5;
 const CHAT_TREEMAP_MIN_WIDTH = 320;
 const CHAT_TREEMAP_TABLET_MIN_WIDTH = 280;
 const CHAT_TREEMAP_MOBILE_MIN_WIDTH = 220;
@@ -3789,10 +3784,6 @@ const CHAT_TREEMAP_MAX_HEIGHT = 1400;
 const CHAT_TREEMAP_ASPECT_RATIO = 1.0;
 const CHAT_TREEMAP_TOOLTIP_WIDTH = 280;
 const CHAT_TREEMAP_TOOLTIP_HEIGHT = 160;
-const CHAT_TREEMAP_AREA_PER_CELL = 800;
-const CHAT_TREEMAP_MOBILE_AREA_PER_CELL = 1200;
-const CHAT_TREEMAP_TABLET_AREA_PER_CELL = 1000;
-const CHAT_TREEMAP_MAX_LAYOUT_TOP_SHARE = 0.52;
 const CHAT_TREEMAP_EMPTY_MESSAGE = '트리맵에 표시할 데이터가 없습니다.';
 
 const CHAT_TREEMAP_MOBILE_BP = 768;

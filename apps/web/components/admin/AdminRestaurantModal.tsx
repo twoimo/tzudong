@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -33,18 +32,6 @@ import {
     ADMIN_MODAL_FOOTER_DIVIDER,
     ADMIN_MODAL_SCROLL_BODY,
 } from "@/components/admin/admin-modal-styles";
-
-// 해외 국가 목록
-const OVERSEAS_COUNTRIES = [
-    "미국", "USA", "United States",
-    "일본", "Japan",
-    "대만", "Taiwan",
-    "태국", "Thailand",
-    "인도네시아", "Indonesia",
-    "튀르키예", "Turkey", "Türkiye",
-    "헝가리", "Hungary",
-    "오스트레일리아", "Australia"
-];
 
 // YouTube Video ID 추출 함수
 const extractVideoId = (url: string): string | null => {
@@ -151,6 +138,32 @@ interface AdminRestaurantModalProps {
     onSuccess: (updatedRestaurant?: Restaurant) => void;
 }
 
+type AddressElement = Record<string, unknown>;
+type AddressElementsValue = AddressElement | AddressElement[] | null;
+
+interface GeocodingResultItem {
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: AddressElementsValue;
+    x: string;
+    y: string;
+}
+
+interface NaverGeocodeAddressItem {
+    roadAddress: string;
+    jibunAddress: string;
+    englishAddress: string;
+    addressElements: AddressElementsValue;
+    x: string;
+    y: string;
+}
+
+interface NaverGeocodeResponse {
+    error?: string;
+    addresses?: NaverGeocodeAddressItem[];
+}
+
 export function AdminRestaurantModal({
     isOpen,
     onClose,
@@ -164,14 +177,7 @@ export function AdminRestaurantModal({
     const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
     const [isGeocodingGoogle, setIsGeocodingGoogle] = useState(false);
     const [isGeocoded, setIsGeocoded] = useState(false); // 재지오코딩 완료 여부
-    const [geocodingResults, setGeocodingResults] = useState<Array<{
-        road_address: string;
-        jibun_address: string;
-        english_address: string;
-        address_elements: any;
-        x: string;
-        y: string;
-    }>>([]);
+    const [geocodingResults, setGeocodingResults] = useState<GeocodingResultItem[]>([]);
     const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
     const [formData, setFormData] = useState({
         name: "",
@@ -179,7 +185,7 @@ export function AdminRestaurantModal({
         road_address: "",
         jibun_address: "",
         english_address: "",
-        address_elements: null as any,
+        address_elements: null as AddressElementsValue,
         phone: "",
         categories: [] as string[],
         youtube_reviews: [] as { id: string; youtube_link: string; tzuyang_review: string }[],
@@ -246,7 +252,7 @@ export function AdminRestaurantModal({
                 road_address: restaurant.road_address || "",
                 jibun_address: restaurant.jibun_address || "",
                 english_address: restaurant.english_address || "",
-                address_elements: restaurant.address_elements || null,
+                address_elements: (restaurant.address_elements as AddressElementsValue) || null,
                 phone: restaurant.phone || "",
                 categories: allCategories,
                 youtube_reviews: youtubeReviews,
@@ -292,7 +298,7 @@ export function AdminRestaurantModal({
         road_address: string;
         jibun_address: string;
         english_address: string;
-        address_elements: any;
+        address_elements: AddressElementsValue;
         x: string;
         y: string;
     }>) => {
@@ -306,12 +312,6 @@ export function AdminRestaurantModal({
         });
     };
 
-    // 해외 주소 감지 함수
-    const isOverseasAddress = (address: string, englishAddress?: string): boolean => {
-        const checkText = `${address} ${englishAddress || ''}`;
-        return OVERSEAS_COUNTRIES.some(country => checkText.includes(country));
-    };
-
     // Google Geocoding API 호출 함수
     const geocodeWithGoogle = async (address: string, limit: number = 3) => {
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -321,7 +321,7 @@ export function AdminRestaurantModal({
             return await geocodeWithGoogleMapsJs(address, apiKey, limit);
         } catch (error) {
             console.error('Google Geocoding 에러:', error);
-            throw error as any;
+            throw error instanceof Error ? error : new Error(String(error));
         }
     };
 
@@ -331,12 +331,13 @@ export function AdminRestaurantModal({
             const { data, error } = await supabase.functions.invoke('naver-geocode', {
                 body: { query: address, count: limit }
             });
+            const geocodeData = data as NaverGeocodeResponse | null;
 
             if (error) throw new Error(error.message || JSON.stringify(error));
-            if (!data || data.error) throw new Error(data?.error || '지오코딩 실패');
-            if (!data.addresses || data.addresses.length === 0) return [];
+            if (!geocodeData || geocodeData.error) throw new Error(geocodeData?.error || '지오코딩 실패');
+            if (!geocodeData.addresses || geocodeData.addresses.length === 0) return [];
 
-            return data.addresses.slice(0, limit).map((addr: any) => ({
+            return geocodeData.addresses.slice(0, limit).map((addr) => ({
                 road_address: addr.roadAddress,
                 jibun_address: addr.jibunAddress,
                 english_address: addr.englishAddress,
@@ -464,47 +465,6 @@ export function AdminRestaurantModal({
         toast.success('주소가 선택되었습니다');
     };
 
-    // 네이버 지오코딩 API (단일 - 기존 호환용)
-    const geocodeWithNaver = async (address: string) => {
-        try {
-            const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
-            const clientSecret = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_SECRET;
-
-            const response = await fetch(
-                `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`,
-                {
-                    headers: {
-                        'X-NCP-APIGW-API-KEY-ID': clientId || '',
-                        'X-NCP-APIGW-API-KEY': clientSecret || '',
-                    }
-                }
-            );
-
-            const data = await response.json();
-
-            if (data.addresses && data.addresses.length > 0) {
-                const result = data.addresses[0];
-                return {
-                    road_address: result.roadAddress || "",
-                    jibun_address: result.jibunAddress || "",
-                    english_address: result.englishAddress || "",
-                    address_elements: result.addressElements || [],
-                    lat: parseFloat(result.y),
-                    lng: parseFloat(result.x),
-                };
-            }
-            return null;
-        } catch (error) {
-            console.error("Naver Geocoding error:", error);
-            return null;
-        }
-        toast.success('주소가 선택되었습니다');
-    };
-
-    const handleAddressBlur = async () => {
-        // 더 이상 사용하지 않음
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -556,11 +516,6 @@ export function AdminRestaurantModal({
                     ? restaurant.mergedRestaurants.map(r => r.id)
                     : [restaurant.id];
 
-                // 기존 유튜브 링크들
-                const existingYoutubeLinks = formData.youtube_reviews
-                    .filter(r => existingIds.includes(r.id))
-                    .map(r => r.youtube_link.trim());
-
                 // 새로운 유튜브 링크들 (id가 'new-'로 시작하는 것들)
                 const newReviews = formData.youtube_reviews.filter(r => r.id.startsWith('new-'));
 
@@ -584,9 +539,9 @@ export function AdminRestaurantModal({
                 }
 
                 // 2. 공통 필드를 모든 기존 레코드에 업데이트
-                const { error: commonError } = await (supabase
-                    .from("restaurants") as any)
-                    .update(commonData)
+                const { error: commonError } = await supabase
+                    .from("restaurants" as never)
+                    .update(commonData as never)
                     .in("id", existingIds);
 
                 if (commonError) throw commonError;
@@ -595,12 +550,12 @@ export function AdminRestaurantModal({
                 for (const review of formData.youtube_reviews) {
                     if (review.id.startsWith('new-')) continue; // 새 레코드는 스킵
 
-                    const { error: reviewError } = await (supabase
-                        .from("restaurants") as any)
+                    const { error: reviewError } = await supabase
+                        .from("restaurants" as never)
                         .update({
                             youtube_link: review.youtube_link.trim() || null,
                             tzuyang_review: review.tzuyang_review.trim() || null,
-                        })
+                        } as never)
                         .eq("id", review.id);
 
                     if (reviewError) {
@@ -652,8 +607,8 @@ export function AdminRestaurantModal({
                     }
 
                     // 신규 레코드 생성
-                    const { error: insertError } = await (supabase
-                        .from("restaurants") as any)
+                    const { error: insertError } = await supabase
+                        .from("restaurants" as never)
                         .insert({
                             ...commonData,
                             // DB 스키마 기준: restaurants는 trace_id가 unique key
@@ -666,7 +621,7 @@ export function AdminRestaurantModal({
                             geocoding_success: true,
                             is_missing: false,
                             is_not_selected: false,
-                        });
+                        } as never);
 
                     if (insertError) {
                         console.error('신규 레코드 추가 실패:', insertError);
@@ -694,8 +649,9 @@ export function AdminRestaurantModal({
                     .in("id", existingIds);
 
                 if (allUpdatedRestaurants && allUpdatedRestaurants.length > 0) {
-                    const primaryRestaurant = (allUpdatedRestaurants as any[]).find(r => r.id === restaurant.id);
-                    const mergedChildren = (allUpdatedRestaurants as any[]).filter(r => r.id !== restaurant.id);
+                    const typedUpdatedRestaurants = allUpdatedRestaurants as Restaurant[];
+                    const primaryRestaurant = typedUpdatedRestaurants.find((updatedRestaurant) => updatedRestaurant.id === restaurant.id);
+                    const mergedChildren = typedUpdatedRestaurants.filter((updatedRestaurant) => updatedRestaurant.id !== restaurant.id);
 
                     if (primaryRestaurant) {
                         const finalRestaurant = {
@@ -725,7 +681,7 @@ export function AdminRestaurantModal({
                     lng,
                 };
 
-                const { error } = await (supabase.from("restaurants") as any).insert(restaurantData);
+                const { error } = await supabase.from("restaurants" as never).insert(restaurantData as never);
                 if (error) throw error;
 
                 toast.success("맛집이 등록되었습니다");
@@ -1078,7 +1034,7 @@ export function AdminRestaurantModal({
 
                         {formData.youtube_reviews.length === 0 ? (
                             <div className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
-                                등록된 유튜브 링크가 없습니다. '+ 추가' 버튼을 눌러 추가하세요.
+                                등록된 유튜브 링크가 없습니다. &apos;+ 추가&apos; 버튼을 눌러 추가하세요.
                             </div>
                         ) : (
                             <div className="space-y-3">

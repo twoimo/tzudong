@@ -54,13 +54,27 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-CACHE_TTL_SECONDS = int(os.getenv("STORYBOARD_AGENT_CACHE_TTL_SECONDS", "120"))
-CACHE_MAX_ENTRIES = int(os.getenv("STORYBOARD_AGENT_CACHE_MAX_ENTRIES", "200"))
-TOOL_PREWARM = os.getenv("STORYBOARD_AGENT_PREWARM", "false").lower() in (
-    "1",
-    "true",
-    "yes",
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _ensure_positive(name: str, value: int, fallback: int) -> int:
+    if value > 0:
+        return value
+    logger.warning("Invalid non-positive value for %s, fallback: %s", name, fallback)
+    return fallback
+
+
+CACHE_TTL_SECONDS = _env_int("STORYBOARD_AGENT_CACHE_TTL_SECONDS", 120)
+CACHE_MAX_ENTRIES = _ensure_positive(
+    "STORYBOARD_AGENT_CACHE_MAX_ENTRIES",
+    _env_int("STORYBOARD_AGENT_CACHE_MAX_ENTRIES", 200),
+    200,
 )
+TOOL_PREWARM = _env_bool("STORYBOARD_AGENT_PREWARM", False)
 
 _tools_module: Any | None = None
 _tools_lock = threading.Lock()
@@ -101,15 +115,13 @@ STORYBOARD_AGENT_LLM_MODEL = (
     os.getenv("STORYBOARD_AGENT_LLM_MODEL", "gemini-3-flash-preview").strip()
     or "gemini-3-flash-preview"
 )
-STORYBOARD_AGENT_LLM_TIMEOUT_MS = _env_int("STORYBOARD_AGENT_LLM_TIMEOUT_MS", STORYBOARD_AGENT_REQUEST_TIMEOUT_MS)
+STORYBOARD_AGENT_LLM_TIMEOUT_MS = _env_int(
+    "STORYBOARD_AGENT_LLM_TIMEOUT_MS",
+    STORYBOARD_AGENT_REQUEST_TIMEOUT_MS,
+)
 if STORYBOARD_AGENT_LLM_TIMEOUT_MS < 200:
     STORYBOARD_AGENT_LLM_TIMEOUT_MS = 200
-STORYBOARD_AGENT_USE_LLM = os.getenv("STORYBOARD_AGENT_USE_LLM", "true").lower() in (
-    "1",
-    "true",
-    "yes",
-    "on",
-)
+STORYBOARD_AGENT_USE_LLM = _env_bool("STORYBOARD_AGENT_USE_LLM", True)
 STORYBOARD_AGENT_GEMINI_API_KEY = (
     os.getenv("STORYBOARD_AGENT_GEMINI_API_KEY")
     or os.getenv("GEMINI_API_KEY")
@@ -132,36 +144,38 @@ STORYBOARD_AGENT_MODEL_FALLBACK = (
     or STORYBOARD_AGENT_NANO_BANANA_MODEL
 ).strip()
 
-STORYBOARD_AGENT_BMAD_ENABLED = os.getenv("STORYBOARD_AGENT_BMAD_ENABLED", "true").lower() in (
-    "1",
-    "true",
-    "yes",
-    "on",
-)
+STORYBOARD_AGENT_BMAD_ENABLED = _env_bool("STORYBOARD_AGENT_BMAD_ENABLED", True)
 STORYBOARD_AGENT_DEFAULT_PROFILE = (
     os.getenv("STORYBOARD_AGENT_DEFAULT_PROFILE", "nanobanana").strip()
     or "nanobanana"
 )
-STORYBOARD_AGENT_BMAD_MAX_AGENTS = _env_int("STORYBOARD_AGENT_BMAD_MAX_AGENTS", 3)
-if STORYBOARD_AGENT_BMAD_MAX_AGENTS <= 0:
-    STORYBOARD_AGENT_BMAD_MAX_AGENTS = 3
-STORYBOARD_AGENT_MAX_RESEARCH_QUERIES = _env_int("STORYBOARD_AGENT_MAX_RESEARCH_QUERIES", 3)
-if STORYBOARD_AGENT_MAX_RESEARCH_QUERIES <= 0:
-    STORYBOARD_AGENT_MAX_RESEARCH_QUERIES = 3
-STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT = _env_int("STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT", 12)
-if STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT <= 0:
-    STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT = 12
+STORYBOARD_AGENT_BMAD_MAX_AGENTS = _ensure_positive(
+    "STORYBOARD_AGENT_BMAD_MAX_AGENTS",
+    _env_int("STORYBOARD_AGENT_BMAD_MAX_AGENTS", 3),
+    3,
+)
+STORYBOARD_AGENT_MAX_RESEARCH_QUERIES = _ensure_positive(
+    "STORYBOARD_AGENT_MAX_RESEARCH_QUERIES",
+    _env_int("STORYBOARD_AGENT_MAX_RESEARCH_QUERIES", 3),
+    3,
+)
+STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT = _ensure_positive(
+    "STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT",
+    _env_int("STORYBOARD_AGENT_BMAD_TRANSCRIPT_LIMIT", 12),
+    12,
+)
 
-STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED = os.getenv(
-    "STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED",
-    "true",
-).lower() in ("1", "true", "yes", "on")
-STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD = _env_int("STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD", 3)
-if STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD <= 0:
-    STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD = 3
-STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS = _env_int("STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS", 30)
-if STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS <= 0:
-    STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS = 30
+STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED = _env_bool("STORYBOARD_AGENT_CIRCUIT_BREAKER_ENABLED", True)
+STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD = _ensure_positive(
+    "STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD",
+    _env_int("STORYBOARD_AGENT_CIRCUIT_BREAKER_THRESHOLD", 3),
+    3,
+)
+STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS = _ensure_positive(
+    "STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS",
+    _env_int("STORYBOARD_AGENT_CIRCUIT_BREAKER_RESET_SECONDS", 30),
+    30,
+)
 
 _tool_circuit_failures: dict[str, int] = {}
 _tool_circuit_open_until: dict[str, float] = {}
@@ -651,7 +665,7 @@ def _storyboard_transcript_key(doc: dict[str, Any]) -> str:
 def _search_storyboard_by_query(
     tools: Any,
     query: str,
-    query_weight: int,
+    query_position: int,
 ) -> list[tuple[dict[str, Any], int]]:
     try:
         payload = _invoke_tool(
@@ -680,14 +694,14 @@ def _search_storyboard_by_query(
             normalized["metadata"] = metadata
         is_peak = bool(metadata.get("is_peak"))
         text = normalized.get("page_content", "")
-        score = (STORYBOARD_AGENT_MAX_RESEARCH_QUERIES - query_weight) * 14
+        score = (STORYBOARD_AGENT_MAX_RESEARCH_QUERIES - query_position) * 14
         score += max(0, 12 - rank)
         score += len(str(text)) / 120.0
         if is_peak:
             score += 10
         normalized["__searchScore"] = score
-        normalized["__queryWeight"] = query_weight
-        output.append((normalized, int(query_weight)))
+        normalized["__queryWeight"] = query_position
+        output.append((normalized, int(query_position)))
     return output
 
 
@@ -717,13 +731,19 @@ def _research_storyboard_transcripts(
             except Exception:
                 logger.debug("Storyboard planner/research task failed: %s", future_map[future])
                 continue
-            for item, _ in results:
+            for item, query_position in results:
                 key = _storyboard_transcript_key(item)
                 existing = merged.get(key)
                 if existing is None:
                     merged[key] = item
                     continue
-                if item.get("__searchScore", 0) > existing.get("__searchScore", 0):
+                current_score = item.get("__searchScore", 0)
+                existing_score = existing.get("__searchScore", 0)
+                if current_score > existing_score or (
+                    current_score == existing_score
+                    and query_position
+                    < existing.get("__queryWeight", query_position)
+                ):
                     merged[key] = item
 
     if not merged:
@@ -1226,7 +1246,7 @@ async def chat(payload: StoryboardChatRequest):
 if __name__ == "__main__":
     host = os.getenv("STORYBOARD_AGENT_HOST", "0.0.0.0")
     port = int(os.getenv("STORYBOARD_AGENT_PORT", "8001"))
-    reload = os.getenv("STORYBOARD_AGENT_RELOAD", "false").lower() in ("1", "true", "yes")
+    reload = _env_bool("STORYBOARD_AGENT_RELOAD", False)
     log_level = os.getenv("STORYBOARD_AGENT_LOG_LEVEL", "info")
     logging.basicConfig(level=log_level.upper())
 

@@ -76,12 +76,18 @@ function normalizeAddress(address: string): string {
 
 import { perfMonitor } from "@/lib/performance-monitor";
 
-type IntermediateRestaurant = DBRestaurant & {
-    mergedRestaurants?: DBRestaurant[];
-    mergedYoutubeLinks?: string[];
-    mergedTzuyangReviews?: string[];
-    mergedYoutubeMetas?: YoutubeMeta[];
+type RestaurantWithOptionalName = DBRestaurant & {
+    name?: string | null;
+    approved_name?: string | null;
 };
+
+type ReviewCountRow = {
+    restaurant_id: string | null;
+};
+
+function getRestaurantName(restaurant: RestaurantWithOptionalName): string {
+    return restaurant.name || restaurant.approved_name || '';
+}
 
 /**
  * 레스토랑 데이터 병합 함수
@@ -116,8 +122,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
     // 1. 데이터 정규화 및 인덱싱 (O(N))
     const normalizedData = restaurants.map((r, i) => {
-        // [Fix] r.name이 없으면 approved_name 사용 (RPC 결과 등)
-        const name = (r as any).name || (r as any).approved_name || '';
+        const name = getRestaurantName(r as RestaurantWithOptionalName);
         const addr = normalizeAddress(r.jibun_address || r.road_address || '');
 
         if (name) {
@@ -170,8 +175,8 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
         // 이름 길이순으로 정렬하여 가장 긴 이름을 메인으로 사용
         const sortedByNameLength = [...groupRestaurants].sort((a, b) => {
-            const nameA = (a as any).name || (a as any).approved_name || '';
-            const nameB = (b as any).name || (b as any).approved_name || '';
+            const nameA = getRestaurantName(a as RestaurantWithOptionalName);
+            const nameB = getRestaurantName(b as RestaurantWithOptionalName);
             return nameB.length - nameA.length;
         });
 
@@ -216,7 +221,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
         return {
             ...mainRestaurant,
-            name: (mainRestaurant as any).name || (mainRestaurant as any).approved_name || '',
+            name: getRestaurantName(mainRestaurant as RestaurantWithOptionalName),
             lat,
             lng,
             categories: allCategories,
@@ -224,7 +229,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
             category: allCategories,
             youtube_link: mergedYoutubeLinks[0] || null,
             tzuyang_review: mergedTzuyangReviews[0] || null,
-            youtube_meta: (mergedYoutubeMetas[0] || null) as any,
+            youtube_meta: mergedYoutubeMetas[0] || null,
             mergedYoutubeLinks,
             mergedTzuyangReviews,
             mergedYoutubeMetas,
@@ -287,11 +292,6 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // 지역(Region) 필터 적용
             if (region) {
-                // @ts-ignore - Check if region exists in OVERSEAS_REGIONS (using dynamic check to avoid import loops if any)
-                // But better to import it.
-                // Dynamic import or check string format?
-                // Let's assume we imported OVERSEAS_REGIONS at top level.
-
                 if (region === "울릉도") {
                     // 울릉도는 주소에 '울릉'이 포함된 데이터 필터링
                     query = query.or(`road_address.ilike.%울릉%,jibun_address.ilike.%울릉%`);
@@ -330,8 +330,9 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             }
 
             // 승인된 리뷰 수 조회
-            const restaurantIds = ((data || []) as any[]).map(r => r.id);
-            let verifiedCountMap = new Map<string, number>();
+            const rawRestaurants = (data || []) as RestaurantWithOptionalName[];
+            const restaurantIds = rawRestaurants.map(r => r.id);
+            const verifiedCountMap = new Map<string, number>();
 
             if (restaurantIds.length > 0) {
                 const { data: reviewCounts } = await supabase
@@ -340,18 +341,19 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     .in('restaurant_id', restaurantIds)
                     .eq('is_verified', true);
 
-                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                (reviewCounts as ReviewCountRow[] | null)?.forEach((r) => {
+                    if (!r.restaurant_id) return;
                     verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
                 });
             }
 
             // 병합 로직 적용
-            const restaurants = mergeRestaurants(data || []);
+            const restaurants = mergeRestaurants(rawRestaurants);
 
             // 승인된 리뷰 수 추가 (병합된 모든 레스토랑 ID의 리뷰 합산)
             return restaurants.map(r => {
                 // 병합된 레스토랑들의 모든 ID에 대한 verified_review_count 합산
-                const mergedIds = r.mergedRestaurants?.map((mr: any) => mr.id) || [r.id];
+                const mergedIds = r.mergedRestaurants?.map((mr) => mr.id) || [r.id];
                 const totalVerifiedCount = mergedIds.reduce((sum: number, id: string) =>
                     sum + (verifiedCountMap.get(id) || 0), 0);
                 return {

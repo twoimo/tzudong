@@ -29,7 +29,9 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
 
     return (
         <Button
+            type="button"
             onClick={onClick}
+            aria-label="맛집 제보하기"
             className={cn(
                 "fixed z-50",
                 // 모바일/태블릿: 우측 하단 (검색 버튼 위)

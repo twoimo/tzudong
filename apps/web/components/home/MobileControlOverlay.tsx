@@ -4,12 +4,13 @@ import { memo, useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense
 import { Filter, Search, X, MapPin, Check, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Region, REGIONS } from '@/types/restaurant';
+import { Region, REGIONS, Restaurant } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from 'sonner';
+import type { User } from '@supabase/supabase-js';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -69,12 +70,12 @@ interface MobileControlOverlayProps {
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
-    onRestaurantSelect: (restaurant: any) => void;
-    onRestaurantSearch: (restaurant: any) => void;
+    onRestaurantSelect: (restaurant: Restaurant) => void;
+    onRestaurantSearch: (restaurant: Restaurant) => void;
     onSearchExecute: (region?: Region | null) => void;
     isAdmin?: boolean;
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
-    user?: any;
+    user?: User | null;
     onSubmissionClick?: () => void;
 }
 
@@ -97,7 +98,6 @@ function MobileControlOverlayComponent({
     onRestaurantSelect,
     onRestaurantSearch,
     onSearchExecute,
-    isAdmin = false,
     onModeChange,
     user,
     onSubmissionClick,
@@ -413,16 +413,25 @@ function MobileControlOverlayComponent({
         const handleTouchEnd = () => {
             handleDragEnd('handle');
         };
+        const handleTouchStartListener: EventListener = (event) => {
+            handleTouchStart(event as TouchEvent);
+        };
+        const handleTouchMoveListener: EventListener = (event) => {
+            handleTouchMove(event as TouchEvent);
+        };
+        const handleMouseDownListener: EventListener = (event) => {
+            handleMouseDown(event as MouseEvent);
+        };
 
         // 터치 이벤트
-        handleEl.addEventListener('touchstart', handleTouchStart as any, { passive: true });
-        handleEl.addEventListener('touchmove', handleTouchMove as any, { passive: false });
+        handleEl.addEventListener('touchstart', handleTouchStartListener, { passive: true });
+        handleEl.addEventListener('touchmove', handleTouchMoveListener, { passive: false });
         handleEl.addEventListener('touchmove', preventPullToRefresh, { passive: false });
         handleEl.addEventListener('touchend', handleTouchEnd, { passive: true });
         handleEl.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
         // 마우스 이벤트 (핸들에서 시작)
-        handleEl.addEventListener('mousedown', handleMouseDown as any);
+        handleEl.addEventListener('mousedown', handleMouseDownListener);
 
         // 마우스 move/up은 window에 등록 (핸들 밖으로 드래그해도 동작)
         const handleWindowMouseMove = (e: MouseEvent) => {
@@ -442,12 +451,12 @@ function MobileControlOverlayComponent({
         window.addEventListener('mouseup', handleWindowMouseUp);
 
         return () => {
-            handleEl.removeEventListener('touchstart', handleTouchStart as any);
-            handleEl.removeEventListener('touchmove', handleTouchMove as any);
+            handleEl.removeEventListener('touchstart', handleTouchStartListener);
+            handleEl.removeEventListener('touchmove', handleTouchMoveListener);
             handleEl.removeEventListener('touchmove', preventPullToRefresh);
             handleEl.removeEventListener('touchend', handleTouchEnd);
             handleEl.removeEventListener('touchcancel', handleTouchEnd);
-            handleEl.removeEventListener('mousedown', handleMouseDown as any);
+            handleEl.removeEventListener('mousedown', handleMouseDownListener);
             window.removeEventListener('mousemove', handleWindowMouseMove);
             window.removeEventListener('mouseup', handleWindowMouseUp);
         };
@@ -814,7 +823,7 @@ function MobileControlOverlayComponent({
                                                     handleClose();
                                                 }}
                                                 filters={filters}
-                                                selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
+                                                selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
                                                 isKoreanOnly={mapMode === 'domestic'}
                                                 maxItems={3} // 모바일에서는 3개씩만 표시
                                             />

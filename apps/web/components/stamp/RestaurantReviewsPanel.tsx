@@ -79,7 +79,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
         );
     }
 
-    const category = parseCategory(restaurant.category || (restaurant as any).categories);
+    const category = parseCategory(restaurant.category ?? restaurant.categories);
 
     return (
         <div className="flex flex-col h-full">

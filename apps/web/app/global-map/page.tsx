@@ -364,7 +364,7 @@ export default function GlobalMapPage() {
                     status: 'pending',
                     restaurant_name: editFormData.name,
                     restaurant_address: editFormData.address,
-                } as any)
+                } as never)
                 .select('id')
                 .single();
 
@@ -382,7 +382,7 @@ export default function GlobalMapPage() {
 
             const { error: itemsError } = await supabase
                 .from('restaurant_submission_items')
-                .insert(items as any);
+                .insert(items as never);
 
             if (itemsError) throw itemsError;
 

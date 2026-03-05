@@ -14,7 +14,6 @@ import {
     Loader2,
     Clock,
     AlertCircle,
-    User,
     Youtube,
     Edit,
     Search,
@@ -42,6 +41,7 @@ import {
     ApprovalData,
     GeocodingResult,
     ItemDecision,
+    NaverSearchResult,
 } from './SubmissionDetailView';
 import {
     TooltipProvider,
@@ -58,6 +58,8 @@ import {
     ADMIN_MODAL_SCROLL_BODY,
     ADMIN_MODAL_SCROLL_BODY_COMPACT,
 } from './admin-modal-styles';
+
+const SUBMISSION_TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
 
 // Supabase Storage에서 리뷰 사진 public URL 생성
 function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
@@ -77,21 +79,6 @@ function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
         url += `?t=${new Date(cacheBuster).getTime()}`;
     }
     return url;
-}
-
-// YouTube 비디오 ID 추출
-function getYoutubeVideoId(url: string | undefined): string | null {
-    if (!url) return null;
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
-        /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
-        /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-    ];
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1]) return match[1];
-    }
-    return null;
 }
 
 // 리뷰 타입 정의
@@ -278,7 +265,7 @@ export function SubmissionListView({
 
     // 네이버 검색 검증 상태
     const [naverSearchLoading, setNaverSearchLoading] = useState(false);
-    const [naverSearchResults, setNaverSearchResults] = useState<any[]>([]);
+    const [naverSearchResults, setNaverSearchResults] = useState<NaverSearchResult[]>([]);
     const [showWarningModal, setShowWarningModal] = useState(false);
     const [verificationDone, setVerificationDone] = useState(false);
 
@@ -315,7 +302,6 @@ export function SubmissionListView({
 
     const handleClearSubmissionSearch = useCallback(() => setSearchQuery(''), []);
 
-    const TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
     const SUBMISSION_TAB_SWIPE_DISTANCE = 24;
 
     const handleSubmissionTabTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -378,16 +364,16 @@ export function SubmissionListView({
             return false;
         }
 
-        const currentIndex = TAB_ORDER.indexOf(activeTab);
+        const currentIndex = SUBMISSION_TAB_ORDER.indexOf(activeTab);
         if (currentIndex === -1) return false;
 
-        if (distanceX > 0 && currentIndex < TAB_ORDER.length - 1) {
-            setActiveTabWithReset(TAB_ORDER[currentIndex + 1]);
+        if (distanceX > 0 && currentIndex < SUBMISSION_TAB_ORDER.length - 1) {
+            setActiveTabWithReset(SUBMISSION_TAB_ORDER[currentIndex + 1]);
             return true;
         }
 
         if (distanceX < 0 && currentIndex > 0) {
-            setActiveTabWithReset(TAB_ORDER[currentIndex - 1]);
+            setActiveTabWithReset(SUBMISSION_TAB_ORDER[currentIndex - 1]);
             return true;
         }
 
@@ -503,7 +489,7 @@ export function SubmissionListView({
             } else {
                 toast.error(`OCR 처리 실패: ${data.error || '알 수 없는 오류'}`);
             }
-        } catch (error) {
+        } catch {
             toast.error('OCR 처리 중 오류가 발생했습니다.');
         } finally {
             setIsOcrRunning(false);
@@ -526,7 +512,7 @@ export function SubmissionListView({
             } else {
                 toast.error(`OCR 전체 재실행 실패: ${data.error || '알 수 없는 오류'}`);
             }
-        } catch (error) {
+        } catch {
             toast.error('OCR 전체 재실행 중 오류가 발생했습니다.');
         } finally {
             setIsOcrRunning(false);
@@ -544,10 +530,11 @@ export function SubmissionListView({
     }, [activeTab, fetchOcrStatus]);
 
     // OCR 카운트다운 타이머 관리
+    const hasOcrCountdowns = useMemo(() => Object.keys(ocrCountdowns).length > 0, [ocrCountdowns]);
+
     useEffect(() => {
         // 카운트다운이 있는 리뷰가 있으면 1초마다 감소
-        const hasCountdowns = Object.keys(ocrCountdowns).length > 0;
-        if (!hasCountdowns) {
+        if (!hasOcrCountdowns) {
             if (ocrCountdownRef.current) {
                 clearInterval(ocrCountdownRef.current);
                 ocrCountdownRef.current = null;
@@ -574,7 +561,7 @@ export function SubmissionListView({
                 ocrCountdownRef.current = null;
             }
         };
-    }, [Object.keys(ocrCountdowns).length]);
+    }, [hasOcrCountdowns]);
 
     // 단일 리뷰 OCR 재실행 (GitHub Actions 트리거)
     const handleRerunOcr = useCallback(async (reviewId: string) => {
@@ -617,7 +604,7 @@ export function SubmissionListView({
                     return next;
                 });
             }
-        } catch (error) {
+        } catch {
             toast.error('OCR 재실행 중 오류가 발생했습니다.');
             setOcrRerunningIds(prev => {
                 const next = new Set(prev);

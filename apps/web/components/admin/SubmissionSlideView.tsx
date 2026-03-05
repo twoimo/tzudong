@@ -31,6 +31,7 @@ import {
     ApprovalData,
     GeocodingResult,
     ItemDecision,
+    NaverSearchResult,
 } from './SubmissionDetailView';
 import {
     ADMIN_MODAL_ACTION,
@@ -97,7 +98,7 @@ export function SubmissionSlideView({
 
     // 네이버 검색 검증 상태
     const [naverSearchLoading, setNaverSearchLoading] = useState(false);
-    const [naverSearchResults, setNaverSearchResults] = useState<any[]>([]);
+    const [naverSearchResults, setNaverSearchResults] = useState<NaverSearchResult[]>([]);
     const [showWarningModal, setShowWarningModal] = useState(false);
     const [verificationDone, setVerificationDone] = useState(false);
 
