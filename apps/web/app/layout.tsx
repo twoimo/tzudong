@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR } from "next/font/google";
+import Script from "next/script";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from "./providers";
 import { AppProviders } from "./app-providers";
@@ -18,6 +19,8 @@ const notoSerifKR = Noto_Serif_KR({
 
 // 카카오톡 OG 이미지 표시를 위해 절대 URL 필요
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tzudong.vercel.app';
+const supabasePreconnectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+const shouldPreconnectSupabase = Boolean(supabasePreconnectUrl && /^https?:\/\//i.test(supabasePreconnectUrl));
 
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),
@@ -75,7 +78,9 @@ export default function RootLayout({
             <head>
                 {/* [PERF] 네트워크 최적화: 핵심 외부 도메인 Preconnect (TCP+TLS 핸드쉐이크 선행) */}
                 {/* Supabase API - 데이터 페칭 핵심 */}
-                <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} crossOrigin="anonymous" />
+                {shouldPreconnectSupabase ? (
+                    <link rel="preconnect" href={supabasePreconnectUrl} crossOrigin="anonymous" />
+                ) : null}
                 {/* 네이버 지도 - 메인 기능 */}
                 <link rel="preconnect" href="https://oapi.map.naver.com" crossOrigin="anonymous" />
                 <link rel="preconnect" href="https://openapi.map.naver.com" crossOrigin="anonymous" />
@@ -88,9 +93,7 @@ export default function RootLayout({
                 <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
             </head>
             <body className={notoSerifKR.className} suppressHydrationWarning>
-                <script dangerouslySetInnerHTML={{
-                    __html: `(function(){var d=document.documentElement,s=d.style;function v(){if(CSS.supports('height','100dvh'))return;var h=window.innerHeight*.01;s.setProperty('--vh',h+'px');s.setProperty('--full-height',h*100+'px')}v();var t;window.addEventListener('resize',function(){clearTimeout(t);t=setTimeout(v,100)});window.addEventListener('orientationchange',function(){setTimeout(v,200)})})();`
-                }} />
+                <Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />
 
                 <QueryProvider>
                     <AppProviders>

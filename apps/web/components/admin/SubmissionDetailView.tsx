@@ -231,6 +231,10 @@ function removeDuplicateAddresses(addresses: GeocodingResult[]): GeocodingResult
     });
 }
 
+function sanitizePlainText(input: string): string {
+    return input.replace(/<[^>]*>/g, '').trim();
+}
+
 async function geocodeAddressMultiple(name: string, address: string, maxResults: number = 3): Promise<GeocodingResult[]> {
     // Supabase Edge Function을 통해 지오코딩 (EditRestaurantModal과 동일한 방식)
 
@@ -736,7 +740,7 @@ export function SubmissionDetailView({
                                     result.isMatch ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
                                 )}>
                                     <div>
-                                        <p className="font-medium text-gray-900" dangerouslySetInnerHTML={{ __html: result.title }} />
+                                        <p className="font-medium text-gray-900">{sanitizePlainText(result.title)}</p>
                                         <p className="text-gray-500 mt-0.5">{result.address}</p>
                                         {result.roadAddress && <p className="text-gray-400 text-[10px]">{result.roadAddress}</p>}
                                     </div>

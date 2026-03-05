@@ -644,8 +644,11 @@ export function buildAdminInsightOpsChecklist(
 export async function getAdminInsightSystemStatus(
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<AdminInsightSystemStatusResponse> {
+  env = { ...env };
+  const isTestRuntime = env.NODE_ENV === 'test' || env.BUN_ENV === 'test';
   const cacheTtlRaw = Number(env.INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS || String(DEFAULT_CACHE_TTL_MS));
-  const cacheTtlMs = Number.isFinite(cacheTtlRaw) && cacheTtlRaw >= 0 ? cacheTtlRaw : DEFAULT_CACHE_TTL_MS;
+  const resolvedCacheTtlMs = Number.isFinite(cacheTtlRaw) && cacheTtlRaw >= 0 ? cacheTtlRaw : DEFAULT_CACHE_TTL_MS;
+  const cacheTtlMs = isTestRuntime ? 0 : resolvedCacheTtlMs;
   const now = Date.now();
 
   if (cacheTtlMs > 0 && cachedStatus && cachedStatus.expiresAt > now) {
