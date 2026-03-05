@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import Image from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 
@@ -76,9 +75,8 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
                     setEmbedError(true);
                 }
-            } catch (error) {
+            } catch {
                 // 네트워크 에러 시에는 그냥 iframe 시도
-
             }
         };
 
@@ -368,10 +366,13 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                     }}
                                 >
                                     {videoId ? (
-                                        <img
+                                        <Image
                                             src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
                                             alt="YouTube 썸네일"
-                                            className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 group-hover:opacity-90"
+                                            fill
+                                            unoptimized
+                                            sizes="(max-width: 768px) 100vw, 768px"
+                                            className="rounded-lg object-cover shadow-lg transition-opacity duration-200 group-hover:opacity-90"
                                             onError={(e) => {
                                                 const target = e.currentTarget;
                                                 if (target.src.includes('maxresdefault')) {

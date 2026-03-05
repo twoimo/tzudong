@@ -21,6 +21,7 @@ test.describe('Phase 1: Smoke Test', () => {
 
         // 로그인 버튼이 보여야 함 (비로그인 상태)
         const loginButton = page.getByRole('button', { name: /로그인/i });
+        await expect(loginButton).toBeVisible();
         // 버튼 텍스트가 정확하지 않을 수 있으므로, LoginUser UI 컴포넌트 구조에 따라 조정 필요
         // 여기서는 일반적인 '로그인' 텍스트 혹은 아이콘을 찾습니다.
         // 만약 아이콘이라면 aria-label 등을 확인해야 합니다.

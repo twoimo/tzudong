@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -423,14 +424,16 @@ export default function ReviewsPage() {
                       {(review.foodPhotos || []).slice(0, 4).map((photo, idx) => (
                         <div
                           key={idx}
-                          className="w-16 h-16 bg-muted rounded overflow-hidden"
+                          className="relative w-16 h-16 bg-muted rounded overflow-hidden"
                         >
-                          <img
+                          <Image
                             src={supabase.storage.from("review-photos").getPublicUrl(photo).data.publicUrl}
                             alt={`음식 사진 ${idx + 1}`}
-                            className="w-full h-full object-cover"
+                            fill
+                            sizes="64px"
+                            className="object-cover"
                             onError={(e) => {
-                              e.currentTarget.style.display = "none";
+                              (e.currentTarget as HTMLImageElement).style.display = "none";
                             }}
                           />
                         </div>

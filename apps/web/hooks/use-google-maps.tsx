@@ -54,7 +54,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
                 globalLoadState.isLoading = false;
                 setIsLoaded(true);
             });
-            existingScript.addEventListener("error", (e) => {
+            existingScript.addEventListener("error", () => {
                 globalLoadState.error = new Error("Failed to load Google Maps");
                 globalLoadState.isLoading = false;
                 setLoadError(globalLoadState.error);
@@ -70,6 +70,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
         // Google Maps 콜백 함수 설정 (더 빠른 로딩 감지)
         window.googleMapsCallback = () => {
             if (window.google && window.google.maps && window.google.maps.Map) {
+                clearTimeout(timeoutId);
                 globalLoadState.isLoaded = true;
                 globalLoadState.isLoading = false;
                 setIsLoaded(true);
@@ -85,14 +86,10 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             }
         }, 5000);
 
-        // 스크립트를 head의 맨 위에 추가해서 가장 먼저 로드되도록 함
-        const head = document.head;
-        const firstChild = head.firstChild;
-        head.insertBefore(script, firstChild);
-
         globalLoadState.isLoading = true;
 
         script.addEventListener("load", () => {
+            clearTimeout(timeoutId);
             // 콜백이 아직 호출되지 않았을 수 있으므로 확인
             setTimeout(() => {
                 if (window.google && window.google.maps && window.google.maps.Map && !globalLoadState.isLoaded) {
@@ -103,8 +100,9 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             }, 100);
         });
 
-        script.addEventListener("error", (e) => {
-            globalLoadState.error = new Error(`Google Maps 로딩 실패: ${e.message || '알 수 없는 오류'}`);
+        script.addEventListener("error", () => {
+            clearTimeout(timeoutId);
+            globalLoadState.error = new Error("Google Maps 로딩 실패: 알 수 없는 오류");
             globalLoadState.isLoading = false;
             setLoadError(globalLoadState.error);
         });
@@ -112,7 +110,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
         document.head.appendChild(script);
 
         return () => {
-            // Cleanup if needed
+            clearTimeout(timeoutId);
         };
     }, [apiKey, libraries]);
 

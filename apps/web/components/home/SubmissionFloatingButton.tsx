@@ -21,11 +21,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
 }: SubmissionFloatingButtonProps) {
     const { isMobileOrTablet } = useDeviceType();
     const isHydrated = useHydration();
-
-    // 사이드바 너비에 따라 left 위치 조정 (데스크탑)
-    // 열려있을 때: 256px(w-64) + 16px(여백) = 272px
-    // 닫혀있을 때: 64px(w-16) + 16px(여백) = 80px
-    const desktopLeft = isSidebarOpen ? 'left-[272px]' : 'left-[80px]';
+    void isSidebarOpen;
 
     return (
         <Button
