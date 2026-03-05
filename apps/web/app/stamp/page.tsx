@@ -2,8 +2,9 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,6 @@ import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
@@ -80,144 +80,6 @@ interface Review {
 
 // 유틸리티 함수들: stamp-utils.ts에서 import
 
-// 리스트 아이템 컴포넌트 메모이제이션 (성능 최적화)
-interface RestaurantCardProps {
-    restaurant: Restaurant;
-    visited: boolean;
-    isUserStampsReady: boolean;
-    isSelected: boolean;
-    currentThumbnailIndex: number;
-    onThumbnailChange: (id: string, index: number) => void;
-    onClick: (restaurant: Restaurant) => void;
-}
-
-const RestaurantCard = memo(({ restaurant, visited, isUserStampsReady, isSelected, currentThumbnailIndex, onThumbnailChange, onClick }: RestaurantCardProps) => {
-    // 도장 표시 여부: 방문 데이터가 준비되었고 visited가 true인 경우에만 표시
-    const showStamp = isUserStampsReady && visited;
-    // 병합된 YouTube 링크 배열 가져오기
-    const youtubeLinks = (restaurant as any).mergedYoutubeLinks ||
-        (restaurant.youtube_link ? [restaurant.youtube_link] : []);
-
-    // 현재 인덱스의 썸네일 URL 생성
-    const currentIndex = currentThumbnailIndex % youtubeLinks.length;
-    const thumbnailUrl = youtubeLinks[currentIndex] ? getYouTubeThumbnailUrl(youtubeLinks[currentIndex]) : null;
-    const category = parseCategory(restaurant.category || (restaurant as any).categories);
-
-    // 다음/이전 썸네일로 이동
-    const handlePrevThumbnail = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const newIndex = currentIndex === 0 ? youtubeLinks.length - 1 : currentIndex - 1;
-        onThumbnailChange(restaurant.id, newIndex);
-    };
-
-    const handleNextThumbnail = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const newIndex = currentIndex === youtubeLinks.length - 1 ? 0 : currentIndex + 1;
-        onThumbnailChange(restaurant.id, newIndex);
-    };
-
-    return (
-        <Card
-            className={cn(
-                "relative overflow-hidden transition-all duration-300 cursor-pointer group",
-                showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
-                isSelected ? "ring-2 ring-primary" : ""
-            )}
-            onClick={() => onClick(restaurant)}
-        >
-            <div className="aspect-video relative">
-                {thumbnailUrl ? (
-                    <>
-                        <img
-                            src={thumbnailUrl}
-                            alt={`${restaurant.name} 썸네일`}
-                            className={cn(
-                                "w-full h-full object-cover transition-all duration-300",
-                                showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
-                            )}
-                            loading="lazy"
-                        />
-
-                        {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 표시 */}
-                        {youtubeLinks.length > 1 && (
-                            <>
-                                <button
-                                    onClick={handlePrevThumbnail}
-                                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
-                                    aria-label="이전 썸네일"
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={handleNextThumbnail}
-                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
-                                    aria-label="다음 썸네일"
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </button>
-
-                                {/* 점 인디케이터 */}
-                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                                    {youtubeLinks.map((_: string, index: number) => (
-                                        <div
-                                            key={index}
-                                            className={cn(
-                                                "w-1.5 h-1.5 rounded-full transition-colors",
-                                                index === currentIndex ? "bg-white" : "bg-white/40"
-                                            )}
-                                        />
-                                    ))}
-                                </div>
-                            </>
-                        )}
-
-                        {showStamp && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                {/* [라이트 모드] */}
-                                <img
-                                    src="/images/stamp-clear.png"
-                                    alt="방문 완료"
-                                    className="w-44 h-44 sm:w-52 sm:h-52 object-contain opacity-90 drop-shadow-lg dark:hidden"
-                                    style={{ transform: 'rotate(-45deg)' }}
-                                />
-                                {/* [다크 모드] */}
-                                <img
-                                    src="/images/stamp-clear-dark.png"
-                                    alt="방문 완료"
-                                    className="w-44 h-44 sm:w-52 sm:h-52 object-contain opacity-90 drop-shadow-lg hidden dark:block"
-                                    style={{ transform: 'rotate(-45deg)' }}
-                                />
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                        <MapPin className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                )}
-            </div>
-            <div className="p-3">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <h3 className="text-sm font-medium truncate" title={restaurant.name}>
-                            {restaurant.name}
-                        </h3>
-                        {category && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60">
-                                {category}
-                            </Badge>
-                        )}
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                        리뷰 {(restaurant as any).verified_review_count ?? restaurant.review_count ?? 0}
-                    </span>
-                </div>
-            </div>
-        </Card>
-    );
-});
-RestaurantCard.displayName = 'RestaurantCard';
-
 interface RestaurantRowProps {
     restaurant: Restaurant;
     isSelected: boolean;
@@ -240,13 +102,13 @@ const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowPr
             <TableCell>
                 <div className="flex items-center gap-3">
                     {thumbnailUrl && (
-                        <div className="w-24 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
-                            <img
+                        <div className="w-24 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 relative">
+                            <Image
                                 src={thumbnailUrl}
                                 alt={`${restaurant.name} 썸네일`}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                                decoding="async"
+                                fill
+                                sizes="96px"
+                                className="object-cover"
                             />
                         </div>
                     )}
@@ -1192,15 +1054,16 @@ export default function StampPage() {
 
                                         const currentIndex = cardThumbnailIndexes[restaurant.id] || 0;
                                         return (
-                                            <RestaurantCard
+                                            <StampCard
                                                 key={restaurant.id}
                                                 restaurant={restaurant}
-                                                visited={isVisited(restaurant.id)}
+                                                isVisited={isVisited(restaurant.id)}
                                                 isUserStampsReady={isUserStampsReady}
                                                 isSelected={selectedRestaurant?.id === restaurant.id}
                                                 currentThumbnailIndex={currentIndex}
                                                 onThumbnailChange={handleCardThumbnailChange}
                                                 onClick={handleRestaurantClick}
+                                                size={isDesktop ? "compact" : "default"}
                                             />
                                         );
                                     })}

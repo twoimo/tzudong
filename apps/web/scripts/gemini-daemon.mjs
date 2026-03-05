@@ -2,8 +2,6 @@
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
-import { createRequire } from 'module';
 
 // --- 설정 (Configuration) ---
 const PORT = 3456;

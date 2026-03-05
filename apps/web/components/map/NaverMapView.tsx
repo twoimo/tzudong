@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/exhaustive-deps */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
@@ -1980,7 +1981,7 @@ const NaverMapView = memo(({
             console.error("네이버 지도 초기화 오류:", error);
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
-    }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isLoaded]);
 
     // [New] 커스텀 스크롤 휠 핸들러 (마우스 호버 위치 기준 줌 고정)
     useEffect(() => {
@@ -1993,10 +1994,25 @@ const NaverMapView = memo(({
         let targetZoomLevel = map.getZoom();
         let lastWheelTime = 0;
         let pendingAnchorAdjustListener: any = null;
+        let isAnchorAdjusting = false;
 
-        const handleWheel = (e: WheelEvent) => {
-            e.preventDefault();
+        type QueuedWheelInput = {
+            clientX: number;
+            clientY: number;
+            deltaY: number;
+        };
 
+        let queuedWheelInput: QueuedWheelInput | null = null;
+
+        function runQueuedWheelInput() {
+            if (isAnchorAdjusting || !queuedWheelInput) return;
+
+            const nextInput = queuedWheelInput;
+            queuedWheelInput = null;
+            handleWheelInput(nextInput);
+        }
+
+        function handleWheelInput(input: QueuedWheelInput) {
             const now = Date.now();
             const timeDiff = now - lastWheelTime;
             lastWheelTime = now;
@@ -2014,7 +2030,7 @@ const NaverMapView = memo(({
 
             // 2. 새로운 목표 계산 (정수 1단위)
             // deltaY > 0 : 줌 아웃(값 감소), deltaY < 0 : 줌 인(값 증가)
-            const zoomChange = e.deltaY > 0 ? -1 : 1;
+            const zoomChange = input.deltaY > 0 ? -1 : 1;
             const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(baseZoom) + zoomChange));
 
             // 3. 적용 (변경이 있을 때만)
@@ -2032,8 +2048,8 @@ const NaverMapView = memo(({
 
                     const rect = mapElement.getBoundingClientRect();
                     const mousePoint = new naver.maps.Point(
-                        e.clientX - rect.left,
-                        e.clientY - rect.top
+                        input.clientX - rect.left,
+                        input.clientY - rect.top
                     );
                     const viewportCenterPoint = new naver.maps.Point(rect.width / 2, rect.height / 2);
 
@@ -2059,11 +2075,8 @@ const NaverMapView = memo(({
                     // 줌 전: 마우스 포인터 아래의 좌표
                     const beforeCoord = projection.fromOffsetToCoord(mouseOffsetBeforeZoom);
 
-                    // 기존 대기 중 보정 리스너는 취소 (최신 휠 이벤트 우선)
-                    if (pendingAnchorAdjustListener) {
-                        naver.maps.Event.removeListener(pendingAnchorAdjustListener);
-                        pendingAnchorAdjustListener = null;
-                    }
+                    // 보정 중일 때는 후속 휠 입력을 큐에 보관하고 idle 이후 순차 처리
+                    isAnchorAdjusting = true;
 
                     // 줌 반영 후( idle ) 투영이 갱신된 시점에 중심 보정
                     pendingAnchorAdjustListener = naver.maps.Event.addListener(map, 'idle', () => {
@@ -2072,34 +2085,42 @@ const NaverMapView = memo(({
                             pendingAnchorAdjustListener = null;
                         }
 
-                        const updatedProjection = map.getProjection();
-                        if (!updatedProjection) return;
+                        try {
+                            const updatedProjection = map.getProjection();
+                            if (!updatedProjection) return;
 
-                        const currentCenter = map.getCenter();
-                        const centerOffsetAfterZoom = updatedProjection.fromCoordToOffset(currentCenter);
-                        const mouseOffsetAfterZoom = {
-                            x: centerOffsetAfterZoom.x + (mousePoint.x - viewportCenterPoint.x),
-                            y: centerOffsetAfterZoom.y + (mousePoint.y - viewportCenterPoint.y),
-                        };
-                        const adjustedCenter = calculateHoverAnchoredCenter({
-                            projection: {
-                                fromCoordToOffset: (coord) =>
-                                    updatedProjection.fromCoordToOffset(
-                                        new naver.maps.LatLng(coord.lat, coord.lng)
-                                    ),
-                                fromOffsetToCoord: (offset) => {
-                                    const coord = updatedProjection.fromOffsetToCoord(
-                                        new naver.maps.Point(offset.x, offset.y)
-                                    );
-                                    return { lat: coord.lat(), lng: coord.lng() };
+                            const currentCenter = map.getCenter();
+                            const centerOffsetAfterZoom = updatedProjection.fromCoordToOffset(currentCenter);
+                            const mouseOffsetAfterZoom = {
+                                x: centerOffsetAfterZoom.x + (mousePoint.x - viewportCenterPoint.x),
+                                y: centerOffsetAfterZoom.y + (mousePoint.y - viewportCenterPoint.y),
+                            };
+                            const adjustedCenter = calculateHoverAnchoredCenter({
+                                projection: {
+                                    fromCoordToOffset: (coord) =>
+                                        updatedProjection.fromCoordToOffset(
+                                            new naver.maps.LatLng(coord.lat, coord.lng)
+                                        ),
+                                    fromOffsetToCoord: (offset) => {
+                                        const coord = updatedProjection.fromOffsetToCoord(
+                                            new naver.maps.Point(offset.x, offset.y)
+                                        );
+                                        return { lat: coord.lat(), lng: coord.lng() };
+                                    },
                                 },
-                            },
-                            anchorCoordBeforeZoom: { lat: beforeCoord.lat(), lng: beforeCoord.lng() },
-                            currentCenter: { lat: currentCenter.lat(), lng: currentCenter.lng() },
-                            mouseOffset: mouseOffsetAfterZoom,
-                        });
+                                anchorCoordBeforeZoom: { lat: beforeCoord.lat(), lng: beforeCoord.lng() },
+                                currentCenter: { lat: currentCenter.lat(), lng: currentCenter.lng() },
+                                mouseOffset: mouseOffsetAfterZoom,
+                            });
 
-                        map.setCenter(new naver.maps.LatLng(adjustedCenter.lat, adjustedCenter.lng));
+                            map.setCenter(new naver.maps.LatLng(adjustedCenter.lat, adjustedCenter.lng));
+                        } finally {
+                            isAnchorAdjusting = false;
+                            targetZoomLevel = map.getZoom();
+                            if (queuedWheelInput) {
+                                window.requestAnimationFrame(runQueuedWheelInput);
+                            }
+                        }
                     });
 
                     // 줌 적용 (보정은 idle 리스너에서 수행)
@@ -2107,8 +2128,29 @@ const NaverMapView = memo(({
                 } catch (error) {
                     console.error("휠 줌 포인터 고정 처리 실패:", error);
                     map.setZoom(nextZoom, true);
+                    isAnchorAdjusting = false;
+                    if (queuedWheelInput) {
+                        window.requestAnimationFrame(runQueuedWheelInput);
+                    }
                 }
             }
+        }
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+
+            const input: QueuedWheelInput = {
+                clientX: e.clientX,
+                clientY: e.clientY,
+                deltaY: e.deltaY,
+            };
+
+            if (isAnchorAdjusting) {
+                queuedWheelInput = input;
+                return;
+            }
+
+            handleWheelInput(input);
         };
 
         // passive: false여야 preventDefault()가 동작함
@@ -2119,6 +2161,8 @@ const NaverMapView = memo(({
                 window.naver.maps.Event.removeListener(pendingAnchorAdjustListener);
                 pendingAnchorAdjustListener = null;
             }
+            isAnchorAdjusting = false;
+            queuedWheelInput = null;
             mapElement.removeEventListener('wheel', handleWheel);
         };
     }, [isMapInitialized]);
@@ -2256,7 +2300,7 @@ const NaverMapView = memo(({
             map.setZoom(targetZoom);
             map.setCenter(new window.naver.maps.LatLng(targetLat, targetLng));
         }
-    }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [searchedRestaurant]);
 
 
     // 로딩 에러 처리

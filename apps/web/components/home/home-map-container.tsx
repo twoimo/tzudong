@@ -368,7 +368,7 @@ function HomeMapContainerComponent({
             viewport.removeEventListener('resize', handleResize);
             if (throttleTimer !== null) cancelAnimationFrame(throttleTimer);
         };
-    }, [getCurrentMaxHeight]);
+    }, [getCurrentMaxHeight, percentToPx]);
 
     // 패널이 열릴 때 50% 높이로 열기 (헤더 배제)
     useEffect(() => {
@@ -403,6 +403,7 @@ function HomeMapContainerComponent({
     }, [
         isPanelOpen,
         isMobileOrTablet,
+        panelRestaurant,
         panelRestaurant?.id,
         getCurrentMaxHeight,
         resetSheetInteractionState,
@@ -434,6 +435,7 @@ function HomeMapContainerComponent({
     }, [
         isPanelOpen,
         isMobileOrTablet,
+        panelRestaurant,
         panelRestaurant?.id,
         resetContentScrollPosition
     ]);
@@ -489,7 +491,6 @@ function HomeMapContainerComponent({
             : velocityRef.current;
         const isSwipeDown = gestureVelocity >= SWIPE_VELOCITY_THRESHOLD;
         const isSwipeDownStrong = gestureVelocity >= SWIPE_VELOCITY_CLOSE_THRESHOLD;
-        const isSwipeUp = gestureVelocity <= -SWIPE_VELOCITY_THRESHOLD;
         const isSwipeUpStrong = gestureVelocity <= -SWIPE_VELOCITY_OPEN_THRESHOLD;
         const movementFromStart = currentHeight - startHeightRef.current;
         const movementPxFromStart = percentToPx(movementFromStart);

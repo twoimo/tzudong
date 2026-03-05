@@ -130,7 +130,7 @@ function makeArgs() {
 }
 
 try {
-  const { args, mode } = makeArgs();
+  const { args } = makeArgs();
   const stdout = execFileSync('supabase', args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],

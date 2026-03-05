@@ -30,6 +30,7 @@ export default function AdminAnnouncementPanel({
     onToggleCollapse,
     isCollapsed,
 }: AdminAnnouncementPanelProps) {
+    void isOpen;
     const [announcements, setAnnouncements] = useState<Announcement[]>([...DUMMY_ANNOUNCEMENTS]);
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);

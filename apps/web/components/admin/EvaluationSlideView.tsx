@@ -40,6 +40,8 @@ export function EvaluationSlideView({
     loading
 }: EvaluationSlideViewProps) {
     const currentRecord = records[currentIndex];
+    void onRegisterMissing;
+    void onResolveConflict;
     const isMobile = useIsMobile();
     const slideSwipeStartXRef = useRef<number | null>(null);
     const slideSwipeEndXRef = useRef<number | null>(null);

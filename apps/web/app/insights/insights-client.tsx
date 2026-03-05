@@ -781,7 +781,7 @@ export default function InsightsClient() {
         }
     }, [periodOptionsForView, period]);
 
-    const rawRows = treemapQuery.data?.videos ?? [];
+    const rawRows = useMemo(() => treemapQuery.data?.videos ?? [], [treemapQuery.data?.videos]);
     const renderWidth = useMemo(() => Math.max(1, chartWidth), [chartWidth]);
 
     const { leafRows, leafTotalMetric, leafMetricValuesSorted } = useMemo<LeafRowsData>(() => {
@@ -1039,7 +1039,7 @@ export default function InsightsClient() {
                 return step > all[index - 1];
             })
             .slice(0, 7);
-    }, [leafMetricValuesSorted, metricMode]);
+    }, [leafMetricValuesSorted, leafRows.length, metricMode]);
 
     useEffect(() => {
         if (clusterStep === null) return;
@@ -1153,7 +1153,7 @@ export default function InsightsClient() {
         }
 
         return leafRows;
-    }, [leafRows, viewMode, metricMode, clusterStep]);
+    }, [leafRows, viewMode, metricMode, clusterStep, leafMetricValuesSorted, leafTotalMetric]);
     const treemapCells = useMemo<TreemapCellLayout[]>(() => {
         if (treeData.length === 0) return [];
         return buildTreemapLayout(treeData, renderWidth, chartHeight);

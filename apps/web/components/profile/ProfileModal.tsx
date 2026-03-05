@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,16 +46,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     // Account deletion
     const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
 
-    useEffect(() => {
-        if (isOpen && user) {
-            loadProfile();
-            // 모달이 열릴 때 삭제 확인 이메일 초기화
-            setDeleteConfirmationEmail("");
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, user]);
-
-    const loadProfile = async () => {
+    const loadProfile = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -80,7 +71,15 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             toast.error('프로필 정보를 불러오는데 실패했습니다');
             console.error('Profile load error:', error);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        if (isOpen && user) {
+            void loadProfile();
+            // 모달이 열릴 때 삭제 확인 이메일 초기화
+            setDeleteConfirmationEmail("");
+        }
+    }, [isOpen, user, loadProfile]);
 
     const handleNicknameChange = async () => {
         if (!user || !newNickname.trim()) {

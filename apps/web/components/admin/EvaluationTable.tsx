@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Image from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -55,16 +56,6 @@ export function EvaluationTable({
 
     const config = variants[status] || { label: status, variant: 'default' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getEvaluationSummary = (record: EvaluationRecord) => {
-    if (!record.evaluation_results) return '-/-/-';
-
-    const va = record.evaluation_results.visit_authenticity?.eval_value ?? '-';
-    const rb = record.evaluation_results.rb_grounding_TF?.eval_value ? 'T' : 'F';
-    const rf = record.evaluation_results.review_faithfulness_score?.eval_value === 1 ? 'T' : 'F';
-
-    return `${va}/${rb}/${rf}`;
   };
 
   const getYoutubeVideoId = (url: string) => {
@@ -137,11 +128,16 @@ export function EvaluationTable({
                           rel="noopener noreferrer"
                           className="flex-shrink-0"
                         >
-                          <img
-                            src={thumbnailUrl}
-                            alt="유튜브 썸네일"
-                            className="w-32 h-20 object-cover rounded hover:opacity-80 transition-opacity"
-                          />
+                          <div className="relative h-20 w-32 overflow-hidden rounded">
+                            <Image
+                              src={thumbnailUrl}
+                              alt="유튜브 썸네일"
+                              fill
+                              unoptimized
+                              sizes="128px"
+                              className="object-cover transition-opacity hover:opacity-80"
+                            />
+                          </div>
                         </a>
                       )}
                       <div className="flex-1 min-w-0">

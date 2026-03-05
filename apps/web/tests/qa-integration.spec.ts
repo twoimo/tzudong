@@ -25,7 +25,6 @@ test.describe('QA Integration Tests', () => {
         // Better: Use the 'container' locator that wraps the text.
         // We can look for the specific class on the page directly, but escape it carefully.
         // Or finding the element that HAS that class.
-        const container = page.locator('div').filter({ hasText: '리뷰 데이터를 불러오는 중...' }).first();
         // This might be the h2 or the container. 
         // Let's locate the specific div that should have the class.
         // It is the top-level div of GlobalLoader.
@@ -41,7 +40,7 @@ test.describe('QA Integration Tests', () => {
         await expect(page.getByText('리뷰 데이터를 불러오는 중...')).toBeVisible();
     });
 
-    test('SCH-01: Search Results should be limited to ~4 items', async ({ page, isMobile }) => {
+    test('SCH-01: Search Results should be limited to ~4 items', async ({ page }) => {
         test.setTimeout(60000); // Increase test timeout
         await gotoAndHidePopup(page, '/');
 
@@ -118,7 +117,7 @@ test.describe('QA Integration Tests', () => {
         await expect(popularItems).toHaveCount(3);
     });
 
-    test('STP-01, STP-02: Stamp Image should be custom and rotated', async ({ page, isMobile }) => {
+    test('STP-01, STP-02: Stamp Image should be custom and rotated', async ({ page }) => {
         // This test assumes at least one visited restaurant exists or we can mock it.
         // Since we can't easily mock complex auth/data without seeding, we will mock the `isVisited` check IF possible,
         // or just check if the CSS class for rotation exists in the codebase (static check) 

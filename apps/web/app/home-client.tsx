@@ -113,8 +113,6 @@ export default function HomeClient() {
 
         return () => clearTimeout(timer);
     }, []);
-
-
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
@@ -304,6 +302,7 @@ export default function HomeClient() {
                 router.replace(`/feed?review=${reviewId}`);
             }
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams, router]);
 
     // 상태 관리 커스텀 훅
@@ -337,7 +336,7 @@ export default function HomeClient() {
         state.setPanelRestaurant(null);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
-    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
+    }, [state]);
 
     // 모든 패널 닫기
     // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -346,7 +345,7 @@ export default function HomeClient() {
         state.setPanelRestaurant(null);
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
-    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
+    }, [state]);
 
     // 패널 접기/펼치기
     // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -420,12 +419,12 @@ export default function HomeClient() {
             router.replace('/', { scroll: false });
         }
         // q 파라미터(공유 URL)는 유지
-    }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setSearchedRestaurant, state.setIsPanelOpen, router]);
+    }, [state, router]);
 
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
         state.setSelectedRestaurant(restaurant);
         state.setPanelRestaurant(restaurant);
-    }, [state.setPanelRestaurant, state.setSelectedRestaurant]);
+    }, [state]);
 
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({

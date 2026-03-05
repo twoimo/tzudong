@@ -40,6 +40,7 @@ export default function AnnouncementPanel({
     isAdmin = false,
     initialAnnouncement,
 }: AnnouncementPanelProps) {
+    void isOpen;
     const { data: adminAnnouncements = [], isLoading: isAdminAnnouncementsLoading } = useAnnouncementsAdmin();
     const { data: activeAnnouncements = [], isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements();
     const createAnnouncement = useCreateAnnouncement();

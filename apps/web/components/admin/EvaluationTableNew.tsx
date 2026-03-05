@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
+import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -361,10 +362,13 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
                   {/* 성공 상태 - 썸네일 표시 */}
                   {thumbnailState === 'loaded' && thumbnailUrl && (
-                    <img
+                    <NextImage
                       src={thumbnailUrl}
                       alt="유튜브 썸네일"
-                      className="w-full h-full object-cover"
+                      fill
+                      unoptimized
+                      sizes="(max-width: 640px) 80px, 96px"
+                      className="object-cover"
                     />
                   )}
 
@@ -597,6 +601,8 @@ export function EvaluationTable({
   hasMore = false,
   isLoadingMore = false,
 }: EvaluationTableProps) {
+  void onRegisterMissing;
+  void onResolveConflict;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showMobileAdvancedFilters, setShowMobileAdvancedFilters] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -1260,7 +1266,14 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 >
                   <div className="relative h-16 w-24 overflow-hidden rounded bg-muted">
                     {thumbnailInfo?.state === 'loaded' && thumbnailInfo.url ? (
-                      <img src={thumbnailInfo.url} alt="유튜브 썸네일" className="h-full w-full object-cover" />
+                      <NextImage
+                        src={thumbnailInfo.url}
+                        alt="유튜브 썸네일"
+                        fill
+                        unoptimized
+                        sizes="96px"
+                        className="object-cover"
+                      />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />

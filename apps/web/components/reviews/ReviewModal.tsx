@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Image from "next/image";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,14 +184,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     }, [foodPhotoUrls]);
 
     // 메모이제이션된 이벤트 핸들러들
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const handleVerificationPhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleVerificationPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setVerificationPhoto(file);
             analyzeReceipt(file);
         }
-    }, []);
+    };
 
     const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
@@ -227,8 +227,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         setIsVerificationDragging(false);
     }, []);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const handleVerificationDrop = useCallback((e: React.DragEvent) => {
+    const handleVerificationDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsVerificationDragging(false);
@@ -240,7 +239,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             setVerificationPhoto(imageFiles[0]);
             analyzeReceipt(imageFiles[0]);
         }
-    }, []);
+    };
 
     const handleFoodPhotosDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -322,7 +321,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     // handleClose에서는 삭제하지 않음 (임시 저장 의도). handleSubmit 성공 시에만 삭제.
 
     // OCR 분석 실행 (모달 내부에서 처리)
-    const analyzeReceipt = async (file: File) => {
+    async function analyzeReceipt(file: File) {
         // 1. 캐싱 키 생성 (파일 메타데이터 + 크기 기반)
         const fileKey = `ocr_cache_${file.name}_${file.size}_${file.lastModified}`;
 
@@ -487,7 +486,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         } finally {
             setIsAnalyzing(false);
         }
-    };
+    }
     const handleSubmit = async () => {
         const targetRestaurant = selectedRestaurant || restaurant;
         // 필수 항목 검증
@@ -858,11 +857,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         <div className="w-full space-y-3">
                                             <div className="flex items-center justify-center relative">
                                                 <div className="relative">
-                                                    <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
-                                                        <img
+                                                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
+                                                        <Image
                                                             src={verificationPhotoUrl || ''}
                                                             alt="인증 사진 미리보기"
-                                                            className="w-full h-full object-cover"
+                                                            fill
+                                                            unoptimized
+                                                            sizes="80px"
+                                                            className="object-cover"
                                                         />
                                                     </div>
                                                     <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
@@ -1166,8 +1168,15 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         {foodPhotos.map((photo, index) => (
                                             <div key={index} className="relative group">
                                                 <Card className="p-2 hover:shadow-md transition-shadow">
-                                                    <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                                                        <img src={foodPhotoUrls[index] || ''} alt={`음식 사진 ${index + 1}`} className="w-full h-full object-cover" />
+                                                    <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                                                        <Image
+                                                            src={foodPhotoUrls[index] || ''}
+                                                            alt={`음식 사진 ${index + 1}`}
+                                                            fill
+                                                            unoptimized
+                                                            sizes="(max-width: 640px) 45vw, 180px"
+                                                            className="object-cover"
+                                                        />
                                                     </div>
                                                     <div className="mt-2 space-y-1">
                                                         <p className="text-xs font-medium truncate" title={photo.name}>{photo.name}</p>
@@ -1387,11 +1396,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <div className="w-full space-y-3">
                                                     <div className="flex items-center justify-center relative">
                                                         <div className="relative">
-                                                            <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
-                                                                <img
+                                                            <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
+                                                                <Image
                                                                     src={verificationPhotoUrl || ''}
                                                                     alt="인증 사진 미리보기"
-                                                                    className="w-full h-full object-cover"
+                                                                    fill
+                                                                    unoptimized
+                                                                    sizes="80px"
+                                                                    className="object-cover"
                                                                 />
                                                             </div>
                                                             <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
@@ -1703,11 +1715,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             {foodPhotos.map((photo, index) => (
                                                 <div key={index} className="relative group">
                                                     <Card className="p-2 hover:shadow-md transition-shadow">
-                                                        <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                                                            <img
+                                                        <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                                                            <Image
                                                                 src={foodPhotoUrls[index] || ''}
                                                                 alt={`음식 사진 ${index + 1}`}
-                                                                className="w-full h-full object-cover"
+                                                                fill
+                                                                unoptimized
+                                                                sizes="(max-width: 640px) 45vw, 180px"
+                                                                className="object-cover"
                                                             />
                                                         </div>
                                                         <div className="mt-2 space-y-1">

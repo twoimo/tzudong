@@ -26,6 +26,7 @@ export function RestaurantErrorAlert({
     onResolve,
     onViewConflict,
 }: RestaurantErrorAlertProps) {
+    void onViewConflict;
     if (!errorMessage) return null;
 
     const isDuplicate = errorDetails?.error_type === 'duplicate';

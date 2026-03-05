@@ -288,12 +288,14 @@ export const ReviewCard = React.memo(function ReviewCard({
                                 {photoUrls.map((url, index) => (
                                     <CarouselItem key={index}>
                                         <div className="relative w-full aspect-square">
-                                            <img
+                                            <Image
                                                 src={url}
                                                 alt={`리뷰 사진 ${index + 1}`}
-                                                className="w-full h-full object-cover pointer-events-none"
-                                                draggable="false"
-                                                loading={index === 0 ? "eager" : "lazy"}
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, 768px"
+                                                className="object-cover pointer-events-none"
+                                                draggable={false}
+                                                priority={index === 0}
                                             />
                                         </div>
                                     </CarouselItem>

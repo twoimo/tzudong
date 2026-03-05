@@ -53,6 +53,7 @@ const nextConfig = {
         NEXT_PUBLIC_NAVER_CLIENT_SECRET: process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET,
     },
     output: 'standalone',
+    typedRoutes: false,
     outputFileTracingRoot: path.join(__dirname, '../../'),
     // [PERF] 정적 자산에 대한 장기 캐시 헤더 설정
     async headers() {

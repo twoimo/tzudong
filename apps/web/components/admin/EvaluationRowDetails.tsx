@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
 import { RestaurantErrorAlert } from './RestaurantErrorAlert';
 import { EvaluationDetailView } from './EvaluationDetailView';
@@ -12,7 +11,7 @@ interface EvaluationRowDetailsProps {
 }
 
 export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
-  const { youtube_meta, evaluation_results, restaurant_info, missing_message } = record;
+  const { youtube_meta, restaurant_info, missing_message } = record;
 
   // 디버깅: 데이터 구조 확인
   // console.log('📊 EvaluationRowDetails 데이터:', { ... });

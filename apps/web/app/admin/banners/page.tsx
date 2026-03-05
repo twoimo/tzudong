@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo, Suspense, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -478,11 +479,14 @@ function BannerManagementPage() {
                                     <div className="flex gap-3">
                                         {/* 썸네일 */}
                                         {banner.image_url ? (
-                                            <div className="w-20 h-16 rounded overflow-hidden border border-stone-200 flex-shrink-0">
-                                                <img
+                                            <div className="relative w-20 h-16 rounded overflow-hidden border border-stone-200 flex-shrink-0">
+                                                <Image
                                                     src={banner.image_url}
                                                     alt={banner.title}
-                                                    className="w-full h-full object-cover"
+                                                    fill
+                                                    unoptimized
+                                                    sizes="80px"
+                                                    className="object-cover"
                                                 />
                                             </div>
                                         ) : (
@@ -582,11 +586,14 @@ function BannerManagementPage() {
                                         <TableRow key={banner.id} className="hover:bg-stone-50">
                                             <TableCell>
                                                 {banner.image_url ? (
-                                                    <div className="w-16 h-12 rounded overflow-hidden border border-stone-200">
-                                                        <img
+                                                    <div className="relative w-16 h-12 rounded overflow-hidden border border-stone-200">
+                                                        <Image
                                                             src={banner.image_url}
                                                             alt={banner.title}
-                                                            className="w-full h-full object-cover"
+                                                            fill
+                                                            unoptimized
+                                                            sizes="64px"
+                                                            className="object-cover"
                                                         />
                                                     </div>
                                                 ) : (
@@ -753,10 +760,13 @@ function BannerManagementPage() {
                                     ) : imagePreview ? (
                                         <div className="space-y-3">
                                             <div className="relative aspect-video w-full max-w-md mx-auto rounded overflow-hidden border">
-                                                <img
+                                                <Image
                                                     src={imagePreview}
                                                     alt="미리보기"
-                                                    className="w-full h-full object-cover"
+                                                    fill
+                                                    unoptimized
+                                                    sizes="(max-width: 768px) 100vw, 768px"
+                                                    className="object-cover"
                                                 />
                                                 <Button
                                                     variant="destructive"

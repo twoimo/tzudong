@@ -330,9 +330,7 @@ function AdminEvaluationPage() {
 
     // user도 있고 isAdmin도 true인 경우
     hasCheckedAuth.current = true;
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, authLoading]);
+  }, [user, isAdmin, authLoading, toast, router]);
 
   // YouTube 제목 퍼지 검색
   useEffect(() => {
@@ -837,9 +835,7 @@ function AdminEvaluationPage() {
       hasLoadedData.current = true;
       loadAllRecords();
     }
-    // loadAllRecords는 의존성에서 제외 (무한 루프 방지)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin, authLoading]);
+  }, [user, isAdmin, authLoading, loadAllRecords]);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
@@ -849,7 +845,7 @@ function AdminEvaluationPage() {
   };
 
   // 통계 재계산 (현재 allRecords 기준)
-  const recalculateStats = () => {
+  const recalculateStats = useCallback(() => {
     const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
 
     const newStats: CategoryStats = {
@@ -877,15 +873,14 @@ function AdminEvaluationPage() {
     };
 
     setStats(newStats);
-  };
+  }, [allRecords]);
 
   // allRecords가 변경될 때마다 통계 재계산
   useEffect(() => {
     if (allRecords.length > 0) {
       recalculateStats();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRecords]);
+  }, [allRecords, recalculateStats]);
 
   // 승인 핸들러 (오류 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {

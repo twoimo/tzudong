@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, memo, useRef } from 'react';
+import Image from 'next/image';
 import { Scroll, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -106,13 +107,18 @@ const BannerSlide = memo(({
                 />
             ) : banner.image_url ? (
                 /* 이미지 배너 (우선순위 2) */
-                <img
-                    src={banner.image_url}
-                    alt={banner.title}
-                    className="w-full h-full object-cover"
-                    loading={isActive ? "eager" : "lazy"}
-                    decoding="async"
-                />
+                <div className="relative h-full w-full">
+                    <Image
+                        src={banner.image_url}
+                        alt={banner.title}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 640px) 100vw, 400px"
+                        className="object-cover"
+                        loading={isActive ? "eager" : "lazy"}
+                        decoding="async"
+                    />
+                </div>
             ) : (
                 /* 텍스트 전용 배너 (Fallback) */
                 <>
@@ -307,8 +313,6 @@ const CombinedPopupComponent = () => {
     if (!isVisible || banners.length === 0) {
         return null;
     }
-
-    const currentBanner = banners[currentSlide];
 
     return (
         <div

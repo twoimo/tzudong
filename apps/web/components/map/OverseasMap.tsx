@@ -195,20 +195,21 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             }
         };
 
-        if (mapContainer.current) {
-            mapContainer.current.addEventListener('wheel', handleWheel, { passive: false });
+        const mapContainerEl = mapContainer.current;
+        if (mapContainerEl) {
+            mapContainerEl.addEventListener('wheel', handleWheel, { passive: false });
         }
 
         return () => {
-            if (mapContainer.current) {
-                mapContainer.current.removeEventListener('wheel', handleWheel);
+            if (mapContainerEl) {
+                mapContainerEl.removeEventListener('wheel', handleWheel);
             }
             if (map.current) {
                 map.current.remove();
                 map.current = null;
             }
         };
-    }, []);
+    }, [selectedCountry]);
 
     const moveToRestaurant = useCallback((restaurant: Restaurant) => {
         if (!map.current) return;
