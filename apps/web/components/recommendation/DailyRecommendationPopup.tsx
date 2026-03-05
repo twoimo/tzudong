@@ -72,9 +72,10 @@ export function DailyRecommendationPopup() {
 
     // 초기 로딩 후 팝업 표시 (홈/글로벌 페이지에서만)
     useEffect(() => {
+        let showTimer: ReturnType<typeof setTimeout> | null = null;
+
         // 홈이 아니면 팝업 닫기
         if (!shouldShowPopup) {
-            setIsVisible(false);
             return;
         }
 
@@ -99,11 +100,19 @@ export function DailyRecommendationPopup() {
         if (isLoggedIn && unvisitedRestaurants.length > 0) {
             const restaurant = selectRandomRestaurant();
             if (restaurant) {
-                setSelectedRestaurant(restaurant);
                 window.hasShownDailyPopup = true; // 윈도우 객체에 표시 기록 (새로고침 시 초기화됨)
-                setTimeout(() => setIsVisible(true), 500); // 부드러운 등장을 위한 딜레이
+                showTimer = setTimeout(() => {
+                    setSelectedRestaurant(restaurant);
+                    setIsVisible(true);
+                }, 500); // 부드러운 등장을 위한 딜레이
             }
         }
+
+        return () => {
+            if (showTimer) {
+                clearTimeout(showTimer);
+            }
+        };
     }, [isLoggedIn, unvisitedRestaurants.length, shouldShowPopup, selectRandomRestaurant]);
 
     // 닫기
@@ -175,7 +184,7 @@ export function DailyRecommendationPopup() {
         router.push(targetPath);
     };
 
-    if (!selectedRestaurant || !isVisible) return null;
+    if (!shouldShowPopup || !selectedRestaurant || !isVisible) return null;
 
     const thumbnailUrl = selectedRestaurant.youtube_link
         ? getYouTubeThumbnailUrl(selectedRestaurant.youtube_link)

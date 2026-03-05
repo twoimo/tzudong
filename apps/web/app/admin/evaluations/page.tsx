@@ -48,6 +48,12 @@ import {
 
 const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
+const TRANSCRIPT_API_BASE_URL = (process.env.NEXT_PUBLIC_TRANSCRIPT_API_BASE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+
+function buildTranscriptApiUrl(pathname: string): string {
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return `${TRANSCRIPT_API_BASE_URL}${normalizedPath}`;
+}
 
 interface LocationMatchResult {
   matched_name?: string;
@@ -1199,7 +1205,7 @@ function AdminEvaluationPage() {
 
     try {
       // 1. 먼저 상태 확인
-      const statusResponse = await fetch('http://localhost:8000/status');
+      const statusResponse = await fetch(buildTranscriptApiUrl('/status'));
       if (!statusResponse.ok) {
         throw new Error('FastAPI 서버에 연결할 수 없습니다. uvicorn main:app --reload 명령으로 서버를 시작하세요.');
       }
@@ -1219,7 +1225,7 @@ function AdminEvaluationPage() {
       setTranscriptMessage(`${statusData.pending_urls}개 URL 자막 수집 중...`);
 
       // 2. 자막 수집 및 GitHub 커밋 실행
-      const collectResponse = await fetch('http://localhost:8000/collect', {
+      const collectResponse = await fetch(buildTranscriptApiUrl('/collect'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
