@@ -67,6 +67,7 @@ export function SubmissionSlideView({
     loading = false,
 }: SubmissionSlideViewProps) {
     const currentSubmission = submissions[currentIndex];
+    void onApprovalDataUpdate;
 
     // 지오코딩 관련 상태
     const [approvalData, setApprovalData] = useState<ApprovalData>({
@@ -143,7 +144,7 @@ export function SubmissionSlideView({
                 categories: currentSubmission.restaurant_categories || [],
             });
         }
-    }, [currentIndex, currentSubmission?.id]);
+    }, [currentIndex, currentSubmission]);
 
     // 외부에서 전달된 approvalData 동기화 (수정 모달에서 저장 시)
     useEffect(() => {
@@ -187,18 +188,18 @@ export function SubmissionSlideView({
                 {config.label}
             </Badge>
         );
-    }, [currentSubmission?.status]);
+    }, [currentSubmission]);
 
     // 승인 가능 여부 체크 (엄격한 기준 적용)
     const canApprove = useMemo(() => {
         if (!currentSubmission) return false;
         
         // 1. 최소 하나의 아이템이 승인으로 선택되어야 함
-        const approvedItems = Object.entries(itemDecisions).filter(([_, d]) => d.approved);
+        const approvedItems = Object.entries(itemDecisions).filter(([, d]) => d.approved);
         if (approvedItems.length === 0) return false;
 
         // 2. 승인된 모든 아이템의 메타데이터가 있어야 함
-        const allMetaFetched = approvedItems.every(([_, d]) => d.metaFetched || d.metaData);
+        const allMetaFetched = approvedItems.every(([, d]) => d.metaFetched || d.metaData);
         if (!allMetaFetched) return false;
 
         // 3. 지오코딩 완료 (좌표 및 도로명 주소 존재)
@@ -377,7 +378,7 @@ export function SubmissionSlideView({
     };
 
     // 승인 핸들러
-    const handleApprove = useCallback(async () => {
+    const handleApprove = async () => {
         if (!currentSubmission) return;
         if (!canApprove) {
             toast.error('지오코딩을 완료하고 최소 하나의 항목을 승인으로 선택해주세요');
@@ -392,8 +393,7 @@ export function SubmissionSlideView({
 
         // 검증 실행
         await handleNaverSearchAndVerify();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [canApprove, approvalData, currentSubmission, itemDecisions, forceApprove, onApprove, verificationDone, editableData, geocodingResults]);
+    };
 
     // 거부 핸들러
     const handleReject = useCallback(() => {

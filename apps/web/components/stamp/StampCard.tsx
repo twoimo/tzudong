@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import Image from 'next/image';
 import { MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -90,14 +91,15 @@ export const StampCard = memo(function StampCard({
             <div className="aspect-video relative">
                 {thumbnailUrl ? (
                     <>
-                        <img
+                        <Image
                             src={thumbnailUrl}
                             alt={`${restaurant.name} 썸네일`}
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1536px) 25vw, 20vw"
                             className={cn(
                                 "w-full h-full object-cover transition-all duration-300",
                                 showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
-                            loading="lazy"
                         />
 
                         {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 */}
@@ -167,18 +169,24 @@ export const StampCard = memo(function StampCard({
                                         <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} />
                                     </button>
                                 )}
-                                <img
-                                    src="/images/stamp-clear.png"
-                                    alt="방문 완료"
-                                    className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg dark:hidden")}
-                                    style={{ transform: 'rotate(-45deg)' }}
-                                />
-                                <img
-                                    src="/images/stamp-clear-dark.png"
-                                    alt="방문 완료"
-                                    className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg hidden dark:block")}
-                                    style={{ transform: 'rotate(-45deg)' }}
-                                />
+                                <div className={cn("relative", stampSizeClass)}>
+                                    <Image
+                                        src="/images/stamp-clear.png"
+                                        alt="방문 완료"
+                                        fill
+                                        sizes="208px"
+                                        className="object-contain opacity-90 drop-shadow-lg dark:hidden"
+                                        style={{ transform: 'rotate(-45deg)' }}
+                                    />
+                                    <Image
+                                        src="/images/stamp-clear-dark.png"
+                                        alt="방문 완료"
+                                        fill
+                                        sizes="208px"
+                                        className="object-contain opacity-90 drop-shadow-lg hidden dark:block"
+                                        style={{ transform: 'rotate(-45deg)' }}
+                                    />
+                                </div>
                             </div>
                         )}
                     </>

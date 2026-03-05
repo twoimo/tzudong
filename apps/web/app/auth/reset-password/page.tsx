@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
         };
 
         handleRecoverySession();
-    }, [router]);
+    }, [router, isValidSession]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

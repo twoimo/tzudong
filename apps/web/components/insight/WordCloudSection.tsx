@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -226,13 +227,15 @@ const VideoReviewCard = memo(({ video }: { video: VideoWithKeyword }) => (
     <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3">
         <div className="flex items-start gap-3">
             {/* 썸네일 플레이스홀더 */}
-            <div className="w-24 h-14 bg-muted rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <div className="relative w-24 h-14 bg-muted rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {video.thumbnail ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                         src={video.thumbnail}
                         alt="영상 썸네일"
-                        className="w-full h-full object-cover"
+                        fill
+                        unoptimized
+                        sizes="96px"
+                        className="object-cover"
                         loading="lazy"
                         referrerPolicy="no-referrer"
                     />

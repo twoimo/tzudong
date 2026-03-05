@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Restaurant } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { Tables } from "@/integrations/supabase/types";
 
