@@ -98,6 +98,13 @@ async function loadSystemStatusHelper() {
     return import(moduleId);
 }
 
+async function ensureRealSystemStatusModuleForRoute() {
+    const actual = await loadSystemStatusHelper();
+    mock.module('@/lib/insight/chat-system-status', () => ({
+        getAdminInsightSystemStatus: actual.getAdminInsightSystemStatus,
+    }));
+}
+
 function findChecklistItem(payload: WithChecklist, id: string) {
     return payload.checklist.find((entry) => entry.id === id);
 }
@@ -583,6 +590,7 @@ describe('admin insight system status API route', () => {
 
         mock.restore();
         setAuthMock('unauthorized');
+        await ensureRealSystemStatusModuleForRoute();
 
         try {
             const { GET } = await loadSystemStatusRoute();
@@ -629,6 +637,7 @@ describe('admin insight system status API route', () => {
 
         mock.restore();
         setAuthMock('ok');
+        await ensureRealSystemStatusModuleForRoute();
 
         try {
             const { GET } = await loadSystemStatusRoute();
@@ -712,6 +721,7 @@ describe('admin insight system status API route', () => {
 
         mock.restore();
         setAuthMock('ok');
+        await ensureRealSystemStatusModuleForRoute();
 
         try {
             const { GET } = await loadSystemStatusRoute();
@@ -760,6 +770,7 @@ describe('admin insight system status API route', () => {
 
         mock.restore();
         setAuthMock('ok');
+        await ensureRealSystemStatusModuleForRoute();
 
         try {
             const { GET } = await loadSystemStatusRoute();
