@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant } from "@/types/restaurant";
+import { Tables } from "@/integrations/supabase/types";
 
 // ============================================================================
 // Type Definitions
@@ -94,17 +95,6 @@ function incrementMapCount(map: Map<string, number>, key: string): void {
     map.set(key, (map.get(key) ?? 0) + 1);
 }
 
-/** 좋아요 수 카운트 맵 생성 */
-function buildLikesCountMap(likes: Array<{ review_id: string }> | null): Map<string, number> {
-    const likesMap = new Map<string, number>();
-    if (!likes) return likesMap;
-
-    for (const like of likes) {
-        incrementMapCount(likesMap, like.review_id);
-    }
-    return likesMap;
-}
-
 // ============================================================================
 // Database Query Types (Supabase response shapes)
 // ============================================================================
@@ -120,22 +110,23 @@ interface ReviewRow {
     is_verified: boolean;
 }
 
-interface ReviewWithRestaurantRow {
+interface UserReviewRow {
     id: string;
     restaurant_id: string;
     content: string;
     is_verified: boolean;
     created_at: string;
     visited_at: string | null;
-    restaurants: { name: string } | null;
+    food_photos: string[] | null;
 }
 
-interface StampRow {
+interface StampReviewRow {
     restaurant_id: string;
     visited_at: string | null;
     created_at: string;
-    restaurants: { name: string } | null;
 }
+
+type UserProfileRestaurantRow = Tables<"restaurants">;
 
 interface ReviewLikeRow {
     review_id: string;
@@ -239,10 +230,11 @@ export function useUserReviews(userId: string, viewerId?: string) {
                 .order('created_at', { ascending: false });
 
             if (reviewsError || !reviews?.length) return [];
+            const typedReviews = reviews as UserReviewRow[];
 
             // 2. 관련 데이터 ID 추출
-            const reviewIds = reviews.map((r: any) => r.id);
-            const restaurantIds = [...new Set(reviews.map((r: any) => r.restaurant_id))];
+            const reviewIds = typedReviews.map((r) => r.id);
+            const restaurantIds = [...new Set(typedReviews.map((r) => r.restaurant_id))];
 
             // 3. 맛집 정보 조회
             const { data: restaurants } = await supabase
@@ -250,14 +242,11 @@ export function useUserReviews(userId: string, viewerId?: string) {
                 .select('*')
                 .in('id', restaurantIds);
 
+            const typedRestaurants = (restaurants ?? []) as UserProfileRestaurantRow[];
             const restaurantMap = new Map(
-                restaurants?.map((r: any) => {
-                    const mappedR = { ...r };
-                    if (mappedR.approved_name) {
-                        mappedR.name = mappedR.approved_name;
-                    }
-                    return [r.id, mappedR as Restaurant];
-                }) || []
+                typedRestaurants.map((r) => {
+                    return [r.id, r as Restaurant];
+                })
             );
 
             // 4. 좋아요 정보 조회 (뷰어 기준 + 전체 개수)
@@ -271,7 +260,7 @@ export function useUserReviews(userId: string, viewerId?: string) {
             const userLikedMap = new Map<string, boolean>();
 
             if (likes) {
-                (likes as any[]).forEach(l => {
+                (likes as ReviewLikeRow[]).forEach(l => {
                     likesCountMap.set(l.review_id, (likesCountMap.get(l.review_id) || 0) + 1);
                     if (viewerId && l.user_id === viewerId) {
                         userLikedMap.set(l.review_id, true);
@@ -280,7 +269,7 @@ export function useUserReviews(userId: string, viewerId?: string) {
             }
 
             // 5. 데이터 병합
-            return reviews.map((r: any) => {
+            return typedReviews.map((r) => {
                 const photos = r.food_photos?.map((url: string) => ({
                     url: url,
                     type: 'image'
@@ -390,9 +379,10 @@ export function useUserStamps(userId: string) {
                 .order('created_at', { ascending: false });
 
             if (reviewsError || !reviews?.length) return [];
+            const typedReviews = reviews as StampReviewRow[];
 
             // 2. 맛집 ID 추출
-            const restaurantIds = [...new Set((reviews as any[]).map(r => r.restaurant_id))];
+            const restaurantIds = [...new Set(typedReviews.map(r => r.restaurant_id))];
 
             // 3. 맛집 상세 정보 조회
             const { data: restaurants } = await supabase
@@ -400,18 +390,15 @@ export function useUserStamps(userId: string) {
                 .select('*')
                 .in('id', restaurantIds);
 
+            const typedRestaurants = (restaurants ?? []) as UserProfileRestaurantRow[];
             const restaurantMap = new Map(
-                (restaurants as any[])?.map(r => {
-                    const mappedR = { ...r };
-                    if (mappedR.approved_name) {
-                        mappedR.name = mappedR.approved_name;
-                    }
-                    return [r.id, mappedR as Restaurant];
-                }) || []
+                typedRestaurants.map(r => {
+                    return [r.id, r as Restaurant];
+                })
             );
 
             // 4. 데이터 병합
-            return reviews.map((r: any) => {
+            return typedReviews.map((r) => {
                 const restaurant = restaurantMap.get(r.restaurant_id);
                 // 맛집 정보가 없으면 스킵되어야 하지만, 일단 타입 안전을 위해 빈 객체 또는 처리 필요
                 if (!restaurant) return null;

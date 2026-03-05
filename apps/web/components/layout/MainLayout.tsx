@@ -47,21 +47,17 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { isSidebarOpen, setIsSidebarOpen } = useLayout();
-    const { isMobileOrTablet, isDesktop } = useDeviceType();
+    const { isDesktop } = useDeviceType();
     const [isCenteredLayout, setIsCenteredLayout] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const prevPathnameRef = useRef(pathname);
 
     // 마이페이지 여부 확인
     const isMyPage = pathname?.startsWith('/mypage');
-
-    // [NEW] 홈페이지 여부 확인 (오버레이 레이아웃 적용 대상)
-    const isHomePage = pathname === '/';
 
     // 페이지 이동 감지
     useEffect(() => {
@@ -98,16 +94,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
     const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
         queryClient.invalidateQueries({ queryKey: ['restaurants'] });
-        setRefreshTrigger(prev => prev + 1);
 
         if (updatedRestaurant) {
             setSelectedRestaurant(updatedRestaurant);
         }
-    };
-
-    const handleAdminEditRestaurant = (restaurant: Restaurant) => {
-        setSelectedRestaurant(restaurant);
-        setIsAdminModalOpen(true);
     };
 
     // [NEW] 데스크탑에서는 항상 오버레이 레이아웃 사용 (사이드바 완전 제거)
@@ -135,12 +125,16 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
             <div
                 className={cn(
-                    "flex-1 flex flex-col overflow-hidden transition-[margin] duration-300",
+                    'flex-1 flex flex-col overflow-hidden transition-[margin] duration-300',
                     // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
-                    "pb-[var(--mobile-bottom-nav-height)]"
+                    'pb-[var(--mobile-bottom-nav-height)]'
                 )}
                 style={{ transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
             >
+                <a href="#main-content" className="skip-link">
+                    본문 바로가기
+                </a>
+
                 <Header
                     onToggleSidebar={handleToggleSidebar}
                     isLoggedIn={!!user}
@@ -155,10 +149,13 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     hideToggleSidebar={true}
                 />
 
-                <main className={cn(
-                    "flex-1 relative overflow-hidden",
-                    isCenteredLayout && shouldShowCenteredLayoutButton && "flex items-center justify-center"
-                )}>
+                <main
+                    id="main-content"
+                    className={cn(
+                        'flex-1 relative overflow-hidden',
+                        isCenteredLayout && shouldShowCenteredLayoutButton && 'flex items-center justify-center'
+                    )}
+                >
                     <div className={cn(
                         "h-full w-full",
                         isCenteredLayout && shouldShowCenteredLayoutButton && "max-w-7xl mx-auto"

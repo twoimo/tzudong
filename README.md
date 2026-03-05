@@ -6,20 +6,13 @@ Next.js 16 (Turbopack) + Supabase 기반의 풀스택 맛집 정보 플랫폼입
 
 **Live Demo**: [https://tzudong.app](https://tzudong.app)
 
----
-
 ## 시스템 아키텍처 (System Architecture)
 
-현재 프로젝트는 **멀티모달 RAG(Multimodal RAG) 기반 비디오 분석 및 스토리보드 생성 에이전트**를 중심으로 고도화된 아키텍처를 자랑합니다.
-
-### 전체 시스템 아키텍처
 ![System Architecture](apps/web/public/images/architecture.png)
 
-### 랭그래프 멀티 에이전트 체제 (LangGraph Orchestration)
-Supervisor를 중앙 컨트롤 타워로 하여 Researcher, Designer, Intern 에이전트가 동적으로 협업하는 **방사형(Hub-and-spoke) 멀티 에이전트 오케스트레이션** 엔진이 구축되어 있습니다.
-![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
+## 랭그래프 멀티 에이전트 체제 (LangGraph Orchestration)
 
----
+![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
 
 ## 주요 기능
 
@@ -33,7 +26,7 @@ Supervisor를 중앙 컨트롤 타워로 하여 Researcher, Designer, Intern 에
 #### 다채로운 카테고리 마커 아이콘 지원 (15종)
 지도 상의 맛집 메뉴를 한눈에 직관적으로 인지할 수 있도록 다채롭고 세련된 커스텀 마커 세트가 적용되어 있습니다.
 
-<div align="center">
+<div align="left">
   <img src="apps/web/public/images/maker-images/korean.png" width="48" alt="한식">
   <img src="apps/web/public/images/maker-images/chinese.png" width="48" alt="중식">
   <img src="apps/web/public/images/maker-images/asian.png" width="48" alt="아시안">
@@ -90,29 +83,3 @@ Supervisor를 중앙 컨트롤 타워로 하여 Researcher, Designer, Intern 에
 - **Bundle 최적화**: Dynamic imports, Code splitting
 - **Image 최적화**: AVIF/WebP, Lazy loading
 - **Cache**: React Query (staleTime: 60s, gcTime: 5m)
-
----
-
-## 시작하기
-
-### 사전 요구사항
-- Node.js 18.17+
-- Bun 1.2.0+ (권장) 또는 npm/yarn
-- Python 3.11+ (백엔드 파이프라인)
-
-### 설치 및 실행
-
-```bash
-# 1. 레포지토리 클론
-git clone https://github.com/twoimo/tzudong.git
-cd tzudong
-
-# 2. 환경 변수 설정
-cp apps/web/.env.example apps/web/.env.local
-# .env.local 파일에 API 키 입력
-
-# 3. 의존성 설치 및 실행
-cd apps/web
-bun install
-bun run dev  # http://localhost:8080
-```

@@ -1,13 +1,10 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search, Edit, Share2, Check, CheckCircle, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { MessageSquareText, Plus, Eye, EyeOff, Filter, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,15 +16,39 @@ import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
-import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
 
+type FeedRestaurantRecord = Record<string, unknown> & {
+    id: string;
+    name?: string | null;
+    approved_name?: string | null;
+};
 
-// [PERF] 모듈 레벨 포맷터 캐시 - 매 호출시 Intl.DateTimeFormat 재생성 방지
-const DATE_FORMATTER = new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-});
+interface FeedReviewRow {
+    id: string;
+    user_id: string;
+    restaurant_id: string;
+    visited_at: string;
+    created_at: string;
+    content: string;
+    food_photos?: string[] | null;
+    categories?: string[] | null;
+    category?: string | null;
+    like_count?: number | null;
+}
+
+interface FeedProfileRow {
+    user_id: string;
+    nickname: string | null;
+    avatar_url: string | null;
+}
+
+interface FeedReviewLikeRow {
+    review_id: string;
+}
+
+interface FeedProfileNicknameRow {
+    nickname: string | null;
+}
 
 // ========== Types ==========
 export interface FeedReview {
@@ -44,7 +65,7 @@ export interface FeedReview {
     categories: string[];
     likeCount: number;
     isLikedByUser: boolean;
-    restaurant: any; // Full restaurant object
+    restaurant: FeedRestaurantRecord | null; // Full restaurant object
 }
 
 interface FeedContentProps {
@@ -61,7 +82,7 @@ interface FeedContentProps {
     /** 초기 하이라이트 리뷰 ID (Deep Link) */
     initialReviewId?: string | null;
     /** 맛집 상세 모달 열기 핸들러 (오버레이용) */
-    onOpenRestaurantDetail?: (restaurant: any) => void;
+    onOpenRestaurantDetail?: (restaurant: FeedRestaurantRecord) => void;
     /** 유저 프로필 모달 열기 핸들러 (오버레이용) */
     onOpenUserProfile?: (userId: string) => void;
     /** 로그인 모달 열기 */
@@ -112,8 +133,6 @@ export default function FeedContent({
     useReviewLikesRealtime();
 
     // [리뷰 공유] 스크롤 타겟
-    const searchParams = useSearchParams();
-    const targetReviewId = searchParams?.get('review') || null;
     const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(null);
 
     // [성능 최적화] 검색어 디바운싱 (300ms)
@@ -158,7 +177,7 @@ export default function FeedContent({
 
             setTimeout(scrollToElement, 500);
         }
-    }, [reviewIdPrefix]);
+    }, [reviewIdPrefix, initialReviewId]);
 
     // 리뷰 작성 핸들러
     const handleWriteReview = useCallback(() => {
@@ -199,74 +218,80 @@ export default function FeedContent({
                 .select('*')
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false })
-                .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1)) as any;
+                .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1));
 
-            if (reviewsError || !reviewsData || reviewsData.length === 0) {
+            const typedReviewsData = (reviewsData ?? []) as FeedReviewRow[];
+
+            if (reviewsError || typedReviewsData.length === 0) {
                 return { reviews: [], nextCursor: null };
             }
 
-            const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
-            const { data: profilesData } = await supabase
+            const userIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.user_id))];
+            const { data: profilesDataRaw } = await supabase
                 .from('profiles')
                 .select('user_id, nickname, avatar_url')
-                .in('user_id', userIds) as any;
-            const profilesMap = new Map((profilesData || []).map((p: any) =>
-                [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }]
+                .in('user_id', userIds);
+
+            const profilesData = (profilesDataRaw ?? []) as FeedProfileRow[];
+            const profilesMap = new Map(profilesData.map((profileRow) =>
+                [profileRow.user_id, { nickname: profileRow.nickname, avatarUrl: profileRow.avatar_url }]
             ));
 
-            const restaurantIds = [...new Set(reviewsData.map((r: any) => r.restaurant_id))];
-            const { data: restaurantsData } = await supabase
+            const restaurantIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.restaurant_id))];
+            const { data: restaurantsDataRaw } = await supabase
                 .from('restaurants')
                 .select('*')
-                .in('id', restaurantIds) as any;
+                .in('id', restaurantIds);
 
-            const restaurantsMap = new Map<string, any>((restaurantsData || []).map((r: any) => {
-                const mappedR = { ...r };
+            const restaurantsData = (restaurantsDataRaw ?? []) as FeedRestaurantRecord[];
+            const restaurantsMap = new Map<string, FeedRestaurantRecord>((restaurantsData || []).map((restaurantRow) => {
+                const mappedRestaurant: FeedRestaurantRecord = { ...restaurantRow };
                 // approved_name을 name으로 사용 (호환성)
-                if (mappedR.approved_name) {
-                    mappedR.name = mappedR.approved_name;
+                if (mappedRestaurant.approved_name) {
+                    mappedRestaurant.name = mappedRestaurant.approved_name;
                 }
-                return [r.id, mappedR];
+                return [restaurantRow.id, mappedRestaurant];
             }));
 
-            const reviewIds = reviewsData.map((r: any) => r.id);
+            const reviewIds = typedReviewsData.map((reviewRow) => reviewRow.id);
             let userLikesMap = new Map<string, boolean>();
 
             if (user) {
-                const { data: userLikesData } = await supabase
+                const { data: userLikesDataRaw } = await supabase
                     .from('review_likes')
                     .select('review_id')
                     .in('review_id', reviewIds)
-                    .eq('user_id', user.id) as any;
+                    .eq('user_id', user.id);
+                const userLikesData = (userLikesDataRaw ?? []) as FeedReviewLikeRow[];
 
                 userLikesMap = new Map(
-                    (userLikesData || []).map((like: any) => [like.review_id, true])
+                    userLikesData.map((likeRow) => [likeRow.review_id, true])
                 );
             }
 
-            const reviews: FeedReview[] = reviewsData.map((review: any) => {
-                const profileInfo = (profilesMap.get(review.user_id) || { nickname: '탈퇴한 사용자', avatarUrl: undefined }) as { nickname: string; avatarUrl?: string };
+            const reviews: FeedReview[] = typedReviewsData.map((reviewRow) => {
+                const profileInfo = (profilesMap.get(reviewRow.user_id) || { nickname: '탈퇴한 사용자', avatarUrl: undefined }) as { nickname: string; avatarUrl?: string };
                 return {
-                    id: review.id,
-                    userId: review.user_id,
-                    restaurantId: review.restaurant_id,
-                    restaurantName: restaurantsMap.get(review.restaurant_id)?.name || '알 수 없음',
-                    restaurant: restaurantsMap.get(review.restaurant_id),
+                    id: reviewRow.id,
+                    userId: reviewRow.user_id,
+                    restaurantId: reviewRow.restaurant_id,
+                    restaurantName: String(restaurantsMap.get(reviewRow.restaurant_id)?.name || '알 수 없음'),
+                    restaurant: restaurantsMap.get(reviewRow.restaurant_id) || null,
                     userName: profileInfo.nickname || '탈퇴한 사용자',
                     userAvatarUrl: profileInfo.avatarUrl,
-                    visitedAt: review.visited_at,
-                    createdAt: review.created_at,
-                    content: review.content,
-                    photos: review.food_photos || [],
-                    categories: (Array.isArray(review.categories) && review.categories.length > 0)
-                        ? review.categories
-                        : (review.category ? [review.category] : []),
-                    likeCount: review.like_count || 0,
-                    isLikedByUser: userLikesMap.get(review.id) || false,
+                    visitedAt: reviewRow.visited_at,
+                    createdAt: reviewRow.created_at,
+                    content: reviewRow.content,
+                    photos: reviewRow.food_photos || [],
+                    categories: (Array.isArray(reviewRow.categories) && reviewRow.categories.length > 0)
+                        ? reviewRow.categories
+                        : (reviewRow.category ? [reviewRow.category] : []),
+                    likeCount: reviewRow.like_count || 0,
+                    isLikedByUser: userLikesMap.get(reviewRow.id) || false,
                 };
             });
 
-            const nextCursor = reviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
+            const nextCursor = typedReviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
             return { reviews, nextCursor };
         },
         getNextPageParam: (lastPage) => lastPage?.nextCursor,
@@ -336,18 +361,24 @@ export default function FeedContent({
             if (currentIsLiked) {
                 await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
             } else {
-                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as any);
+                await supabase.from('review_likes' as never).insert({ review_id: reviewId, user_id: user.id } as never);
 
                 if (reviewUserId && reviewUserId !== user.id) {
                     try {
-                        const { data: profileData } = await (supabase.from('profiles') as any)
+                        const { data: profileDataRaw } = await supabase
+                            .from('profiles')
                             .select('nickname')
                             .eq('user_id', user.id)
                             .single();
+                        const profileData = profileDataRaw as FeedProfileNicknameRow | null;
 
-                        const likerName = (profileData as any)?.nickname || '누군가';
+                        const likerName = profileData?.nickname || '누군가';
 
-                        await (supabase as any).rpc('create_user_notification', {
+                        const rpcClient = supabase as unknown as {
+                            rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+                        };
+
+                        await rpcClient.rpc('create_user_notification', {
                             p_user_id: reviewUserId,
                             p_type: 'review_like',
                             p_title: '리뷰에 좋아요가 눌렸어요!',
@@ -370,7 +401,7 @@ export default function FeedContent({
     }, [user, queryClient, queryKey]);
 
     // 맛집으로 이동
-    const goToRestaurant = useCallback((restaurantId: string, restaurant?: any) => {
+    const goToRestaurant = useCallback((restaurantId: string, restaurant?: FeedRestaurantRecord | null) => {
         // [오버레이] onOpenRestaurantDetail이 있으면 사이드 패널로 열기
         if (isOverlay && onOpenRestaurantDetail && restaurant) {
             onOpenRestaurantDetail(restaurant);
@@ -382,11 +413,6 @@ export default function FeedContent({
         }
         router.push(`/?restaurant=${restaurantId}`);
     }, [router, isOverlay, onClose, onOpenRestaurantDetail]);
-
-    // [PERF] 날짜 포맷 - 모듈 레벨 formatter 캐시 사용
-    const formatDate = useCallback((dateString: string) => {
-        return DATE_FORMATTER.format(new Date(dateString));
-    }, []);
 
     return (
         <div className={cn(

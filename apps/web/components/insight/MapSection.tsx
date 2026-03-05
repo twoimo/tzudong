@@ -1,23 +1,20 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
     MapPin,
-    ExternalLink,
     Youtube,
     Search,
     X,
     ChevronRight,
     Users,
-    Star,
     Clock,
     RefreshCw
 } from 'lucide-react';
@@ -54,6 +51,16 @@ interface RestaurantMarker {
     confidence?: string;
     addressSource?: string;
 }
+
+type NaverMapLike = {
+    panTo: (target: unknown, options?: unknown) => void;
+    getCenter: () => unknown;
+    setCenter: (target: unknown) => void;
+};
+
+type NaverMarkerLike = {
+    setMap: (map: unknown) => void;
+};
 
 // [HELPER] YoutuberRestaurant를 RestaurantMarker로 변환
 function convertToMarker(restaurant: YoutuberRestaurant): RestaurantMarker | null {
@@ -337,8 +344,8 @@ const NaverMapView = memo(({ markers, onMarkerClick, selectedMarkerId, isPanelOp
     isPanelOpen: boolean;
 }) => {
     const mapRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<any>(null);
-    const markersRef = useRef<any[]>([]);
+    const mapInstanceRef = useRef<NaverMapLike | null>(null);
+    const markersRef = useRef<NaverMarkerLike[]>([]);
     const selectedMarkerRef = useRef<RestaurantMarker | null>(null);
     const { isLoaded, isLoading, loadError, load } = useNaverMaps({ autoLoad: true });
 
@@ -543,15 +550,14 @@ const MapSectionComponent = () => {
         restaurants: youtuberRestaurants,
         isLoading,
         error,
-        refetch,
-        totalCount
+        refetch
     } = useYoutuberRestaurants({
         youtuberName: selectedYoutuber !== 'all' ? selectedYoutuber : undefined,
         onlyWithCoordinates: true
     });
 
     // [DATA] 유튜버 목록 가져오기
-    const { youtubers, isLoading: isLoadingYoutubers } = useYoutuberList();
+    const { youtubers } = useYoutuberList();
 
     // [OPTIMIZATION] 필터링된 마커 메모이제이션
     const filteredMarkers = useMemo(() => {

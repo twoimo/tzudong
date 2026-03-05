@@ -8,7 +8,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -29,7 +28,6 @@ import { ko } from "date-fns/locale";
 import {
   Mail,
   Calendar,
-  Shield,
   LogOut,
   User,
   Lock,
@@ -82,13 +80,7 @@ export default function ProfilePage() {
   // 아바타 업로드
   const [avatarUploading, setAvatarUploading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
-  }, [user]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -111,7 +103,13 @@ export default function ProfilePage() {
       toast.error('프로필 정보를 불러오는데 실패했습니다');
       console.error('Profile load error:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadProfile();
+    }
+  }, [user, loadProfile]);
 
   const handleNicknameChange = async () => {
     if (!user || !newNickname.trim()) {
@@ -126,11 +124,11 @@ export default function ProfilePage() {
 
     setLoading(true);
     try {
-      const { error } = await (supabase
-        .from('profiles') as any)
+      const { error } = await supabase
+        .from('profiles' as never)
         .update({
           nickname: newNickname.trim()
-        })
+        } as never)
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -232,8 +230,9 @@ export default function ProfilePage() {
       const publicUrl = `${baseUrl}?t=${Date.now()}`;
 
       // 프로필 업데이트 (avatar_url 컬럼 사용)
-      const { error: updateError } = await (supabase.from('profiles') as any)
-        .update({ avatar_url: publicUrl })
+      const { error: updateError } = await supabase
+        .from('profiles' as never)
+        .update({ avatar_url: publicUrl } as never)
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
@@ -276,8 +275,9 @@ export default function ProfilePage() {
       }
 
       // 프로필 업데이트 (avatar_url 널로)
-      const { error: updateError } = await (supabase.from('profiles') as any)
-        .update({ avatar_url: null })
+      const { error: updateError } = await supabase
+        .from('profiles' as never)
+        .update({ avatar_url: null } as never)
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
@@ -366,9 +366,9 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       // 프로필 익명화
-      const { error: profileError } = await (supabase
-        .from('profiles') as any)
-        .update({ nickname: '탈퇴한 사용자' })
+      const { error: profileError } = await supabase
+        .from('profiles' as never)
+        .update({ nickname: '탈퇴한 사용자' } as never)
         .eq('user_id', user.id);
 
       if (profileError) {
@@ -448,7 +448,6 @@ export default function ProfilePage() {
   const displayName = profile?.nickname || user.user_metadata?.full_name || user.email?.split("@")[0] || "사용자";
   // 프로필 사진 URL (avatar_url 컬럼만 사용 - 삭제 시 완전히 제거됨)
   const avatarUrl = profile?.avatar_url;
-  const isAdmin = user.user_metadata?.is_admin === true;
   const createdAt = user.created_at ? new Date(user.created_at) : new Date();
 
   return (
@@ -804,7 +803,7 @@ export default function ProfilePage() {
                 <AlertDialogTitle>계정을 비활성화하시겠습니까?</AlertDialogTitle>
                 <AlertDialogDescription className="space-y-2">
                   <span className="block">계정을 비활성화하면:</span>
-                  <span className="block">• 닉네임이 '탈퇴한 사용자'로 변경됩니다</span>
+                  <span className="block">• 닉네임이 &apos;탈퇴한 사용자&apos;로 변경됩니다</span>
                   <span className="block">• 작성한 리뷰는 유지됩니다</span>
                   <span className="block">• 랭킹에서 제외됩니다</span>
                   <span className="block">• 나중에 다시 로그인하면 복구할 수 있습니다</span>
@@ -873,7 +872,7 @@ export default function ProfilePage() {
                   <span className="block font-semibold text-destructive">⚠️ 이 작업은 되돌릴 수 없습니다!</span>
                   <span className="block">계정을 완전히 삭제하면:</span>
                   <span className="block">• 모든 개인 정보가 삭제됩니다</span>
-                  <span className="block">• 작성한 리뷰는 '탈퇴한 사용자'로 유지됩니다</span>
+                  <span className="block">• 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다</span>
                   <span className="block">• 다시는 이 계정으로 로그인할 수 없습니다</span>
                   <span className="block mt-4">계속하시려면 아래에 계정 이메일을 입력해주세요.</span>
                 </AlertDialogDescription>

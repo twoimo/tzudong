@@ -1,14 +1,19 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, ExternalLink, X, Sparkles } from "lucide-react";
+import { MapPin, Sparkles } from "lucide-react";
 import { useUnvisitedRestaurants } from "@/hooks/useUnvisitedRestaurants";
 
 const POPUP_STORAGE_KEY = "dailyRecommendationHideUntil";
+
+declare global {
+    interface Window {
+        hasShownDailyPopup?: boolean;
+    }
+}
 
 /**
  * 매일 추천 음식점 팝업 컴포넌트 (광고 팝업 스타일)
@@ -18,10 +23,9 @@ const POPUP_STORAGE_KEY = "dailyRecommendationHideUntil";
 export function DailyRecommendationPopup() {
     const router = useRouter();
     const pathname = usePathname();
-    const { unvisitedRestaurants, isLoading, isLoggedIn } = useUnvisitedRestaurants();
+    const { unvisitedRestaurants, isLoggedIn } = useUnvisitedRestaurants();
     const [isVisible, setIsVisible] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<typeof unvisitedRestaurants[0] | null>(null);
-    const [hideToday, setHideToday] = useState(false);
 
     // 글로벌 국가 목록 (GlobalMapPage와 동일)
     const GLOBAL_COUNTRIES = [
@@ -45,7 +49,7 @@ export function DailyRecommendationPopup() {
     };
 
     // 랜덤 음식점 선택 (국내만)
-    const selectRandomRestaurant = () => {
+    const selectRandomRestaurant = useCallback(() => {
         // 한국 지역만 필터링 (해외 제외)
         const KOREAN_REGIONS = [
             "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
@@ -63,10 +67,7 @@ export function DailyRecommendationPopup() {
         if (koreanRestaurants.length === 0) return null;
         const randomIndex = Math.floor(Math.random() * koreanRestaurants.length);
         return koreanRestaurants[randomIndex];
-    };
-
-    // window 객체에 커스텀 프로퍼티 타입 추가
-    const globalWindow = typeof window !== 'undefined' ? (window as any) : {};
+    }, [unvisitedRestaurants]);
 
     // 초기 로딩 후 팝업 표시 (홈/글로벌 페이지에서만)
     useEffect(() => {
@@ -77,7 +78,7 @@ export function DailyRecommendationPopup() {
         }
 
         // 이미 보여줬거나, 클라이언트가 아니면 리턴
-        if (globalWindow.hasShownDailyPopup || typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || window.hasShownDailyPopup) return;
 
         // localStorage에서 숨김 설정 확인
         const hideUntilStr = localStorage.getItem(POPUP_STORAGE_KEY);
@@ -98,21 +99,14 @@ export function DailyRecommendationPopup() {
             const restaurant = selectRandomRestaurant();
             if (restaurant) {
                 setSelectedRestaurant(restaurant);
-                globalWindow.hasShownDailyPopup = true; // 윈도우 객체에 표시 기록 (새로고침 시 초기화됨)
+                window.hasShownDailyPopup = true; // 윈도우 객체에 표시 기록 (새로고침 시 초기화됨)
                 setTimeout(() => setIsVisible(true), 500); // 부드러운 등장을 위한 딜레이
             }
         }
-    }, [isLoggedIn, unvisitedRestaurants.length, shouldShowPopup]);
+    }, [isLoggedIn, unvisitedRestaurants.length, shouldShowPopup, selectRandomRestaurant]);
 
     // 닫기
     const handleClose = () => {
-        // "오늘 하루 안 보이기" 체크된 경우 localStorage에 저장
-        if (hideToday && typeof window !== 'undefined') {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0); // 다음 날 자정
-            localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString());
-        }
         setIsVisible(false);
 
         // 광고 배너 팝업에게 닫힘 알림
@@ -122,12 +116,9 @@ export function DailyRecommendationPopup() {
     // 맛집의 지역 정보를 추출하는 함수
     const getRestaurantRegion = (restaurant: typeof unvisitedRestaurants[0]): string | null => {
         if (restaurant.address_elements && typeof restaurant.address_elements === 'object') {
-            const addressElements = restaurant.address_elements as any;
-            if (addressElements.SIDO) {
-                const sido = addressElements.SIDO;
-                if (typeof sido === 'string') {
-                    return sido;
-                }
+            const sido = (restaurant.address_elements as Record<string, unknown>).SIDO;
+            if (typeof sido === 'string') {
+                return sido;
             }
         }
 

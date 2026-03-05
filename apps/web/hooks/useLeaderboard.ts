@@ -14,6 +14,24 @@ export interface LeaderboardUser {
     qualityScore: number;
 }
 
+type ProfileRow = {
+    user_id: string;
+    nickname: string;
+};
+
+type ReviewRow = {
+    id: string;
+    user_id: string;
+    is_verified: boolean;
+    created_at: string;
+};
+
+type ReviewLikeRow = {
+    review_id: string;
+};
+
+type LeaderboardComputedUser = Omit<LeaderboardUser, 'rank'>;
+
 export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
     const queryClient = useQueryClient();
 
@@ -47,8 +65,8 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
         queryFn: async () => {
             try {
                 // [1단계] 모든 프로필 조회 (유령 회원 포함)
-                const { data: profilesData, error: profilesError } = await (supabase
-                    .from('profiles') as any)
+                const { data: profilesRawData, error: profilesError } = await supabase
+                    .from('profiles')
                     .select('user_id, nickname')
                     .not('nickname', 'is', null)
                     .neq('nickname', '탈퇴한 사용자');
@@ -58,12 +76,13 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
                     throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
                 }
 
-                if (!profilesData || profilesData.length === 0) {
+                const profilesData = (profilesRawData ?? []) as ProfileRow[];
+                if (profilesData.length === 0) {
                     return [];
                 }
 
                 // [2단계] 모든 리뷰 조회
-                const userIds = profilesData.map((profile: any) => profile.user_id);
+                const userIds = profilesData.map((profile) => profile.user_id);
 
                 let reviewsQuery = supabase
                     .from('reviews')
@@ -76,30 +95,28 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
                     reviewsQuery = reviewsQuery.gte('created_at', formatISO(startOfMonthDate));
                 }
 
-                const { data: allReviewsData, error: allReviewsError } = await reviewsQuery;
+                const { data: allReviewsRawData, error: allReviewsError } = await reviewsQuery;
 
                 if (allReviewsError) {
                     console.warn('전체 리뷰 데이터 조회 실패:', allReviewsError.message);
                 }
+                const allReviewsData = (allReviewsRawData ?? []) as ReviewRow[];
 
                 // [3단계] 모든 리뷰의 좋아요 데이터 조회
-                let reviewIds: string[] = [];
-                if (allReviewsData) {
-                    reviewIds = allReviewsData.map((review: any) => review.id);
-                }
+                const reviewIds = allReviewsData.map((review) => review.id);
 
                 // 리뷰가 하나라도 있을 때만 좋아요 조회
-                let likesData: any[] = [];
+                let likesData: ReviewLikeRow[] = [];
                 if (reviewIds.length > 0) {
-                    const { data: fetchedLikes, error: likesError } = await (supabase
-                        .from('review_likes') as any)
+                    const { data: fetchedLikes, error: likesError } = await supabase
+                        .from('review_likes')
                         .select('review_id')
                         .in('review_id', reviewIds);
 
                     if (likesError) {
                         console.warn('좋아요 데이터 조회 실패:', likesError.message);
                     } else {
-                        likesData = fetchedLikes || [];
+                        likesData = (fetchedLikes ?? []) as ReviewLikeRow[];
                     }
                 }
 
@@ -110,35 +127,31 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
 
                 // 각 리뷰별 좋아요 수 Map 생성
                 const reviewLikesMap = new Map<string, number>();
-                if (likesData) {
-                    likesData.forEach((like: any) => {
-                        const current = reviewLikesMap.get(like.review_id) || 0;
-                        reviewLikesMap.set(like.review_id, current + 1);
-                    });
-                }
+                likesData.forEach((like) => {
+                    const current = reviewLikesMap.get(like.review_id) || 0;
+                    reviewLikesMap.set(like.review_id, current + 1);
+                });
 
                 // 리뷰 통계 계산
-                if (allReviewsData) {
-                    allReviewsData.forEach((review: any) => {
-                        // 총 리뷰 수 계산
-                        const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
-                        reviewCountMap.set(review.user_id, currentReviewCount + 1);
+                allReviewsData.forEach((review) => {
+                    // 총 리뷰 수 계산
+                    const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
+                    reviewCountMap.set(review.user_id, currentReviewCount + 1);
 
-                        // 승인된 리뷰 수 계산
-                        if (review.is_verified) {
-                            const currentVerifiedCount = verifiedReviewCountMap.get(review.user_id) || 0;
-                            verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
-                        }
+                    // 승인된 리뷰 수 계산
+                    if (review.is_verified) {
+                        const currentVerifiedCount = verifiedReviewCountMap.get(review.user_id) || 0;
+                        verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
+                    }
 
-                        // 총 좋아요 수 계산
-                        const reviewLikes = reviewLikesMap.get(review.id) || 0;
-                        const currentLikes = totalLikesMap.get(review.user_id) || 0;
-                        totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
-                    });
-                }
+                    // 총 좋아요 수 계산
+                    const reviewLikes = reviewLikesMap.get(review.id) || 0;
+                    const currentLikes = totalLikesMap.get(review.user_id) || 0;
+                    totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
+                });
 
                 // [4단계] 각 사용자별 통계 계산 및 품질 점수 산출
-                const users = profilesData.map((profile: any) => {
+                const users: LeaderboardComputedUser[] = profilesData.map((profile) => {
                     const reviewCount = reviewCountMap.get(profile.user_id) || 0;
                     const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
                     const totalLikes = totalLikesMap.get(profile.user_id) || 0;
@@ -164,8 +177,8 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
 
                 // 품질 점수 기준 내림차순 정렬 및 순위 부여
                 return users
-                    .sort((a: any, b: any) => b.qualityScore - a.qualityScore)
-                    .map((user: any, index: number) => ({
+                    .sort((a, b) => b.qualityScore - a.qualityScore)
+                    .map((user, index: number) => ({
                         ...user,
                         rank: index + 1,
                     }));

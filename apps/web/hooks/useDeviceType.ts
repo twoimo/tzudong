@@ -17,9 +17,9 @@ export interface DeviceType {
     isTouch: boolean;
 }
 
-function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
     let timeoutId: ReturnType<typeof setTimeout>;
-    return ((...args: any[]) => {
+    return ((...args: Parameters<T>) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => fn(...args), delay);
     }) as T;
@@ -77,8 +77,8 @@ export function useDeviceType(): DeviceType {
         window.addEventListener('orientationchange', debouncedUpdate, { passive: true });
 
         return () => {
-            window.removeEventListener('resize', debouncedUpdate, { passive: true } as any);
-            window.removeEventListener('orientationchange', debouncedUpdate, { passive: true } as any);
+            window.removeEventListener('resize', debouncedUpdate);
+            window.removeEventListener('orientationchange', debouncedUpdate);
         };
     }, [calculateDeviceType]);
 
