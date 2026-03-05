@@ -139,7 +139,9 @@ const RiceBowlWordCloud = memo(({
     useEffect(() => {
         if (keywords.length === 0 || dimensions.width === 0 || dimensions.height === 0) return;
 
-        setIsReady(false);
+        const readyResetRaf = requestAnimationFrame(() => {
+            setIsReady(false);
+        });
 
         const maxCount = Math.max(...keywords.map(k => k.count));
         const minCount = Math.min(...keywords.map(k => k.count));
@@ -168,6 +170,10 @@ const RiceBowlWordCloud = memo(({
             });
 
         layout.start();
+
+        return () => {
+            cancelAnimationFrame(readyResetRaf);
+        };
     }, [getDisplayKeyword, keywords, dimensions]);
 
     // 준비되지 않았으면 로딩 표시
@@ -310,21 +316,16 @@ const WordCloudSectionComponent = () => {
 
     const keywords = keywordResponse?.keywords ?? EMPTY_KEYWORDS;
     const getDisplayKeyword = useCallback((keyword: string) => toKoreanKeywordLabel(keyword), []);
-
-    useEffect(() => {
-        if (selectedKeyword) return;
-        if (keywords.length === 0) return;
-        setSelectedKeyword(keywords[0]?.keyword ?? null);
-    }, [keywords, selectedKeyword]);
+    const activeSelectedKeyword = selectedKeyword ?? keywords[0]?.keyword ?? null;
 
     const {
         data: videosResponse,
         isLoading: isVideosLoading,
         error: videosError,
     } = useQuery({
-        queryKey: ['admin-insight-wordcloud-videos', selectedKeyword],
-        queryFn: () => fetchWordcloudVideos(selectedKeyword as string),
-        enabled: Boolean(selectedKeyword),
+        queryKey: ['admin-insight-wordcloud-videos', activeSelectedKeyword],
+        queryFn: () => fetchWordcloudVideos(activeSelectedKeyword as string),
+        enabled: Boolean(activeSelectedKeyword),
         staleTime: 1000 * 60 * 5,
     });
 
@@ -344,9 +345,9 @@ const WordCloudSectionComponent = () => {
 
     // 선택된 키워드 정보
     const selectedKeywordData = useMemo(() => {
-        if (!selectedKeyword) return undefined;
-        return keywords.find(k => k.keyword === selectedKeyword);
-    }, [keywords, selectedKeyword]);
+        if (!activeSelectedKeyword) return undefined;
+        return keywords.find(k => k.keyword === activeSelectedKeyword);
+    }, [activeSelectedKeyword, keywords]);
 
     // [OPTIMIZATION] 핸들러 메모이제이션
     const handleKeywordClick = useCallback((keyword: string) => {
@@ -390,7 +391,7 @@ const WordCloudSectionComponent = () => {
                     ) : (
                         <RiceBowlWordCloud
                             keywords={filteredKeywords}
-                            selectedKeyword={selectedKeyword}
+                            selectedKeyword={activeSelectedKeyword}
                             onKeywordClick={handleKeywordClick}
                             getDisplayKeyword={getDisplayKeyword}
                         />
@@ -404,9 +405,9 @@ const WordCloudSectionComponent = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="text-base flex items-center gap-2">
-                                {selectedKeyword && (
+                                {activeSelectedKeyword && (
                                     <Badge variant="default" className="text-sm">
-                                        {getDisplayKeyword(selectedKeyword)}
+                                        {getDisplayKeyword(activeSelectedKeyword)}
                                     </Badge>
                                 )}
                                 관련 영상
@@ -430,7 +431,7 @@ const WordCloudSectionComponent = () => {
                             <div className="text-center py-12 text-muted-foreground text-sm">
                                 관련 영상을 불러오지 못했습니다.
                             </div>
-                        ) : !selectedKeyword ? (
+                        ) : !activeSelectedKeyword ? (
                             <div className="text-center py-12 text-muted-foreground text-sm">
                                 키워드를 선택해 주세요.
                             </div>
