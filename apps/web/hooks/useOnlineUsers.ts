@@ -4,6 +4,14 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+function getPresenceIdentity(value: unknown, fallback: string): string {
+    if (typeof value !== 'object' || value === null) return fallback;
+    const record = value as Record<string, unknown>;
+    const userId = typeof record.user_id === 'string' ? record.user_id : undefined;
+    const presenceRef = typeof record.presence_ref === 'string' ? record.presence_ref : undefined;
+    return userId || presenceRef || fallback;
+}
+
 /**
  * 실시간 동시 접속자 수를 조회하는 훅
  * Supabase Presence 채널을 사용하여 실시간 업데이트
@@ -27,9 +35,9 @@ export function useOnlineUsers() {
                 // 고유 user_id만 카운트 (동일 유저의 여러 탭/브라우저를 1명으로 계산)
                 const uniqueUserIds = new Set<string>();
                 Object.entries(state).forEach(([presenceKey, presences]) => {
-                    (presences as any[]).forEach((presence: any) => {
-                        // 로그인 사용자는 user_id로, 비로그인은 presence_ref로 식별
-                        uniqueUserIds.add(presence.user_id || presence.presence_ref || presenceKey);
+                    const normalizedPresences = Array.isArray(presences) ? presences : [];
+                    normalizedPresences.forEach((presence) => {
+                        uniqueUserIds.add(getPresenceIdentity(presence, presenceKey));
                     });
                 });
                 setOnlineCount(uniqueUserIds.size);

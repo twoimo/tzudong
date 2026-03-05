@@ -111,7 +111,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
 
         if (filters.categories.length > 0) {
             result = result.filter(r => {
-                const categoryData = r.category || (r as any).categories;
+                const categoryData = r.category ?? r.categories;
                 let restaurantCategories: string[] = [];
                 if (Array.isArray(categoryData)) {
                     restaurantCategories = categoryData;

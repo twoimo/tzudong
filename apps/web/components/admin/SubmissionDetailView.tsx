@@ -19,7 +19,6 @@ import {
     X,
     Sparkles,
     Check,
-    Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
@@ -133,6 +132,13 @@ export interface ItemDecision {
     } | null;
 }
 
+export interface NaverSearchResult {
+    title: string;
+    address: string;
+    roadAddress?: string;
+    isMatch?: boolean;
+}
+
 interface SubmissionDetailViewProps {
     submission: SubmissionRecord;
     approvalData: ApprovalData;
@@ -142,7 +148,11 @@ interface SubmissionDetailViewProps {
     selectedGeocodingIndex: number | null;
     onSelectedGeocodingIndexChange: (index: number | null) => void;
     itemDecisions: Record<string, ItemDecision>;
-    onItemDecisionsChange: (decisions: Record<string, ItemDecision>) => void;
+    onItemDecisionsChange: (
+        decisions:
+            | Record<string, ItemDecision>
+            | ((prev: Record<string, ItemDecision>) => Record<string, ItemDecision>)
+    ) => void;
     forceApprove: boolean;
     onForceApproveChange: (force: boolean) => void;
     editableData: {
@@ -154,7 +164,7 @@ interface SubmissionDetailViewProps {
     onEditableDataChange: (data: { name: string; address: string; phone: string; categories: string[] }) => void;
     className?: string;
     // 네이버 검색 검증 관련 props 추가
-    naverSearchResults: any[];
+    naverSearchResults: NaverSearchResult[];
     naverSearchLoading: boolean;
     onVerifyNaverSearch: () => void;
     // 지오코딩 선택 핸들러 (선택적)
@@ -313,8 +323,9 @@ export function SubmissionDetailView({
     const hasDuplicateItems = pendingItems.some(item => item.duplicate_check_result?.isDuplicate);
 
     useEffect(() => {
-        setInitialAddress(editableData.address);
-    }, [submission.id]);
+        setInitialAddress(submission.restaurant_address ?? '');
+        setAddressChanged(false);
+    }, [submission.id, submission.restaurant_address]);
 
     const handleFieldChange = (field: keyof typeof editableData, value: string | string[]) => {
         if (field === 'address') {
@@ -360,7 +371,7 @@ export function SubmissionDetailView({
             } else {
                 toast.error('주소를 찾을 수 없습니다');
             }
-        } catch (error) {
+        } catch {
             toast.error('네이버 지오코딩에 실패했습니다');
         } finally {
             setGeocodingNaver(false);
@@ -431,8 +442,6 @@ export function SubmissionDetailView({
         try {
             const meta = await fetchYoutubeMetadata(youtubeLink);
             if (meta) {
-                // 함수형 업데이트 사용 (타입 캐스팅 필요할 수 있음)
-                // @ts-ignore - onItemDecisionsChange가 setState 함수인 경우 함수형 업데이트 지원
                 onItemDecisionsChange((prev: Record<string, ItemDecision>) => ({
                     ...prev,
                     [itemId]: {
@@ -445,7 +454,7 @@ export function SubmissionDetailView({
             } else {
                 toast.error('메타데이터를 가져오지 못했습니다');
             }
-        } catch (error) {
+        } catch {
             toast.error('메타데이터 가져오기 실패');
         } finally {
             setFetchingMeta(null);
@@ -485,7 +494,6 @@ export function SubmissionDetailView({
             }));
 
             if (isMounted && hasUpdates) {
-                // @ts-ignore - 함수형 업데이트로 안전하게 병합
                 onItemDecisionsChange((prev: Record<string, ItemDecision>) => {
                     const next = { ...prev };
                     Object.entries(updates).forEach(([id, update]) => {

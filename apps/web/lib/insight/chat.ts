@@ -17,8 +17,6 @@ import type {
   StoryboardModelProfile,
 } from '@/types/insight';
 import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
-import { getDashboardFunnel, getDashboardFailures } from '@/lib/dashboard/evaluation';
-import { getDashboardQuality } from '@/lib/dashboard/quality';
 import { getAdminInsightHeatmap } from '@/lib/insight/heatmap';
 import { getAdminInsightSeason } from '@/lib/insight/season';
 import { getAdminInsightWordcloud } from '@/lib/insight/wordcloud';
@@ -414,11 +412,9 @@ const GEMINI_MODEL_DEFAULT = 'gemini-3-flash-preview';
 const DEFAULT_STORYBOARD_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
 const DEFAULT_IMAGE_MODEL_PROFILE: StoryboardModelProfile = 'nanobanana';
 const LLM_TIMEOUT_MS = 30_000;
-const LLM_MAX_TOKENS = 4096;
 const LLM_MAX_TOKENS_FAST = 1200;
 const LLM_MAX_TOKENS_DEEP = 2048;
 const LLM_MAX_TOKENS_STRUCTURED = 2560;
-const FALLBACK_CONFIDENCE_MIN = 0.18;
 
 function resolveServerLlmApiKey(provider: LlmProvider): string {
   switch (provider) {
@@ -930,12 +926,6 @@ function normalizeMemoryMode(raw: unknown): InsightChatMemoryMode | undefined {
 function resolveResponseModeProfile(responseMode?: InsightChatResponseMode): ResponseModeProfile {
   return RESPONSE_MODE_PROFILES[normalizeResponseMode(responseMode)] ?? RESPONSE_MODE_PROFILES.fast;
 }
-
-type ResponseModeMetaPayload = {
-  responseMode?: InsightChatResponseMode;
-  toolTrace?: string[];
-  feedbackContext?: InsightChatFeedbackContext;
-};
 
 const MAX_PROMPT_ATTACHMENT_SNIPPETS = 4;
 const MAX_PROMPT_ATTACHMENT_SNIPPET_LENGTH = 1500;
@@ -2907,7 +2897,6 @@ export async function answerAdminInsightChat(
   const input = message.trim();
   const resolvedRequestId = normalizeRequestId(requestId);
   const normalizedMemoryMode = normalizeMemoryMode(memoryMode);
-  const profile = resolveResponseModeProfile(responseMode);
   const toolTrace = [
     `responseMode:${normalizeResponseMode(responseMode)}`,
     ...(normalizedMemoryMode ? [`memoryMode:${normalizedMemoryMode}`] : []),

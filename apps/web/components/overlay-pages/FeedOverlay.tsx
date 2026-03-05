@@ -1,6 +1,7 @@
 'use client';
 
 import FeedContent from '@/components/feed/FeedContent';
+import type { Restaurant } from '@/types/restaurant';
 
 interface FeedOverlayProps {
     onClose: () => void;
@@ -8,7 +9,7 @@ interface FeedOverlayProps {
     hideReviewModal?: boolean;
     hideFloatingButton?: boolean;
     initialReviewId?: string | null;
-    onOpenRestaurantDetail?: (restaurant: any) => void;
+    onOpenRestaurantDetail?: (restaurant: Restaurant) => void;
     onOpenUserProfile?: (userId: string) => void;
     onOpenAuth?: () => void;
 }
@@ -35,7 +36,10 @@ export default function FeedOverlay({
             hideReviewModal={hideReviewModal}
             hideFloatingButton={hideFloatingButton}
             initialReviewId={initialReviewId}
-            onOpenRestaurantDetail={onOpenRestaurantDetail}
+            onOpenRestaurantDetail={
+                onOpenRestaurantDetail as unknown as
+                ((restaurant: Record<string, unknown> & { id: string }) => void) | undefined
+            }
             onOpenUserProfile={onOpenUserProfile}
             onOpenAuth={onOpenAuth}
         />

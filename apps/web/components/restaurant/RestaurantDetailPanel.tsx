@@ -4,26 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
-import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import {
     X,
     MapPin,
-    Clock,
-    ExternalLink,
-    ThumbsUp,
     MessageSquare,
     Share2,
     Navigation,
-    Globe,
-    MoreVertical,
-    Flag,
     Edit,
-    Pencil,
-    Map as MapIcon,
     Copy,
     ChevronDown,
-    Info,
     Youtube,
     Settings,
     Store,
@@ -38,7 +28,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
 import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
@@ -88,7 +78,6 @@ interface Review {
 
 export function RestaurantDetailPanel({
     restaurant,
-    onClose,
     onWriteReview,
     onEditRestaurant,
     onRequestEditRestaurant,
@@ -395,7 +384,7 @@ export function RestaurantDetailPanel({
         contentSwipeDirectionRef.current = null;
         isContentSwipingRef.current = true;
         hideSwipeHint();
-    }, []);
+    }, [hideSwipeHint]);
 
     useEffect(() => {
         if (!isMobile || !isPanelOpen || !(onSwipeLeft || onSwipeRight)) {
@@ -536,48 +525,48 @@ export function RestaurantDetailPanel({
     if (!restaurant) return null;
 
     // [핸들러] 길찾기 시트 열기
-    const handleGetDirections = useCallback(() => {
+    const handleGetDirections = () => {
         setIsDirectionSheetOpen(true);
-    }, []);
+    };
 
     // [핸들러] 네이버 지도 열기
-    const handleNaverMap = useCallback(() => {
+    const handleNaverMap = () => {
         const url = `https://map.naver.com/v5/search/${encodeURIComponent(restaurant.name)}`;
         window.open(url, '_blank');
         setIsDirectionSheetOpen(false);
-    }, [restaurant.name]);
+    };
 
     // [핸들러] 구글 지도 열기
-    const handleGoogleMap = useCallback(() => {
+    const handleGoogleMap = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
         window.open(url, '_blank');
         setIsDirectionSheetOpen(false);
-    }, [restaurant.lat, restaurant.lng]);
+    };
 
     // [핸들러] 카카오맵 열기
-    const handleKakaoMap = useCallback(() => {
+    const handleKakaoMap = () => {
         const url = `https://map.kakao.com/link/to/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`;
         window.open(url, '_blank');
         setIsDirectionSheetOpen(false);
-    }, [restaurant.name, restaurant.lat, restaurant.lng]);
+    };
 
     // [핸들러] 수정 요청
-    const handleRequestEditRestaurant = useCallback(() => {
+    const handleRequestEditRestaurant = () => {
         if (!user) {
             setIsAuthModalOpen(true);
             return;
         }
         onRequestEditRestaurant?.(restaurant);
-    }, [user, onRequestEditRestaurant, restaurant]);
+    };
 
     // [핸들러] 리뷰 작성
-    const handleWriteReview = useCallback(() => {
+    const handleWriteReview = () => {
         if (!user) {
             setIsAuthModalOpen(true);
             return;
         }
         onWriteReview?.();
-    }, [user, onWriteReview]);
+    };
 
     const handleLikeReview = async (reviewId: string) => {
         if (!user) {

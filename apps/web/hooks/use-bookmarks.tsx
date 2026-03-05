@@ -47,6 +47,10 @@ interface RestaurantRow {
     lng: number | null;
 }
 
+interface BookmarkIdRow {
+    restaurant_id: string;
+}
+
 export function useBookmarks() {
     const { user } = useAuth();
 
@@ -56,7 +60,7 @@ export function useBookmarks() {
             if (!user?.id) return [];
 
             // 1. 북마크 데이터 조회
-            const { data: bookmarksData, error: bookmarksError } = await (supabase as any)
+            const { data: bookmarksData, error: bookmarksError } = await supabase
                 .from('user_bookmarks')
                 .select('id, user_id, restaurant_id, created_at')
                 .eq('user_id', user.id)
@@ -123,14 +127,14 @@ export function useBookmarkIds() {
         queryFn: async () => {
             if (!user?.id) return [] as string[];
 
-            const { data, error } = await (supabase as any)
+            const { data, error } = await supabase
                 .from('user_bookmarks')
                 .select('restaurant_id')
                 .eq('user_id', user.id);
 
             if (error) throw error;
 
-            return (data || []).map((item: any) => item.restaurant_id) as string[];
+            return ((data ?? []) as BookmarkIdRow[]).map((item) => item.restaurant_id);
         },
         enabled: !!user?.id,
         staleTime: BOOKMARK_STALE_TIME,
@@ -154,12 +158,12 @@ export function useToggleBookmark() {
         mutationFn: async (restaurantId: string) => {
             if (!user?.id) throw new Error('로그인이 필요합니다');
 
-            const { error } = await (supabase as any)
+            const { error } = await supabase
                 .from('user_bookmarks')
                 .insert({
                     user_id: user.id,
                     restaurant_id: restaurantId,
-                });
+                } as never);
 
             if (error) throw error;
         },
@@ -196,7 +200,7 @@ export function useToggleBookmark() {
         mutationFn: async (restaurantId: string) => {
             if (!user?.id) throw new Error('로그인이 필요합니다');
 
-            const { error } = await (supabase as any)
+            const { error } = await supabase
                 .from('user_bookmarks')
                 .delete()
                 .eq('user_id', user.id)

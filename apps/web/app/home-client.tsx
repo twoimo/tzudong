@@ -70,6 +70,18 @@ const ReviewModal = dynamic(
 import { Announcement } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
+
+type AnnouncementRow = {
+    id: string;
+    title: string;
+    content: string;
+    is_active: boolean;
+    show_on_banner: boolean;
+    priority: number;
+    created_at: string;
+    updated_at: string;
+};
+
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
@@ -85,9 +97,6 @@ export default function HomeClient() {
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-
-    // [리뷰 공유] 공유 링크로 접속 시 리뷰 하이라이트용 ID
-    const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
 
     // [Fix] 마운트 시점 기록 - 라우트 변경 후 돌아왔을 때 지도 강제 리마운트
     const [mapMountKey] = useState(() => Date.now());
@@ -110,32 +119,32 @@ export default function HomeClient() {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
         const restaurantId = searchParams.get('r') || searchParams.get('restaurant'); // 피드에서 restaurant 파라미터 사용
-        const restaurantName = searchParams.get('q'); // 공유 URL에서 맛집 이름
 
         if (panelParam === 'announcement') {
             if (announcementId) {
                 (async () => {
                     try {
                         const { supabase } = await import('@/integrations/supabase/client');
-                        const { data, error } = await (supabase as any)
-                            .from('announcements')
+                        const announcementsTable = supabase.from('announcements' as never);
+                        const { data: rawAnnouncement, error } = await announcementsTable
                             .select('id, title, content, is_active, show_on_banner, priority, created_at, updated_at')
                             .eq('id', announcementId)
                             .maybeSingle();
 
-                        if (error || !data) {
+                        const announcementRow = rawAnnouncement as AnnouncementRow | null;
+                        if (error || !announcementRow) {
                             return;
                         }
 
                         const announcement: Announcement = {
-                            id: data.id,
-                            title: data.title,
-                            content: data.content,
-                            isActive: data.is_active,
-                            showOnBanner: data.show_on_banner,
-                            priority: data.priority,
-                            createdAt: data.created_at,
-                            updatedAt: data.updated_at,
+                            id: announcementRow.id,
+                            title: announcementRow.title,
+                            content: announcementRow.content,
+                            isActive: announcementRow.is_active,
+                            showOnBanner: announcementRow.show_on_banner,
+                            priority: announcementRow.priority,
+                            createdAt: announcementRow.created_at,
+                            updatedAt: announcementRow.updated_at,
                         };
 
                         // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
@@ -184,11 +193,11 @@ export default function HomeClient() {
                     const { data: sameNameRestaurants } = await supabase
                         .from('restaurants')
                         .select('*')
-                        .eq('approved_name', (targetRestaurant as any).name)
+                        .eq('approved_name', (targetRestaurant as Restaurant).name)
                         .eq('status', 'approved');
 
                     // 병합 로직 적용
-                    const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
+                    const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as Restaurant[]);
                     const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
                     if (mergedRestaurant) {
@@ -264,7 +273,7 @@ export default function HomeClient() {
                         }
 
                         // 병합 로직 적용
-                        const merged = mergeRestaurants(restaurants as any);
+                        const merged = mergeRestaurants(restaurants as Restaurant[]);
                         const restaurant = merged[0];
 
                         if (restaurant) {
@@ -289,7 +298,6 @@ export default function HomeClient() {
 
             if (!isMobileWidth) {
                 // 데스크탑: 피드 오버레이 열기 (selectedReviewId로 스크롤)
-                setSelectedReviewId(reviewId);
                 window.dispatchEvent(new CustomEvent('openFeedOverlay', { detail: { reviewId } }));
             } else {
                 // 모바일/태블릿: 피드 페이지로 리다이렉트
@@ -507,24 +515,26 @@ export default function HomeClient() {
 
                 if (error || !targetRestaurant) return;
 
-                const tr = targetRestaurant as any;
+                const tr = targetRestaurant as Restaurant;
                 // 모드 자동 감지 (이벤트에 모드가 없었을 경우)
                 if (!mode) {
-                    const isOverseasCoord = tr.lat && (tr.lat < 33 || tr.lat > 39 || tr.lng < 124 || tr.lng > 132);
-                    if (isOverseasCoord) {
-                        setMapMode('overseas');
-                    } else {
-                        setMapMode('domestic');
+                    if (typeof tr.lat === 'number' && typeof tr.lng === 'number') {
+                        const isOverseasCoord = tr.lat < 33 || tr.lat > 39 || tr.lng < 124 || tr.lng > 132;
+                        if (isOverseasCoord) {
+                            setMapMode('overseas');
+                        } else {
+                            setMapMode('domestic');
+                        }
                     }
                 }
 
                 const { data: sameNameRestaurants } = await supabase
                     .from('restaurants')
                     .select('*')
-                    .eq('approved_name', (targetRestaurant as any).name)
+                    .eq('approved_name', (targetRestaurant as Restaurant).name)
                     .eq('status', 'approved');
 
-                const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
+                const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as Restaurant[]);
                 const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
                 if (mergedRestaurant) {

@@ -51,8 +51,6 @@ const SWIPE_VELOCITY_THRESHOLD = 0.22;
 const SWIPE_VELOCITY_CLOSE_THRESHOLD = 0.26;
 const SWIPE_VELOCITY_OPEN_THRESHOLD = 0.24;
 const CONTENT_TOP_EPSILON = 2;
-const CONTENT_DRAG_START_THRESHOLD = 9;
-const CONTENT_VERTICAL_INTENT_RATIO = 1.0;
 const SHEET_HALF_OPEN_TOLERANCE = 1;
 const HALF_TO_FULL_DISTANCE_PX = 14;
 const FULL_TO_HALF_DISTANCE_PX = 18;
@@ -303,7 +301,7 @@ function BottomSheetComponent({
         });
 
         setIsDragging(true);
-    }, [SNAP_TRANSITION_BASE_MS, SNAP_EASING_BASE]);
+    }, []);
 
     // [PERFORMANCE] 드래그 중 공통 로직 - RAF 기반 최적화
     const handleDragMoveCore = useCallback((currentY: number) => {
@@ -511,8 +509,6 @@ function BottomSheetComponent({
         handleDragMoveCore(currentY);
     }, [
         canContentDragFromTouch,
-        HORIZONTAL_SWIPE_INTENT_RATIO,
-        HORIZONTAL_SWIPE_THRESHOLD,
         handleDragMoveCore,
         handleDragStartCore,
         onSwipeLeft,
@@ -572,8 +568,6 @@ function BottomSheetComponent({
             contentStartBoundaryRef.current = null;
         }
     }, [
-        HORIZONTAL_SWIPE_INTENT_RATIO,
-        HORIZONTAL_SWIPE_THRESHOLD,
         handleDragEnd,
         onSwipeLeft,
         onSwipeRight,
@@ -610,8 +604,6 @@ function BottomSheetComponent({
         contentStartBoundaryRef.current = isAtTop ? 'top' : null;
         sheetTouchSourceRef.current = 'content';
     }, [
-        CONTENT_TOP_EPSILON,
-        findScrollableTouchTarget,
         handleTouchStart,
     ]);
 

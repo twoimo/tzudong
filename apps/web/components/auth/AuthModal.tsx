@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -65,7 +65,7 @@ const PrivacyPolicyContent = memo(() => (
     <section>
       <h3 className="font-semibold text-base mb-2">1. 개인정보의 수집 및 이용 목적</h3>
       <p className="text-muted-foreground">
-        쯔동여지도('서비스')는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
+        쯔동여지도(&apos;서비스&apos;)는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
       </p>
       <ul className="list-disc pl-5 mt-2 text-muted-foreground space-y-1">
         <li>회원 가입 및 관리: 회원 가입의사 확인, 회원제 서비스 제공에 따른 본인 식별·인증, 회원자격 유지·관리, 서비스 부정이용 방지</li>
@@ -115,7 +115,7 @@ const PrivacyPolicyContent = memo(() => (
       </p>
       <h4 className="font-medium mt-3 mb-1">4-1. 계정 비활성화</h4>
       <ul className="list-disc pl-5 text-muted-foreground space-y-1">
-        <li>닉네임이 '탈퇴한 사용자'로 익명화됩니다</li>
+        <li>닉네임이 &apos;탈퇴한 사용자&apos;로 익명화됩니다</li>
         <li>작성한 리뷰, 제보 내역은 익명으로 유지됩니다</li>
         <li>랭킹에서 제외됩니다</li>
         <li>계정 정보(이메일, 비밀번호)는 유지됩니다</li>
@@ -124,7 +124,7 @@ const PrivacyPolicyContent = memo(() => (
       <h4 className="font-medium mt-3 mb-1">4-2. 계정 완전 삭제 (회원탈퇴)</h4>
       <ul className="list-disc pl-5 text-muted-foreground space-y-1">
         <li>이메일, 비밀번호, 닉네임 등 모든 개인정보가 즉시 영구 삭제됩니다</li>
-        <li>작성한 리뷰, 제보 내역은 '탈퇴한 사용자'로 익명화되어 유지됩니다</li>
+        <li>작성한 리뷰, 제보 내역은 &apos;탈퇴한 사용자&apos;로 익명화되어 유지됩니다</li>
         <li>북마크, 알림, 통계, 업로드한 이미지 등 부가 정보가 모두 삭제됩니다</li>
         <li>삭제된 계정은 복구가 불가능합니다</li>
         <li>동일한 이메일로 재가입은 가능하나, 이전 데이터와 연결되지 않습니다</li>
@@ -275,7 +275,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
     if (!username) {
       setUsername(generateRandomNickname());
     }
-  }, [isOpen]);
+  }, [isOpen, username]);
 
   const resetForm = useCallback(() => {
     setEmail("");
