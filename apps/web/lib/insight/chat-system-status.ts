@@ -254,8 +254,6 @@ function resolveFrameCaptionDataSource(env: NodeJS.ProcessEnv): {
 } {
   const explicitPath = resolveConfiguredPath(pickFirstEnvValue(env, ['INSIGHT_FRAME_CAPTION_BASE_PATH']));
   const fallbackPath = path.resolve(process.cwd(), FRAME_CAPTION_DATA_RELATIVE_PATH);
-
-  const checkPath = explicitPath || fallbackPath;
   let configured = false;
   let available = false;
   let localPath: string | undefined;

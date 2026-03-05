@@ -34,7 +34,7 @@ export default async function ShortUrlRedirectPage({ params }: PageProps) {
 }
 
 // 메타데이터 생성
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata() {
     return {
         title: '쯔동여지도 - 리다이렉트 중...',
         robots: 'noindex',

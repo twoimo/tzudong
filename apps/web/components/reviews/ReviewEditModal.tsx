@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -624,11 +625,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             <div className="flex flex-wrap gap-2">
                                                 {existingFoodPhotos.map((photoPath, idx) => (
                                                     <div key={photoPath} className="relative group">
-                                                        <div className="w-20 h-20 rounded-lg overflow-hidden border">
-                                                            <img
+                                                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
+                                                            <Image
                                                                 src={supabase.storage.from('review-photos').getPublicUrl(photoPath).data.publicUrl}
                                                                 alt={`기존 음식 사진 ${idx + 1}`}
-                                                                className="w-full h-full object-cover"
+                                                                fill
+                                                                unoptimized
+                                                                sizes="80px"
+                                                                className="object-cover"
                                                             />
                                                         </div>
                                                         <button
@@ -651,11 +655,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                             <div className="flex flex-wrap gap-2">
                                                 {newFoodPhotos.map((photo, idx) => (
                                                     <div key={idx} className="relative group">
-                                                        <div className="w-20 h-20 rounded-lg overflow-hidden border border-green-300">
-                                                            <img
+                                                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-green-300">
+                                                            <Image
                                                                 src={newFoodPhotoUrls[idx]}
                                                                 alt={`새 음식 사진 ${idx + 1}`}
-                                                                className="w-full h-full object-cover"
+                                                                fill
+                                                                unoptimized
+                                                                sizes="80px"
+                                                                className="object-cover"
                                                             />
                                                         </div>
                                                         <div className="absolute -top-1 -left-1 bg-green-500 text-white rounded-full p-0.5">

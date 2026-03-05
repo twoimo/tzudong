@@ -1,5 +1,4 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { SearchSkeleton } from "./SearchSkeleton";
 
 export function ControlPanelSkeleton() {
     return (

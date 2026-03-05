@@ -165,11 +165,8 @@ export default function GlobalMapPage() {
 
     // selectedRestaurant 변경 감지 - 팝업에서 전달된 경우에만 패널 열기
     useEffect(() => {
-        // 이전 값과 비교하여 실제로 변경되었는지 확인
-        const hasChanged = prevSelectedRestaurantRef.current?.id !== selectedRestaurant?.id;
-
         prevSelectedRestaurantRef.current = selectedRestaurant;
-    }, [selectedRestaurant, moveToRestaurant]);
+    }, [selectedRestaurant]);
 
     // ResizeObserver로 패널 너비 추적
     useEffect(() => {
@@ -461,7 +458,7 @@ export default function GlobalMapPage() {
             {isGridMode ? (
                 // 그리드 모드: 2x2 그리드로 4개 국가 표시
                 <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-1 p-1">
-                    {GRID_COUNTRIES.map((country, index) => (
+                    {GRID_COUNTRIES.map((country) => (
                         <div key={country} className="relative min-h-0 overflow-hidden rounded-md border border-border">
                             <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
                                 <MapView

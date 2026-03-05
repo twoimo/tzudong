@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -220,10 +221,13 @@ export function DailyRecommendationPopup() {
                         {/* YouTube 썸네일 */}
                         {thumbnailUrl && (
                             <div className="aspect-video relative group">
-                                <img
+                                <Image
                                     src={thumbnailUrl}
                                     alt={`${selectedRestaurant.name} 썸네일`}
-                                    className="w-full h-full object-cover group-hover:brightness-110 transition-all"
+                                    fill
+                                    unoptimized
+                                    sizes="(max-width: 640px) 100vw, 320px"
+                                    className="object-cover transition-all group-hover:brightness-110"
                                 />
                             </div>
                         )}

@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef, useCallback, useEffect } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,11 +13,29 @@ import {
 } from "@/components/admin/SubmissionListView";
 import {
     SubmissionRecord,
+    SubmissionItem,
     ApprovalData,
     ItemDecision,
 } from "@/components/admin/SubmissionDetailView";
 
 const PAGE_SIZE = 10;
+
+type SubmissionPage = {
+    data: SubmissionRecord[];
+    nextCursor: number | null;
+};
+
+type SubmissionProfile = {
+    id: string;
+    nickname: string | null;
+};
+
+type SubmissionQueryRecord = Omit<SubmissionRecord, "items" | "profiles">;
+type RpcPayload = Record<string, unknown>;
+
+const runAdminRpc = async (functionName: string, payload: RpcPayload) => {
+    return supabase.rpc(functionName as never, payload as never);
+};
 
 export default function AdminSubmissionsPage() {
     const { user, isAdmin } = useAuth();
@@ -36,7 +53,7 @@ export default function AdminSubmissionsPage() {
     } = useInfiniteQuery({
         queryKey: ["admin-submissions", isAdmin],
         initialPageParam: 0,
-        queryFn: async ({ pageParam }) => {
+        queryFn: async ({ pageParam }): Promise<SubmissionPage> => {
             if (!user || !isAdmin) return { data: [], nextCursor: null };
 
             // 모든 상태의 제보 가져오기 (pending, partially_approved 우선)
@@ -45,50 +62,56 @@ export default function AdminSubmissionsPage() {
                 .select("*")
                 .order("status", { ascending: true }) // pending 먼저
                 .order("created_at", { ascending: false })
-                .range(pageParam as number, (pageParam as number) + PAGE_SIZE - 1);
+                .range(pageParam as number, (pageParam as number) + PAGE_SIZE - 1)
+                .returns<SubmissionQueryRecord[]>();
 
             if (error) throw error;
             if (!submissions || submissions.length === 0) {
                 return { data: [], nextCursor: null };
             }
 
-            const submissionIds = submissions.map((s: any) => s.id);
-            const userIds = [...new Set(submissions.map((s: any) => s.user_id))] as string[];
+            const submissionIds = submissions.map((submission) => submission.id);
+            const userIds = [...new Set(submissions.map((submission) => submission.user_id))] as string[];
 
             // Fetch items for all submissions
             const { data: items } = await supabase
                 .from("restaurant_submission_items")
                 .select("*")
-                .in("submission_id", submissionIds);
+                .in("submission_id", submissionIds)
+                .returns<SubmissionItem[]>();
 
             // Fetch profiles
             const { data: profiles } = await supabase
                 .from("profiles")
                 .select("id, nickname")
-                .in("id", userIds);
+                .in("id", userIds)
+                .returns<SubmissionProfile[]>();
 
             // Combine
-            const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
-            const itemMap = new Map<string, any[]>();
+            const profileMap = new Map(profiles?.map((profile) => [profile.id, profile]) || []);
+            const itemMap = new Map<string, SubmissionItem[]>();
 
-            items?.forEach((item: any) => {
+            items?.forEach((item) => {
                 const existing = itemMap.get(item.submission_id) || [];
                 existing.push(item);
                 itemMap.set(item.submission_id, existing);
             });
 
-            const enrichedSubmissions = submissions.map((s: any) => ({
-                ...s,
-                items: itemMap.get(s.id) || [],
-                profiles: profileMap.get(s.user_id) || null,
-            }));
+            const enrichedSubmissions: SubmissionRecord[] = submissions.map((submission) => {
+                const profile = profileMap.get(submission.user_id);
+                return {
+                    ...submission,
+                    items: itemMap.get(submission.id) || [],
+                    profiles: profile ? { nickname: profile.nickname ?? "알 수 없음" } : null,
+                };
+            });
 
             return {
                 data: enrichedSubmissions,
                 nextCursor: submissions.length === PAGE_SIZE ? (pageParam as number) + PAGE_SIZE : null,
             };
         },
-        getNextPageParam: (lastPage: any) => lastPage.nextCursor,
+        getNextPageParam: (lastPage: SubmissionPage) => lastPage.nextCursor,
         enabled: !!user && isAdmin,
     });
 
@@ -124,6 +147,7 @@ export default function AdminSubmissionsPage() {
             forceApprove: boolean;
             editableData: { name: string; address: string; phone: string; categories: string[] };
         }) => {
+            void forceApprove;
             // 승인된 항목만 처리
             const approvedItems = Object.entries(itemDecisions).filter(([, d]) => d.approved);
 
@@ -172,7 +196,7 @@ export default function AdminSubmissionsPage() {
                     // submission 테이블은 업데이트하지 않고 (사용자 원본 유지),
                     // restaurants 테이블 생성 시에만 관리자 수정 데이터를 사용함 (RPC 내부 처리)
                     
-                    const { error } = await (supabase.rpc as any)(
+                    const { error } = await runAdminRpc(
                         "approve_submission_item",
                         {
                             p_item_id: itemId,
@@ -186,7 +210,7 @@ export default function AdminSubmissionsPage() {
                     // name, phone, categories는 이미 restaurantData에 포함됨
                     const updatedData = restaurantData;
 
-                    const { error } = await (supabase.rpc as any)(
+                    const { error } = await runAdminRpc(
                         "approve_edit_submission_item",
                         {
                             p_item_id: itemId,
@@ -201,7 +225,7 @@ export default function AdminSubmissionsPage() {
             // 거부된 항목 처리
             const rejectedItems = Object.entries(itemDecisions).filter(([, d]) => !d.approved);
             for (const [itemId, decision] of rejectedItems) {
-                const { error } = await (supabase.rpc as any)(
+                const { error } = await runAdminRpc(
                     "reject_submission_item",
                     {
                         p_item_id: itemId,
@@ -230,7 +254,7 @@ export default function AdminSubmissionsPage() {
             submission: SubmissionRecord;
             reason: string;
         }) => {
-            const { error } = await (supabase.rpc as any)(
+            const { error } = await runAdminRpc(
                 "reject_all_submission_items",
                 {
                     p_submission_id: submission.id,
@@ -344,7 +368,7 @@ export default function AdminSubmissionsPage() {
                 </div>
             ) : (
                 <SubmissionListView
-                    submissions={submissions as SubmissionRecord[]}
+                    submissions={submissions}
                     onApprove={handleApprove}
                     onReject={handleReject}
                     onDelete={handleDelete}

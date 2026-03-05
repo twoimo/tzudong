@@ -1,7 +1,6 @@
 'use client';
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -27,6 +26,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 
 // ==================== 타입 정의 ====================
+
+interface NaverGeocodeAddress {
+    roadAddress?: string;
+    jibunAddress?: string;
+    englishAddress?: string;
+    addressElements?: unknown;
+    x: string;
+    y: string;
+}
+
+interface NaverGeocodeResponse {
+    error?: string;
+    addresses?: NaverGeocodeAddress[];
+}
 
 export interface SubmissionItem {
     id: string;
@@ -103,7 +116,7 @@ export interface GeocodingResult {
     road_address: string;
     jibun_address: string;
     english_address: string;
-    address_elements: any;
+    address_elements: unknown;
     x: string;
     y: string;
 }
@@ -114,7 +127,7 @@ export interface ApprovalData {
     road_address: string;
     jibun_address: string;
     english_address: string;
-    address_elements: any;
+    address_elements: unknown;
 }
 
 export interface ItemDecision {
@@ -233,24 +246,24 @@ async function geocodeAddressMultiple(name: string, address: string, maxResults:
         throw new Error(error.message || JSON.stringify(error));
     }
 
-    if (!data) {
+    const geocodeData = data as NaverGeocodeResponse | null;
+
+    if (!geocodeData) {
         console.error('❌ 응답 데이터 없음');
         return [];
     }
 
-    if (data.error) {
-        console.error('❌ API 에러:', data.error);
-        throw new Error(data.error);
+    if (geocodeData.error) {
+        console.error('❌ API 에러:', geocodeData.error);
+        throw new Error(geocodeData.error);
     }
 
-    if (!data.addresses || data.addresses.length === 0) {
+    if (!geocodeData.addresses || geocodeData.addresses.length === 0) {
         console.warn('⚠️ 주소 결과 없음');
         return [];
     }
 
-
-
-    return data.addresses.slice(0, maxResults).map((addr: any) => ({
+    return (geocodeData.addresses || []).slice(0, maxResults).map((addr) => ({
         road_address: addr.roadAddress || '',
         jibun_address: addr.jibunAddress || '',
         english_address: addr.englishAddress || '',
@@ -341,7 +354,11 @@ export function SubmissionDetailView({
         onEditableDataChange({ ...editableData, [field]: value });
     };
 
-    const handleItemDecisionChange = (itemId: string, field: keyof ItemDecision, value: any) => {
+    const handleItemDecisionChange = <K extends keyof ItemDecision>(
+        itemId: string,
+        field: K,
+        value: ItemDecision[K]
+    ) => {
         onItemDecisionsChange({
             ...itemDecisions,
             [itemId]: { ...itemDecisions[itemId], [field]: value },
@@ -401,9 +418,9 @@ export function SubmissionDetailView({
             } else {
                 toast.error('주소를 찾을 수 없습니다');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Google Geocoding error:', error);
-            toast.error(error?.message || 'Google 지오코딩에 실패했습니다');
+            toast.error(error instanceof Error ? error.message : 'Google 지오코딩에 실패했습니다');
         } finally {
             setGeocodingGoogle(false);
         }
@@ -466,7 +483,7 @@ export function SubmissionDetailView({
         let isMounted = true;
         const fetchAllMetadata = async () => {
             const pendingItems = submission.items.filter(item => item.item_status === 'pending');
-            const updates: Record<string, any> = {};
+            const updates: Record<string, Partial<ItemDecision>> = {};
             let hasUpdates = false;
 
             // 병렬로 메타데이터 가져오기
@@ -907,9 +924,12 @@ export function SubmissionDetailView({
                                                 rel="noopener noreferrer"
                                                 className="flex-shrink-0"
                                             >
-                                                <img
+                                                <Image
                                                     src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
                                                     alt="YouTube thumbnail"
+                                                    width={128}
+                                                    height={80}
+                                                    unoptimized
                                                     className="w-32 h-20 object-cover rounded hover:opacity-80 transition-opacity"
                                                 />
                                             </a>
@@ -984,9 +1004,12 @@ export function SubmissionDetailView({
                                                             rel="noopener noreferrer"
                                                             className="flex-shrink-0"
                                                         >
-                                                            <img
+                                                            <Image
                                                                 src={`https://img.youtube.com/vi/${originalVideoId}/mqdefault.jpg`}
                                                                 alt="기존 YouTube thumbnail"
+                                                                width={128}
+                                                                height={80}
+                                                                unoptimized
                                                                 className="w-32 h-20 object-cover rounded hover:opacity-80 transition-opacity border"
                                                             />
                                                         </a>

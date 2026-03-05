@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -154,9 +155,12 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
             )}
-            <img
+            <Image
                 src={src}
                 alt={alt}
+                fill
+                unoptimized
+                sizes={isReceipt ? "256px" : "192px"}
                 className={cn(
                     "w-auto object-contain transition-opacity",  // object-cover -> object-contain으로 변경
                     isReceipt ? "h-48 max-w-64" : "h-32 max-w-48",
@@ -1338,7 +1342,7 @@ export function SubmissionListView({
     };
 
     // 승인 핸들러
-    const handleApprove = useCallback(async () => {
+    const handleApprove = async () => {
         if (!selectedSubmission) return;
 
         if (!approvalData.lat || !approvalData.lng || !approvalData.road_address) {
@@ -1368,8 +1372,7 @@ export function SubmissionListView({
 
         // 검증 실행
         await handleNaverSearchAndVerify();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [canApprove, approvalData, selectedSubmission, itemDecisions, forceApprove, editableData, onApprove, closeDetailModal, verificationDone, geocodingResults]);
+    };
 
     // 거부 핸들러
     const handleReject = useCallback(() => {
@@ -2358,10 +2361,13 @@ export function SubmissionListView({
                         </DialogHeader>
                         {previewImage && (
                             <div className="relative">
-                                <img
+                                <Image
                                     src={previewImage.url}
                                     alt={previewImage.alt}
-                                    className="w-full max-h-[80dvh] object-contain rounded-lg"
+                                    width={1600}
+                                    height={1200}
+                                    unoptimized
+                                    className="w-full max-h-[80dvh] h-auto object-contain rounded-lg"
                                 />
                                 <Button
                                     variant="secondary"
@@ -2379,4 +2385,3 @@ export function SubmissionListView({
         </TooltipProvider>
     );
 }
-

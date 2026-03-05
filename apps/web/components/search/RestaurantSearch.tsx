@@ -24,6 +24,20 @@ interface RestaurantSearchProps {
 
 type SearchType = 'name' | 'youtube';
 
+type SearchRestaurantsByYoutubeTitleArgs = {
+  search_query: string;
+  max_results: number;
+  include_all_status: boolean;
+  korean_only: boolean;
+};
+
+type YoutubeTitleRpcClient = {
+  rpc: (
+    fn: 'search_restaurants_by_youtube_title',
+    args: SearchRestaurantsByYoutubeTitleArgs
+  ) => Promise<{ data: unknown; error: unknown }>;
+};
+
 const RestaurantSearch = ({
   onRestaurantSelect,
   onSearchExecute,
@@ -141,8 +155,8 @@ const RestaurantSearch = ({
           }
         } else {
           // 유튜브 제목으로 검색
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data, error } = await (supabase as any).rpc("search_restaurants_by_youtube_title", {
+          const youtubeTitleRpcClient = supabase as unknown as YoutubeTitleRpcClient;
+          const { data, error } = await youtubeTitleRpcClient.rpc("search_restaurants_by_youtube_title", {
             search_query: trimmedQuery,
             max_results: 50,
             include_all_status: false,  // 일반 사용자는 approved만 표시
