@@ -4871,14 +4871,6 @@ const TypingIndicator = memo(() => (
                 style={{ animation: 'chatTypingPulse 1.4s ease-in-out infinite', animationDelay: '400ms' }}
             />
         </div>
-        <style dangerouslySetInnerHTML={{
-            __html: `
-            @keyframes chatTypingPulse {
-                0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-                40% { opacity: 1; transform: scale(1); }
-            }
-
-        ` }} />
     </div>
 ));
 TypingIndicator.displayName = 'TypingIndicator';
