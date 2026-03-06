@@ -3,8 +3,8 @@
   "version": "1.1.1",
   "private": true,
   "scripts": {
-    "dev": "node -e \"const fs = require('fs'); fs.rmSync('.next', { recursive: true, force: true });\" && next dev --webpack --port 8080",
-    "dev:clean": "node -e \"const fs = require('fs'); fs.rmSync('.next', { recursive: true, force: true });\" && next dev --webpack --port 8080",
+    "dev": "node scripts/clean-next.mjs && next dev --webpack --port 8080",
+    "dev:clean": "node scripts/clean-next.mjs && next dev --webpack --port 8080",
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",

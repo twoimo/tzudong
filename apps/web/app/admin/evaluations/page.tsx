@@ -48,11 +48,119 @@ import {
 
 const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
-const TRANSCRIPT_API_BASE_URL = (process.env.NEXT_PUBLIC_TRANSCRIPT_API_BASE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const FALLBACK_TRANSCRIPT_API_BASE_URL = 'http://localhost:8000';
+const SAFE_TRANSCRIPT_API_PROTOCOLS = new Set(['http:', 'https:']);
+const EVALUATION_FILTER_KEYS = [
+  'visit_authenticity',
+  'rb_inference_score',
+  'rb_grounding_TF',
+  'review_faithfulness_score',
+  'geocoding_success',
+  'category_validity_TF',
+  'category_TF',
+  'status',
+] as const;
+const EVALUATION_RECORD_STATUS_SET = new Set<EvaluationRecordStatus>([
+  'pending',
+  'approved',
+  'rejected',
+  'hold',
+  'deleted',
+  'missing',
+  'db_conflict',
+  'geocoding_failed',
+  'not_selected',
+]);
+
+type EvalFilterKey = (typeof EVALUATION_FILTER_KEYS)[number];
+type EvalFiltersState = Partial<Record<EvalFilterKey, string>>;
+
+interface StoredEvaluationPageState {
+  selectedStatuses?: EvaluationRecordStatus[];
+  searchQuery?: string;
+  evalFilters?: EvalFiltersState;
+  isAlternateView?: boolean;
+}
+
+function resolveTranscriptApiBaseUrl(rawBaseUrl?: string): string {
+  const candidate = rawBaseUrl?.trim();
+
+  if (!candidate) {
+    return FALLBACK_TRANSCRIPT_API_BASE_URL;
+  }
+
+  if (candidate.startsWith('/')) {
+    return candidate.replace(/\/+$/, '');
+  }
+
+  try {
+    const parsedUrl = new URL(candidate);
+    if (!SAFE_TRANSCRIPT_API_PROTOCOLS.has(parsedUrl.protocol)) {
+      throw new Error(`Unsupported protocol: ${parsedUrl.protocol}`);
+    }
+
+    parsedUrl.hash = '';
+    parsedUrl.search = '';
+    return parsedUrl.toString().replace(/\/+$/, '');
+  } catch (error) {
+    console.warn('[AdminEvaluations] Invalid NEXT_PUBLIC_TRANSCRIPT_API_BASE_URL, using fallback:', error);
+    return FALLBACK_TRANSCRIPT_API_BASE_URL;
+  }
+}
+
+const TRANSCRIPT_API_BASE_URL = resolveTranscriptApiBaseUrl(process.env.NEXT_PUBLIC_TRANSCRIPT_API_BASE_URL);
 
 function buildTranscriptApiUrl(pathname: string): string {
   const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
   return `${TRANSCRIPT_API_BASE_URL}${normalizedPath}`;
+}
+
+function isEvaluationRecordStatus(value: unknown): value is EvaluationRecordStatus {
+  return typeof value === 'string' && EVALUATION_RECORD_STATUS_SET.has(value as EvaluationRecordStatus);
+}
+
+function sanitizeEvalFilters(value: unknown): EvalFiltersState {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const rawFilters = value as Record<string, unknown>;
+  const sanitizedFilters: EvalFiltersState = {};
+
+  EVALUATION_FILTER_KEYS.forEach((key) => {
+    const candidateValue = rawFilters[key];
+    if (typeof candidateValue === 'string') {
+      sanitizedFilters[key] = candidateValue;
+    }
+  });
+
+  return sanitizedFilters;
+}
+
+function parseStoredEvaluationPageState(serializedState: string | null): StoredEvaluationPageState | null {
+  if (!serializedState) {
+    return null;
+  }
+
+  const parsedState: unknown = JSON.parse(serializedState);
+  if (!parsedState || typeof parsedState !== 'object') {
+    return null;
+  }
+
+  const rawState = parsedState as Record<string, unknown>;
+  const selectedStatuses = Array.isArray(rawState.selectedStatuses)
+    ? rawState.selectedStatuses.filter(isEvaluationRecordStatus)
+    : undefined;
+  const searchQuery = typeof rawState.searchQuery === 'string' ? rawState.searchQuery : undefined;
+  const evalFilters = sanitizeEvalFilters(rawState.evalFilters);
+  const isAlternateView = typeof rawState.isAlternateView === 'boolean' ? rawState.isAlternateView : undefined;
+
+  return {
+    ...(selectedStatuses ? { selectedStatuses } : {}),
+    ...(searchQuery !== undefined ? { searchQuery } : {}),
+    ...(Object.keys(evalFilters).length > 0 ? { evalFilters } : {}),
+    ...(isAlternateView !== undefined ? { isAlternateView } : {}),
+  };
 }
 
 interface LocationMatchResult {
@@ -167,16 +275,7 @@ function AdminEvaluationPage() {
   const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
   const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null); // 검색 결과
   const [isSearching, setIsSearching] = useState(false); // 검색 로딩 상태
-  const [evalFilters, setEvalFilters] = useState<{
-    visit_authenticity?: string;
-    rb_inference_score?: string;
-    rb_grounding_TF?: string;
-    review_faithfulness_score?: string;
-    geocoding_success?: string;
-    category_validity_TF?: string;
-    category_TF?: string;
-    status?: string;
-  }>({});
+  const [evalFilters, setEvalFilters] = useState<EvalFiltersState>({});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
   const [conflictPanelOpen, setConflictPanelOpen] = useState(false);
@@ -265,14 +364,13 @@ function AdminEvaluationPage() {
   // localStorage에서 상태 복원
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.selectedStatuses) setSelectedStatuses(parsed.selectedStatuses);
-        if (parsed.searchQuery) setSearchQuery(parsed.searchQuery);
-        if (parsed.evalFilters) setEvalFilters(parsed.evalFilters);
-        if (parsed.isAlternateView) setIsAlternateView(parsed.isAlternateView);
-      }
+      const savedState = parseStoredEvaluationPageState(localStorage.getItem(STORAGE_KEY));
+      if (!savedState) return;
+
+      if (savedState.selectedStatuses) setSelectedStatuses(savedState.selectedStatuses);
+      if (savedState.searchQuery !== undefined) setSearchQuery(savedState.searchQuery);
+      if (savedState.evalFilters) setEvalFilters(savedState.evalFilters);
+      if (savedState.isAlternateView !== undefined) setIsAlternateView(savedState.isAlternateView);
     } catch (error) {
       console.error('Failed to parse saved state:', error);
     }

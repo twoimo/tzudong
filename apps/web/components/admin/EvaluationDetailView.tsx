@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
+import { openExternalUrl } from '@/lib/open-external-url';
 
 // 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
 const getYoutubeVideoId = (url: string | undefined): string | null => {
@@ -357,13 +358,15 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 </div>
                             ) : (
                                 /* Facade Pattern: 썸네일 표시 (클릭 시 새 탭) */
-                                <div
+                                <button
+                                    type="button"
                                     className="relative w-full aspect-video cursor-pointer group"
                                     onClick={() => {
                                         if (record.youtube_link) {
-                                            window.open(record.youtube_link, '_blank');
+                                            openExternalUrl(record.youtube_link);
                                         }
                                     }}
+                                    aria-label="유튜브 영상 새 탭에서 열기"
                                 >
                                     {videoId ? (
                                         <Image
@@ -385,7 +388,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                             <p className="text-gray-400 text-sm">썸네일 없음</p>
                                         </div>
                                     )}
-                                </div>
+                                </button>
                             )}
                         </div>
                     </div>
