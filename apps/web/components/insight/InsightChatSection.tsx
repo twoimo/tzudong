@@ -8632,6 +8632,12 @@ const InsightChatSectionComponent = () => {
                                                         event.preventDefault();
                                                     }}
                                                     onClick={() => handlePromptTemplateApply(suggestion.prompt)}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === 'Enter' || event.key === ' ') {
+                                                            event.preventDefault();
+                                                            handlePromptTemplateApply(suggestion.prompt);
+                                                        }
+                                                    }}
                                                 >
                                                     <div className="flex items-center justify-between gap-2">
                                                         <div className="min-w-0">
