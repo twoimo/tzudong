@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { type KeyboardEvent as ReactKeyboardEvent, memo, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -176,6 +176,15 @@ const RiceBowlWordCloud = memo(({
         };
     }, [getDisplayKeyword, keywords, dimensions]);
 
+    const handleWordKeyDown = useCallback((event: ReactKeyboardEvent<SVGTextElement>, word: string) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+
+        event.preventDefault();
+        onKeywordClick(word);
+    }, [onKeywordClick]);
+
     // 준비되지 않았으면 로딩 표시
     if (!isReady || dimensions.width === 0) {
         return (
@@ -208,8 +217,13 @@ const RiceBowlWordCloud = memo(({
                                 fill={getColor(word.category, isSelected, isHovered)}
                                 textAnchor="middle"
                                 dominantBaseline="middle"
-                                className="cursor-pointer"
+                                className="wordcloud-keyword cursor-pointer"
+                                role="button"
+                                tabIndex={0}
+                                aria-pressed={isSelected}
+                                aria-label={`${word.label} 키워드 선택`}
                                 onClick={() => onKeywordClick(word.text)}
+                                onKeyDown={(event) => handleWordKeyDown(event, word.text)}
                                 onMouseEnter={() => setHoveredWord(word.text)}
                                 onMouseLeave={() => setHoveredWord(null)}
                                 style={{
@@ -229,9 +243,12 @@ const RiceBowlWordCloud = memo(({
 RiceBowlWordCloud.displayName = 'RiceBowlWordCloud';
 
 // [COMPONENT] 관련 영상 및 리뷰 카드
-const VideoReviewCard = memo(({ video }: { video: VideoWithKeyword }) => (
-    <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3">
-        <div className="flex items-start gap-3">
+const VideoReviewCard = memo(({ video }: { video: VideoWithKeyword }) => {
+    const videoLink = buildYoutubeLinkWithTimestamp(video.youtubeLink ?? null, video.timestampSec);
+
+    return (
+        <div className="p-4 border rounded-lg hover:bg-muted/50 transition-colors space-y-3">
+            <div className="flex items-start gap-3">
             {/* 썸네일 플레이스홀더 */}
             <div className="relative w-24 h-14 bg-muted rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {video.thumbnail ? (
@@ -259,10 +276,10 @@ const VideoReviewCard = memo(({ video }: { video: VideoWithKeyword }) => (
                     <span>{formatViewsKorean(video.views)}</span>
                 </div>
             </div>
-            {buildYoutubeLinkWithTimestamp(video.youtubeLink ?? null, video.timestampSec) ? (
+            {videoLink ? (
                 <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" asChild>
                     <a
-                        href={buildYoutubeLinkWithTimestamp(video.youtubeLink ?? null, video.timestampSec) as string}
+                        href={videoLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="유튜브에서 보기"
@@ -295,7 +312,8 @@ const VideoReviewCard = memo(({ video }: { video: VideoWithKeyword }) => (
             {video.mentionContext}
         </p>
     </div>
-));
+    );
+});
 VideoReviewCard.displayName = 'VideoReviewCard';
 
 // [MAIN] 워드 클라우드 섹션 메인 컴포넌트

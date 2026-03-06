@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
+import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { requireAdmin } from '@/lib/auth/require-admin';
 
@@ -27,6 +28,11 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const routeDirname = path.dirname(fileURLToPath(import.meta.url));
+const preprocessScriptPath = path.resolve(
+    routeDirname,
+    '../../../../../../../backend/geminiCLI-ocr-receipts/preprocess_receipt.py'
+);
 
 const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
 
@@ -100,11 +106,9 @@ const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가
  */
 function runPythonPreprocess(inputPath: string, outputDir: string): Promise<Record<string, string>> {
     return new Promise((resolve, reject) => {
-        // Python 스크립트 경로 - 프로젝트 루트 기준
-        const scriptPath = path.join(process.cwd(), '..', '..', 'backend', 'geminiCLI-ocr-receipts', 'preprocess_receipt.py');
         const python = process.platform === 'win32' ? 'python' : 'python3';
 
-        const proc = spawn(python, [scriptPath, inputPath, outputDir]);
+        const proc = spawn(python, [preprocessScriptPath, inputPath, outputDir]);
         let stdout = '';
         let stderr = '';
 

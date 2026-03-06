@@ -1682,7 +1682,11 @@ export function SubmissionListView({
                                                     <span>{review.profiles?.nickname || '익명'}</span>
                                                 </div>
 
-                                                <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                                <div
+                                                    className="mt-2 flex items-center gap-1.5"
+                                                    onPointerDownCapture={(e) => e.stopPropagation()}
+                                                    onClickCapture={(e) => e.stopPropagation()}
+                                                >
                                                     {isPending && (
                                                         <>
                                                             <Button
@@ -1836,7 +1840,11 @@ export function SubmissionListView({
                                                     )}
                                                 </div>
 
-                                                <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                                <div
+                                                    className="mt-2 flex items-center gap-1.5"
+                                                    onPointerDownCapture={(e) => e.stopPropagation()}
+                                                    onClickCapture={(e) => e.stopPropagation()}
+                                                >
                                                     {isPending && (
                                                         <Button
                                                             size="sm"

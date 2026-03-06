@@ -1,5 +1,6 @@
 import { AlertCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { openExternalUrl } from '@/lib/open-external-url';
 
 interface DuplicateErrorDetails {
     error_type: 'duplicate';
@@ -88,7 +89,7 @@ export function RestaurantErrorAlert({
                                     variant="ghost"
                                     onClick={() => {
                                         // 메인 페이지로 이동하면서 맛집 ID를 쿼리 파라미터로 전달
-                                        window.open(`/?restaurant=${errorDetails.conflicting_restaurant.id}`, '_blank');
+                                        openExternalUrl(`/?restaurant=${errorDetails.conflicting_restaurant.id}`);
                                     }}
                                     className="text-xs"
                                 >

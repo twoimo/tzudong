@@ -2013,6 +2013,11 @@ const NaverMapView = memo(({
         }
 
         function handleWheelInput(input: QueuedWheelInput) {
+            const normalizedDirection = Math.sign(input.deltaY);
+            if (normalizedDirection === 0) {
+                return;
+            }
+
             const now = Date.now();
             const timeDiff = now - lastWheelTime;
             lastWheelTime = now;
@@ -2030,7 +2035,7 @@ const NaverMapView = memo(({
 
             // 2. 새로운 목표 계산 (정수 1단위)
             // deltaY > 0 : 줌 아웃(값 감소), deltaY < 0 : 줌 인(값 증가)
-            const zoomChange = input.deltaY > 0 ? -1 : 1;
+            const zoomChange = normalizedDirection > 0 ? -1 : 1;
             const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(baseZoom) + zoomChange));
 
             // 3. 적용 (변경이 있을 때만)

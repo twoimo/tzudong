@@ -49,7 +49,7 @@ To inject role-specific behavior, the parent MUST read the role prompt and pass 
 
 Delegation steps:
 1. Decide which agent role to delegate to (e.g., `architect`, `executor`, `debugger`)
-2. Read the role prompt: `~/.codex/prompts/{role}.md`
+2. Read the role prompt: `./.codex/prompts/{role}.md`
 3. Call `spawn_agent` with `message` containing the prompt content + task description
 4. The child agent receives full role context and executes the task independently
 
@@ -61,7 +61,7 @@ spawn_agent(message: "<test-engineer prompt>\n\nTask: Write tests for the auth c
 ```
 
 Each child agent:
-- Receives its role-specific prompt (from ~/.codex/prompts/)
+- Receives its role-specific prompt (from ./.codex/prompts/)
 - Inherits AGENTS.md context (via child_agents_md feature flag)
 - Runs in an isolated context with its own tool access
 - Returns results to the parent when complete
@@ -79,8 +79,8 @@ Codex CLI uses these prefixes for custom commands:
 - `$name` — invoke a skill (e.g., `$ralph "fix all tests"`, `$autopilot "build REST API"`)
 - `/skills` — browse available skills interactively
 
-Agent prompts (in `~/.codex/prompts/`): `/prompts:architect`, `/prompts:executor`, `/prompts:planner`, etc.
-Workflow skills (in `~/.agents/skills/`): `$ralph`, `$autopilot`, `$plan`, `$ralplan`, `$team`, etc.
+Agent prompts (in `./.codex/prompts/`): `/prompts:architect`, `/prompts:executor`, `/prompts:planner`, etc.
+Workflow skills (in `./.agents/skills/`): `$ralph`, `$autopilot`, `$plan`, `$ralplan`, `$team`, etc.
 </invocation_conventions>
 
 <model_routing>
@@ -146,25 +146,31 @@ Do not ask for confirmation — just read the skill file and follow its instruct
 
 | Keyword(s) | Skill | Action |
 |-------------|-------|--------|
-| "ralph", "don't stop", "must complete", "keep going" | `$ralph` | Read `~/.agents/skills/ralph/SKILL.md`, execute persistence loop |
-| "autopilot", "build me", "I want a" | `$autopilot` | Read `~/.agents/skills/autopilot/SKILL.md`, execute autonomous pipeline |
-| "ultrawork", "ulw", "parallel" | `$ultrawork` | Read `~/.agents/skills/ultrawork/SKILL.md`, execute parallel agents |
-| "plan this", "plan the", "let's plan" | `$plan` | Read `~/.agents/skills/plan/SKILL.md`, start planning workflow |
-| "ralplan", "consensus plan" | `$ralplan` | Read `~/.agents/skills/ralplan/SKILL.md`, start consensus planning |
-| "team", "swarm", "coordinated team", "coordinated swarm" | `$team` | Read `~/.agents/skills/team/SKILL.md`, start team orchestration (swarm compatibility alias) |
-| "ecomode", "eco", "budget" | `$ecomode` | Read `~/.agents/skills/ecomode/SKILL.md`, enable token-efficient mode |
-| "research", "analyze data" | `$research` | Read `~/.agents/skills/research/SKILL.md`, start parallel research |
-| "cancel", "stop", "abort" | `$cancel` | Read `~/.agents/skills/cancel/SKILL.md`, cancel active modes |
-| "tdd", "test first" | `$tdd` | Read `~/.agents/skills/tdd/SKILL.md`, start test-driven workflow |
-| "fix build", "type errors" | `$build-fix` | Read `~/.agents/skills/build-fix/SKILL.md`, fix build errors |
-| "review code" | `$code-review` | Read `~/.agents/skills/code-review/SKILL.md`, run code review |
-| "security review" | `$security-review` | Read `~/.agents/skills/security-review/SKILL.md`, run security audit |
+| "ralph", "don't stop", "must complete", "keep going" | `$ralph` | Read `./.agents/skills/ralph/SKILL.md`, execute persistence loop |
+| "autopilot", "build me", "I want a" | `$autopilot` | Read `./.agents/skills/autopilot/SKILL.md`, execute autonomous pipeline |
+| "ultrawork", "ulw", "parallel" | `$ultrawork` | Read `./.agents/skills/ultrawork/SKILL.md`, execute parallel agents |
+| "plan this", "plan the", "let's plan" | `$plan` | Read `./.agents/skills/plan/SKILL.md`, start planning workflow |
+| "interview", "deep interview", "gather requirements", "interview me", "don't assume", "ouroboros" | `$deep-interview` | Read `./.agents/skills/deep-interview/SKILL.md`, run Ouroboros-inspired Socratic ambiguity-gated interview workflow |
+| "ralplan", "consensus plan" | `$ralplan` | Read `./.agents/skills/ralplan/SKILL.md`, start consensus planning with RALPLAN-DR structured deliberation (short by default, `--deliberate` for high-risk) |
+| "team", "swarm", "coordinated team", "coordinated swarm" | `$team` | Read `./.agents/skills/team/SKILL.md`, start team orchestration (swarm compatibility alias) |
+| "ecomode", "eco", "budget" | `$ecomode` | Read `./.agents/skills/ecomode/SKILL.md`, enable token-efficient mode |
+| "cancel", "stop", "abort" | `$cancel` | Read `./.agents/skills/cancel/SKILL.md`, cancel active modes |
+| "tdd", "test first" | `$tdd` | Read `./.agents/skills/tdd/SKILL.md`, start test-driven workflow |
+| "fix build", "type errors" | `$build-fix` | Read `./.agents/skills/build-fix/SKILL.md`, fix build errors |
+| "review code" | `$code-review` | Read `./.agents/skills/code-review/SKILL.md`, run code review |
+| "security review" | `$security-review` | Read `./.agents/skills/security-review/SKILL.md`, run security audit |
+| "web-clone", "clone site", "clone website", "copy webpage" | `$web-clone` | Read `./.agents/skills/web-clone/SKILL.md`, start website cloning pipeline |
 
 Detection rules:
 - Keywords are case-insensitive and match anywhere in the user's message
 - If multiple keywords match, use the most specific (longest match)
 - Conflict resolution: explicit `$name` invocation overrides keyword detection
 - The rest of the user's message (after keyword extraction) becomes the task description
+
+Ralph / Ralplan execution gate:
+- Enforce **ralplan-first** when ralph is active and planning is not complete.
+- Planning is complete only after both `.omx/plans/prd-*.md` and `.omx/plans/test-spec-*.md` exist.
+- Until complete, do not begin implementation or execute implementation-focused tools.
 </keyword_detection>
 
 ---
@@ -176,13 +182,15 @@ Workflow Skills:
 - `autopilot`: Full autonomous execution from idea to working code
 - `ralph`: Self-referential persistence loop with verification
 - `ultrawork`: Maximum parallelism with parallel agent orchestration
+- `visual-verdict`: Structured visual QA verdict loop for screenshot/reference comparisons
+- `web-clone`: URL-driven website cloning with visual + functional verification
 - `ecomode`: Token-efficient execution using lightweight models
 - `team`: N coordinated agents on shared task list
 - `swarm`: N coordinated agents on shared task list (compatibility facade over team)
 - `ultraqa`: QA cycling -- test, verify, fix, repeat
-- `plan`: Strategic planning with optional consensus mode
-- `ralplan`: Iterative consensus planning (planner + architect + critic)
-- `research`: Parallel research agents for comprehensive analysis
+- `plan`: Strategic planning with optional RALPLAN-DR consensus mode
+- `deep-interview`: Socratic deep interview with Ouroboros-inspired mathematical ambiguity gating before execution
+- `ralplan`: Iterative consensus planning with RALPLAN-DR structured deliberation (planner + architect + critic); supports `--deliberate` for high-risk work
 
 Agent Shortcuts:
 - `analyze` -> debugger: Investigation and root-cause analysis
@@ -282,8 +290,15 @@ Parallelization:
 - Use background execution for installs, builds, and tests.
 - Prefer Team mode as the primary parallel execution surface. Use ad hoc parallelism only when Team overhead is disproportionate to the task.
 
+Visual iteration gate:
+- For visual tasks (reference image(s) + generated screenshot), run `$visual-verdict` every iteration before the next edit.
+- Persist visual verdict JSON in `.omx/state/{scope}/ralph-progress.json` with both numeric (`score`, threshold pass/fail) and qualitative (`reasoning`, `differences`, `suggestions`, `next_actions`) feedback.
+
 Continuation:
   Before concluding, confirm: zero pending tasks, all features working, tests passing, zero errors, verification evidence collected. If any item is unchecked, continue working.
+
+Ralph planning gate:
+  If ralph is active, verify PRD + test spec artifacts exist before any implementation work/tool execution. If missing, stay in planning and create them first (ralplan-first).
 </execution_protocols>
 
 <cancellation>

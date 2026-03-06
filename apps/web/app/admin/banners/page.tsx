@@ -65,6 +65,7 @@ import {
     Scroll,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { toast } from '@/hooks/use-toast';
 
 // 이미지 압축 옵션
@@ -73,6 +74,12 @@ const IMAGE_COMPRESSION_OPTIONS = {
     maxWidthOrHeight: 1600,
     fileType: 'image/webp' as const,
     useWebWorker: true,
+};
+
+const revokeObjectUrlIfNeeded = (url: string | null) => {
+    if (url?.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+    }
 };
 
 // Suspense 래퍼
@@ -144,6 +151,8 @@ function BannerManagementPage() {
 
     // 폼 초기화
     const resetForm = () => {
+        revokeObjectUrlIfNeeded(imagePreview);
+        revokeObjectUrlIfNeeded(videoPreview);
         setFormData({
             title: '',
             description: '',
@@ -161,6 +170,17 @@ function BannerManagementPage() {
         setVideoPreview(null);
         setCompressionProgress(0);
         setEditingBanner(null);
+    };
+
+    const handleOpenExternalLink = (rawUrl: string) => {
+        const isOpened = openExternalUrl(rawUrl);
+        if (!isOpened) {
+            toast({
+                title: '링크를 열 수 없습니다',
+                description: '링크 형식 또는 팝업 차단 설정을 확인해주세요.',
+                variant: 'destructive',
+            });
+        }
     };
 
     // 다이얼로그 열기 (생성)
@@ -249,9 +269,8 @@ function BannerManagementPage() {
             setCompressionProgress(0);
 
             // 기존 영상 제거
-            if (videoPreview) {
-                URL.revokeObjectURL(videoPreview);
-            }
+            revokeObjectUrlIfNeeded(imagePreview);
+            revokeObjectUrlIfNeeded(videoPreview);
             setVideoFile(null);
             setVideoPreview(null);
 
@@ -281,9 +300,8 @@ function BannerManagementPage() {
             setIsUploading(true);
 
             // 기존 이미지 제거
-            if (imagePreview) {
-                URL.revokeObjectURL(imagePreview);
-            }
+            revokeObjectUrlIfNeeded(imagePreview);
+            revokeObjectUrlIfNeeded(videoPreview);
             setImageFile(null);
             setImagePreview(null);
 
@@ -305,12 +323,8 @@ function BannerManagementPage() {
 
     // 미디어 삭제
     const handleMediaRemove = () => {
-        if (imagePreview) {
-            URL.revokeObjectURL(imagePreview);
-        }
-        if (videoPreview) {
-            URL.revokeObjectURL(videoPreview);
-        }
+        revokeObjectUrlIfNeeded(imagePreview);
+        revokeObjectUrlIfNeeded(videoPreview);
         setImageFile(null);
         setVideoFile(null);
         setImagePreview(null);
@@ -538,7 +552,7 @@ function BannerManagementPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            onClick={() => window.open(banner.link_url!, '_blank')}
+                                                            onClick={() => handleOpenExternalLink(banner.link_url!)}
                                                             className="h-7 w-7"
                                                         >
                                                             <ExternalLink className="h-3.5 w-3.5" />
@@ -643,7 +657,7 @@ function BannerManagementPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            onClick={() => window.open(banner.link_url!, '_blank')}
+                                                            onClick={() => handleOpenExternalLink(banner.link_url!)}
                                                             className="h-8 w-8"
                                                         >
                                                             <ExternalLink className="h-4 w-4" />

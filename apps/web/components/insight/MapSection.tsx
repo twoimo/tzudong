@@ -19,6 +19,7 @@ import {
     RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { useNaverMaps } from '@/hooks/use-naver-maps';
 import { useYoutuberRestaurants, useYoutuberList, type YoutuberRestaurant } from '@/hooks/use-youtuber-restaurants';
 
@@ -132,10 +133,14 @@ const RestaurantListItem = memo(({
     isSelected: boolean;
     onClick: () => void;
 }) => (
-    <div
+    <button
+        type="button"
         onClick={onClick}
+        aria-pressed={isSelected}
+        aria-label={`${marker.name} 상세 보기`}
         className={cn(
-            "group w-full p-3 rounded-lg cursor-pointer transition-all duration-200 border",
+            "group w-full p-3 rounded-lg cursor-pointer transition-all duration-200 border text-left",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             isSelected
                 ? "bg-primary/10 border-primary shadow-sm"
                 : "bg-card hover:bg-accent/50 border-border/50 hover:border-border"
@@ -168,7 +173,7 @@ const RestaurantListItem = memo(({
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
         </div>
-    </div>
+    </button>
 ));
 RestaurantListItem.displayName = 'RestaurantListItem';
 
@@ -189,7 +194,7 @@ const DetailPanel = memo(({
                     <h3 title={marker.name} className="font-semibold text-lg truncate">{marker.name}</h3>
                     <Badge variant="secondary" className="text-xs shrink-0">{marker.category}</Badge>
                 </div>
-                <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose}>
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose} aria-label="상세 패널 닫기">
                     <X className="h-4 w-4" />
                 </Button>
             </div>
@@ -241,7 +246,7 @@ const DetailPanel = memo(({
                                     variant="outline"
                                     size="sm"
                                     className="w-full border-red-200 hover:bg-red-50 hover:text-red-600"
-                                    onClick={() => window.open(marker.youtubeUrl, '_blank')}
+                                    onClick={() => openExternalUrl(marker.youtubeUrl)}
                                 >
                                     <Youtube className="h-4 w-4 mr-2 text-red-500" />
                                     관련 영상 보기
@@ -289,7 +294,7 @@ const DetailPanel = memo(({
                                     variant="outline"
                                     size="sm"
                                     className="w-full border-red-200 hover:bg-red-50 hover:text-red-600"
-                                    onClick={() => window.open(marker.youtubeUrl, '_blank')}
+                                    onClick={() => openExternalUrl(marker.youtubeUrl)}
                                 >
                                     <Youtube className="h-4 w-4 mr-2 text-red-500" />
                                     유튜브에서 보기
@@ -622,6 +627,7 @@ const MapSectionComponent = () => {
                             onClick={() => refetch()}
                             disabled={isLoading}
                             title="새로고침"
+                            aria-label="맛집 목록 새로고침"
                         >
                             <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
                         </Button>

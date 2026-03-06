@@ -226,7 +226,12 @@ export function DailyRecommendationPopup() {
                     </div>
 
                     {/* 클릭 가능 영역 */}
-                    <div className="cursor-pointer hover:opacity-95 transition-opacity" onClick={handleCardClick}>
+                    <button
+                        type="button"
+                        className="w-full cursor-pointer text-left hover:opacity-95 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        onClick={handleCardClick}
+                        aria-label={`${selectedRestaurant.name} 상세 페이지로 이동`}
+                    >
                         {/* YouTube 썸네일 */}
                         {thumbnailUrl && (
                             <div className="aspect-video relative group">
@@ -254,7 +259,7 @@ export function DailyRecommendationPopup() {
                             </div>
 
                         </div>
-                    </div>
+                    </button>
 
                     {/* 하단 버튼 (광고 배너와 동일) */}
                     <div className="flex border-t border-border">
