@@ -36,6 +36,7 @@ import { BookmarkButton } from "@/components/ui/bookmark-button";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useReviewLikesRealtime } from "@/hooks/use-review-likes-realtime";
+import { openExternalUrl } from "@/lib/open-external-url";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -532,21 +533,21 @@ export function RestaurantDetailPanel({
     // [핸들러] 네이버 지도 열기
     const handleNaverMap = () => {
         const url = `https://map.naver.com/v5/search/${encodeURIComponent(restaurant.name)}`;
-        window.open(url, '_blank');
+        openExternalUrl(url);
         setIsDirectionSheetOpen(false);
     };
 
     // [핸들러] 구글 지도 열기
     const handleGoogleMap = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
-        window.open(url, '_blank');
+        openExternalUrl(url);
         setIsDirectionSheetOpen(false);
     };
 
     // [핸들러] 카카오맵 열기
     const handleKakaoMap = () => {
         const url = `https://map.kakao.com/link/to/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`;
-        window.open(url, '_blank');
+        openExternalUrl(url);
         setIsDirectionSheetOpen(false);
     };
 
@@ -965,7 +966,7 @@ export function RestaurantDetailPanel({
                                                     className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                     onClick={() => {
                                                         if (restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) {
-                                                            window.open(restaurant.mergedYoutubeLinks[0], '_blank');
+                                                            openExternalUrl(restaurant.mergedYoutubeLinks[0]);
                                                         }
                                                     }}
                                                 >
@@ -988,7 +989,7 @@ export function RestaurantDetailPanel({
                                                     className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                     onClick={() => {
                                                         if (restaurant.youtube_link) {
-                                                            window.open(restaurant.youtube_link, '_blank');
+                                                            openExternalUrl(restaurant.youtube_link);
                                                         }
                                                     }}
                                                 >
@@ -1015,7 +1016,7 @@ export function RestaurantDetailPanel({
                                                         <div
                                                             key={index + 1}
                                                             className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                            onClick={() => window.open(link, '_blank')}
+                                                            onClick={() => openExternalUrl(link)}
                                                         >
                                                             {getYouTubeThumbnailUrl(link) && (
                                                                 <Image

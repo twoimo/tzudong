@@ -81,3 +81,7 @@ backend/supabase/backup_db/*.sql
 
 # codex
 .codex
+.agents
+
+# Next.js stale cache fallback directories
+.next-stale-*

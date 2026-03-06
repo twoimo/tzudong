@@ -36,10 +36,14 @@ const VideoHeatmapCard = memo(({ video, isSelected, onClick }: {
     isSelected: boolean;
     onClick: () => void;
 }) => (
-    <div
+    <button
+        type="button"
         onClick={onClick}
+        aria-pressed={isSelected}
+        aria-label={`${video.title} 영상 선택`}
         className={`
-            p-3 rounded-lg cursor-pointer transition-all duration-200 border
+            w-full p-3 rounded-lg cursor-pointer transition-all duration-200 border text-left
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
             ${isSelected
                 ? 'bg-primary/10 border-primary shadow-sm'
                 : 'bg-card hover:bg-muted/50 border-transparent'
@@ -85,7 +89,7 @@ const VideoHeatmapCard = memo(({ video, isSelected, onClick }: {
                 </div>
             </div>
         </div>
-    </div>
+    </button>
 ));
 VideoHeatmapCard.displayName = 'VideoHeatmapCard';
 

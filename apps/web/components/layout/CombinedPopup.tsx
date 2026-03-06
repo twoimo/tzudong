@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, memo, useRef } from 'react';
 import Image from 'next/image';
 import { Scroll, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { openExternalUrl } from '@/lib/open-external-url';
 import { Button } from '@/components/ui/button';
 import { usePopupAdBanners } from '@/hooks/use-ad-banners';
 import { AdBanner } from '@/types/ad-banner';
@@ -305,7 +306,7 @@ const CombinedPopupComponent = () => {
     // 배너 클릭
     const handleBannerClick = useCallback((banner: AdBanner) => {
         if (banner.link_url) {
-            window.open(banner.link_url, '_blank', 'noopener,noreferrer');
+            openExternalUrl(banner.link_url);
         }
     }, []);
 

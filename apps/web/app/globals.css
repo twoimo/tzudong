@@ -302,6 +302,14 @@ div[style*="z-index"]>div>.custom-marker {
   outline-offset: 2px;
 }
 
+/* SVG 기반 인터랙티브 텍스트 전용 포커스 표시 */
+.wordcloud-keyword:focus-visible {
+  outline: none;
+  stroke: hsl(var(--ring));
+  stroke-width: 0.8px;
+  paint-order: stroke;
+}
+
 /* [PERF] GPU 가속 레이어 프로모션 */
 .gpu-accelerated {
   transform: translateZ(0);

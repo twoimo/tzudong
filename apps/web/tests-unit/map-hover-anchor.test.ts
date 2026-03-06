@@ -82,4 +82,35 @@ describe('map hover anchor center adjustment', () => {
         expect(Math.abs(finalOffset.x - mouseOffset.x)).toBeLessThan(0.0001);
         expect(Math.abs(finalOffset.y - mouseOffset.y)).toBeLessThan(0.0001);
     });
+
+    test('keeps hovered coordinate stable across repeated zoom in/out operations', () => {
+        const state: LinearProjectionState = {
+            center: { lat: 37.501, lng: 127.039 },
+            scale: 900,
+            viewportCenter: { x: 540, y: 360 },
+        };
+        const mouseOffset = { x: 812, y: 182 };
+
+        for (const nextScale of [1800, 3600, 1800, 900, 450, 900]) {
+            const projectionBefore = makeLinearProjection(state);
+            const anchorCoordBeforeZoom = projectionBefore.fromOffsetToCoord(mouseOffset);
+
+            state.scale = nextScale;
+            const projectionAfterZoom = makeLinearProjection(state);
+
+            const adjustedCenter = calculateHoverAnchoredCenter({
+                projection: projectionAfterZoom,
+                anchorCoordBeforeZoom,
+                currentCenter: state.center,
+                mouseOffset,
+            });
+
+            state.center = adjustedCenter;
+            const projectionAfterAdjust = makeLinearProjection(state);
+            const finalOffset = projectionAfterAdjust.fromCoordToOffset(anchorCoordBeforeZoom);
+
+            expect(Math.abs(finalOffset.x - mouseOffset.x)).toBeLessThan(0.0001);
+            expect(Math.abs(finalOffset.y - mouseOffset.y)).toBeLessThan(0.0001);
+        }
+    });
 });
