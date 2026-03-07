@@ -328,9 +328,11 @@ export default function AnnouncementPanel({
                                     >
                                         <div className="space-y-3 overflow-hidden">
                                             {/* 제목/내용 - 클릭 시 상세보기 */}
-                                            <div
-                                                className="flex items-start justify-between gap-2 overflow-hidden cursor-pointer hover:bg-muted/50 -mx-4 -mt-4 p-4 rounded-t-lg transition-colors"
+                                            <button
+                                                type="button"
+                                                className="w-full flex items-start justify-between gap-2 overflow-hidden text-left cursor-pointer hover:bg-muted/50 -mx-4 -mt-4 p-4 rounded-t-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                 onClick={() => handleViewDetail(announcement)}
+                                                aria-label={`${announcement.title} 공지사항 상세 보기`}
                                             >
                                                 <div className="flex-1 min-w-0 overflow-hidden">
                                                     <h3 className="font-semibold truncate mb-1">
@@ -340,7 +342,7 @@ export default function AnnouncementPanel({
                                                         {announcement.content}
                                                     </p>
                                                 </div>
-                                            </div>
+                                            </button>
 
                                             {/* 메타 정보 */}
                                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
