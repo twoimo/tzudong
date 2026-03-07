@@ -608,7 +608,21 @@ function MobileControlOverlayComponent({
             {activeSheet !== 'none' && (
                 <div
                     className="fixed inset-0 z-50 bg-black/30"
-                    onClick={handleClose}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="바텀시트 닫기"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            handleClose();
+                        }
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+                            e.preventDefault();
+                            handleClose();
+                        }
+                    }}
                 >
                     {/* 바텀시트 컨테이너 */}
                     <div
@@ -640,7 +654,6 @@ function MobileControlOverlayComponent({
                             // 검색 시트는 네비게이션 바(약 65px) + Safe Area 위로 띄움
                             bottom: activeSheet === 'search' ? 'calc(35px + env(safe-area-inset-bottom))' : 0,
                         }}
-                        onClick={(e) => e.stopPropagation()}
                     >
                         {/* 핸들 바 - 검색 시트는 드래그 불가, touch-action: none으로 Pull-to-Refresh 방지 */}
                         {activeSheet !== 'search' && (

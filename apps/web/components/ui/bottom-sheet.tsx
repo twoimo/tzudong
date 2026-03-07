@@ -124,7 +124,7 @@ function BottomSheetComponent({
     const dragEndTimeRef = useRef(0);
     const velocityRef = useRef(0);
     const sheetRef = useRef<HTMLDivElement>(null);
-    const handleRef = useRef<HTMLDivElement>(null);
+    const handleRef = useRef<HTMLButtonElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const rafIdRef = useRef<number>(0);
     const contentTouchStartYRef = useRef(0);
@@ -695,7 +695,21 @@ function BottomSheetComponent({
             {/* 배경 오버레이 */}
             <div
                 className="fixed inset-0 z-50 bg-black/30 transition-opacity duration-200"
-                onClick={onClose}
+                role="button"
+                tabIndex={0}
+                aria-label="바텀시트 닫기"
+                onClick={(event) => {
+                    if (event.target === event.currentTarget) {
+                        onClose();
+                    }
+                }}
+                onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
+                        event.preventDefault();
+                        onClose();
+                    }
+                }}
             />
 
             {/* 바텀시트 */}
@@ -714,18 +728,19 @@ function BottomSheetComponent({
                 onTouchMoveCapture={handleSheetTouchMove}
                 onTouchEndCapture={handleSheetTouchEnd}
                 onTouchCancelCapture={handleSheetTouchEnd}
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* 핸들 바 */}
                 {showHandle && (
-                    <div
+                    <button
+                        type="button"
                         ref={handleRef}
-                        className="flex-shrink-0 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none rounded-t-2xl"
+                        className="flex-shrink-0 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none rounded-t-2xl border-0 appearance-none"
                         style={{ touchAction: 'none' }}
                         onMouseDown={handleMouseDown}
+                        aria-label="바텀시트 높이 조절"
                     >
                         <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
-                    </div>
+                    </button>
                 )}
 
                 {/* 닫기 버튼 */}

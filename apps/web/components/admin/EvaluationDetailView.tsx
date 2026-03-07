@@ -100,11 +100,6 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
         }
     }, [record?.youtube_link, record?.id, embedError]);
 
-    // iframe 에러 핸들링
-    const handleVideoError = useCallback(() => {
-        setEmbedError(true);
-    }, []);
-
     if (!record) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
@@ -353,7 +348,6 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
                                         allowFullScreen
                                         className="w-full h-full block"
-                                        onError={handleVideoError}
                                     />
                                 </div>
                             ) : (

@@ -143,12 +143,14 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
     const isReceipt = labelVariant === 'receipt';
 
     return (
-        <div
+        <button
+            type="button"
             className={cn(
                 "flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all",
                 isReceipt ? "h-48 min-w-28" : "h-32 min-w-24"  // 영수증은 더 크게
             )}
             onClick={onClick}
+            aria-label={alt}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
@@ -180,7 +182,7 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
             >
                 {label}
             </Badge>
-        </div>
+        </button>
     );
 }, (prev, next) =>
     prev.src === next.src &&

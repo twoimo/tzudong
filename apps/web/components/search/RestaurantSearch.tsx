@@ -398,15 +398,17 @@ const RestaurantSearch = ({
                             {item.address}
                           </span>
                         </div>
-                        <div
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             removeFromHistory(item.id);
                           }}
                           className="opacity-0 group-hover:opacity-100 p-1 hover:bg-background rounded cursor-pointer"
+                          aria-label={`${item.name} 최근 검색 삭제`}
                         >
                           <X className="h-3 w-3" />
-                        </div>
+                        </button>
                       </button>
                     ))}
                 </div>

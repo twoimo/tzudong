@@ -73,6 +73,12 @@ const BannerSlide = memo(({
     onVideoEnded?: () => void;
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const handleSlideKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+        }
+    }, [onClick]);
 
     // isActive 변경 시 영상 재생/정지 제어
     useEffect(() => {
@@ -95,6 +101,10 @@ const BannerSlide = memo(({
         <div
             className="w-full h-full flex-shrink-0"
             onClick={onClick}
+            role="button"
+            tabIndex={0}
+            aria-label={`${banner.title} 배너 열기`}
+            onKeyDown={handleSlideKeyDown}
         >
             {/* 영상 배너 (우선순위 1) */}
             {banner.video_url ? (
@@ -247,6 +257,39 @@ const CombinedPopupComponent = () => {
         setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
     }, [banners.length]);
 
+    // 배너 클릭
+    const handleBannerClick = useCallback((banner: AdBanner) => {
+        if (banner.link_url) {
+            openExternalUrl(banner.link_url);
+        }
+    }, []);
+
+    const handleSlideViewportKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            prevSlide();
+            setIsAutoPlaying(false);
+            setTimeout(() => setIsAutoPlaying(true), 8000);
+            return;
+        }
+
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            nextSlide();
+            setIsAutoPlaying(false);
+            setTimeout(() => setIsAutoPlaying(true), 8000);
+            return;
+        }
+
+        if ((e.key === 'Enter' || e.key === ' ') && !isDragging) {
+            e.preventDefault();
+            const currentBanner = banners[currentSlide];
+            if (currentBanner) {
+                handleBannerClick(currentBanner);
+            }
+        }
+    }, [banners, currentSlide, handleBannerClick, isDragging, nextSlide, prevSlide]);
+
     // [OPTIMIZATION] Memoized swipe config
     const minSwipeDistance = 50;
 
@@ -303,13 +346,6 @@ const CombinedPopupComponent = () => {
         }
     }, [isDragging]);
 
-    // 배너 클릭
-    const handleBannerClick = useCallback((banner: AdBanner) => {
-        if (banner.link_url) {
-            openExternalUrl(banner.link_url);
-        }
-    }, []);
-
     // 표시 조건 체크
     if (!isVisible || banners.length === 0) {
         return null;
@@ -319,9 +355,6 @@ const CombinedPopupComponent = () => {
         <div
             data-popup-overlay
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 animate-in fade-in duration-300"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
         >
             <div
                 className={cn(
@@ -329,13 +362,14 @@ const CombinedPopupComponent = () => {
                     "animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
                 )}
                 style={{ backgroundColor: 'hsl(var(--background))' }}
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
             >
                 {/* 배너 슬라이드 컨텐츠 - 가로 슬라이딩 방식 */}
                 <div
                     className="relative aspect-[4/5] overflow-hidden group"
+                    role="button"
+                    tabIndex={0}
+                    aria-label="팝업 배너 슬라이드"
+                    onKeyDown={handleSlideViewportKeyDown}
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}

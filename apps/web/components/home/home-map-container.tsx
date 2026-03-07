@@ -156,7 +156,7 @@ function HomeMapContainerComponent({
     const velocityRef = useRef(0);
     const dragEndYRef = useRef(0);
     const dragEndTimeRef = useRef(0);
-    const handleRef = useRef<HTMLDivElement>(null);
+    const handleRef = useRef<HTMLButtonElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const sheetContainerRef = useRef<HTMLDivElement>(null);
     const detailScrollAreaRef = useRef<HTMLElement | null>(null);
@@ -960,7 +960,21 @@ function HomeMapContainerComponent({
                     {isMobileOrTablet && isPanelOpen && (
                         <div
                             className="fixed inset-0 z-50 bg-black/30 transition-opacity duration-200"
-                            onClick={onPanelClose}
+                            role="button"
+                            tabIndex={0}
+                            aria-label="상세 패널 닫기"
+                            onClick={(e) => {
+                                if (e.target === e.currentTarget) {
+                                    onPanelClose();
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.target !== e.currentTarget) return;
+                                if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+                                    e.preventDefault();
+                                    onPanelClose();
+                                }
+                            }}
                         >
                 <div
                                 ref={sheetContainerRef}
@@ -986,21 +1000,22 @@ function HomeMapContainerComponent({
                                     // 커스텀 이징 함수
                                     transitionTimingFunction: isDragging ? undefined : sheetSnapTransition.easing,
                                 } as unknown as Record<string, string | number | undefined>}
-                                onClick={(e) => e.stopPropagation()}
                             >
                                 {/* 핸들 바 - 드래그 가능, 항상 상단 고정, touch-action: none으로 Pull-to-Refresh 방지 */}
-                                <div
+                                <button
+                                    type="button"
                                     ref={handleRef}
-                                    className="sticky top-0 z-20 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none"
+                                    className="sticky top-0 z-20 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none"
                                     style={{ touchAction: 'none' }}
                                     onTouchStart={handleTouchStart}
                                     onTouchMove={handleTouchMove}
                                     onTouchEnd={() => handleDragEnd()}
                                     onTouchCancel={() => handleDragEnd()}
                                     onMouseDown={handleMouseDown}
+                                    aria-label="상세 패널 높이 조절"
                                 >
                                     <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
-                                </div>
+                                </button>
                                 <Button
                                     variant="ghost"
                                     size="icon"

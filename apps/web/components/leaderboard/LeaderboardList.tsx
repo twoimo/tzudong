@@ -44,16 +44,17 @@ export function LeaderboardList({
                         {/* Username */}
                         <div className="flex-1 min-w-0 max-w-[42vw] sm:max-w-xs">
                             {onOpenUserProfile ? (
-                                <div
+                                <button
+                                    type="button"
                                     onClick={() => onOpenUserProfile(user.id)}
                                     className={cn(
-                                        "font-semibold text-base sm:text-lg truncate block hover:underline cursor-pointer lg:text-base",
+                                        "w-full text-left font-semibold text-base sm:text-lg truncate block hover:underline cursor-pointer lg:text-base",
                                         isCurrentUser ? "text-primary" : "hover:text-primary"
                                     )}
                                 >
                                     {user.username}
                                     {isCurrentUser && " (나)"}
-                                </div>
+                                </button>
                             ) : (
                                 <Link
                                     href={`/user/${user.id}`}

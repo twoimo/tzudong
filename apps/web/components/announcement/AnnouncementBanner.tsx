@@ -87,6 +87,16 @@ export default function AnnouncementBanner({
         <div
             className="absolute top-0 left-0 z-40 cursor-pointer transition-all duration-300"
             onClick={handleClick}
+            role="button"
+            tabIndex={0}
+            aria-label={`공지사항 배너: ${currentAnnouncement.title}`}
+            onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClick();
+                }
+            }}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
             style={{
@@ -110,6 +120,7 @@ export default function AnnouncementBanner({
                         <Button
                             variant="ghost"
                             size="icon"
+                            type="button"
                             onClick={handlePrev}
                             className="h-6 w-6 flex-shrink-0 hover:bg-accent text-muted-foreground hover:text-foreground relative z-10 mr-1"
                             aria-label="이전 공지"
@@ -134,6 +145,7 @@ export default function AnnouncementBanner({
                             <Button
                                 variant="ghost"
                                 size="icon"
+                                type="button"
                                 onClick={handleNext}
                                 className="h-6 w-6 flex-shrink-0 hover:bg-accent text-muted-foreground hover:text-foreground"
                                 aria-label="다음 공지"
@@ -144,6 +156,7 @@ export default function AnnouncementBanner({
                         <Button
                             variant="ghost"
                             size="icon"
+                            type="button"
                             onClick={handleDismiss}
                             className="h-8 w-8 flex-shrink-0 hover:bg-accent text-muted-foreground hover:text-foreground"
                             aria-label="공지사항 닫기"
