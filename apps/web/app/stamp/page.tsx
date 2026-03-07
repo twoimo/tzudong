@@ -98,6 +98,15 @@ const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowPr
                 isSelected ? "bg-muted" : ""
             )}
             onClick={() => onClick(restaurant)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick(restaurant);
+                }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`${restaurant.name} 상세 보기`}
         >
             <TableCell>
                 <div className="flex items-center gap-3">
@@ -1082,21 +1091,36 @@ export default function StampPage() {
                                     <Table allowHorizontalScroll>
                                         <TableHeader className="sticky top-0 bg-background z-20">
                                             <TableRow>
-                                                <TableHead className="w-[25%] min-w-[200px] cursor-pointer" onClick={() => handleSort("name")}>
-                                                    <div className="flex items-center gap-1">
+                                                <TableHead className="w-[25%] min-w-[200px]">
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center gap-1 w-full text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                                                        onClick={() => handleSort("name")}
+                                                        aria-label="맛집명 기준 정렬"
+                                                    >
                                                         맛집명 {getSortIcon("name")}
-                                                    </div>
+                                                    </button>
                                                 </TableHead>
-                                                <TableHead className="w-[15%] min-w-[100px] cursor-pointer" onClick={() => handleSort("category")}>
-                                                    <div className="flex items-center gap-1">
+                                                <TableHead className="w-[15%] min-w-[100px]">
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center gap-1 w-full text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                                                        onClick={() => handleSort("category")}
+                                                        aria-label="카테고리 기준 정렬"
+                                                    >
                                                         카테고리 {getSortIcon("category")}
-                                                    </div>
+                                                    </button>
                                                 </TableHead>
                                                 <TableHead className="w-[50%] min-w-[250px]">주소</TableHead>
-                                                <TableHead className="w-[10%] min-w-[80px] text-center cursor-pointer" onClick={() => handleSort("fanVisits")}>
-                                                    <div className="flex items-center justify-center gap-1">
+                                                <TableHead className="w-[10%] min-w-[80px] text-center">
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center justify-center gap-1 w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                                                        onClick={() => handleSort("fanVisits")}
+                                                        aria-label="리뷰수 기준 정렬"
+                                                    >
                                                         리뷰수 {getSortIcon("fanVisits")}
-                                                    </div>
+                                                    </button>
                                                 </TableHead>
                                             </TableRow>
                                         </TableHeader>
