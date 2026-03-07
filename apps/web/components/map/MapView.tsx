@@ -122,6 +122,15 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   };
 
+  const handleDetailPanelMouseDownCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    onPanelClick?.('detail');
+  }, [onPanelClick]);
+
+  const handleDetailPanelFocusCapture = useCallback(() => {
+    onPanelClick?.('detail');
+  }, [onPanelClick]);
+
   // props로 전달된 panelWidth가 있으면 우선 사용
   const effectivePanelWidth = propPanelWidth !== undefined ? propPanelWidth : panelWidth;
 
@@ -644,11 +653,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         <div
           ref={mapRef}
           className="flex-1 h-full"
-          onClick={() => {
-            // 지도 클릭 시 패널 닫기/모드 변경 등의 동작이 필요하다면 여기서 처리
-            // 단, 드래그 시에는 발생하지 않아야 함.
-            // onPanelClick?.('map');
-          }}
         />
 
 
@@ -686,11 +690,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           <div
             className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
             style={{ overflow: 'visible' }}
-            onClick={(e) => {
-              // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
-              e.stopPropagation();
-              onPanelClick?.('detail');
-            }}
+            onMouseDownCapture={handleDetailPanelMouseDownCapture}
+            onFocusCapture={handleDetailPanelFocusCapture}
           >
             <div ref={detailPanelRef} className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
               <RestaurantDetailPanel

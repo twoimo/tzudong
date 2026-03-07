@@ -170,6 +170,20 @@ export const ReviewCard = React.memo(function ReviewCard({
 
     const MAX_LENGTH = 100;
     const shouldTruncate = review.content.length > MAX_LENGTH;
+    const cardInteractionProps = onClick
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            onClick,
+            onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onClick();
+                }
+            },
+        }
+        : {};
 
     return (
         <div
@@ -178,7 +192,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                 ${review.isPinned ? "border-primary border-2" : ""}
                 ${isHighlighted ? "ring-2 ring-primary ring-offset-2" : ""}
             `}
-            onClick={onClick}
+            {...cardInteractionProps}
         >
             {/* 헤더 영역 */}
             <div className="flex items-center justify-between p-3 border-b border-border/50">

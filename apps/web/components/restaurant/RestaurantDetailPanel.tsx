@@ -875,10 +875,12 @@ export function RestaurantDetailPanel({
                                     </h3>
 
                                     {uniqueData?.roadAddresses.map((address, index) => (
-                                        <div
+                                        <button
+                                            type="button"
                                             key={index}
-                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group text-left"
                                             onClick={() => handleCopyAddress(address, 'road')}
+                                            aria-label="도로명 주소 복사"
                                         >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
@@ -890,14 +892,16 @@ export function RestaurantDetailPanel({
                                             ) : (
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             )}
-                                        </div>
+                                        </button>
                                     ))}
 
                                     {uniqueData?.jibunAddresses && uniqueData.jibunAddresses.length > 0 && uniqueData.jibunAddresses.map((address, index) => (
-                                        <div
+                                        <button
+                                            type="button"
                                             key={index}
-                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group text-left"
                                             onClick={() => handleCopyAddress(address, 'jibun')}
+                                            aria-label="지번 주소 복사"
                                         >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
@@ -909,14 +913,16 @@ export function RestaurantDetailPanel({
                                             ) : (
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             )}
-                                        </div>
+                                        </button>
                                     ))}
 
                                     {uniqueData?.englishAddresses && uniqueData.englishAddresses.length > 0 && uniqueData.englishAddresses.map((address, index) => (
-                                        <div
+                                        <button
+                                            type="button"
                                             key={index}
-                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group text-left"
                                             onClick={() => handleCopyAddress(address, 'english')}
+                                            aria-label="영문 주소 복사"
                                         >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
@@ -928,7 +934,7 @@ export function RestaurantDetailPanel({
                                             ) : (
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             )}
-                                        </div>
+                                        </button>
                                     ))}
 
 
@@ -962,13 +968,15 @@ export function RestaurantDetailPanel({
                                         {/* 첫 번째 항목은 항상 보임 */}
                                         <div className="space-y-2">
                                             {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0 ? (
-                                                <div
-                                                    className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                <button
+                                                    type="button"
+                                                    className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                     onClick={() => {
                                                         if (restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) {
                                                             openExternalUrl(restaurant.mergedYoutubeLinks[0]);
                                                         }
                                                     }}
+                                                    aria-label="유튜브 영상 1 열기"
                                                 >
                                                     {getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0]) && (
                                                         <Image
@@ -983,15 +991,17 @@ export function RestaurantDetailPanel({
                                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
                                                         <Youtube className="h-12 w-12 text-white" />
                                                     </div>
-                                                </div>
+                                                </button>
                                             ) : restaurant.youtube_link ? (
-                                                <div
-                                                    className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                <button
+                                                    type="button"
+                                                    className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                     onClick={() => {
                                                         if (restaurant.youtube_link) {
                                                             openExternalUrl(restaurant.youtube_link);
                                                         }
                                                     }}
+                                                    aria-label="유튜브 영상 열기"
                                                 >
                                                     {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
                                                         <Image
@@ -1006,17 +1016,19 @@ export function RestaurantDetailPanel({
                                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
                                                         <Youtube className="h-12 w-12 text-white" />
                                                     </div>
-                                                </div>
+                                                </button>
                                             ) : null}
 
                                             {/* 추가 항목들은 조건부로 표시 */}
                                             {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 1 && isYoutubeExpanded && (
                                                 <div className="space-y-2">
                                                     {restaurant.mergedYoutubeLinks.slice(1).map((link, index) => (
-                                                        <div
+                                                        <button
+                                                            type="button"
                                                             key={index + 1}
-                                                            className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                            className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                             onClick={() => openExternalUrl(link)}
+                                                            aria-label={`유튜브 영상 ${index + 2} 열기`}
                                                         >
                                                             {getYouTubeThumbnailUrl(link) && (
                                                                 <Image
@@ -1030,7 +1042,7 @@ export function RestaurantDetailPanel({
                                                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
                                                                 <Youtube className="h-12 w-12 text-white" />
                                                             </div>
-                                                        </div>
+                                                        </button>
                                                     ))}
                                                 </div>
                                             )}

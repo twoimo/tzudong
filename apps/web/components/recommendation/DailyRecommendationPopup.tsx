@@ -205,11 +205,11 @@ export function DailyRecommendationPopup() {
     return (
         <div className="fixed inset-0 z-[100] pointer-events-none" data-popup-overlay>
             {/* 오버레이 (선택사항 - 클릭 시 닫기) */}
-            <div
+            <button
+                type="button"
                 className="absolute inset-0 bg-black/50 pointer-events-auto animate-in fade-in duration-300"
                 onClick={handleClose}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
+                aria-label="추천 팝업 닫기"
             />
 
             {/* 광고 팝업 스타일 */}

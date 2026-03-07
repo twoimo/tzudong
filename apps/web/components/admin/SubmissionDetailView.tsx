@@ -678,17 +678,19 @@ export function SubmissionDetailView({
                             <Label className="text-sm">지오코딩 결과 ({geocodingResults.length}개)</Label>
                             <Badge variant="default" className="bg-green-600 text-xs">성공</Badge>
                         </div>
-                        <div className="space-y-1">
-                            {geocodingResults.map((result, index) => (
-                                <div
+                            <div className="space-y-1">
+                                {geocodingResults.map((result, index) => (
+                                <button
+                                    type="button"
                                     key={index}
                                     onClick={() => handleSelectGeocodingResult(index)}
                                     className={cn(
-                                        "p-2 rounded-lg border-2 cursor-pointer transition-all text-sm",
+                                        "w-full text-left p-2 rounded-lg border-2 cursor-pointer transition-all text-sm",
                                         selectedGeocodingIndex === index
                                             ? 'border-primary bg-primary/5'
                                             : 'border-gray-200 hover:border-gray-300'
                                     )}
+                                    aria-label={`지오코딩 옵션 ${index + 1} 선택`}
                                 >
                                     <div className="flex items-center gap-2 mb-1">
                                         <Badge variant={selectedGeocodingIndex === index ? 'default' : 'outline'} className="text-xs">
@@ -701,7 +703,7 @@ export function SubmissionDetailView({
                                     <p className="text-xs"><span className="text-muted-foreground">도로명:</span> {result.road_address}</p>
                                     <p className="text-xs"><span className="text-muted-foreground">지번:</span> {result.jibun_address}</p>
                                     <p className="text-xs"><span className="text-muted-foreground">좌표:</span> {result.y}, {result.x}</p>
-                                </div>
+                                </button>
                             ))}
                         </div>
                         {selectedGeocodingIndex === null && (
@@ -846,7 +848,8 @@ export function SubmissionDetailView({
                                     <div className="flex items-center gap-2">
                                         {/* 선택 박스 (체크박스 + 텍스트 함께) - 대기 중 항목만 */}
                                         {isPending && decision && (
-                                            <div
+                                            <button
+                                                type="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleItemDecisionChange(item.id, 'approved', !decision.approved);
@@ -857,6 +860,7 @@ export function SubmissionDetailView({
                                                         ? "border-green-500 bg-green-50"
                                                         : "border-gray-300 bg-white hover:border-gray-400"
                                                 )}
+                                                aria-label={`항목 ${item.id} 선택`}
                                             >
                                                 <div className={cn(
                                                     "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0",
@@ -872,7 +876,7 @@ export function SubmissionDetailView({
                                                 )}>
                                                     선택
                                                 </span>
-                                            </div>
+                                            </button>
                                         )}
 
                                         {/* 메타데이터 가져오기 버튼 - 빨간색 */}

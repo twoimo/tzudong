@@ -642,6 +642,8 @@ const TreemapTiles = memo(function TreemapTiles({
                 <div
                     key={`${tile.leaf.id}-${tile.x}-${tile.y}-${tile.leaf.value}`}
                     className="absolute flex items-center justify-center border border-white/30"
+                    role="presentation"
+                    aria-hidden="true"
                     style={{
                         left: tile.x,
                         top: tile.y,
