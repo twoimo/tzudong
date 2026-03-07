@@ -1,6 +1,5 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -41,10 +40,26 @@ import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPane
 import { REGIONS, extractRegion, parseCategory, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
+import type { Json, Tables } from "@/integrations/supabase/types";
 
 type SortColumn = "name" | "category" | "fanVisits";
 type SortDirection = "asc" | "desc" | null;
 type ViewMode = "grid" | "list";
+type ReviewRow = Tables<'reviews'>;
+type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
+type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
+type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
+type CreateUserNotificationArgs = {
+    p_user_id: string;
+    p_type: string;
+    p_title: string;
+    p_message: string;
+    p_data: Json;
+};
+type SupabaseRpcClient = {
+    rpc: (fn: 'create_user_notification', args: CreateUserNotificationArgs) => Promise<{ error: unknown }>;
+};
+const RPC_CLIENT = supabase as unknown as SupabaseRpcClient;
 const STAMP_GUIDE_DEMO_RESTAURANT = {
     id: "guide-stamp-demo",
     name: "명동 얼큰수제비",
@@ -87,9 +102,9 @@ interface RestaurantRowProps {
 }
 
 const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowProps) => {
-    const category = parseCategory(restaurant.category || (restaurant as any).categories);
+    const category = parseCategory(restaurant.category || restaurant.categories);
     const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
-    const reviewCount = (restaurant as any).verified_review_count ?? restaurant.review_count ?? 0;
+    const reviewCount = (restaurant as RestaurantWithVerifiedCount).verified_review_count ?? restaurant.review_count ?? 0;
 
     return (
         <TableRow
@@ -267,9 +282,10 @@ export default function StampPage() {
                     .limit(100);
                 if (error) throw error;
                 if (!restaurants || restaurants.length === 0) return [];
+                const typedRestaurants = restaurants as RestaurantWithVerifiedCount[];
 
                 // 승인된 리뷰 수 조회
-                const restaurantIds = restaurants.map((r: any) => r.id);
+                const restaurantIds = typedRestaurants.map((restaurant) => restaurant.id);
                 const { data: reviewCounts } = await supabase
                     .from('reviews')
                     .select('restaurant_id')
@@ -278,14 +294,14 @@ export default function StampPage() {
 
                 // 승인된 리뷰 수 카운트
                 const verifiedCountMap = new Map<string, number>();
-                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
-                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                (reviewCounts as Pick<ReviewRow, 'restaurant_id'>[] | null)?.forEach((reviewCountRow) => {
+                    verifiedCountMap.set(reviewCountRow.restaurant_id, (verifiedCountMap.get(reviewCountRow.restaurant_id) || 0) + 1);
                 });
 
                 // 맛집에 승인된 리뷰 수 추가
-                return restaurants.map((r: any) => ({
-                    ...r,
-                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                return typedRestaurants.map((restaurant) => ({
+                    ...restaurant,
+                    verified_review_count: verifiedCountMap.get(restaurant.id) || 0
                 }));
             } catch (error) {
                 console.error('맛집 검색 중 오류:', error);
@@ -313,9 +329,10 @@ export default function StampPage() {
 
                 if (error) throw error;
                 if (!restaurants || restaurants.length === 0) return { restaurants: [], nextCursor: null };
+                const typedRestaurants = restaurants as RestaurantWithVerifiedCount[];
 
                 // 승인된 리뷰 수 조회
-                const restaurantIds = (restaurants as any[]).map(r => r.id);
+                const restaurantIds = typedRestaurants.map((restaurant) => restaurant.id);
                 const { data: reviewCounts } = await supabase
                     .from('reviews')
                     .select('restaurant_id')
@@ -324,17 +341,17 @@ export default function StampPage() {
 
                 // 승인된 리뷰 수 카운트
                 const verifiedCountMap = new Map<string, number>();
-                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
-                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                (reviewCounts as Pick<ReviewRow, 'restaurant_id'>[] | null)?.forEach((reviewCountRow) => {
+                    verifiedCountMap.set(reviewCountRow.restaurant_id, (verifiedCountMap.get(reviewCountRow.restaurant_id) || 0) + 1);
                 });
 
                 // 맛집에 승인된 리뷰 수 추가
-                const restaurantsWithCount = (restaurants as any[]).map(r => ({
-                    ...r,
-                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                const restaurantsWithCount = typedRestaurants.map((restaurant) => ({
+                    ...restaurant,
+                    verified_review_count: verifiedCountMap.get(restaurant.id) || 0
                 }));
 
-                const nextCursor = restaurants.length === STAMP_PAGE_SIZE ? pageParam + STAMP_PAGE_SIZE : null;
+                const nextCursor = typedRestaurants.length === STAMP_PAGE_SIZE ? pageParam + STAMP_PAGE_SIZE : null;
                 return { restaurants: restaurantsWithCount, nextCursor };
             } catch (error) {
                 console.error('맛집 데이터 조회 중 오류:', error);
@@ -346,7 +363,7 @@ export default function StampPage() {
         enabled: !searchQuery.trim(),
     });
 
-    const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants as any), [allRestaurants]);
+    const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants as Restaurant[]), [allRestaurants]);
 
     const filteredAndSortedRestaurants = useMemo(() => {
         // 검색어가 있으면 검색 결과, 없으면 useRestaurants 훅의 전체 데이터 사용
@@ -358,7 +375,7 @@ export default function StampPage() {
         // 카테고리 필터
         if (filters.categories.length > 0) {
             result = result.filter(r => {
-                const categoryData = r.category || (r as any).categories;
+                const categoryData = r.category || r.categories;
                 let restaurantCategories: string[] = [];
 
                 if (Array.isArray(categoryData)) {
@@ -401,8 +418,8 @@ export default function StampPage() {
         // 정렬
         if (sortColumn && sortDirection) {
             result.sort((a, b) => {
-                let aValue: any;
-                let bValue: any;
+                let aValue: string | number = "";
+                let bValue: string | number = "";
 
                 switch (sortColumn) {
                     case "name":
@@ -410,8 +427,8 @@ export default function StampPage() {
                         bValue = b.name || "";
                         break;
                     case "category":
-                        aValue = parseCategory(a.category || (a as any).categories) || "";
-                        bValue = parseCategory(b.category || (b as any).categories) || "";
+                        aValue = parseCategory(a.category || a.categories) || "";
+                        bValue = parseCategory(b.category || b.categories) || "";
                         break;
                     case "fanVisits":
                         aValue = a.review_count || 0;
@@ -419,12 +436,14 @@ export default function StampPage() {
                         break;
                 }
 
-                if (typeof aValue === "string") {
+                if (typeof aValue === "string" && typeof bValue === "string") {
                     return sortDirection === "asc"
                         ? aValue.localeCompare(bValue)
                         : bValue.localeCompare(aValue);
                 } else {
-                    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+                    return sortDirection === "asc"
+                        ? Number(aValue) - Number(bValue)
+                        : Number(bValue) - Number(aValue);
                 }
             });
         }
@@ -500,21 +519,27 @@ export default function StampPage() {
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false })
-                    .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1)) as any;
+                    .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1));
 
                 if (error) throw error;
                 if (!reviewsData || reviewsData.length === 0) return { reviews: [], nextCursor: null };
+                const typedReviewsData = reviewsData as ReviewRow[];
 
                 // 사용자 프로필 정보 조회
-                const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
+                const userIds = [...new Set(typedReviewsData.map((review) => review.user_id))];
                 const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('user_id, nickname, avatar_url')
                     .in('user_id', userIds);
-                const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }]));
+                const profilesMap = new Map(
+                    ((profilesData ?? []) as ProfileRow[]).map((profile) => [
+                        profile.user_id,
+                        { nickname: profile.nickname, avatarUrl: profile.avatar_url },
+                    ])
+                );
 
                 // 좋아요 정보 조회 (최적화)
-                const reviewIds = reviewsData.map((r: any) => r.id);
+                const reviewIds = typedReviewsData.map((review) => review.id);
                 let userLikesMap = new Map<string, boolean>();
 
                 if (user) {
@@ -522,14 +547,14 @@ export default function StampPage() {
                         .from('review_likes')
                         .select('review_id')
                         .in('review_id', reviewIds)
-                        .eq('user_id', user.id) as any;
+                        .eq('user_id', user.id);
 
                     userLikesMap = new Map(
-                        (userLikesData || []).map((like: any) => [like.review_id, true])
+                        ((userLikesData ?? []) as ReviewLikeRow[]).map((likeRow) => [likeRow.review_id, true])
                     );
                 }
 
-                const reviews = reviewsData.map((review: any) => {
+                const reviews = typedReviewsData.map((review) => {
                     return {
                         id: review.id,
                         userId: review.user_id,
@@ -544,11 +569,9 @@ export default function StampPage() {
                         isPinned: review.is_pinned || false,
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
-                        photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                        category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : (review.category || ''),
-                        categories: (Array.isArray(review.categories) && review.categories.length > 0)
-                            ? review.categories
-                            : (review.category ? [review.category] : []),
+                        photos: review.food_photos ? review.food_photos.map((url) => ({ url, type: 'food' as const })) : [],
+                        category: review.categories?.[0] || '',
+                        categories: review.categories || [],
                         likeCount: review.like_count || 0, // 캐시된 값 사용
                         isLikedByUser: userLikesMap.get(review.id) || false,
                     };
@@ -680,22 +703,20 @@ export default function StampPage() {
             if (currentIsLiked) {
                 await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
             } else {
-                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as any);
+                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as never);
 
                 // 리뷰 작성자에게 알림 전송 (자기 자신 제외)
                 const targetReview = restaurantReviews.find(r => r.id === reviewId);
                 if (targetReview && targetReview.userId && targetReview.userId !== user.id) {
                     try {
-                        // 현재 사용자의 닉네임 가져오기
-                        const { data: profileData } = await (supabase
-                            .from('profiles') as any)
-                            .select('nickname')
-                            .eq('user_id', user.id)
-                            .single();
+                        const likerName =
+                            typeof user.user_metadata?.nickname === 'string'
+                                ? user.user_metadata.nickname
+                                : typeof user.user_metadata?.name === 'string'
+                                    ? user.user_metadata.name
+                                    : '누군가';
 
-                        const likerName = (profileData as any)?.nickname || '누군가';
-
-                        await (supabase as any).rpc('create_user_notification', {
+                        await RPC_CLIENT.rpc('create_user_notification', {
                             p_user_id: targetReview.userId,
                             p_type: 'review_like',
                             p_title: '리뷰에 좋아요가 눌렸어요!',

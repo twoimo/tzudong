@@ -11,7 +11,34 @@
  * pool.release('restaurant-123');
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+type MarkerClickEvent = unknown;
+
+interface MarkerAnchorLike {
+    x: number;
+    y: number;
+}
+
+interface MarkerIconLike {
+    content?: unknown;
+    anchor?: MarkerAnchorLike | null;
+    [key: string]: unknown;
+}
+
+interface MarkerPositionLike {
+    equals?: (position: unknown) => boolean;
+}
+
+interface PooledMarker {
+    __onClick?: (event: MarkerClickEvent) => void;
+    getMap: () => unknown;
+    setMap: (map: unknown | null) => void;
+    getPosition: () => MarkerPositionLike | null;
+    setPosition: (position: unknown) => void;
+    getIcon: () => MarkerIconLike | null;
+    setIcon: (icon: MarkerIconLike) => void;
+    getElement: () => HTMLElement | null;
+    setZIndex: (zIndex: number) => void;
+}
 
 /**
  * 싱글톤 마커 풀 클래스
@@ -20,10 +47,10 @@ export class MarkerPool {
     private static instance: MarkerPool | null = null;
 
     /** 사용 가능한 마커 풀 */
-    private pool: any[] = [];
+    private pool: PooledMarker[] = [];
 
     /** 현재 활성화된 마커 맵 (ID → Marker) */
-    private active: Map<string, any> = new Map();
+    private active: Map<string, PooledMarker> = new Map();
 
     /** 풀 최대 크기 (메모리 제한) */
     private readonly MAX_POOL_SIZE = 1000;
@@ -60,12 +87,12 @@ export class MarkerPool {
      */
     public acquire(
         id: string,
-        position: any,
-        icon: any,
-        map: any,
+        position: unknown,
+        icon: MarkerIconLike,
+        map: unknown,
         onClick?: () => void
-    ): any {
-        let marker: any;
+    ): PooledMarker {
+        let marker: PooledMarker;
         let isNew = false;
 
         // 1. 이미 활성화된 마커 재사용
@@ -83,13 +110,13 @@ export class MarkerPool {
                 position, // 초기값
                 icon,     // 초기값
                 map,      // 초기값
-            });
+            }) as PooledMarker;
             isNew = true;
             this.stats.created++;
 
             // [PERFORMANCE] 이벤트 위임: 마커 생성 시 단 1회만 리스너 등록
             // 이후 핸들러 교체는 __onClick 프로퍼티만 변경하여 zero-overhead 달성
-            window.naver.maps.Event.addListener(marker, 'click', (e: any) => {
+            window.naver.maps.Event.addListener(marker, 'click', (e: MarkerClickEvent) => {
                 if (marker.__onClick) {
                     marker.__onClick(e);
                 }
@@ -108,7 +135,7 @@ export class MarkerPool {
         if (!isNew) {
             const currentPos = marker.getPosition();
             // LatLng.equals 메서드 활용 또는 좌표값 비교
-            if (!currentPos.equals(position)) {
+            if (!currentPos?.equals || !currentPos.equals(position)) {
                 marker.setPosition(position);
             }
         }
@@ -116,12 +143,13 @@ export class MarkerPool {
         // 3. 아이콘 업데이트 (컨텐츠/앵커 비교)
         if (!isNew) {
             const currentIcon = marker.getIcon();
+            const currentAnchor = currentIcon?.anchor ?? null;
+            const nextAnchor = icon.anchor ?? null;
             // content가 다르거나 anchor가 다르면 업데이트
-            const isContentDifferent = currentIcon.content !== icon.content;
+            const isContentDifferent = currentIcon?.content !== icon.content;
             const isAnchorDifferent =
-                (currentIcon.anchor && !icon.anchor) ||
-                (!currentIcon.anchor && icon.anchor) ||
-                (currentIcon.anchor && icon.anchor && (currentIcon.anchor.x !== icon.anchor.x || currentIcon.anchor.y !== icon.anchor.y));
+                (currentAnchor?.x ?? null) !== (nextAnchor?.x ?? null) ||
+                (currentAnchor?.y ?? null) !== (nextAnchor?.y ?? null);
 
             if (isContentDifferent || isAnchorDifferent) {
                 marker.setIcon(icon);
@@ -213,8 +241,8 @@ export class MarkerPool {
     public update(
         id: string,
         updates: {
-            position?: any;
-            icon?: any;
+            position?: unknown;
+            icon?: MarkerIconLike;
             zIndex?: number;
         }
     ): void {
@@ -238,7 +266,7 @@ export class MarkerPool {
      * @param id 마커 ID
      * @returns 마커 객체 (없으면 undefined)
      */
-    public get(id: string): any | undefined {
+    public get(id: string): PooledMarker | undefined {
         return this.active.get(id);
     }
 
