@@ -1,6 +1,5 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +24,10 @@ export default function RestaurantSubmissionModal({
     isOpen,
     onClose,
 }: RestaurantSubmissionModalProps) {
+    const getErrorMessage = (error: unknown, fallback: string) => {
+        return error instanceof Error && error.message ? error.message : fallback;
+    };
+
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [submissionMode, setSubmissionMode] = useState<'new' | 'request'>('new');
@@ -63,7 +66,7 @@ export default function RestaurantSubmissionModal({
                     restaurant_address: data.address.trim(),
                     restaurant_phone: data.phone.trim() || null,
                     restaurant_categories: data.categories.length > 0 ? data.categories : null,
-                } as any)
+                } as never)
                 .select('id')
                 .single();
 
@@ -78,7 +81,7 @@ export default function RestaurantSubmissionModal({
                     submission_id: submissionId,
                     youtube_link: data.youtube_link.trim(),
                     tzuyang_review: data.description.trim() || null,
-                } as any);
+                } as never);
 
             if (itemError) {
                 // 롤백: submission 삭제
@@ -93,8 +96,8 @@ export default function RestaurantSubmissionModal({
             onClose();
             resetForm();
         },
-        onError: (error: any) => {
-            toast.error(error.message || '제보 제출에 실패했습니다');
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, '제보 제출에 실패했습니다'));
         },
     });
 
@@ -113,7 +116,7 @@ export default function RestaurantSubmissionModal({
                     categories: data.categories.length > 0 ? data.categories : null,
                     recommendation_reason: data.description.trim(),
                     youtube_link: data.youtube_link.trim() || null,
-                } as any);
+                } as never);
 
             if (error) throw error;
         },
@@ -124,8 +127,8 @@ export default function RestaurantSubmissionModal({
             onClose();
             resetForm();
         },
-        onError: (error: any) => {
-            toast.error(error.message || '추천 제출에 실패했습니다');
+        onError: (error: unknown) => {
+            toast.error(getErrorMessage(error, '추천 제출에 실패했습니다'));
         },
     });
 
