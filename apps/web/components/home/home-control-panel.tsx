@@ -81,9 +81,13 @@ const HomeControlPanelComponent = ({
         return () => window.removeEventListener('resize', updateLayout);
     }, [isDesktop, updateLayout]);
 
-    // [OPTIMIZATION] 클릭 핸들러 메모이제이션
-    const handlePanelClick = useCallback((e: React.MouseEvent) => {
+    // [OPTIMIZATION] 상호작용 핸들러 메모이제이션
+    const handlePanelMouseDownCapture = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+        onPanelClick?.('control');
+    }, [onPanelClick]);
+
+    const handlePanelFocusCapture = useCallback(() => {
         onPanelClick?.('control');
     }, [onPanelClick]);
 
@@ -120,7 +124,8 @@ const HomeControlPanelComponent = ({
                 left: leftPosition,
                 transform: 'translateX(-50%)'
             }}
-            onClick={handlePanelClick}
+            onMouseDownCapture={handlePanelMouseDownCapture}
+            onFocusCapture={handlePanelFocusCapture}
         >
             <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border shadow-lg p-3 hover:shadow-xl hover:border-primary/50 transition-all duration-300">
                 {/* [CSR] 지역/국가 선택 - 드롭다운 인터랙션 */}

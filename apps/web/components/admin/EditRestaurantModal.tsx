@@ -981,7 +981,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
               <div className="space-y-2">
                 {geocodingResults.map((result, index) => (
-                  <div
+                  <button
+                    type="button"
                     key={index}
                     onClick={() => {
                       setSelectedGeocodingIndex(index);
@@ -990,10 +991,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                       setInitialAddress(result.jibun_address);
                       setAddressChanged(false);
                     }}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
+                    className={`w-full text-left p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
                       ? 'border-primary bg-primary/5'
                       : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
                       }`}
+                    aria-label={`지오코딩 옵션 ${index + 1} 선택`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -1028,7 +1030,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
 
