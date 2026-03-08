@@ -3,7 +3,7 @@ import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
 import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback, memo, useMemo } from "react";
+import { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,7 @@ import {
   useToggleAnnouncementActive,
   useToggleAnnouncementBanner,
 } from "@/hooks/use-announcements";
+import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -63,6 +64,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
+  const headerRef = useRef<HTMLElement>(null);
 
   const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
   const { data: activeAnnouncements = [] } = useActiveAnnouncements();
@@ -123,6 +125,24 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       setCurrentBannerIndex(0);
     }
   }, [bannerAnnouncements.length, currentBannerIndex]);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+
+    const element = headerRef.current;
+    const updateHeaderHeight = () => {
+      updateMobileHeaderHeight(element.offsetHeight);
+    };
+
+    updateHeaderHeight();
+
+    const resizeObserver = new ResizeObserver(updateHeaderHeight);
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // 미처리 제보 건수 조회
   useEffect(() => {
@@ -358,7 +378,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   return (
     <header
-      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
+      ref={headerRef}
+      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative transition-[opacity,transform,background-color] duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
+      style={{
+        transform: 'translateY(calc(-1 * var(--mobile-sheet-header-offset, 0px)))',
+        opacity: 'calc(1 - var(--mobile-sheet-header-progress, 0))',
+      }}
     >
       {/* 한지 질감 오버레이 - 다크모드에서 숨김 */}
       <div

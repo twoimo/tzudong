@@ -1,14 +1,18 @@
 ## 개요
-- NaverMapView 컴포넌트의 마커 선택 및 식당 탐색 로직 리팩토링
-- `.next-stale-*` 캐시 무시 규칙을 ESLint 설정에 보강
+- 모바일 UI 최적화 완료 (`mobile-sheet-layout` 및 `viewport-height-fix` 추가, CSS 수정) 
+- 시스템 구조 최적화: `eslint` 규칙 최적화 및 `tsconfig` 경로 재정의, `video-compression` 로직 모듈화 추가
+- 불필요/임시 파일 정리 및 미사용 코드 최적화 진행, 테스트 항목 보강
 
 ## 변경 내용
-- `apps/web/components/map/NaverMapView.tsx`: 중복되던 레스토랑 매칭 로직을 `findMatchingRestaurantInList` 함수로 분리하여 코드 가독성 제고
-- `apps/web/eslint.config.mjs`: `.next-stale-*` 디렉터리에 대한 글로벌 무시 (`**/.next-stale-*/**`) 패턴 추가 
+- 모바일 뷰 전용 `mobile-sheet-layout` 컴포넌트 추가 및 뷰포트 높이 버그 수정을 위한 스크립트(`viewport-height-fix.js`) 추가
+- 전역 모바일 지원 스타일시트 변수화 적용 및 사이드바/패널 관련 코드 리팩토링 수행 (`Sidebar.tsx`, `RestaurantDetailPanel.tsx` 등)
+- 개발자 도구 및 통합 테스트(QA) 스크립트(`insight-chat-*.test.ts`, `qa-integration.spec.ts`) 추가/보강
+- 불필요한 테스트 파일, 데모 코드 일괄 삭제 및 정리
 
 ## 테스트
-- 앱 로컬 환경 무한 렌더링 검사 완료
-- 린트(`lint` / `type-check`) 에러 발생 여부 확인
+- 로컬 환경 컴파일 및 린트/타입 체크 확인
+- 모바일 브라우저(사파리/크롬 모바일 모드) 뷰포트 UI 깨짐 현상 해소 확인
+- `npm run test` 통과 확인
 
 ## 관련 이슈
 - (없음)

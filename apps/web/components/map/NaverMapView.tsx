@@ -835,7 +835,7 @@ const NaverMapView = memo(({
             // CSS 변수에서 하단 네비게이션 높이 읽기
             const navHeight = parseFloat(
                 getComputedStyle(document.documentElement)
-                    .getPropertyValue('--mobile-bottom-nav-height')
+                    .getPropertyValue('--mobile-bottom-nav-effective-height')
             ) || 60; // 기본값 60px
 
             // 하단 네비게이션 높이의 절반만큼 위로 이동
@@ -1097,7 +1097,7 @@ const NaverMapView = memo(({
             if (isMobileOrTablet) {
                 const navHeight = parseFloat(
                     getComputedStyle(document.documentElement)
-                        .getPropertyValue('--mobile-bottom-nav-height')
+                        .getPropertyValue('--mobile-bottom-nav-effective-height')
                 ) || 60;
                 targetOffsetY = -navHeight / 2;
             }

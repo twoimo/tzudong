@@ -126,10 +126,11 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             <div
                 className={cn(
                     'flex-1 flex flex-col overflow-hidden transition-[margin] duration-300',
-                    // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
-                    'pb-[var(--mobile-bottom-nav-height)]'
                 )}
-                style={{ transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
+                style={{
+                    transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)',
+                    paddingBottom: 'calc(var(--mobile-bottom-nav-height, 60px) * (1 - var(--mobile-sheet-hide-bottom-nav, 0)))',
+                }}
             >
                 <a href="#main-content" className="skip-link">
                     본문 바로가기
@@ -152,9 +153,12 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 <main
                     id="main-content"
                     className={cn(
-                        'flex-1 relative overflow-hidden',
+                        'flex-1 relative overflow-hidden transition-[margin] duration-300',
                         isCenteredLayout && shouldShowCenteredLayoutButton && 'flex items-center justify-center'
                     )}
+                    style={{
+                        marginTop: 'calc(-1 * var(--mobile-sheet-header-offset, 0px))',
+                    }}
                 >
                     <div className={cn(
                         "h-full w-full",
@@ -170,9 +174,16 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 // CSS 미디어 쿼리: 1600px 이상에서 숨김 (데스크탑)
                 "min-[1600px]:hidden",
                 // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
-                isDesktop && "hidden"
+                isDesktop && "hidden",
+                'transition-[transform,opacity] duration-300'
             )}>
-                <MobileBottomNav />
+                <MobileBottomNav
+                    className="transition-[transform,opacity] duration-300"
+                    style={{
+                        transform: 'translateY(calc(var(--mobile-sheet-hide-bottom-nav, 0) * 110%))',
+                        opacity: 'calc(1 - var(--mobile-sheet-hide-bottom-nav, 0))',
+                    }}
+                />
             </div>
 
             {/* [PERF] 조건부 렌더링 - 모달이 닫혀있을 때 DOM 마운트 방지 (TBT 개선) */}
