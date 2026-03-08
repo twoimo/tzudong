@@ -567,8 +567,7 @@ export function SubmissionDetailView({
             }, 200);
             return () => clearTimeout(timer);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedGeocodingIndex]);
+    }, [selectedGeocodingIndex, geocodingResults.length, onVerifyNaverSearch]);
 
     return (
         <div className={cn("overflow-y-auto", className)}>

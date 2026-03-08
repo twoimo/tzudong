@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -69,15 +68,38 @@ interface NaverGeocodingResponse {
     roadAddress: string;
     jibunAddress: string;
     englishAddress: string;
-    addressElements: any[];
+    addressElements: unknown[];
     x: string;
     y: string;
   }>;
   errorMessage?: string;
 }
 
+type ConflictRestaurant = NonNullable<Awaited<ReturnType<typeof checkDbConflict>>['conflictingRestaurants']>[number];
+type ExistingRestaurantForMerge = Parameters<typeof mergeRestaurantData>[0]['existingRestaurant'];
+
+interface GeocodedAddressData {
+  road_address: string;
+  jibun_address: string;
+  english_address: string;
+  address_elements: unknown[];
+  x: string;
+  y: string;
+}
+
+interface MergeTargetRestaurantRow {
+  id: string;
+  youtube_link: string | null;
+  youtube_meta: unknown;
+  tzuyang_review: string | null;
+  categories: string[] | string | null;
+  updated_at: string;
+}
+
 export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }: MissingRestaurantFormProps) {
   const { toast } = useToast();
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -91,21 +113,14 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // 지오코딩 결과 상태
   const [geocodingResult, setGeocodingResult] = useState<{
     success: boolean;
-    data?: {
-      road_address: string;
-      jibun_address: string;
-      english_address: string;
-      address_elements: any;
-      x: string;
-      y: string;
-    };
+    data?: GeocodedAddressData;
     error?: string;
   } | null>(null);
 
   // 오류 경고 다이얼로그 상태
   const [showConflictWarning, setShowConflictWarning] = useState(false);
-  const [conflictData, setConflictData] = useState<any>(null);
-  const [pendingGeocodingData, setPendingGeocodingData] = useState<any>(null);
+  const [conflictData, setConflictData] = useState<ConflictRestaurant[] | null>(null);
+  const [pendingGeocodingData, setPendingGeocodingData] = useState<GeocodedAddressData | null>(null);
   const [pendingFormData, setPendingFormData] = useState<{
     name: string;
     phone: string;
@@ -155,11 +170,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           description: result.error || '주소를 좌표로 변환할 수 없습니다.',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: '지오코딩 실패',
-        description: error.message,
+        description: getErrorMessage(error, '지오코딩 중 오류가 발생했습니다.'),
       });
     } finally {
       setGeocoding(false);
@@ -207,36 +222,52 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         youtubeLink: record.youtube_link || '',
       });
 
+      const geocodingData = geocodingResult.data;
+      if (!geocodingData) {
+        toast({
+          variant: 'destructive',
+          title: '지오코딩 데이터 오류',
+          description: '지오코딩 결과를 다시 확인해주세요.',
+        });
+        setLoading(false);
+        return;
+      }
+
       if (conflictCheck.hasConflict) {
         if (conflictCheck.conflictType === 'name_mismatch') {
           // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
-          setPendingGeocodingData(geocodingResult.data);
+          setPendingGeocodingData(geocodingData);
           setPendingFormData({
             name: trimmedName,
             phone: trimmedPhone,
             category: trimmedCategory,
             tzuyang_review: trimmedTzuyangReview,
           });
-          setConflictData(conflictCheck.conflictingRestaurants);
+          setConflictData(conflictCheck.conflictingRestaurants ?? []);
           setShowConflictWarning(true);
           setLoading(false);
           return;
         } else if (conflictCheck.conflictType === 'merge_needed') {
           // 충돌 타입 2: 같은 주소 + 같은 음식점명 → 자동 병합
-          await handleMerge(conflictCheck.conflictingRestaurants![0], geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
+          const existingRestaurant = conflictCheck.conflictingRestaurants?.[0];
+          if (!existingRestaurant) {
+            throw new Error('병합 대상 레스토랑을 찾을 수 없습니다.');
+          }
+
+          await handleMerge(existingRestaurant, trimmedName, trimmedCategory, trimmedTzuyangReview);
           return;
         }
       }
 
       // 충돌 없음 → 새 레스토랑 등록
-      await registerNewRestaurant(geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
+      await registerNewRestaurant(geocodingData, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('레스토랑 등록 실패:', error);
       toast({
         variant: 'destructive',
         title: '등록 실패',
-        description: error.message,
+        description: getErrorMessage(error, '레스토랑 등록 중 오류가 발생했습니다.'),
       });
     } finally {
       setLoading(false);
@@ -244,12 +275,44 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   };
 
   // 병합 처리 함수
-  const handleMerge = async (existingRestaurant: any, geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
+  const handleMerge = async (existingRestaurant: ConflictRestaurant, trimmedName: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
+      const mergeTargetQuery = await supabase
+        .from('restaurants' as never)
+        .select('id, youtube_link, youtube_meta, tzuyang_review, categories, updated_at')
+        .eq('id', existingRestaurant.id)
+        .single();
+      const mergeTargetError = mergeTargetQuery.error;
+      const mergeTargetRestaurant = mergeTargetQuery.data as MergeTargetRestaurantRow | null;
+
+      if (mergeTargetError || !mergeTargetRestaurant) {
+        throw new Error('병합 대상 레스토랑을 찾을 수 없습니다.');
+      }
+
+      const normalizedYoutubeMeta =
+        mergeTargetRestaurant.youtube_meta &&
+        typeof mergeTargetRestaurant.youtube_meta === 'object' &&
+        !Array.isArray(mergeTargetRestaurant.youtube_meta)
+          ? (mergeTargetRestaurant.youtube_meta as Record<string, unknown>)
+          : null;
+      const normalizedNewYoutubeMeta =
+        record?.youtube_meta &&
+        typeof record.youtube_meta === 'object' &&
+        !Array.isArray(record.youtube_meta)
+          ? (record.youtube_meta as Record<string, unknown>)
+          : undefined;
+
       const mergeResult = await mergeRestaurantData({
-        existingRestaurant,
+        existingRestaurant: {
+          id: mergeTargetRestaurant.id,
+          youtube_link: mergeTargetRestaurant.youtube_link,
+          youtube_meta: normalizedYoutubeMeta,
+          tzuyang_review: mergeTargetRestaurant.tzuyang_review,
+          categories: mergeTargetRestaurant.categories ?? [],
+          updated_at: mergeTargetRestaurant.updated_at,
+        } satisfies ExistingRestaurantForMerge,
         newYoutubeLink: record!.youtube_link || '',
-        newYoutubeMeta: record!.youtube_meta || undefined,
+        newYoutubeMeta: normalizedNewYoutubeMeta,
         newTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review,
         newCategory: trimmedCategory,
       });
@@ -259,12 +322,12 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       }
 
       // evaluation_record 상태 업데이트
-      const { error: updateError } = await (supabase
-        .from('evaluation_records') as any)
+      const { error: updateError } = await supabase
+        .from('evaluation_records' as never)
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
-        })
+        } as never)
         .eq('id', record!.id);
 
       if (updateError) throw updateError;
@@ -280,11 +343,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       });
       onOpenChange(false);
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: '병합 실패',
-        description: error.message,
+        description: getErrorMessage(error, '병합 중 오류가 발생했습니다.'),
       });
     } finally {
       setLoading(false);
@@ -292,10 +355,10 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   };
 
   // 새 레스토랑 등록 함수
-  const registerNewRestaurant = async (geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
+  const registerNewRestaurant = async (geocodingData: GeocodedAddressData, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
-      const { error: insertError } = await (supabase
-        .from('restaurants') as any)
+      const { error: insertError } = await supabase
+        .from('restaurants')
         .insert({
           approved_name: trimmedName,
           road_address: geocodingData.road_address,
@@ -309,17 +372,17 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           youtube_links: [record!.youtube_link],
           youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
           tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record!.restaurant_info?.tzuyang_review ? [record!.restaurant_info.tzuyang_review] : []),
-        });
+        } as never);
 
       if (insertError) throw insertError;
 
       // evaluation_record 상태 업데이트
-      const { error: updateError } = await (supabase
-        .from('evaluation_records') as any)
+      const { error: updateError } = await supabase
+        .from('evaluation_records' as never)
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
-        })
+        } as never)
         .eq('id', record!.id);
 
       if (updateError) throw updateError;
@@ -335,11 +398,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       });
       onOpenChange(false);
       resetForm();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: '등록 실패',
-        description: error.message,
+        description: getErrorMessage(error, '레스토랑 등록 중 오류가 발생했습니다.'),
       });
     } finally {
       setLoading(false);
@@ -362,14 +425,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
   const geocodeAddress = async (address: string): Promise<{
     success: boolean;
-    data?: {
-      road_address: string;
-      jibun_address: string;
-      english_address: string;
-      address_elements: any;
-      x: string;
-      y: string;
-    };
+    data?: GeocodedAddressData;
     error?: string
   }> => {
     try {
@@ -413,8 +469,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         },
       };
 
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: getErrorMessage(error, '지오코딩 중 오류가 발생했습니다.') };
     }
   };
 
@@ -640,13 +696,12 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
                   <div className="border rounded-lg p-3 bg-destructive/10">
                     <p className="text-sm font-semibold mb-2">기존 데이터베이스:</p>
-                    {conflictData.map((restaurant: any, idx: number) => (
+                    {conflictData.map((restaurant, idx: number) => (
                       <div key={idx} className="ml-4 mb-3">
                         <ul className="text-sm space-y-1">
                           <li>• 음식점명: <span className="font-medium">{restaurant.name}</span></li>
                           <li>• 지번주소: <span className="font-medium">{restaurant.jibun_address}</span></li>
-                          <li>• 전화번호: <span className="font-medium">{restaurant.phone || '-'}</span></li>
-                          <li>• YouTube 링크 수: <span className="font-medium">{restaurant.youtube_links?.length || 0}개</span></li>
+                          <li>• YouTube 링크 수: <span className="font-medium">{restaurant.youtube_link ? 1 : 0}개</span></li>
                         </ul>
                       </div>
                     ))}
