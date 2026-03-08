@@ -830,8 +830,6 @@ function HomeMapContainerComponent({
         if (!isMobileOrTablet || !isPanelOpen) return;
 
         const handleOutsidePointerDown = (event: PointerEvent) => {
-            if (sheetHeightRef.current > PEEK_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE) return;
-
             const target = event.target as Node | null;
             if (!target) return;
             if (sheetContainerRef.current?.contains(target)) return;
@@ -1034,28 +1032,32 @@ function HomeMapContainerComponent({
                                 } as unknown as Record<string, string | number | undefined>}
                             >
                                 {/* 핸들 바 - 드래그 가능, 항상 상단 고정, touch-action: none으로 Pull-to-Refresh 방지 */}
-                                <button
-                                    type="button"
-                                    ref={handleRef}
-                                    className="sticky top-0 z-20 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none"
-                                    style={{ touchAction: 'none' }}
-                                    onTouchStart={handleTouchStart}
-                                    onTouchMove={handleTouchMove}
-                                    onTouchEnd={() => handleDragEnd()}
-                                    onTouchCancel={() => handleDragEnd()}
-                                    onMouseDown={handleMouseDown}
-                                    aria-label="상세 패널 높이 조절"
-                                >
-                                    <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
-                                </button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={onPanelClose}
-                                    className="absolute right-2 top-2 z-30"
-                                >
-                                    <X className="h-5 w-5" />
-                                </Button>
+                                {!isSheetAtFullHeight && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            ref={handleRef}
+                                            className="sticky top-0 z-20 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none"
+                                            style={{ touchAction: 'none' }}
+                                            onTouchStart={handleTouchStart}
+                                            onTouchMove={handleTouchMove}
+                                            onTouchEnd={() => handleDragEnd()}
+                                            onTouchCancel={() => handleDragEnd()}
+                                            onMouseDown={handleMouseDown}
+                                            aria-label="상세 패널 높이 조절"
+                                        >
+                                            <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
+                                        </button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={onPanelClose}
+                                            className="absolute right-2 top-2 z-30"
+                                        >
+                                            <X className="h-5 w-5" />
+                                        </Button>
+                                    </>
+                                )}
 
                                 {/* 상세 패널 콘텐츠 */}
                                 <div
