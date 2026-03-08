@@ -1208,9 +1208,13 @@ export default function StampPage() {
                     isOpen={isRightPanelVisible}
                     onClose={handleCloseRightPanel}
                     defaultHeight={50}
-                    minHeight={50}
-                    headerOffset={80}   // 헤더(64px) + 여백(16px) 공간 확보
-                    bottomNavOffset={64} // 하단 네비게이션(56px) 공간 확보
+                    minHeight={25}
+                    headerOffset={0}
+                    bottomNavOffset={0}
+                    enablePeek={true}
+                    hideBottomNavWhenOpen={true}
+                    progressiveHeaderHide={true}
+                    layoutSource="stamp-bottom-sheet"
                     disableContentScroll={true} // 내부 패널 스크롤 사용
                     showCloseButton={true}
                     className="p-0"

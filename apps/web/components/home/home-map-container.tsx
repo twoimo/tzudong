@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -44,7 +45,9 @@ interface HomeMapContainerProps {
 
 // ========== [PERFORMANCE] 상수 호이스팅 - 컴포넌트 외부로 이동하여 리렌더링 시 재선언 방지 ==========
 const INITIAL_HEIGHT = 50;
-const HEADER_OFFSET = 80; // 헤더(64px) + 여유(16px)
+const HOME_MAP_MOBILE_LAYOUT_SOURCE = 'home-map-bottom-sheet';
+const HEADER_OFFSET = 0;
+const PEEK_SHEET_HEIGHT = 25;
 const HALF_SHEET_HEIGHT = 50;
 const SWIPE_VELOCITY_THRESHOLD = 0.22;
 const SWIPE_VELOCITY_CLOSE_THRESHOLD = 0.26;
@@ -56,13 +59,9 @@ const SHEET_HALF_OPEN_TOLERANCE = 1;
 const HALF_TO_FULL_DISTANCE_PX = 14;
 const FULL_TO_HALF_DISTANCE_PX = 18;
 const FULL_TO_HALF_FAST_DISTANCE_PX = 18;
-const HALF_TO_DISMISS_DISTANCE_PX = 36;
-const HALF_TO_DISMISS_HINT_DISTANCE_PX = 24;
-const HALF_TO_DISMISS_FAST_DISTANCE_PX = 16;
+const HALF_TO_PEEK_DISTANCE_PX = 28;
 const HALF_TO_FULL_FAST_DISTANCE_PX = 12;
 const HALF_TO_FULL_VELOCITY_FLOOR_PX_PER_MS = 0.16;
-const HALF_TO_DISMISS_VELOCITY_FLOOR_PX_PER_MS = 0.15;
-const HALF_TO_DISMISS_QUICK_VELOCITY_FLOOR_PX_PER_MS = 0.20;
 const HALF_TO_FULL_QUICK_VELOCITY_FLOOR_PX_PER_MS = 0.19;
 const QUICK_GESTURE_DURATION_MS = 85;
 const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
@@ -230,7 +229,7 @@ function HomeMapContainerComponent({
 
     const getContentSnapPoints = useCallback(() => {
         const maxSnap = Math.max(HALF_SHEET_HEIGHT, getCurrentMaxHeight());
-        return [HALF_SHEET_HEIGHT, maxSnap];
+        return [PEEK_SHEET_HEIGHT, HALF_SHEET_HEIGHT, maxSnap];
     }, [getCurrentMaxHeight]);
 
     const getNearestSnapHeight = useCallback((currentHeight: number) => {
@@ -247,6 +246,27 @@ function HomeMapContainerComponent({
     const percentToPx = useCallback((percent: number) => {
         return (percent / 100) * viewportHeightRef.current;
     }, []);
+
+    const syncMobileLayout = useCallback((heightPercent: number) => {
+        if (!isMobileOrTablet || !isPanelOpen) {
+            resetMobileSheetLayoutState(HOME_MAP_MOBILE_LAYOUT_SOURCE);
+            return;
+        }
+
+        const maxHeight = getCurrentMaxHeight();
+        const clampedHeight = Math.max(PEEK_SHEET_HEIGHT, Math.min(maxHeight, heightPercent));
+        const hideBottomNav = true;
+        const headerHideProgress =
+            clampedHeight <= HALF_SHEET_HEIGHT
+                ? 0
+                : Math.max(0, Math.min(1, (clampedHeight - HALF_SHEET_HEIGHT) / Math.max(1, maxHeight - HALF_SHEET_HEIGHT)));
+
+        setMobileSheetLayoutState({
+            source: HOME_MAP_MOBILE_LAYOUT_SOURCE,
+            hideBottomNav,
+            headerHideProgress,
+        });
+    }, [getCurrentMaxHeight, isMobileOrTablet, isPanelOpen]);
 
     const writeSheetHeightStyle = useCallback((heightPercent: number) => {
         const sheetContainer = sheetContainerRef.current;
@@ -300,13 +320,15 @@ function HomeMapContainerComponent({
 
     const setSheetHeightSafe = useCallback((nextHeight: number, forceRender = false) => {
         const maxHeight = getCurrentMaxHeight();
-        const nextHeightSafe = Math.max(HALF_SHEET_HEIGHT, Math.min(maxHeight, nextHeight));
+        const nextHeightSafe = Math.max(PEEK_SHEET_HEIGHT, Math.min(maxHeight, nextHeight));
         if (Math.abs(sheetHeightRef.current - nextHeightSafe) < DRAG_RENDER_EPSILON_PERCENT) {
+            syncMobileLayout(nextHeightSafe);
             return;
         }
 
         sheetHeightRef.current = nextHeightSafe;
         writeSheetHeightStyle(nextHeightSafe);
+        syncMobileLayout(nextHeightSafe);
 
         const shouldCommitRender = forceRender || !isDraggingRef.current;
         if (!shouldCommitRender) {
@@ -314,7 +336,7 @@ function HomeMapContainerComponent({
         }
 
         setSheetHeight(nextHeightSafe);
-    }, [getCurrentMaxHeight, writeSheetHeightStyle]);
+    }, [getCurrentMaxHeight, syncMobileLayout, writeSheetHeightStyle]);
 
     const resetSheetInteractionState = useCallback(() => {
         isDraggingRef.current = false;
@@ -353,7 +375,7 @@ function HomeMapContainerComponent({
                 // 드래그 중이 아닐 때만 상태 업데이트 (리렌더링 최소화)
                 if (!isDraggingRef.current) {
                     const currentMaxHeight = getCurrentMaxHeight(viewport.height);
-                    setSheetHeight(prev => Math.max(HALF_SHEET_HEIGHT, Math.min(prev, currentMaxHeight)));
+                    setSheetHeight(prev => Math.max(PEEK_SHEET_HEIGHT, Math.min(prev, currentMaxHeight)));
                 } else if (sheetContainerRef.current) {
                     const sheetHeightPx = percentToPx(sheetHeightRef.current);
                     sheetContainerRef.current.style.setProperty(SHEET_HEIGHT_CSS_VAR, `${sheetHeightPx}px`);
@@ -379,6 +401,7 @@ function HomeMapContainerComponent({
             wasPanelOpenRef.current = false;
             lastPanelRestaurantIdRef.current = null;
             contentScrollResetNeededRef.current = false;
+            resetMobileSheetLayoutState(HOME_MAP_MOBILE_LAYOUT_SOURCE);
             return;
         }
 
@@ -409,6 +432,12 @@ function HomeMapContainerComponent({
         resetSheetInteractionState,
         setSheetHeightSafe
     ]);
+
+    useEffect(() => {
+        return () => {
+            resetMobileSheetLayoutState(HOME_MAP_MOBILE_LAYOUT_SOURCE);
+        };
+    }, []);
 
     useEffect(() => {
         if (!isPanelOpen) {
@@ -494,20 +523,27 @@ function HomeMapContainerComponent({
         const isSwipeUpStrong = gestureVelocity <= -SWIPE_VELOCITY_OPEN_THRESHOLD;
         const movementFromStart = currentHeight - startHeightRef.current;
         const movementPxFromStart = percentToPx(movementFromStart);
-        const startedAtHalf = startHeightRef.current <= HALF_SHEET_HEIGHT + 0.5;
+        const startedAtPeek = startHeightRef.current <= PEEK_SHEET_HEIGHT + 0.5;
+        const startedAtHalf = !startedAtPeek && startHeightRef.current <= HALF_SHEET_HEIGHT + 0.5;
         const startedAtFull = startHeightRef.current >= currentMaxHeight - 0.5;
         const isQuickGesture = elapsedMs <= QUICK_GESTURE_DURATION_MS;
         const movementPx = Math.abs(movementPxFromStart);
         const isLongPress = !isQuickGesture && elapsedMs >= LONG_PRESS_TRANSITION_THRESHOLD_MS;
+        const peekToHalfDistancePercent = pxToPercent(
+            HALF_TO_FULL_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
+        );
         const halfToFullDistancePercent = pxToPercent(
             HALF_TO_FULL_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
         );
         const fullToHalfDistancePercent = pxToPercent(
             FULL_TO_HALF_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
         );
+        const halfToPeekDistancePercent = pxToPercent(
+            HALF_TO_PEEK_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
+        );
         const shouldUseFastTransition = isSwipeUpStrong || isSwipeDownStrong;
         const isQuickAndSmall = isQuickGesture && movementPx <= QUICK_GESTURE_SHORT_DISTANCE_PX;
-        const shouldUseSmoothTransition = isLongPress || (!isQuickAndSmall && movementPx > QUICK_GESTURE_SHORT_DISTANCE_PX) || dragDistancePx > HALF_TO_DISMISS_HINT_DISTANCE_PX;
+        const shouldUseSmoothTransition = isLongPress || (!isQuickAndSmall && movementPx > QUICK_GESTURE_SHORT_DISTANCE_PX) || dragDistancePx > HALF_TO_PEEK_DISTANCE_PX;
 
         applySnapTransition(
             shouldUseFastTransition,
@@ -516,42 +552,27 @@ function HomeMapContainerComponent({
         );
         velocityRef.current = 0;
 
-        const halfToDismissDistancePx =
-            HALF_TO_DISMISS_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
-        const halfToDismissHintDistancePx =
-            HALF_TO_DISMISS_HINT_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
-        const halfToDismissFastDistancePx = HALF_TO_DISMISS_FAST_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
         const fullToHalfDistancePx =
             FULL_TO_HALF_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
         const fullToHalfFastDistancePx = FULL_TO_HALF_FAST_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
-        const hasClearDownDistance = dragDistancePx >= halfToDismissDistancePx;
-        const hasHintDownDistance = isSwipeDownStrong && dragDistancePx >= halfToDismissHintDistancePx;
-        const hasFastDownDistance = isSwipeDownStrong &&
-            dragDistancePx >= halfToDismissFastDistancePx &&
-            elapsedMs <= QUICK_GESTURE_DURATION_MS;
-        const hasDownVelocity = dragDistancePx >= HALF_TO_DISMISS_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
-        const hasFastVelocityDown = isSwipeDownStrong && dragDistancePx >= HALF_TO_DISMISS_QUICK_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
         const hasFullToHalfHint = isSwipeDownStrong && dragDistancePx >= fullToHalfFastDistancePx;
         const halfToFullFastDistancePx = HALF_TO_FULL_FAST_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0);
         const hasFastUpDistance = isSwipeUpStrong && upwardDistancePx >= halfToFullFastDistancePx;
         const hasFastUpVelocity = isSwipeUpStrong && upwardDistancePx >= HALF_TO_FULL_QUICK_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
         const hasFastUpDistanceByVelocity = isSwipeUpStrong && upwardDistancePx >= HALF_TO_FULL_VELOCITY_FLOOR_PX_PER_MS * elapsedMs;
-        const shouldCloseFromHalf =
+        const shouldSnapToPeekFromHalf =
             startedAtHalf &&
             dragDistancePx > 0 &&
-            (hasClearDownDistance ||
-                (hasHintDownDistance && hasDownVelocity) ||
-                (hasFastDownDistance && hasFastVelocityDown) ||
-                (isSwipeDownStrong && hasFastDownDistance));
+            dragDistancePx >= HALF_TO_PEEK_DISTANCE_PX;
 
         if (isSwipeDown) {
-            if (startedAtHalf) {
-                if (shouldCloseFromHalf) {
-                    onPanelClose();
-                    return;
-                }
+            if (startedAtPeek) {
+                setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
+                return;
+            }
 
-                setSheetHeightSafe(HALF_SHEET_HEIGHT, true);
+            if (startedAtHalf) {
+                setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
                 return;
             }
 
@@ -559,8 +580,13 @@ function HomeMapContainerComponent({
             return;
         }
 
-        if (shouldCloseFromHalf) {
-            onPanelClose();
+        if (startedAtPeek && (movementPxFromStart > peekToHalfDistancePercent || (hasFastUpDistance && hasFastUpVelocity) || hasFastUpDistanceByVelocity)) {
+            setSheetHeightSafe(HALF_SHEET_HEIGHT, true);
+            return;
+        }
+
+        if (startedAtHalf && (movementPxFromStart < -halfToPeekDistancePercent || shouldSnapToPeekFromHalf)) {
+            setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
             return;
         }
 
@@ -586,7 +612,6 @@ function HomeMapContainerComponent({
         getNearestSnapHeight,
         percentToPx,
         pxToPercent,
-        onPanelClose,
         setSheetHeightSafe,
     ]);
 
@@ -801,6 +826,28 @@ function HomeMapContainerComponent({
         }
     }, [onSwipeableRestaurantsChange, activeSwipeableRestaurants]);
 
+    useEffect(() => {
+        if (!isMobileOrTablet || !isPanelOpen) return;
+
+        const handleOutsidePointerDown = (event: PointerEvent) => {
+            if (sheetHeightRef.current > PEEK_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE) return;
+
+            const target = event.target as Node | null;
+            if (!target) return;
+            if (sheetContainerRef.current?.contains(target)) return;
+
+            const mapContainer = document.querySelector('[data-testid="map-container"]');
+            if (mapContainer instanceof Element && mapContainer.contains(target)) {
+                onPanelClose();
+            }
+        };
+
+        document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+        return () => {
+            document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+        };
+    }, [isMobileOrTablet, isPanelOpen, onPanelClose]);
+
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
         if (isMobileOrTablet && isPanelOpen) {
@@ -870,6 +917,7 @@ function HomeMapContainerComponent({
         const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
         return { top: 0, bottom: vh * 0.45, left: 0, right: 0 };
     }, [isPanelOpen, isDesktop]);
+    const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
 
     return (
         <div className="relative w-full h-full">
@@ -958,44 +1006,28 @@ function HomeMapContainerComponent({
 
                     {/* 모바일/태블릿 바텀시트 */}
                     {isMobileOrTablet && isPanelOpen && (
-                        <div
-                            className="fixed inset-0 z-50 bg-black/30 transition-opacity duration-200"
-                            role="button"
-                            tabIndex={0}
-                            aria-label="상세 패널 닫기"
-                            onClick={(e) => {
-                                if (e.target === e.currentTarget) {
-                                    onPanelClose();
-                                }
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.target !== e.currentTarget) return;
-                                if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
-                                    e.preventDefault();
-                                    onPanelClose();
-                                }
-                            }}
-                        >
-                <div
+                        <div className="fixed inset-0 z-50 pointer-events-none">
+                            <div
                                 ref={sheetContainerRef}
                                 className={cn(
-                                    'fixed bottom-0 left-0 right-0 z-50',
-                                    'bg-background rounded-t-2xl shadow-xl',
+                                    'fixed bottom-0 left-0 right-0 z-50 pointer-events-auto',
+                                    'bg-background shadow-xl',
+                                    isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                                     'overflow-hidden flex flex-col',
                                     // 드래그 중에는 트랜지션 제거, 종료 시 부드러운 스프링 효과
-                                    isDragging ? '' : 'transition-[height]',
-                                    // iOS safe area 지원 + 하단 네비게이션바 공간
-                                    'pb-[calc(env(safe-area-inset-bottom)+64px)]'
+                                    isDragging ? '' : 'transition-[height,border-radius]',
+                                    // iOS safe area 지원
+                                    'pb-[env(safe-area-inset-bottom)]'
                                 )}
+                                data-sheet-state={isSheetAtFullHeight ? 'full' : 'partial'}
                                 style={{
                                     // [FIX] Safari/삼성 인터넷 100vh 버그 수정
                                     // bottom: 0 고정 + height(px)로 직접 계산
                                     // viewportHeightRef 사용 (visualViewport API 기반)
                                     [`${SHEET_HEIGHT_CSS_VAR}`]: `${viewportHeightRef.current * sheetHeight / 100}px`,
                                     height: `var(${SHEET_HEIGHT_CSS_VAR})`,
-                                    // 최소 상단 위치 강제 (헤더 80px 아래)
-                                    maxHeight: `calc(100% - 80px)`,
-                                    willChange: 'height',
+                                    maxHeight: '100%',
+                                    willChange: isDragging ? 'height' : undefined,
                                     transitionDuration: isDragging ? '0ms' : `${sheetSnapTransition.duration}ms`,
                                     // 커스텀 이징 함수
                                     transitionTimingFunction: isDragging ? undefined : sheetSnapTransition.easing,
@@ -1032,7 +1064,7 @@ function HomeMapContainerComponent({
                                     style={{
                                         touchAction: isDragging
                                             ? 'none'
-                                            : (sheetHeight <= HALF_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE ? 'none' : 'pan-y'),
+                                            : (sheetHeight <= PEEK_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE ? 'none' : 'pan-y'),
                                     }}
                                     onTouchStart={handleContentTouchStart}
                                     onTouchMove={handleContentTouchMove}
