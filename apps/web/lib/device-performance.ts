@@ -4,6 +4,7 @@
  * 디바이스 하드웨어 사양을 감지하여 성능 등급을 반환합니다.
  * 클러스터링 최적화, 렌더링 품질 조정 등에 활용됩니다.
  */
+import { debugLog } from '@/lib/debug-log';
 
 /**
  * 디바이스 성능 등급
@@ -79,7 +80,7 @@ export const getDevicePerformanceLevel = (): DevicePerformanceLevel => {
     // 1. UA 기반 저사양 디바이스 감지
     if (isLowEndDeviceByUA()) {
         if (process.env.NODE_ENV === 'development') {
-            console.log('[DevicePerformance] LOW - User-Agent 패턴 매칭');
+            debugLog('[DevicePerformance] LOW - User-Agent 패턴 매칭');
         }
         return 'LOW';
     }
@@ -127,7 +128,7 @@ export const getDevicePerformanceLevel = (): DevicePerformanceLevel => {
     }
 
     if (process.env.NODE_ENV === 'development') {
-        console.log(`[DevicePerformance] ${level} - Memory: ${memory ?? 'N/A'}GB, Cores: ${cores ?? 'N/A'}`);
+        debugLog(`[DevicePerformance] ${level} - Memory: ${memory ?? 'N/A'}GB, Cores: ${cores ?? 'N/A'}`);
     }
 
     return level;

@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
+import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import {
     X,
@@ -37,6 +37,23 @@ import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useReviewLikesRealtime } from "@/hooks/use-review-likes-realtime";
 import { openExternalUrl } from "@/lib/open-external-url";
+
+type ReviewRow = Tables<'reviews'>;
+type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
+type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id' | 'user_id'>;
+type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
+
+interface CreateUserNotificationArgs {
+    p_user_id: string;
+    p_type: string;
+    p_title: string;
+    p_message: string;
+    p_data: Record<string, unknown>;
+}
+
+type SupabaseRpcClient = {
+    rpc: (fn: 'create_user_notification', args: CreateUserNotificationArgs) => Promise<{ error: unknown | null }>;
+};
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -183,12 +200,12 @@ export function RestaurantDetailPanel({
                 // 0. 모든 관련 레코드 ID 수집
                 const allIds = [restaurant.id];
                 if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
-                    allIds.push(...restaurant.mergedRestaurants.map((r: any) => r.id));
+                    allIds.push(...restaurant.mergedRestaurants.map((mergedRestaurant) => mergedRestaurant.id));
                 }
 
                 // 1. 해당 맛집의 승인된 리뷰 조회 (Paging)
-                const { data: reviewsPageData, error: reviewsError } = await (supabase
-                    .from('reviews') as any)
+                const { data: reviewsPageData, error: reviewsError } = await supabase
+                    .from('reviews')
                     .select('*')
                     .in('restaurant_id', allIds)
                     .eq('is_verified', true)
@@ -200,40 +217,43 @@ export function RestaurantDetailPanel({
                 if (!reviewsPageData || reviewsPageData.length === 0) {
                     return { reviews: [], nextCursor: null };
                 }
+                const typedReviewsPageData = reviewsPageData as ReviewRow[];
 
                 // 2. 필요한 user_id 수집
-                const userIds = [...new Set(reviewsPageData.map((r: any) => r.user_id))];
+                const userIds = [...new Set(typedReviewsPageData.map((review) => review.user_id))];
 
                 // 3. Profiles 가져오기
-                const { data: profilesData } = await (supabase
-                    .from('profiles') as any)
+                const { data: profilesData } = await supabase
+                    .from('profiles')
                     .select('user_id, nickname, avatar_url')
                     .in('user_id', userIds);
+                const typedProfilesData = (profilesData || []) as ProfileRow[];
 
                 // 4. Map으로 변환
                 const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
-                    (profilesData || []).map((p: any) => [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }])
+                    typedProfilesData.map((profile) => [profile.user_id, { nickname: profile.nickname, avatarUrl: profile.avatar_url }])
                 );
 
                 // 6. 리뷰 좋아요 데이터 조회
-                const reviewIds = reviewsPageData.map((r: any) => r.id);
-                const { data: likesData } = await (supabase
-                    .from('review_likes') as any)
+                const reviewIds = typedReviewsPageData.map((review) => review.id);
+                const { data: likesData } = await supabase
+                    .from('review_likes')
                     .select('review_id, user_id')
                     .in('review_id', reviewIds);
+                const typedLikesData = (likesData || []) as ReviewLikeRow[];
 
                 // 좋아요 수와 사용자 좋아요 상태 계산
                 const likesMap = new Map<string, { count: number; isLiked: boolean }>();
                 reviewIds.forEach((reviewId: string) => {
-                    const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
+                    const likesForReview = typedLikesData.filter((like) => like.review_id === reviewId);
                     likesMap.set(reviewId, {
                         count: likesForReview.length,
-                        isLiked: user ? likesForReview.some((like: any) => like.user_id === user.id) : false
+                        isLiked: user ? likesForReview.some((like) => like.user_id === user.id) : false
                     });
                 });
 
                 // 7. 리뷰 데이터 매핑
-                const reviews = reviewsPageData.map((review: any) => {
+                const reviews = typedReviewsPageData.map((review) => {
                     const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                     const userProfile = profilesMap.get(review.user_id);
 
@@ -252,10 +272,8 @@ export function RestaurantDetailPanel({
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                        category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : (review.category || ''),
-                        categories: (Array.isArray(review.categories) && review.categories.length > 0)
-                            ? review.categories
-                            : (review.category ? [review.category] : []),
+                        category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : '',
+                        categories: Array.isArray(review.categories) ? review.categories : [],
                         likeCount: likesInfo.count,
                         isLikedByUser: likesInfo.isLiked,
                     };
@@ -285,7 +303,7 @@ export function RestaurantDetailPanel({
     const recentReviews = safeReviewsData.slice(0, 3);
 
     // [총 리뷰 수]
-    const totalReviewCount = (restaurant as any).verified_review_count ?? safeReviewsData.length;
+    const totalReviewCount = (restaurant as RestaurantWithVerifiedCount | null)?.verified_review_count ?? safeReviewsData.length;
 
     // [무한 스크롤 감시] 리뷰 목록 추가 로드
     const loadMoreReviewsRef = useRef<HTMLDivElement>(null);
@@ -592,8 +610,8 @@ export function RestaurantDetailPanel({
         try {
             if (isCurrentlyLiked) {
                 // 좋아요 취소
-                const { error } = await (supabase
-                    .from('review_likes') as any)
+                const { error } = await supabase
+                    .from('review_likes')
                     .delete()
                     .eq('review_id', reviewId)
                     .eq('user_id', user.id);
@@ -601,12 +619,12 @@ export function RestaurantDetailPanel({
                 if (error) throw error;
             } else {
                 // 좋아요 추가
-                const { error } = await (supabase
-                    .from('review_likes') as any)
+                const { error } = await supabase
+                    .from('review_likes')
                     .insert({
                         review_id: reviewId,
                         user_id: user.id
-                    });
+                    } as never);
 
                 if (error) throw error;
 
@@ -615,15 +633,17 @@ export function RestaurantDetailPanel({
                 if (targetReview && targetReview.userId && targetReview.userId !== user.id) {
                     try {
                         // 현재 사용자의 닉네임 가져오기
-                        const { data: profileData } = await (supabase
-                            .from('profiles') as any)
+                        const { data: profileData } = await supabase
+                            .from('profiles' as never)
                             .select('nickname')
                             .eq('user_id', user.id)
                             .single();
 
-                        const likerName = (profileData as any)?.nickname || '누군가';
+                        const typedProfileData = profileData as { nickname: string } | null;
+                        const likerName = typedProfileData?.nickname || '누군가';
 
-                        await (supabase as any).rpc('create_user_notification', {
+                        const rpcClient = supabase as unknown as SupabaseRpcClient;
+                        await rpcClient.rpc('create_user_notification', {
                             p_user_id: targetReview.userId,
                             p_type: 'review_like',
                             p_title: '리뷰에 좋아요가 눌렸어요!',
@@ -767,13 +787,21 @@ export function RestaurantDetailPanel({
                                         {/* 광고 태그 - 모든 병합된 영상에서 수집 */}
                                         {(() => {
                                             const allAds: string[] = [];
-                                            const metas = restaurant.mergedYoutubeMetas ||
-                                                (restaurant.youtube_meta ? [restaurant.youtube_meta] : []);
+                                            const metas: unknown[] = restaurant.mergedYoutubeMetas?.length
+                                                ? restaurant.mergedYoutubeMetas
+                                                : (restaurant.youtube_meta ? [restaurant.youtube_meta] : []);
 
-                                            metas.forEach((meta: any) => {
-                                                const adsInfo = meta?.ads_info;
-                                                if (adsInfo?.is_ads === true && Array.isArray(adsInfo.what_ads)) {
-                                                    allAds.push(...adsInfo.what_ads);
+                                            metas.forEach((meta) => {
+                                                if (!meta || typeof meta !== 'object') return;
+                                                if (!('ads_info' in meta)) return;
+
+                                                const adsInfo = (meta as { ads_info?: unknown }).ads_info;
+                                                if (!adsInfo || typeof adsInfo !== 'object') return;
+
+                                                const { is_ads, what_ads } = adsInfo as { is_ads?: unknown; what_ads?: unknown };
+                                                if (is_ads === true && Array.isArray(what_ads)) {
+                                                    const normalizedAds = what_ads.filter((ad): ad is string => typeof ad === 'string');
+                                                    allAds.push(...normalizedAds);
                                                 }
                                             });
 

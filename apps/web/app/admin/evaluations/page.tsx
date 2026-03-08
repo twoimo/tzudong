@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import { debugLog } from '@/lib/debug-log';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -805,7 +806,7 @@ function AdminEvaluationPage() {
       }
 
       // 디버그: 실제 로드된 레코드 수 확인
-      console.log('📊 데이터 로드 완료:', data?.length, '개 로드됨');
+      debugLog('📊 데이터 로드 완료:', data?.length, '개 로드됨');
 
       if (!data) {
         console.warn('No data returned from restaurants');
@@ -1023,7 +1024,7 @@ function AdminEvaluationPage() {
       // YouTube 링크 추출 (단일 값)
       const youtubeLink = record.youtube_link || '';
 
-      console.log('🔍 중복 검사 시작:', {
+      debugLog('🔍 중복 검사 시작:', {
         name: record.restaurant_name || record.name,
         jibun_address: record.jibun_address,
         record_id: record.id,
@@ -1038,10 +1039,10 @@ function AdminEvaluationPage() {
         youtubeLink // YouTube 링크 전달
       );
 
-      console.log('📊 중복 검사 결과:', duplicateCheck);
+      debugLog('📊 중복 검사 결과:', duplicateCheck);
 
       if (duplicateCheck.isDuplicate) {
-        console.log('⚠️ 중복 감지!', {
+        debugLog('⚠️ 중복 감지!', {
           matchedRestaurant: duplicateCheck.matchedRestaurant,
           currentYoutubeLink: youtubeLink,
           matchedYoutubeLink: duplicateCheck.matchedRestaurant?.youtube_link,
@@ -1051,7 +1052,7 @@ function AdminEvaluationPage() {
         const currentYoutubeLink = youtubeLink?.trim() || null;
         const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
 
-        console.log('🔗 유튜브 링크 비교:', {
+        debugLog('🔗 유튜브 링크 비교:', {
           current: currentYoutubeLink,
           matched: matchedYoutubeLink,
           isDifferent: currentYoutubeLink !== matchedYoutubeLink,
@@ -1059,7 +1060,7 @@ function AdminEvaluationPage() {
 
         // 유튜브 링크가 다른 경우: 확인 모달 표시
         if (currentYoutubeLink !== matchedYoutubeLink) {
-          console.log('✅ 유튜브 링크가 다름 → 확인 모달 표시');
+          debugLog('✅ 유튜브 링크가 다름 → 확인 모달 표시');
 
           // 모달 상태 설정
           setPendingApprovalRecord(record);
@@ -1072,7 +1073,7 @@ function AdminEvaluationPage() {
           return;
         }
 
-        console.log('❌ 유튜브 링크가 같음 → 중복 오류 처리');
+        debugLog('❌ 유튜브 링크가 같음 → 중복 오류 처리');
 
         // 유튜브 링크가 같은 경우: 중복 오류 처리 (기존 로직)
         // 중복 발견 시 에러 정보 저장
@@ -1152,7 +1153,7 @@ function AdminEvaluationPage() {
       naverName = record.restaurant_name || record.name || '이름 없음';
     }
 
-    console.log('🚀 승인 요청 시작:', {
+    debugLog('🚀 승인 요청 시작:', {
       id: record.id,
       naverName,
       original_status: record.status
@@ -1178,7 +1179,7 @@ function AdminEvaluationPage() {
       throw error;
     }
 
-    console.log('✅ DB 업데이트 성공:', updatedData);
+    debugLog('✅ DB 업데이트 성공:', updatedData);
 
     const updatedRecord = updatedData as { status?: string } | null;
     if (updatedRecord?.status !== 'approved') {
@@ -1406,8 +1407,8 @@ function AdminEvaluationPage() {
         .in('status', ['pending', 'partially_approved'])
         .order('created_at', { ascending: false });
 
-      console.log('[Submissions Query] user:', user?.id, 'isAdmin:', isAdmin);
-      console.log('[Submissions Query] data:', submissionsData, 'error:', submissionsError);
+      debugLog('[Submissions Query] user:', user?.id, 'isAdmin:', isAdmin);
+      debugLog('[Submissions Query] data:', submissionsData, 'error:', submissionsError);
 
       if (submissionsError) throw submissionsError;
       if (!submissionsData?.length) return [];
@@ -1449,7 +1450,7 @@ function AdminEvaluationPage() {
           .filter((targetRestaurantId): targetRestaurantId is string => Boolean(targetRestaurantId))
       )];
 
-      console.log('[EDIT 제보 디버깅] item target_restaurant_ids:', itemTargetRestaurantIds);
+      debugLog('[EDIT 제보 디버깅] item target_restaurant_ids:', itemTargetRestaurantIds);
 
         const originalRestaurantsMap = new Map<string, SubmissionOriginalRestaurantData>();
         if (itemTargetRestaurantIds.length > 0) {
@@ -1459,7 +1460,7 @@ function AdminEvaluationPage() {
             .select('id, unique_id:trace_id, name:approved_name, road_address, jibun_address, phone, categories, youtube_link, tzuyang_review, youtube_meta')
             .in('id', itemTargetRestaurantIds);
 
-        console.log('[EDIT 제보 디버깅] originalData:', originalData, 'error:', originalError);
+        debugLog('[EDIT 제보 디버깅] originalData:', originalData, 'error:', originalError);
 
         if (originalData) {
           const typedOriginalData = originalData as RestaurantLookupRow[];
@@ -1491,7 +1492,7 @@ function AdminEvaluationPage() {
             : null;
 
           if (originalRestaurant) {
-            console.log('[EDIT 제보 디버깅] item:', item.id, 'target_restaurant_id:', item.target_restaurant_id, 'matched:', originalRestaurant.name);
+            debugLog('[EDIT 제보 디버깅] item:', item.id, 'target_restaurant_id:', item.target_restaurant_id, 'matched:', originalRestaurant.name);
           }
 
           return {
@@ -1843,7 +1844,7 @@ function AdminEvaluationPage() {
             } : null,
           };
 
-          console.log('🔍 [DEBUG] RPC에 전달할 restaurantData:', restaurantData);
+          debugLog('🔍 [DEBUG] RPC에 전달할 restaurantData:', restaurantData);
 
 	          if (submission.submission_type === 'edit' && item.target_restaurant_id) {
 	            // 수정 제보: approve_edit_submission_item RPC 호출
@@ -2100,7 +2101,7 @@ function AdminEvaluationPage() {
       queryClient.invalidateQueries({ queryKey: ['restaurants'] });
       setEditingSubmission(null);
       setEditModalOpen(false);
-      console.log('[Update Submission Success]', submission.id);
+      debugLog('[Update Submission Success]', submission.id);
     },
 	    onError: (error: unknown) => {
 	      toast({ variant: 'destructive', title: '수정 실패', description: getErrorMessage(error) });
