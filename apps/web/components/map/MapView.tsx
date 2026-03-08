@@ -101,6 +101,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const googleMapRef = useRef<GoogleMapLike | null>(null);
   const markersRef = useRef<GoogleMarkerLike[]>([]);
   const detailPanelRef = useRef<HTMLDivElement>(null);
+  const selectedCountryRef = useRef<string | null | undefined>(selectedCountry);
 
   // [상태] 지도 이동 - 선택된 맛집으로 이동 (한 번만 수행)
   const lastCenteredRestaurantId = useRef<string | null>(null);
@@ -111,6 +112,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const [panelWidth, setPanelWidth] = useState(0);
   const [showRestaurantCount, setShowRestaurantCount] = useState(false);
   const [localIsPanelOpen, setLocalIsPanelOpen] = useState(false);
+
+  useEffect(() => {
+    selectedCountryRef.current = selectedCountry;
+  }, [selectedCountry]);
 
   // props로 전달된 isPanelOpen이 있으면 우선 사용, 없으면 로컬 상태 사용
   const isPanelOpen = propIsPanelOpen !== undefined ? propIsPanelOpen : localIsPanelOpen;
@@ -366,7 +371,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
 
     // 선택된 국가에 따라 중심점과 줌 설정 (기본값: 미국)
-    const countryConfig = selectedCountry && COUNTRY_CENTERS[selectedCountry];
+    const initialSelectedCountry = selectedCountryRef.current;
+    const countryConfig = initialSelectedCountry && COUNTRY_CENTERS[initialSelectedCountry];
     const center = countryConfig ? { lat: countryConfig.lat, lng: countryConfig.lng } : USA_CENTER;
     const zoom = countryConfig ? countryConfig.zoom : USA_ZOOM;
 
@@ -394,7 +400,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     } catch (error) {
       console.error("Error creating Google Map:", error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
   // [국가 변경] 선택된 국가에 따라 지도 중심 및 줌 레벨 조정
