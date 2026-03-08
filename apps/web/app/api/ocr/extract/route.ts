@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import sharp from 'sharp';
+import { debugLog } from '@/lib/debug-log';
 
 // --- 설정 ---
 const GEMINI_API_KEY = process.env.GEMINI_OCR_YEON;
@@ -28,7 +29,7 @@ async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savin
 
         const newSize = optimized.length;
         const savingsPercent = ((originalSize - newSize) / originalSize * 100).toFixed(0);
-        console.log(`[OCR] 이미지 압축: ${(originalSize / 1024).toFixed(0)}KB → ${(newSize / 1024).toFixed(0)}KB (${savingsPercent}% 절감)`);
+        debugLog(`[OCR] 이미지 압축: ${(originalSize / 1024).toFixed(0)}KB → ${(newSize / 1024).toFixed(0)}KB (${savingsPercent}% 절감)`);
 
         return { optimized, savings: `${savingsPercent}%` };
     } catch (e) {
@@ -182,7 +183,7 @@ export async function POST(req: Request) {
         const cachedResult = cachedResultRaw as { metadata?: OcrLogMetadata | null } | null;
         const cachedMetadata = cachedResult?.metadata as OcrLogMetadata | null;
         if (cachedMetadata?.ocr_result) {
-            console.log('[OCR] 캐시 히트! API 호출 생략');
+            debugLog('[OCR] 캐시 히트! API 호출 생략');
             return NextResponse.json({
                 ...cachedMetadata.ocr_result,
                 cached: true

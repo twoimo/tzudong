@@ -28,6 +28,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
+import { debugLog as logDebug } from "@/lib/debug-log";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -208,21 +209,18 @@ export default function GlobalMapPage() {
     }, []);
 
     const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
-        // 개발 환경에서만 구조화된 상태 로그 출력
-        if (process.env.NODE_ENV === "development") {
-            console.log("[handleRestaurantSearch] 호출", {
-                restaurant,
-                moveToRestaurantExists: !!moveToRestaurant,
-                isGridMode,
-                selectedCountry,
-            });
-        }
+        logDebug("[handleRestaurantSearch] 호출", {
+            restaurant,
+            moveToRestaurantExists: !!moveToRestaurant,
+            isGridMode,
+            selectedCountry,
+        });
 
         // 검색된 맛집의 국가로 하단 컨트롤 패널의 국가 필터 실시간 변경
         const restaurantCountry = getRestaurantCountry(restaurant);
         if (restaurantCountry && restaurantCountry !== selectedCountry) {
             setSelectedCountry(restaurantCountry);
-            console.log('🌍 검색된 맛집 국가로 필터 변경:', restaurantCountry);
+            logDebug('🌍 검색된 맛집 국가로 필터 변경:', restaurantCountry);
         }
 
         // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정 (객체 복사로 참조 변경 보장)
@@ -235,9 +233,7 @@ export default function GlobalMapPage() {
 
         // 지도 이동 함수가 준비되었다면 약간의 지연 후 이동 (패널 오픈 애니메이션 고려)
         if (moveToRestaurant) {
-            if (process.env.NODE_ENV === "development") {
-                console.log("[handleRestaurantSearch] moveToRestaurant 실행 예약", { restaurant });
-            }
+            logDebug("[handleRestaurantSearch] moveToRestaurant 실행 예약", { restaurant });
             // 300ms 지연 후 이동 (패널이 열리고 지도가 리사이즈될 시간을 줌)
             setTimeout(() => {
                 moveToRestaurant(restaurant);
@@ -246,9 +242,7 @@ export default function GlobalMapPage() {
 
         // 그리드 모드에서 검색 시 단일 모드로 전환
         if (isGridMode) {
-            if (process.env.NODE_ENV === "development") {
-                console.log("[handleRestaurantSearch] 그리드 모드에서 단일 모드로 전환");
-            }
+            logDebug("[handleRestaurantSearch] 그리드 모드에서 단일 모드로 전환");
             setIsGridMode(false);
         }
     }, [moveToRestaurant, isGridMode, setSelectedRestaurant, selectedCountry, getRestaurantCountry]);

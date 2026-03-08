@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { debugLog as logDebug } from '@/lib/debug-log';
 
 /**
  * 리뷰 좋아요 실시간 반영 훅
@@ -32,7 +33,7 @@ export function useReviewLikesRealtime() {
                 },
                 (payload) => {
                     // 좋아요 변경 시 관련 쿼리 무효화
-                    console.log('[Realtime] review_likes 변경 감지:', payload.eventType);
+                    logDebug('[Realtime] review_likes 변경 감지:', payload.eventType);
                     invalidateLikesQueries();
                 }
             )

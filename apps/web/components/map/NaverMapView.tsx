@@ -1,7 +1,6 @@
 'use client';
 /* eslint-disable react-hooks/exhaustive-deps */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import { usePathname } from "next/navigation";
 
@@ -43,6 +42,45 @@ import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateHoverAnchoredCenter } from "@/lib/map-hover-anchor";
+
+interface ExtendedBounds {
+    sw: NaverLatLngLike;
+    ne: NaverLatLngLike;
+}
+
+interface MarkerVisibilityHandle {
+    setMap: (map: unknown | null) => void;
+    getMap: () => unknown;
+}
+
+interface NaverLatLngLike {
+    lat: () => number;
+    lng: () => number;
+}
+
+interface NaverProjectionLike {
+    fromCoordToOffset: (coord: unknown) => { x: number; y: number };
+    fromOffsetToCoord: (offset: unknown) => NaverLatLngLike;
+}
+
+interface NaverMapLike {
+    getBounds: () => {
+        getSW: () => NaverLatLngLike;
+        getNE: () => NaverLatLngLike;
+        getWest: () => number;
+        getSouth: () => number;
+        getEast: () => number;
+        getNorth: () => number;
+    } | null;
+    getCenter: () => NaverLatLngLike;
+    getProjection: () => NaverProjectionLike;
+    getZoom: () => number;
+    morph: (target: unknown, zoom?: number, options?: unknown) => void;
+    panBy: (x: number, y: number) => void;
+    panTo: (target: unknown, options?: unknown) => void;
+    setCenter: (target: unknown) => void;
+    setZoom: (zoom: number, effect?: boolean) => void;
+}
 
 // 상수 정의
 const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
@@ -228,9 +266,12 @@ EmptyStateIndicator.displayName = 'EmptyStateIndicator';
  * @param delay 지연 시간 (ms)
  * @returns 디바운스된 함수
  */
-const debounce = <T extends (...args: any[]) => any>(func: T, delay: number): ((...args: Parameters<T>) => void) => {
+const debounce = <TArgs extends unknown[], TResult>(
+    func: (...args: TArgs) => TResult,
+    delay: number
+): ((...args: TArgs) => void) => {
     let timeout: NodeJS.Timeout | null = null;
-    return (...args: Parameters<T>) => {
+    return (...args: TArgs) => {
         if (timeout) {
             clearTimeout(timeout);
         }
@@ -244,7 +285,7 @@ const debounce = <T extends (...args: any[]) => any>(func: T, delay: number): ((
 /**
  * 가시영역 확장 계산 (필터링 성능 최적화를 위해 한 번만 수행)
  */
-const getExtendedBounds = (map: any, padding: number = VIEWPORT_PADDING) => {
+const getExtendedBounds = (map: NaverMapLike | null, padding: number = VIEWPORT_PADDING): ExtendedBounds | null => {
     if (!map) return null;
     const bounds = map.getBounds();
     if (!bounds || typeof bounds.getSW !== 'function') return null;
@@ -263,7 +304,7 @@ const getExtendedBounds = (map: any, padding: number = VIEWPORT_PADDING) => {
 /**
  * 주어진 레스토랑이 현재 지도의 가시 영역 내에 있는지 확인합니다.
  */
-const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: any): boolean => {
+const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: ExtendedBounds | null): boolean => {
     if (!extendedBounds || !restaurant.lat || !restaurant.lng) return true;
 
     // 네이버 지도 LatLngBounds.hasLatLng 사용 (또는 단순 수치 비교로 최적화 가능)
@@ -293,8 +334,8 @@ const NaverMapView = memo(({
     onVisibleRestaurantsChange,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<any>(null);
-    const markersMapRef = useRef<Map<string, any>>(new Map()); // 마커 Map (ID -> Marker)
+    const mapInstanceRef = useRef<NaverMapLike | null>(null);
+    const markersMapRef = useRef<Map<string, MarkerVisibilityHandle>>(new Map()); // 마커 Map (ID -> Marker)
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
@@ -872,10 +913,11 @@ const NaverMapView = memo(({
 
         const mapElement = mapRef.current;
         if (mapElement) {
+            const interactionListenerOptions: AddEventListenerOptions = { capture: true, passive: true };
             // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
-            mapElement.addEventListener('wheel', handleUserInteraction, { capture: true, passive: true });
-            mapElement.addEventListener('mousedown', handleUserInteraction, { capture: true, passive: true });
-            mapElement.addEventListener('touchstart', handleUserInteraction, { capture: true, passive: true });
+            mapElement.addEventListener('wheel', handleUserInteraction, interactionListenerOptions);
+            mapElement.addEventListener('mousedown', handleUserInteraction, interactionListenerOptions);
+            mapElement.addEventListener('touchstart', handleUserInteraction, interactionListenerOptions);
         }
 
         const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleUserInteraction);
@@ -887,9 +929,9 @@ const NaverMapView = memo(({
             naver.maps.Event.removeListener(pinchListener);
 
             if (mapElement) {
-                mapElement.removeEventListener('wheel', handleUserInteraction, { capture: true, passive: true } as any);
-                mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true, passive: true } as any);
-                mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true, passive: true } as any);
+                mapElement.removeEventListener('wheel', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true });
             }
         };
 
@@ -1068,7 +1110,7 @@ const NaverMapView = memo(({
 
         window.addEventListener('resize', handleWindowResize, { passive: true });
         return () => {
-            window.removeEventListener('resize', handleWindowResize, { passive: true } as any);
+            window.removeEventListener('resize', handleWindowResize);
             clearTimeout(resizeTimer);
         };
     }, []);
@@ -1130,8 +1172,14 @@ const NaverMapView = memo(({
                 const state = channel.presenceState();
                 const uniqueUserIds = new Set<string>();
                 Object.entries(state).forEach(([presenceKey, presences]) => {
-                    (presences as any[]).forEach((presence: any) => {
-                        uniqueUserIds.add(presence.user_id || presence.presence_ref || presenceKey);
+                    if (!Array.isArray(presences)) return;
+                    presences.forEach((presence) => {
+                        if (!presence || typeof presence !== 'object') {
+                            uniqueUserIds.add(presenceKey);
+                            return;
+                        }
+                        const typedPresence = presence as { user_id?: string; presence_ref?: string };
+                        uniqueUserIds.add(typedPresence.user_id || typedPresence.presence_ref || presenceKey);
                     });
                 });
                 const count = uniqueUserIds.size;
@@ -1411,7 +1459,7 @@ const NaverMapView = memo(({
             const fakeFeature = {
                 properties: { point_count: count },
                 geometry: { coordinates: [position.lng, position.lat] }
-            } as any;
+            } as unknown as Supercluster.ClusterFeature<ClusterProperties>;
             const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
 
             markerPool.acquire(
@@ -1688,7 +1736,7 @@ const NaverMapView = memo(({
                         const fakeFeature = {
                             properties: { point_count: cluster.count },
                             geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
-                        } as any;
+                        } as unknown as Supercluster.ClusterFeature<ClusterProperties>;
                         const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex); // 이제 여기서 배지도 포함됨
 
                         marker.setIcon({
@@ -1714,7 +1762,7 @@ const NaverMapView = memo(({
                         const fakeFeature = {
                             properties: { point_count: cluster.count },
                             geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
-                        } as any;
+                        } as unknown as Supercluster.ClusterFeature<ClusterProperties>;
                         const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
                         marker.setIcon({ content: html, anchor: new window.naver.maps.Point(24, 24) });
                     }
@@ -1966,7 +2014,7 @@ const NaverMapView = memo(({
             mapInstanceRef.current = map;
             setIsMapInitialized(true);
             if (process.env.NODE_ENV !== 'production') {
-                (window as any).__TZUDONG_DEBUG_MAP__ = map;
+                (window as typeof window & { __TZUDONG_DEBUG_MAP__?: unknown }).__TZUDONG_DEBUG_MAP__ = map;
             }
 
             // [Fix] URL 파라미터로 초기화된 경우 플래그 설정 (centering effect에서 줌 오버라이드 방지)
@@ -2002,7 +2050,7 @@ const NaverMapView = memo(({
         // 연속 스크롤 시 목표 줌 레벨 추적 변수 (Effect 클로저 내 유지)
         let targetZoomLevel = map.getZoom();
         let lastWheelTime = 0;
-        let pendingAnchorAdjustListener: any = null;
+        let pendingAnchorAdjustListener: unknown = null;
         let isAnchorAdjusting = false;
 
         type QueuedWheelInput = {
@@ -2411,14 +2459,6 @@ const NaverMapView = memo(({
                 }
             </div >
         );
-    }
-
-    // [DEBUG] Render tracking
-    if (process.env.NODE_ENV === 'development') {
-        // console.log('[Performance] NaverMapView rendered', {
-        //     zoom: mapInstanceRef.current?.getZoom(),
-        //     restaurantsCount: displayRestaurants.length
-        // });
     }
 
     // 단일 지도 모드에서는 Flexbox 레이아웃 적용 (고정 너비 패널)

@@ -13,9 +13,6 @@ interface EvaluationRowDetailsProps {
 export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
   const { youtube_meta, restaurant_info, missing_message } = record;
 
-  // 디버깅: 데이터 구조 확인
-  // console.log('📊 EvaluationRowDetails 데이터:', { ... });
-
   // 🔥 중복 에러 알림 표시
   const showErrorAlert = record.db_error_message && record.db_error_details;
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { debugLog } from '@/lib/debug-log';
 
 const NAVER_CLIENT_ID = process.env.NEXT_NAVER_CLIENT_ID_BYEON || process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
 const NAVER_CLIENT_SECRET = process.env.NEXT_NAVER_CLIENT_SECRET_BYEON || process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET;
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
     const query = searchParams.get('query');
     const display = searchParams.get('display') || '5';
 
-    console.log(`[API] Naver Search Request: query=${query}, display=${display}`);
+    debugLog(`[API] Naver Search Request: query=${query}, display=${display}`);
 
     if (!query) {
         return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
 
     try {
         const apiUrl = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=${display}`;
-        console.log(`[API] Calling Naver API: ${apiUrl}`);
+        debugLog(`[API] Calling Naver API: ${apiUrl}`);
         
         const response = await fetch(apiUrl, {
             headers: {
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
         }
 
         const data = await response.json();
-        console.log(`[API] Naver API Success: ${data.items?.length || 0} items found`);
+        debugLog(`[API] Naver API Success: ${data.items?.length || 0} items found`);
         return NextResponse.json(data);
     } catch (error) {
         console.error('[API] Internal Server Error:', error);
