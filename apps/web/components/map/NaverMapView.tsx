@@ -312,13 +312,52 @@ const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: Extended
     return bounds.hasLatLng(latLng);
 };
 
+const getPrimaryCategory = (restaurant: Pick<Restaurant, 'categories' | 'category'>): string => {
+    if (Array.isArray(restaurant.categories) && restaurant.categories.length > 0) {
+        return restaurant.categories[0] ?? '기타';
+    }
+    if (Array.isArray(restaurant.category) && restaurant.category.length > 0) {
+        return restaurant.category[0] ?? '기타';
+    }
+    return '기타';
+};
+
+const hasSameNameAndCoordinate = (a: Pick<Restaurant, 'name' | 'lat' | 'lng'>, b: Pick<Restaurant, 'name' | 'lat' | 'lng'>): boolean => {
+    return (
+        a.name === b.name &&
+        Math.abs((a.lat || 0) - (b.lat || 0)) < 0.0001 &&
+        Math.abs((a.lng || 0) - (b.lng || 0)) < 0.0001
+    );
+};
+
+const findMatchingRestaurantInList = (target: Restaurant, candidates: Restaurant[]): Restaurant | null => {
+    if (target.mergedRestaurants && target.mergedRestaurants.length > 0) {
+        const mergedIds = target.mergedRestaurants.map((restaurant) => restaurant.id);
+        return (
+            candidates.find((candidate) =>
+                mergedIds.includes(candidate.id) ||
+                candidate.mergedRestaurants?.some((mergedRestaurant) => mergedIds.includes(mergedRestaurant.id)) ||
+                hasSameNameAndCoordinate(candidate, target)
+            ) ?? null
+        );
+    }
+
+    return (
+        candidates.find((candidate) =>
+            candidate.id === target.id ||
+            candidate.mergedRestaurants?.some((mergedRestaurant) => mergedRestaurant.id === target.id) ||
+            hasSameNameAndCoordinate(candidate, target)
+        ) ?? null
+    );
+};
+
 const NaverMapView = memo(({
     mapFocusZoom,
     filters,
     selectedRegion,
     searchedRestaurant,
     selectedRestaurant,
-    refreshTrigger,
+    refreshTrigger: _refreshTrigger,
     onAdminEditRestaurant,
     onRequestEditRestaurant,
     isGridMode = false,
@@ -521,8 +560,16 @@ const NaverMapView = memo(({
 
     // ... (중략) ...
 
-    // [OPTIMIZATION] 외부에 정의된 함수 참조 사용 - useMemo 오버헤드 제거
-    void refreshTrigger;
+    const handleMarkerRestaurantSelection = useCallback((restaurant: Restaurant) => {
+        hasUserMovedMapRef.current = false;
+        if (onMarkerClick) {
+            onMarkerClick(restaurant);
+            return;
+        }
+
+        onRestaurantSelect?.(restaurant);
+        setInternalPanelOpen(true);
+    }, [onMarkerClick, onRestaurantSelect]);
 
 
     // [커스텀 토스트] 지도 상단 중앙 알림 상태
@@ -1549,7 +1596,7 @@ const NaverMapView = memo(({
 
                     activeIds.add(restaurant.id);
                     const isSelected = selectedRestaurant?.id === restaurant.id;
-                    const category = (Array.isArray(restaurant.categories) ? restaurant.categories[0] : restaurant.category || '기타') as string;
+                    const category = getPrimaryCategory(restaurant);
                     const html = createIndividualMarkerHTML(category, isSelected);
 
                     markerPool.acquire(
@@ -1557,14 +1604,7 @@ const NaverMapView = memo(({
                         new naver.maps.LatLng(restaurant.lat, restaurant.lng),
                         { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
                         map,
-                        () => {
-                            hasUserMovedMapRef.current = false;
-                            if (onMarkerClick) onMarkerClick(restaurant);
-                            else {
-                                if (onRestaurantSelect) onRestaurantSelect(restaurant);
-                                setInternalPanelOpen(true);
-                            }
-                        }
+                        () => handleMarkerRestaurantSelection(restaurant)
                     );
                 });
             }
@@ -1639,12 +1679,7 @@ const NaverMapView = memo(({
                                     // ... existing click logic ...
                                     const restaurant = displayRestaurants.find(r => r.id === restaurantId);
                                     if (restaurant) {
-                                        hasUserMovedMapRef.current = false;
-                                        if (onMarkerClick) onMarkerClick(restaurant);
-                                        else {
-                                            if (onRestaurantSelect) onRestaurantSelect(restaurant);
-                                            setInternalPanelOpen(true);
-                                        }
+                                        handleMarkerRestaurantSelection(restaurant);
                                     }
                                 }
                             );
@@ -1686,7 +1721,7 @@ const NaverMapView = memo(({
 
                     activeIds.add(restaurant.id);
                     const isSelected = selectedRestaurant?.id === restaurant.id;
-                    const category = (Array.isArray(restaurant.categories) ? restaurant.categories[0] : restaurant.category || '기타') as string;
+                    const category = getPrimaryCategory(restaurant);
                     const html = createIndividualMarkerHTML(category, isSelected);
 
                     markerPool.acquire(
@@ -1694,14 +1729,7 @@ const NaverMapView = memo(({
                         new naver.maps.LatLng(restaurant.lat, restaurant.lng),
                         { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
                         map,
-                        () => {
-                            hasUserMovedMapRef.current = false;
-                            if (onMarkerClick) onMarkerClick(restaurant);
-                            else {
-                                if (onRestaurantSelect) onRestaurantSelect(restaurant);
-                                setInternalPanelOpen(true);
-                            }
-                        }
+                        () => handleMarkerRestaurantSelection(restaurant)
                     );
                 });
                 restaurantsRef.current = restaurantsToShow;
@@ -1717,7 +1745,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, searchedRestaurant]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, searchedRestaurant, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
@@ -1829,9 +1857,7 @@ const NaverMapView = memo(({
                 // 카테고리 계산
                 const restaurant = displayRestaurants.find(r => r.id === prevSelectedId);
                 if (restaurant) {
-                    const category = (Array.isArray(restaurant.categories)
-                        ? restaurant.categories[0]
-                        : restaurant.category || '기타') as string;
+                    const category = getPrimaryCategory(restaurant);
                     const content = createIndividualMarkerHTML(category, false);
 
                     markerPool.update(prevSelectedId, {
@@ -1851,9 +1877,7 @@ const NaverMapView = memo(({
             if (currentMarker) {
                 const restaurant = displayRestaurants.find(r => r.id === currentSelectedId);
                 if (restaurant) {
-                    const category = (Array.isArray(restaurant.categories)
-                        ? restaurant.categories[0]
-                        : restaurant.category || '기타') as string;
+                    const category = getPrimaryCategory(restaurant);
                     const content = createIndividualMarkerHTML(category, true);
 
                     markerPool.update(currentSelectedId, {
@@ -1877,28 +1901,7 @@ const NaverMapView = memo(({
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
     useEffect(() => {
         if (selectedRestaurant && displayRestaurants.length > 0) {
-            let existingRestaurant = null;
-
-            // 병합된 데이터의 경우
-            if (selectedRestaurant.mergedRestaurants && selectedRestaurant.mergedRestaurants.length > 0) {
-                const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
-                existingRestaurant = displayRestaurants.find(r =>
-                    mergedIds.includes(r.id) ||
-                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id))) ||
-                    (r.name === selectedRestaurant.name &&
-                        Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
-                        Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
-                );
-            } else {
-                // 일반 데이터의 경우 - 지도의 병합된 데이터에서도 찾기
-                existingRestaurant = displayRestaurants.find(r =>
-                    r.id === selectedRestaurant.id ||
-                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === selectedRestaurant.id)) ||
-                    (r.name === selectedRestaurant.name &&
-                        Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
-                        Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
-                );
-            }
+            const existingRestaurant = findMatchingRestaurantInList(selectedRestaurant, displayRestaurants);
 
             if (existingRestaurant && existingRestaurant.id !== selectedRestaurant.id) {
                 if (onRestaurantSelect) {
@@ -2315,39 +2318,12 @@ const NaverMapView = memo(({
 
         // 검색된 맛집이 병합된 데이터라면 기존 restaurants에서 같은 데이터를 찾아서 교체
         let actualSearchedRestaurant = searchedRestaurant;
-
-        // 1. 검색 결과가 병합된 데이터인 경우
-        if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
-            const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
-            const existingRestaurant = restaurants.find(r =>
-                mergedIds.includes(r.id) ||
-                (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id))) ||
-                (r.name === searchedRestaurant.name &&
-                    Math.abs((r.lat || 0) - (searchedRestaurant.lat || 0)) < 0.0001 &&
-                    Math.abs((r.lng || 0) - (searchedRestaurant.lng || 0)) < 0.0001)
-            );
-            if (existingRestaurant) {
-                actualSearchedRestaurant = existingRestaurant;
-                // 부모 컴포넌트의 selectedRestaurant도 업데이트
-                if (onRestaurantSelect) {
-                    onRestaurantSelect(existingRestaurant);
-                }
-            }
-        } else {
-            // 2. 검색 결과가 개별 레코드인 경우 - 지도의 병합된 데이터에서 찾기
-            const existingRestaurant = restaurants.find(r =>
-                r.id === searchedRestaurant.id ||
-                (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === searchedRestaurant.id)) ||
-                (r.name === searchedRestaurant.name &&
-                    Math.abs((r.lat || 0) - (searchedRestaurant.lat || 0)) < 0.0001 &&
-                    Math.abs((r.lng || 0) - (searchedRestaurant.lng || 0)) < 0.0001)
-            );
-            if (existingRestaurant) {
-                actualSearchedRestaurant = existingRestaurant;
-                // 부모 컴포넌트의 selectedRestaurant도 업데이트
-                if (onRestaurantSelect) {
-                    onRestaurantSelect(existingRestaurant);
-                }
+        const existingRestaurant = findMatchingRestaurantInList(searchedRestaurant, restaurants);
+        if (existingRestaurant) {
+            actualSearchedRestaurant = existingRestaurant;
+            // 부모 컴포넌트의 selectedRestaurant도 업데이트
+            if (onRestaurantSelect) {
+                onRestaurantSelect(existingRestaurant);
             }
         }
 
