@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -97,6 +97,8 @@ export default function HomeClient() {
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+    const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
+    const openDetailPanelRef = useRef<(restaurant: Restaurant, focusZoom?: number) => void>(() => {});
 
     // [Fix] 마운트 시점 기록 - 라우트 변경 후 돌아왔을 때 지도 강제 리마운트
     const [mapMountKey] = useState(() => Date.now());
@@ -148,7 +150,7 @@ export default function HomeClient() {
                         // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
                         setTimeout(() => {
                             setSelectedAnnouncement(announcement);
-                            openPanel('announcement');
+                            openPanelRef.current('announcement');
 
                             // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
                             router.replace('/', { scroll: false });
@@ -161,7 +163,7 @@ export default function HomeClient() {
                 // 공지 목록 오픈 (상세 ID 없이 panel만 전달된 경우)
                 setTimeout(() => {
                     setSelectedAnnouncement(null);
-                    openPanel('announcement');
+                    openPanelRef.current('announcement');
                     router.replace('/', { scroll: false });
                 }, 350);
             }
@@ -198,9 +200,9 @@ export default function HomeClient() {
                     const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as Restaurant[]);
                     const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
-                    if (mergedRestaurant) {
-                        const zoomParam = searchParams.get('z');
-                        const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
+                        if (mergedRestaurant) {
+                            const zoomParam = searchParams.get('z');
+                            const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
 
                         // [New] URL 파라미터 또는 좌표 기반 모드 설정
                         const modeParam = searchParams.get('mode');
@@ -221,7 +223,7 @@ export default function HomeClient() {
                         }
 
                         setTimeout(() => {
-                            openDetailPanel(mergedRestaurant, !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined);
+                            openDetailPanelRef.current(mergedRestaurant, !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined);
                             // URL 정리
                             router.replace('/', { scroll: false });
                         }, 300);
@@ -236,9 +238,6 @@ export default function HomeClient() {
         const urlLat = searchParams.get('lat');
         const urlLng = searchParams.get('lng');
         const urlZoom = searchParams.get('z');
-        // const reviewId = searchParams.get('review'); <-- this was causing error if already defined?
-        // Let's check the context.
-        // Actually, I will just fix the variable name to be safe `sharedReviewId`.
         const sharedReviewId = searchParams.get('review');
 
 
@@ -276,7 +275,7 @@ export default function HomeClient() {
 
                         if (restaurant) {
                             setTimeout(() => {
-                                openDetailPanel(restaurant);
+                                openDetailPanelRef.current(restaurant);
                                 // [URL 안정화] URL 유지
                             }, 500);
                         }
@@ -302,7 +301,6 @@ export default function HomeClient() {
                 router.replace(`/feed?review=${reviewId}`);
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams, router]);
 
     // 상태 관리 커스텀 훅
@@ -337,6 +335,7 @@ export default function HomeClient() {
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
     }, [state]);
+    openPanelRef.current = openPanel;
 
     // 모든 패널 닫기
     // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -420,6 +419,7 @@ export default function HomeClient() {
         }
         // q 파라미터(공유 URL)는 유지
     }, [state, router]);
+    openDetailPanelRef.current = openDetailPanel;
 
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
         state.setSelectedRestaurant(restaurant);

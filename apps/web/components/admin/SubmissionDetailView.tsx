@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -332,6 +332,8 @@ export function SubmissionDetailView({
     const [geocodingNaver, setGeocodingNaver] = useState(false);
     const [geocodingGoogle, setGeocodingGoogle] = useState(false);
     const [fetchingMeta, setFetchingMeta] = useState<string | null>(null);
+    const autoMetadataHandledSubmissionRef = useRef<string | null>(null);
+    const autoGeocodeHandledSubmissionRef = useRef<string | null>(null);
     const [initialAddress, setInitialAddress] = useState<string>('');
     const [addressChanged, setAddressChanged] = useState(false);
 
@@ -369,7 +371,7 @@ export function SubmissionDetailView({
         });
     };
 
-    const handleReGeocodeNaver = async () => {
+    const handleReGeocodeNaver = useCallback(async () => {
         const address = editableData.address.trim();
         const name = editableData.name.trim();
         if (!address || !name) {
@@ -397,7 +399,7 @@ export function SubmissionDetailView({
         } finally {
             setGeocodingNaver(false);
         }
-    };
+    }, [editableData.address, editableData.name, onGeocodingResultsChange]);
 
     const handleReGeocodeGoogle = async () => {
         const address = editableData.address.trim();
@@ -484,6 +486,11 @@ export function SubmissionDetailView({
 
     // 자동 메타데이터 가져오기
     useEffect(() => {
+        if (autoMetadataHandledSubmissionRef.current === submission.id) {
+            return;
+        }
+        autoMetadataHandledSubmissionRef.current = submission.id;
+
         let isMounted = true;
         const fetchAllMetadata = async () => {
             const pendingItems = submission.items.filter(item => item.item_status === 'pending');
@@ -536,11 +543,15 @@ export function SubmissionDetailView({
             isMounted = false;
             clearTimeout(timer);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [submission.id]); // itemDecisions를 의존성에 넣으면 무한 루프 가능성 있음
+    }, [submission.id, submission.items, itemDecisions, onItemDecisionsChange]);
 
     // 자동 지오코딩 (주소가 있고 결과가 없을 때)
     useEffect(() => {
+        if (autoGeocodeHandledSubmissionRef.current === submission.id) {
+            return;
+        }
+        autoGeocodeHandledSubmissionRef.current = submission.id;
+
         const autoGeocode = async () => {
             if (editableData.address && geocodingResults.length === 0 && !geocodingNaver && !geocodingGoogle) {
                 // 승인 데이터가 없을 때만 실행
@@ -555,8 +566,7 @@ export function SubmissionDetailView({
         }, 100);
 
         return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [submission.id]);
+    }, [submission.id, editableData.address, geocodingResults.length, geocodingNaver, geocodingGoogle, approvalData.lat, approvalData.lng, handleReGeocodeNaver]);
 
     // 지오코딩 결과 선택 시 자동으로 네이버 검색 검증 실행
     useEffect(() => {
