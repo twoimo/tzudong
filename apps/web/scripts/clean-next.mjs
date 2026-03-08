@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const projectRoot = process.cwd();
 const nextDir = path.join(projectRoot, '.next');
+const stalePrefix = '.next-stale-';
 
 const tryRemove = (targetPath) => {
     fs.rmSync(targetPath, {
@@ -12,6 +13,30 @@ const tryRemove = (targetPath) => {
         retryDelay: 150,
     });
 };
+
+const purgeStaleCaches = () => {
+    let entries = [];
+    try {
+        entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+    } catch {
+        return;
+    }
+
+    for (const entry of entries) {
+        if (!entry.isDirectory() || !entry.name.startsWith(stalePrefix)) {
+            continue;
+        }
+
+        try {
+            tryRemove(path.join(projectRoot, entry.name));
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.warn(`[clean-next] failed to remove ${entry.name}: ${message}`);
+        }
+    }
+};
+
+purgeStaleCaches();
 
 try {
     tryRemove(nextDir);
@@ -30,3 +55,5 @@ try {
         console.warn(`[clean-next] fallback cleanup skipped: ${fallbackMessage}`);
     }
 }
+
+purgeStaleCaches();

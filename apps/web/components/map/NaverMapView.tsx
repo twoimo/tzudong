@@ -517,7 +517,7 @@ const NaverMapView = memo(({
             // 마커 풀 정리
             markerPool.clear();
         };
-    }, []);
+    }, [mapOptimization.clusterAnimationEnabled, mapOptimization.clusterAnimationInterval]);
 
     // ... (중략) ...
 
@@ -944,7 +944,11 @@ const NaverMapView = memo(({
         internalPanelOpen, // 패널 열림/닫힘 시 중심 재조정
         isGridMode,
         onMarkerClick,
-        isSidebarOpen // 사이드바 토글 시에도 중심 재조정 로직 실행
+        isSidebarOpen, // 사이드바 토글 시에도 중심 재조정 로직 실행
+        getDeviceAdjustedZoom,
+        getViewportOffset,
+        isMobileOrTablet,
+        mapFocusZoom
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
@@ -1085,7 +1089,7 @@ const NaverMapView = memo(({
                 clearTimeout(resizeDebounceTimer);
             }
         };
-    }, [isMapInitialized, selectedRestaurant, selectedRegion]);
+    }, [isMapInitialized, selectedRestaurant, selectedRegion, isMobileOrTablet]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동 (디바운스 적용)
@@ -1313,7 +1317,7 @@ const NaverMapView = memo(({
         const seoulResultFiltered = getSeoulDistrictClusters(displayRestaurants, 3);
         setSeoulDistrictClustersFiltered(seoulResultFiltered.clusters);
         setSeoulIndividualIds(seoulResultFiltered.individualRestaurantIds);
-    }, [displayRestaurants.length, selectedRegion, isMapInitialized]);
+    }, [displayRestaurants, selectedRegion, isMapInitialized, mapOptimization]);
 
     // [Cluster] 지도 이동/줌 시 클러스터 업데이트
     useEffect(() => {
@@ -1385,7 +1389,7 @@ const NaverMapView = memo(({
         return () => {
             naver.maps.Event.removeListener(idleListener);
         };
-    }, [displayRestaurants, isMapInitialized]);
+    }, [displayRestaurants, isMapInitialized, mapOptimization.idleDebounceMs]);
 
 
 
@@ -1713,7 +1717,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, searchedRestaurant]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
@@ -1902,7 +1906,7 @@ const NaverMapView = memo(({
                 }
             }
         }
-    }, [selectedRestaurant, onRestaurantSelect]); // restaurants를 dependency에서 제거하여 무한 루프 방지
+    }, [selectedRestaurant, onRestaurantSelect, displayRestaurants]);
 
 
 
@@ -2037,7 +2041,7 @@ const NaverMapView = memo(({
             console.error("네이버 지도 초기화 오류:", error);
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
-    }, [isLoaded]);
+    }, [isLoaded, getDeviceAdjustedZoom, selectedRegion]);
 
     // [New] 커스텀 스크롤 휠 핸들러 (마우스 호버 위치 기준 줌 고정)
     useEffect(() => {
@@ -2297,7 +2301,7 @@ const NaverMapView = memo(({
         return () => {
             naver.maps.Event.removeListener(idleListener);
         };
-    }, [displayRestaurants, searchedRestaurant, selectedRestaurant, isMapInitialized]);
+    }, [displayRestaurants, searchedRestaurant, selectedRestaurant, isMapInitialized, mapOptimization.mapUpdateDebounceMs]);
 
     // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
     // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);
@@ -2361,7 +2365,7 @@ const NaverMapView = memo(({
             map.setZoom(targetZoom);
             map.setCenter(new window.naver.maps.LatLng(targetLat, targetLng));
         }
-    }, [searchedRestaurant]);
+    }, [searchedRestaurant, onRestaurantSelect, restaurants]);
 
 
     // 로딩 에러 처리
