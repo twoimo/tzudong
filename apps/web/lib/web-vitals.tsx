@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { onCLS, onFCP, onLCP, onINP, type Metric } from 'web-vitals';
+import { debugLog } from '@/lib/debug-log';
 
 /**
  * Web Vitals 측정 및 로깅
@@ -12,7 +13,7 @@ export function WebVitals() {
         const handleMetric = (metric: Metric) => {
             // 개발 환경에서 콘솔 출력
             if (process.env.NODE_ENV === 'development') {
-                console.log(`[Web Vitals] ${metric.name}:`, {
+                debugLog(`[Web Vitals] ${metric.name}:`, {
                     value: metric.value,
                     rating: metric.rating,
                     delta: metric.delta,

@@ -1,9 +1,9 @@
 'use client';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, forwardRef } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { createUserNotification } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,11 @@ import {
     ADMIN_MODAL_FOOTER_DIVIDER,
 } from "./admin-modal-styles";
 
+type ReviewRow = Tables<'reviews'>;
+type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
+type RestaurantSummaryRow = Pick<Tables<'restaurants'>, 'id' | 'name' | 'road_address' | 'jibun_address'>;
+type ReviewStatusRow = Pick<Tables<'reviews'>, 'restaurant_id' | 'is_verified'>;
+type RestaurantReviewCountRow = Pick<Tables<'restaurants'>, 'review_count'>;
 
 interface Review {
     id: string;
@@ -42,7 +47,7 @@ interface Review {
     visited_at: string;
     verification_photo: string;
     food_photos: string[];
-    category: string;
+    categories: string[];
     is_verified: boolean;
     admin_note: string | null;
     is_pinned: boolean;
@@ -96,7 +101,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 return { reviews: [], nextCursor: null };
             }
 
-            const typedReviewsData = reviewsData as any[];
+            const typedReviewsData = (reviewsData || []) as ReviewRow[];
             const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
@@ -107,20 +112,42 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             const { data: restaurantsData } = await supabase
                 .from('restaurants')
-                .select('id, name:approved_name, address')
+                .select('id, name, road_address, jibun_address')
                 .in('id', restaurantIds);
 
-            const typedProfilesData = (profilesData || []) as any[];
-            const typedRestaurantsData = (restaurantsData || []) as any[];
+            const typedProfilesData = (profilesData || []) as ProfileRow[];
+            const typedRestaurantsData = (restaurantsData || []) as RestaurantSummaryRow[];
 
             const profilesMap = new Map(typedProfilesData.map(p => [p.user_id, p.nickname]));
-            const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.name, address: r.address }]));
+            const restaurantsMap = new Map(
+                typedRestaurantsData.map(r => [
+                    r.id,
+                    {
+                        name: r.name,
+                        address: r.road_address || r.jibun_address || '',
+                    },
+                ])
+            );
 
-            const reviews = typedReviewsData.map(review => ({
-                ...review,
+            const reviews: Review[] = typedReviewsData.map((review) => ({
+                id: review.id,
+                user_id: review.user_id,
+                restaurant_id: review.restaurant_id,
+                title: review.title,
+                content: review.content,
+                visited_at: review.visited_at,
+                verification_photo: review.verification_photo,
+                food_photos: review.food_photos,
+                categories: review.categories,
+                is_verified: review.is_verified,
+                admin_note: review.admin_note,
+                is_pinned: review.is_pinned,
+                is_edited_by_admin: review.is_edited_by_admin,
+                created_at: review.created_at,
+                updated_at: review.updated_at,
                 profiles: { nickname: profilesMap.get(review.user_id) || '탈퇴한 사용자' },
-                restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' }
-            })) as Review[];
+                restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' },
+            }));
 
             const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
 
@@ -168,17 +195,20 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             if (reviewError) throw reviewError;
 
-            const typedReview = review as any;
+            const typedReview = review as ReviewStatusRow | null;
+            if (!typedReview) {
+                throw new Error('리뷰 정보를 찾을 수 없습니다.');
+            }
             const wasAlreadyVerified = typedReview.is_verified;
 
-            const { error: approveError } = await (supabase
-                .from('reviews') as any)
+            const { error: approveError } = await supabase
+                .from('reviews' as never)
                 .update({
                     is_verified: true,
                     admin_note: adminNote.trim() || null,
                     is_edited_by_admin: !!adminNote.trim(),
                     updated_at: new Date().toISOString(),
-                })
+                } as never)
                 .eq('id', reviewId);
 
             if (approveError) throw approveError;
@@ -192,14 +222,17 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
                 if (fetchError) throw fetchError;
 
-                const typedRestaurant = restaurant as any;
+                const typedRestaurant = restaurant as RestaurantReviewCountRow | null;
+                if (!typedRestaurant) {
+                    throw new Error('레스토랑 리뷰 수 정보를 찾을 수 없습니다.');
+                }
 
-                const { error: visitError } = await (supabase
-                    .from('restaurants') as any)
+                const { error: visitError } = await supabase
+                    .from('restaurants' as never)
                     .update({
                         review_count: (typedRestaurant.review_count ?? 0) + 1,
                         updated_at: new Date().toISOString(),
-                    })
+                    } as never)
                     .eq('id', typedReview.restaurant_id);
 
                 if (visitError) throw visitError;
@@ -238,16 +271,19 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             if (reviewError) throw reviewError;
 
-            const typedReview = review as any;
+            const typedReview = review as ReviewStatusRow | null;
+            if (!typedReview) {
+                throw new Error('리뷰 정보를 찾을 수 없습니다.');
+            }
 
-            const { error: rejectError } = await (supabase
-                .from('reviews') as any)
+            const { error: rejectError } = await supabase
+                .from('reviews' as never)
                 .update({
                     is_verified: false,
                     admin_note: adminNote.trim() ? `거부: ${adminNote.trim()}` : '거부: 관리자에 의해 거부됨',
                     is_edited_by_admin: true,
                     updated_at: new Date().toISOString(),
-                })
+                } as never)
                 .eq('id', reviewId);
 
             if (rejectError) throw rejectError;
@@ -261,14 +297,17 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
                 if (fetchError) throw fetchError;
 
-                const typedRestaurant = restaurant as any;
+                const typedRestaurant = restaurant as RestaurantReviewCountRow | null;
+                if (!typedRestaurant) {
+                    throw new Error('레스토랑 리뷰 수 정보를 찾을 수 없습니다.');
+                }
 
-                const { error: visitError } = await (supabase
-                    .from('restaurants') as any)
+                const { error: visitError } = await supabase
+                    .from('restaurants' as never)
                     .update({
                         review_count: Math.max((typedRestaurant.review_count ?? 0) - 1, 0),
                         updated_at: new Date().toISOString(),
-                    })
+                    } as never)
                     .eq('id', typedReview.restaurant_id);
 
                 if (visitError) throw visitError;
@@ -525,7 +564,6 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 }
 
 // 리뷰 카드 컴포넌트
-import { forwardRef } from 'react';
 
 interface ReviewCardProps {
     review: Review;

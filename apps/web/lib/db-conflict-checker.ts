@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { debugLog } from '@/lib/debug-log';
 
 export interface ConflictCheckResult {
   hasConflict: boolean;
@@ -114,7 +115,7 @@ export async function checkRestaurantDuplicate(
   try {
     const normalizedInputAddress = normalizeAddress(jibunAddress);
 
-    console.log('🔍 중복 검사 시작:', {
+    debugLog('🔍 중복 검사 시작:', {
       name,
       jibunAddress,
       normalizedAddress: normalizedInputAddress,
@@ -157,10 +158,10 @@ export async function checkRestaurantDuplicate(
       r.jibun_address && normalizeAddress(r.jibun_address) === normalizedInputAddress
     );
 
-    console.log('📊 정규화된 주소 일치 approved 레스토랑:', existingRestaurants.length, '개');
+    debugLog('📊 정규화된 주소 일치 approved 레스토랑:', existingRestaurants.length, '개');
 
     if (existingRestaurants.length === 0) {
-      console.log('✅ 중복 없음 (정규화된 주소 일치하는 approved 레스토랑 없음)');
+      debugLog('✅ 중복 없음 (정규화된 주소 일치하는 approved 레스토랑 없음)');
       return { isDuplicate: false, similarityScore: 0 };
     }
 
@@ -170,7 +171,7 @@ export async function checkRestaurantDuplicate(
 
       const similarity = calculateSimilarity(name, restaurant.name);
 
-      console.log('🔍 유사도 비교:', {
+      debugLog('🔍 유사도 비교:', {
         current: name,
         existing: restaurant.name,
         similarity: Math.round(similarity * 100) + '%',
@@ -178,7 +179,7 @@ export async function checkRestaurantDuplicate(
 
       // 🔥 85% 이상 유사하면 중복으로 판단 (YouTube 링크 무관)
       if (similarity >= NAME_SIMILARITY_THRESHOLD) {
-        console.log('⚠️ 중복 감지! (유사도 85% 이상)');
+        debugLog('⚠️ 중복 감지! (유사도 85% 이상)');
 
         return {
           isDuplicate: true,
@@ -195,7 +196,7 @@ export async function checkRestaurantDuplicate(
       }
     }
 
-    console.log('✅ 중복 없음 (유사도 85% 미만)');
+    debugLog('✅ 중복 없음 (유사도 85% 미만)');
     return { isDuplicate: false, similarityScore: 0 };
   } catch (error) {
     console.error('💥 중복 검사 에러:', error);
