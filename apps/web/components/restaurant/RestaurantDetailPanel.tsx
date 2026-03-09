@@ -883,9 +883,9 @@ export function RestaurantDetailPanel({
                 </div>
 
                 {/* 내용 */}
-                        <div
+	                <div
 	                        data-restaurant-detail-swipe-area="content"
-	                        className="relative flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+	                        className="relative flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
 	                        style={{ touchAction: 'pan-y' }}
 	                        onTouchStart={handleContentSwipeStart}
 	                        onTouchMove={handleContentSwipeMove}
@@ -1239,10 +1239,20 @@ export function RestaurantDetailPanel({
 
                 {/* 하단 액션 (네이버/카카오/구글 지도 선택) */}
                 {viewMode === 'detail' && (
-                    <div className="border-t border-border">
+                    <div
+                        className={cn(
+                            "border-t border-border shrink-0",
+                            isDirectionSheetOpen && isMobile && "max-h-[calc(100%-80px)] overflow-y-auto overscroll-contain"
+                        )}
+                    >
                         {/* Direction Options - 확장 시 표시 */}
                         {isDirectionSheetOpen && (
-                            <div className="p-4 border-b border-border bg-muted/30 space-y-2 animate-in slide-in-from-bottom-2 duration-200">
+                            <div
+                                className={cn(
+                                    "border-b border-border bg-muted/30 space-y-2 animate-in slide-in-from-bottom-2 duration-200",
+                                    isMobile ? "p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" : "p-4"
+                                )}
+                            >
                                 <div className="flex items-center justify-between mb-3">
                                     <div>
                                         <h4 className="text-sm font-semibold">길찾기 앱 선택</h4>
@@ -1261,7 +1271,10 @@ export function RestaurantDetailPanel({
                                 {/* 네이버 지도 - 추천 */}
                                 <Button
                                     onClick={handleNaverMap}
-                                    className="w-full min-h-[64px] h-auto bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white shadow-sm"
+                                    className={cn(
+                                        "w-full h-auto bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white shadow-sm",
+                                        isMobile ? "min-h-[56px]" : "min-h-[64px]"
+                                    )}
                                 >
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
@@ -1281,7 +1294,10 @@ export function RestaurantDetailPanel({
                                 <Button
                                     onClick={handleKakaoMap}
                                     variant="outline"
-                                    className="w-full min-h-[64px] h-auto border-2 hover:bg-yellow-50 hover:border-yellow-400"
+                                    className={cn(
+                                        "w-full h-auto border-2 hover:bg-yellow-50 hover:border-yellow-400",
+                                        isMobile ? "min-h-[56px]" : "min-h-[64px]"
+                                    )}
                                 >
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <div className="w-9 h-9 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -1298,7 +1314,10 @@ export function RestaurantDetailPanel({
                                 <Button
                                     onClick={handleGoogleMap}
                                     variant="outline"
-                                    className="w-full min-h-[64px] h-auto border-2 hover:bg-blue-50 hover:border-blue-400"
+                                    className={cn(
+                                        "w-full h-auto border-2 hover:bg-blue-50 hover:border-blue-400",
+                                        isMobile ? "min-h-[56px]" : "min-h-[64px]"
+                                    )}
                                 >
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -1314,37 +1333,39 @@ export function RestaurantDetailPanel({
                         )}
 
                         {/* Main Action Buttons */}
-                        <div className="p-4">
-                            <div className="grid gap-2" style={{ gridTemplateColumns: '2fr 3fr 2fr' }}>
-                                <Button
-                                    onClick={handleRequestEditRestaurant}
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex flex-col gap-1 h-auto py-3 px-2"
-                                >
-                                    <Edit className="h-4 w-4" />
-                                    <span className="text-xs">수정 요청</span>
-                                </Button>
+                        {(!isDirectionSheetOpen || !isMobile) && (
+                            <div className={cn("p-4", isDirectionSheetOpen && isMobile && "pt-2")}>
+                                <div className="grid gap-2" style={{ gridTemplateColumns: '2fr 3fr 2fr' }}>
+                                    <Button
+                                        onClick={handleRequestEditRestaurant}
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex flex-col gap-1 h-auto py-3 px-2"
+                                    >
+                                        <Edit className="h-4 w-4" />
+                                        <span className="text-xs">수정 요청</span>
+                                    </Button>
 
-                                <Button
-                                    onClick={handleGetDirections}
-                                    className="flex flex-col gap-1 h-auto py-3 px-2 bg-gradient-primary hover:opacity-90"
-                                >
-                                    <Navigation className="h-4 w-4" />
-                                    <span className="text-xs font-medium">길찾기</span>
-                                </Button>
+                                    <Button
+                                        onClick={handleGetDirections}
+                                        className="flex flex-col gap-1 h-auto py-3 px-2 bg-gradient-primary hover:opacity-90"
+                                    >
+                                        <Navigation className="h-4 w-4" />
+                                        <span className="text-xs font-medium">길찾기</span>
+                                    </Button>
 
-                                <Button
-                                    onClick={handleWriteReview}
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex flex-col gap-1 h-auto py-3 px-2"
-                                >
-                                    <MessageSquare className="h-4 w-4" />
-                                    <span className="text-xs">리뷰 작성</span>
-                                </Button>
+                                    <Button
+                                        onClick={handleWriteReview}
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex flex-col gap-1 h-auto py-3 px-2"
+                                    >
+                                        <MessageSquare className="h-4 w-4" />
+                                        <span className="text-xs">리뷰 작성</span>
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 

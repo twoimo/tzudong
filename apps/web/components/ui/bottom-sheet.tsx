@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef, memo } from 'react';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/useDeviceType';
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
 
@@ -15,7 +13,6 @@ interface BottomSheetProps {
     minHeight?: number;    // Percent
     maxHeight?: number;    // Percent
     showHandle?: boolean;
-    showCloseButton?: boolean;
     className?: string;
     closeThreshold?: number; // Percent
     disableContentScroll?: boolean;
@@ -90,7 +87,6 @@ function BottomSheetComponent({
     minHeight = 50,
     maxHeight = 100,
     showHandle = true,
-    showCloseButton = true,
     className,
     closeThreshold = 15,
     disableContentScroll = false,
@@ -129,11 +125,14 @@ function BottomSheetComponent({
     const dragEndTimeRef = useRef(0);
     const velocityRef = useRef(0);
     const sheetRef = useRef<HTMLDivElement>(null);
-    const handleRef = useRef<HTMLButtonElement>(null);
+    const handleRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
+    const lockedContentScrollTargetRef = useRef<HTMLElement | null>(null);
+    const lockedContentScrollTargetOverflowRef = useRef<string | null>(null);
+    const lockedContentRootOverflowRef = useRef<string | null>(null);
     const contentStartBoundaryRef = useRef<'top' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
     const handleTouchStartXRef = useRef(0);
@@ -242,12 +241,55 @@ function BottomSheetComponent({
         setSheetHeight(nextHeightSafe);
     }, [getCurrentMaxHeight, minHeight, syncMobileLayout]);
 
+    const unlockContentScrollDuringDrag = useCallback(() => {
+        const lockedTarget = lockedContentScrollTargetRef.current;
+        if (lockedTarget) {
+            lockedTarget.style.overflowY = lockedContentScrollTargetOverflowRef.current ?? '';
+        }
+
+        const content = contentRef.current;
+        if (content) {
+            content.style.overflowY = lockedContentRootOverflowRef.current ?? '';
+        }
+
+        lockedContentScrollTargetRef.current = null;
+        lockedContentScrollTargetOverflowRef.current = null;
+        lockedContentRootOverflowRef.current = null;
+    }, []);
+
+    const lockContentScrollDuringDrag = useCallback((preferredTarget?: HTMLElement | null) => {
+        const content = contentRef.current;
+        if (!content) return;
+
+        if (lockedContentRootOverflowRef.current === null) {
+            lockedContentRootOverflowRef.current = content.style.overflowY;
+        }
+        content.style.overflowY = 'hidden';
+
+        const target = preferredTarget ?? contentScrollTargetRef.current;
+        if (!target) return;
+
+        if (lockedContentScrollTargetRef.current && lockedContentScrollTargetRef.current !== target) {
+            lockedContentScrollTargetRef.current.style.overflowY = lockedContentScrollTargetOverflowRef.current ?? '';
+            lockedContentScrollTargetRef.current = null;
+            lockedContentScrollTargetOverflowRef.current = null;
+        }
+
+        if (!lockedContentScrollTargetRef.current) {
+            lockedContentScrollTargetRef.current = target;
+            lockedContentScrollTargetOverflowRef.current = target.style.overflowY;
+        }
+
+        target.style.overflowY = 'hidden';
+    }, []);
+
     const resetSheetInteractionState = useCallback(() => {
         isDraggingRef.current = false;
         setIsDragging(false);
         isContentDraggingSheetRef.current = false;
         velocityRef.current = 0;
-    }, []);
+        unlockContentScrollDuringDrag();
+    }, [unlockContentScrollDuringDrag]);
 
     const canContentDragFromTouch = useCallback((deltaY: number) => {
         const scrollArea = contentScrollTargetRef.current;
@@ -353,8 +395,9 @@ function BottomSheetComponent({
         if (sheetRef.current) {
             sheetRef.current.style.transitionDuration = '0ms';
         }
+        lockContentScrollDuringDrag();
         setIsDragging(true);
-    }, []);
+    }, [lockContentScrollDuringDrag]);
 
     // [PERFORMANCE] 드래그 중 공통 로직 - 즉시 반응 우선
     const handleDragMoveCore = useCallback((currentY: number) => {
@@ -385,6 +428,7 @@ function BottomSheetComponent({
     const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
         isDraggingRef.current = false;
         setIsDragging(false);
+        unlockContentScrollDuringDrag();
 
         const currentHeight = sheetHeightRef.current;
         const currentMaxHeight = getCurrentMaxHeight();
@@ -501,6 +545,7 @@ function BottomSheetComponent({
         percentToPx,
         pxToPercent,
         setSheetHeightSafe,
+        unlockContentScrollDuringDrag,
     ]);
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -542,6 +587,9 @@ function BottomSheetComponent({
             }
 
             handleDragStartCore(currentStartY);
+            if (!isFromHandle) {
+                lockContentScrollDuringDrag(contentScrollTargetRef.current);
+            }
             currentDirectionRef.current = 'vertical';
             if (!isFromHandle) {
                 isContentDraggingSheetRef.current = true;
@@ -557,6 +605,7 @@ function BottomSheetComponent({
         canContentDragFromTouch,
         handleDragMoveCore,
         handleDragStartCore,
+        lockContentScrollDuringDrag,
         onSwipeLeft,
         onSwipeRight,
     ]);
@@ -613,10 +662,12 @@ function BottomSheetComponent({
             contentScrollTargetRef.current = null;
             contentStartBoundaryRef.current = null;
         }
+        unlockContentScrollDuringDrag();
     }, [
         handleDragEnd,
         onSwipeLeft,
         onSwipeRight,
+        unlockContentScrollDuringDrag,
     ]);
 
     const handleSheetTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -636,6 +687,7 @@ function BottomSheetComponent({
         if (isFromHandle) {
             handleTouchStart(e);
             sheetTouchSourceRef.current = 'handle';
+            lockContentScrollDuringDrag();
             return;
         }
 
@@ -647,10 +699,20 @@ function BottomSheetComponent({
             ? scrollTarget.scrollTop
             : contentRef.current?.scrollTop ?? 0;
         const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
+        const currentMaxHeight = getCurrentMaxHeight();
+        const isAtFull = sheetHeightRef.current >= currentMaxHeight - SHEET_HALF_OPEN_TOLERANCE;
         contentStartBoundaryRef.current = isAtTop ? 'top' : null;
         sheetTouchSourceRef.current = 'content';
+        if (isAtTop && !isAtFull) {
+            lockContentScrollDuringDrag(scrollTarget);
+            return;
+        }
+        unlockContentScrollDuringDrag();
     }, [
+        getCurrentMaxHeight,
         handleTouchStart,
+        lockContentScrollDuringDrag,
+        unlockContentScrollDuringDrag,
     ]);
 
     const handleSheetTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -709,11 +771,30 @@ function BottomSheetComponent({
         if (!handle || !isOpen) return;
 
         const preventPullToRefresh = (e: TouchEvent) => {
-            e.preventDefault();
+            if (e.cancelable) {
+                e.preventDefault();
+            }
         };
 
         handle.addEventListener('touchmove', preventPullToRefresh, { passive: false });
         return () => handle.removeEventListener('touchmove', preventPullToRefresh);
+    }, [isOpen]);
+
+    // 콘텐츠 영역: 드래그 중 터치 스크롤 방지 (non-passive 리스너)
+    useEffect(() => {
+        const content = contentRef.current;
+        if (!content || !isOpen) return;
+
+        const preventContentScrollWhileDragging = (e: TouchEvent) => {
+            if (isDraggingRef.current || isContentDraggingSheetRef.current) {
+                if (e.cancelable) {
+                    e.preventDefault();
+                }
+            }
+        };
+
+        content.addEventListener('touchmove', preventContentScrollWhileDragging, { passive: false });
+        return () => content.removeEventListener('touchmove', preventContentScrollWhileDragging);
     }, [isOpen]);
 
     useEffect(() => {
@@ -743,7 +824,7 @@ function BottomSheetComponent({
         <>
             {/* 배경 오버레이 */}
             <div
-                className="fixed inset-0 z-50 bg-black/30 transition-opacity duration-200"
+                className="fixed inset-0 z-[94] bg-black/30 transition-opacity duration-200"
                 role="button"
                 tabIndex={0}
                 aria-label="바텀시트 닫기"
@@ -765,7 +846,7 @@ function BottomSheetComponent({
             <div
                 ref={sheetRef}
                 className={cn(
-                    'fixed bottom-0 left-0 right-0 z-50',
+                    'fixed bottom-0 left-0 right-0 z-[95]',
                     'bg-background shadow-xl',
                     isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                     'flex flex-col',
@@ -782,36 +863,24 @@ function BottomSheetComponent({
             >
                 {/* 핸들 바 */}
                 {showHandle && (
-                    <button
-                        type="button"
+                    <div
                         ref={handleRef}
+                        role="button"
+                        tabIndex={0}
                         className={cn(
-                            "flex-shrink-0 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none [-webkit-appearance:none] [background-clip:padding-box]",
+                            "flex-shrink-0 flex w-full justify-center py-1 bg-transparent cursor-grab active:cursor-grabbing select-none",
                             isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl'
                         )}
                         style={{
                             touchAction: 'none',
-                            WebkitAppearance: 'none',
                             WebkitTapHighlightColor: 'transparent',
-                            backgroundColor: 'hsl(var(--background))',
+                            backgroundColor: 'transparent',
                         }}
                         onMouseDown={handleMouseDown}
                         aria-label="바텀시트 높이 조절"
                     >
-                        <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
-                    </button>
-                )}
-
-                {/* 닫기 버튼 */}
-                {showCloseButton && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onClose}
-                        className="absolute right-2 top-2 z-30 h-8 w-8"
-                    >
-                        <X className="h-5 w-5" />
-                    </Button>
+                        <div className="w-8 h-1 bg-muted-foreground/40 rounded-full" />
+                    </div>
                 )}
 
                 {/* 콘텐츠 영역 */}
@@ -829,6 +898,7 @@ function BottomSheetComponent({
                                     ? (sheetHeight <= defaultHeight + SHEET_HALF_OPEN_TOLERANCE ? 'none' : 'pan-y')
                                     : (sheetHeight <= minHeight + SHEET_HALF_OPEN_TOLERANCE ? 'none' : 'pan-y')
                             ),
+                        overflowY: isDragging ? 'hidden' : undefined,
                         WebkitOverflowScrolling: 'touch',
                         paddingBottom: `calc(env(safe-area-inset-bottom) + ${bottomNavOffset}px)`
                     }}
