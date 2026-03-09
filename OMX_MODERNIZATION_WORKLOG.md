@@ -131,3 +131,17 @@
 - Team status rc: 0
 - Team status output: team=cycle-2-20260309t095858z-scan phase=team-exec workers: total=2 dead=0 non_reporting=0 tasks: total=5 pending=5 blocked=0 in_progress=0 completed=0 failed=0 monitor_perf_ms: total=115.51 list=16.27 workers=28.51 mailbox=8.91
 - Team counts: pending=5 in_progress=0 failed=0
+- Team await rc: 0
+- Team await output: {"team_name":"cycle-2-20260309t095858z-scan","status":"timeout","cursor":"","event":null}
+- Team status rc: 0
+- Team status output: team=cycle-2-20260309t095858z-scan phase=team-exec workers: total=2 dead=0 non_reporting=0 tasks: total=5 pending=5 blocked=0 in_progress=0 completed=0 failed=0 monitor_perf_ms: total=125.94 list=15.51 workers=32.47 mailbox=11.45
+- Team counts: pending=5 in_progress=0 failed=0
+- Team await rc: 0
+- Team await output: {"team_name":"cycle-2-20260309t095858z-scan","status":"timeout","cursor":"","event":null}
+- Team status rc: 0
+- Team status output: team=cycle-2-20260309t095858z-scan phase=team-exec workers: total=2 dead=0 non_reporting=0 tasks: total=5 pending=5 blocked=0 in_progress=0 completed=0 failed=0 monitor_perf_ms: total=1192.07 list=157.72 workers=193.66 mailbox=76.15
+- Team counts: pending=5 in_progress=0 failed=0
+- Team forced shutdown reason: pending owner has no heartbeat (worker-1:missing-heartbeat)
+- Team forced shutdown rc: 0
+- Team forced shutdown output: Team shutdown complete: cycle-2-20260309t095858z-scan
+- Team shutdown skipped: already forced during recovery

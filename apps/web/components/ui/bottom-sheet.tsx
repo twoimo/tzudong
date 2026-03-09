@@ -131,7 +131,6 @@ function BottomSheetComponent({
     const sheetRef = useRef<HTMLDivElement>(null);
     const handleRef = useRef<HTMLButtonElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
-    const rafIdRef = useRef<number>(0);
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
@@ -245,10 +244,6 @@ function BottomSheetComponent({
 
     const resetSheetInteractionState = useCallback(() => {
         isDraggingRef.current = false;
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = 0;
-        }
         setIsDragging(false);
         isContentDraggingSheetRef.current = false;
         velocityRef.current = 0;
@@ -355,10 +350,13 @@ function BottomSheetComponent({
             easing: SNAP_EASING_BASE,
         });
 
+        if (sheetRef.current) {
+            sheetRef.current.style.transitionDuration = '0ms';
+        }
         setIsDragging(true);
     }, []);
 
-    // [PERFORMANCE] 드래그 중 공통 로직 - RAF 기반 최적화
+    // [PERFORMANCE] 드래그 중 공통 로직 - 즉시 반응 우선
     const handleDragMoveCore = useCallback((currentY: number) => {
         if (!isDraggingRef.current) return;
 
@@ -372,21 +370,14 @@ function BottomSheetComponent({
         dragEndYRef.current = currentY;
         dragEndTimeRef.current = currentTime;
 
-        // [PERFORMANCE] 이전 RAF 취소
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-        }
+        const deltaY = startYRef.current - currentY;
+        const vh = viewportHeightRef.current;
+        const deltaPercent = (deltaY / vh) * 100;
+        const currentMaxHeight = getCurrentMaxHeight(vh);
 
-        rafIdRef.current = requestAnimationFrame(() => {
-            const deltaY = startYRef.current - currentY;
-            const vh = viewportHeightRef.current;
-            const deltaPercent = (deltaY / vh) * 100;
-            const currentMaxHeight = getCurrentMaxHeight(vh);
-
-            let newHeight = startHeightRef.current + deltaPercent;
-            newHeight = Math.max(minHeight, Math.min(currentMaxHeight, newHeight));
-            setSheetHeightSafe(newHeight, true);
-        });
+        let newHeight = startHeightRef.current + deltaPercent;
+        newHeight = Math.max(minHeight, Math.min(currentMaxHeight, newHeight));
+        setSheetHeightSafe(newHeight, true);
     }, [getCurrentMaxHeight, minHeight, setSheetHeightSafe]);
 
     // 터치 드래그 시작
@@ -394,11 +385,6 @@ function BottomSheetComponent({
     const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
         isDraggingRef.current = false;
         setIsDragging(false);
-
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = 0;
-        }
 
         const currentHeight = sheetHeightRef.current;
         const currentMaxHeight = getCurrentMaxHeight();
