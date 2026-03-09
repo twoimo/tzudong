@@ -72,8 +72,13 @@ const SNAP_TRANSITION_SMOOTH_MS = 295;
 const SNAP_EASING_BASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const SNAP_EASING_FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const SNAP_EASING_SMOOTH = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
-const HORIZONTAL_SWIPE_THRESHOLD = 24;
-const HORIZONTAL_SWIPE_INTENT_RATIO = 1.0;
+const HORIZONTAL_SWIPE_THRESHOLD = 10;
+const HORIZONTAL_SWIPE_INTENT_RATIO = 0.85;
+const VERTICAL_DRAG_INTENT_RATIO = 1.25;
+const HANDLE_VERTICAL_DRAG_THRESHOLD = 6;
+const CONTENT_VERTICAL_DRAG_THRESHOLD = 10;
+const FULL_HEIGHT_VERTICAL_DRAG_THRESHOLD = 22;
+const FULL_HEIGHT_VERTICAL_INTENT_RATIO = 1.8;
 
 /**
  * 드래그 가능한 바텀시트 컴포넌트
@@ -574,15 +579,33 @@ function BottomSheetComponent({
         const absDeltaX = Math.abs(deltaX);
 
         if (!currentDirectionRef.current) {
-            const isHorizontalSwipe = absDeltaX > absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO && absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD;
+            const isHorizontalSwipe =
+                absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD &&
+                absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO;
             if (isHorizontalSwipe && (onSwipeLeft || onSwipeRight)) {
                 currentDirectionRef.current = 'horizontal';
                 return;
             }
 
-            if (isFromHandle) {
-                if (absDeltaY <= 2) return;
-            } else if (!canContentDragFromTouch(deltaY)) {
+            const verticalThreshold = isFromHandle
+                ? HANDLE_VERTICAL_DRAG_THRESHOLD
+                : CONTENT_VERTICAL_DRAG_THRESHOLD;
+            const currentMaxHeight = getCurrentMaxHeight();
+            const isAtFull = sheetHeightRef.current >= currentMaxHeight - SHEET_HALF_OPEN_TOLERANCE;
+            const resolvedVerticalThreshold = !isFromHandle && isAtFull
+                ? Math.max(verticalThreshold, FULL_HEIGHT_VERTICAL_DRAG_THRESHOLD)
+                : verticalThreshold;
+            const resolvedVerticalIntentRatio = !isFromHandle && isAtFull
+                ? FULL_HEIGHT_VERTICAL_INTENT_RATIO
+                : VERTICAL_DRAG_INTENT_RATIO;
+            const hasVerticalIntent =
+                absDeltaY >= resolvedVerticalThreshold &&
+                absDeltaY >= absDeltaX * resolvedVerticalIntentRatio;
+            if (!hasVerticalIntent) {
+                return;
+            }
+
+            if (!isFromHandle && !canContentDragFromTouch(deltaY)) {
                 return;
             }
 
@@ -603,6 +626,7 @@ function BottomSheetComponent({
         handleDragMoveCore(currentY);
     }, [
         canContentDragFromTouch,
+        getCurrentMaxHeight,
         handleDragMoveCore,
         handleDragStartCore,
         lockContentScrollDuringDrag,
@@ -623,7 +647,9 @@ function BottomSheetComponent({
             const deltaY = currentTouch.clientY - currentStartY;
             const absDeltaX = Math.abs(deltaX);
             const absDeltaY = Math.abs(deltaY);
-            const isValidSwipe = absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO;
+            const isValidSwipe =
+                absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD &&
+                absDeltaX >= absDeltaY * HORIZONTAL_SWIPE_INTENT_RATIO;
 
             if (isValidSwipe) {
                 if (deltaX < 0) {
@@ -637,7 +663,9 @@ function BottomSheetComponent({
             const deltaY = currentTouch.clientY - currentStartY;
             const absDeltaX = Math.abs(deltaX);
             const absDeltaY = Math.abs(deltaY);
-            const isPossibleSwipe = absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * 0.9;
+            const isPossibleSwipe =
+                absDeltaX >= HORIZONTAL_SWIPE_THRESHOLD &&
+                absDeltaX >= absDeltaY * 0.8;
 
             if (isPossibleSwipe) {
                 if (deltaX < 0) {

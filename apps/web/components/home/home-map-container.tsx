@@ -51,8 +51,12 @@ const SWIPE_VELOCITY_THRESHOLD = 0.22;
 const SWIPE_VELOCITY_CLOSE_THRESHOLD = 0.26;
 const SWIPE_VELOCITY_OPEN_THRESHOLD = 0.24;
 const CONTENT_TOP_EPSILON = 2;
-const CONTENT_DRAG_START_THRESHOLD = 9;
-const CONTENT_VERTICAL_INTENT_RATIO = 1.0;
+const CONTENT_DRAG_START_THRESHOLD = 10;
+const CONTENT_HORIZONTAL_SWIPE_THRESHOLD = 10;
+const CONTENT_HORIZONTAL_INTENT_RATIO = 0.85;
+const CONTENT_VERTICAL_INTENT_RATIO = 1.3;
+const CONTENT_FULL_DRAG_START_THRESHOLD = 22;
+const CONTENT_FULL_VERTICAL_INTENT_RATIO = 1.8;
 const SHEET_HALF_OPEN_TOLERANCE = 1;
 const HALF_TO_FULL_DISTANCE_PX = 14;
 const FULL_TO_HALF_DISTANCE_PX = 18;
@@ -73,6 +77,12 @@ const SNAP_EASING_BASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const SNAP_EASING_FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const SNAP_EASING_SMOOTH = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 const SHEET_HEIGHT_CSS_VAR = '--home-sheet-height-px';
+const KOREA_BOUNDS = {
+    minLat: 33,
+    maxLat: 39,
+    minLng: 124,
+    maxLng: 132,
+} as const;
 const OVERSEAS_KEYWORDS = Object.values(OVERSEAS_REGIONS).flatMap(config =>
     config.keywords.map((keyword) => keyword.toLowerCase())
 );
@@ -195,6 +205,21 @@ function HomeMapContainerComponent({
         return `${restaurant.road_address || ''} ${restaurant.jibun_address || ''} ${restaurant.english_address || ''}`.toLowerCase();
     }, []);
 
+    const isOverseasByCoordinate = useCallback((restaurant: Restaurant) => {
+        const lat = Number(restaurant.lat);
+        const lng = Number(restaurant.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return false;
+        }
+
+        return (
+            lat < KOREA_BOUNDS.minLat ||
+            lat > KOREA_BOUNDS.maxLat ||
+            lng < KOREA_BOUNDS.minLng ||
+            lng > KOREA_BOUNDS.maxLng
+        );
+    }, []);
+
     const getSelectedCountryKeywords = useMemo(() => {
         if (!selectedCountry || !(selectedCountry in OVERSEAS_REGIONS)) {
             return null;
@@ -210,18 +235,20 @@ function HomeMapContainerComponent({
 
         return restaurants.filter((restaurant) => {
             const addressText = getRestaurantAddressText(restaurant);
+            const hasOverseasKeyword = OVERSEAS_KEYWORDS.some((keyword) => addressText.includes(keyword));
+            const isOverseasCoord = isOverseasByCoordinate(restaurant);
 
             if (mapMode === 'domestic') {
-                return !OVERSEAS_KEYWORDS.some((keyword) => addressText.includes(keyword));
+                return !hasOverseasKeyword && !isOverseasCoord;
             }
 
             if (getSelectedCountryKeywords?.length) {
                 return getSelectedCountryKeywords.some((keyword) => addressText.includes(keyword));
             }
 
-            return OVERSEAS_KEYWORDS.some((keyword) => addressText.includes(keyword));
+            return hasOverseasKeyword || isOverseasCoord;
         });
-    }, [getRestaurantAddressText, mapMode, getSelectedCountryKeywords]);
+    }, [getRestaurantAddressText, getSelectedCountryKeywords, isOverseasByCoordinate, mapMode]);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return ((vh - HEADER_OFFSET) / vh) * 100;
@@ -454,7 +481,9 @@ function HomeMapContainerComponent({
         const isFirstOpen = !wasPanelOpenRef.current;
         const shouldResetContentScroll = isFirstOpen || isNewRestaurant;
 
-        if (isFirstOpen || isNewRestaurant) {
+        // 중요: 바텀시트가 이미 열린 상태에서 맛집만 바뀌는 경우(예: 좌우 스와이프),
+        // 현재 높이를 유지해야 하므로 최초 오픈일 때만 50%로 초기화한다.
+        if (isFirstOpen) {
             setSheetHeightSafe(Math.min(HALF_SHEET_HEIGHT, getCurrentMaxHeight()));
         }
         contentScrollResetNeededRef.current = shouldResetContentScroll;
@@ -723,15 +752,27 @@ function HomeMapContainerComponent({
         const deltaX = currentX - contentTouchStartXRef.current;
         const absDeltaY = Math.abs(deltaY);
         const absDeltaX = Math.abs(deltaX);
+        const currentMaxHeight = getCurrentMaxHeight();
+        const isAtFull = sheetHeightRef.current >= currentMaxHeight - SHEET_HALF_OPEN_TOLERANCE;
+        const verticalDragStartThreshold = isAtFull
+            ? CONTENT_FULL_DRAG_START_THRESHOLD
+            : CONTENT_DRAG_START_THRESHOLD;
+        const verticalIntentRatio = isAtFull
+            ? CONTENT_FULL_VERTICAL_INTENT_RATIO
+            : CONTENT_VERTICAL_INTENT_RATIO;
 
         if (!contentSwipeDirectionRef.current) {
-            if (absDeltaX >= 24 && absDeltaX >= absDeltaY * 1.0) {
+            const isHorizontalIntent =
+                absDeltaX >= CONTENT_HORIZONTAL_SWIPE_THRESHOLD &&
+                absDeltaX >= absDeltaY * CONTENT_HORIZONTAL_INTENT_RATIO;
+            if (isHorizontalIntent) {
                 contentSwipeDirectionRef.current = 'horizontal';
+                unlockContentScrollDuringDrag();
                 return;
             }
 
-            if (absDeltaY < CONTENT_DRAG_START_THRESHOLD) return;
-            if (absDeltaY < absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
+            if (absDeltaY < verticalDragStartThreshold) return;
+            if (absDeltaY < absDeltaX * verticalIntentRatio) return;
             if (!canContentDragFromTouch(deltaY)) return;
 
             startSheetDrag(contentTouchStartYRef.current);
@@ -744,7 +785,15 @@ function HomeMapContainerComponent({
 
         e.stopPropagation();
         handleDragMoveCore(currentY);
-    }, [canContentDragFromTouch, getDetailScrollArea, handleDragMoveCore, lockContentScrollDuringDrag, startSheetDrag]);
+    }, [
+        canContentDragFromTouch,
+        getDetailScrollArea,
+        handleDragMoveCore,
+        lockContentScrollDuringDrag,
+        startSheetDrag,
+        unlockContentScrollDuringDrag,
+        getCurrentMaxHeight,
+    ]);
 
     const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         if (!isContentDraggingSheetRef.current || contentSwipeDirectionRef.current !== 'vertical') {
@@ -848,22 +897,23 @@ function HomeMapContainerComponent({
     }, []);
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
-        if (activeSwipeableRestaurants.length <= 1) return;
+        const modeScopedRestaurants = getRestaurantListByMode(activeSwipeableRestaurants);
+        if (modeScopedRestaurants.length <= 1) return;
 
         const currentRestaurant = panelRestaurant || selectedRestaurant;
         if (!currentRestaurant) return;
 
-        const currentIndex = activeSwipeableRestaurants.findIndex((restaurant) =>
+        const currentIndex = modeScopedRestaurants.findIndex((restaurant) =>
             isSameRestaurantForSwipe(restaurant, currentRestaurant)
         );
         if (currentIndex < 0) return;
 
         const nextIndex = currentIndex + step;
-        const nextRestaurant = activeSwipeableRestaurants[nextIndex];
+        const nextRestaurant = modeScopedRestaurants[nextIndex];
         if (!nextRestaurant) return;
 
         onRestaurantSelect(nextRestaurant);
-    }, [onRestaurantSelect, panelRestaurant, selectedRestaurant, activeSwipeableRestaurants]);
+    }, [activeSwipeableRestaurants, getRestaurantListByMode, onRestaurantSelect, panelRestaurant, selectedRestaurant]);
 
     useEffect(() => {
         if (onSwipeableRestaurantsChange) {
