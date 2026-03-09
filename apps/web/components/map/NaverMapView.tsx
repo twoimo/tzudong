@@ -85,6 +85,7 @@ interface NaverMapLike {
 const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
 const ZOOM_DIFF_THRESHOLD = 4; // 즉시 로드할 줌 차이 임계값
 const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
+const MOBILE_MARKER_CENTER_FINE_TUNE_PX = -6; // 선택 마커 translateY(-5px) 시각 보정
 
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
@@ -136,6 +137,7 @@ interface NaverMapViewProps {
     externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
     isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
     isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
+    mobileSheetHeightPercent?: number; // 모바일 바텀시트 높이(%) - 마커 Y축 중앙 보정
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
 }
 
@@ -369,6 +371,7 @@ const NaverMapView = memo(({
     externalPanelOpen,
     isPanelCollapsed = false,
     isPanelOpen: propIsPanelOpen,
+    mobileSheetHeightPercent = 0,
     onVisibleRestaurantsChange,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
@@ -686,6 +689,23 @@ const NaverMapView = memo(({
         return panelWidth;
     }, [isMobileOrTablet, onMarkerClick, internalPanelOpen, isGridMode, isPanelCollapsed, propIsPanelOpen, externalPanelOpen, panelWidth]);
 
+    const getMobileVerticalOffset = useCallback(() => {
+        if (!isMobileOrTablet) return 0;
+
+        const navHeight = parseFloat(
+            getComputedStyle(document.documentElement)
+                .getPropertyValue('--mobile-bottom-nav-effective-height')
+        ) || 60;
+
+        const vh = window.visualViewport?.height ?? window.innerHeight;
+        const clampedSheetHeightPercent = Math.max(0, Math.min(100, mobileSheetHeightPercent));
+        const sheetHeightPx = (clampedSheetHeightPercent / 100) * vh;
+
+        // 마커를 남은 가시 영역의 중앙으로 올리려면,
+        // 지도 중심은 바텀시트/하단네비 총 높이의 절반만큼 '아래(+)로' 이동해야 함
+        return (sheetHeightPx / 2) + (navHeight / 2) + MOBILE_MARKER_CENTER_FINE_TUNE_PX;
+    }, [isMobileOrTablet, mobileSheetHeightPercent]);
+
     // [Helper] 패널 오프셋을 고려한 morph (클러스터 클릭 시 사용)
     // 우측 패널이 열려있을 때 클러스터 중심이 "보이는 영역"의 중앙에 위치하도록 조정
     const morphWithPanelOffset = useCallback((
@@ -788,11 +808,6 @@ const NaverMapView = memo(({
             targetLat = selectedRestaurant.lat;
             targetLng = selectedRestaurant.lng;
 
-            if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
-                // URL에 좌표가 있으면 현재 상태 유지 (이동하지 않음)
-                return;
-            }
-
             // [New] 줌 레벨 강제 (북마크 등에서 넘어온 경우)
             if (mapFocusZoom) {
                 targetZoom = mapFocusZoom;
@@ -832,15 +847,7 @@ const NaverMapView = memo(({
         // 지도 중심을 위로 이동시켜야 합니다. (양수 = 위로 이동)
         let targetOffsetY = 0;
         if (isMobileOrTablet) {
-            // CSS 변수에서 하단 네비게이션 높이 읽기
-            const navHeight = parseFloat(
-                getComputedStyle(document.documentElement)
-                    .getPropertyValue('--mobile-bottom-nav-effective-height')
-            ) || 60; // 기본값 60px
-
-            // 하단 네비게이션 높이의 절반만큼 위로 이동
-            // 음수로 설정하여 지도 중심이 위로 이동 (화면 하단의 네비게이션을 피함)
-            targetOffsetY = -navHeight / 2;
+            targetOffsetY = getMobileVerticalOffset();
         }
 
         // **핵심 로직 변경**
@@ -993,9 +1000,11 @@ const NaverMapView = memo(({
         onMarkerClick,
         isSidebarOpen, // 사이드바 토글 시에도 중심 재조정 로직 실행
         getDeviceAdjustedZoom,
+        getMobileVerticalOffset,
         getViewportOffset,
         isMobileOrTablet,
-        mapFocusZoom
+        mapFocusZoom,
+        mobileSheetHeightPercent,
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
@@ -1095,11 +1104,7 @@ const NaverMapView = memo(({
             // [모바일/태블릿] Y축 오프셋 계산 (ResizeObserver에서도 동일하게 적용)
             let targetOffsetY = 0;
             if (isMobileOrTablet) {
-                const navHeight = parseFloat(
-                    getComputedStyle(document.documentElement)
-                        .getPropertyValue('--mobile-bottom-nav-effective-height')
-                ) || 60;
-                targetOffsetY = -navHeight / 2;
+                targetOffsetY = getMobileVerticalOffset();
             }
 
             // [Helper 사용] 현재 줌 레벨 유지
@@ -1136,7 +1141,7 @@ const NaverMapView = memo(({
                 clearTimeout(resizeDebounceTimer);
             }
         };
-    }, [isMapInitialized, selectedRestaurant, selectedRegion, isMobileOrTablet]);
+    }, [getMobileVerticalOffset, isMapInitialized, isMobileOrTablet, selectedRestaurant, selectedRegion]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동 (디바운스 적용)

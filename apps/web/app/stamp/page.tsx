@@ -1216,7 +1216,6 @@ export default function StampPage() {
                     progressiveHeaderHide={true}
                     layoutSource="stamp-bottom-sheet"
                     disableContentScroll={true} // 내부 패널 스크롤 사용
-                    showCloseButton={true}
                     className="p-0"
                 >
                     <RestaurantDetailPanel
