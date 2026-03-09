@@ -7,8 +7,6 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
 
@@ -1037,8 +1035,13 @@ function HomeMapContainerComponent({
                                         <button
                                             type="button"
                                             ref={handleRef}
-                                            className="sticky top-0 z-20 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none"
-                                            style={{ touchAction: 'none' }}
+                                            className="sticky top-0 z-20 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none [-webkit-appearance:none] [background-clip:padding-box]"
+                                            style={{
+                                                touchAction: 'none',
+                                                WebkitAppearance: 'none',
+                                                WebkitTapHighlightColor: 'transparent',
+                                                backgroundColor: 'hsl(var(--background))',
+                                            }}
                                             onTouchStart={handleTouchStart}
                                             onTouchMove={handleTouchMove}
                                             onTouchEnd={() => handleDragEnd()}
@@ -1048,14 +1051,6 @@ function HomeMapContainerComponent({
                                         >
                                             <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
                                         </button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={onPanelClose}
-                                            className="absolute right-2 top-2 z-30"
-                                        >
-                                            <X className="h-5 w-5" />
-                                        </Button>
                                     </>
                                 )}
 
