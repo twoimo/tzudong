@@ -1,14 +1,13 @@
 ## 개요
-- 모바일 드래그/리사이저블 컴포넌트 터치 최적화
-- Next.js 캐시 클린업 스크립트 오작동 메시지 로깅 최적화 및 중복 발생 방지
+- 모바일 바텀 시트 및 패널 드래그 성능 튜닝 패치 롤백 및 누락된 UI 컴포넌트 복구
 
 ## 변경 내용
-- `apps/web/components/home/home-map-container.tsx` 및 `apps/web/components/ui/bottom-sheet.tsx`의 내부 드래그 컨트롤 UI에 `WebkitAppearance: 'none'`, `WebkitTapHighlightColor: 'transparent'`와 같은 모바일 사파리 특화 Webkit 스타일 추가 및 X 버튼 제거/수정
-- `apps/web/scripts/clean-next.mjs`에서 `.next-stale-*` 캐시 삭제 시 발생하는 EBUSY, EPERM 등의 락 관련 에러에 대해 `verbose` 옵션 도입 및 중복 린트/에러 로깅 누락 현상 수정
+- `apps/web/components/home/home-map-container.tsx`, `apps/web/components/ui/bottom-sheet.tsx`: 
+  - 드래그 터치 반응 속도를 늦추던 `requestAnimationFrame` (RAF) 기반 성능 최적화 로직을 제거하고 즉각적인 상태 렌더링 방식으로 롤백하여 모바일 반응성(직관성) 개선
+  - 이전 커밋에서 누락되었던 우측 상단 닫기 엑스(`X`) 버튼 컴포넌트 UI 원상 복구
 
 ## 테스트
-- iOS/Android 모바일 터치 이벤트 오동작 검수
-- 윈도우/맥OS `npm run build` 스크립트 실행 후 `clear-next` 구동 및 무시 메시지 정상 동작 확인
+- 로컬 모바일 개발 환경(iOS/Android 에뮬레이터) 터치 스와이프 및 드래그 반응 즉각 동작 확인
 
 ## 관련 이슈
 - (없음)

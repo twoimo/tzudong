@@ -7,6 +7,8 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
 
@@ -159,7 +161,6 @@ function HomeMapContainerComponent({
     const detailScrollAreaRef = useRef<HTMLElement | null>(null);
     const sheetHeightRef = useRef(INITIAL_HEIGHT);
     const sheetHeightPxRef = useRef(0);
-    const rafIdRef = useRef<number>(0);
     const dragStartTimeRef = useRef(0);
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
@@ -338,10 +339,6 @@ function HomeMapContainerComponent({
 
     const resetSheetInteractionState = useCallback(() => {
         isDraggingRef.current = false;
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = 0;
-        }
         setIsDragging(false);
         isContentDraggingSheetRef.current = false;
         contentSwipeDirectionRef.current = null;
@@ -482,6 +479,9 @@ function HomeMapContainerComponent({
             easing: SNAP_EASING_BASE,
         });
 
+        if (sheetContainerRef.current) {
+            sheetContainerRef.current.style.transitionDuration = '0ms';
+        }
         setIsDragging(true);
     }, []);
 
@@ -502,11 +502,6 @@ function HomeMapContainerComponent({
     const endSheetDrag = useCallback(() => {
         isDraggingRef.current = false;
         setIsDragging(false);
-
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-            rafIdRef.current = 0;
-        }
 
         const currentHeight = sheetHeightRef.current;
         const currentMaxHeight = getCurrentMaxHeight();
@@ -637,17 +632,11 @@ function HomeMapContainerComponent({
         dragEndYRef.current = currentY;
         dragEndTimeRef.current = currentTime;
 
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current);
-        }
-
-        rafIdRef.current = requestAnimationFrame(() => {
-            const deltaY = startYRef.current - currentY;
-            const vh = viewportHeightRef.current;
-            const deltaPercent = (deltaY / vh) * 100;
-            const newHeight = startHeightRef.current + deltaPercent;
-            setSheetHeightSafe(newHeight);
-        });
+        const deltaY = startYRef.current - currentY;
+        const vh = viewportHeightRef.current;
+        const deltaPercent = (deltaY / vh) * 100;
+        const newHeight = startHeightRef.current + deltaPercent;
+        setSheetHeightSafe(newHeight);
     }, [setSheetHeightSafe]);
 
     // 터치 드래그 중
@@ -1051,6 +1040,14 @@ function HomeMapContainerComponent({
                                         >
                                             <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
                                         </button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={onPanelClose}
+                                            className="absolute right-2 top-2 z-30"
+                                        >
+                                            <X className="h-5 w-5" />
+                                        </Button>
                                     </>
                                 )}
 
