@@ -800,10 +800,15 @@ function BottomSheetComponent({
                         type="button"
                         ref={handleRef}
                         className={cn(
-                            "flex-shrink-0 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none",
+                            "flex-shrink-0 flex w-full justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none border-0 appearance-none [-webkit-appearance:none] [background-clip:padding-box]",
                             isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl'
                         )}
-                        style={{ touchAction: 'none' }}
+                        style={{
+                            touchAction: 'none',
+                            WebkitAppearance: 'none',
+                            WebkitTapHighlightColor: 'transparent',
+                            backgroundColor: 'hsl(var(--background))',
+                        }}
                         onMouseDown={handleMouseDown}
                         aria-label="바텀시트 높이 조절"
                     >
