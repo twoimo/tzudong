@@ -1,17 +1,13 @@
 ## 개요
-- 모바일 바텀 시트 및 상세 패널 터치 인터랙션 대대적 개편 및 iOS 버스 스크롤 현상 대응
+- 바텀 시트 및 패널 스와이프 민감도 튜닝 및 `useCallback` 의존성 최적화
 
 ## 변경 내용
-- `apps/web/components/home/home-map-container.tsx` 및 `apps/web/components/ui/bottom-sheet.tsx`: 
-  - 불필요한 `button` 태그 대신 일반 `div` 핸들러로 스와이프 이벤트를 교체하여 iOS Safari에서 발생하는 브라우저 고유 Webkit 터치 하이라이트/더블 탭 클릭 방지
-  - 드래그 동작 중 스크롤 영역에 `overflowY: 'hidden'` 스타일을 동적 부여하여, 컴포넌트 내부 스크롤 이벤트가 부모(바텀 시트)의 드래그를 간섭하는 버그 수정
-- `apps/web/app/stamp/page.tsx`: 스탬프 투어 페이지 맵 컨테이너 마진 및 `BottomSheetComponent` 파라미터 미세 조정 
-- `apps/web/components/map/NaverMapView.tsx`: 클러스터링 모드 해제 시 마커 애니메이션 성능 오버헤드 개선
-- `OMX_MODERNIZATION_WORKLOG.md` 갱신
+- `apps/web/components/ui/bottom-sheet.tsx` 및 `apps/web/components/restaurant/RestaurantDetailPanel.tsx`: 모바일 체감 향상을 위해 좌우 수평(Horizontal) 스와이프 및 상하 수직(Vertical) 스와이프 발생 민감도(Threshold) 및 각도 비율(Intent Ratio) 미세 조정
+- `apps/web/components/home/home-map-container.tsx`: 음식점 좌우 스와이프 이동 시 현재 지도 탐색 모드(지역/서울 구 단위 등)에 맞는 대상 필터링 로직 안정화를 위해 `getRestaurantListByMode` 함수 `useCallback` 의존성 반영
 
 ## 테스트
-- iOS/Android 환경 터치 스와이프 브라우저 간섭 여부 크로스 브라우징 확인
-- 로컬 환경 컴파일 에러 없음 점검 완료
+- 로컬 모바일 개발 환경(iOS/Android 에뮬레이터) 터치 스와이프 감도 개선 확인
+- 린트(`lint` / `type-check`) 에러 발생 여부 확인
 
 ## 관련 이슈
 - (없음)

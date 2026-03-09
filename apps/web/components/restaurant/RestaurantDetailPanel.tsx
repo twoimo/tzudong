@@ -364,8 +364,8 @@ export function RestaurantDetailPanel({
         }
     }, []);
 
-    const RESTAURANT_DETAIL_SWIPE_THRESHOLD = 12;
-    const RESTAURANT_DETAIL_SWIPE_INTENT_RATIO = 1.0;
+    const RESTAURANT_DETAIL_SWIPE_THRESHOLD = 10;
+    const RESTAURANT_DETAIL_SWIPE_INTENT_RATIO = 0.85;
 
     const contentSwipeStartXRef = useRef(0);
     const contentSwipeStartYRef = useRef(0);
@@ -429,7 +429,9 @@ export function RestaurantDetailPanel({
         const absDeltaY = Math.abs(deltaY);
 
         if (!contentSwipeDirectionRef.current) {
-            const isHorizontalSwipe = absDeltaX > absDeltaY * RESTAURANT_DETAIL_SWIPE_INTENT_RATIO && absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD;
+            const isHorizontalSwipe =
+                absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD &&
+                absDeltaX >= absDeltaY * RESTAURANT_DETAIL_SWIPE_INTENT_RATIO;
             if (isHorizontalSwipe && (onSwipeLeft || onSwipeRight)) {
                 contentSwipeDirectionRef.current = 'horizontal';
                 e.stopPropagation();
@@ -462,8 +464,12 @@ export function RestaurantDetailPanel({
         const absDeltaY = Math.abs(deltaY);
         const direction = contentSwipeDirectionRef.current;
 
-        const isValidSwipe = absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * RESTAURANT_DETAIL_SWIPE_INTENT_RATIO;
-        const isPossibleSwipe = absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD && absDeltaX > absDeltaY * 0.9;
+        const isValidSwipe =
+            absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD &&
+            absDeltaX >= absDeltaY * RESTAURANT_DETAIL_SWIPE_INTENT_RATIO;
+        const isPossibleSwipe =
+            absDeltaX >= RESTAURANT_DETAIL_SWIPE_THRESHOLD &&
+            absDeltaX >= absDeltaY * 0.8;
 
         if (direction === 'horizontal' || direction === null) {
             if (isValidSwipe || isPossibleSwipe) {
