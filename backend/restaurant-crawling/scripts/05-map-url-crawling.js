@@ -1,6 +1,6 @@
 /**
  * 05-map-url-crawling.js
- * description 기반 지도 URL 채널용 음식점 정보 수집 (기본: 정육왕 meatcreator)
+ * 정육왕 채널용 지도 기반 음식점 정보 수집
  * 
  * 기능:
  * 1. 영상 설명에서 네이버/카카오/구글 지도 URL 추출
@@ -11,7 +11,6 @@
  * 
  * 사용법:
  *   node 05-map-url-crawling.js --channel meatcreator
- *   node 05-map-url-crawling.js --channel <slug>  # channels.yaml의 map_url_crawling/description_source 설정 사용
  */
 
 import fs from 'fs';
@@ -24,7 +23,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const CHANNELS_CONFIG_NAME = process.env.CHANNELS_CONFIG || 'channels.yaml';
 
 // .env 로드
 const envPath = path.resolve(__dirname, '../.env');
@@ -47,21 +45,9 @@ function log(level, msg) {
 
 // config 로드
 function loadChannelsConfig() {
-    const configPath = path.resolve(__dirname, `../../config/${CHANNELS_CONFIG_NAME}`);
+    const configPath = path.resolve(__dirname, '../../config/channels.yaml');
     if (!fs.existsSync(configPath)) throw new Error(`설정 파일 없음: ${configPath}`);
     return yaml.load(fs.readFileSync(configPath, 'utf-8'));
-}
-
-function shouldUseDescriptionMapCrawling(channelName, channelConfig) {
-    if (!channelConfig || typeof channelConfig !== 'object') return false;
-
-    if (channelConfig.map_url_crawling === true) return true;
-
-    const descriptionSource = String(channelConfig.description_source || '').toLowerCase();
-    if (descriptionSource === 'map_url' || descriptionSource === 'description_map') return true;
-
-    // Backward-compatible default: 정육왕(meatcreator)는 description 지도 URL 경로를 사용한다.
-    return channelName === 'meatcreator';
 }
 
 // 텍스트 정제 (제어 문자 제거, 네이버 접미사 제거)
@@ -827,18 +813,17 @@ async function main() {
         }
     }
 
-    const config = loadChannelsConfig();
-    const configuredChannels = Object.keys(config.channels || {});
-    let channels = targetChannel ? [targetChannel] : configuredChannels;
+    // 정육왕(meatcreator)만 처리
+    const ALLOWED_CHANNELS = ['meatcreator'];
 
-    // description 기반 map-url 크롤링을 사용하는 채널만 실행
-    channels = channels.filter((channelName) => {
-        const channelConfig = config.channels?.[channelName];
-        return shouldUseDescriptionMapCrawling(channelName, channelConfig);
-    });
+    const config = loadChannelsConfig();
+    let channels = targetChannel ? [targetChannel] : ALLOWED_CHANNELS;
+
+    // 허용된 채널만 필터링
+    channels = channels.filter(ch => ALLOWED_CHANNELS.includes(ch));
 
     if (channels.length === 0) {
-        log('warning', `처리할 채널 없음 (description map-url 경로 활성 채널 기준, CHANNELS_CONFIG=${CHANNELS_CONFIG_NAME})`);
+        log('warning', '처리할 채널 없음 (이 스크립트는 정육왕 전용)');
         return;
     }
 
