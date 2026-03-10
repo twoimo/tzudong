@@ -1,7 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2, GitBranch } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
 import {
@@ -785,10 +785,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <DropdownMenuItem onClick={() => router.push('/admin/costs')} className="text-foreground hover:bg-accent py-1.5">
                     <DollarSign className="mr-2 h-4 w-4" />
                     서버비용
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/admin/workflows')} className="text-foreground hover:bg-accent py-1.5">
-                    <GitBranch className="mr-2 h-4 w-4" />
-                    워크플로
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
                     <BarChart2 className="mr-2 h-4 w-4" />

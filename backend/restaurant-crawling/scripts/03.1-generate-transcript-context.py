@@ -237,7 +237,6 @@ def process_video(
     video_id: str,
     transcript_data: dict,
     metadata: dict,
-    channel: str,
     model: str,
     base_url: str,
     prompt,
@@ -253,7 +252,7 @@ def process_video(
 
     full_transcript = "\n".join([str(seg.get("text", "") or "") for seg in transcript])
     title = metadata["title"]
-    channel_name = metadata.get("channel_name", channel)
+    channel_name = metadata.get("channel_name", "tzuyang")  # 기본값 tzuyang
     video_duration = metadata.get("duration")  # 영상 전체 길이 (초)
 
     # 자막 구간별 청크에서 새로운 청크 생성 (video_duration 전달)
@@ -278,7 +277,7 @@ def process_video(
         )
 
         # [후처리] LLM 생성 문맥에서 이름 오타 수정
-        if gen_context and channel == "tzuyang":
+        if gen_context:
             gen_context = gen_context.replace("쯔위", "쯔양")
             gen_context = re.sub(r"tzuyu", "tzuyang", gen_context, flags=re.IGNORECASE)
 
@@ -311,10 +310,7 @@ def process_video(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="YouTube 자막 문맥 생성 스크립트"
-    )
-    parser.add_argument(
-        "--channel", type=str, default="tzuyang", help="채널 슬러그 (예: tzuyang, meatcreator)"
+        description="YouTube 자막 문맥 생성 스크립트 (tzuyang 전용)"
     )
     parser.add_argument(
         "--model",
@@ -348,10 +344,11 @@ def main():
     if args.check_connection_only:
         return
 
-    youtuber = args.channel
+    # tzuyang 전용 (다른 유튜버는 이 스크립트 사용 불가)
+    YOUTUBER = "tzuyang"
 
     # 경로 설정
-    data_dir = SCRIPT_DIR / f"../data/{youtuber}"
+    data_dir = SCRIPT_DIR / f"../data/{YOUTUBER}"
     transcript_dir = data_dir / "transcript"
     meta_dir = data_dir / "meta"
     output_dir = data_dir / "transcript-document-with-context"
@@ -546,7 +543,6 @@ def main():
                 video_id=video_id,
                 transcript_data=transcript_data,
                 metadata=metadata,
-                channel=args.channel,
                 model=args.model,
                 base_url=ollama_host,
                 prompt=prompt,

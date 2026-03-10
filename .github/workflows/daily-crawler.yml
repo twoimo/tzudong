@@ -1,5 +1,4 @@
 name: Daily Data Collection
-run-name: Daily Crawler • ${{ github.event_name }} • ${{ inputs.channel_slug || 'tzuyang' }} • ${{ inputs.dispatch_uuid || github.run_id }}
 
 on:
   schedule:
@@ -7,26 +6,6 @@ on:
     - cron: '0 19 * * *'
   workflow_dispatch:
     inputs:
-      channel_url:
-        description: '대상 채널 URL (기본: tzuyang)'
-        required: false
-        default: 'https://www.youtube.com/@tzuyang6145'
-        type: string
-      channel_slug:
-        description: '채널 슬러그 (선택, 미입력 시 channel_url로 자동 해석)'
-        required: false
-        default: ''
-        type: string
-      dispatch_uuid:
-        description: '관리자 디스패치 상관관계 UUID (선택)'
-        required: false
-        default: ''
-        type: string
-      trigger_source:
-        description: '트리거 소스 (manual_admin/schedule)'
-        required: false
-        default: 'manual_admin'
-        type: string
       max_videos:
         description: '자막 문맥 생성 개수 설정 (0=Unlimited, -1=Skip)'
         required: false
@@ -81,74 +60,6 @@ jobs:
         with:
           ref: data
           fetch-depth: 1
-
-      - name: Resolve workflow dispatch inputs
-        id: resolve_inputs
-        shell: bash
-        env:
-          INPUT_CHANNEL_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.channel_url || 'https://www.youtube.com/@tzuyang6145' }}
-          INPUT_CHANNEL_SLUG: ${{ github.event_name == 'workflow_dispatch' && inputs.channel_slug || '' }}
-          INPUT_DISPATCH_UUID: ${{ github.event_name == 'workflow_dispatch' && inputs.dispatch_uuid || '' }}
-          INPUT_TRIGGER_SOURCE: ${{ github.event_name == 'workflow_dispatch' && inputs.trigger_source || 'schedule' }}
-          INPUT_MAX_VIDEOS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_videos || '-1' }}
-        run: |
-          sanitize_input() {
-            printf '%s' "$1" | tr -d '\r\n'
-          }
-
-          CHANNEL_URL="$(sanitize_input "${INPUT_CHANNEL_URL}")"
-          CHANNEL_SLUG="$(sanitize_input "${INPUT_CHANNEL_SLUG}")"
-          DISPATCH_UUID="$(sanitize_input "${INPUT_DISPATCH_UUID}")"
-          TRIGGER_SOURCE="$(sanitize_input "${INPUT_TRIGGER_SOURCE}")"
-          MAX_VIDEOS="$(sanitize_input "${INPUT_MAX_VIDEOS}")"
-
-          if [ -z "$CHANNEL_URL" ]; then
-            CHANNEL_URL='https://www.youtube.com/@tzuyang6145'
-          fi
-
-          URL_LOWER="$(echo "$CHANNEL_URL" | tr '[:upper:]' '[:lower:]')"
-          if [[ ! "$URL_LOWER" =~ ^https?://(www\.|m\.)?youtube\.com/ ]]; then
-            echo "::error::Invalid channel_url. Only youtube.com channel URLs are allowed."
-            exit 1
-          fi
-
-          if [[ "$URL_LOWER" =~ /(watch|results|playlist|shorts|feed)($|[/?#]) ]]; then
-            echo "::error::Invalid channel_url path. Please provide a channel URL such as /@handle, /channel/<id>, /c/<name>, /user/<name>."
-            exit 1
-          fi
-
-          if [ -z "$CHANNEL_SLUG" ]; then
-            if [[ "$URL_LOWER" =~ /@([a-z0-9_.-]+) ]]; then
-              CHANNEL_SLUG="${BASH_REMATCH[1]}"
-            elif [[ "$URL_LOWER" =~ /channel/(uc[a-z0-9_-]{20,}) ]]; then
-              CHANNEL_SLUG="${BASH_REMATCH[1]}"
-            elif [[ "$URL_LOWER" =~ /(c|user)/([a-z0-9_.-]+) ]]; then
-              CHANNEL_SLUG="${BASH_REMATCH[2]}"
-            else
-              CHANNEL_SLUG="tzuyang"
-            fi
-            CHANNEL_SLUG="$(echo "$CHANNEL_SLUG" | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//')"
-            if [ -z "$CHANNEL_SLUG" ]; then
-              CHANNEL_SLUG="tzuyang"
-            fi
-          fi
-
-          if [ -z "$DISPATCH_UUID" ]; then
-            if command -v uuidgen >/dev/null 2>&1; then
-              DISPATCH_UUID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
-            else
-              DISPATCH_UUID="$(python3 -c 'import uuid; print(uuid.uuid4())')"
-            fi
-          fi
-
-          GDRIVE_BASE="gdrive:04_빠른공유/tzudong_${CHANNEL_SLUG}_data"
-          echo "channel_url=$CHANNEL_URL" >> "$GITHUB_OUTPUT"
-          echo "channel_slug=$CHANNEL_SLUG" >> "$GITHUB_OUTPUT"
-          echo "dispatch_uuid=$DISPATCH_UUID" >> "$GITHUB_OUTPUT"
-          echo "trigger_source=$TRIGGER_SOURCE" >> "$GITHUB_OUTPUT"
-          echo "max_videos=$MAX_VIDEOS" >> "$GITHUB_OUTPUT"
-          echo "gdrive_remote_path=${GDRIVE_BASE}/video_cache" >> "$GITHUB_OUTPUT"
-          echo "gdrive_frames_path=${GDRIVE_BASE}/frames" >> "$GITHUB_OUTPUT"
 
       # ============================================================
       # 의존성 설치 (Dependencies) - 캐시 활용 극대화
@@ -305,27 +216,17 @@ jobs:
           NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
           # RClone / GDrive
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
-          GDRIVE_REMOTE_PATH: ${{ steps.resolve_inputs.outputs.gdrive_remote_path }}
-          GDRIVE_FRAMES_PATH: ${{ steps.resolve_inputs.outputs.gdrive_frames_path }}
+          GDRIVE_REMOTE_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/video_cache"
+          GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
           # Ollama
           OLLAMA_HOST: http://localhost:11434
           # CI
           CI: true
-          CHANNEL_URL: ${{ steps.resolve_inputs.outputs.channel_url }}
-          CHANNEL_SLUG: ${{ steps.resolve_inputs.outputs.channel_slug }}
-          DISPATCH_UUID: ${{ steps.resolve_inputs.outputs.dispatch_uuid }}
-          TRIGGER_SOURCE: ${{ steps.resolve_inputs.outputs.trigger_source }}
-          # [PERF] 자막 문맥 생성 배치 크기
-          MAX_CONTEXT_VIDEOS: ${{ steps.resolve_inputs.outputs.max_videos }}
-          WORKFLOW_SIGNAL_DB: "1"
+          # [PERF] 자막 문맥 생성 배치 크기 (기본: 1, 메모리 보호)
+          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '-1' }}
         run: |
           chmod +x backend/run_daily.sh
-          bash backend/run_daily.sh \
-            --channel "$CHANNEL_SLUG" \
-            --channel-url "$CHANNEL_URL" \
-            --dispatch-uuid "$DISPATCH_UUID" \
-            --trigger-source "$TRIGGER_SOURCE" \
-            --max-videos "$MAX_CONTEXT_VIDEOS"
+          bash backend/run_daily.sh
           
       # ============================================================
       # 후처리 (Post-processing) - 항상 실행
@@ -341,15 +242,10 @@ jobs:
       - name: Upload Results to GDrive
         if: always()
         env:
-          GDRIVE_FRAMES_PATH: ${{ steps.resolve_inputs.outputs.gdrive_frames_path }}
+          GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
         run: |
-          FRAME_DIR="backend/restaurant-crawling/data/${{ steps.resolve_inputs.outputs.channel_slug }}/frames"
-          if [ -d "$FRAME_DIR" ]; then
+          if [ -d "backend/restaurant-crawling/data/frames" ]; then
             echo "Syncing frames to GDrive..."
-            rclone copy "$FRAME_DIR" "$GDRIVE_FRAMES_PATH" --progress
-          elif [ -d "backend/restaurant-crawling/data/frames" ]; then
-            # Backward compatibility for legacy directory layout
-            echo "Syncing legacy frames directory to GDrive..."
             rclone copy "backend/restaurant-crawling/data/frames" "$GDRIVE_FRAMES_PATH" --progress
           else
             echo "No frames directory found, skipping upload."
