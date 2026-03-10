@@ -1,8 +1,0 @@
-fastapi
-uvicorn[standard]
-pydantic
-python-dotenv
-numpy
-supabase
-langchain-core
-langchain-teddynote
