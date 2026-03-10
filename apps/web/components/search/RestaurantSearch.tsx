@@ -22,6 +22,22 @@ interface RestaurantSearchProps {
   maxItems?: number; // [OPTIMIZATION] 표시할 최대 아이템 수 (최근 검색, 인기 검색어)
 }
 
+const MIN_SEARCH_QUERY_LENGTH = 2;
+
+const KOREAN_REGIONS = [
+  "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
+  "대전광역시", "울산광역시", "세종특별자치시",
+  "경기도", "강원특별자치도", "충청북도", "충청남도",
+  "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도",
+];
+
+const getSearchQueryFromUrl = () => {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get('q') || '';
+};
+
+const POPULAR_RESTAURANTS_QUERY_KEY = ["popular-searches-weekly"] as const;
+
 type SearchType = 'name' | 'youtube';
 
 type SearchRestaurantsByYoutubeTitleArgs = {
@@ -48,31 +64,32 @@ const RestaurantSearch = ({
   isKoreanOnly = false,
   maxItems // [OPTIMIZATION] 기본값은 undefined (제한 없음)
 }: RestaurantSearchProps) => {
-  // [URL 동기화] 초기 로드 시 URL에서 검색어 복원
-  const getInitialQuery = () => {
-    if (typeof window === 'undefined') return '';
-    const params = new URLSearchParams(window.location.search);
-    return params.get('q') || '';
-  };
-  const [searchQuery, setSearchQuery] = useState(getInitialQuery);
+  const [searchQuery, setSearchQuery] = useState(getSearchQueryFromUrl);
   const debouncedSearchQuery = useDeferredValue(searchQuery); // [OPTIMIZATION] 디바운싱
+  const trimmedDebouncedSearchQuery = useMemo(
+    () => debouncedSearchQuery.trim(),
+    [debouncedSearchQuery]
+  );
   const [isFocused, setIsFocused] = useState(false);
   const [searchType, setSearchType] = useState<SearchType>('name');
   const searchRef = useRef<HTMLDivElement>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
   const queryClient = useQueryClient();
+  const normalizedCategoryFilter = useMemo(() => {
+    if (!filters?.categories?.length) {
+      return [];
+    }
 
-  // 한국 지역 목록 (홈페이지 필터링용)
-  const KOREAN_REGIONS = [
-    "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
-    "대전광역시", "울산광역시", "세종특별자치시",
-    "경기도", "강원특별자치도", "충청북도", "충청남도",
-    "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"
-  ];
+    return [...filters.categories].filter(Boolean).sort();
+  }, [filters?.categories]);
+  const categoryFilterKey = useMemo(
+    () => normalizedCategoryFilter.join('|'),
+    [normalizedCategoryFilter]
+  );
 
   // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 5개) - [OPTIMIZATION] 병합 로직 적용
   const { data: popularRestaurants = [] } = useQuery({
-    queryKey: ["popular-searches-weekly"],
+    queryKey: POPULAR_RESTAURANTS_QUERY_KEY,
     queryFn: async () => {
       try {
         const { data, error } = await supabase
@@ -103,8 +120,8 @@ const RestaurantSearch = ({
 
   // 메모이제이션된 쿼리 키 (debouncedSearchQuery 사용)
   const queryKey = useMemo(
-    () => ["restaurant-search", debouncedSearchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly],
-    [debouncedSearchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly]
+    () => ["restaurant-search", trimmedDebouncedSearchQuery, searchType, categoryFilterKey, selectedRegion, isKoreanOnly],
+    [trimmedDebouncedSearchQuery, searchType, categoryFilterKey, selectedRegion, isKoreanOnly]
   );
 
   // 맛집 검색 쿼리
@@ -112,9 +129,9 @@ const RestaurantSearch = ({
     queryKey,
     queryFn: async () => {
       // [OPTIMIZATION] 최소 2자 이상부터 검색
-      if (!debouncedSearchQuery.trim() || debouncedSearchQuery.trim().length < 2) return [];
+      if (trimmedDebouncedSearchQuery.length < MIN_SEARCH_QUERY_LENGTH) return [];
 
-      const trimmedQuery = debouncedSearchQuery.trim();
+      const trimmedQuery = trimmedDebouncedSearchQuery;
 
 
       let results: Restaurant[] = [];
@@ -122,8 +139,8 @@ const RestaurantSearch = ({
       try {
         if (searchType === 'name') {
           // 맛집 이름(approved_name)으로 검색
-          const categoriesToSearch = filters?.categories && filters.categories.length > 0
-            ? filters.categories
+          const categoriesToSearch = normalizedCategoryFilter.length > 0
+            ? normalizedCategoryFilter
             : null;
 
           let query = supabase
@@ -189,7 +206,7 @@ const RestaurantSearch = ({
         return [];
       }
     },
-    enabled: debouncedSearchQuery.trim().length >= 2, // [OPTIMIZATION] 2자 이상부터 쿼리 실행
+    enabled: trimmedDebouncedSearchQuery.length >= MIN_SEARCH_QUERY_LENGTH,
     staleTime: 1000 * 60 * 5, // 5분간 캐시
     gcTime: 1000 * 60 * 10, // 10분간 메모리 보존
   });
@@ -218,7 +235,7 @@ const RestaurantSearch = ({
     });
 
     // 인기 검색어 쿼리 무효화하여 즉시 업데이트
-    queryClient.invalidateQueries({ queryKey: ["popular-searches"] });
+    queryClient.invalidateQueries({ queryKey: POPULAR_RESTAURANTS_QUERY_KEY });
 
 
 
@@ -248,7 +265,28 @@ const RestaurantSearch = ({
     }
   }, [searchQuery]);
 
-  const showResults = isFocused && (searchQuery.length > 0 || restaurants.length > 0);
+  const handleHistoryOrPopularSelect = useCallback(async (name: string, selectedRestaurantId?: string) => {
+    const { data } = await supabase
+      .from('restaurants')
+      .select('*, name:approved_name')
+      .eq('approved_name', name)
+      .eq('status', 'approved');
+
+    if (!data || data.length === 0) {
+      return;
+    }
+
+    const merged = mergeRestaurants(data as Restaurant[]);
+    const selectedRestaurant =
+      merged.find((restaurant) => restaurant.id === selectedRestaurantId) ||
+      merged.find((restaurant) => restaurant.name === name) ||
+      merged[0];
+    if (selectedRestaurant) {
+      handleSelect(selectedRestaurant);
+    }
+  }, [handleSelect]);
+
+  const showResults = isFocused && (trimmedDebouncedSearchQuery.length > 0 || restaurants.length > 0);
   const showHistoryAndPopular = isFocused && !searchQuery.trim();
 
   return (
@@ -343,7 +381,7 @@ const RestaurantSearch = ({
                     </div>
                   </button>
                 ))
-              ) : searchQuery ? (
+                      ) : trimmedDebouncedSearchQuery ? (
                 <div className="p-3 text-sm text-muted-foreground">검색 결과가 없습니다.</div>
               ) : null}
             </>
@@ -368,27 +406,12 @@ const RestaurantSearch = ({
                       전체 삭제
                     </Button>
                   </div>
-                  {history
+                {history
                     .slice(0, maxItems)
                     .map((item) => (
                       <button
                         key={item.id}
-                        onClick={async () => {
-                          // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
-                          const { data } = await supabase
-                            .from('restaurants')
-                            .select('*, name:approved_name') // [Fix] name 별칭 추가
-                            .eq('approved_name', item.name)
-                            .eq('status', 'approved');
-
-                          if (data && data.length > 0) {
-                            // 병합 로직 적용
-                            const merged = mergeRestaurants(data as Restaurant[]);
-                            // 원래 선택한 레스토랑을 우선적으로 사용
-                            const selectedRestaurant = merged.find(r => r.id === item.id) || merged[0];
-                            handleSelect(selectedRestaurant);
-                          }
-                        }}
+                        onClick={() => handleHistoryOrPopularSelect(item.name, item.id)}
                         className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2 group"
                       >
                         <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -421,27 +444,12 @@ const RestaurantSearch = ({
                     <TrendingUp className="h-4 w-4" />
                     인기 검색 맛집
                   </div>
-                  {popularRestaurants
+                {popularRestaurants
                     .slice(0, maxItems)
                     .map((restaurant, index) => (
                       <button
                         key={restaurant.id}
-                        onClick={async () => {
-                          // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
-                          const { data } = await supabase
-                            .from('restaurants')
-                            .select('*, name:approved_name') // [Fix] name 별칭 추가
-                            .eq('approved_name', restaurant.name)
-                            .eq('status', 'approved');
-
-                          if (data && data.length > 0) {
-                            // 병합 로직 적용
-                            const merged = mergeRestaurants(data as Restaurant[]);
-                            // 원래 선택한 레스토랑을 우선적으로 사용
-                            const selectedRestaurant = merged.find(r => r.id === restaurant.id) || merged[0];
-                            handleSelect(selectedRestaurant);
-                          }
-                        }}
+                        onClick={() => handleHistoryOrPopularSelect(restaurant.name, restaurant.id)}
                         className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
                       >
                         <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">

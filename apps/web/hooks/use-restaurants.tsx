@@ -89,6 +89,17 @@ function getRestaurantName(restaurant: RestaurantWithOptionalName): string {
     return restaurant.name || restaurant.approved_name || '';
 }
 
+function isLengthDiffWithinSimilarityThreshold(
+    str1: string,
+    str2: string,
+    threshold = 0.95
+): boolean {
+    const maxLen = Math.max(str1.length, str2.length);
+    if (maxLen === 0) return true;
+    const lenDiff = Math.abs(str1.length - str2.length);
+    return lenDiff <= maxLen * (1 - threshold);
+}
+
 /**
  * 레스토랑 데이터 병합 함수
  * 이름과 주소가 유사한 중복 데이터들을 하나로 병합합니다.
@@ -155,7 +166,13 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
                 if (find(idx1) === find(idx2)) continue;
 
                 // 이름 유사도 체크 (이 부분은 주소가 같을 때만 실행되므로 매우 효율적)
-                if (calculateSimilarity(normalizedData[idx1].name, normalizedData[idx2].name) >= 0.95) {
+                const name1 = normalizedData[idx1].name;
+                const name2 = normalizedData[idx2].name;
+                if (!isLengthDiffWithinSimilarityThreshold(name1, name2)) {
+                    continue;
+                }
+
+                if (calculateSimilarity(name1, name2) >= 0.95) {
                     union(idx1, idx2);
                 }
             }
