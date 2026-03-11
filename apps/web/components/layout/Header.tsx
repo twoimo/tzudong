@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -66,7 +67,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const router = useRouter();
   const headerRef = useRef<HTMLElement>(null);
 
-  const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
+  const { data: bannerAnnouncements = [], isLoading: isBannerAnnouncementsLoading } = useBannerAnnouncements();
   const { data: activeAnnouncements = [] } = useActiveAnnouncements();
   const deleteAnnouncement = useDeleteAnnouncement();
   const toggleAnnouncementActive = useToggleAnnouncementActive();
@@ -102,6 +103,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   // 성능 최적화: 조건부 렌더링 로직 메모이제이션
   const shouldShowAuthUI = useMemo(() => isHydrated && !isAuthLoading, [isHydrated, isAuthLoading]);
   const shouldShowHeaderIcons = isLoggedIn && shouldShowAuthUI;
+  const shouldShowLoginButton = !isLoggedIn && shouldShowAuthUI;
+  const shouldShowAuthSkeleton = !shouldShowAuthUI;
+  const shouldShowBannerSkeleton = (!isHydrated || isBannerAnnouncementsLoading) && bannerAnnouncements.length === 0;
 
   const handleInsightMenuClick = useCallback(() => {
     if (isLoggedIn) {
@@ -358,7 +362,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     }
   };
 
-  const currentBanner = useMemo(() => bannerAnnouncements[currentBannerIndex], [bannerAnnouncements, currentBannerIndex]);
+  const currentBanner = useMemo(() => {
+    if (isBannerDismissed) return null;
+    return bannerAnnouncements[currentBannerIndex];
+  }, [bannerAnnouncements, currentBannerIndex, isBannerDismissed]);
 
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
@@ -427,8 +434,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
 
 
-      {/* 중앙: 공지 배너 - 남은 공간 최대 활용, 내용 길이와 무관하게 고정 */}
-      {currentBanner && (
+      {/* 중앙: 공지 배너 - 로딩 중 스켈레톤으로 레이아웃 고정 */}
+      {shouldShowBannerSkeleton ? (
+        <div className="flex-1 min-w-0 relative z-10">
+          <Skeleton className="h-8 w-full rounded-md" />
+        </div>
+      ) : currentBanner ? (
         <div
           aria-live="polite"
           role="button"
@@ -480,6 +491,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </Button>
           )}
         </div>
+      ) : (
+        <div className="flex-1 min-w-0" aria-hidden />
       )}
 
       {/* 우측: 위젯 및 버튼들 */}
@@ -825,17 +838,20 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           </DropdownMenu>
         )}
 
+        {shouldShowAuthSkeleton && (
+          <Skeleton className="ml-1 h-8 w-[84px] rounded-md md:ml-2 md:h-10 md:w-[96px]" />
+        )}
+
         {/* 로그인 버튼 */}
         {
-          !isLoggedIn && (
+          shouldShowLoginButton && (
             <Button
               onClick={onOpenAuth}
               type="button"
               aria-label="로그인"
               className={cn(
                 "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
-                "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
-                shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
+                "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2"
               )}
             >
               로그인
