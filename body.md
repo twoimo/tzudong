@@ -1,14 +1,18 @@
 ## 개요
-- 반응형(Responsive) E2E 테스트 안정화 및 인증 수단 보강 방어 로직 추가
+- 모바일 맵 터치 시 연속/중복 동작 방지 및 글로벌 헤더 영역 CLS(Cumulative Layout Shift) 방지 최적화
 
 ## 변경 내용
-- `apps/web/playwright.config.ts`, `tests/responsive-overflow.spec.ts`: `webServer` 타임아웃/의존성 누락으로 인한 Playwright 기동 터짐 방지를 위해 `scripts/run-responsive-tests.mjs` 래퍼 스크립트 작성 및 툴체인 분리
-- `apps/web/tests/setup/admin.setup.ts`: 로컬 E2E 테스트에서 Admin 계정 인증 정보가 없을 경우, 이전 세션 쿠키(`sb-*-auth-token`)나 `INSIGHTS_CHAT_ADMIN_COOKIE` 헤더를 기반으로 Soft Auth Fallback 수행
-- `.gitignore`: 로컬 실행 결과물(`apps/web/.cache` 등) 및 로컬 기록용 워크로그(`OMX_MODERNIZATION_WORKLOG.md`) 반영 제외
+- `apps/web/components/home/home-map-container.tsx`:
+  - 모바일 기기 터치 환경에서 마커/오버레이 중단/닫힘 시 단기간 연속 터치로 인한 불필요한 패널 재열림 버그 방지(`MAP_TAP_MARKER_REOPEN_GUARD_MS` 상수 및 suppress ref 추가)
+- `apps/web/components/layout/Header.tsx`:
+  - 초기 Hydration 중 배너 공지 및 인증 상태(로그인 버튼 등) 공간을 예약하는 Skeleton UI 컴포넌트 적용
+  - 이를 통해 첫 로딩 시점 레이아웃 흔들림(CLS 현상) 최소화 및 렌더링 성능 최적화
+- `apps/web/app/home-client.tsx`:
+  - 불필요한 렌더 트리거 방지를 위한 컴포넌트 상태 최적화 일부 반영
 
 ## 테스트
-- `run_responsive_tests.mjs` 래퍼 단독 구동 시 skip 모드 동작 여부 및 E2E 타임아웃 완주 확인 완료
-- `npm run lint`, `type-check` 이상 없음 파악
+- 모바일 맵 탭 및 연속 패널 닫기 동작 이상 여부 확인 완료
+- Header Skeleton 적용을 통한 초기 진입부 레이아웃 떨림 제어 확인
 
 ## 관련 이슈
 - (없음)

@@ -69,6 +69,7 @@ const QUICK_GESTURE_DURATION_MS = 85;
 const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
 const QUICK_GESTURE_SHORT_DISTANCE_PX = 25;
 const LONG_PRESS_TRANSITION_THRESHOLD_MS = 175;
+const MAP_TAP_MARKER_REOPEN_GUARD_MS = 260;
 const DRAG_RENDER_EPSILON_PERCENT = 0.08;
 const SNAP_TRANSITION_BASE_MS = 235;
 const SNAP_TRANSITION_FAST_MS = 175;
@@ -183,6 +184,7 @@ function HomeMapContainerComponent({
     const pendingSwipeableRestaurantsRef = useRef<Restaurant[]>([]);
     const swipeableRestaurantsRafRef = useRef(0);
     const markerClickSincePointerDownRef = useRef(false);
+    const suppressMarkerClickUntilRef = useRef(0);
     const outsideCloseTimeoutRef = useRef<number | null>(null);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
@@ -918,6 +920,10 @@ function HomeMapContainerComponent({
     }, [activeSwipeableRestaurants, getRestaurantListByMode, onRestaurantSelect, panelRestaurant, selectedRestaurant]);
 
     const handleMapMarkerClick = useCallback((restaurant: Restaurant) => {
+        if (performance.now() < suppressMarkerClickUntilRef.current) {
+            return;
+        }
+
         markerClickSincePointerDownRef.current = true;
         onMarkerClick(restaurant);
     }, [onMarkerClick]);
@@ -963,6 +969,7 @@ function HomeMapContainerComponent({
                 outsideCloseTimeoutRef.current = window.setTimeout(() => {
                     outsideCloseTimeoutRef.current = null;
                     if (markerClickSincePointerDownRef.current) return;
+                    suppressMarkerClickUntilRef.current = performance.now() + MAP_TAP_MARKER_REOPEN_GUARD_MS;
                     onPanelClose();
                 }, 0);
             }

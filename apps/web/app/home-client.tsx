@@ -342,6 +342,8 @@ export default function HomeClient() {
     const closeAllPanels = useCallback(() => {
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
+        state.setSelectedRestaurant(null);
+        state.setSearchedRestaurant(null);
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
     }, [state]);
