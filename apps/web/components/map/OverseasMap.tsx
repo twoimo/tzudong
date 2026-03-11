@@ -323,7 +323,11 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
     return (
         <div className={`relative w-full h-full bg-[#E5E5E5] ${className}`}>
-            <div ref={mapContainer} className="w-full h-full" />
+            <div
+                ref={mapContainer}
+                className="w-full h-full"
+                data-testid="map-container"
+            />
 
             {(!isMapLoaded || isLoadingRestaurants) && (
                 <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm">

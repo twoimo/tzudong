@@ -182,6 +182,8 @@ function HomeMapContainerComponent({
     const contentScrollResetNeededRef = useRef(false);
     const pendingSwipeableRestaurantsRef = useRef<Restaurant[]>([]);
     const swipeableRestaurantsRafRef = useRef(0);
+    const markerClickSincePointerDownRef = useRef(false);
+    const outsideCloseTimeoutRef = useRef<number | null>(null);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
@@ -915,6 +917,11 @@ function HomeMapContainerComponent({
         onRestaurantSelect(nextRestaurant);
     }, [activeSwipeableRestaurants, getRestaurantListByMode, onRestaurantSelect, panelRestaurant, selectedRestaurant]);
 
+    const handleMapMarkerClick = useCallback((restaurant: Restaurant) => {
+        markerClickSincePointerDownRef.current = true;
+        onMarkerClick(restaurant);
+    }, [onMarkerClick]);
+
     useEffect(() => {
         if (onSwipeableRestaurantsChange) {
             onSwipeableRestaurantsChange(activeSwipeableRestaurants);
@@ -925,6 +932,7 @@ function HomeMapContainerComponent({
         if (!isMobileOrTablet || !isPanelOpen) return;
 
         const handleOutsidePointerDown = (event: PointerEvent) => {
+            markerClickSincePointerDownRef.current = false;
             const target = event.target as Node | null;
             if (!target) return;
             if (sheetContainerRef.current?.contains(target)) return;
@@ -948,13 +956,25 @@ function HomeMapContainerComponent({
 
             const mapContainer = document.querySelector('[data-testid="map-container"]');
             if (mapContainer instanceof Element && mapContainer.contains(target)) {
-                onPanelClose();
+                if (outsideCloseTimeoutRef.current !== null) {
+                    window.clearTimeout(outsideCloseTimeoutRef.current);
+                }
+
+                outsideCloseTimeoutRef.current = window.setTimeout(() => {
+                    outsideCloseTimeoutRef.current = null;
+                    if (markerClickSincePointerDownRef.current) return;
+                    onPanelClose();
+                }, 0);
             }
         };
 
         document.addEventListener('pointerdown', handleOutsidePointerDown, true);
         return () => {
             document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+            if (outsideCloseTimeoutRef.current !== null) {
+                window.clearTimeout(outsideCloseTimeoutRef.current);
+                outsideCloseTimeoutRef.current = null;
+            }
         };
     }, [isMobileOrTablet, isPanelOpen, onPanelClose]);
 
@@ -1039,6 +1059,20 @@ function HomeMapContainerComponent({
         }
     }, [onRequestEditRestaurant, panelRestaurant]);
 
+    const handleOpenDirectionSheet = useCallback(() => {
+        if (!isMobileOrTablet || !isPanelOpen) return;
+
+        const currentMaxHeight = getCurrentMaxHeight();
+        const targetHeight = Math.min(
+            currentMaxHeight,
+            Math.max(sheetHeightRef.current, HALF_SHEET_HEIGHT)
+        );
+
+        if (targetHeight > sheetHeightRef.current + DRAG_RENDER_EPSILON_PERCENT) {
+            setSheetHeightSafe(targetHeight, true);
+        }
+    }, [getCurrentMaxHeight, isMobileOrTablet, isPanelOpen, setSheetHeightSafe]);
+
     const mapPadding = useMemo(() => {
         if (!isPanelOpen) return undefined;
         // Desktop: Right panel 400px
@@ -1067,7 +1101,7 @@ function HomeMapContainerComponent({
                         onRestaurantSelect={onRestaurantSelect}
                         activePanel={activePanel}
                         onPanelClick={onPanelClick}
-                        onMarkerClick={onMarkerClick}
+                        onMarkerClick={handleMapMarkerClick}
                         externalPanelOpen={externalPanelOpen}
                         isPanelCollapsed={isPanelCollapsed}
                         isPanelOpen={isPanelOpen}
@@ -1088,7 +1122,7 @@ function HomeMapContainerComponent({
                         onRestaurantSelect={onRestaurantSelect}
                         onRequestEditRestaurant={onRequestEditRestaurant}
                         onMapReady={onMapReady}
-                        onMarkerClick={onMarkerClick}
+                        onMarkerClick={handleMapMarkerClick}
                         mapPadding={mapPadding}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                     />
@@ -1129,6 +1163,7 @@ function HomeMapContainerComponent({
                                     onWriteReview={onReviewModalOpen}
                                     onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
                                     onRequestEditRestaurant={handleRequestEditRestaurant}
+                                    onOpenDirectionSheet={handleOpenDirectionSheet}
                                     onToggleCollapse={onTogglePanelCollapse}
                                     isPanelOpen={isPanelOpen}
                                 />
@@ -1212,6 +1247,7 @@ function HomeMapContainerComponent({
                                         onWriteReview={onReviewModalOpen}
                                         onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
                                         onRequestEditRestaurant={handleRequestEditRestaurant}
+                                        onOpenDirectionSheet={handleOpenDirectionSheet}
                                         onSwipeLeft={() => handleSwipeToRestaurant(1)}
                                         onSwipeRight={() => handleSwipeToRestaurant(-1)}
                                         onToggleCollapse={onTogglePanelCollapse}
