@@ -21,6 +21,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const isRefreshTokenNotFoundError = (error: unknown) => {
+    if (!error || typeof error !== 'object') return false;
+
+    const code = 'code' in error ? String(error.code) : '';
+    if (code === 'refresh_token_not_found') return true;
+
+    const message = 'message' in error ? String(error.message).toLowerCase() : '';
+    return message.includes('invalid refresh token') || message.includes('refresh token not found');
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
@@ -69,10 +79,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
+    const clearStaleSession = useCallback(async () => {
+        try {
+            await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+            // no-op
+        }
+
+        setSession(null);
+        setUser(null);
+        setIsAdmin(false);
+        setNeedsNicknameSetup(false);
+    }, []);
+
     useEffect(() => {
         // 초기 세션 가져오기
         // 초기 세션 가져오기
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+            if (error && isRefreshTokenNotFoundError(error)) {
+                await clearStaleSession();
+                setIsLoading(false);
+                return;
+            }
+
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
@@ -80,6 +109,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     checkAdminRole(session.user.id),
                     checkProfileStatus(session.user.id)
                 ]);
+            }
+            setIsLoading(false);
+        }).catch(async (error) => {
+            if (isRefreshTokenNotFoundError(error)) {
+                await clearStaleSession();
+            } else {
+                console.error('Error loading session:', error);
             }
             setIsLoading(false);
         });
@@ -100,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => subscription.unsubscribe();
-    }, [checkAdminRole, checkProfileStatus]);
+    }, [checkAdminRole, checkProfileStatus, clearStaleSession]);
 
     const completeNicknameSetup = useCallback(() => {
         setNeedsNicknameSetup(false);
@@ -146,8 +182,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signOut = useCallback(async () => {
         const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-    }, []);
+        if (!error) return;
+
+        if (isRefreshTokenNotFoundError(error)) {
+            await clearStaleSession();
+            return;
+        }
+
+        throw error;
+    }, [clearStaleSession]);
 
     const resetPassword = useCallback(async (email: string) => {
         const redirectUrl = `${window.location.origin}/auth/reset-password`;

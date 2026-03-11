@@ -3,6 +3,15 @@ import { defineConfig, devices, type PlaywrightTestProject } from '@playwright/t
 const RESPONSIVE_SPEC = /responsive-overflow\.spec\.ts/;
 const ADMIN_SETUP_SPEC = /tests[\\/]setup[\\/]admin\.setup\.ts/;
 const ADMIN_STORAGE_STATE = 'tests/.auth/admin.json';
+const PLAYWRIGHT_WEB_SERVER_COMMAND =
+    process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? 'npm run dev:playwright';
+const PLAYWRIGHT_WEB_SERVER_URL =
+    process.env.PLAYWRIGHT_WEB_SERVER_URL ?? 'http://localhost:8080/api/health';
+const PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS = Number(
+    process.env.PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS ?? '180000'
+);
+const PLAYWRIGHT_RESPONSIVE_BROWSER =
+    process.env.PLAYWRIGHT_RESPONSIVE_BROWSER ?? 'chromium';
 
 type DeviceUse = {
     viewport: { width: number; height: number };
@@ -43,6 +52,7 @@ function withResponsiveOptions(name: string, use: DeviceUse): PlaywrightTestProj
         testMatch: RESPONSIVE_SPEC,
         dependencies: ['admin-setup'],
         use: {
+            browserName: PLAYWRIGHT_RESPONSIVE_BROWSER as 'chromium' | 'firefox' | 'webkit',
             ...use,
             storageState: ADMIN_STORAGE_STATE,
             trace: 'retain-on-failure',
@@ -169,7 +179,11 @@ export default defineConfig({
         {
             name: 'admin-setup',
             testMatch: ADMIN_SETUP_SPEC,
-            use: { ...devices['Desktop Chrome'] },
+            use: {
+                ...devices['iPhone SE'],
+                browserName: PLAYWRIGHT_RESPONSIVE_BROWSER as 'chromium' | 'firefox' | 'webkit',
+                trace: 'retain-on-failure',
+            },
         },
         {
             name: 'chromium',
@@ -189,8 +203,9 @@ export default defineConfig({
         ...responsiveProjects,
     ],
     webServer: {
-        command: 'bun run dev',
-        url: 'http://localhost:8080',
+        command: PLAYWRIGHT_WEB_SERVER_COMMAND,
+        url: PLAYWRIGHT_WEB_SERVER_URL,
+        timeout: PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS,
         reuseExistingServer: !process.env.CI,
     },
 });

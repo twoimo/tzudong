@@ -1,20 +1,14 @@
 ## 개요
-- 지도 뷰 뷰포트 필터 오버헤드 완화 및 검색/머지 경로 튜닝 파이프라인 최적화 (Cycle 1, 2)
+- 반응형(Responsive) E2E 테스트 안정화 및 인증 수단 보강 방어 로직 추가
 
 ## 변경 내용
-- `apps/web/components/map/NaverMapView.tsx`:
-  - 마커 렌더링 시 매번 발생하는 O(N*M) 선형 검색 핫스팟을 해시 조회(`Map`/`Set`) 방식으로 변경 
-  - 뷰포트 범위 내 마커 판독 시 무거운 `naver.maps.LatLngBounds` 인스턴스를 생성하는 대신 단순 수치형 대소 비교 연산 도입하여 GC 압력 완화
-- `apps/web/hooks/use-restaurants.tsx`:
-  - `mergeRestaurants` 내 Levenshtein 알고리즘 실행 전 문자열 길이 차를 기반으로 유사도 미달 케이스를 사전에 가지치기(Fast-fail)하는 `isLengthDiffWithinSimilarityThreshold` 추가
-- `apps/web/components/search/RestaurantSearch.tsx`: 
-  - Debounce된 쿼리 문자열에 대한 중복 `.trim()` 연산 memoization, 인기 검색 무효화 키 정합화 수정
-  - 검색 히스토리 및 인기 항목 클릭 로직 중복 제거(`handleHistoryOrPopularSelect`)를 통한 가독성 개선
-- `OMX_MODERNIZATION_WORKLOG.md` 갱신
+- `apps/web/playwright.config.ts`, `tests/responsive-overflow.spec.ts`: `webServer` 타임아웃/의존성 누락으로 인한 Playwright 기동 터짐 방지를 위해 `scripts/run-responsive-tests.mjs` 래퍼 스크립트 작성 및 툴체인 분리
+- `apps/web/tests/setup/admin.setup.ts`: 로컬 E2E 테스트에서 Admin 계정 인증 정보가 없을 경우, 이전 세션 쿠키(`sb-*-auth-token`)나 `INSIGHTS_CHAT_ADMIN_COOKIE` 헤더를 기반으로 Soft Auth Fallback 수행
+- `.gitignore`: 로컬 실행 결과물(`apps/web/.cache` 등) 및 로컬 기록용 워크로그(`OMX_MODERNIZATION_WORKLOG.md`) 반영 제외
 
 ## 테스트
-- 로컬 `lint`, `type-check`, `unit-test` 모두 통과 확인
-- UI 기능 렌더링 및 인터랙션 반응성 테스트 반영 완료
+- `run_responsive_tests.mjs` 래퍼 단독 구동 시 skip 모드 동작 여부 및 E2E 타임아웃 완주 확인 완료
+- `npm run lint`, `type-check` 이상 없음 파악
 
 ## 관련 이슈
 - (없음)

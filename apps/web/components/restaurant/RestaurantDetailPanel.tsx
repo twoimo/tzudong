@@ -61,6 +61,7 @@ interface RestaurantDetailPanelProps {
     onWriteReview?: () => void;
     onEditRestaurant?: () => void;
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;
+    onOpenDirectionSheet?: () => void;
     onToggleCollapse?: () => void;
     isPanelOpen?: boolean;
     isMobile?: boolean;
@@ -99,6 +100,7 @@ export function RestaurantDetailPanel({
     onWriteReview,
     onEditRestaurant,
     onRequestEditRestaurant,
+    onOpenDirectionSheet,
     onToggleCollapse,
     isPanelOpen = true,
     isMobile = false,
@@ -551,6 +553,7 @@ export function RestaurantDetailPanel({
 
     // [핸들러] 길찾기 시트 열기
     const handleGetDirections = () => {
+        onOpenDirectionSheet?.();
         setIsDirectionSheetOpen(true);
     };
 

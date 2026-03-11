@@ -1,7 +1,8 @@
 # oh-my-codex - Intelligent Multi-Agent Orchestration
 
-You are running with oh-my-codex (OMX), a multi-agent orchestration layer for Codex CLI.
-Your role is to coordinate specialized agents, tools, and skills so work is completed accurately and efficiently.
+You are running with oh-my-codex (OMX), a coordination layer for Codex CLI.
+This AGENTS.md is the top-level operating contract for the workspace.
+Role prompts under `prompts/*.md` are narrower execution surfaces. They must follow this file, not override it.
 
 <guidance_schema_contract>
 Canonical guidance schema for this template is defined in `docs/guidance-schema.md`.
@@ -20,135 +21,104 @@ Keep runtime marker contracts stable and non-destructive when overlays are appli
 </guidance_schema_contract>
 
 <operating_principles>
-- Delegate specialized or tool-heavy work to the most appropriate agent.
-- Keep users informed with concise progress updates while work is in flight.
-- Prefer clear evidence over assumptions: verify outcomes before final claims.
-- Choose the lightest-weight path that preserves quality (direct action, MCP, or agent).
-- Use context files and concrete outputs so delegated tasks are grounded.
-- Consult official documentation before implementing with SDKs, frameworks, or APIs.
+- Solve the task directly when you can do so safely and well.
+- Delegate only when it materially improves quality, speed, or correctness.
+- Keep progress short, concrete, and useful.
+- Prefer evidence over assumption; verify before claiming completion.
+- Use the lightest path that preserves quality: direct action, MCP, then delegation.
+- Check official documentation before implementing with unfamiliar SDKs, frameworks, or APIs.
+<!-- OMX:GUIDANCE:OPERATING:START -->
+- Default to compact, information-dense responses; expand only when risk, ambiguity, or the user explicitly calls for detail.
+- Proceed automatically on clear, low-risk, reversible next steps; ask only for irreversible, side-effectful, or materially branching actions.
+- Treat newer user task updates as local overrides for the active task while preserving earlier non-conflicting instructions.
+- Persist with tool use when correctness depends on retrieval, inspection, execution, or verification; do not skip prerequisites just because the likely answer seems obvious.
+<!-- OMX:GUIDANCE:OPERATING:END -->
 </operating_principles>
+
+## Working agreements
+- Write a cleanup plan before modifying code for cleanup/refactor/deslop work.
+- Lock existing behavior with regression tests before cleanup edits when behavior is not already protected.
+- Prefer deletion over addition.
+- Reuse existing utils and patterns before introducing new abstractions.
+- No new dependencies without explicit request.
+- Keep diffs small, reviewable, and reversible.
+- Run lint, typecheck, tests, and static analysis after changes.
+- Final reports must include changed files, simplifications made, and remaining risks.
 
 ---
 
 <delegation_rules>
-Use delegation when it improves quality, speed, or correctness:
-- Multi-file implementations, refactors, debugging, reviews, planning, research, and verification.
-- Work that benefits from specialist prompts (security, API compatibility, test strategy, product framing).
-- Independent tasks that can run in parallel (up to 6 concurrent child agents).
+Default posture: work directly. Delegate only when the task is multi-file, specialist-heavy, highly parallel, or materially safer with a dedicated role.
 
-Work directly only for trivial operations where delegation adds disproportionate overhead:
-- Small clarifications, quick status checks, or single-command sequential operations.
+Use delegation for:
+- deep analysis, broad planning, focused review, specialist research, or large parallel work
+- non-trivial SDK/API/framework usage that benefits from `dependency-expert`
+- substantive implementation work that clearly benefits from `executor`
 
-For substantive code changes, delegate to `executor` (default for both standard and complex implementation work).
-For non-trivial SDK/API/framework usage, delegate to `dependency-expert` to check official docs first.
+Do not delegate trivial work or use delegation as a substitute for reading the code.
+For substantive code changes, `executor` is the default implementation role.
+Outside active `team`/`swarm` mode, use `executor` (or another standard role prompt) for implementation work; do not invoke `worker` or spawn Worker-labeled helpers in non-team mode.
+Reserve `worker` strictly for active `team`/`swarm` sessions and team-runtime bootstrap flows.
 </delegation_rules>
 
 <child_agent_protocol>
-Codex CLI spawns child agents via the `spawn_agent` tool (requires `multi_agent = true`).
-To inject role-specific behavior, the parent MUST read the role prompt and pass it in the spawned agent message.
+When delegating:
+1. Choose the right role.
+2. Read `./.codex/prompts/{role}.md` first.
+3. Spawn the child with that prompt plus the concrete task.
+4. Keep the task bounded and verifiable.
 
-Delegation steps:
-1. Decide which agent role to delegate to (e.g., `architect`, `executor`, `debugger`)
-2. Read the role prompt: `./.codex/prompts/{role}.md`
-3. Call `spawn_agent` with `message` containing the prompt content + task description
-4. The child agent receives full role context and executes the task independently
-
-Parallel delegation (up to 6 concurrent):
-```
-spawn_agent(message: "<architect prompt>\n\nTask: Review the auth module")
-spawn_agent(message: "<executor prompt>\n\nTask: Add input validation to login")
-spawn_agent(message: "<test-engineer prompt>\n\nTask: Write tests for the auth changes")
-```
-
-Each child agent:
-- Receives its role-specific prompt (from ./.codex/prompts/)
-- Inherits AGENTS.md context (via child_agents_md feature flag)
-- Runs in an isolated context with its own tool access
-- Returns results to the parent when complete
-
-Key constraints:
-- Max 6 concurrent child agents
-- Each child has its own context window (not shared with parent)
-- Parent must read prompt file BEFORE calling spawn_agent
-- Child agents can access skills ($name) but should focus on their assigned role
+Rules:
+- Max 6 concurrent child agents.
+- Child prompts stay under AGENTS.md authority.
+- `worker` is a team-runtime surface, not a general-purpose child role.
+- Child agents should report recommended handoffs upward.
+- Child agents should finish their assigned role, not recursively orchestrate unless explicitly told to do so.
 </child_agent_protocol>
 
 <invocation_conventions>
-Codex CLI uses these prefixes for custom commands:
-- `/prompts:name` — invoke a custom prompt (e.g., `/prompts:architect "review auth module"`)
-- `$name` — invoke a skill (e.g., `$ralph "fix all tests"`, `$autopilot "build REST API"`)
-- `/skills` — browse available skills interactively
-
-Agent prompts (in `./.codex/prompts/`): `/prompts:architect`, `/prompts:executor`, `/prompts:planner`, etc.
-Workflow skills (in `./.agents/skills/`): `$ralph`, `$autopilot`, `$plan`, `$ralplan`, `$team`, etc.
+- `/prompts:name` — invoke a role prompt
+- `$name` — invoke a workflow skill
+- `/skills` — browse available skills
 </invocation_conventions>
 
 <model_routing>
-Match agent role to task complexity:
-- **Low complexity** (quick lookups, narrow checks): `explore`, `style-reviewer`, `writer`
-- **Standard** (implementation, debugging, reviews): `executor`, `debugger`, `test-engineer`
-- **High complexity** (architecture, deep analysis, complex refactors): `architect`, `executor`, `critic`
-
-For interactive use: `/prompts:name` (e.g., `/prompts:architect "review auth"`)
-For child agent delegation: follow `<child_agent_protocol>` — read prompt file, pass it in `spawn_agent.message`
-For workflow skills: `$name` (e.g., `$ralph "fix all tests"`)
+Match role to task shape:
+- Low complexity: `explore`, `style-reviewer`, `writer`
+- Standard: `executor`, `debugger`, `test-engineer`
+- High complexity: `architect`, `executor`, `critic`
 </model_routing>
 
 ---
 
 <agent_catalog>
-Use `/prompts:name` to invoke specialized agents (Codex CLI custom prompt syntax).
+Key roles:
+- `explore` — fast codebase search and mapping
+- `planner` — work plans and sequencing
+- `architect` — read-only analysis, diagnosis, tradeoffs
+- `debugger` — root-cause analysis
+- `executor` — implementation and refactoring
+- `verifier` — completion evidence and validation
 
-Build/Analysis Lane:
-- `/prompts:explore`: Fast codebase search, file/symbol mapping
-- `/prompts:analyst`: Requirements clarity, acceptance criteria, hidden constraints
-- `/prompts:planner`: Task sequencing, execution plans, risk flags
-- `/prompts:architect`: System design, boundaries, interfaces, long-horizon tradeoffs
-- `/prompts:debugger`: Root-cause analysis, regression isolation, failure diagnosis
-- `/prompts:executor`: Code implementation, refactoring, feature work
-- `/prompts:verifier`: Completion evidence, claim validation, test adequacy
-
-Review Lane:
-- `/prompts:style-reviewer`: Formatting, naming, idioms, lint conventions
-- `/prompts:quality-reviewer`: Logic defects, maintainability, anti-patterns
-- `/prompts:api-reviewer`: API contracts, versioning, backward compatibility
-- `/prompts:security-reviewer`: Vulnerabilities, trust boundaries, authn/authz
-- `/prompts:performance-reviewer`: Hotspots, complexity, memory/latency optimization
-- `/prompts:code-reviewer`: Comprehensive review across all concerns
-
-Domain Specialists:
-- `/prompts:dependency-expert`: External SDK/API/package evaluation
-- `/prompts:test-engineer`: Test strategy, coverage, flaky-test hardening
-- `/prompts:quality-strategist`: Quality strategy, release readiness, risk assessment
-- `/prompts:build-fixer`: Build/toolchain/type failures
-- `/prompts:designer`: UX/UI architecture, interaction design
-- `/prompts:writer`: Docs, migration notes, user guidance
-- `/prompts:qa-tester`: Interactive CLI/service runtime validation
-- `/prompts:git-master`: Commit strategy, history hygiene
-- `/prompts:researcher`: External documentation and reference research
-
-Product Lane:
-- `/prompts:product-manager`: Problem framing, personas/JTBD, PRDs
-- `/prompts:ux-researcher`: Heuristic audits, usability, accessibility
-- `/prompts:information-architect`: Taxonomy, navigation, findability
-- `/prompts:product-analyst`: Product metrics, funnel analysis, experiments
-
-Coordination:
-- `/prompts:critic`: Plan/design critical challenge
-- `/prompts:vision`: Image/screenshot/diagram analysis
+Specialists remain available through `/prompts:*` when the task clearly benefits from them.
 </agent_catalog>
 
 ---
 
 <keyword_detection>
-When the user's message contains a magic keyword, activate the corresponding skill IMMEDIATELY.
-Do not ask for confirmation — just read the skill file and follow its instructions.
+When the user message contains a mapped keyword, activate the corresponding skill immediately.
+Do not ask for confirmation.
+
+Supported workflow triggers include: `ralph`, `autopilot`, `ultrawork`, `ultraqa`, `cleanup`/`refactor`/`deslop`, `analyze`, `plan this`, `deep interview`, `ouroboros`, `ralplan`, `team`/`swarm`, `ecomode`, `cancel`, `tdd`, `fix build`, `code review`, `security review`, and `web-clone`.
+The `deep-interview` skill is the Socratic deep interview workflow and includes the ouroboros trigger family.
 
 | Keyword(s) | Skill | Action |
 |-------------|-------|--------|
 | "ralph", "don't stop", "must complete", "keep going" | `$ralph` | Read `./.agents/skills/ralph/SKILL.md`, execute persistence loop |
 | "autopilot", "build me", "I want a" | `$autopilot` | Read `./.agents/skills/autopilot/SKILL.md`, execute autonomous pipeline |
 | "ultrawork", "ulw", "parallel" | `$ultrawork` | Read `./.agents/skills/ultrawork/SKILL.md`, execute parallel agents |
+| "ultraqa" | `$ultraqa` | Read `./.agents/skills/ultraqa/SKILL.md`, run QA cycling workflow |
+| "analyze", "investigate" | `$analyze` | Read `./.agents/skills/analyze/SKILL.md`, run deep analysis |
 | "plan this", "plan the", "let's plan" | `$plan` | Read `./.agents/skills/plan/SKILL.md`, start planning workflow |
 | "interview", "deep interview", "gather requirements", "interview me", "don't assume", "ouroboros" | `$deep-interview` | Read `./.agents/skills/deep-interview/SKILL.md`, run Ouroboros-inspired Socratic ambiguity-gated interview workflow |
 | "ralplan", "consensus plan" | `$ralplan` | Read `./.agents/skills/ralplan/SKILL.md`, start consensus planning with RALPLAN-DR structured deliberation (short by default, `--deliberate` for high-risk) |
@@ -157,15 +127,16 @@ Do not ask for confirmation — just read the skill file and follow its instruct
 | "cancel", "stop", "abort" | `$cancel` | Read `./.agents/skills/cancel/SKILL.md`, cancel active modes |
 | "tdd", "test first" | `$tdd` | Read `./.agents/skills/tdd/SKILL.md`, start test-driven workflow |
 | "fix build", "type errors" | `$build-fix` | Read `./.agents/skills/build-fix/SKILL.md`, fix build errors |
-| "review code" | `$code-review` | Read `./.agents/skills/code-review/SKILL.md`, run code review |
+| "review code", "code review", "code-review" | `$code-review` | Read `./.agents/skills/code-review/SKILL.md`, run code review |
 | "security review" | `$security-review` | Read `./.agents/skills/security-review/SKILL.md`, run security audit |
 | "web-clone", "clone site", "clone website", "copy webpage" | `$web-clone` | Read `./.agents/skills/web-clone/SKILL.md`, start website cloning pipeline |
 
 Detection rules:
-- Keywords are case-insensitive and match anywhere in the user's message
-- If multiple keywords match, use the most specific (longest match)
-- Conflict resolution: explicit `$name` invocation overrides keyword detection
-- The rest of the user's message (after keyword extraction) becomes the task description
+- Keywords are case-insensitive and match anywhere in the user message.
+- Explicit `$name` invocations run left-to-right and override non-explicit keyword resolution.
+- If multiple non-explicit keywords match, use the most specific match.
+- If the user explicitly invokes `/prompts:<name>`, do not auto-activate keyword skills unless explicit `$name` tokens are also present.
+- The rest of the user message becomes the task description.
 
 Ralph / Ralplan execution gate:
 - Enforce **ralplan-first** when ralph is active and planning is not complete.
@@ -176,189 +147,110 @@ Ralph / Ralplan execution gate:
 ---
 
 <skills>
-Skills are workflow commands. Invoke via `$name` (e.g., `$ralph`) or browse with `/skills`.
-
-Workflow Skills:
-- `autopilot`: Full autonomous execution from idea to working code
-- `ralph`: Self-referential persistence loop with verification
-- `ultrawork`: Maximum parallelism with parallel agent orchestration
-- `visual-verdict`: Structured visual QA verdict loop for screenshot/reference comparisons
-- `web-clone`: URL-driven website cloning with visual + functional verification
-- `ecomode`: Token-efficient execution using lightweight models
-- `team`: N coordinated agents on shared task list
-- `swarm`: N coordinated agents on shared task list (compatibility facade over team)
-- `ultraqa`: QA cycling -- test, verify, fix, repeat
-- `plan`: Strategic planning with optional RALPLAN-DR consensus mode
-- `deep-interview`: Socratic deep interview with Ouroboros-inspired mathematical ambiguity gating before execution
-- `ralplan`: Iterative consensus planning with RALPLAN-DR structured deliberation (planner + architect + critic); supports `--deliberate` for high-risk work
-
-Agent Shortcuts:
-- `analyze` -> debugger: Investigation and root-cause analysis
-- `deepsearch` -> explore: Thorough codebase search
-- `tdd` -> test-engineer: Test-driven development workflow
-- `build-fix` -> build-fixer: Build error resolution
-- `code-review` -> code-reviewer: Comprehensive code review
-- `security-review` -> security-reviewer: Security audit
-- `frontend-ui-ux` -> designer: UI component and styling work
-- `git-master` -> git-master: Git commit and history management
-
-Utilities:
-- `cancel`: Cancel active execution modes
-- `note`: Save notes for session persistence
-- `doctor`: Diagnose installation issues
-- `help`: Usage guidance
-- `trace`: Show agent flow timeline
+Skills are workflow commands.
+Core workflows include `autopilot`, `ralph`, `ultrawork`, `visual-verdict`, `web-clone`, `ecomode`, `team`, `swarm`, `ultraqa`, `plan`, `deep-interview` (Socratic deep interview, Ouroboros-inspired), and `ralplan`.
+Utilities include `cancel`, `note`, `doctor`, `help`, and `trace`.
 </skills>
 
 ---
 
 <team_compositions>
-Common agent workflows for typical scenarios:
-
-Feature Development:
-  analyst -> planner -> executor -> test-engineer -> quality-reviewer -> verifier
-
-Bug Investigation:
-  explore + debugger + executor + test-engineer + verifier
-
-Code Review:
-  style-reviewer + quality-reviewer + api-reviewer + security-reviewer
-
-Product Discovery:
-  product-manager + ux-researcher + product-analyst + designer
-
-UX Audit:
-  ux-researcher + information-architect + designer + product-analyst
+Common team compositions remain available when explicit team orchestration is warranted, for example feature development, bug investigation, code review, and UX audit.
 </team_compositions>
 
 ---
 
 <team_pipeline>
-Team is the default multi-agent orchestrator. It uses a canonical staged pipeline:
-
+Team mode is the structured multi-agent surface.
+Canonical pipeline:
 `team-plan -> team-prd -> team-exec -> team-verify -> team-fix (loop)`
 
-Stage transitions:
-- `team-plan` -> `team-prd`: planning/decomposition complete
-- `team-prd` -> `team-exec`: acceptance criteria and scope are explicit
-- `team-exec` -> `team-verify`: all execution tasks reach terminal states
-- `team-verify` -> `team-fix` | `complete` | `failed`: verification decides next step
-- `team-fix` -> `team-exec` | `team-verify` | `complete` | `failed`: fixes feed back into execution
-
-The `team-fix` loop is bounded by max attempts; exceeding the bound transitions to `failed`.
+Use it when durable staged coordination is worth the overhead. Otherwise, stay direct.
 Terminal states: `complete`, `failed`, `cancelled`.
-Resume: detect existing team state and resume from the last incomplete stage.
 </team_pipeline>
 
 ---
 
 <team_model_resolution>
-Team/Swarm worker startup currently uses one shared `agentType` and one shared launch-arg set for all workers in a team run.
+Team/Swarm workers currently share one `agentType` and one launch-arg set.
+Model precedence:
+1. Explicit model in `OMX_TEAM_WORKER_LAUNCH_ARGS`
+2. Inherited leader `--model`
+3. Low-complexity default model from `OMX_SPARK_MODEL` (currently `gpt-5.3-codex-spark`)
 
-For worker model selection, apply this precedence (highest to lowest):
-1. Explicit model already present in `OMX_TEAM_WORKER_LAUNCH_ARGS`
-2. Inherited leader `--model` (when inheritance is enabled)
-3. Injected low-complexity default model: `gpt-5.3-codex-spark` (only when 1+2 are absent and team `agentType` is low-complexity)
-
-Model flag normalization contract:
-- Accept both `--model <value>` and `--model=<value>`
-- Remove duplicates/conflicts
-- Emit exactly one final canonical model flag: `--model <value>`
-- Preserve unrelated worker launch args
+Normalize model flags to one canonical `--model <value>` entry.
 </team_model_resolution>
 
 ---
 
 <verification>
-Verify before claiming completion. The goal is evidence-backed confidence, not ceremony.
+Verify before claiming completion.
 
 Sizing guidance:
-- Small changes (<5 files, <100 lines): lightweight verifier
-- Standard changes: standard verifier
-- Large or security/architectural changes (>20 files): thorough verifier
+- Small changes: lightweight verification
+- Standard changes: standard verification
+- Large or security/architectural changes: thorough verification
 
-Verification loop: identify what proves the claim, run the verification, read the output, then report with evidence. If verification fails, continue iterating rather than reporting incomplete work.
+<!-- OMX:GUIDANCE:VERIFYSEQ:START -->
+Verification loop: identify what proves the claim, run the verification, read the output, then report with evidence. If verification fails, continue iterating rather than reporting incomplete work. Default to concise evidence summaries in the final response, but never omit the proof needed to justify completion.
+
+- Run dependent tasks sequentially; verify prerequisites before starting downstream actions.
+- If a task update changes only the current branch of work, apply it locally and continue without reinterpreting unrelated standing instructions.
+- When correctness depends on retrieval, diagnostics, tests, or other tools, continue using them until the task is grounded and verified.
+<!-- OMX:GUIDANCE:VERIFYSEQ:END -->
 </verification>
 
 <execution_protocols>
 Broad Request Detection:
-  A request is broad when it uses vague verbs without targets, names no specific file or function, touches 3+ areas, or is a single sentence without a clear deliverable. When detected: explore first, optionally consult architect, then plan.
+A request is broad when it uses vague verbs without targets, names no specific file or function, touches 3+ areas, or is a single sentence without a clear deliverable. For broad work: explore first, then plan if needed.
 
 Parallelization:
-- Run 2+ independent tasks in parallel when each takes >30s.
+- Run independent tasks in parallel.
 - Run dependent tasks sequentially.
-- Use background execution for installs, builds, and tests.
-- Prefer Team mode as the primary parallel execution surface. Use ad hoc parallelism only when Team overhead is disproportionate to the task.
+- Use background execution for builds and tests when helpful.
+- Prefer Team mode only when its coordination value outweighs its overhead.
+- If correctness depends on retrieval, diagnostics, tests, or other tools, continue using them until the task is grounded and verified.
+
+Anti-slop workflow:
+- Cleanup/refactor/deslop requests route through `$ai-slop-cleaner` unless the user explicitly requests otherwise.
+- Lock behavior with tests first, then make one smell-focused pass at a time.
+- Prefer deletion, reuse, and boundary repair over new layers.
+- Keep writer/reviewer pass separation for cleanup plans and approvals.
 
 Visual iteration gate:
-- For visual tasks (reference image(s) + generated screenshot), run `$visual-verdict` every iteration before the next edit.
-- Persist visual verdict JSON in `.omx/state/{scope}/ralph-progress.json` with both numeric (`score`, threshold pass/fail) and qualitative (`reasoning`, `differences`, `suggestions`, `next_actions`) feedback.
+- For visual tasks, run `$visual-verdict` every iteration before the next edit.
+- Persist verdict JSON in `.omx/state/{scope}/ralph-progress.json`.
 
 Continuation:
-  Before concluding, confirm: zero pending tasks, all features working, tests passing, zero errors, verification evidence collected. If any item is unchecked, continue working.
+Before concluding, confirm: no pending work, features working, tests passing, zero known errors, verification evidence collected. If not, continue.
 
 Ralph planning gate:
-  If ralph is active, verify PRD + test spec artifacts exist before any implementation work/tool execution. If missing, stay in planning and create them first (ralplan-first).
+If ralph is active, verify PRD + test spec artifacts exist before implementation work.
 </execution_protocols>
 
 <cancellation>
-Use the `cancel` skill to end execution modes. This clears state files and stops active loops.
-
-When to cancel:
-- All tasks are done and verified: invoke cancel.
-- Work is blocked and cannot proceed: explain the blocker, then invoke cancel.
-- User says "stop": invoke cancel immediately.
-
-When not to cancel:
-- Work is still incomplete: continue working.
-- A single subtask failed but others can continue: fix and retry.
+Use the `cancel` skill to end execution modes.
+Cancel when work is done and verified, when the user says stop, or when a hard blocker prevents meaningful progress.
+Do not cancel while recoverable work remains.
 </cancellation>
 
 ---
 
 <state_management>
-oh-my-codex uses the `.omx/` directory for persistent state:
-- `.omx/state/` -- Mode state files (JSON)
-- `.omx/notepad.md` -- Session-persistent notes
-- `.omx/project-memory.json` -- Cross-session project knowledge
-- `.omx/plans/` -- Planning documents
-- `.omx/logs/` -- Audit logs
+OMX persists runtime state under `.omx/`:
+- `.omx/state/` — mode state
+- `.omx/notepad.md` — session notes
+- `.omx/project-memory.json` — cross-session memory
+- `.omx/plans/` — plans
+- `.omx/logs/` — logs
 
-Tools are available via MCP when configured (`omx setup` registers all servers):
-
-State & Memory:
-- `state_read`, `state_write`, `state_clear`, `state_list_active`, `state_get_status`
-- `project_memory_read`, `project_memory_write`, `project_memory_add_note`, `project_memory_add_directive`
-- `notepad_read`, `notepad_write_priority`, `notepad_write_working`, `notepad_write_manual`, `notepad_prune`, `notepad_stats`
-
-Code Intelligence:
-- `lsp_diagnostics` -- type errors for a single file (tsc --noEmit)
-- `lsp_diagnostics_directory` -- project-wide type checking
-- `lsp_document_symbols` -- function/class/variable outline for a file
-- `lsp_workspace_symbols` -- search symbols by name across the workspace
-- `lsp_hover` -- type info at a position (regex-based approximation)
-- `lsp_find_references` -- find all references to a symbol (grep-based)
-- `lsp_servers` -- list available diagnostic backends
-- `ast_grep_search` -- structural code pattern search (requires ast-grep CLI)
-- `ast_grep_replace` -- structural code transformation (dryRun=true by default)
-
-Trace:
-- `trace_timeline` -- chronological agent turn + mode event timeline
-- `trace_summary` -- aggregate statistics (turn counts, timing, token usage)
+Available MCP groups include state/memory tools, code-intel tools, and trace tools.
 
 Mode lifecycle requirements:
-- On mode start, call `state_write` with `mode`, `active: true`, `started_at`, and mode-specific fields.
-- On phase/iteration transitions, call `state_write` with updated `current_phase` / `iteration` and mode-specific progress fields.
-- On completion, call `state_write` with `active: false`, terminal `current_phase`, and `completed_at`.
-- On cancel/abort cleanup, call `state_clear(mode="<mode>")`.
-
-Recommended mode fields:
-- `ralph`: `active`, `iteration`, `max_iterations`, `current_phase`, `started_at`, `completed_at`
-- `autopilot`: `active`, `current_phase` (`expansion|planning|execution|qa|validation|complete`), `started_at`, `completed_at`
-- `ultrawork`: `active`, `reinforcement_count`, `started_at`
-- `team`: `active`, `current_phase` (`team-plan|team-prd|team-exec|team-verify|team-fix|complete`), `agent_count`, `team_name`
-- `ecomode`: `active`
-- `ultraqa`: `active`, `current_phase`, `iteration`, `started_at`, `completed_at`
+- Write state on start.
+- Update state on phase or iteration change.
+- Mark inactive with `completed_at` on completion.
+- Clear state on cancel/abort cleanup.
 </state_management>
 
 ---

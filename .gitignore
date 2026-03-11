@@ -85,3 +85,6 @@ backend/supabase/backup_db/*.sql
 
 # Next.js stale cache fallback directories
 .next-stale-*
+apps/web/.cache
+OMX_MODERNIZATION_WORKLOG.md
+AGENTS.md
