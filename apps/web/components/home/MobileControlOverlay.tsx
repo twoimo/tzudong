@@ -1,12 +1,14 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     Filter,
     X,
     MapPin,
     Video,
+    Bookmark,
+    Bell,
     Check,
     Send,
     User as UserIcon,
@@ -26,13 +28,17 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
+    DropdownMenuGroup,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Region, REGIONS, Restaurant } from '@/types/restaurant';
+import type { Notification } from '@/types/notification';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +46,8 @@ import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from 'sonner';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { useBookmarks } from '@/hooks/use-bookmarks';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -134,8 +142,11 @@ function MobileControlOverlayComponent({
     onSubmissionClick,
     onTopShellUserIconClick,
 }: MobileControlOverlayProps) {
+    const pathname = usePathname();
     const router = useRouter();
     const { signOut } = useAuth();
+    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+    const { data: bookmarksData = [] } = useBookmarks();
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     const [sheetHeight, setSheetHeight] = useState(50); // 최종 높이 (스냅 시에만 업데이트)
     // [OPTIMIZATION] isDragging은 UI 업데이트용으로만 사용, 실제 드래그 로직은 ref 사용
@@ -649,6 +660,199 @@ function MobileControlOverlayComponent({
         }
     }, [closeUserMenu, router, signOut]);
 
+    const handleNotificationItemClick = useCallback((notification: Notification) => {
+        markAsRead(notification.id);
+
+        if (notification.type === 'review_approved' || notification.type === 'review_rejected') {
+            const reviewId = notification.data?.reviewId;
+            const status = notification.type === 'review_approved' ? 'approved' : 'rejected';
+            if (reviewId) {
+                router.push(`/mypage/reviews?reviewId=${reviewId}&status=${status}`);
+            } else {
+                router.push(`/mypage/reviews?status=${status}`);
+            }
+            return;
+        }
+
+        router.push('/?panel=announcement');
+    }, [markAsRead, router]);
+
+    const renderBookmarkMenuButton = () => (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        'h-8 w-8 rounded-full border border-border bg-background',
+                        'hover:bg-secondary/80'
+                    )}
+                    aria-label="북마크"
+                >
+                    <Bookmark className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72 bg-card border-border font-serif z-[110]">
+                <DropdownMenuLabel className="flex items-center justify-between text-foreground">
+                    <span>북마크</span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => {
+                            if (!user) {
+                                toast.error('로그인 후 북마크를 확인할 수 있어요');
+                                onTopShellUserIconClick?.();
+                                return;
+                            }
+                            router.push('/mypage/bookmarks');
+                        }}
+                        className="h-6 px-2 text-xs"
+                    >
+                        전체보기
+                    </Button>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border" />
+                <ScrollArea className="h-64">
+                    {!user ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                            로그인 후 북마크를 확인할 수 있어요
+                        </div>
+                    ) : bookmarksData.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                            북마크한 맛집이 없습니다
+                        </div>
+                    ) : (
+                        <DropdownMenuGroup>
+                            {bookmarksData.slice(0, 20).map((bookmark) => (
+                                <DropdownMenuItem
+                                    key={bookmark.id}
+                                    className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full"
+                                    onClick={() => {
+                                        const restaurant = bookmark.restaurant;
+                                        const isOverseas = restaurant.lat && restaurant.lng && (
+                                            restaurant.lat < 33 || restaurant.lat > 39 ||
+                                            restaurant.lng < 124 || restaurant.lng > 132
+                                        );
+
+                                        if (pathname === '/') {
+                                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', {
+                                                detail: {
+                                                    id: bookmark.restaurant_id,
+                                                    mode: isOverseas ? 'overseas' : 'domestic'
+                                                }
+                                            }));
+                                            return;
+                                        }
+
+                                        const modeParam = isOverseas ? '&mode=overseas' : '';
+                                        router.push(`/?r=${bookmark.restaurant_id}${modeParam}&z=13`);
+                                    }}
+                                >
+                                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                        <div className="flex items-center justify-between gap-2 w-full">
+                                            <span className="text-sm font-medium text-foreground truncate block">
+                                                {bookmark.restaurant.name}
+                                            </span>
+                                            {bookmark.restaurant.category?.[0] && (
+                                                <Badge variant="secondary" className="text-[10px] shrink-0 h-5 px-1.5 font-normal">
+                                                    {bookmark.restaurant.category[0]}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <span className="text-xs text-muted-foreground truncate block">
+                                            {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
+                                        </span>
+                                    </div>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuGroup>
+                    )}
+                </ScrollArea>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+
+    const renderNotificationMenuButton = () => (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        'h-8 w-8 rounded-full border border-border bg-background',
+                        'hover:bg-secondary/80 relative'
+                    )}
+                    aria-label="알림"
+                >
+                    <Bell className="h-4 w-4" />
+                    {unreadCount > 0 && (
+                        <Badge
+                            variant="destructive"
+                            className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 text-[10px] bg-red-800"
+                        >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </Badge>
+                    )}
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72 bg-card border-border font-serif z-[110]">
+                <DropdownMenuLabel className="flex items-center justify-between text-foreground">
+                    <span>알림</span>
+                    {unreadCount > 0 && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={markAllAsRead}
+                            className="h-6 px-2 text-xs"
+                        >
+                            모두 읽음
+                        </Button>
+                    )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border" />
+                <ScrollArea className="h-64">
+                    {!user ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                            로그인 후 알림을 확인할 수 있어요
+                        </div>
+                    ) : notifications.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                            새로운 알림이 없습니다
+                        </div>
+                    ) : (
+                        <DropdownMenuGroup>
+                            {notifications.map((notification) => (
+                                <DropdownMenuItem
+                                    key={notification.id}
+                                    className={cn(
+                                        "flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full",
+                                        !notification.isRead && "bg-accent/50"
+                                    )}
+                                    onClick={() => handleNotificationItemClick(notification)}
+                                >
+                                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                        <div className="flex items-center justify-between gap-2 w-full">
+                                            <p className="text-sm font-medium text-foreground truncate">{notification.title}</p>
+                                            {!notification.isRead && (
+                                                <span className="h-2 w-2 rounded-full bg-red-700 shrink-0" aria-hidden />
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                                            {notification.createdAt.toLocaleString('ko-KR')}
+                                        </p>
+                                    </div>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuGroup>
+                    )}
+                </ScrollArea>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+
     const renderUserMenuButton = () => {
         if (!user) {
             return (
@@ -800,6 +1004,9 @@ function MobileControlOverlayComponent({
                         <span className="text-sm text-muted-foreground truncate">쯔동여지도 맛집 검색하기</span>
                     </Button>
 
+                    {renderBookmarkMenuButton()}
+                    {renderNotificationMenuButton()}
+
                     {renderUserMenuButton()}
                 </div>
 
@@ -940,7 +1147,7 @@ function MobileControlOverlayComponent({
                                         ref={searchInputRef}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder="쯔동여지도 맛집 검색하기"
+                                        placeholder={searchType === 'name' ? '쯔동여지도 맛집 검색하기' : '유튜브 제목으로 검색하기'}
                                         inputMode="search"
                                         enterKeyHint="search"
                                         autoComplete="off"

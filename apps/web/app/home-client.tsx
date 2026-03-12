@@ -8,6 +8,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "sonner";
 import { Restaurant } from "@/types/restaurant";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
@@ -85,7 +86,7 @@ type AnnouncementRow = {
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
-    const { isDesktop } = useDeviceType();
+    const { isDesktop, isMobileOrTablet } = useDeviceType();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
     const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
@@ -97,6 +98,7 @@ export default function HomeClient() {
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+    const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
     const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
     const openDetailPanelRef = useRef<(restaurant: Restaurant, focusZoom?: number) => void>(() => {});
 
@@ -332,9 +334,17 @@ export default function HomeClient() {
         // 맛집 상세 패널 닫기
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
+        if (panel === 'announcement' && isMobileOrTablet) {
+            setActiveRightPanel(null);
+            setIsAnnouncementSheetOpen(true);
+            setIsPanelCollapsed(false);
+            return;
+        }
+
+        setIsAnnouncementSheetOpen(false);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
-    }, [state]);
+    }, [isMobileOrTablet, state]);
     openPanelRef.current = openPanel;
 
     // 모든 패널 닫기
@@ -345,6 +355,7 @@ export default function HomeClient() {
         state.setSelectedRestaurant(null);
         state.setSearchedRestaurant(null);
         setActiveRightPanel(null);
+        setIsAnnouncementSheetOpen(false);
         setIsPanelCollapsed(false);
     }, [state]);
 
@@ -359,6 +370,7 @@ export default function HomeClient() {
         if (state.isPanelOpen) {
             // 맛집 상세 패널이 열리면 다른 패널들 모두 닫기
             setActiveRightPanel(null);
+            setIsAnnouncementSheetOpen(false);
             setIsPanelCollapsed(false);
         }
     }, [state.isPanelOpen]);
@@ -726,19 +738,47 @@ export default function HomeClient() {
             )}
 
             {/* 공지사항 패널 (관리자/사용자 통합) */}
-            <RightPanelWrapper
-                isOpen={activeRightPanel === 'announcement'}
-                isCollapsed={isPanelCollapsed}
-            >
-                <AnnouncementPanel
-                    isOpen={!isPanelCollapsed}
-                    onClose={closeAllPanels}
-                    onToggleCollapse={togglePanelCollapse}
+            {!isMobileOrTablet ? (
+                <RightPanelWrapper
+                    isOpen={activeRightPanel === 'announcement'}
                     isCollapsed={isPanelCollapsed}
-                    isAdmin={isAdmin}
-                    initialAnnouncement={selectedAnnouncement}
-                />
-            </RightPanelWrapper>
+                >
+                    <AnnouncementPanel
+                        isOpen={!isPanelCollapsed}
+                        onClose={closeAllPanels}
+                        onToggleCollapse={togglePanelCollapse}
+                        isCollapsed={isPanelCollapsed}
+                        isAdmin={isAdmin}
+                        initialAnnouncement={selectedAnnouncement}
+                    />
+                </RightPanelWrapper>
+            ) : (
+                <Sheet
+                    open={isAnnouncementSheetOpen}
+                    onOpenChange={(open) => {
+                        setIsAnnouncementSheetOpen(open);
+                        if (!open) {
+                            setActiveRightPanel(null);
+                            setIsPanelCollapsed(false);
+                            setSelectedAnnouncement(null);
+                        }
+                    }}
+                >
+                    <SheetContent side="bottom" className="bg-background border-border font-serif max-h-[86vh] p-0">
+                        <SheetHeader className="sr-only">
+                            <SheetTitle>공지사항</SheetTitle>
+                        </SheetHeader>
+                        <div className="h-[82vh] overflow-hidden">
+                            <AnnouncementPanel
+                                isOpen={isAnnouncementSheetOpen}
+                                onClose={closeAllPanels}
+                                isAdmin={isAdmin}
+                                initialAnnouncement={selectedAnnouncement}
+                            />
+                        </div>
+                    </SheetContent>
+                </Sheet>
+            )}
 
 
         </>
