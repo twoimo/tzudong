@@ -674,12 +674,12 @@ function MobileControlOverlayComponent({
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        'h-8 w-8 rounded-full border border-border bg-background',
+                        'h-9 w-9 rounded-full border border-border bg-background',
                         'hover:bg-secondary/80'
                     )}
                     aria-label="북마크"
                 >
-                    <Bookmark className="h-4 w-4" />
+                    <Bookmark className="h-[18px] w-[18px]" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-72 bg-card border-border font-serif z-[110]">
@@ -770,12 +770,12 @@ function MobileControlOverlayComponent({
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        'h-8 w-8 rounded-full border border-border bg-background',
+                        'h-9 w-9 rounded-full border border-border bg-background',
                         'hover:bg-secondary/80 relative'
                     )}
                     aria-label="알림"
                 >
-                    <Bell className="h-4 w-4" />
+                    <Bell className="h-[18px] w-[18px]" />
                     {unreadCount > 0 && (
                         <Badge
                             variant="destructive"
@@ -854,12 +854,12 @@ function MobileControlOverlayComponent({
                         onTopShellUserIconClick?.();
                     }}
                     className={cn(
-                        'h-8 w-8 rounded-full border border-border bg-background',
+                        'h-9 w-9 rounded-full border border-border bg-background',
                         'hover:bg-secondary/80'
                     )}
                     aria-label="사용자 메뉴"
                 >
-                    <UserIcon className="h-4 w-4" />
+                    <UserIcon className="h-[18px] w-[18px]" />
                 </Button>
             );
         }
@@ -871,12 +871,12 @@ function MobileControlOverlayComponent({
                         variant="ghost"
                         size="icon"
                         className={cn(
-                            'h-8 w-8 rounded-full border border-border bg-background',
+                            'h-9 w-9 rounded-full border border-border bg-background',
                             'hover:bg-secondary/80'
                         )}
                         aria-label="사용자 메뉴"
                     >
-                        <UserIcon className="h-4 w-4" />
+                        <UserIcon className="h-[18px] w-[18px]" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-border font-serif w-40 z-[110]">
@@ -974,24 +974,24 @@ function MobileControlOverlayComponent({
             <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)]">
                 <div
                     className={cn(
-                        'pointer-events-auto flex items-center gap-1.5 h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5',
+                        'pointer-events-auto flex items-center gap-2 h-12 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-2',
                         activeSheet === 'search' && 'ring-2 ring-primary'
                     )}
                 >
                     <Button
                         variant="ghost"
                         onClick={() => toggleSheet('search')}
-                        className="flex-1 h-9 rounded-full justify-start gap-2 px-2 hover:bg-secondary/80"
+                        className="flex-1 h-10 rounded-full justify-start gap-2 px-2.5 hover:bg-secondary/80"
                         aria-label="맛집 검색 열기"
                     >
                         <Image
                             src="/logo.png"
                             alt="로고"
-                            width={24}
-                            height={24}
+                            width={26}
+                            height={26}
                             className="rounded-md object-contain shrink-0"
                         />
-                        <span className="text-sm text-muted-foreground truncate">쯔동여지도 맛집 검색하기</span>
+                        <span className="text-[15px] text-muted-foreground truncate">쯔동여지도 맛집 검색하기</span>
                     </Button>
 
                     {renderBookmarkMenuButton()}
@@ -1000,7 +1000,7 @@ function MobileControlOverlayComponent({
                     {renderUserMenuButton()}
                 </div>
 
-                <div className="pointer-events-auto mt-2 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] pb-1 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="pointer-events-auto mt-2.5 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] pb-1 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {quickTopCategories.map((category) => (
                         <Button
                             key={category}
@@ -1008,8 +1008,8 @@ function MobileControlOverlayComponent({
                             size="sm"
                             onClick={() => handleQuickCategoryToggle(category)}
                             className={cn(
-                                'pointer-events-auto h-8 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                'px-3 text-xs font-medium transition-colors hover:bg-secondary/80',
+                                'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                'px-3.5 text-[13px] font-medium transition-colors hover:bg-secondary/80',
                                 quickSelectedCategories.includes(category)
                                     ? 'bg-red-700 text-white border-red-700 hover:bg-red-800'
                                     : 'text-foreground'
@@ -1023,12 +1023,12 @@ function MobileControlOverlayComponent({
                         size="sm"
                         onClick={() => toggleSheet('category')}
                         className={cn(
-                            'pointer-events-auto h-8 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                            'hover:bg-secondary/80 px-3 text-xs font-medium',
+                            'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                            'hover:bg-secondary/80 px-3.5 text-[13px] font-medium',
                             activeSheet === 'category' && 'ring-2 ring-primary'
                         )}
                     >
-                        <Filter className="mr-1 h-3.5 w-3.5" />
+                        <Filter className="mr-1 h-4 w-4" />
                         더보기
                     </Button>
                 </div>
