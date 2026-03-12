@@ -879,7 +879,7 @@ function MobileControlOverlayComponent({
                         <UserIcon className="h-[18px] w-[18px]" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36 z-[110]">
+                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-32 z-[110]">
                     <DropdownMenuItem onClick={() => dispatchWindowEvent('openMyPage')} className="text-foreground hover:bg-accent py-1.5">
                         <UserIcon className="mr-2 h-4 w-4" />
                         마이페이지
