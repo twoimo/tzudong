@@ -8,7 +8,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "sonner";
 import { Restaurant } from "@/types/restaurant";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
@@ -82,6 +82,8 @@ type AnnouncementRow = {
     created_at: string;
     updated_at: string;
 };
+
+const ANNOUNCEMENT_HALF_HEIGHT = 50;
 
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
@@ -374,8 +376,6 @@ export default function HomeClient() {
             setIsPanelCollapsed(false);
         }
     }, [state.isPanelOpen]);
-
-
 
     // 우측 패널 너비 계산 (접힌 상태면 0)
     const rightPanelWidth = (state.isPanelOpen || activeRightPanel) && !isPanelCollapsed ? 400 : 0;
@@ -753,31 +753,35 @@ export default function HomeClient() {
                     />
                 </RightPanelWrapper>
             ) : (
-                <Sheet
-                    open={isAnnouncementSheetOpen}
-                    onOpenChange={(open) => {
-                        setIsAnnouncementSheetOpen(open);
-                        if (!open) {
-                            setActiveRightPanel(null);
-                            setIsPanelCollapsed(false);
-                            setSelectedAnnouncement(null);
-                        }
+                <BottomSheet
+                    isOpen={isAnnouncementSheetOpen}
+                    onClose={() => {
+                        setIsAnnouncementSheetOpen(false);
+                        setActiveRightPanel(null);
+                        setIsPanelCollapsed(false);
+                        setSelectedAnnouncement(null);
                     }}
+                    defaultHeight={ANNOUNCEMENT_HALF_HEIGHT}
+                    minHeight={25}
+                    maxHeight={100}
+                    enablePeek
+                    hideBottomNavWhenOpen
+                    progressiveHeaderHide
+                    showBackdrop={false}
+                    closeOnOutsidePointerDown
+                    layoutSource="home-announcement-bottom-sheet"
+                    className="z-[95] p-0"
                 >
-                    <SheetContent side="bottom" className="bg-background border-border font-serif max-h-[86vh] p-0">
-                        <SheetHeader className="sr-only">
-                            <SheetTitle>공지사항</SheetTitle>
-                        </SheetHeader>
-                        <div className="h-[82vh] overflow-hidden">
-                            <AnnouncementPanel
-                                isOpen={isAnnouncementSheetOpen}
-                                onClose={closeAllPanels}
-                                isAdmin={isAdmin}
-                                initialAnnouncement={selectedAnnouncement}
-                            />
-                        </div>
-                    </SheetContent>
-                </Sheet>
+                    <div className="h-full min-h-0 overflow-hidden bg-background">
+                        <AnnouncementPanel
+                            isOpen={isAnnouncementSheetOpen}
+                            onClose={closeAllPanels}
+                            isAdmin={isAdmin}
+                            initialAnnouncement={selectedAnnouncement}
+                            isBottomSheet
+                        />
+                    </div>
+                </BottomSheet>
             )}
 
 

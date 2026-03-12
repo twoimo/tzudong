@@ -30,6 +30,7 @@ interface AnnouncementPanelProps {
     isCollapsed?: boolean;
     isAdmin?: boolean;
     initialAnnouncement?: Announcement | null;
+    isBottomSheet?: boolean;
 }
 
 export default function AnnouncementPanel({
@@ -39,6 +40,7 @@ export default function AnnouncementPanel({
     isCollapsed,
     isAdmin = false,
     initialAnnouncement,
+    isBottomSheet = false,
 }: AnnouncementPanelProps) {
     void isOpen;
     const { data: adminAnnouncements = [], isLoading: isAdminAnnouncementsLoading } = useAnnouncementsAdmin();
@@ -228,7 +230,7 @@ export default function AnnouncementPanel({
     }, [currentPage, totalPages]);
 
     return (
-        <div className="h-full flex flex-col bg-background border-l border-border relative">
+        <div className={`h-full flex flex-col bg-background relative ${isBottomSheet ? '' : 'border-l border-border'}`}>
             {/* 플로팅 접기/펼치기 버튼 */}
             {onToggleCollapse && (
                 <button

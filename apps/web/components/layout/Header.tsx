@@ -13,12 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -106,6 +101,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const shouldShowLoginButton = !isLoggedIn && shouldShowAuthUI;
   const shouldShowAuthSkeleton = !shouldShowAuthUI;
   const shouldShowBannerSkeleton = (!isHydrated || isBannerAnnouncementsLoading) && bannerAnnouncements.length === 0;
+  const isMobileBannerOnlyHeader = isMobileOrTablet;
 
   const handleInsightMenuClick = useCallback(() => {
     if (isLoggedIn) {
@@ -402,19 +398,21 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border to-transparent dark:via-border" />
 
       {/* 좌측: 로고 */}
-      <Link href="/" className="relative z-10 flex-shrink-0 flex items-center justify-center">
-        <NextImage
-          src="/logo.png"
-          alt="Tzudong Logo"
-          width={32}
-          height={32}
-          className="rounded-lg object-contain"
-          priority
-        />
-      </Link>
+      {!isMobileBannerOnlyHeader && (
+        <Link href="/" className="relative z-10 flex-shrink-0 flex items-center justify-center">
+          <NextImage
+            src="/logo.png"
+            alt="Tzudong Logo"
+            width={32}
+            height={32}
+            className="rounded-lg object-contain"
+            priority
+          />
+        </Link>
+      )}
 
       {/* 좌측: 사이드바 토글 */}
-      {!hideToggleSidebar && shouldShowHeaderIcons && (
+      {!isMobileBannerOnlyHeader && !hideToggleSidebar && shouldShowHeaderIcons && (
         <div className={cn(
           "flex items-center relative z-10 flex-shrink-0 transition-all duration-300",
           isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
@@ -496,10 +494,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       )}
 
       {/* 우측: 위젯 및 버튼들 */}
-      <div className={cn(
-        "flex items-center gap-1 sm:gap-2 relative z-10 flex-shrink-0 transition-all duration-300",
-        isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-      )}>
+      {!isMobileBannerOnlyHeader && (
+        <div className={cn(
+          "flex items-center gap-1 sm:gap-2 relative z-10 flex-shrink-0 transition-all duration-300",
+          isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+        )}>
         {/* 랭킹 및 접속자 위젯 - 데스크탑에서만 표시 */}
         <div className={cn(
           "hidden md:flex",
@@ -858,12 +857,26 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </Button>
           )
         }
-      </div >
+      </div>
+      )}
 
       {/* 공지사항 바텀시트 */}
-      < Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen} >
-        <SheetContent side="bottom" className="bg-background border-border font-serif max-h-[80vh] flex flex-col">
-          <SheetHeader className="flex-shrink-0">
+      <BottomSheet
+        isOpen={isAnnouncementSheetOpen}
+        onClose={() => setIsAnnouncementSheetOpen(false)}
+        defaultHeight={50}
+        minHeight={25}
+        maxHeight={100}
+        enablePeek
+        hideBottomNavWhenOpen
+        progressiveHeaderHide
+        showBackdrop={false}
+        closeOnOutsidePointerDown
+        layoutSource="header-announcement-bottom-sheet"
+        className="z-[95]"
+      >
+        <div className="h-full flex flex-col bg-background font-serif">
+          <div className="flex-shrink-0 border-b border-border px-4 py-3">
             <div className="flex items-center gap-2">
               {announcementViewMode === 'detail' && (
                 <Button
@@ -877,26 +890,24 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <ChevronLeft className="h-5 w-5 text-foreground" />
                 </Button>
               )}
-              <div className="flex-1 min-w-0">
-                <SheetTitle className="text-foreground flex items-center gap-2">
-                  <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
-                  <span className="truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</span>
-                  {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
-                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap flex-shrink-0">
-                      · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
-                        addSuffix: true,
-                        locale: ko
-                      })}
-                    </span>
-                  )}
-                </SheetTitle>
+              <div className="flex-1 min-w-0 text-foreground flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
+                <h2 className="font-semibold truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</h2>
+                {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
+                  <span className="text-xs text-muted-foreground font-normal whitespace-nowrap flex-shrink-0">
+                    · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
+                      addSuffix: true,
+                      locale: ko
+                    })}
+                  </span>
+                )}
               </div>
             </div>
-          </SheetHeader>
-          <div className="flex-1 overflow-hidden mt-4">
+          </div>
+          <div className="flex-1 overflow-hidden px-4 pt-4">
             {announcementViewMode === 'list' ? (
               <div className="h-full flex flex-col">
-                <ScrollArea className="flex-1 pr-4">
+                <ScrollArea className="flex-1">
                   <div className="space-y-3">
                     {(() => {
                       const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
@@ -974,7 +985,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               </div>
             ) : (
               <div className="h-full flex flex-col">
-                <ScrollArea className="flex-1 pr-4">
+                <ScrollArea className="flex-1">
                   <div className="text-foreground text-sm whitespace-pre-wrap leading-relaxed">
                     {selectedAnnouncement?.content}
                   </div>
@@ -1044,9 +1055,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet >
-    </header >
+        </div>
+      </BottomSheet>
+    </header>
   );
 };
 

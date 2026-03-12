@@ -41,6 +41,7 @@ import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateHoverAnchoredCenter } from "@/lib/map-hover-anchor";
+import { useBannerAnnouncements } from "@/hooks/use-announcements";
 
 interface ExtendedBounds {
     south: number;
@@ -89,6 +90,7 @@ const ZOOM_DIFF_THRESHOLD = 4; // 즉시 로드할 줌 차이 임계값
 const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 const MOBILE_MARKER_CENTER_FINE_TUNE_PX = -6; // 선택 마커 translateY(-5px) 시각 보정
 const ONLINE_USERS_TOAST_INTERVAL_MS = 60000;
+const ANNOUNCEMENT_TOAST_INTERVAL_MS = 70000;
 
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
@@ -252,6 +254,18 @@ const OnlineUsersBadge = memo(({ count, style, className }: { count: number, sty
     </div>
 ));
 OnlineUsersBadge.displayName = 'OnlineUsersBadge';
+
+const AnnouncementToastBadge = memo(({ title, style, className }: { title: string; style?: React.CSSProperties; className?: string }) => (
+    <div
+        style={{ ...style, animation: 'fadeInOut 4s ease-in-out forwards' }}
+        className={`bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300 ${className || ''}`}
+    >
+        <span className="text-sm font-medium truncate max-w-[min(80vw,28rem)]">
+            📢 {title}
+        </span>
+    </div>
+));
+AnnouncementToastBadge.displayName = 'AnnouncementToastBadge';
 
 
 // 빈 상태 UI 컴포넌트
@@ -456,6 +470,12 @@ const NaverMapView = memo(({
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [onlineUsersCount, setOnlineUsersCount] = useState(0);
+    const [showAnnouncementToast, setShowAnnouncementToast] = useState(false);
+    const [announcementToastTitle, setAnnouncementToastTitle] = useState('');
+    const announcementToastIndexRef = useRef(0);
+    const announcementToastHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const announcementToastInitialTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
     const [isMapInitialized, setIsMapInitialized] = useState(false);
 
     const handleDetailPanelMouseDownCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -1306,6 +1326,44 @@ const NaverMapView = memo(({
             if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
         };
     }, [isLoaded]); // isLoaded만 의존성으로
+
+    // 공지사항 배너 내용 주기 노출
+    useEffect(() => {
+        if (!isLoaded || bannerAnnouncements.length === 0) {
+            setShowAnnouncementToast(false);
+            setAnnouncementToastTitle('');
+            if (announcementToastInitialTimerRef.current) clearTimeout(announcementToastInitialTimerRef.current);
+            if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
+            return;
+        }
+
+        const showAnnouncementBadge = () => {
+            const index = announcementToastIndexRef.current % bannerAnnouncements.length;
+            const announcement = bannerAnnouncements[index];
+            if (!announcement) return;
+
+            setAnnouncementToastTitle(announcement.title);
+            setShowAnnouncementToast(true);
+
+            announcementToastIndexRef.current = (announcementToastIndexRef.current + 1) % bannerAnnouncements.length;
+
+            if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
+            announcementToastHideTimerRef.current = setTimeout(() => {
+                setShowAnnouncementToast(false);
+            }, 4200);
+        };
+
+        if (announcementToastInitialTimerRef.current) clearTimeout(announcementToastInitialTimerRef.current);
+        announcementToastInitialTimerRef.current = setTimeout(showAnnouncementBadge, 9000);
+
+        const interval = setInterval(showAnnouncementBadge, ANNOUNCEMENT_TOAST_INTERVAL_MS);
+
+        return () => {
+            clearInterval(interval);
+            if (announcementToastInitialTimerRef.current) clearTimeout(announcementToastInitialTimerRef.current);
+            if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
+        };
+    }, [bannerAnnouncements, isLoaded]);
 
     // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
     const displayRestaurants = useMemo(() => {
@@ -2470,6 +2528,16 @@ const NaverMapView = memo(({
                     )
                 }
 
+                {
+                    showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && announcementToastTitle && (
+                        <AnnouncementToastBadge
+                            title={announcementToastTitle}
+                            style={centerOffsetStyle}
+                            className={floatingBadgePositionClass}
+                        />
+                    )
+                }
+
                 {/* 빈 상태 UI - 맛집이 없을 때 표시 */}
                 {
                     !isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
@@ -2532,6 +2600,14 @@ const NaverMapView = memo(({
                 {showOnlineUsers && !showRestaurantCount && (
                     <OnlineUsersBadge
                         count={onlineUsersCount}
+                        style={centerOffsetStyle}
+                        className={floatingBadgePositionClass}
+                    />
+                )}
+
+                {showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && announcementToastTitle && (
+                    <AnnouncementToastBadge
+                        title={announcementToastTitle}
                         style={centerOffsetStyle}
                         className={floatingBadgePositionClass}
                     />
