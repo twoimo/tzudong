@@ -667,10 +667,10 @@ const NaverMapView = memo(({
 
     const centerOffsetStyle = { left: `calc(50% - ${effectivePanelOffset / 2}px)` };
     const floatingBadgePositionClass = isMobileOrTablet
-        ? "absolute top-[calc(env(safe-area-inset-top)+106px)] -translate-x-1/2 transition-[left] duration-300 ease-in-out z-[61]"
+        ? "absolute top-[calc(env(safe-area-inset-top)+124px)] -translate-x-1/2 transition-[left] duration-300 ease-in-out z-[61]"
         : "absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out";
     const floatingToastPositionClass = isMobileOrTablet
-        ? "absolute top-[calc(env(safe-area-inset-top)+106px)] -translate-x-1/2 transition-[left] ease-in-out z-[70]"
+        ? "absolute top-[calc(env(safe-area-inset-top)+124px)] -translate-x-1/2 transition-[left] ease-in-out z-[70]"
         : "absolute top-4 -translate-x-1/2 transition-[left] ease-in-out";
 
     // 외부에서 패널 닫기 요청 시 닫기 (externalPanelOpen이 false면 닫기)
