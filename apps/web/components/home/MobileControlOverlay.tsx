@@ -1,9 +1,37 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
-import { Filter, Search, X, MapPin, Check, Send } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+    Filter,
+    X,
+    MapPin,
+    Video,
+    Check,
+    Send,
+    User as UserIcon,
+    Megaphone,
+    BarChart2,
+    Utensils,
+    ClipboardList,
+    MessageSquare,
+    Image as ImageIcon,
+    DollarSign,
+    LogOut,
+    ChevronDown,
+    ChevronUp
+} from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 import { Region, REGIONS, Restaurant } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +39,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from 'sonner';
 import type { User } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -77,6 +106,7 @@ interface MobileControlOverlayProps {
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
     user?: User | null;
     onSubmissionClick?: () => void;
+    onTopShellUserIconClick?: () => void;
 }
 
 type ActiveSheet = 'none' | 'region' | 'category' | 'search';
@@ -98,14 +128,25 @@ function MobileControlOverlayComponent({
     onRestaurantSelect,
     onRestaurantSearch,
     onSearchExecute,
+    isAdmin = false,
     onModeChange,
     user,
     onSubmissionClick,
+    onTopShellUserIconClick,
 }: MobileControlOverlayProps) {
+    const router = useRouter();
+    const { signOut } = useAuth();
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     const [sheetHeight, setSheetHeight] = useState(50); // 최종 높이 (스냅 시에만 업데이트)
     // [OPTIMIZATION] isDragging은 UI 업데이트용으로만 사용, 실제 드래그 로직은 ref 사용
     const [isDragging, setIsDragging] = useState(false);
+    const [quickSelectedCategories, setQuickSelectedCategories] = useState<string[]>(selectedCategories);
+    const [searchViewportHeight, setSearchViewportHeight] = useState<number | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
+    const [adminBadgeCounts, setAdminBadgeCounts] = useState({ submissions: 0, reviews: 0 });
 
     // [OPTIMIZATION] ref로 실시간 드래그 상태 추적 (리렌더링 없이)
     const sheetRef = useRef<HTMLDivElement>(null);
@@ -124,6 +165,7 @@ function MobileControlOverlayComponent({
     const isContentDraggingSheetRef = useRef(false);
     const contentStartBoundaryRef = useRef<'top' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const getContentSnapPoints = useCallback(() => {
         const midSnap = MIN_SHEET_HEIGHT + ((MAX_SHEET_HEIGHT - MIN_SHEET_HEIGHT) / 2);
@@ -134,7 +176,7 @@ function MobileControlOverlayComponent({
         const snapPoints = getContentSnapPoints();
         return snapPoints.reduce((closest, snap) =>
             Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
-        , snapPoints[0]);
+            , snapPoints[0]);
     }, [getContentSnapPoints]);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
@@ -483,14 +525,318 @@ function MobileControlOverlayComponent({
         mapMode === 'domestic' ? (selectedRegion || '전체') : (selectedCountry || '국가'),
         [mapMode, selectedRegion, selectedCountry]);
 
-    const categoryLabel = useMemo(() =>
-        selectedCategories.length > 0
-            ? `${selectedCategories[0]}${selectedCategories.length > 1 ? ` +${selectedCategories.length - 1}` : ''}`
-            : '카테고리',
-        [selectedCategories]);
+    const quickTopCategories = useMemo(() => CATEGORIES.slice(0, 8), []);
+
+    const handleQuickCategoryToggle = useCallback((category: string) => {
+        const nextCategories = quickSelectedCategories.includes(category)
+            ? quickSelectedCategories.filter((item) => item !== category)
+            : [...quickSelectedCategories, category];
+        setQuickSelectedCategories(nextCategories);
+        onCategoryChange(nextCategories);
+    }, [onCategoryChange, quickSelectedCategories]);
+
+    useEffect(() => {
+        setQuickSelectedCategories(selectedCategories);
+    }, [selectedCategories]);
+
+    useEffect(() => {
+        if (activeSheet !== 'search') {
+            setSearchViewportHeight(null);
+            return;
+        }
+
+        const visualViewport = window.visualViewport;
+        const updateViewportHeight = () => {
+            const nextHeight = visualViewport?.height ?? window.innerHeight;
+            setSearchViewportHeight(Math.max(320, nextHeight));
+        };
+
+        updateViewportHeight();
+        visualViewport?.addEventListener('resize', updateViewportHeight);
+        visualViewport?.addEventListener('scroll', updateViewportHeight);
+        window.addEventListener('resize', updateViewportHeight);
+
+        return () => {
+            visualViewport?.removeEventListener('resize', updateViewportHeight);
+            visualViewport?.removeEventListener('scroll', updateViewportHeight);
+            window.removeEventListener('resize', updateViewportHeight);
+        };
+    }, [activeSheet]);
+
+    useEffect(() => {
+        if (activeSheet !== 'search') return;
+
+        const focusTimer = window.setTimeout(() => {
+            searchInputRef.current?.focus();
+        }, 120);
+
+        return () => window.clearTimeout(focusTimer);
+    }, [activeSheet]);
+
+    useEffect(() => {
+        if (!user || !isAdmin || activeSheet !== 'none') return;
+
+        let isMounted = true;
+        const loadPendingCounts = async () => {
+            try {
+                const [{ count: submissionsCount }, { count: reviewsCount }] = await Promise.all([
+                    supabase
+                        .from('restaurant_submissions')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('status', 'pending'),
+                    supabase
+                        .from('reviews')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('is_verified', false),
+                ]);
+
+                if (!isMounted) return;
+                setAdminBadgeCounts({
+                    submissions: submissionsCount ?? 0,
+                    reviews: reviewsCount ?? 0,
+                });
+            } catch {
+                if (!isMounted) return;
+                setAdminBadgeCounts({ submissions: 0, reviews: 0 });
+            }
+        };
+
+        loadPendingCounts();
+        return () => {
+            isMounted = false;
+        };
+    }, [activeSheet, isAdmin, user]);
+
+    const closeUserMenu = useCallback(() => {
+        setIsUserMenuOpen(false);
+    }, []);
+
+    const dispatchWindowEvent = useCallback((eventName: string) => {
+        window.dispatchEvent(new Event(eventName));
+        closeUserMenu();
+    }, [closeUserMenu]);
+
+    const handleInsightMenuClick = useCallback(() => {
+        router.push('/insights');
+        closeUserMenu();
+    }, [closeUserMenu, router]);
+
+    const handleAdminBannersClick = useCallback(() => {
+        router.push('/admin/banners');
+        closeUserMenu();
+    }, [closeUserMenu, router]);
+
+    const handleAdminCostClick = useCallback(() => {
+        router.push('/admin/costs');
+        closeUserMenu();
+    }, [closeUserMenu, router]);
+
+    const handleAdminRestaurantsClick = useCallback(() => {
+        router.push('/admin/evaluations');
+        closeUserMenu();
+    }, [closeUserMenu, router]);
+
+    const handleLogoutClick = useCallback(async () => {
+        try {
+            await signOut();
+            toast.success('로그아웃되었습니다');
+            router.push('/');
+        } catch (error) {
+            console.error('로그아웃 실패:', error);
+            toast.error('로그아웃에 실패했습니다');
+        } finally {
+            closeUserMenu();
+        }
+    }, [closeUserMenu, router, signOut]);
+
+    const renderUserMenuButton = () => {
+        if (!user) {
+            return (
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onTopShellUserIconClick?.();
+                    }}
+                    className={cn(
+                        'h-8 w-8 rounded-full border border-border bg-background',
+                        'hover:bg-secondary/80'
+                    )}
+                    aria-label="사용자 메뉴"
+                >
+                    <UserIcon className="h-4 w-4" />
+                </Button>
+            );
+        }
+
+        return (
+            <DropdownMenu open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            'h-8 w-8 rounded-full border border-border bg-background',
+                            'hover:bg-secondary/80'
+                        )}
+                        aria-label="사용자 메뉴"
+                    >
+                        <UserIcon className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-40 z-[110]">
+                    <DropdownMenuItem onClick={() => dispatchWindowEvent('openMyPage')} className="text-foreground hover:bg-accent py-1.5">
+                        <UserIcon className="mr-2 h-4 w-4" />
+                        마이페이지
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminAnnouncements')} className="text-foreground hover:bg-accent py-1.5">
+                        <Megaphone className="mr-2 h-4 w-4" />
+                        공지사항
+                    </DropdownMenuItem>
+                    {!isAdmin && (
+                        <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
+                            <BarChart2 className="mr-2 h-4 w-4" />
+                            인사이트
+                        </DropdownMenuItem>
+                    )}
+                    {isAdmin && (
+                        <>
+                            <DropdownMenuSeparator className="bg-border my-1" />
+                            <DropdownMenuItem onClick={handleAdminRestaurantsClick} className="text-foreground hover:bg-accent py-1.5">
+                                <Utensils className="mr-2 h-4 w-4" />
+                                맛집관리
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminSubmissions')} className="text-foreground hover:bg-accent py-1.5">
+                                <ClipboardList className="mr-2 h-4 w-4" />
+                                제보관리
+                                {adminBadgeCounts.submissions > 0 && (
+                                    <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
+                                        {adminBadgeCounts.submissions > 99 ? '99+' : adminBadgeCounts.submissions}
+                                    </Badge>
+                                )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminReviews')} className="text-foreground hover:bg-accent py-1.5">
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                리뷰관리
+                                {adminBadgeCounts.reviews > 0 && (
+                                    <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
+                                        {adminBadgeCounts.reviews > 99 ? '99+' : adminBadgeCounts.reviews}
+                                    </Badge>
+                                )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
+                                <ImageIcon className="mr-2 h-4 w-4" />
+                                배너관리
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-border my-1" />
+                            <DropdownMenuItem onClick={handleAdminCostClick} className="text-foreground hover:bg-accent py-1.5">
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                서버비용
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
+                                <BarChart2 className="mr-2 h-4 w-4" />
+                                인사이트
+                            </DropdownMenuItem>
+                        </>
+                    )}
+                    <DropdownMenuSeparator className="bg-border my-1" />
+                    <DropdownMenuItem onClick={handleLogoutClick} className="text-foreground hover:bg-accent py-1.5">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        로그아웃
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-border my-1" />
+                    <div className="px-2 py-1">
+                        <button
+                            type="button"
+                            aria-label="사업자 정보 펼치기/접기"
+                            onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
+                            className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
+                        >
+                            <span className="text-[10px] text-muted-foreground">v1.0.0 © 타이니번</span>
+                            {isBusinessInfoExpanded ? (
+                                <ChevronUp className="h-3 w-3 text-muted-foreground ml-1" />
+                            ) : (
+                                <ChevronDown className="h-3 w-3 text-muted-foreground ml-1" />
+                            )}
+                        </button>
+                        {isBusinessInfoExpanded && (
+                            <div className="mt-1 pt-1 border-t border-border text-[9px] text-muted-foreground space-y-0.5 px-1">
+                                <p className="font-medium text-foreground">타이니번 데이터랩</p>
+                                <p>대표: 최연우</p>
+                                <p>사업자: 601-09-04613</p>
+                                <p>이메일: cs@tzudong.app</p>
+                            </div>
+                        )}
+                    </div>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        );
+    };
 
     return (
         <>
+            {/* 상단: 로고/검색/유저 아이콘 + 카테고리 플로팅 행 */}
+            <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)]">
+                <div
+                    className={cn(
+                        'pointer-events-auto flex items-center gap-1.5 h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5',
+                        activeSheet === 'search' && 'ring-2 ring-primary'
+                    )}
+                >
+                    <Button
+                        variant="ghost"
+                        onClick={() => toggleSheet('search')}
+                        className="flex-1 h-9 rounded-full justify-start gap-2 px-2 hover:bg-secondary/80"
+                        aria-label="맛집 검색 열기"
+                    >
+                        <Image
+                            src="/logo.png"
+                            alt="로고"
+                            width={24}
+                            height={24}
+                            className="rounded-md object-contain shrink-0"
+                        />
+                        <span className="text-sm text-muted-foreground truncate">쯔동여지도 맛집 검색하기</span>
+                    </Button>
+
+                    {renderUserMenuButton()}
+                </div>
+
+                <div className="pointer-events-auto mt-2 -mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-1 pr-[calc(env(safe-area-inset-right)+6px)] scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {quickTopCategories.map((category) => (
+                        <Button
+                            key={category}
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleQuickCategoryToggle(category)}
+                            className={cn(
+                                'pointer-events-auto h-8 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                'px-3 text-xs font-medium transition-colors hover:bg-secondary/80',
+                                quickSelectedCategories.includes(category)
+                                    ? 'bg-red-700 text-white border-red-700 hover:bg-red-800'
+                                    : 'text-foreground'
+                            )}
+                        >
+                            {category}
+                        </Button>
+                    ))}
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => toggleSheet('category')}
+                        className={cn(
+                            'pointer-events-auto h-8 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                            'hover:bg-secondary/80 px-3 text-xs font-medium',
+                            activeSheet === 'category' && 'ring-2 ring-primary'
+                        )}
+                    >
+                        <Filter className="mr-1 h-3.5 w-3.5" />
+                        더보기
+                    </Button>
+                </div>
+            </div>
+
             {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
             <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
@@ -542,27 +888,6 @@ function MobileControlOverlayComponent({
                     </div>
                 </Button>
 
-                {/* 카테고리 필터 버튼 */}
-                <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => toggleSheet('category')}
-                    className={cn(
-                        'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] px-2 h-8',
-                        activeSheet === 'category' && 'ring-2 ring-primary',
-                        selectedCategories.length > 0 && 'bg-primary/10'
-                    )}
-                >
-                    <div className="flex items-center w-full gap-1">
-                        <div className="flex items-center justify-center w-4 shrink-0">
-                            <Filter className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 flex items-center justify-center min-w-0">
-                            <span className="text-xs truncate">{categoryLabel}</span>
-                        </div>
-                    </div>
-                </Button>
             </div>
 
             {/* 우측 하단: 제보, 검색 버튼 */}
@@ -588,26 +913,113 @@ function MobileControlOverlayComponent({
                 >
                     <Send className="h-5 w-5" />
                 </Button>
-
-                {/* 검색 버튼 */}
-                <Button
-                    variant="secondary"
-                    size="icon"
-                    onClick={() => toggleSheet('search')}
-                    className={cn(
-                        'h-12 w-12 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80',
-                        activeSheet === 'search' && 'ring-2 ring-primary'
-                    )}
-                >
-                    <Search className="h-5 w-5" />
-                </Button>
             </div>
 
-            {/* 바텀시트 오버레이 */}
-            {activeSheet !== 'none' && (
+            {/* 전체 화면 검색 레이어 */}
+            {activeSheet === 'search' && (
+                <div className="fixed inset-0 z-[75] bg-background/95 backdrop-blur-sm pointer-events-auto animate-in fade-in-0 duration-200">
+                    <div
+                        className="flex flex-col overflow-hidden animate-in slide-in-from-top-3 duration-300"
+                        style={{
+                            height: searchViewportHeight ? `${searchViewportHeight}px` : '100dvh',
+                            paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
+                            paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
+                        }}
+                    >
+                        <div className="px-3 pb-3">
+                            <div className="flex items-center gap-1.5 h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5">
+                                <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40">
+                                    <Image
+                                        src="/logo.png"
+                                        alt="로고"
+                                        width={24}
+                                        height={24}
+                                        className="rounded-md object-contain shrink-0"
+                                    />
+                                    <input
+                                        ref={searchInputRef}
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="쯔동여지도 맛집 검색하기"
+                                        inputMode="search"
+                                        enterKeyHint="search"
+                                        autoComplete="off"
+                                        className="w-full bg-transparent text-sm text-foreground placeholder:text-foreground/70 outline-none"
+                                        aria-label="맛집 검색어 입력"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchQuery('')}
+                                            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+                                            aria-label="검색어 지우기"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setSearchType((prev) => prev === 'name' ? 'youtube' : 'name')}
+                                    title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
+                                    className="h-8 w-8 rounded-full border border-border bg-background hover:bg-secondary/80"
+                                >
+                                    {searchType === 'name' ? (
+                                        <MapPin className="h-4 w-4" />
+                                    ) : (
+                                        <Video className="h-4 w-4" />
+                                    )}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={handleClose}
+                                    aria-label="검색 닫기"
+                                    className="h-8 w-8 rounded-full border border-border bg-background hover:bg-secondary/80"
+                                >
+                                    <X className="h-5 w-5" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden px-3 pb-2">
+                            <Suspense fallback={<SheetLoading />}>
+                                <RestaurantSearch
+                                    onRestaurantSelect={(restaurant) => {
+                                        onRestaurantSelect(restaurant);
+                                        handleClose();
+                                    }}
+                                    onRestaurantSearch={(restaurant) => {
+                                        onRestaurantSearch(restaurant);
+                                        handleClose();
+                                    }}
+                                    onSearchExecute={() => {
+                                        onSearchExecute();
+                                        handleClose();
+                                    }}
+                                    filters={filters}
+                                    selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
+                                    isKoreanOnly={mapMode === 'domestic'}
+                                    maxItems={5}
+                                    resultView="inline"
+                                    hideSearchControls
+                                    searchQueryValue={searchQuery}
+                                    onSearchQueryChange={setSearchQuery}
+                                    searchTypeValue={searchType}
+                                    onSearchTypeChange={setSearchType}
+                                    className="h-full w-full"
+                                />
+                            </Suspense>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 바텀시트 오버레이 (지역/카테고리 전용) */}
+            {activeSheet !== 'none' && activeSheet !== 'search' && (
                 <div
-                    className="fixed inset-0 z-50 bg-black/30"
+                    className="fixed inset-0 z-[70] bg-black/30 pointer-events-auto"
                     role="button"
                     tabIndex={0}
                     aria-label="바텀시트 닫기"
@@ -628,85 +1040,53 @@ function MobileControlOverlayComponent({
                     <div
                         ref={sheetRef}
                         className={cn(
-                            'fixed bottom-0 left-0 right-0 z-50',
+                            'fixed bottom-0 left-0 right-0 z-[70]',
                             'bg-background rounded-t-2xl shadow-xl',
-                            'flex flex-col', // flexbox로 변경하여 컨텐츠 영역 제어
-                            // [OPTIMIZATION] transition은 드래그 종료 시에만 (검색 시트는 제외)
-                            (isDragging || activeSheet === 'search') ? '' : 'transition-transform duration-150 ease-out',
-                            // 검색 시트일 때는 드롭다운이 위로 나오도록 overflow visible
-                            activeSheet === 'search' ? 'overflow-visible' : 'overflow-hidden',
-                            // 하단 네비게이션바 공간 + iOS safe area + 여유 공간
-                            // 검색 시트는 컨텐츠에 딱 맞게 불필요한 여백 최소화
-                            activeSheet === 'search'
-                                ? 'pb-4'
-                                : 'pb-[calc(env(safe-area-inset-bottom)+80px)]'
+                            'flex flex-col overflow-hidden pb-[calc(env(safe-area-inset-bottom)+80px)]',
+                            isDragging ? '' : 'transition-transform duration-150 ease-out',
                         )}
                         style={{
-                            // [OPTIMIZATION] 검색 시트는 auto height, 나머지는 고정 높이 + transform
-                            // [Fix] 100vh 대신 100%를 사용하여 모바일 브라우저 호환성 향상 (부모가 fixed inset-0임)
-                            // [Fix] 삼성 인터넷/사파리 대응: max-height와 dvh 단위를 사용하여 헤더(64px) 침범 방지
-                            height: activeSheet === 'search' ? 'auto' : '100%',
-                            maxHeight: activeSheet === 'search' ? 'none' : 'calc(100dvh - 64px)',
-                            transform: activeSheet === 'search'
-                                ? 'none'
-                                : `translateY(calc(100% - ${sheetHeight}dvh))`,
-                            willChange: isDragging ? 'transform' : 'auto', // 드래그 중 GPU 레이어 유지
-                            // 검색 시트는 네비게이션 바(약 65px) + Safe Area 위로 띄움
-                            bottom: activeSheet === 'search' ? 'calc(35px + env(safe-area-inset-bottom))' : 0,
+                            height: '100%',
+                            maxHeight: 'calc(100dvh - 64px)',
+                            transform: `translateY(calc(100% - ${sheetHeight}dvh))`,
+                            willChange: isDragging ? 'transform' : 'auto',
+                            bottom: 0,
                         }}
                     >
-                        {/* 핸들 바 - 검색 시트는 드래그 불가, touch-action: none으로 Pull-to-Refresh 방지 */}
-                        {activeSheet !== 'search' && (
-                            <div
-                                ref={handleRef}
-                                className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing select-none border-b border-border/50"
-                                style={{ touchAction: 'none' }}
-                            >
-                                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                            </div>
-                        )}
+                        <div
+                            ref={handleRef}
+                            className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing select-none border-b border-border/50"
+                            style={{ touchAction: 'none' }}
+                        >
+                            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                        </div>
 
-                        {/* 헤더 */}
-                        <div className={cn(
-                            "flex items-center justify-between px-4 pb-3 border-b border-border",
-                            activeSheet === 'search' && "pt-3" // 검색 시트는 핸들이 없으므로 상단 패딩 추가
-                        )}>
+                        <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
                             <h3 className="text-lg font-semibold">
                                 {activeSheet === 'region' && (mapMode === 'domestic' ? '지역 선택' : '국가 선택')}
                                 {activeSheet === 'category' && '카테고리 필터'}
-                                {activeSheet === 'search' && '맛집 검색'}
                             </h3>
                             <Button variant="ghost" size="icon" onClick={handleClose}>
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
 
-                        {/* 컨텐츠 - 별도의 스크롤 컨테이너 */}
                         <div
                             ref={contentRef}
-                            className={cn(
-                                "flex-1",
-                                // 검색 시트일 때는 드롭다운이 보이도록 overflow visible
-                                activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto'
-                            )}
+                            className="flex-1 overflow-y-auto"
                             style={{
-                                // [Fix] vh 대신 dvh 사용 및 헤더 오프셋 정합성 유지
-                                maxHeight: activeSheet === 'search'
-                                    ? 'none' // 검색 시트는 높이 제한 없음 (컨텐츠만큼만)
-                                    : `calc(${sheetHeight}dvh - 120px)`,
+                                maxHeight: `calc(${sheetHeight}dvh - 120px)`,
                             }}
                             onTouchStart={handleContentTouchStart}
                             onTouchMove={handleContentTouchMove}
                             onTouchEnd={handleContentTouchEnd}
                             onTouchCancel={handleContentTouchEnd}
                         >
-                            <div className="p-4 pb-8">{/* 하단 패딩으로 스크롤 끝까지 가능 */}
+                            <div className="p-4 pb-8">
                                 {activeSheet === 'region' && (
                                     <div className="space-y-3">
                                         {mapMode === 'domestic' ? (
-                                            // 국내 지역 버튼 그리드
                                             <>
-                                                {/* 전국 버튼 */}
                                                 <Button
                                                     variant={selectedRegion === null ? "default" : "outline"}
                                                     className="w-full justify-between h-auto py-3"
@@ -720,7 +1100,6 @@ function MobileControlOverlayComponent({
                                                     <span className="text-sm opacity-75">({restaurants.length}개)</span>
                                                 </Button>
 
-                                                {/* 지역 버튼 그리드 */}
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {REGIONS.map((region) => {
                                                         const count = regionCounts[region] || 0;
@@ -744,7 +1123,6 @@ function MobileControlOverlayComponent({
                                                 </div>
                                             </>
                                         ) : (
-                                            // 해외 국가 버튼 그리드
                                             <div className="grid grid-cols-2 gap-2">
                                                 {Object.keys(countryCounts).map((country) => {
                                                     const count = countryCounts[country] || 0;
@@ -771,18 +1149,19 @@ function MobileControlOverlayComponent({
 
                                 {activeSheet === 'category' && (
                                     <div className="space-y-3">
-                                        {/* 초기화 버튼 */}
                                         {selectedCategories.length > 0 && (
                                             <Button
                                                 variant="outline"
                                                 className="w-full"
-                                                onClick={() => onCategoryChange([])}
+                                                onClick={() => {
+                                                    setQuickSelectedCategories([]);
+                                                    onCategoryChange([]);
+                                                }}
                                             >
                                                 초기화 ({selectedCategories.length}개 선택됨)
                                             </Button>
                                         )}
 
-                                        {/* 카테고리 버튼 그리드 */}
                                         <div className="grid grid-cols-2 gap-2">
                                             {CATEGORIES.map((category) => {
                                                 const count = categoryCounts[category] || 0;
@@ -796,6 +1175,7 @@ function MobileControlOverlayComponent({
                                                             const newCategories = isSelected
                                                                 ? selectedCategories.filter(cat => cat !== category)
                                                                 : [...selectedCategories, category];
+                                                            setQuickSelectedCategories(newCategories);
                                                             onCategoryChange(newCategories);
                                                         }}
                                                     >
@@ -809,7 +1189,6 @@ function MobileControlOverlayComponent({
                                             })}
                                         </div>
 
-                                        {/* 적용 버튼 */}
                                         <Button
                                             className="w-full"
                                             onClick={handleClose}
@@ -817,31 +1196,6 @@ function MobileControlOverlayComponent({
                                             적용하기
                                         </Button>
                                     </div>
-                                )}
-
-                                {activeSheet === 'search' && (
-                                    <Suspense fallback={<SheetLoading />}>
-                                        <div className="space-y-4">
-                                            <RestaurantSearch
-                                                onRestaurantSelect={(restaurant) => {
-                                                    onRestaurantSelect(restaurant);
-                                                    handleClose();
-                                                }}
-                                                onRestaurantSearch={(restaurant) => {
-                                                    onRestaurantSearch(restaurant);
-                                                    handleClose();
-                                                }}
-                                                onSearchExecute={() => {
-                                                    onSearchExecute();
-                                                    handleClose();
-                                                }}
-                                                filters={filters}
-                                                selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
-                                                isKoreanOnly={mapMode === 'domestic'}
-                                                maxItems={3} // 모바일에서는 3개씩만 표시
-                                            />
-                                        </div>
-                                    </Suspense>
                                 )}
                             </div>
                         </div>

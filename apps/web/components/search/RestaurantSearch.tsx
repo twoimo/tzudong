@@ -11,6 +11,8 @@ import { FilterState } from "@/components/filters/FilterPanel";
 import { useSearchHistory } from "@/hooks/use-search-history";
 import { incrementSearchCount } from "@/lib/search-count";
 
+type SearchType = 'name' | 'youtube';
+
 interface RestaurantSearchProps {
   onRestaurantSelect: (restaurant: Restaurant) => void;
   onSearchExecute?: () => void; // [OPTIMIZATION] 그리드 모드에서 검색 실행 시 호출
@@ -20,6 +22,14 @@ interface RestaurantSearchProps {
   selectedRegion?: string | null; // [OPTIMIZATION] 선택된 지역 (국가)
   isKoreanOnly?: boolean; // [OPTIMIZATION] 한국 지역만 필터링 (홈페이지용)
   maxItems?: number; // [OPTIMIZATION] 표시할 최대 아이템 수 (최근 검색, 인기 검색어)
+  dropdownPlacement?: 'top' | 'bottom';
+  autoFocusInput?: boolean;
+  resultView?: 'dropdown' | 'inline';
+  searchQueryValue?: string;
+  onSearchQueryChange?: (value: string) => void;
+  searchTypeValue?: SearchType;
+  onSearchTypeChange?: (value: SearchType) => void;
+  hideSearchControls?: boolean;
 }
 
 const MIN_SEARCH_QUERY_LENGTH = 2;
@@ -37,8 +47,6 @@ const getSearchQueryFromUrl = () => {
 };
 
 const POPULAR_RESTAURANTS_QUERY_KEY = ["popular-searches-weekly"] as const;
-
-type SearchType = 'name' | 'youtube';
 
 type SearchRestaurantsByYoutubeTitleArgs = {
   search_query: string;
@@ -62,16 +70,38 @@ const RestaurantSearch = ({
   filters,
   selectedRegion,
   isKoreanOnly = false,
-  maxItems // [OPTIMIZATION] 기본값은 undefined (제한 없음)
+  maxItems, // [OPTIMIZATION] 기본값은 undefined (제한 없음)
+  dropdownPlacement = 'top',
+  autoFocusInput = false,
+  resultView = 'dropdown',
+  searchQueryValue,
+  onSearchQueryChange,
+  searchTypeValue,
+  onSearchTypeChange,
+  hideSearchControls = false,
 }: RestaurantSearchProps) => {
-  const [searchQuery, setSearchQuery] = useState(getSearchQueryFromUrl);
+  const [internalSearchQuery, setInternalSearchQuery] = useState(getSearchQueryFromUrl);
+  const [internalSearchType, setInternalSearchType] = useState<SearchType>('name');
+  const searchQuery = searchQueryValue ?? internalSearchQuery;
+  const searchType = searchTypeValue ?? internalSearchType;
+  const setSearchQuery = useCallback((value: string) => {
+    onSearchQueryChange?.(value);
+    if (searchQueryValue === undefined) {
+      setInternalSearchQuery(value);
+    }
+  }, [onSearchQueryChange, searchQueryValue]);
+  const setSearchType = useCallback((value: SearchType) => {
+    onSearchTypeChange?.(value);
+    if (searchTypeValue === undefined) {
+      setInternalSearchType(value);
+    }
+  }, [onSearchTypeChange, searchTypeValue]);
   const debouncedSearchQuery = useDeferredValue(searchQuery); // [OPTIMIZATION] 디바운싱
   const trimmedDebouncedSearchQuery = useMemo(
     () => debouncedSearchQuery.trim(),
     [debouncedSearchQuery]
   );
   const [isFocused, setIsFocused] = useState(false);
-  const [searchType, setSearchType] = useState<SearchType>('name');
   const searchRef = useRef<HTMLDivElement>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
   const queryClient = useQueryClient();
@@ -258,12 +288,12 @@ const RestaurantSearch = ({
   }, []);
 
   const toggleSearchType = useCallback(() => {
-    setSearchType(prev => prev === 'name' ? 'youtube' : 'name');
+    setSearchType(searchType === 'name' ? 'youtube' : 'name');
     // 검색어가 있으면 검색 타입 변경 시 재검색
     if (searchQuery.trim()) {
       setIsFocused(true);
     }
-  }, [searchQuery]);
+  }, [searchQuery, searchType, setSearchType]);
 
   const handleHistoryOrPopularSelect = useCallback(async (name: string, selectedRestaurantId?: string) => {
     const { data } = await supabase
@@ -286,62 +316,87 @@ const RestaurantSearch = ({
     }
   }, [handleSelect]);
 
-  const showResults = isFocused && (trimmedDebouncedSearchQuery.length > 0 || restaurants.length > 0);
-  const showHistoryAndPopular = isFocused && !searchQuery.trim();
+  const isInlineView = resultView === 'inline';
+  const showResults = isInlineView
+    ? trimmedDebouncedSearchQuery.length > 0 || restaurants.length > 0
+    : isFocused && (trimmedDebouncedSearchQuery.length > 0 || restaurants.length > 0);
+  const showHistoryAndPopular = isInlineView
+    ? !searchQuery.trim()
+    : isFocused && !searchQuery.trim();
 
   return (
-    <div ref={searchRef} className={cn("relative flex items-center gap-2", className)}>
-      {/* 검색 타입 토글 버튼 */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={toggleSearchType}
-        className="flex items-center gap-1.5 flex-shrink-0 order-last ml-auto px-2 md:px-3"
-        title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
-      >
-        {searchType === 'name' ? (
-          <>
-            <MapPin className="h-4 w-4" />
-            <span className="hidden md:inline">맛집명</span>
-          </>
-        ) : (
-          <>
-            <Video className="h-4 w-4" />
-            <span className="hidden md:inline">유튜브</span>
-          </>
-        )}
-      </Button>
+    <div ref={searchRef} className={cn("relative", isInlineView && "h-full flex flex-col", className)}>
+      {!hideSearchControls && (
+        <div className="flex items-center gap-2">
+        {/* 검색 타입 토글 버튼 */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleSearchType}
+          className="flex items-center gap-1.5 flex-shrink-0 order-last ml-auto px-2 md:px-3"
+          title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
+        >
+          {searchType === 'name' ? (
+            <>
+              <MapPin className="h-4 w-4" />
+              <span className="hidden md:inline">맛집명</span>
+            </>
+          ) : (
+            <>
+              <Video className="h-4 w-4" />
+              <span className="hidden md:inline">유튜브</span>
+            </>
+          )}
+        </Button>
 
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={searchType === 'name' ? "맛집 이름 검색..." : "유튜브 제목 검색..."}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          className="pl-10 pr-10 w-full min-w-0"
-          inputMode="search"
-          enterKeyHint="search"
-          autoComplete="off"
-        />
-        {searchQuery && (
-          <button
-            onClick={clearSearch}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={searchType === 'name' ? "맛집 이름 검색..." : "유튜브 제목 검색..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            autoFocus={autoFocusInput}
+            className="pl-10 pr-10 w-full min-w-0"
+            inputMode="search"
+            enterKeyHint="search"
+            autoComplete="off"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        </div>
+      )}
 
       {/* 검색 결과, 최근 검색, 인기 검색어 드롭다운 */}
       {(showResults || showHistoryAndPopular) && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-[19rem] overflow-y-auto">
+        <div
+          className={cn(
+            isInlineView
+              ? "z-10 overflow-y-auto bg-transparent border-0 shadow-none rounded-none"
+              : "bg-background border border-border rounded-md shadow-lg z-50 overflow-y-auto",
+            isInlineView
+              ? cn("flex-1", hideSearchControls ? "mt-0" : "mt-3")
+              : "absolute left-0 right-0",
+            !isInlineView && (dropdownPlacement === 'top'
+              ? "bottom-full mb-1 max-h-[19rem]"
+              : "top-full mt-1 max-h-[min(60vh,28rem)]")
+          )}
+        >
           {showResults ? (
             // 검색 결과 표시
             <>
               {isLoading ? (
                 <div className="p-3 text-sm text-muted-foreground">검색 중...</div>
+              ) : trimmedDebouncedSearchQuery.length > 0 && trimmedDebouncedSearchQuery.length < MIN_SEARCH_QUERY_LENGTH ? (
+                <div className="p-3 text-sm text-muted-foreground">두 글자 이상 입력해 주세요.</div>
               ) : restaurants.length > 0 ? (
                 restaurants.map((restaurant) => (
                   <button
@@ -409,9 +464,17 @@ const RestaurantSearch = ({
                 {history
                     .slice(0, maxItems)
                     .map((item) => (
-                      <button
+                      <div
                         key={item.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => handleHistoryOrPopularSelect(item.name, item.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleHistoryOrPopularSelect(item.name, item.id);
+                          }
+                        }}
                         className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2 group"
                       >
                         <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -432,7 +495,7 @@ const RestaurantSearch = ({
                         >
                           <X className="h-3 w-3" />
                         </button>
-                      </button>
+                      </div>
                     ))}
                 </div>
               )}

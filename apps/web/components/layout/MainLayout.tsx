@@ -13,6 +13,7 @@ import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
+import { APP_HEADER_HEIGHT_VAR, MOBILE_SHEET_HEADER_OFFSET_VAR, MOBILE_SHEET_HEADER_PROGRESS_VAR } from '@/lib/mobile-sheet-layout';
 
 // [PERF] 모달과 비핵심 컴포넌트를 동적 임포트로 코드 스플리팅
 // 이 컴포넌트들은 사용자 인터랙션 후에만 필요하므로 초기 번들에서 제외
@@ -58,6 +59,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
     // 마이페이지 여부 확인
     const isMyPage = pathname?.startsWith('/mypage');
+    const isMobileHomeHeaderHidden = pathname === '/' && !isDesktop;
 
     // 페이지 이동 감지
     useEffect(() => {
@@ -91,6 +93,19 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             router.push(`/?panel=announcement&announcementId=${announcement.id}`);
         }
     }, [pathname, router]);
+    const setMobileHomeHeaderVars = useCallback((isHidden: boolean) => {
+        const root = document.documentElement;
+        if (isHidden) {
+            root.style.setProperty(MOBILE_SHEET_HEADER_PROGRESS_VAR, '0');
+            root.style.setProperty(MOBILE_SHEET_HEADER_OFFSET_VAR, '0px');
+            root.style.setProperty(APP_HEADER_HEIGHT_VAR, '0px');
+            return;
+        }
+
+        root.style.setProperty(MOBILE_SHEET_HEADER_PROGRESS_VAR, '0');
+        root.style.setProperty(MOBILE_SHEET_HEADER_OFFSET_VAR, '0px');
+        root.style.setProperty(APP_HEADER_HEIGHT_VAR, '56px');
+    }, []);
 
     const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
         queryClient.invalidateQueries({ queryKey: ['restaurants'] });
@@ -99,6 +114,40 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             setSelectedRestaurant(updatedRestaurant);
         }
     };
+
+    // 모바일 홈 전용 헤더-리스너 계약 기반 이벤트 처리
+    const handleMobileAuthRequest = useCallback(() => {
+        setIsAuthModalOpen(true);
+    }, []);
+
+    const handleMobileProfileRequest = useCallback(() => {
+        setIsProfileModalOpen(true);
+    }, []);
+
+    useEffect(() => {
+        setMobileHomeHeaderVars(isMobileHomeHeaderHidden);
+
+        const openAuthListener = (event: Event) => {
+            const detail = (event as CustomEvent<{ route?: string }> | undefined)?.detail;
+            if (detail?.route && detail.route !== '/') return;
+            handleMobileAuthRequest();
+        };
+
+        const openProfileListener = (event: Event) => {
+            const detail = (event as CustomEvent<{ route?: string }> | undefined)?.detail;
+            if (detail?.route && detail.route !== '/') return;
+            handleMobileProfileRequest();
+        };
+
+        window.addEventListener('home:mobile-auth-request', openAuthListener);
+        window.addEventListener('home:mobile-profile-request', openProfileListener);
+
+        return () => {
+            window.removeEventListener('home:mobile-auth-request', openAuthListener);
+            window.removeEventListener('home:mobile-profile-request', openProfileListener);
+            setMobileHomeHeaderVars(false);
+        };
+    }, [handleMobileAuthRequest, handleMobileProfileRequest, isMobileHomeHeaderHidden, setMobileHomeHeaderVars]);
 
     // [NEW] 데스크탑에서는 항상 오버레이 레이아웃 사용 (사이드바 완전 제거)
     if (isDesktop) {
@@ -136,19 +185,21 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     본문 바로가기
                 </a>
 
-                <Header
-                    onToggleSidebar={handleToggleSidebar}
-                    isLoggedIn={!!user}
-                    isAuthLoading={isLoading}
-                    onOpenAuth={handleOpenAuth}
-                    onLogout={handleLogout}
-                    onProfileClick={handleProfileClick}
-                    isCenteredLayout={isCenteredLayout}
-                    onToggleCenteredLayout={shouldShowCenteredLayoutButton ? handleToggleCenteredLayout : undefined}
-                    isAdmin={isAdmin}
-                    onAnnouncementClick={handleAnnouncementClick}
-                    hideToggleSidebar={true}
-                />
+                {!isMobileHomeHeaderHidden && (
+                    <Header
+                        onToggleSidebar={handleToggleSidebar}
+                        isLoggedIn={!!user}
+                        isAuthLoading={isLoading}
+                        onOpenAuth={handleOpenAuth}
+                        onLogout={handleLogout}
+                        onProfileClick={handleProfileClick}
+                        isCenteredLayout={isCenteredLayout}
+                        onToggleCenteredLayout={shouldShowCenteredLayoutButton ? handleToggleCenteredLayout : undefined}
+                        isAdmin={isAdmin}
+                        onAnnouncementClick={handleAnnouncementClick}
+                        hideToggleSidebar={true}
+                    />
+                )}
 
                 <main
                     id="main-content"

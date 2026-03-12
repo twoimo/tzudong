@@ -452,6 +452,30 @@ export default function HomeClient() {
         setIsSubmissionModalOpen(true);
     }, [user]);
 
+    const handleTopShellUserIconClick = useCallback(() => {
+        if (typeof window === 'undefined') return;
+
+        if (!user) {
+            window.dispatchEvent(new CustomEvent('home:mobile-auth-request', {
+                detail: {
+                    source: 'mobile-top-shell',
+                    route: '/',
+                    ts: Date.now(),
+                },
+            }));
+            return;
+        }
+
+        window.dispatchEvent(new CustomEvent('home:mobile-profile-request', {
+            detail: {
+                source: 'mobile-top-shell',
+                route: '/',
+                userId: user.id,
+                ts: Date.now(),
+            },
+        }));
+    }, [user]);
+
     // 헤더에서 패널 열기 이벤트 리스너
     useEffect(() => {
         const handleMyPageOpen = () => {
@@ -601,6 +625,7 @@ export default function HomeClient() {
                 }}
                 user={user}
                 onSubmissionClick={handleSubmissionButtonClick}
+                onTopShellUserIconClick={handleTopShellUserIconClick}
             />
 
             <HomeMapContainer
