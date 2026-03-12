@@ -1,16 +1,16 @@
 ## 개요
-- 전역 토스트 알림 로직 최적화 및 모바일 검색 UI 텍스트 간소화
+- 피드(Feed) 무한 루프 반복 모드 구현
 
 ## 변경 내용
-- **토스트 알림 라이브러리 교체**:
-  - `apps/web` 내 여러 컴포넌트(`MobileControlOverlay`, `EditRestaurantModal`, `RestaurantSubmissionModal`, `MyPageSidebar`, `NicknameSetupModal`, `ProfileModal`, `RestaurantDetailPanel`, `sonner.tsx`, `use-announcements.tsx`)에서 기존 `sonner` 패키지 대신 프로젝트 내 커스텀 라이브러리인 `@/lib/no-toast`를 사용하도록 변경했습니다.
-  - 이를 통해 특정 상황에서의 알림 노출을 제어하고 불필요한 시각적 방해를 최적화했습니다.
-- **모바일 검색바 텍스트 최적화**:
-  - `MobileControlOverlay.tsx`의 검색바 플레이스홀더 및 상단 텍스트를 "쯔동여지도 맛집 검색하기"에서 "쯔동여지도 검색하기"로 간소화하여 시인성을 개선했습니다.
+- **`apps/web/components/feed/FeedContent.tsx`**:
+  - 더 이상 불러올 페이지가 없을 때 기존 피드 항목을 처음부터 다시 보여주는 '루프 반복(Loop Repeat)' 기능을 추가했습니다.
+  - 이를 통해 사용자가 피드의 끝에 도달하더라도 끊김 없는 스크롤 경험을 유지할 수 있도록 개선했습니다.
+  - 중복된 항목에 대해 고유한 `key`와 `idPrefix`를 부여하여 DOM 충돌 및 하이라이트 중복 문제를 방지했습니다.
+  - `IntersectionObserver`와 연동하여 루프 시점에 맞춰 가상 아이템 수를 동적으로 조절하는 로직을 효율적으로 처리했습니다.
 
 ## 테스트
-- 모바일 환경에서의 검색바 텍스트 노출 상태를 확인했습니다.
-- 토스트 알림이 발생하는 시나리오에서 `@/lib/no-toast`가 의도대로 동작하는지 검증했습니다.
+- 피드 페이지의 마지막 항목 도달 시 첫 번째 항목부터 다시 순차적으로 노출되는지 확인했습니다.
+- 루프 시 항목 클릭 및 하이라이트 기능이 첫 번째 사이클에서만 활성화되고 반복 사이클에서는 시각적으로만 노출되는지 검증했습니다.
 
 ## 관련 이슈
 - (없음)
