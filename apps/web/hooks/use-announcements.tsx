@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Announcement, AnnouncementFormData, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
-import { toast } from 'sonner';
+import { toast } from '@/lib/no-toast';
 
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
 

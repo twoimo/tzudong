@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/lib/no-toast";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';

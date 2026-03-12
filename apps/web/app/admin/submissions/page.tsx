@@ -5,7 +5,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { toast } from "@/lib/no-toast";
 import { Loader2, RefreshCw, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import {
