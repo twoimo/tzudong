@@ -26,6 +26,7 @@ interface BottomSheetProps {
     layoutSource?: string;
     showBackdrop?: boolean;
     closeOnOutsidePointerDown?: boolean;
+    hideHandleWhenFull?: boolean;
 }
 
 const isVerticallyScrollable = (element: HTMLElement) => {
@@ -107,6 +108,7 @@ function BottomSheetComponent({
     layoutSource = 'bottom-sheet',
     showBackdrop = true,
     closeOnOutsidePointerDown = false,
+    hideHandleWhenFull = false,
 }: BottomSheetProps) {
     const isMobileOrTablet = useIsMobile();
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
@@ -912,7 +914,7 @@ function BottomSheetComponent({
                 onTouchCancelCapture={handleSheetTouchEnd}
             >
                 {/* 핸들 바 */}
-                {showHandle && (
+                {showHandle && (!hideHandleWhenFull || !isAtFullHeight) && (
                     <div
                         ref={handleRef}
                         role="button"

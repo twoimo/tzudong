@@ -1000,7 +1000,7 @@ function MobileControlOverlayComponent({
                     {renderUserMenuButton()}
                 </div>
 
-                <div className="pointer-events-auto mt-2.5 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] pb-1 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="pointer-events-auto mt-2.5 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] pt-[2px] pb-[2px] scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {quickTopCategories.map((category) => (
                         <Button
                             key={category}
@@ -1224,6 +1224,7 @@ function MobileControlOverlayComponent({
                     enablePeek
                     hideBottomNavWhenOpen
                     progressiveHeaderHide
+                    hideHandleWhenFull
                     showBackdrop={false}
                     closeOnOutsidePointerDown
                     layoutSource="mobile-control-overlay-sheet"
