@@ -1008,7 +1008,7 @@ function MobileControlOverlayComponent({
                             size="sm"
                             onClick={() => handleQuickCategoryToggle(category)}
                             className={cn(
-                                'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                'pointer-events-auto h-[35px] shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
                                 'px-3.5 text-[13px] font-medium transition-colors hover:bg-secondary/80',
                                 quickSelectedCategories.includes(category)
                                     ? 'bg-red-700 text-white border-red-700 hover:bg-red-800'
@@ -1023,7 +1023,7 @@ function MobileControlOverlayComponent({
                         size="sm"
                         onClick={() => toggleSheet('category')}
                         className={cn(
-                            'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                            'pointer-events-auto h-[35px] shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
                             'hover:bg-secondary/80 px-3.5 text-[13px] font-medium',
                             activeSheet === 'category' && 'ring-2 ring-primary'
                         )}
