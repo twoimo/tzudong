@@ -216,19 +216,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const handleBannerClick = useCallback(() => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
     if (currentAnnouncement) {
-      if (isMobileOrTablet) {
-        setAnnouncementPage(1);
-        setSelectedAnnouncement(currentAnnouncement);
-        setAnnouncementViewMode('detail');
-        setIsAnnouncementSheetOpen(true);
-      } else {
-        // 데스크탑: 우측 패널로 공지사항 열기
-        if (onAnnouncementClick) {
-          onAnnouncementClick(currentAnnouncement);
-        }
-      }
+      setAnnouncementPage(1);
+      setSelectedAnnouncement(currentAnnouncement);
+      setAnnouncementViewMode('detail');
+      setIsAnnouncementSheetOpen(true);
     }
-  }, [bannerAnnouncements, currentBannerIndex, isMobileOrTablet, onAnnouncementClick]);
+  }, [bannerAnnouncements, currentBannerIndex]);
 
   const handleAnnouncementListClick = useCallback(() => {
     if (isMobileOrTablet) {
