@@ -107,6 +107,7 @@ export default function FeedContent({
     const router = useRouter();
     const queryClient = useQueryClient();
     const loadMoreRef = useRef<HTMLDivElement>(null);
+    const loopAppendLockRef = useRef(false);
     const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [showMyReviewsOnly, setShowMyReviewsOnly] = useState(false);
@@ -123,6 +124,7 @@ export default function FeedContent({
         isVerified: boolean;
         adminNote: string | null;
     } | null>(null);
+    const [loopItemCount, setLoopItemCount] = useState(0);
 
     const isLoggedIn = !!user;
     const isOverlay = variant === 'overlay';
@@ -314,12 +316,54 @@ export default function FeedContent({
         return reviews;
     }, [feedPages, showMyReviewsOnly, user?.id, debouncedQuery]);
 
+    const isLoopRepeatMode = !hasNextPage && allReviews.length > 0;
+    const effectiveLoopItemCount = useMemo(() => {
+        if (!isLoopRepeatMode) {
+            return allReviews.length;
+        }
+
+        return Math.max(loopItemCount, allReviews.length);
+    }, [allReviews.length, isLoopRepeatMode, loopItemCount]);
+
+    const renderedReviewItems = useMemo(() => {
+        if (!isLoopRepeatMode || allReviews.length === 0) {
+            return allReviews.map((review, index) => ({
+                review,
+                listIndex: index,
+                loopIndex: 0,
+            }));
+        }
+
+        return Array.from({ length: effectiveLoopItemCount }, (_, index) => ({
+            review: allReviews[index % allReviews.length],
+            listIndex: index,
+            loopIndex: Math.floor(index / allReviews.length),
+        }));
+    }, [allReviews, effectiveLoopItemCount, isLoopRepeatMode]);
+
+    useEffect(() => {
+        setLoopItemCount(allReviews.length);
+        loopAppendLockRef.current = false;
+    }, [allReviews, hasNextPage]);
+
     // 무한 스크롤
     const loadMore = useCallback(() => {
         if (hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
+            return;
         }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+        if (!hasNextPage && allReviews.length > 0 && !loopAppendLockRef.current) {
+            loopAppendLockRef.current = true;
+            const repeatBatchSize = Math.max(6, Math.min(18, allReviews.length));
+
+            setLoopItemCount((prev) => Math.max(prev, allReviews.length) + repeatBatchSize);
+
+            setTimeout(() => {
+                loopAppendLockRef.current = false;
+            }, 180);
+        }
+    }, [allReviews.length, fetchNextPage, hasNextPage, isFetchingNextPage]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -501,16 +545,17 @@ export default function FeedContent({
                         </div>
                     ) : (
                         <div className="space-y-4 p-4">
-                            {allReviews.map((review) => {
+                            {renderedReviewItems.map(({ review, listIndex, loopIndex }) => {
                                 const optimistic = optimisticLikes[review.id];
                                 const likeCount = optimistic?.count ?? review.likeCount;
                                 const isLiked = optimistic?.isLiked ?? review.isLikedByUser;
+                                const cardIdPrefix = loopIndex === 0 ? reviewIdPrefix : `${reviewIdPrefix}-loop-${loopIndex}`;
 
                                 return (
                                     <ReviewCard
-                                        key={review.id}
-                                        idPrefix={reviewIdPrefix}
-                                        isHighlighted={highlightedReviewId === review.id}
+                                        key={`${review.id}-${loopIndex}-${listIndex}`}
+                                        idPrefix={cardIdPrefix}
+                                        isHighlighted={loopIndex === 0 && highlightedReviewId === review.id}
                                         review={{
                                             id: review.id,
                                             userId: review.userId,
