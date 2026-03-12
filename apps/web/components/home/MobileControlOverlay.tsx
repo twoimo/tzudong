@@ -44,7 +44,7 @@ import { FilterState } from '@/components/filters/FilterPanel';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
-import { toast } from 'sonner';
+import { toast } from '@/lib/no-toast';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -991,7 +991,7 @@ function MobileControlOverlayComponent({
                             height={26}
                             className="rounded-md object-contain shrink-0"
                         />
-                        <span className="text-[15px] text-muted-foreground truncate">쯔동여지도 맛집 검색하기</span>
+                        <span className="text-[15px] text-muted-foreground truncate">쯔동여지도 검색하기</span>
                     </Button>
 
                     {renderBookmarkMenuButton()}
@@ -1137,7 +1137,7 @@ function MobileControlOverlayComponent({
                                         ref={searchInputRef}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        placeholder={searchType === 'name' ? '쯔동여지도 맛집 검색하기' : '유튜브 제목으로 검색하기'}
+                                        placeholder={searchType === 'name' ? '쯔동여지도 검색하기' : '유튜브 제목으로 검색하기'}
                                         inputMode="search"
                                         enterKeyHint="search"
                                         autoComplete="off"

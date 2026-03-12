@@ -2,8 +2,6 @@
 
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Toaster } from '@/components/ui/toaster';
-import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
@@ -74,8 +72,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                 <TooltipProvider>
                     {/* [PERF] 성능 지표 모니터링 - 지연 로딩 */}
                     <WebVitals />
-                    <Toaster />
-                    <Sonner />
                     {children}
                 </TooltipProvider>
             </NotificationProvider>

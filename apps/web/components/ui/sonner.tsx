@@ -1,4 +1,4 @@
-﻿import { Toaster as Sonner, toast } from "sonner";
+﻿import { Toaster as Sonner, toast } from "@/lib/no-toast";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 

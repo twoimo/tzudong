@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { toast } from 'sonner';
+import { toast } from '@/lib/no-toast';
 import { DUMMY_ANNOUNCEMENTS, Announcement, AnnouncementFormData } from '@/types/announcement';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';

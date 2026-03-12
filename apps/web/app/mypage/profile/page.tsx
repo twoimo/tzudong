@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
+import { toast } from "@/lib/no-toast";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import {

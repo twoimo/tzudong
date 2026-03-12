@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { toast } from "@/lib/no-toast";
 import { X, Send, CheckCircle2 } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/submissionDraftDB";

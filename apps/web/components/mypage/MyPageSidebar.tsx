@@ -36,7 +36,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/image-utils';
-import { toast } from 'sonner';
+import { toast } from '@/lib/no-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
 export function MyPageSidebar() {

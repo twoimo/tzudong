@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
-import { toast } from "sonner";
+import { toast } from "@/lib/no-toast";
 import { Restaurant } from "@/types/restaurant";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 

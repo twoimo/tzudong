@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
-import { toast } from "sonner";
+import { toast } from "@/lib/no-toast";
 import {
     X,
     MapPin,
