@@ -5733,6 +5733,10 @@ const InsightChatSectionComponent = () => {
     const activeConversationMemoryModeLabel = CHAT_MEMORY_MODES.find((mode) => mode.value === activeConversationMemoryMode)?.label
         ?? '기억 안함';
     const activeConversationMemoryProfileNote = activeConversation?.memoryProfileNote ?? '';
+    const isTopControlDropdownOpen = showModelDropdown
+        || showImageModelDropdown
+        || showResponseModeDropdown
+        || showMemoryModeDropdown;
 
     const updateConversation = useCallback((conversationId: string, update: (prev: ChatConversation) => ChatConversation) => {
         setConversations((prev) => {
@@ -5766,16 +5770,6 @@ const InsightChatSectionComponent = () => {
             updatedAt: Date.now(),
         }));
         setShowMemoryModeDropdown(false);
-    }, [activeConversation, updateConversation]);
-
-    const setActiveConversationMemoryProfileNote = useCallback((nextValue: string) => {
-        if (!activeConversation) return;
-
-        updateConversation(activeConversation.id, (prev) => ({
-            ...prev,
-            memoryProfileNote: sanitizeMemoryProfileNote(nextValue),
-            updatedAt: Date.now(),
-        }));
     }, [activeConversation, updateConversation]);
 
     const feedbackForMessage = useCallback((messageId: string) => messageFeedbacks[messageId], [messageFeedbacks]);
@@ -7778,7 +7772,12 @@ const InsightChatSectionComponent = () => {
 
                 <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
                     <div className="mb-2 flex flex-nowrap items-center gap-2 pb-1 min-w-0">
-                        <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <div
+                            className={cn(
+                                'min-w-0 flex-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                                isTopControlDropdownOpen ? 'overflow-visible' : 'overflow-x-auto overflow-y-hidden',
+                            )}
+                        >
                             <div className="flex w-max flex-nowrap items-center gap-2 pr-1">
                             <div ref={modelDropdownRef} className="relative shrink-0">
                                 <button
@@ -7796,7 +7795,7 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showModelDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
                                         {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
                                             const providerModels = availableModels.filter((m) => m.provider === provider);
                                             const providerHasKey = hasProviderServerOrUserKey(provider);
@@ -7844,7 +7843,7 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showImageModelDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
                                         {IMAGE_MODEL_PROFILES.map((profile) => (
                                             <button
                                                 key={profile.id}
@@ -7876,7 +7875,7 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showResponseModeDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
                                         {CHAT_RESPONSE_MODES.map((mode) => (
                                             <button
                                                 key={mode.value}
@@ -7910,7 +7909,7 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showMemoryModeDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
                                         {CHAT_MEMORY_MODES.map((mode) => (
                                             <button
                                                 key={mode.value}
@@ -7931,16 +7930,6 @@ const InsightChatSectionComponent = () => {
                                 ) : null}
                             </div>
 
-                            <div className="relative shrink-0 min-w-0 max-w-[16rem]">
-                                <Input
-                                    value={activeConversationMemoryProfileNote}
-                                    onChange={(event) => setActiveConversationMemoryProfileNote(event.target.value)}
-                                    placeholder="기억 프로필 메모"
-                                    maxLength={MAX_MEMORY_PROFILE_NOTE_LENGTH}
-                                    aria-label="기억 프로필 메모"
-                                    className="h-8 text-xs bg-white border-[#e5e7eb] focus-visible:ring-[#f87171]"
-                                />
-                            </div>
                             </div>
                         </div>
 
