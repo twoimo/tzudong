@@ -1181,11 +1181,11 @@ function HomeMapContainerComponent({
 
                     {/* 모바일/태블릿 바텀시트 */}
                     {isMobileOrTablet && isPanelOpen && (
-                        <div className="fixed inset-0 z-50 pointer-events-none">
+                        <div className="fixed inset-0 z-[80] pointer-events-none">
                             <div
                                 ref={sheetContainerRef}
                                 className={cn(
-                                    'fixed bottom-0 left-0 right-0 z-50 pointer-events-auto',
+                                    'fixed bottom-0 left-0 right-0 z-[80] pointer-events-auto',
                                     'bg-background shadow-xl',
                                     isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                                     'overflow-hidden flex flex-col',

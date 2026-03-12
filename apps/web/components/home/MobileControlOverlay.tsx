@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Region, REGIONS, Restaurant } from '@/types/restaurant';
 import type { Notification } from '@/types/notification';
 import { FilterState } from '@/components/filters/FilterPanel';
@@ -56,8 +57,9 @@ const CATEGORIES = [
     "카페·디저트", "찜·탕", "야식", "도시락"
 ];
 const MIN_DRAG_HEIGHT = 5;
-const MAX_SHEET_HEIGHT = 90;
-const MIN_SHEET_HEIGHT = 20;
+const MIN_SHEET_HEIGHT = 25;
+const HALF_SHEET_HEIGHT = 50;
+const MAX_SHEET_HEIGHT = 100;
 const CLOSE_THRESHOLD = 15;
 const SWIPE_VELOCITY_THRESHOLD = 0.5;
 const CONTENT_TOP_EPSILON = 2;
@@ -179,8 +181,7 @@ function MobileControlOverlayComponent({
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const getContentSnapPoints = useCallback(() => {
-        const midSnap = MIN_SHEET_HEIGHT + ((MAX_SHEET_HEIGHT - MIN_SHEET_HEIGHT) / 2);
-        return [MIN_SHEET_HEIGHT, midSnap, MAX_SHEET_HEIGHT];
+        return [MIN_SHEET_HEIGHT, HALF_SHEET_HEIGHT, MAX_SHEET_HEIGHT];
     }, []);
 
     const getNearestSnapHeight = useCallback((currentHeight: number) => {
@@ -260,7 +261,7 @@ function MobileControlOverlayComponent({
         const deltaVh = (deltaY / viewportHeight) * 100;
 
         let newHeight = startHeightRef.current + deltaVh;
-        // 최소 5%까지 드래그 가능 (닫기 영역), 최대 90%
+        // 최소 5%까지 드래그 가능 (닫기 영역), 최대 100%
         newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(MAX_SHEET_HEIGHT, newHeight));
 
         currentHeightRef.current = newHeight;
@@ -281,19 +282,12 @@ function MobileControlOverlayComponent({
         handleDragMove(e.clientY);
     }, [handleDragMove]);
 
-    // [OPTIMIZATION] 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
+    // 드래그 종료 - 25 / 50 / full 스냅
     const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
         isDraggingRef.current = false;
         setIsDragging(false);
 
         const currentHeight = currentHeightRef.current;
-
-        if (source === 'content') {
-            const targetHeight = getNearestSnapHeight(currentHeight);
-            setSheetHeight(targetHeight);
-            currentHeightRef.current = targetHeight;
-            return;
-        }
 
         // 빠르게 아래로 스와이프 (velocity > 0.5px/ms) 하면 닫기
         if (velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
@@ -307,18 +301,13 @@ function MobileControlOverlayComponent({
             return;
         }
 
-        // 최소 높이 이하면 최소 높이로 조정 (20%)
-        if (currentHeight < MIN_SHEET_HEIGHT) {
-            setSheetHeight(MIN_SHEET_HEIGHT);
-            currentHeightRef.current = MIN_SHEET_HEIGHT;
-            if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(100% - ${MIN_SHEET_HEIGHT}dvh))`;
-            }
-        } else {
-            // [Fix] 드래그 종료 시 현재 높이로 state 업데이트하여 위치 유지 (리렌더링 시 스냅백 방지)
-            setSheetHeight(currentHeight);
+        const targetHeight = getNearestSnapHeight(currentHeight);
+        setSheetHeight(targetHeight);
+        currentHeightRef.current = targetHeight;
+
+        if (source === 'handle' && sheetRef.current) {
+            sheetRef.current.style.transform = `translateY(calc(100% - ${targetHeight}dvh))`;
         }
-        // 스냅 없음 - 현재 위치 그대로 유지
     }, [handleClose, getNearestSnapHeight]);
 
     const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -535,6 +524,7 @@ function MobileControlOverlayComponent({
     const regionLabel = useMemo(() =>
         mapMode === 'domestic' ? (selectedRegion || '전체') : (selectedCountry || '국가'),
         [mapMode, selectedRegion, selectedCountry]);
+    const isSheetAtFullHeight = sheetHeight >= MAX_SHEET_HEIGHT - 0.5;
 
     const quickTopCategories = useMemo(() => CATEGORIES.slice(0, 8), []);
 
@@ -1223,191 +1213,149 @@ function MobileControlOverlayComponent({
                 </div>
             )}
 
-            {/* 바텀시트 오버레이 (지역/카테고리 전용) */}
+            {/* 바텀시트 (지역/카테고리 전용) - 맛집 바텀시트와 동일한 인터랙션 */}
             {activeSheet !== 'none' && activeSheet !== 'search' && (
-                <div
-                    className="fixed inset-0 z-[70] bg-black/30 pointer-events-auto"
-                    role="button"
-                    tabIndex={0}
-                    aria-label="바텀시트 닫기"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            handleClose();
-                        }
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.target !== e.currentTarget) return;
-                        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
-                            e.preventDefault();
-                            handleClose();
-                        }
-                    }}
+                <BottomSheet
+                    isOpen
+                    onClose={handleClose}
+                    defaultHeight={HALF_SHEET_HEIGHT}
+                    minHeight={MIN_SHEET_HEIGHT}
+                    maxHeight={MAX_SHEET_HEIGHT}
+                    enablePeek
+                    hideBottomNavWhenOpen
+                    progressiveHeaderHide
+                    showBackdrop={false}
+                    closeOnOutsidePointerDown
+                    layoutSource="mobile-control-overlay-sheet"
+                    className="z-[95]"
                 >
-                    {/* 바텀시트 컨테이너 */}
-                    <div
-                        ref={sheetRef}
-                        className={cn(
-                            'fixed bottom-0 left-0 right-0 z-[70]',
-                            'bg-background rounded-t-2xl shadow-xl',
-                            'flex flex-col overflow-hidden pb-[calc(env(safe-area-inset-bottom)+80px)]',
-                            isDragging ? '' : 'transition-transform duration-150 ease-out',
-                        )}
-                        style={{
-                            height: '100%',
-                            maxHeight: 'calc(100dvh - 64px)',
-                            transform: `translateY(calc(100% - ${sheetHeight}dvh))`,
-                            willChange: isDragging ? 'transform' : 'auto',
-                            bottom: 0,
-                        }}
-                    >
-                        <div
-                            ref={handleRef}
-                            className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing select-none border-b border-border/50"
-                            style={{ touchAction: 'none' }}
-                        >
-                            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                        </div>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background">
+                        <h3 className="text-lg font-semibold">
+                            {activeSheet === 'region' && (mapMode === 'domestic' ? '지역 선택' : '국가 선택')}
+                            {activeSheet === 'category' && '카테고리 필터'}
+                        </h3>
+                        <Button variant="ghost" size="icon" onClick={handleClose}>
+                            <X className="h-5 w-5" />
+                        </Button>
+                    </div>
 
-                        <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
-                            <h3 className="text-lg font-semibold">
-                                {activeSheet === 'region' && (mapMode === 'domestic' ? '지역 선택' : '국가 선택')}
-                                {activeSheet === 'category' && '카테고리 필터'}
-                            </h3>
-                            <Button variant="ghost" size="icon" onClick={handleClose}>
-                                <X className="h-5 w-5" />
-                            </Button>
-                        </div>
-
-                        <div
-                            ref={contentRef}
-                            className="flex-1 overflow-y-auto"
-                            style={{
-                                maxHeight: `calc(${sheetHeight}dvh - 120px)`,
-                            }}
-                            onTouchStart={handleContentTouchStart}
-                            onTouchMove={handleContentTouchMove}
-                            onTouchEnd={handleContentTouchEnd}
-                            onTouchCancel={handleContentTouchEnd}
-                        >
-                            <div className="p-4 pb-8">
-                                {activeSheet === 'region' && (
-                                    <div className="space-y-3">
-                                        {mapMode === 'domestic' ? (
-                                            <>
-                                                <Button
-                                                    variant={selectedRegion === null ? "default" : "outline"}
-                                                    className="w-full justify-between h-auto py-3"
-                                                    onClick={() => {
-                                                        onRegionChange(null);
-                                                        onSearchExecute(null);
-                                                        handleClose();
-                                                    }}
-                                                >
-                                                    <span className="font-medium">전국</span>
-                                                    <span className="text-sm opacity-75">({restaurants.length}개)</span>
-                                                </Button>
-
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {REGIONS.map((region) => {
-                                                        const count = regionCounts[region] || 0;
-                                                        const isSelected = selectedRegion === region;
-                                                        return (
-                                                            <Button
-                                                                key={region}
-                                                                variant={isSelected ? "default" : "outline"}
-                                                                className="justify-between h-auto py-3"
-                                                                onClick={() => {
-                                                                    onRegionChange(region);
-                                                                    onSearchExecute(region);
-                                                                    handleClose();
-                                                                }}
-                                                            >
-                                                                <span className="font-medium">{region}</span>
-                                                                <span className="text-xs opacity-75">({count})</span>
-                                                            </Button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {Object.keys(countryCounts).map((country) => {
-                                                    const count = countryCounts[country] || 0;
-                                                    const isSelected = selectedCountry === country;
-                                                    return (
-                                                        <Button
-                                                            key={country}
-                                                            variant={isSelected ? "default" : "outline"}
-                                                            className="justify-between h-auto py-3"
-                                                            onClick={() => {
-                                                                onCountryChange(country);
-                                                                handleClose();
-                                                            }}
-                                                        >
-                                                            <span className="font-medium">{country}</span>
-                                                            <span className="text-xs opacity-75">({count})</span>
-                                                        </Button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {activeSheet === 'category' && (
-                                    <div className="space-y-3">
-                                        {selectedCategories.length > 0 && (
-                                            <Button
-                                                variant="outline"
-                                                className="w-full"
-                                                onClick={() => {
-                                                    setQuickSelectedCategories([]);
-                                                    onCategoryChange([]);
-                                                }}
-                                            >
-                                                초기화 ({selectedCategories.length}개 선택됨)
-                                            </Button>
-                                        )}
+                    <div className="p-4 pb-8">
+                        {activeSheet === 'region' && (
+                            <div className="space-y-3">
+                                {mapMode === 'domestic' ? (
+                                    <>
+                                        <Button
+                                            variant={selectedRegion === null ? "default" : "outline"}
+                                            className="w-full justify-between h-auto py-3"
+                                            onClick={() => {
+                                                onRegionChange(null);
+                                                onSearchExecute(null);
+                                                handleClose();
+                                            }}
+                                        >
+                                            <span className="font-medium">전국</span>
+                                            <span className="text-sm opacity-75">({restaurants.length}개)</span>
+                                        </Button>
 
                                         <div className="grid grid-cols-2 gap-2">
-                                            {CATEGORIES.map((category) => {
-                                                const count = categoryCounts[category] || 0;
-                                                const isSelected = selectedCategories.includes(category);
+                                            {REGIONS.map((region) => {
+                                                const count = regionCounts[region] || 0;
+                                                const isSelected = selectedRegion === region;
                                                 return (
                                                     <Button
-                                                        key={category}
+                                                        key={region}
                                                         variant={isSelected ? "default" : "outline"}
                                                         className="justify-between h-auto py-3"
                                                         onClick={() => {
-                                                            const newCategories = isSelected
-                                                                ? selectedCategories.filter(cat => cat !== category)
-                                                                : [...selectedCategories, category];
-                                                            setQuickSelectedCategories(newCategories);
-                                                            onCategoryChange(newCategories);
+                                                            onRegionChange(region);
+                                                            onSearchExecute(region);
+                                                            handleClose();
                                                         }}
                                                     >
-                                                        <span className="font-medium flex items-center gap-1.5">
-                                                            {isSelected && <Check className="h-4 w-4" />}
-                                                            {category}
-                                                        </span>
+                                                        <span className="font-medium">{region}</span>
                                                         <span className="text-xs opacity-75">({count})</span>
                                                     </Button>
                                                 );
                                             })}
                                         </div>
-
-                                        <Button
-                                            className="w-full"
-                                            onClick={handleClose}
-                                        >
-                                            적용하기
-                                        </Button>
+                                    </>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {Object.keys(countryCounts).map((country) => {
+                                            const count = countryCounts[country] || 0;
+                                            const isSelected = selectedCountry === country;
+                                            return (
+                                                <Button
+                                                    key={country}
+                                                    variant={isSelected ? "default" : "outline"}
+                                                    className="justify-between h-auto py-3"
+                                                    onClick={() => {
+                                                        onCountryChange(country);
+                                                        handleClose();
+                                                    }}
+                                                >
+                                                    <span className="font-medium">{country}</span>
+                                                    <span className="text-xs opacity-75">({count})</span>
+                                                </Button>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        )}
+
+                        {activeSheet === 'category' && (
+                            <div className="space-y-3">
+                                {selectedCategories.length > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full"
+                                        onClick={() => {
+                                            setQuickSelectedCategories([]);
+                                            onCategoryChange([]);
+                                        }}
+                                    >
+                                        초기화 ({selectedCategories.length}개 선택됨)
+                                    </Button>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    {CATEGORIES.map((category) => {
+                                        const count = categoryCounts[category] || 0;
+                                        const isSelected = selectedCategories.includes(category);
+                                        return (
+                                            <Button
+                                                key={category}
+                                                variant={isSelected ? "default" : "outline"}
+                                                className="justify-between h-auto py-3"
+                                                onClick={() => {
+                                                    const newCategories = isSelected
+                                                        ? selectedCategories.filter(cat => cat !== category)
+                                                        : [...selectedCategories, category];
+                                                    setQuickSelectedCategories(newCategories);
+                                                    onCategoryChange(newCategories);
+                                                }}
+                                            >
+                                                <span className="font-medium flex items-center gap-1.5">
+                                                    {isSelected && <Check className="h-4 w-4" />}
+                                                    {category}
+                                                </span>
+                                                <span className="text-xs opacity-75">({count})</span>
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+
+                                <Button
+                                    className="w-full"
+                                    onClick={handleClose}
+                                >
+                                    적용하기
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                </div>
+                </BottomSheet>
             )}
         </>
     );

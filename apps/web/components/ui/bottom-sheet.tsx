@@ -24,6 +24,8 @@ interface BottomSheetProps {
     hideBottomNavWhenOpen?: boolean;
     progressiveHeaderHide?: boolean;
     layoutSource?: string;
+    showBackdrop?: boolean;
+    closeOnOutsidePointerDown?: boolean;
 }
 
 const isVerticallyScrollable = (element: HTMLElement) => {
@@ -103,6 +105,8 @@ function BottomSheetComponent({
     hideBottomNavWhenOpen = false,
     progressiveHeaderHide = false,
     layoutSource = 'bottom-sheet',
+    showBackdrop = true,
+    closeOnOutsidePointerDown = false,
 }: BottomSheetProps) {
     const isMobileOrTablet = useIsMobile();
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
@@ -832,6 +836,22 @@ function BottomSheetComponent({
         };
     }, [isOpen, resetSheetInteractionState]);
 
+    useEffect(() => {
+        if (!isOpen || showBackdrop || !closeOnOutsidePointerDown) return;
+
+        const handleOutsidePointerDown = (event: PointerEvent) => {
+            const target = event.target as Node | null;
+            if (!target) return;
+            if (sheetRef.current?.contains(target)) return;
+            onClose();
+        };
+
+        document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+        return () => {
+            document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+        };
+    }, [closeOnOutsidePointerDown, isOpen, onClose, showBackdrop]);
+
     if (!isOpen) return null;
 
     const currentMaxHeight = Math.max(minHeight, getCurrentMaxHeight());
@@ -851,24 +871,26 @@ function BottomSheetComponent({
     return (
         <>
             {/* 배경 오버레이 */}
-            <div
-                className="fixed inset-0 z-[94] bg-black/30 transition-opacity duration-200"
-                role="button"
-                tabIndex={0}
-                aria-label="바텀시트 닫기"
-                onClick={(event) => {
-                    if (event.target === event.currentTarget) {
-                        onClose();
-                    }
-                }}
-                onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget) return;
-                    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
-                        event.preventDefault();
-                        onClose();
-                    }
-                }}
-            />
+            {showBackdrop && (
+                <div
+                    className="fixed inset-0 z-[94] bg-black/30 transition-opacity duration-200"
+                    role="button"
+                    tabIndex={0}
+                    aria-label="바텀시트 닫기"
+                    onClick={(event) => {
+                        if (event.target === event.currentTarget) {
+                            onClose();
+                        }
+                    }}
+                    onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
+                            event.preventDefault();
+                            onClose();
+                        }
+                    }}
+                />
+            )}
 
             {/* 바텀시트 */}
             <div
