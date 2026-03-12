@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'restaurant_search_history';
-const MAX_HISTORY = 3;
+const MAX_HISTORY = 5;
 
 export interface SearchHistoryItem {
     id: string;

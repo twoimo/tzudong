@@ -88,6 +88,7 @@ const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
 const ZOOM_DIFF_THRESHOLD = 4; // 즉시 로드할 줌 차이 임계값
 const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 const MOBILE_MARKER_CENTER_FINE_TUNE_PX = -6; // 선택 마커 translateY(-5px) 시각 보정
+const ONLINE_USERS_TOAST_INTERVAL_MS = 60000;
 
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
@@ -641,6 +642,12 @@ const NaverMapView = memo(({
     }
 
     const centerOffsetStyle = { left: `calc(50% - ${effectivePanelOffset / 2}px)` };
+    const floatingBadgePositionClass = isMobileOrTablet
+        ? "absolute top-[calc(env(safe-area-inset-top)+106px)] -translate-x-1/2 transition-[left] duration-300 ease-in-out z-[61]"
+        : "absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out";
+    const floatingToastPositionClass = isMobileOrTablet
+        ? "absolute top-[calc(env(safe-area-inset-top)+106px)] -translate-x-1/2 transition-[left] ease-in-out z-[70]"
+        : "absolute top-4 -translate-x-1/2 transition-[left] ease-in-out";
 
     // 외부에서 패널 닫기 요청 시 닫기 (externalPanelOpen이 false면 닫기)
     useEffect(() => {
@@ -1289,8 +1296,8 @@ const NaverMapView = memo(({
                 }
             });
 
-        // 90초마다 동시 접속자 토스트 표시
-        const interval = setInterval(showOnlineToast, 90000);
+        // 60초마다 동시 접속자 토스트 표시
+        const interval = setInterval(showOnlineToast, ONLINE_USERS_TOAST_INTERVAL_MS);
 
         return () => {
             supabase.removeChannel(channel);
@@ -2436,7 +2443,7 @@ const NaverMapView = memo(({
                         <MapLoadingIndicator
                             isLoaded={isLoaded}
                             style={centerOffsetStyle}
-                            className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                            className={floatingBadgePositionClass}
                         />
                     )
                 }
@@ -2447,7 +2454,7 @@ const NaverMapView = memo(({
                         <RestaurantCountBadge
                             count={restaurants.length}
                             style={centerOffsetStyle}
-                            className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                            className={floatingBadgePositionClass}
                         />
                     )
                 }
@@ -2458,7 +2465,7 @@ const NaverMapView = memo(({
                         <OnlineUsersBadge
                             count={onlineUsersCount}
                             style={centerOffsetStyle}
-                            className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                            className={floatingBadgePositionClass}
                         />
                     )
                 }
@@ -2466,7 +2473,7 @@ const NaverMapView = memo(({
                 {/* 빈 상태 UI - 맛집이 없을 때 표시 */}
                 {
                     !isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
-                        <div style={centerOffsetStyle} className="absolute top-4 -translate-x-1/2 z-10 transition-[left] duration-300 ease-in-out">
+                        <div style={centerOffsetStyle} className={floatingBadgePositionClass}>
                             <EmptyStateIndicator />
                         </div>
                     )
@@ -2477,7 +2484,7 @@ const NaverMapView = memo(({
                     mapToast && mapToast.isVisible && (
                         <div
                             style={centerOffsetStyle}
-                            className="absolute top-4 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300 transition-[left] ease-in-out"
+                            className={`${floatingToastPositionClass} bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 animate-in fade-in zoom-in duration-300`}
                         >
                             <span className="text-sm font-medium">
                                 {mapToast.message}
@@ -2508,7 +2515,7 @@ const NaverMapView = memo(({
                     <MapLoadingIndicator
                         isLoaded={isLoaded}
                         style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                        className={floatingBadgePositionClass}
                     />
                 )}
 
@@ -2517,7 +2524,7 @@ const NaverMapView = memo(({
                     <RestaurantCountBadge
                         count={restaurants.length}
                         style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                        className={floatingBadgePositionClass}
                     />
                 )}
 
@@ -2526,13 +2533,13 @@ const NaverMapView = memo(({
                     <OnlineUsersBadge
                         count={onlineUsersCount}
                         style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                        className={floatingBadgePositionClass}
                     />
                 )}
 
                 {/* 빈 상태 UI - 맛집이 없을 때 표시 */}
                 {!isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
-                    <div style={centerOffsetStyle} className="absolute top-4 -translate-x-1/2 z-10 transition-[left] duration-300 ease-in-out">
+                    <div style={centerOffsetStyle} className={floatingBadgePositionClass}>
                         <EmptyStateIndicator />
                     </div>
                 )}
@@ -2541,7 +2548,7 @@ const NaverMapView = memo(({
                 {mapToast && mapToast.isVisible && (
                     <div
                         style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300 transition-[left] ease-in-out"
+                        className={`${floatingToastPositionClass} bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 animate-in fade-in zoom-in duration-300`}
                     >
                         <span className="text-sm font-medium">
                             {mapToast.message}

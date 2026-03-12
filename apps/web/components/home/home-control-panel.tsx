@@ -35,6 +35,7 @@ interface HomeControlPanelProps {
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
     user?: User | null;
     onSubmissionClick?: () => void;
+    onTopShellUserIconClick?: () => void;
 }
 
 // [CSR] 지역/국가 선택, 카테고리 필터, 검색 통합 패널 - 모든 사용자 입력 처리
@@ -59,6 +60,7 @@ const HomeControlPanelComponent = ({
     onModeChange,
     user,
     onSubmissionClick,
+    onTopShellUserIconClick,
 }: HomeControlPanelProps) => {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
     const [leftPosition, setLeftPosition] = useState<string>('50%');
@@ -111,6 +113,7 @@ const HomeControlPanelComponent = ({
                 onModeChange={onModeChange}
                 user={user}
                 onSubmissionClick={onSubmissionClick}
+                onTopShellUserIconClick={onTopShellUserIconClick}
             />
         );
     }
