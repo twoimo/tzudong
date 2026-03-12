@@ -4,6 +4,7 @@ import { RankingWidget } from "./RankingWidget";
 import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -853,203 +854,206 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       </div>
       )}
 
-      {/* 공지사항 바텀시트 */}
-      <BottomSheet
-        isOpen={isAnnouncementSheetOpen}
-        onClose={() => setIsAnnouncementSheetOpen(false)}
-        defaultHeight={50}
-        minHeight={25}
-        maxHeight={100}
-        enablePeek
-        hideBottomNavWhenOpen
-        progressiveHeaderHide
-        showBackdrop={false}
-        closeOnOutsidePointerDown
-        layoutSource="header-announcement-bottom-sheet"
-        className="z-[95]"
-      >
-        <div className="h-full flex flex-col bg-background font-serif">
-          <div className="flex-shrink-0 border-b border-border px-4 py-3">
-            <div className="flex items-center gap-2">
-              {announcementViewMode === 'detail' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  aria-label="공지사항 목록으로 돌아가기"
-                  onClick={() => setAnnouncementViewMode('list')}
-                  className="p-0 h-auto hover:bg-transparent"
-                >
-                  <ChevronLeft className="h-5 w-5 text-foreground" />
-                </Button>
-              )}
-              <div className="flex-1 min-w-0 text-foreground flex items-center gap-2">
-                <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
-                <h2 className="font-semibold truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</h2>
-                {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
-                  <span className="text-xs text-muted-foreground font-normal whitespace-nowrap flex-shrink-0">
-                    · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
-                      addSuffix: true,
-                      locale: ko
-                    })}
-                  </span>
+      {/* 공지사항 바텀시트 (Portal로 렌더링하여 헤더 transform 영향 제거) */}
+      {isHydrated && createPortal(
+        <BottomSheet
+          isOpen={isAnnouncementSheetOpen}
+          onClose={() => setIsAnnouncementSheetOpen(false)}
+          defaultHeight={50}
+          minHeight={25}
+          maxHeight={100}
+          enablePeek
+          hideBottomNavWhenOpen
+          progressiveHeaderHide
+          showBackdrop={false}
+          closeOnOutsidePointerDown
+          layoutSource="header-announcement-bottom-sheet"
+          className="z-[95]"
+        >
+          <div className="h-full flex flex-col bg-background font-serif">
+            <div className="flex-shrink-0 border-b border-border px-4 py-3">
+              <div className="flex items-center gap-2">
+                {announcementViewMode === 'detail' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    aria-label="공지사항 목록으로 돌아가기"
+                    onClick={() => setAnnouncementViewMode('list')}
+                    className="p-0 h-auto hover:bg-transparent"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-foreground" />
+                  </Button>
                 )}
+                <div className="flex-1 min-w-0 text-foreground flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
+                  <h2 className="font-semibold truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</h2>
+                  {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
+                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap flex-shrink-0">
+                      · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
+                        addSuffix: true,
+                        locale: ko
+                      })}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex-1 overflow-hidden px-4 pt-4">
-            {announcementViewMode === 'list' ? (
-              <div className="h-full flex flex-col">
-                <ScrollArea className="flex-1">
-                  <div className="space-y-3">
-                    {(() => {
-                      const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
-                      const endIdx = startIdx + ANNOUNCEMENTS_PER_PAGE;
-                      const paginatedAnnouncements = activeAnnouncements.slice(startIdx, endIdx);
+            <div className="flex-1 overflow-hidden px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+              {announcementViewMode === 'list' ? (
+                <div className="h-full flex flex-col">
+                  <ScrollArea className="flex-1">
+                    <div className="space-y-3">
+                      {(() => {
+                        const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
+                        const endIdx = startIdx + ANNOUNCEMENTS_PER_PAGE;
+                        const paginatedAnnouncements = activeAnnouncements.slice(startIdx, endIdx);
 
-                      if (activeAnnouncements.length === 0) {
+                        if (activeAnnouncements.length === 0) {
+                          return (
+                            <div className="text-center py-12 text-muted-foreground">
+                              <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                              <p>현재 공지사항이 없습니다</p>
+                            </div>
+                          );
+                        }
+
                         return (
-                          <div className="text-center py-12 text-muted-foreground">
-                            <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                            <p>현재 공지사항이 없습니다</p>
-                          </div>
+                          <>
+                            {paginatedAnnouncements.map((announcement) => (
+                              <button
+                                key={announcement.id}
+                                type="button"
+                                className="p-4 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors w-full text-left"
+                                aria-label={`${announcement.title} 공지사항 상세 보기`}
+                                onClick={() => {
+                                  setSelectedAnnouncement(announcement);
+                                  setAnnouncementViewMode('detail');
+                                }}
+                              >
+                                <h4 className="font-semibold text-foreground mb-1">{announcement.title}</h4>
+                                <p className="text-sm text-foreground/80 line-clamp-2 mb-2">{announcement.content}</p>
+                                <div className="text-xs text-muted-foreground">
+                                  {formatDistanceToNow(new Date(announcement.createdAt), {
+                                    addSuffix: true,
+                                    locale: ko
+                                  })}
+                                </div>
+                              </button>
+                            ))}
+                          </>
                         );
-                      }
+                      })()}
+                    </div>
+                  </ScrollArea>
 
-                      return (
-                        <>
-                          {paginatedAnnouncements.map((announcement) => (
-                            <button
-                              key={announcement.id}
-                              type="button"
-                              className="p-4 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors w-full text-left"
-                              aria-label={`${announcement.title} 공지사항 상세 보기`}
-                              onClick={() => {
-                                setSelectedAnnouncement(announcement);
-                                setAnnouncementViewMode('detail');
-                              }}
-                            >
-                              <h4 className="font-semibold text-foreground mb-1">{announcement.title}</h4>
-                              <p className="text-sm text-foreground/80 line-clamp-2 mb-2">{announcement.content}</p>
-                              <div className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(announcement.createdAt), {
-                                  addSuffix: true,
-                                  locale: ko
-                                })}
-                              </div>
-                            </button>
-                          ))}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </ScrollArea>
-
-                {/* 페이지네이션 */}
-                {activeAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
-                  <div className="flex items-center justify-center gap-2 pt-3 border-t border-border">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      aria-label="이전 페이지로 이동"
-                      onClick={() => setAnnouncementPage(p => Math.max(1, p - 1))}
-                      disabled={announcementPage === 1}
-                      className="h-8"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm text-foreground/80 px-2">
-                      {announcementPage} / {Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      aria-label="다음 페이지로 이동"
-                      onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
-                      disabled={announcementPage === Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
-                      className="h-8"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="h-full flex flex-col">
-                <ScrollArea className="flex-1">
-                  <div className="text-foreground text-sm whitespace-pre-wrap leading-relaxed">
-                    {selectedAnnouncement?.content}
-                  </div>
-                </ScrollArea>
-
-                {/* 관리자 제어 버튼 */}
-                {isAdmin && selectedAnnouncement && (
-                  <div className="flex-shrink-0 pt-4 border-t border-border mt-4">
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* 페이지네이션 */}
+                  {activeAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
+                    <div className="flex items-center justify-center gap-2 pt-3 border-t border-border">
                       <Button
                         variant="outline"
                         size="sm"
                         type="button"
-                        aria-label={selectedAnnouncement.isActive ? "공지사항 비활성화" : "공지사항 활성화"}
-                        onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
-                        disabled={isAnnouncementMutationPending}
-                        className="gap-1 text-xs"
+                        aria-label="이전 페이지로 이동"
+                        onClick={() => setAnnouncementPage(p => Math.max(1, p - 1))}
+                        disabled={announcementPage === 1}
+                        className="h-8"
                       >
-                        {selectedAnnouncement.isActive ? (
-                          <>
-                            <EyeOff className="h-3 w-3" />
-                            비활성화
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="h-3 w-3" />
-                            활성화
-                          </>
-                        )}
+                        <ChevronLeft className="h-4 w-4" />
                       </Button>
+                      <span className="text-sm text-foreground/80 px-2">
+                        {announcementPage} / {Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                      </span>
                       <Button
                         variant="outline"
                         size="sm"
                         type="button"
-                        aria-label={selectedAnnouncement.showOnBanner ? "배너에서 숨기기" : "배너로 노출"}
-                        onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
-                        disabled={isAnnouncementMutationPending}
-                        className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
+                        aria-label="다음 페이지로 이동"
+                        onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
+                        disabled={announcementPage === Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                        className="h-8"
                       >
-                        {selectedAnnouncement.showOnBanner ? (
-                          <>
-                            <BellOff className="h-3 w-3" />
-                            배너해제
-                          </>
-                        ) : (
-                          <>
-                            <Bell className="h-3 w-3" />
-                            배너노출
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        aria-label={`${selectedAnnouncement.title ?? ""} 공지사항 삭제`}
-                        onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
-                        disabled={isAnnouncementMutationPending}
-                        className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        삭제
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col">
+                  <ScrollArea className="flex-1">
+                    <div className="text-foreground text-sm whitespace-pre-wrap leading-relaxed">
+                      {selectedAnnouncement?.content}
+                    </div>
+                  </ScrollArea>
+
+                  {/* 관리자 제어 버튼 */}
+                  {isAdmin && selectedAnnouncement && (
+                    <div className="flex-shrink-0 pt-4 border-t border-border mt-4 pb-[calc(env(safe-area-inset-bottom)+8px)]">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          aria-label={selectedAnnouncement.isActive ? "공지사항 비활성화" : "공지사항 활성화"}
+                          onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
+                          disabled={isAnnouncementMutationPending}
+                          className="gap-1 text-xs"
+                        >
+                          {selectedAnnouncement.isActive ? (
+                            <>
+                              <EyeOff className="h-3 w-3" />
+                              비활성화
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-3 w-3" />
+                              활성화
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          aria-label={selectedAnnouncement.showOnBanner ? "배너에서 숨기기" : "배너로 노출"}
+                          onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
+                          disabled={isAnnouncementMutationPending}
+                          className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
+                        >
+                          {selectedAnnouncement.showOnBanner ? (
+                            <>
+                              <BellOff className="h-3 w-3" />
+                              배너해제
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="h-3 w-3" />
+                              배너노출
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          aria-label={`${selectedAnnouncement.title ?? ""} 공지사항 삭제`}
+                          onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
+                          disabled={isAnnouncementMutationPending}
+                          className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          삭제
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </BottomSheet>
+        </BottomSheet>,
+        document.body
+      )}
     </header>
   );
 };
