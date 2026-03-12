@@ -47,7 +47,6 @@ import { cn } from '@/lib/utils';
 import { parseInsightChatStreamLine, type InsightChatStreamState } from '@/lib/insight/insight-chat-stream';
 import type {
     AdminInsightChatBootstrapResponse,
-    AdminInsightChatGuardrailMetricsResetResponse,
     AdminInsightChatGuardrailMetricsResponse,
     AdminInsightChatResponse,
     AdminInsightSystemStatusChecklistItem,
@@ -558,8 +557,6 @@ const CHAT_REQUEST_TIMEOUT_MS = 18_000;
 const CHAT_REQUEST_RETRY_ATTEMPTS = 1;
 const CHAT_REQUEST_RETRY_BASE_DELAY_MS = 250;
 const CHAT_REQUEST_CACHE_LIMIT = 64;
-const CHAT_GUARDRAIL_METRICS_STALE_MS = 15_000;
-const CHAT_GUARDRAIL_METRICS_REFRESH_MS = 60_000;
 const MAX_CONVERSATIONS = 30;
 const MAX_MESSAGES_PER_CONVERSATION = 220;
 const MAX_FOLLOW_UP_PROMPT_LENGTH = 120;
@@ -651,7 +648,6 @@ const LLM_ENABLED_MODELS_KEY = 'tzudong-admin-llm-enabled-models';
 const STORYBOARD_PROFILE_STORAGE_KEY = 'tzudong-admin-storyboard-profile';
 const STREAM_STOP_MESSAGE = '답변 생성을 중단했습니다. 재생성 버튼으로 다시 요청해 주세요.';
 const COPY_SUCCESS_MESSAGE = '복사했습니다';
-const CONTEXT_WINDOW_CHOICES = [20, 40, 80, 120];
 const META_SOURCE_PANEL_LABELS: Record<NonNullable<AdminInsightChatMeta['source']> & string, string> = {
     local: '로컬 분석',
     agent: '에이전트',
@@ -685,7 +681,6 @@ const META_FALLBACK_REASON_LABELS: Record<string, string> = {
     storyboard_qna_unavailable: '스토리보드 Q&A 불가',
 };
 const GUARDRAIL_METRIC_OTHER_LABEL = '기타';
-const GUARDRAIL_METRIC_BADGE_MAX_LABEL_CHARS = 16;
 const VALID_GUARDRAIL_FEEDBACK_REASON_CATEGORIES = new Set(
     ['accuracy', 'relevance', 'completeness', 'tone', 'latency', 'other'] as const,
 );
@@ -828,7 +823,6 @@ type InsightChatGuardrailRouteOutcomeRateSummary = {
     fallbackRate: number;
     errorRate: number;
 };
-type InsightChatGuardrailRouteMetricEntries = Array<[string, number]>;
 
 const DEFAULT_INSIGHT_CHAT_GUARDRAIL_CONFIG: InsightChatGuardrailConfig = {
     enabled: true,
@@ -879,17 +873,6 @@ function normalizeMetricCounts(raw: unknown): Record<string, number> {
     return counts;
 }
 
-function getTopMetricEntries(
-    raw: unknown,
-    limit = 3,
-): InsightChatGuardrailRouteMetricEntries {
-    const counts = normalizeMetricCounts(raw);
-    return Object.entries(counts)
-        .filter(([, count]) => count > 0)
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .slice(0, limit);
-}
-
 export function getGuardrailMetricLabel(value: string): string {
     const normalized = sanitizeMetaValue(value);
     if (!normalized) return '';
@@ -937,27 +920,6 @@ export function getFeedbackReasonCategoryMetricLabel(value: string): string {
     if (normalized === 'other') return GUARDRAIL_METRIC_OTHER_LABEL;
     return FEEDBACK_REASON_CATEGORY_PANEL_LABELS[normalized as keyof typeof FEEDBACK_REASON_CATEGORY_PANEL_LABELS]
         ?? GUARDRAIL_METRIC_OTHER_LABEL;
-}
-
-function getCompactGuardrailMetricLabel(label: string): string {
-    return label.length <= GUARDRAIL_METRIC_BADGE_MAX_LABEL_CHARS ? label : `${label.slice(0, GUARDRAIL_METRIC_BADGE_MAX_LABEL_CHARS - 1)}…`;
-}
-
-function renderGuardrailMetricBadge(
-    label: string,
-    count: number,
-    className: string,
-    suffix = '',
-){
-    const compactLabel = getCompactGuardrailMetricLabel(label);
-    return (
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${className}`}>
-            <span className="max-w-[8.5rem] min-w-0 truncate" title={label}>
-                {compactLabel}
-            </span>
-            <span className="ml-1">: {count}{suffix}</span>
-        </span>
-    );
 }
 
 function toNonNegativeRate(value: number, denominator: number): number {
@@ -3338,33 +3300,6 @@ async function fetchChatBootstrap(conversationId: string): Promise<AdminInsightC
     }
 }
 
-async function fetchChatGuardrailMetrics(): Promise<AdminInsightChatGuardrailMetricsResponse> {
-    const payload = await fetchJsonWithTimeout<unknown>('/api/admin/insight/chat/metrics', {
-        method: 'GET',
-        cache: 'no-store',
-    }, CHAT_REQUEST_TIMEOUT_MS);
-    return normalizeInsightChatGuardrailMetricsResponse(payload);
-}
-
-async function postResetChatGuardrailMetrics(): Promise<AdminInsightChatGuardrailMetricsResetResponse> {
-    const payload = await fetchJsonWithTimeout<unknown>('/api/admin/insight/chat/metrics/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-    }, CHAT_REQUEST_TIMEOUT_MS);
-
-    if (!isRecord(payload) || payload.success !== true) {
-        throw new Error('가드레일 지표 초기화에 실패했습니다.');
-    }
-
-    return {
-        success: true,
-        message: typeof payload.message === 'string' && payload.message.trim()
-            ? payload.message
-            : '가드레일 지표를 초기화했습니다.',
-    };
-}
-
 async function postChatMessage(
     message: string,
     requestId: string,
@@ -5487,7 +5422,6 @@ const InsightChatSectionComponent = () => {
     const [sendingConversationId, setSendingConversationId] = useState<string | null>(null);
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [activeCommandIndex, setActiveCommandIndex] = useState(0);
-    const [showShortcutHelp, setShowShortcutHelp] = useState(false);
     const bootstrapRequestRef = useRef(new Map<string, number>());
     const conversationDraftMapRef = useRef<ConversationDraftMap>({});
     const streamAbortControllerRef = useRef<AbortController | null>(null);
@@ -5505,12 +5439,8 @@ const InsightChatSectionComponent = () => {
     const [showResponseModeDropdown, setShowResponseModeDropdown] = useState(false);
     const [showMemoryModeDropdown, setShowMemoryModeDropdown] = useState(false);
     const [showConversationList, setShowConversationList] = useState(false);
-    const [showGuardrailPanel, setShowGuardrailPanel] = useState(false);
-    const [isResettingGuardrailMetrics, setIsResettingGuardrailMetrics] = useState(false);
-    const [guardrailActionMessage, setGuardrailActionMessage] = useState<string | null>(null);
     const [conversationSearchQuery, setConversationSearchQuery] = useState('');
     const [conversationQuickFilter, setConversationQuickFilter] = useState<InsightConversationFilter>(CONVERSATION_FILTER_ALL);
-    const [activeConversationTagInput, setActiveConversationTagInput] = useState('');
     const [keyVisibility, setKeyVisibility] = useState<Partial<Record<ClientKeyProvider, boolean>>>({});
     const [serverKeyAvailability, setServerKeyAvailability] = useState<ServerKeyAvailability>({});
     const [systemStatus, setSystemStatus] = useState<AdminInsightSystemStatusResponse | null>(null);
@@ -5593,7 +5523,6 @@ const InsightChatSectionComponent = () => {
 
     useEffect(() => {
         setDraftAttachments([]);
-        setActiveConversationTagInput('');
         setEditingMessageId(null);
         setInputValue(getConversationDraftForConversation(conversationDraftMapRef.current, activeConversationId));
     }, [activeConversationId]);
@@ -5729,50 +5658,6 @@ const InsightChatSectionComponent = () => {
     );
     const activeConversationResponseMode = getConversationResponseMode(activeConversation);
     const activeConversationMemoryMode = getConversationMemoryMode(activeConversation);
-    const {
-        data: guardrailMetrics,
-        error: guardrailMetricsError,
-        isFetching: isGuardrailMetricsFetching,
-        refetch: refetchGuardrailMetrics,
-    } = useQuery({
-        queryKey: ['admin-insight-chat-guardrail-metrics'],
-        queryFn: fetchChatGuardrailMetrics,
-        enabled: showGuardrailPanel,
-        staleTime: CHAT_GUARDRAIL_METRICS_STALE_MS,
-        refetchInterval: showGuardrailPanel ? CHAT_GUARDRAIL_METRICS_REFRESH_MS : false,
-        refetchIntervalInBackground: false,
-        retry: 1,
-    });
-    const guardrailMetricsNormalized = useMemo(
-        () => normalizeInsightChatGuardrailMetricsResponse(guardrailMetrics),
-        [guardrailMetrics],
-    );
-    const guardrailSummary = useMemo(
-        () => summarizeInsightChatGuardrailMetrics(guardrailMetricsNormalized),
-        [guardrailMetricsNormalized],
-    );
-    const hasGuardrailMetricsData = Boolean(guardrailMetrics);
-    const guardrailErrorMessage = guardrailMetricsError instanceof Error
-        ? guardrailMetricsError.message
-        : null;
-    const guardrailUpdatedAtLabel = useMemo(() => {
-        if (!hasGuardrailMetricsData) return null;
-        const raw = guardrailMetricsNormalized.timestamp;
-        const date = new Date(raw);
-        if (!Number.isFinite(date.getTime())) return null;
-        return date.toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-        });
-    }, [guardrailMetricsNormalized.timestamp, hasGuardrailMetricsData]);
-    const guardrailDominantFallbackLabel = useMemo(() => {
-        if (!guardrailSummary.dominantFallbackReason) return null;
-        return getFallbackReasonLabel(guardrailSummary.dominantFallbackReason) ?? guardrailSummary.dominantFallbackReason;
-    }, [guardrailSummary.dominantFallbackReason]);
-    const hasGuardrailSignals = guardrailSummary.totalLatencyBudgetExceeded > 0
-        || guardrailSummary.totalFallbackStreakAlerts > 0;
 
     const normalizedConversationQuery = conversationSearchQuery.trim().toLowerCase();
     const availableConversationTags = useMemo(() => {
@@ -5828,24 +5713,6 @@ const InsightChatSectionComponent = () => {
     }, [activeConversation]);
 
     const canShowMoreMessages = !!activeConversation && activeConversation.messages.length > messageWindowSize;
-    const activeConversationMessageCount = activeConversation?.messages.length ?? 0;
-    const contextWindowOptions = useMemo(() => {
-        if (!activeConversationMessageCount) return CONTEXT_WINDOW_CHOICES;
-        const unique = new Set(CONTEXT_WINDOW_CHOICES);
-        unique.add(activeConversationMessageCount);
-        const allValues = [...unique]
-            .filter((value) => value > 0)
-            .sort((a, b) => a - b);
-        if (activeConversationMessageCount <= MESSAGE_WINDOW_INITIAL) {
-            return allValues;
-        }
-        return allValues;
-    }, [activeConversationMessageCount]);
-
-    const activeContextWindow = activeConversation?.contextWindowSize ?? MESSAGE_WINDOW_INITIAL;
-    const conversationContextWindowValue = activeConversation?.messages.length
-        ? Math.min(activeContextWindow, activeConversation.messages.length)
-        : activeContextWindow;
 
     const canRegenerateLastResponse = useMemo(() => {
         if (!activeConversation || !activeConversation.messages.length) {
@@ -5910,39 +5777,6 @@ const InsightChatSectionComponent = () => {
             updatedAt: Date.now(),
         }));
     }, [activeConversation, updateConversation]);
-
-    useEffect(() => {
-        if (!guardrailActionMessage) return;
-        const timer = setTimeout(() => {
-            setGuardrailActionMessage(null);
-        }, 5000);
-        return () => clearTimeout(timer);
-    }, [guardrailActionMessage]);
-
-    const handleRefreshGuardrailMetrics = useCallback(() => {
-        if (!showGuardrailPanel) {
-            setShowGuardrailPanel(true);
-        }
-        setGuardrailActionMessage(null);
-        void refetchGuardrailMetrics();
-    }, [refetchGuardrailMetrics, showGuardrailPanel]);
-
-    const handleResetGuardrailMetrics = useCallback(async () => {
-        if (isResettingGuardrailMetrics) return;
-        setIsResettingGuardrailMetrics(true);
-        setGuardrailActionMessage(null);
-
-        try {
-            const payload = await postResetChatGuardrailMetrics();
-            setGuardrailActionMessage(payload.message);
-            await refetchGuardrailMetrics();
-        } catch (error) {
-            const message = error instanceof Error ? error.message : '가드레일 지표 초기화에 실패했습니다.';
-            setGuardrailActionMessage(message);
-        } finally {
-            setIsResettingGuardrailMetrics(false);
-        }
-    }, [isResettingGuardrailMetrics, refetchGuardrailMetrics]);
 
     const feedbackForMessage = useCallback((messageId: string) => messageFeedbacks[messageId], [messageFeedbacks]);
     const handleFeedback = useCallback((messageId: string, rating: InsightChatFeedbackRating | null, reason = '') => {
@@ -6073,11 +5907,6 @@ const InsightChatSectionComponent = () => {
         [promptLibraryGroups, normalizedCommandPaletteQuery],
     );
 
-    const activePromptGroups = useMemo(
-        () => (isCommandMode ? filteredPromptPaletteGroups : promptLibraryGroups),
-        [filteredPromptPaletteGroups, isCommandMode, promptLibraryGroups],
-    );
-
     const commandSuggestions = useMemo(() => {
         if (!isCommandMode) return [];
 
@@ -6096,17 +5925,6 @@ const InsightChatSectionComponent = () => {
     }, [filteredPromptPaletteGroups, isCommandMode]);
 
     const hasPromptSuggestions = isCommandMode && commandSuggestions.length > 0;
-    const totalQuickPromptCount = useMemo(
-        () => (isCommandMode ? 0 : activePromptGroups.reduce((acc, group) => acc + group.prompts.length, 0)),
-        [activePromptGroups, isCommandMode],
-    );
-
-    const compactQuickPrompts = useMemo(() => {
-        if (isCommandMode) return [];
-        return flattenPromptCommands(activePromptGroups);
-    }, [activePromptGroups, isCommandMode]);
-    const shortcutHelpItems = useMemo(() => getInsightChatShortcutHelpItems(), []);
-
     useEffect(() => {
         if (!hasPromptSuggestions) {
             setActiveCommandIndex(0);
@@ -6453,18 +6271,6 @@ const InsightChatSectionComponent = () => {
         ));
     }, [activeConversation]);
 
-    const handleSetMessageWindow = useCallback((nextWindowSize: number) => {
-        if (!activeConversation) return;
-
-        const bounded = Math.max(1, Math.min(nextWindowSize, activeConversation.messages.length || MESSAGE_WINDOW_INITIAL));
-        setMessageWindowSize(bounded);
-        updateConversation(activeConversation.id, (prev) => ({
-            ...prev,
-            contextWindowSize: bounded,
-            updatedAt: Date.now(),
-        }));
-    }, [activeConversation, updateConversation]);
-
     const handleTogglePinnedConversation = useCallback((conversationId: string) => {
         updateConversation(conversationId, (prev) => ({
             ...prev,
@@ -6481,31 +6287,6 @@ const InsightChatSectionComponent = () => {
         setConversations((prev) => [duplicated, ...prev].slice(0, MAX_CONVERSATIONS));
         setActiveConversationId(duplicated.id);
     }, [conversations]);
-
-    const handleAddConversationTag = useCallback(() => {
-        if (!activeConversation) return;
-        const normalizedTag = sanitizeConversationTag(activeConversationTagInput);
-        if (!normalizedTag) return;
-
-        updateConversation(activeConversation.id, (prev) => ({
-            ...prev,
-            tags: normalizeConversationTags([...normalizeConversationTags(prev.tags), normalizedTag]),
-            updatedAt: Date.now(),
-        }));
-        setActiveConversationTagInput('');
-    }, [activeConversation, activeConversationTagInput, updateConversation]);
-
-    const handleRemoveConversationTag = useCallback((tag: string) => {
-        if (!activeConversation) return;
-        const normalizedTag = sanitizeConversationTag(tag);
-        if (!normalizedTag) return;
-
-        updateConversation(activeConversation.id, (prev) => ({
-            ...prev,
-            tags: normalizeConversationTags(prev.tags).filter((item) => item !== normalizedTag),
-            updatedAt: Date.now(),
-        }));
-    }, [activeConversation, updateConversation]);
 
     const handleRenameConversation = useCallback((conversationId: string) => {
         const target = conversations.find((conversation) => conversation.id === conversationId);
@@ -7086,21 +6867,9 @@ const InsightChatSectionComponent = () => {
             return;
         }
 
-        if (shortcutAction === 'toggleShortcutHelp') {
-            event.preventDefault();
-            setShowShortcutHelp((previous) => !previous);
-            return;
-        }
-
         if (shortcutAction === 'cancelEdit' && editingMessageId) {
             event.preventDefault();
             handleCancelEditMessage();
-            return;
-        }
-
-        if (shortcutAction === 'cancelEdit' && showShortcutHelp) {
-            event.preventDefault();
-            setShowShortcutHelp(false);
             return;
         }
 
@@ -7167,7 +6936,6 @@ const InsightChatSectionComponent = () => {
         inputValue,
         isCommandMode,
         latestEditableUserMessageId,
-        showShortcutHelp,
     ]);
 
     const isSending = sendingConversationId === activeConversationId;
@@ -7182,7 +6950,7 @@ const InsightChatSectionComponent = () => {
     }, [isStreamingInFlight, sendMessage]);
 
     return (
-        <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white border border-[#e5e7eb] relative">
+        <section className="h-full min-h-0 min-w-0 flex overflow-hidden bg-white relative">
             {showConversationList ? (
                 <button
                     type="button"
@@ -7785,57 +7553,6 @@ const InsightChatSectionComponent = () => {
                                 })}
                             </div>
                         </div>
-                        {activeConversation ? (
-                            <div className="px-2 pb-2">
-                                <div className="rounded-lg border border-[#e5e7eb] bg-white p-2 space-y-2">
-                                    <p className="text-[11px] font-medium text-[#6b7280]">현재 대화 태그</p>
-                                    <div className="flex gap-1">
-                                        <Input
-                                            value={activeConversationTagInput}
-                                            onChange={(event) => setActiveConversationTagInput(event.target.value)}
-                                            onKeyDown={(event) => {
-                                                if (event.key === 'Enter') {
-                                                    event.preventDefault();
-                                                    handleAddConversationTag();
-                                                }
-                                            }}
-                                            maxLength={MAX_CONVERSATION_TAG_LENGTH}
-                                            placeholder="태그 추가"
-                                            className="h-7 text-xs bg-white border-[#e5e7eb] focus-visible:ring-[#f87171]"
-                                        />
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-7 px-2"
-                                            onClick={handleAddConversationTag}
-                                        >
-                                            추가
-                                        </Button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1">
-                                        {activeConversation.tags.length === 0 ? (
-                                            <span className="text-[11px] text-[#9ca3af]">태그 없음</span>
-                                        ) : activeConversation.tags.map((tag) => (
-                                            <span
-                                                key={tag}
-                                                className="inline-flex items-center gap-1 rounded-full border border-[#fbcfe8] bg-[#fff1f2] px-2 py-0.5 text-[11px] text-[#be185d]"
-                                            >
-                                                #{tag}
-                                                <button
-                                                    type="button"
-                                                    className="rounded-full p-0.5 hover:bg-[#ffe4e6]"
-                                                    onClick={() => handleRemoveConversationTag(tag)}
-                                                    aria-label={`태그 ${tag} 제거`}
-                                                >
-                                                    <X className="h-2.5 w-2.5" />
-                                                </button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : null}
                         {conversationList.length === 0 ? (
                             <p className="px-2 py-10 text-sm text-[#6b7280] text-center">새로운 대화를 준비 중입니다</p>
                         ) : (
@@ -7961,377 +7678,25 @@ const InsightChatSectionComponent = () => {
             </aside>
 
             <section className="flex-1 min-w-0 flex flex-col min-h-0">
-                <div className="lg:hidden flex items-center gap-2 px-3 py-2 border-b border-[#e5e7eb] bg-white">
+                <div className="lg:hidden flex min-w-0 flex-nowrap items-center gap-2 px-3 py-2 border-b border-[#e5e7eb] bg-white">
                     <Button
                         type="button"
                         size="sm"
                         variant="outline"
                         onClick={() => setShowConversationList(true)}
-                        className="h-9 flex-1"
+                        className="h-9 min-w-0 flex-1"
                     >
                         대화 목록
                     </Button>
                     <Button
                         type="button"
                         size="sm"
-                        className="h-9"
+                        className="h-9 shrink-0"
                         onClick={handleNewConversation}
                     >
                         <PlusCircle className="h-4 w-4 mr-1.5" />
                         새 대화
                     </Button>
-                </div>
-                <div className="border-b border-[#e5e7eb] bg-[#fcfcfd] px-3 py-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[11px] font-semibold text-[#374151]">가드레일</span>
-                            <span
-                                className={cn(
-                                    'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium',
-                                    !guardrailMetricsNormalized.guardrailConfig.enabled
-                                        ? 'border-[#e5e7eb] bg-[#f3f4f6] text-[#6b7280]'
-                                        : hasGuardrailSignals
-                                            ? 'border-[#fecaca] bg-[#fff1f2] text-[#be123c]'
-                                            : 'border-[#bbf7d0] bg-[#f0fdf4] text-[#166534]',
-                                )}
-                            >
-                                {!guardrailMetricsNormalized.guardrailConfig.enabled
-                                    ? '비활성'
-                                    : hasGuardrailSignals
-                                        ? '주의 필요'
-                                        : hasGuardrailMetricsData
-                                            ? '정상'
-                                            : '대기'}
-                            </span>
-                            <span className="text-[11px] text-[#6b7280]">
-                                지연 초과 {guardrailSummary.totalLatencyBudgetExceeded}
-                            </span>
-                            <span className="text-[11px] text-[#6b7280]">
-                                폴백 경고 {guardrailSummary.totalFallbackStreakAlerts}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-[11px]"
-                                onClick={() => {
-                                    setShowGuardrailPanel((prev) => !prev);
-                                    if (!showGuardrailPanel) {
-                                        void refetchGuardrailMetrics();
-                                    }
-                                }}
-                            >
-                                {showGuardrailPanel ? '지표 숨기기' : '지표 보기'}
-                            </Button>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-7 w-7 p-0"
-                                onClick={handleRefreshGuardrailMetrics}
-                                disabled={isGuardrailMetricsFetching}
-                                title="지표 새로고침"
-                            >
-                                <RefreshCw className={cn('h-3.5 w-3.5', isGuardrailMetricsFetching && 'animate-spin')} />
-                            </Button>
-                        </div>
-                    </div>
-                    {showGuardrailPanel ? (
-                        <div className="mt-2 rounded-lg border border-[#e5e7eb] bg-white p-2.5 space-y-2">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="text-[11px] text-[#6b7280]">
-                                    {guardrailUpdatedAtLabel ? `최근 업데이트 ${guardrailUpdatedAtLabel}` : '업데이트 정보 없음'}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-7 px-2 text-[11px]"
-                                        onClick={handleResetGuardrailMetrics}
-                                        disabled={isResettingGuardrailMetrics}
-                                    >
-                                        {isResettingGuardrailMetrics ? '초기화 중...' : '지표 초기화'}
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                {([
-                                    { key: 'chat', label: 'Chat 라우트' },
-                                    { key: 'stream', label: 'Stream 라우트' },
-                                ] as const).map((route) => {
-                                    const metrics = guardrailMetricsNormalized.routes[route.key];
-                                    const outcomeRates = summarizeInsightChatGuardrailRouteOutcomeRates(metrics);
-                                    const providerEntries = getTopMetricEntries(metrics.provider_request_counts, 3);
-                                    const sourceEntries = getTopMetricEntries(metrics.source_counts, 3);
-                                    const reasonEntries = getTopMetricEntries(metrics.fallback_totals ?? metrics.reliability_fallback_streak_alerts, 3);
-                                    const citationQualityEntries = getTopMetricEntries(metrics.citation_quality_counts, 3);
-                                    const responseModeEntries = getTopMetricEntries(metrics.response_mode_counts, 3);
-                                    const memoryModeEntries = getTopMetricEntries(metrics.memory_mode_counts, 3);
-                                    const feedbackRatingEntries = getTopMetricEntries(metrics.feedback_rating_counts, 3);
-                                    const feedbackHasReasonEntries = getTopMetricEntries(metrics.feedback_has_reason_counts, 3);
-                                    const feedbackReasonCategoryEntries = getTopMetricEntries(
-                                        metrics.feedback_reason_category_counts,
-                                        3,
-                                    );
-                                    return (
-                                        <div
-                                            key={route.key}
-                                            className="rounded-md border border-[#f1f5f9] bg-[#f8fafc] p-2 text-[11px] text-[#334155]"
-                                        >
-                                            <p className="font-semibold text-[#0f172a]">{route.label}</p>
-                                            <p className="mt-1">지연 초과: {metrics.latency_budget_exceeded}</p>
-                                            <p className="mt-1">총 요청: {outcomeRates.totalRequests}</p>
-                                            <div className="mt-1">
-                                                <div className="text-[#475569]">요청 결과율</div>
-                                                <div className="mt-1 flex flex-wrap gap-1">
-                                                    {outcomeRates.totalRequests > 0 ? (
-                                                        <>
-                                                            <span>
-                                                                {renderGuardrailMetricBadge(
-                                                                    '성공',
-                                                                    outcomeRates.successRate,
-                                                                    'border border-[#dcfce7] bg-[#f0fdf4] text-[#166534]',
-                                                                    '%',
-                                                                )}
-                                                            </span>
-                                                            <span>
-                                                                {renderGuardrailMetricBadge(
-                                                                    '폴백',
-                                                                    outcomeRates.fallbackRate,
-                                                                    'border border-[#ffe4e6] bg-[#fff1f2] text-[#9f1239]',
-                                                                    '%',
-                                                                )}
-                                                            </span>
-                                                            <span>
-                                                                {renderGuardrailMetricBadge(
-                                                                    '오류',
-                                                                    outcomeRates.errorRate,
-                                                                    'border border-[#fee2e2] bg-[#fef2f2] text-[#991b1b]',
-                                                                    '%',
-                                                                )}
-                                                            </span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-[11px] text-[#64748b]">요청 결과 데이터 없음</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="mt-1">
-                                                <div className="text-[#475569]">상위 공급자</div>
-                                               <div className="mt-1 flex flex-wrap gap-1">
-                                                    {providerEntries.length > 0 ? (
-                                                        providerEntries.map(([provider, count]) => {
-                                                            const label = getGuardrailMetricLabel(provider);
-                                                            return (
-                                                                <span key={`${route.key}-${provider}`}>
-                                                                    {renderGuardrailMetricBadge(
-                                                                        label,
-                                                                        count,
-                                                                        'border border-[#e0e7ff] bg-[#eef2ff] text-[#3730a3]',
-                                                                    )}
-                                                                </span>
-                                                            );
-                                                        })
-                                                    ) : (
-                                                        <span className="text-[11px] text-[#64748b]">공급자 데이터 없음</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="mt-2">
-                                                <div className="text-[#475569]">상위 출처</div>
-                                                <div className="mt-1 flex flex-wrap gap-1">
-                                                    {sourceEntries.length > 0 ? (
-                                                        sourceEntries.map(([source, count]) => {
-                                                            const label = getGuardrailMetricLabel(source);
-                                                            return (
-                                                                <span key={`${route.key}-${source}`}>
-                                                                    {renderGuardrailMetricBadge(
-                                                                        label,
-                                                                        count,
-                                                                        'border border-[#dcfce7] bg-[#f0fdf4] text-[#166534]',
-                                                                    )}
-                                                                </span>
-                                                            );
-                                                        })
-                                                    ) : (
-                                                        <span className="text-[11px] text-[#64748b]">출처 데이터 없음</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                                <div className="mt-2">
-                                                    <div className="text-[#475569]">상위 인용 품질</div>
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                        {citationQualityEntries.length > 0 ? (
-                                                            citationQualityEntries.map(([quality, count]) => {
-                                                                const label = getCitationQualityMetricLabel(quality);
-                                                                return (
-                                                                    <span key={`${route.key}-${quality}`}>
-                                                                        {renderGuardrailMetricBadge(
-                                                                            label,
-                                                                            count,
-                                                                            `border border-[#ddd6fe] bg-[#ede9fe] ${getCitationQualityMetricBadgeStyle(quality)}`,
-                                                                        )}
-                                                                    </span>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <span className="text-[11px] text-[#64748b]">인용 품질 데이터 없음</span>
-                                                        )}
-                                                    </div>
-                                            </div>
-                                                <div className="mt-2">
-                                                    <div className="text-[#475569]">상위 폴백 원인</div>
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                        {reasonEntries.length > 0 ? (
-                                                            reasonEntries.map(([reason, count]) => {
-                                                                const label = getFallbackReasonLabel(reason);
-                                                                return (
-                                                                    <span key={`${route.key}-${reason}`}>
-                                                                        {renderGuardrailMetricBadge(
-                                                                            label || reason,
-                                                                            count,
-                                                                            'border border-[#ffe4e6] bg-[#fff1f2] text-[#9f1239]',
-                                                                        )}
-                                                                    </span>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <span className="text-[11px] text-[#64748b]">폴백 연속 경고 없음</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-2">
-                                                    <div className="text-[#475569]">상위 피드백 사유 카테고리</div>
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                        {feedbackReasonCategoryEntries.length > 0 ? (
-                                                            feedbackReasonCategoryEntries.map(([category, count]) => {
-                                                                const label = getFeedbackReasonCategoryMetricLabel(category);
-                                                                return (
-                                                                    <span key={`${route.key}-${category}`}>
-                                                                        {renderGuardrailMetricBadge(
-                                                                            label,
-                                                                            count,
-                                                                            'border border-[#ffedd5] bg-[#fff7ed] text-[#c2410c]',
-                                                                        )}
-                                                                    </span>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <span className="text-[11px] text-[#64748b]">피드백 사유 카테고리 데이터 없음</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-2">
-                                                    <div className="text-[#475569]">상위 응답 모드</div>
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                        {responseModeEntries.length > 0 ? (
-                                                            responseModeEntries.map(([mode, count]) => {
-                                                                const label = getResponseModeMetricLabel(mode);
-                                                                return (
-                                                                    <span key={`${route.key}-${mode}`}>
-                                                                        {renderGuardrailMetricBadge(
-                                                                            label,
-                                                                            count,
-                                                                            'border border-[#f5f3ff] bg-[#f8fafc] text-[#4c1d95]',
-                                                                        )}
-                                                                    </span>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <span className="text-[11px] text-[#64748b]">응답 모드 데이터 없음</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-2">
-                                                    <div className="text-[#475569]">상위 기억 모드</div>
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                        {memoryModeEntries.length > 0 ? (
-                                                            memoryModeEntries.map(([mode, count]) => {
-                                                                const label = getMemoryModeMetricLabel(mode);
-                                                                return (
-                                                                    <span key={`${route.key}-${mode}`}>
-                                                                        {renderGuardrailMetricBadge(
-                                                                            label,
-                                                                            count,
-                                                                            'border border-[#fef3c7] bg-[#fffbeb] text-[#92400e]',
-                                                                        )}
-                                                                    </span>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <span className="text-[11px] text-[#64748b]">기억 모드 데이터 없음</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-2">
-                                                    <div className="text-[#475569]">상위 피드백</div>
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                        {feedbackRatingEntries.length > 0 ? (
-                                                            feedbackRatingEntries.map(([rating, count]) => {
-                                                                const label = getFeedbackRatingMetricLabel(rating);
-                                                                return (
-                                                                    <span key={`${route.key}-${rating}`}>
-                                                                        {renderGuardrailMetricBadge(
-                                                                            label,
-                                                                            count,
-                                                                            'border border-[#ccfbf1] bg-[#ecfeff] text-[#155e75]',
-                                                                        )}
-                                                                    </span>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <span className="text-[11px] text-[#64748b]">피드백 데이터 없음</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-2">
-                                                    <div className="text-[#475569]">상위 피드백 사유 포함</div>
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                        {feedbackHasReasonEntries.length > 0 ? (
-                                                            feedbackHasReasonEntries.map(([reason, count]) => {
-                                                                const label = getFeedbackHasReasonMetricLabel(reason);
-                                                                return (
-                                                                    <span key={`${route.key}-${reason}`}>
-                                                                        {renderGuardrailMetricBadge(
-                                                                            label,
-                                                                            count,
-                                                                            'border border-[#fee2e2] bg-[#fef2f2] text-[#991b1b]',
-                                                                        )}
-                                                                    </span>
-                                                                );
-                                                            })
-                                                        ) : (
-                                                            <span className="text-[11px] text-[#64748b]">피드백 사유 데이터 없음</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <div className="rounded-md border border-dashed border-[#e5e7eb] bg-[#fafafa] px-2 py-1.5 text-[11px] text-[#6b7280]">
-                                <p>
-                                    가드레일: {guardrailMetricsNormalized.guardrailConfig.enabled ? 'ON' : 'OFF'} ·
-                                    지연 예산 {guardrailMetricsNormalized.guardrailConfig.latencyBudgetMs}ms ·
-                                    연속 임계치 {guardrailMetricsNormalized.guardrailConfig.fallbackStreakThreshold}회
-                                </p>
-                                {guardrailDominantFallbackLabel ? (
-                                    <p className="mt-1">
-                                        최다 폴백 원인: {guardrailDominantFallbackLabel} ({guardrailSummary.dominantFallbackCount}회)
-                                    </p>
-                                ) : null}
-                            </div>
-                            {guardrailErrorMessage ? (
-                                <p className="text-[11px] text-[#dc2626]">{guardrailErrorMessage}</p>
-                            ) : null}
-                            {guardrailActionMessage ? (
-                                <p className="text-[11px] text-[#166534]">{guardrailActionMessage}</p>
-                            ) : null}
-                        </div>
-                    ) : null}
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 bg-white">
                     {activeConversation?.bootstrapFailed ? (
@@ -8359,32 +7724,6 @@ const InsightChatSectionComponent = () => {
                                 </div>
                             ) : (
                                         <>
-                                            <div className="px-1 pb-2 flex flex-wrap items-center gap-2 justify-end">
-                                                <span className="text-xs text-[#6b7280]">컨텍스트 창:</span>
-                                                <select
-                                                    value={conversationContextWindowValue}
-                                                    onChange={(event) => handleSetMessageWindow(Number(event.target.value))}
-                                                    className="h-7 w-28 rounded-md border border-[#e5e7eb] px-2 text-xs"
-                                                >
-                                                    {contextWindowOptions.map((size) => (
-                                                        <option key={size} value={size}>
-                                                            {size >= activeConversationMessageCount ? '전체' : `${size}개`}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        if (!activeConversation) return;
-                                                        handleSetMessageWindow(activeConversation.messages.length || MESSAGE_WINDOW_INITIAL);
-                                                    }}
-                                                    className="h-7 px-2 text-xs"
-                                                >
-                                                    전체 보기
-                                                </Button>
-                                            </div>
                                             {canShowMoreMessages ? (
                                                 <div className="px-1 py-2 text-center">
                                                     <button
@@ -8439,7 +7778,8 @@ const InsightChatSectionComponent = () => {
 
                 <div className="border-t border-[#e5e7eb] px-3 py-3 bg-white">
                     <div className="mb-2 flex flex-nowrap items-center gap-2 pb-1 min-w-0">
-                        <div className="flex shrink-0 flex-nowrap items-center gap-2">
+                        <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <div className="flex w-max flex-nowrap items-center gap-2 pr-1">
                             <div ref={modelDropdownRef} className="relative shrink-0">
                                 <button
                                     type="button"
@@ -8601,6 +7941,7 @@ const InsightChatSectionComponent = () => {
                                     className="h-8 text-xs bg-white border-[#e5e7eb] focus-visible:ring-[#f87171]"
                                 />
                             </div>
+                            </div>
                         </div>
 
                         {isCommandMode ? (
@@ -8684,51 +8025,7 @@ const InsightChatSectionComponent = () => {
                                     <p className="text-xs text-[#6b7280]">일치하는 명령어가 없습니다.</p>
                                 )}
                             </div>
-                        ) : (
-                            <div className="min-w-0 flex-1 rounded-lg border border-[#f3f4f6] bg-white/80 px-2 py-1.5">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <p className="shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider font-semibold text-[#6b7280]">
-                                        빠른 프롬프트
-                                        <span className="ml-1.5 text-[#9ca3af] font-normal">({totalQuickPromptCount})</span>
-                                    </p>
-                                    <div className="min-w-0 flex-1">
-                                        {compactQuickPrompts.length > 0 ? (
-                                            <div
-                                                data-allow-horizontal-scroll="true"
-                                                className="flex flex-nowrap gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5 min-w-0 whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                                            >
-                                                {compactQuickPrompts.map((prompt: InsightPromptCommand) => (
-                                                    <span
-                                                        key={`compact-${prompt.groupId}-${prompt.id}`}
-                                                        className="inline-flex shrink-0 items-center rounded-md border border-[#e5e7eb] bg-[#fafafa] text-xs text-[#111827]"
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handlePromptTemplateApply(prompt)}
-                                                            className="px-2 py-1 text-[#374151] font-medium whitespace-nowrap hover:bg-[#f3f4f6] rounded-l-md"
-                                                            aria-label={`삽입: ${prompt.label}`}
-                                                        >
-                                                            {prompt.label}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handlePromptTemplateApply(prompt, { autoSend: true })}
-                                                            className="px-1.5 py-1 border-l border-[#e5e7eb] text-[#f97316] hover:bg-[#ffedd5] rounded-r-md inline-flex items-center justify-center"
-                                                            aria-label={`즉시 전송: ${prompt.label}`}
-                                                        >
-                                                            <Send className="h-3.5 w-3.5" />
-                                                            <span className="sr-only">즉시 전송</span>
-                                                        </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-xs text-[#9ca3af] truncate">추천 가능한 프롬프트가 없습니다.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                        ) : null}
                     </div>
                     {draftAttachments.length > 0 ? (
                         <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -8748,21 +8045,6 @@ const InsightChatSectionComponent = () => {
                                     </button>
                                 </span>
                             ))}
-                        </div>
-                    ) : null}
-                    {showShortcutHelp ? (
-                        <div className="mb-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] p-2">
-                            <p className="mb-1 text-[11px] font-semibold text-[#374151]">단축키 도움말</p>
-                            <ul className="space-y-1">
-                                {shortcutHelpItems.map((item) => (
-                                    <li key={`${item.keys}-${item.description}`} className="flex items-center gap-2 text-[11px] text-[#4b5563]">
-                                        <kbd className="rounded border border-[#d1d5db] bg-white px-1.5 py-0.5 text-[10px] font-medium text-[#111827]">
-                                            {item.keys}
-                                        </kbd>
-                                        <span>{item.description}</span>
-                                    </li>
-                                ))}
-                            </ul>
                         </div>
                     ) : null}
                     <form
@@ -8804,16 +8086,6 @@ const InsightChatSectionComponent = () => {
                                 title="txt/csv 첨부"
                             >
                                 <Paperclip className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                type="button"
-                                className="h-11 px-2"
-                                variant="outline"
-                                onClick={() => setShowShortcutHelp((previous) => !previous)}
-                                disabled={!!activeConversation?.isBooting || !!isStreamingInFlight}
-                                title="단축키 도움말"
-                            >
-                                ?
                             </Button>
                         </div>
                         <input

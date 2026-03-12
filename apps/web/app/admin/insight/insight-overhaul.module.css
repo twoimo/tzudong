@@ -1,21 +1,19 @@
 .pageShell {
   height: 100%;
   min-height: 0;
-  padding: 12px;
+  padding: 0;
   display: grid;
-  gap: 12px;
+  gap: 0;
   color: #111827;
-  background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 42%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: #fff;
 }
 
 .chatFrame {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 20px 40px -30px rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(8px);
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
   height: 100%;
   max-height: 100%;
   min-height: 0;
@@ -113,14 +111,14 @@
 
 @media (max-width: 900px) {
   .pageShell {
-    padding: 10px;
-    gap: 10px;
+    padding: 0;
+    gap: 0;
   }
 
   .chatFrame {
     height: 100%;
     max-height: 100%;
-    border-radius: 10px;
+    border-radius: 0;
   }
 
   .centerShell {
