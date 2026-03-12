@@ -724,6 +724,27 @@ function getRequestIdLabel(requestId: string | undefined): string | null {
     return sanitized;
 }
 
+function getDropdownHorizontalAnchorClass(container: HTMLDivElement | null): 'left-0' | 'right-0 left-auto' {
+    if (typeof window === 'undefined' || !container) {
+        return 'left-0';
+    }
+
+    const rect = container.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const horizontalPadding = 8;
+    const idealMenuWidth = 256;
+    const menuWidth = Math.min(idealMenuWidth, Math.max(160, viewportWidth - (horizontalPadding * 2)));
+
+    const overflowsRight = rect.left + menuWidth > viewportWidth - horizontalPadding;
+    const overflowsLeftWhenRightAnchored = rect.right - menuWidth < horizontalPadding;
+
+    if (overflowsRight && !overflowsLeftWhenRightAnchored) {
+        return 'right-0 left-auto';
+    }
+
+    return 'left-0';
+}
+
 function normalizeSystemStatusHintText(raw: unknown): string {
     if (typeof raw !== 'string') return '';
     return sanitizeMetaValue(raw).replace(/\s+/g, ' ');
@@ -7795,7 +7816,12 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showModelDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
+                                    <div
+                                        className={cn(
+                                            'absolute bottom-full mb-1 w-64 max-w-[calc(100vw-1rem)] bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto',
+                                            getDropdownHorizontalAnchorClass(modelDropdownRef.current),
+                                        )}
+                                    >
                                         {(['gemini', 'openai', 'anthropic'] as LlmProvider[]).map((provider) => {
                                             const providerModels = availableModels.filter((m) => m.provider === provider);
                                             const providerHasKey = hasProviderServerOrUserKey(provider);
@@ -7843,7 +7869,12 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showImageModelDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
+                                    <div
+                                        className={cn(
+                                            'absolute bottom-full mb-1 w-64 max-w-[calc(100vw-1rem)] bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto',
+                                            getDropdownHorizontalAnchorClass(imageModelDropdownRef.current),
+                                        )}
+                                    >
                                         {IMAGE_MODEL_PROFILES.map((profile) => (
                                             <button
                                                 key={profile.id}
@@ -7875,7 +7906,12 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showResponseModeDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
+                                    <div
+                                        className={cn(
+                                            'absolute bottom-full mb-1 w-64 max-w-[calc(100vw-1rem)] bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto',
+                                            getDropdownHorizontalAnchorClass(responseModeDropdownRef.current),
+                                        )}
+                                    >
                                         {CHAT_RESPONSE_MODES.map((mode) => (
                                             <button
                                                 key={mode.value}
@@ -7909,7 +7945,12 @@ const InsightChatSectionComponent = () => {
                                 </button>
 
                                 {showMemoryModeDropdown ? (
-                                    <div className="absolute bottom-full left-0 mb-1 w-64 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto">
+                                    <div
+                                        className={cn(
+                                            'absolute bottom-full mb-1 w-64 max-w-[calc(100vw-1rem)] bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-[120] py-1 max-h-72 overflow-y-auto',
+                                            getDropdownHorizontalAnchorClass(memoryModeDropdownRef.current),
+                                        )}
+                                    >
                                         {CHAT_MEMORY_MODES.map((mode) => (
                                             <button
                                                 key={mode.value}
