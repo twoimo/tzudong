@@ -118,17 +118,14 @@ describe('insight chat request parser', () => {
         expect(parsed.llmConfig?.imageModelProfile).toBeUndefined();
     });
 
-    test('accepts provider+model pair even when model is outside allowlist', () => {
+    test('rejects provider+model pair when model is outside provider allowlist', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',
             provider: 'openai',
             model: 'gemini-3-flash-preview',
         });
-        expect(parsed.llmConfig).toMatchObject({
-            provider: 'openai',
-            model: 'gemini-3-flash-preview',
-        });
-        expect(parsed.invalidModelReason).toBeUndefined();
+        expect(parsed.llmConfig).toBeUndefined();
+        expect(parsed.invalidModelReason).toBe('invalid_model');
     });
 
     test('flags invalid model payload types as invalid model', () => {
@@ -151,18 +148,46 @@ describe('insight chat request parser', () => {
         expect(parsed.invalidModelReason).toBeUndefined();
     });
 
-    test('accepts arbitrary model ids when provider is supported', () => {
+    test('rejects arbitrary model ids when provider is supported', () => {
         const parsed = parseInsightChatRequestBody({
             message: '안녕',
             provider: 'gemini',
             model: 'not-a-valid-model',
         });
 
-        expect(parsed.llmConfig).toMatchObject({
+        expect(parsed.llmConfig).toBeUndefined();
+        expect(parsed.invalidModelReason).toBe('invalid_model');
+    });
+
+    test('accepts allow-listed model ids for each provider', () => {
+        const geminiParsed = parseInsightChatRequestBody({
+            message: '안녕',
             provider: 'gemini',
-            model: 'not-a-valid-model',
+            model: 'gemini-3.1-pro-preview',
         });
-        expect(parsed.invalidModelReason).toBeUndefined();
+        const openaiParsed = parseInsightChatRequestBody({
+            message: '안녕',
+            provider: 'openai',
+            model: 'gpt-5.3',
+        });
+        const anthropicParsed = parseInsightChatRequestBody({
+            message: '안녕',
+            provider: 'anthropic',
+            model: 'claude-opus-4-6',
+        });
+
+        expect(geminiParsed.llmConfig).toMatchObject({
+            provider: 'gemini',
+            model: 'gemini-3.1-pro-preview',
+        });
+        expect(openaiParsed.llmConfig).toMatchObject({
+            provider: 'openai',
+            model: 'gpt-5.3',
+        });
+        expect(anthropicParsed.llmConfig).toMatchObject({
+            provider: 'anthropic',
+            model: 'claude-opus-4-6',
+        });
     });
 
     test('flags potentially adversarial instruction payloads before routing', () => {

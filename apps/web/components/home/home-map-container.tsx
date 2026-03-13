@@ -9,6 +9,10 @@ import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
+import {
+    getAdjacentRestaurantByStep,
+    handleDesktopArrowNavigationEvent,
+} from '@/lib/home-map-keyboard-navigation';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -902,21 +906,21 @@ function HomeMapContainerComponent({
 
     const handleSwipeToRestaurant = useCallback((step: -1 | 1) => {
         const modeScopedRestaurants = getRestaurantListByMode(activeSwipeableRestaurants);
-        if (modeScopedRestaurants.length <= 1) return;
+        if (modeScopedRestaurants.length <= 1) return false;
 
         const currentRestaurant = panelRestaurant || selectedRestaurant;
-        if (!currentRestaurant) return;
+        if (!currentRestaurant) return false;
 
-        const currentIndex = modeScopedRestaurants.findIndex((restaurant) =>
-            isSameRestaurantForSwipe(restaurant, currentRestaurant)
-        );
-        if (currentIndex < 0) return;
-
-        const nextIndex = currentIndex + step;
-        const nextRestaurant = modeScopedRestaurants[nextIndex];
-        if (!nextRestaurant) return;
+        const nextRestaurant = getAdjacentRestaurantByStep({
+            restaurants: modeScopedRestaurants,
+            currentRestaurant,
+            step,
+            isSameRestaurant: isSameRestaurantForSwipe,
+        });
+        if (!nextRestaurant) return false;
 
         onRestaurantSelect(nextRestaurant);
+        return true;
     }, [activeSwipeableRestaurants, getRestaurantListByMode, onRestaurantSelect, panelRestaurant, selectedRestaurant]);
 
     const handleMapMarkerClick = useCallback((restaurant: Restaurant) => {
@@ -933,6 +937,33 @@ function HomeMapContainerComponent({
             onSwipeableRestaurantsChange(activeSwipeableRestaurants);
         }
     }, [onSwipeableRestaurantsChange, activeSwipeableRestaurants]);
+
+    useEffect(() => {
+        if (!isDesktop || !isPanelOpen) return;
+
+        const handleDesktopArrowNavigation = (event: KeyboardEvent) => {
+            handleDesktopArrowNavigationEvent({
+                event,
+                isDesktop,
+                isPanelOpen,
+                hasCurrentRestaurant: !!(panelRestaurant || selectedRestaurant),
+                swipeableCount: activeSwipeableRestaurants.length,
+                onNavigate: handleSwipeToRestaurant,
+            });
+        };
+
+        window.addEventListener('keydown', handleDesktopArrowNavigation);
+        return () => {
+            window.removeEventListener('keydown', handleDesktopArrowNavigation);
+        };
+    }, [
+        activeSwipeableRestaurants.length,
+        handleSwipeToRestaurant,
+        isDesktop,
+        isPanelOpen,
+        panelRestaurant,
+        selectedRestaurant,
+    ]);
 
     useEffect(() => {
         if (!isMobileOrTablet || !isPanelOpen) return;

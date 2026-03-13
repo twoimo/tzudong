@@ -5,6 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const args = new Set(process.argv.slice(2));
 const shouldFixVideoLinks = args.has('--fix-video-links');
+const shouldDryRunFixVideoLinks = args.has('--dry-run');
+const didConfirmFixVideoLinks = args.has('--confirm-fix-video-links');
 const allowWarnOnly = args.has('--allow-warn');
 
 loadEnv({ path: '.env.local' });
@@ -88,6 +90,20 @@ async function run() {
   const failures = [];
   const warnings = [];
 
+  if (shouldFixVideoLinks && shouldDryRunFixVideoLinks && didConfirmFixVideoLinks) {
+    const message = '--fix-video-links supports either --dry-run or --confirm-fix-video-links (not both)';
+    failures.push(message);
+    logStatus('FAIL', message);
+    process.exit(1);
+  }
+
+  if (shouldFixVideoLinks && !shouldDryRunFixVideoLinks && !didConfirmFixVideoLinks) {
+    const message = '--fix-video-links requires explicit mode: --dry-run (safe preview) or --confirm-fix-video-links (apply updates)';
+    failures.push(message);
+    logStatus('FAIL', message);
+    process.exit(1);
+  }
+
   if (missingEnv.length > 0) {
     const message = `missing required env: ${missingEnv.join(', ')}`;
     failures.push(message);
@@ -169,9 +185,16 @@ async function run() {
   }
 
   let missingVideoIdCount = 0;
+  let normalizationCandidateCount = 0;
   let normalizedCount = 0;
 
   if (Array.isArray(approvedRestaurants)) {
+    if (shouldFixVideoLinks && shouldDryRunFixVideoLinks) {
+      logStatus('WARN', 'youtube_link normalization dry-run enabled (no database updates will be written)');
+    } else if (shouldFixVideoLinks && didConfirmFixVideoLinks) {
+      logStatus('WARN', 'youtube_link normalization confirmed; database updates are enabled');
+    }
+
     for (const row of approvedRestaurants) {
       const youtubeLink = typeof row.youtube_link === 'string' ? row.youtube_link : '';
       const videoId = extractYoutubeVideoId(youtubeLink);
@@ -184,15 +207,26 @@ async function run() {
       if (shouldFixVideoLinks) {
         const canonical = toCanonicalYoutubeLink(videoId);
         if (youtubeLink !== canonical) {
+          normalizationCandidateCount += 1;
+
+          if (shouldDryRunFixVideoLinks) {
+            continue;
+          }
+
           const { error } = await supabase
             .from('restaurants')
             .update({ youtube_link: canonical })
             .eq('id', row.id)
             .eq('status', 'approved');
 
-          if (!error) {
-            normalizedCount += 1;
+          if (error) {
+            const message = `failed to normalize youtube_link for restaurant id=${row.id}: ${toErrorMessage(error)}`;
+            failures.push(message);
+            logStatus('FAIL', message);
+            continue;
           }
+
+          normalizedCount += 1;
         }
       }
     }
@@ -206,7 +240,11 @@ async function run() {
     }
 
     if (shouldFixVideoLinks) {
-      logStatus('PASS', `normalized youtube_link rows=${normalizedCount}`);
+      if (shouldDryRunFixVideoLinks) {
+        logStatus('PASS', `youtube_link normalization dry-run candidates=${normalizationCandidateCount}`);
+      } else {
+        logStatus('PASS', `normalized youtube_link rows=${normalizedCount}/${normalizationCandidateCount}`);
+      }
     }
   }
 

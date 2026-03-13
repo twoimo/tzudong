@@ -2892,6 +2892,7 @@ export async function answerAdminInsightChat(
   attachments?: InsightChatAttachment[],
   contextMessages?: InsightChatContextMessage[],
   memoryProfileNote?: string,
+  requestSignal?: AbortSignal,
 ): Promise<AdminInsightChatResponse> {
   const asOf = new Date().toISOString();
   const input = message.trim();
@@ -2953,6 +2954,7 @@ export async function answerAdminInsightChat(
       contextMessages,
       memoryProfileNote,
       [...toolTrace, `provider:${llmConfig?.provider ?? 'gemini'}`],
+      requestSignal,
   );
   if (llmReply) return llmReply;
 
@@ -3208,6 +3210,7 @@ async function routeLlmRequest(
   contextMessages?: InsightChatContextMessage[],
   memoryProfileNote?: string,
   toolTrace: string[] = [],
+  requestSignal?: AbortSignal,
 ): Promise<AdminInsightChatResponse | null> {
   const provider = config?.provider || 'gemini';
   const apiKey = config?.apiKey || (config?.useServerKey ? resolveServerLlmApiKey(provider) : '');
@@ -3229,6 +3232,7 @@ async function routeLlmRequest(
         memoryProfileNote,
         toolTrace: [...toolTrace, 'provider:gemini'],
         responseProfile: profile,
+        requestSignal,
       });
     case 'openai':
       return askOpenAI(message, model, apiKey, asOf, requestId, {
@@ -3240,6 +3244,7 @@ async function routeLlmRequest(
         memoryProfileNote,
         toolTrace: [...toolTrace, 'provider:openai'],
         responseProfile: profile,
+        requestSignal,
       });
     case 'anthropic':
       return askAnthropic(message, model, apiKey, asOf, requestId, {
@@ -3251,6 +3256,7 @@ async function routeLlmRequest(
         memoryProfileNote,
         toolTrace: [...toolTrace, 'provider:anthropic'],
         responseProfile: profile,
+        requestSignal,
       });
     default:
       return null;
@@ -3740,6 +3746,7 @@ async function askGemini(
     contextMessages?: InsightChatContextMessage[];
     toolTrace?: string[];
     responseProfile?: ResponseModeProfile;
+    requestSignal?: AbortSignal;
   },
 ): Promise<AdminInsightChatResponse | null> {
   const responseMode = normalizeResponseMode(options?.responseMode);
@@ -3757,6 +3764,14 @@ async function askGemini(
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const controller = new AbortController();
+  const onRequestAbort = () => {
+    controller.abort();
+  };
+  if (options?.requestSignal?.aborted) {
+    controller.abort();
+  } else if (options?.requestSignal) {
+    options.requestSignal.addEventListener('abort', onRequestAbort, { once: true });
+  }
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
 
   try {
@@ -3800,6 +3815,9 @@ async function askGemini(
     return null;
   } finally {
     clearTimeout(timer);
+    if (options?.requestSignal) {
+      options.requestSignal.removeEventListener('abort', onRequestAbort);
+    }
   }
 }
 
@@ -3818,6 +3836,7 @@ async function askOpenAI(
     contextMessages?: InsightChatContextMessage[];
     toolTrace?: string[];
     responseProfile?: ResponseModeProfile;
+    requestSignal?: AbortSignal;
   },
 ): Promise<AdminInsightChatResponse | null> {
   const responseMode = normalizeResponseMode(options?.responseMode);
@@ -3833,6 +3852,14 @@ async function askOpenAI(
   );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:openai`, `responseMode:${responseMode}`];
   const controller = new AbortController();
+  const onRequestAbort = () => {
+    controller.abort();
+  };
+  if (options?.requestSignal?.aborted) {
+    controller.abort();
+  } else if (options?.requestSignal) {
+    options.requestSignal.addEventListener('abort', onRequestAbort, { once: true });
+  }
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
 
   try {
@@ -3883,6 +3910,9 @@ async function askOpenAI(
     return null;
   } finally {
     clearTimeout(timer);
+    if (options?.requestSignal) {
+      options.requestSignal.removeEventListener('abort', onRequestAbort);
+    }
   }
 }
 
@@ -3901,6 +3931,7 @@ async function askAnthropic(
     contextMessages?: InsightChatContextMessage[];
     toolTrace?: string[];
     responseProfile?: ResponseModeProfile;
+    requestSignal?: AbortSignal;
   },
 ): Promise<AdminInsightChatResponse | null> {
   const responseMode = normalizeResponseMode(options?.responseMode);
@@ -3916,6 +3947,14 @@ async function askAnthropic(
   );
   const toolTrace = [...(options?.toolTrace ?? []), `llm:anthropic`, `responseMode:${responseMode}`];
   const controller = new AbortController();
+  const onRequestAbort = () => {
+    controller.abort();
+  };
+  if (options?.requestSignal?.aborted) {
+    controller.abort();
+  } else if (options?.requestSignal) {
+    options.requestSignal.addEventListener('abort', onRequestAbort, { once: true });
+  }
   const timer = setTimeout(() => { controller.abort(); }, LLM_TIMEOUT_MS);
 
   try {
@@ -3969,5 +4008,8 @@ async function askAnthropic(
     return null;
   } finally {
     clearTimeout(timer);
+    if (options?.requestSignal) {
+      options.requestSignal.removeEventListener('abort', onRequestAbort);
+    }
   }
 }

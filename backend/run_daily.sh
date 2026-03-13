@@ -53,6 +53,8 @@ mkdir -p "$LOG_DIR"
 
 DATE=$(date +%Y-%m-%d)
 LOG_FILE="$LOG_DIR/daily_$DATE.log"
+# [Safety] 기본값은 force-push 비활성화 (필요 시 ALLOW_DATA_FORCE_PUSH=1로 명시적 허용)
+ALLOW_DATA_FORCE_PUSH="${ALLOW_DATA_FORCE_PUSH:-0}"
 
 # [PERF] 파이프라인 시작 시간 기록 (전체 실행 시간 측정)
 PIPELINE_START=$(date +%s)
@@ -77,6 +79,14 @@ log() {
 # ANSI 색상 코드 제거 함수
 strip_ansi() {
     sed 's/\x1b\[[0-9;]*m//g'
+}
+
+# truthy 환경변수 판별 (1/true/yes/on)
+is_truthy() {
+    case "${1:-}" in
+        1|true|TRUE|yes|YES|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 # [PERF] 스텝 타이밍 함수 - 각 단계의 실행 시간 측정
@@ -185,9 +195,42 @@ sync_data_to_remote() {
     # 원격 변경사항 동기화 (충돌 방지)
     log "INFO" "원격 변경사항 확인 및 Rebase..."
     if ! git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"; then
-        log "WARN" "Rebase 실패 - 강제 푸시 시도"
-        if ! git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
-            log "ERROR" "Failed to push to data branch"
+        local LOCAL_HEAD REMOTE_HEAD DIVERGENCE_STATE
+        log "WARN" "Rebase 실패 - rebase 중단 후 안전 동기화 전략으로 전환"
+        git rebase --abort 2>/dev/null || true
+
+        # 네트워크/일시 오류 가능성을 고려해 일반 push를 한 번 더 시도
+        log "INFO" "Rebase 실패 후 일반 push 재시도..."
+        if git push origin data 2>&1 | tee -a "$LOG_FILE"; then
+            log "OK" "data 브랜치 업데이트 완료 ($STEP_NAME)"
+            return 0
+        fi
+
+        # push 실패 시 로컬/원격 관계를 로그로 남겨 원인 파악 용이하게 함
+        if ! git fetch origin data 2>&1 | tee -a "$LOG_FILE"; then
+            log "WARN" "원격 상태 재조회(fetch) 실패 - divergence 판별 정확도가 낮을 수 있습니다."
+        fi
+
+        LOCAL_HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        REMOTE_HEAD=$(git rev-parse --short origin/data 2>/dev/null || echo "unknown")
+        if git merge-base --is-ancestor origin/data HEAD 2>/dev/null; then
+            DIVERGENCE_STATE="local_ahead_or_equal"
+        elif git merge-base --is-ancestor HEAD origin/data 2>/dev/null; then
+            DIVERGENCE_STATE="local_behind_remote"
+        else
+            DIVERGENCE_STATE="diverged"
+        fi
+        log "WARN" "data 동기화 충돌 감지 (local=${LOCAL_HEAD}, remote=${REMOTE_HEAD}, state=${DIVERGENCE_STATE})"
+
+        if is_truthy "$ALLOW_DATA_FORCE_PUSH"; then
+            log "WARN" "ALLOW_DATA_FORCE_PUSH=$ALLOW_DATA_FORCE_PUSH 감지 - force-with-lease를 명시적으로 수행합니다."
+            if ! git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
+                log "ERROR" "force-with-lease push 실패"
+                return 1
+            fi
+        else
+            log "ERROR" "안전 모드: 기본 동작에서는 force-push를 수행하지 않습니다."
+            log "ERROR" "원격 이력 보호를 위해 동기화를 중단합니다. 필요 시 ALLOW_DATA_FORCE_PUSH=1로 재실행하세요."
             return 1
         fi
     else
