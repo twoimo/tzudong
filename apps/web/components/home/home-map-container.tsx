@@ -186,6 +186,7 @@ function HomeMapContainerComponent({
     const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
     const contentSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
+    const isCarouselTouchRef = useRef(false);
     const wasPanelOpenRef = useRef(false);
     const lastPanelRestaurantIdRef = useRef<string | null>(null);
     const contentScrollResetNeededRef = useRef(false);
@@ -743,6 +744,12 @@ function HomeMapContainerComponent({
         contentTouchStartXRef.current = e.touches[0].clientX;
         isContentDraggingSheetRef.current = false;
         contentSwipeDirectionRef.current = null;
+
+        // [Fix] 캐러셀 내부 터치는 시트 드래그/스크롤 잠금 건너뛰기
+        const target = e.target as HTMLElement;
+        isCarouselTouchRef.current = !!target.closest('[aria-roledescription="carousel"]');
+        if (isCarouselTouchRef.current) return;
+
         const detailScrollArea = getDetailScrollArea();
         const top = detailScrollArea ? detailScrollArea.scrollTop : contentRef.current?.scrollTop ?? 0;
         const currentMaxHeight = getCurrentMaxHeight();
@@ -757,6 +764,9 @@ function HomeMapContainerComponent({
     const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         const touch = e.touches[0];
         if (!touch) return;
+
+        // [Fix] 캐러셀 내부 터치는 시트 드래그 시작하지 않음
+        if (isCarouselTouchRef.current) return;
 
         const currentY = touch.clientY;
         const currentX = touch.clientX;

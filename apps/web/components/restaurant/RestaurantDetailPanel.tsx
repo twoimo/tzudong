@@ -400,6 +400,14 @@ export function RestaurantDetailPanel({
         const touch = e.touches[0];
         if (!touch) return;
 
+        // [Fix] 캐러셀 내부 터치는 맛집 전환 스와이프로 처리하지 않음
+        // 캐러셀 이미지 스와이프가 맛집 전환으로 오인식되어 바텀시트가 최상단으로 이동하는 버그 수정
+        const target = e.target as HTMLElement;
+        if (target.closest('[aria-roledescription="carousel"]')) {
+            isContentSwipingRef.current = false;
+            return;
+        }
+
         contentSwipeStartXRef.current = touch.clientX;
         contentSwipeStartYRef.current = touch.clientY;
         contentSwipeDirectionRef.current = null;
