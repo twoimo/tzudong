@@ -1,63 +1,142 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
-import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import { supabase } from "@/integrations/supabase/client";
 
 type DBRestaurant = Tables<"restaurants">;
+
+const SIMILARITY_THRESHOLD = 0.95;
+const QUERY_KEY_COORDINATE_PRECISION = 4;
+
+type RestaurantWithOptionalName = DBRestaurant & {
+    name?: string | null;
+    approved_name?: string | null;
+};
+
+type ReviewCountRow = {
+    restaurant_id: string | null;
+};
+
+interface UseRestaurantsOptions {
+    bounds?: {
+        south: number;
+        west: number;
+        north: number;
+        east: number;
+    };
+    category?: string[];
+    region?: Region;
+    minReviews?: number;
+    enabled?: boolean;
+}
+
+type NormalizedBounds = [number, number, number, number];
+
+const mergePerfCounters = {
+    similarityChecks: 0,
+    mainSelectionComparisons: 0,
+};
 
 /**
  * 레벤슈타인 거리 계산 (문자열 유사도 측정용)
  * 두 문자열 사이의 편집 거리를 계산합니다.
- * 
+ *
  * @param str1 기준 문자열
  * @param str2 비교 대상 문자열
+ * @param maxDistance 허용되는 최대 거리 (초과하면 즉시 종료)
  * @returns 편집 거리 (숫자)
  */
-function levenshteinDistance(str1: string, str2: string): number {
+function levenshteinDistance(str1: string, str2: string, maxDistance: number = Number.MAX_SAFE_INTEGER): number {
     const len1 = str1.length;
     const len2 = str2.length;
-    const dp: number[][] = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
 
-    for (let i = 0; i <= len1; i++) dp[i][0] = i;
-    for (let j = 0; j <= len2; j++) dp[0][j] = j;
+    if (Math.abs(len1 - len2) > maxDistance) return maxDistance + 1;
+    if (len1 === 0) return Math.min(len2, maxDistance + 1);
+    if (len2 === 0) return Math.min(len1, maxDistance + 1);
 
-    for (let i = 1; i <= len1; i++) {
-        for (let j = 1; j <= len2; j++) {
-            if (str1[i - 1] === str2[j - 1]) {
-                dp[i][j] = dp[i - 1][j - 1];
-            } else {
-                dp[i][j] = Math.min(
-                    dp[i - 1][j] + 1,    // 삭제
-                    dp[i][j - 1] + 1,    // 삽입
-                    dp[i - 1][j - 1] + 1 // 치환
-                );
-            }
-        }
+    const normalizedStr1 = len1 >= len2 ? str1 : str2;
+    const normalizedStr2 = len1 >= len2 ? str2 : str1;
+    const n = normalizedStr1.length;
+    const m = normalizedStr2.length;
+
+    let previous = new Int32Array(m + 1);
+    let current = new Int32Array(m + 1);
+
+    for (let j = 0; j <= m; j++) {
+        previous[j] = j;
     }
 
-    return dp[len1][len2];
+    for (let i = 1; i <= n; i++) {
+        current[0] = i;
+        let rowMin = current[0];
+
+        const windowStart = Math.max(1, i - maxDistance);
+        const windowEnd = Math.min(m, i + maxDistance);
+
+        for (let j = 1; j < windowStart; j++) {
+            current[j] = maxDistance + 1;
+        }
+
+        for (let j = windowStart; j <= windowEnd; j++) {
+            const deletion = previous[j] + 1;
+            const insertion = current[j - 1] + 1;
+            const substitution = previous[j - 1] + (normalizedStr1[i - 1] === normalizedStr2[j - 1] ? 0 : 1);
+            const cost = Math.min(deletion, insertion, substitution);
+            current[j] = cost;
+            if (cost < rowMin) {
+                rowMin = cost;
+            }
+        }
+
+        for (let j = windowEnd + 1; j <= m; j++) {
+            current[j] = maxDistance + 1;
+        }
+
+        if (rowMin > maxDistance) {
+            return maxDistance + 1;
+        }
+
+        const temp = previous;
+        previous = current;
+        current = temp;
+    }
+
+    const distance = previous[m];
+    return distance > maxDistance ? maxDistance + 1 : distance;
 }
 
 /**
  * 문자열 유사도 계산 함수
  * 0-1 사이의 값으로 반환하며, 1에 가까울수록 두 문자열이 유사합니다.
- * 
+ *
  * @param str1 기준 문자열
  * @param str2 비교 대상 문자열
+ * @param similarityThreshold similarity 임계값
  * @returns 유사도 (0.0 ~ 1.0)
  */
-function calculateSimilarity(str1: string, str2: string): number {
+function calculateSimilarity(str1: string, str2: string, similarityThreshold = SIMILARITY_THRESHOLD): number {
     const maxLen = Math.max(str1.length, str2.length);
     if (maxLen === 0) return 1.0;
-    const distance = levenshteinDistance(str1, str2);
+
+    mergePerfCounters.similarityChecks += 1;
+
+    const maxDistance = Math.floor(maxLen * (1 - similarityThreshold));
+    if (maxDistance <= 0) {
+        return str1 === str2 ? 1.0 : 0;
+    }
+
+    const distance = levenshteinDistance(str1, str2, maxDistance);
+    if (distance > maxDistance) return 0;
+
     return 1 - distance / maxLen;
 }
 
 /**
  * 주소 정규화 함수
  * 층/호수 정보를 제거하고, 공백과 특수문자를 제거하여 비교 용이성을 높입니다.
- * 
+ *
  * @param address 원본 주소 문자열
  * @returns 정규화된 주소 문자열
  */
@@ -74,17 +153,6 @@ function normalizeAddress(address: string): string {
         .toLowerCase();
 }
 
-import { perfMonitor } from "@/lib/performance-monitor";
-
-type RestaurantWithOptionalName = DBRestaurant & {
-    name?: string | null;
-    approved_name?: string | null;
-};
-
-type ReviewCountRow = {
-    restaurant_id: string | null;
-};
-
 function getRestaurantName(restaurant: RestaurantWithOptionalName): string {
     return restaurant.name || restaurant.approved_name || '';
 }
@@ -92,7 +160,7 @@ function getRestaurantName(restaurant: RestaurantWithOptionalName): string {
 function isLengthDiffWithinSimilarityThreshold(
     str1: string,
     str2: string,
-    threshold = 0.95
+    threshold = SIMILARITY_THRESHOLD
 ): boolean {
     const maxLen = Math.max(str1.length, str2.length);
     if (maxLen === 0) return true;
@@ -100,13 +168,86 @@ function isLengthDiffWithinSimilarityThreshold(
     return lenDiff <= maxLen * (1 - threshold);
 }
 
+function normalizeBounds(bounds?: UseRestaurantsOptions["bounds"]): NormalizedBounds | null {
+    if (!bounds) return null;
+    const round = (value: number) => Number(value.toFixed(QUERY_KEY_COORDINATE_PRECISION));
+    return [round(bounds.south), round(bounds.west), round(bounds.north), round(bounds.east)];
+}
+
+function normalizeCategories(category?: string[]): string[] {
+    if (!category || category.length === 0) return [];
+    const normalized = category
+        .map((item) => item?.trim())
+        .filter((item): item is string => Boolean(item));
+
+    const deduped = new Set(normalized);
+    return [...deduped].sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeRegion(region?: Region): string | null {
+    const normalized = region?.trim();
+    return normalized ? normalized : null;
+}
+
+function normalizeMinReviews(minReviews?: number): number | null {
+    return typeof minReviews === "number" && Number.isFinite(minReviews) && minReviews > 0 ? minReviews : null;
+}
+
+function buildRestaurantQueryKey(
+    normalizedBounds: NormalizedBounds | null,
+    normalizedCategory: string[],
+    normalizedRegion: string | null,
+    normalizedMinReviews: number | null
+): [
+    "restaurants",
+    NormalizedBounds | null,
+    string[],
+    string | null,
+    number | null
+] {
+    return ["restaurants", normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews];
+}
+
+export function getMergePerfCounters() {
+    return { ...mergePerfCounters };
+}
+
+export function resetMergePerfCounters() {
+    mergePerfCounters.similarityChecks = 0;
+    mergePerfCounters.mainSelectionComparisons = 0;
+}
+
+function isNameBetterForMainCandidate(candidate: RestaurantWithOptionalName, current: RestaurantWithOptionalName): boolean {
+    const candidateName = getRestaurantName(candidate);
+    const currentName = getRestaurantName(current);
+
+    if (candidateName.length !== currentName.length) {
+        return candidateName.length > currentName.length;
+    }
+
+    const candidateReviewCount = candidate.review_count || 0;
+    const currentReviewCount = current.review_count || 0;
+    if (candidateReviewCount !== currentReviewCount) {
+        return candidateReviewCount > currentReviewCount;
+    }
+
+    const candidatePublishedAt = (candidate.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+    const currentPublishedAt = (current.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+    const publishedAtDiff = candidatePublishedAt.localeCompare(currentPublishedAt);
+    if (publishedAtDiff !== 0) {
+        return publishedAtDiff > 0;
+    }
+
+    return candidate.id < current.id;
+}
+
 /**
  * 레스토랑 데이터 병합 함수
  * 이름과 주소가 유사한 중복 데이터들을 하나로 병합합니다.
- * 
+ *
  * [OPTIMIZATION] O(N) 수준의 grouping 및 Union-Find를 이용한 최적화
  * 기존 O(N^2) 루프를 제거하여 대량의 데이터 처리 시 성능 대폭 개선
- * 
+ *
  * @param restaurants DB에서 조회된 레스토랑 목록
  * @returns 병합된 레스토랑 목록
  */
@@ -134,16 +275,25 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     // 1. 데이터 정규화 및 인덱싱 (O(N))
     const normalizedData = restaurants.map((r, i) => {
         const name = getRestaurantName(r as RestaurantWithOptionalName);
-        const addr = normalizeAddress(r.jibun_address || r.road_address || '');
 
+        // 정확 일치 병합은 값이 이미 동일한 경우 매우 빠르게 처리
         if (name) {
-            if (!nameToIndices.has(name)) nameToIndices.set(name, []);
-            nameToIndices.get(name)!.push(i);
+            const sameNameList = nameToIndices.get(name);
+            if (sameNameList) {
+                sameNameList.push(i);
+            } else {
+                nameToIndices.set(name, [i]);
+            }
         }
 
+        const addr = normalizeAddress(r.jibun_address || r.road_address || '');
         if (addr) {
-            if (!addressToIndices.has(addr)) addressToIndices.set(addr, []);
-            addressToIndices.get(addr)!.push(i);
+            const sameAddressList = addressToIndices.get(addr);
+            if (sameAddressList) {
+                sameAddressList.push(i);
+            } else {
+                addressToIndices.set(addr, [i]);
+            }
         }
 
         return { name, addr };
@@ -160,19 +310,25 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     for (const indices of addressToIndices.values()) {
         if (indices.length < 2) continue;
         for (let j = 0; j < indices.length; j++) {
+            const idx1 = indices[j];
             for (let k = j + 1; k < indices.length; k++) {
-                const idx1 = indices[j];
                 const idx2 = indices[k];
                 if (find(idx1) === find(idx2)) continue;
 
-                // 이름 유사도 체크 (이 부분은 주소가 같을 때만 실행되므로 매우 효율적)
                 const name1 = normalizedData[idx1].name;
                 const name2 = normalizedData[idx2].name;
+
+                // 이름 유사도 체크 (이 부분은 주소가 같을 때만 실행되므로 매우 효율적)
+                if (name1 === name2) {
+                    union(idx1, idx2);
+                    continue;
+                }
+
                 if (!isLengthDiffWithinSimilarityThreshold(name1, name2)) {
                     continue;
                 }
 
-                if (calculateSimilarity(name1, name2) >= 0.95) {
+                if (calculateSimilarity(name1, name2) >= SIMILARITY_THRESHOLD) {
                     union(idx1, idx2);
                 }
             }
@@ -183,31 +339,32 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     const groups = new Map<number, number[]>();
     for (let i = 0; i < n; i++) {
         const root = find(i);
-        if (!groups.has(root)) groups.set(root, []);
-        groups.get(root)!.push(i);
+        const existing = groups.get(root);
+        if (existing) {
+            existing.push(i);
+        } else {
+            groups.set(root, [i]);
+        }
     }
 
-    const mergedResults: Restaurant[] = Array.from(groups.values()).map(indices => {
+    const mergedResults: Restaurant[] = Array.from(groups.values()).map((indices) => {
         const groupRestaurants = indices.map(idx => restaurants[idx]);
 
-        // 이름 길이순으로 정렬하여 가장 긴 이름을 메인으로 사용
-        const sortedByNameLength = [...groupRestaurants].sort((a, b) => {
-            const nameA = getRestaurantName(a as RestaurantWithOptionalName);
-            const nameB = getRestaurantName(b as RestaurantWithOptionalName);
-            return nameB.length - nameA.length;
-        });
-
-        const mainRestaurant = sortedByNameLength[0];
-
-        // 유효한 좌표 찾기
-        let lat = 0, lng = 0;
-        for (const r of sortedByNameLength) {
-            if (r.lat && r.lng) {
-                lat = r.lat;
-                lng = r.lng;
-                break;
+        // 메인 레스토랑은 단일 패스 비교로 선택 (정렬 제거)
+        let mainRestaurant = groupRestaurants[0];
+        for (let i = 1; i < groupRestaurants.length; i++) {
+            const candidate = groupRestaurants[i];
+            mergePerfCounters.mainSelectionComparisons += 1;
+            if (isNameBetterForMainCandidate(candidate, mainRestaurant)) {
+                mainRestaurant = candidate;
             }
         }
+
+        // 유효한 좌표를 가진 메인 후보 선택
+        const latLngRestaurant = groupRestaurants.find((restaurant) => restaurant.lat && restaurant.lng) || mainRestaurant;
+
+        const lat = latLngRestaurant?.lat || 0;
+        const lng = latLngRestaurant?.lng || 0;
 
         // 카테고리 병합
         const allCategories = Array.from(new Set(
@@ -263,25 +420,17 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     return mergedResults;
 }
 
-
-interface UseRestaurantsOptions {
-    bounds?: {
-        south: number;
-        west: number;
-        north: number;
-        east: number;
-    };
-    category?: string[];
-    region?: Region;
-    minReviews?: number;
-    enabled?: boolean;
-}
-
 export function useRestaurants(options: UseRestaurantsOptions = {}) {
     const { bounds, category, region, minReviews, enabled = true } = options;
 
+    const normalizedBounds = normalizeBounds(bounds);
+    const normalizedCategory = normalizeCategories(category);
+    const normalizedRegion = normalizeRegion(region);
+    const normalizedMinReviews = normalizeMinReviews(minReviews);
+    const queryKey = buildRestaurantQueryKey(normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews);
+
     return useQuery({
-        queryKey: ["restaurants", bounds, category, region, minReviews],
+        queryKey,
         staleTime: 5 * 60 * 1000, // 5분 동안 fresh 상태 유지
         gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
@@ -294,29 +443,32 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // 경계(Bounds) 필터 적용 (제공된 경우)
             if (bounds) {
+                // queryKey에는 반올림 bounds를 사용해 캐시 키 폭주를 막고,
+                // 실제 필터는 원본 bounds를 사용해 경계 데이터 누락을 방지합니다.
+                const { south, west, north, east } = bounds;
                 query = query
-                    .gte("lat", bounds.south)
-                    .lte("lat", bounds.north)
-                    .gte("lng", bounds.west)
-                    .lte("lng", bounds.east);
+                    .gte("lat", south)
+                    .lte("lat", north)
+                    .gte("lng", west)
+                    .lte("lng", east);
             }
 
             // 카테고리 필터 적용 (categories는 배열 타입)
-            if (category && category.length > 0) {
+            if (normalizedCategory.length > 0) {
                 // categories는 TEXT[] 타입으로 저장됨
-                query = query.overlaps("categories", category);
+                query = query.overlaps("categories", normalizedCategory);
             }
 
             // 지역(Region) 필터 적용
-            if (region) {
-                if (region === "울릉도") {
+            if (normalizedRegion) {
+                if (normalizedRegion === "울릉도") {
                     // 울릉도는 주소에 '울릉'이 포함된 데이터 필터링
                     query = query.or(`road_address.ilike.%울릉%,jibun_address.ilike.%울릉%`);
-                } else if (region === "욕지도") {
+                } else if (normalizedRegion === "욕지도") {
                     // 욕지도는 주소에 '욕지'가 포함된 데이터 필터링
                     query = query.or(`road_address.ilike.%욕지%,jibun_address.ilike.%욕지%`);
-                } else if (region in OVERSEAS_REGIONS) {
-                    const config = OVERSEAS_REGIONS[region as keyof typeof OVERSEAS_REGIONS];
+                } else if (normalizedRegion in OVERSEAS_REGIONS) {
+                    const config = OVERSEAS_REGIONS[normalizedRegion as keyof typeof OVERSEAS_REGIONS];
                     const conditions: string[] = [];
                     config.keywords.forEach((keyword: string) => {
                         conditions.push(`road_address.ilike.%${keyword}%`);
@@ -330,13 +482,13 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 } else {
                     // address_elements의 SIDO에서 지역 필터링
                     // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
-                    query = query.or(`road_address.ilike.%${region}%,jibun_address.ilike.%${region}%`);
+                    query = query.or(`road_address.ilike.%${normalizedRegion}%,jibun_address.ilike.%${normalizedRegion}%`);
                 }
             }
 
             // 리뷰 수 필터 적용
-            if (minReviews && minReviews > 0) {
-                query = query.gte("review_count", minReviews);
+            if (normalizedMinReviews && normalizedMinReviews > 0) {
+                query = query.gte("review_count", normalizedMinReviews);
             }
 
             const { data, error } = await query;
@@ -414,4 +566,3 @@ export function useRestaurant(id: string | null) {
         enabled: !!id,
     });
 }
-

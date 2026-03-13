@@ -42,17 +42,17 @@ import { useMapOptimization } from "@/hooks/useMapOptimization";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateHoverAnchoredCenter } from "@/lib/map-hover-anchor";
 import { useBannerAnnouncements } from "@/hooks/use-announcements";
+import {
+    buildMarkerRenderSignature,
+    shouldSkipMarkerUpdate,
+    type MarkerRenderSignature,
+} from "@/lib/map-render-guard";
 
 interface ExtendedBounds {
     south: number;
     north: number;
     west: number;
     east: number;
-}
-
-interface MarkerVisibilityHandle {
-    setMap: (map: unknown | null) => void;
-    getMap: () => unknown;
 }
 
 interface NaverLatLngLike {
@@ -426,8 +426,7 @@ const NaverMapView = memo(({
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
-    const markersMapRef = useRef<Map<string, MarkerVisibilityHandle>>(new Map()); // 마커 Map (ID -> Marker)
-    const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
+    const markerRenderSignatureRef = useRef<MarkerRenderSignature | null>(null);
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
@@ -504,6 +503,7 @@ const NaverMapView = memo(({
                 markerPool.clear();
                 clusterAnimationManager.clear();
                 mapInstanceRef.current = null;
+                markerRenderSignatureRef.current = null;
                 setIsMapInitialized(false);
             }
         }
@@ -615,6 +615,7 @@ const NaverMapView = memo(({
 
             // 마커 풀 정리
             markerPool.clear();
+            markerRenderSignatureRef.current = null;
         };
     }, [mapOptimization.clusterAnimationEnabled, mapOptimization.clusterAnimationInterval]);
 
@@ -1386,21 +1387,6 @@ const NaverMapView = memo(({
     const restaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
     const { byId: restaurantById, idSet: displayRestaurantIds, mergedRestaurantIds, mergedRestaurantById } = restaurantLookup;
 
-    const hasSearchedRestaurantInDisplay = useCallback((target: Restaurant | null | undefined) => {
-        if (!target) return false;
-        if (!target.mergedRestaurants || target.mergedRestaurants.length === 0) {
-            return displayRestaurantIds.has(target.id) || mergedRestaurantIds.has(target.id);
-        }
-
-        if (displayRestaurantIds.has(target.id) || mergedRestaurantIds.has(target.id)) {
-            return true;
-        }
-
-        return target.mergedRestaurants.some((restaurant) =>
-            displayRestaurantIds.has(restaurant.id) || mergedRestaurantIds.has(restaurant.id)
-        );
-    }, [displayRestaurantIds, mergedRestaurantIds]);
-
     const visibleRestaurantsForSwipe = useMemo(() => {
         const restaurantsForSwipe = [...displayRestaurants];
 
@@ -1601,24 +1587,97 @@ const NaverMapView = memo(({
         const shouldUseSeoulDistrictFull = !shouldUseRegionalCluster && (currentZoom >= 9 && currentZoom <= 10);
         const shouldUseSeoulDistrictFiltered = !shouldUseRegionalCluster && (currentZoom >= 11 && currentZoom <= 12);
         const shouldUseSeoulDistrictCluster = shouldUseSeoulDistrictFull || shouldUseSeoulDistrictFiltered;
+        const seoulClustersToRender = shouldUseSeoulDistrictFull
+            ? seoulDistrictClusters
+            : (shouldUseSeoulDistrictFiltered ? seoulDistrictClustersFiltered : []);
+        const nextIsRegionalClusterMode = shouldUseRegionalCluster;
+        const nextIsSeoulDistrictMode = shouldUseSeoulDistrictCluster;
+        const nextIsClusterMode = shouldUseRegionalCluster ? true : (shouldUseSeoulDistrictCluster ? false : shouldCluster);
 
         // 모드 설정
+        setIsRegionalClusterMode(nextIsRegionalClusterMode);
+        setIsSeoulDistrictMode(nextIsSeoulDistrictMode);
+        setIsClusterMode(nextIsClusterMode);
 
-        if (shouldUseRegionalCluster) {
-            setIsRegionalClusterMode(true);
-            setIsSeoulDistrictMode(false);
-            setIsClusterMode(true);
-        } else if (shouldUseSeoulDistrictCluster) {
-            // [Fix] 서울 자치구 모드: Supercluster 비활성화로 충돌 방지
-            setIsRegionalClusterMode(false);
-            setIsSeoulDistrictMode(true);
-            setIsClusterMode(false);
-        } else {
-            // 일반 Supercluster 모드 또는 개별 마커 모드
-            setIsRegionalClusterMode(false);
-            setIsSeoulDistrictMode(false);
-            setIsClusterMode(shouldCluster);
+        const formatCoordForSignature = (value: number | null | undefined): string =>
+            typeof value === "number" && Number.isFinite(value) ? value.toFixed(6) : "na";
+        const toRestaurantRenderToken = (restaurant: Restaurant, prefix = "restaurant"): string =>
+            `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}`;
+        const renderTargetIdsForSignature: string[] = displayRestaurants.map((restaurant) =>
+            toRestaurantRenderToken(restaurant)
+        );
+
+        if (searchedRestaurant && !displayRestaurantIds.has(searchedRestaurant.id)) {
+            renderTargetIdsForSignature.push(toRestaurantRenderToken(searchedRestaurant, "searched"));
         }
+
+        if (nextIsRegionalClusterMode) {
+            regionalClusters.forEach((cluster) => {
+                const categoriesSignature = [...new Set(cluster.categories)].sort().join("|");
+                renderTargetIdsForSignature.push(
+                    `regional-${cluster.region}:${cluster.count}:${formatCoordForSignature(cluster.center.lat)}:${formatCoordForSignature(cluster.center.lng)}:${categoriesSignature}`
+                );
+            });
+        } else if (nextIsClusterMode || nextIsSeoulDistrictMode) {
+            seoulClustersToRender.forEach((cluster) => {
+                const categoriesSignature = [...new Set(cluster.categories)].sort().join("|");
+                renderTargetIdsForSignature.push(
+                    `seoul-dist-${cluster.region}:${cluster.count}:${formatCoordForSignature(cluster.center.lat)}:${formatCoordForSignature(cluster.center.lng)}:${categoriesSignature}`
+                );
+            });
+
+            if (shouldUseSeoulDistrictFiltered) {
+                seoulIndividualIds.forEach((restaurantId) => {
+                    const restaurant =
+                        restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
+                    if (restaurant) {
+                        renderTargetIdsForSignature.push(toRestaurantRenderToken(restaurant, "seoul-individual"));
+                    } else {
+                        renderTargetIdsForSignature.push(`seoul-individual-${restaurantId}`);
+                    }
+                });
+            }
+
+            clusters.forEach((feature) => {
+                const [lng, lat] = feature.geometry.coordinates;
+                if (isCluster(feature)) {
+                    renderTargetIdsForSignature.push(
+                        `cluster-${feature.properties.cluster_id}:${feature.properties.point_count || 0}:${formatCoordForSignature(lat)}:${formatCoordForSignature(lng)}`
+                    );
+                    return;
+                }
+
+                const restaurantId = feature.properties.restaurantId;
+                const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
+                if (restaurant) {
+                    renderTargetIdsForSignature.push(toRestaurantRenderToken(restaurant, "cluster-restaurant"));
+                    return;
+                }
+
+                renderTargetIdsForSignature.push(
+                    `cluster-restaurant-${restaurantId}:${formatCoordForSignature(lat)}:${formatCoordForSignature(lng)}:${feature.properties.category || "기타"}`
+                );
+            });
+        }
+
+        const nextMarkerRenderSignature = buildMarkerRenderSignature({
+            zoom: currentZoom,
+            bounds: extendedBounds,
+            displayRestaurantIds: renderTargetIdsForSignature,
+            selectedRestaurantId: selectedRestaurant?.id || null,
+            searchedRestaurantId: searchedRestaurant?.id || null,
+            isClusterMode: nextIsClusterMode,
+            isRegionalClusterMode: nextIsRegionalClusterMode,
+            isSeoulDistrictMode: nextIsSeoulDistrictMode,
+        });
+
+        const previousMarkerRenderSignature = markerRenderSignatureRef.current;
+        if (previousMarkerRenderSignature && shouldSkipMarkerUpdate(previousMarkerRenderSignature, nextMarkerRenderSignature)) {
+            perfMonitor.endMeasure('RenderMarkers');
+            return;
+        }
+
+        markerRenderSignatureRef.current = nextMarkerRenderSignature;
 
         // 헬퍼: 클러스터 마커 렌더링 (중복 로직 제거)
         const renderClusterHelper = (
@@ -1657,6 +1716,7 @@ const NaverMapView = memo(({
         if (shouldUseRegionalCluster) {
             // ===== 17개 행정구역 중앙 클러스터 모드 =====
             if (regionalClusters.length === 0) {
+                perfMonitor.endMeasure('RenderMarkers');
                 return;
             }
             const activeIds = new Set<string>();
@@ -1682,6 +1742,10 @@ const NaverMapView = memo(({
 
             // 사용하지 않는 마커 반환
             markerPool.releaseExcept(activeIds);
+            perfMonitor.endMeasure('RenderMarkers');
+            if (process.env.NODE_ENV === 'development' && activeIds.size > 50) {
+                perfMonitor.report();
+            }
 
         } else {
             // ===== 복합 모드: 서울 자치구 (선택적) + Supercluster/개별 마커 =====
@@ -1690,10 +1754,6 @@ const NaverMapView = memo(({
             // 1. 서울 자치구 클러스터 (우선 순위 레이어)
             // 줌 9-10: 모든 자치구 25개 클러스터 (seoulDistrictClusters)
             // 줌 11-12: 마커 3개 이상인 구만 클러스터 (seoulDistrictClustersFiltered)
-            const seoulClustersToRender = shouldUseSeoulDistrictFull
-                ? seoulDistrictClusters
-                : (shouldUseSeoulDistrictFiltered ? seoulDistrictClustersFiltered : []);
-
             if (seoulClustersToRender.length > 0) {
                 seoulClustersToRender.forEach((cluster) => {
                     const markerId = `seoul-dist-${cluster.region}`;
@@ -1865,7 +1925,6 @@ const NaverMapView = memo(({
                         () => handleMarkerRestaurantSelection(restaurant)
                     );
                 });
-                restaurantsRef.current = restaurantsToShow;
             }
 
             // Cleanup
@@ -2088,6 +2147,7 @@ const NaverMapView = memo(({
             markerPool.clear();
             clusterAnimationManager.clear();
             mapInstanceRef.current = null;
+            markerRenderSignatureRef.current = null;
             setIsMapInitialized(false);
         }
 
@@ -2367,71 +2427,6 @@ const NaverMapView = memo(({
             mapElement.removeEventListener('wheel', handleWheel);
         };
     }, [isMapInitialized]);
-
-    // [성능 최적화] 지도 이동/줌 이벤트 리스너 - 가시영역 변경 시 마커 업데이트
-    useEffect(() => {
-        if (!mapInstanceRef.current || !VIEWPORT_FILTER_ENABLED) return;
-
-        const map = mapInstanceRef.current;
-        const { naver } = window;
-
-        // 강제로 마커 업데이트를 트리거하는 함수
-        const triggerMarkerUpdate = () => {
-            // displayRestaurants dependency를 통해 마커 동기화 useEffect가 재실행되도록 유도
-            // 실제로는 dependency가 변경되지 않으므로, 직접 업데이트 로직을 실행
-            const restaurantsToShow = [...displayRestaurants];
-
-            if (searchedRestaurant) {
-                const alreadyExists = hasSearchedRestaurantInDisplay(searchedRestaurant);
-                if (!alreadyExists) {
-                    restaurantsToShow.push(searchedRestaurant);
-                }
-            }
-
-            const extendedBounds = getExtendedBounds(map);
-            const visibleRestaurants = restaurantsToShow.filter(r => {
-                if (r.id === selectedRestaurant?.id || r.id === searchedRestaurant?.id) {
-                    return true;
-                }
-                return isRestaurantInViewport(r, extendedBounds);
-            });
-
-
-
-            const visibleIds = new Set(visibleRestaurants.map(r => r.id));
-
-            // 가시영역 밖의 마커 숨기기
-            markersMapRef.current.forEach((marker, id) => {
-                if (!visibleIds.has(id)) {
-                    marker.setMap(null);
-                }
-            });
-
-            // 가시영역 내의 마커 표시
-            visibleRestaurants.forEach(restaurant => {
-                if (!restaurant.lat || !restaurant.lng) return;
-                const existingMarker = markersMapRef.current.get(restaurant.id);
-                if (existingMarker && existingMarker.getMap() !== map) {
-                    existingMarker.setMap(map);
-                }
-            });
-
-
-        };
-
-        // 디바운스된 업데이트 함수 (성능 티어에 따라 동적 시간)
-        const debouncedUpdate = debounce(triggerMarkerUpdate, mapOptimization.mapUpdateDebounceMs);
-
-        // 이벤트 리스너 등록
-        // 이벤트 리스너 등록
-        // [Fix] dragend/zoom_changed 대신 idle 이벤트만 사용하여
-        // 지도가 완전히 멈춘 후에만 무거운 마커 업데이트 수행 (줌/팬 중 끊김 방지)
-        const idleListener = naver.maps.Event.addListener(map, 'idle', debouncedUpdate);
-
-        return () => {
-            naver.maps.Event.removeListener(idleListener);
-        };
-    }, [displayRestaurants, searchedRestaurant, selectedRestaurant, isMapInitialized, mapOptimization.mapUpdateDebounceMs, hasSearchedRestaurantInDisplay]);
 
     // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
     // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);
