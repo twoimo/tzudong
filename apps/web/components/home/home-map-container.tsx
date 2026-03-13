@@ -8,7 +8,11 @@ import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
-import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
+import {
+    APP_HEADER_HEIGHT_VAR,
+    resetMobileSheetLayoutState,
+    setMobileSheetLayoutState,
+} from '@/lib/mobile-sheet-layout';
 import {
     getAdjacentRestaurantByStep,
     handleDesktopArrowNavigationEvent,
@@ -1177,12 +1181,16 @@ function HomeMapContainerComponent({
                             {/* 상세 패널 */}
                             <div
                                 className={cn(
-                                    "fixed top-16 right-0 h-[calc(100vh-64px)] w-[min(400px,calc(100vw-1rem))] z-[95]",
+                                    "fixed right-0 w-[min(400px,calc(100vw-1rem))] z-[95]",
                                     "bg-background border-l border-border shadow-2xl",
                                     "transform transition-transform duration-300 ease-out",
                                     isPanelOpen ? "translate-x-0" : "translate-x-full"
                                 )}
-                                style={{ overflow: 'visible' }}
+                                style={{
+                                    top: `var(${APP_HEADER_HEIGHT_VAR}, 56px)`,
+                                    height: `calc(100vh - var(${APP_HEADER_HEIGHT_VAR}, 56px))`,
+                                    overflow: 'visible',
+                                }}
                             >
                                 {/* 접기 버튼 */}
                                 <button

@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
+import { APP_HEADER_HEIGHT_VAR } from '@/lib/mobile-sheet-layout';
 
 interface OverlayDetailPanelProps {
     isOpen: boolean;
@@ -64,11 +65,15 @@ function OverlayDetailPanelComponent({
             {/* 상세 패널 */}
             <div
                 className={cn(
-                    "fixed top-16 right-0 h-[calc(100vh-64px)] w-[min(400px,calc(100vw-1rem))] z-[95]",
+                    "fixed right-0 w-[min(400px,calc(100vw-1rem))] z-[95]",
                     "bg-background border-l border-border shadow-2xl",
                     "transform transition-transform duration-300 ease-out",
                     isOpen ? "translate-x-0" : "translate-x-full"
                 )}
+                style={{
+                    top: `var(${APP_HEADER_HEIGHT_VAR}, 56px)`,
+                    height: `calc(100vh - var(${APP_HEADER_HEIGHT_VAR}, 56px))`,
+                }}
             >
                 {/* 접기 버튼 - 패널 좌측 가장자리 */}
                 <button

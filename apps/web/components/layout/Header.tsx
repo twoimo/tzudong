@@ -217,12 +217,16 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const handleBannerClick = useCallback(() => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
     if (currentAnnouncement) {
+      if (!isMobileOrTablet && onAnnouncementClick) {
+        onAnnouncementClick(currentAnnouncement);
+        return;
+      }
       setAnnouncementPage(1);
       setSelectedAnnouncement(currentAnnouncement);
       setAnnouncementViewMode('detail');
       setIsAnnouncementSheetOpen(true);
     }
-  }, [bannerAnnouncements, currentBannerIndex]);
+  }, [bannerAnnouncements, currentBannerIndex, isMobileOrTablet, onAnnouncementClick]);
 
   const handleAnnouncementListClick = useCallback(() => {
     if (isMobileOrTablet) {
@@ -376,7 +380,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   return (
     <header
       ref={headerRef}
-      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative transition-[opacity,transform,background-color] duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
+      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative transition-[opacity,transform,background-color] duration-300 gap-1.5 sm:gap-3 h-12 px-2 md:h-14 md:px-3"
       style={{
         transform: 'translateY(calc(-1 * var(--mobile-sheet-header-offset, 0px)))',
         opacity: 'calc(1 - var(--mobile-sheet-header-progress, 0))',
@@ -417,7 +421,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             type="button"
             aria-label="사이드바 토글"
             onClick={onToggleSidebar}
-            className="hover:bg-accent text-foreground font-serif transition-colors"
+            className="h-9 w-9 hover:bg-accent text-foreground font-serif transition-colors"
           >
             <PanelLeft className="h-5 w-5" />
           </Button>
@@ -429,7 +433,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {/* 중앙: 공지 배너 - 로딩 중 스켈레톤으로 레이아웃 고정 */}
       {shouldShowBannerSkeleton ? (
         <div className="flex-1 min-w-0 relative z-10">
-          <Skeleton className="h-8 w-full rounded-md" />
+          <Skeleton className="h-7 w-full rounded-md md:h-8" />
         </div>
       ) : currentBanner ? (
         <div
@@ -438,7 +442,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           tabIndex={0}
           aria-label={currentBanner?.title ? `공지: ${currentBanner.title}` : "공지사항 배너"}
           className={cn(
-            "flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
+            "flex items-center gap-2 px-2 py-0.5 md:px-3 md:py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
             // 모바일/데스크탑 모두 flex-1로 남은 공간 활용
             "flex-1 min-w-0",
             isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
@@ -512,7 +516,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 size="icon"
                 type="button"
                 aria-label="알림"
-                className="hover:bg-accent text-foreground relative transition-colors"
+                className="h-9 w-9 hover:bg-accent text-foreground relative transition-colors"
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
@@ -617,7 +621,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 size="icon"
                 type="button"
                 aria-label="북마크"
-                className="hover:bg-accent text-foreground relative transition-colors"
+                className="h-9 w-9 hover:bg-accent text-foreground relative transition-colors"
               >
                 <Bookmark className="h-5 w-5" />
               </Button>
@@ -723,7 +727,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             type="button"
             aria-label="전체화면 토글"
             onClick={toggleFullscreen}
-            className="hidden md:flex hover:bg-accent text-foreground transition-colors"
+            className="h-9 w-9 hidden md:flex hover:bg-accent text-foreground transition-colors"
           >
             <Maximize className="h-5 w-5" />
           </Button>
@@ -738,7 +742,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 size="icon"
                 type="button"
                 aria-label="내 계정 메뉴"
-                className="hover:bg-accent text-foreground transition-colors"
+                className="h-9 w-9 hover:bg-accent text-foreground transition-colors"
               >
                 <User className="h-5 w-5" />
               </Button>
@@ -844,7 +848,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               aria-label="로그인"
               className={cn(
                 "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
-                "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2"
+                "h-8 px-4 text-xs md:h-9 md:px-4 md:text-sm"
               )}
             >
               로그인
