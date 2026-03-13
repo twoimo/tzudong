@@ -9,6 +9,16 @@ const withBundleAnalyzer = bundleAnalyzer({
     enabled: process.env.ANALYZE === 'true',
 });
 
+const supabaseStorageHostname = (() => {
+    try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        if (!supabaseUrl) return null;
+        return new URL(supabaseUrl).hostname;
+    } catch {
+        return null;
+    }
+})();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
@@ -18,6 +28,8 @@ const nextConfig = {
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // 아이콘/썸네일 크기
         minimumCacheTTL: 2678400, // [PERF] 31일 캐시 (이미지가 자주 변경되지 않음)
         dangerouslyAllowSVG: true, // SVG 허용
+        // 로컬 개발 환경(WSL/NAT64)에서 Supabase CDN이 private IP로 해석되는 경우가 있어 dev에서만 허용
+        dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
         contentDispositionType: 'attachment', // SVG 보안
         contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
         remotePatterns: [
@@ -38,11 +50,14 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'i.ytimg.com',
             },
-            // [OPTIMIZATION] Supabase 스토리지 도메인
-            {
-                protocol: 'https',
-                hostname: '*.supabase.co',
-            },
+            // [OPTIMIZATION] Supabase 스토리지 도메인 (현재 프로젝트 URL 기준)
+            ...(supabaseStorageHostname ? [
+                {
+                    protocol: 'https',
+                    hostname: supabaseStorageHostname,
+                    pathname: '/storage/v1/object/public/**',
+                },
+            ] : []),
         ],
     },
     env: {

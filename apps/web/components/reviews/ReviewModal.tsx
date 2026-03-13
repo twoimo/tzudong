@@ -74,7 +74,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Calendar, Upload, X as XIcon, AlertCircle, CircleAlert, CheckCircle2, Image as ImageIcon, Trash2, Plus, Search, ChevronDown, Loader2, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, Upload, X as XIcon, AlertCircle, CircleAlert, CheckCircle2, Image as ImageIcon, Trash2, Plus, Search, ChevronDown, Loader2, Clock } from "lucide-react";
 
 interface ReviewModalProps {
     isOpen: boolean;
@@ -125,6 +125,8 @@ interface RestaurantNameRow {
     name: string;
 }
 
+type VerificationInputMode = "ai" | "manual";
+
 export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false }: ReviewModalProps) {
     const { user } = useAuth();
     const [visitedDate, setVisitedDate] = useState("");
@@ -139,6 +141,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
     // OCR 분석 상태
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [verificationInputMode, setVerificationInputMode] = useState<VerificationInputMode>("ai");
 
     // 맛집 검색 상태
     const [searchQuery, setSearchQuery] = useState("");
@@ -184,11 +187,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     }, [foodPhotoUrls]);
 
     // 메모이제이션된 이벤트 핸들러들
+    const handleVerificationPhotoSelected = (file: File) => {
+        setVerificationPhoto(file);
+        if (verificationInputMode === "ai") {
+            analyzeReceipt(file);
+        }
+    };
+
     const handleVerificationPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setVerificationPhoto(file);
-            analyzeReceipt(file);
+            handleVerificationPhotoSelected(file);
         }
     };
 
@@ -236,8 +245,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
         if (imageFiles.length > 0) {
-            setVerificationPhoto(imageFiles[0]);
-            analyzeReceipt(imageFiles[0]);
+            handleVerificationPhotoSelected(imageFiles[0]);
         }
     };
 
@@ -649,6 +657,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         setContent("");
         setVerificationPhoto(null);
         setFoodPhotos([]);
+        setVerificationInputMode("ai");
         onClose();
     }, [onClose]);
 
@@ -745,7 +754,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     }, [isOpen, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, autoSave]);
 
     // SWR을 사용한 쿼터 조회 (자동 캐싱 및 중복 요청 제거)
-    const { data: quota, isLoading: isLoadingQuota, mutate: mutateQuota } = useSWR(
+    const { data: quota, mutate: mutateQuota } = useSWR(
         isOpen && user ? '/api/ocr/quota' : null,
         async (url) => {
             const res = await fetch(url);
@@ -759,6 +768,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     );
 
     const ocrLimitReached = quota?.remaining === 0;
+
+    useEffect(() => {
+        if (!ocrLimitReached) return;
+        if (verificationInputMode !== "ai") return;
+        setVerificationInputMode("manual");
+    }, [ocrLimitReached, verificationInputMode]);
 
     // 초기 로딩 및 모달 열릴 때 임시 저장 불러오기
     useEffect(() => {
@@ -816,7 +831,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 </p>
                                 <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
                                     <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                    <li><b>AI 자동 분석</b>으로 정보를 편리하게 채워보세요 ✨</li>
+                                    <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
                                     <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
                                 </ul>
                             </div>
@@ -824,33 +839,62 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                         {/* 인증 사진 (최상단 배치) */}
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label className="flex items-center gap-2">
-                                    인증 사진 <span className="text-red-500">*</span>
-                                </Label>
-                                {quota && (
-                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
-                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
-                                    </Badge>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <Label className="flex items-center gap-2">
+                                        인증 사진 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                                        <Button
+                                            type="button"
+                                            variant={verificationInputMode === "ai" ? "default" : "outline"}
+                                            size="sm"
+                                            className="h-7 px-2 text-xs"
+                                            disabled={ocrLimitReached}
+                                            onClick={() => setVerificationInputMode("ai")}
+                                        >
+                                            AI 자동 입력
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={verificationInputMode === "manual" ? "default" : "outline"}
+                                            size="sm"
+                                            className="h-7 px-2 text-xs"
+                                            onClick={() => setVerificationInputMode("manual")}
+                                        >
+                                            사진만 첨부
+                                        </Button>
+                                        {quota && (
+                                            <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                                AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                                {verificationInputMode === "manual" && (
+                                    <p className="text-xs text-muted-foreground">
+                                        AI 분석 없이 사진만 첨부합니다. 방문 맛집/일시/카테고리/리뷰 내용을 직접 입력해주세요.
+                                    </p>
+                                )}
+                                {ocrLimitReached && (
+                                    <p className="text-xs text-amber-600">
+                                        AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
+                                    </p>
                                 )}
                             </div>
                             <Card
                                 ref={verificationDropRef}
-                                className={`relative p-6 border-dashed transition-colors ${isLoadingQuota
-                                    ? 'border-muted bg-muted/20 cursor-wait'
-                                    : ocrLimitReached
-                                        ? 'border-muted bg-muted/50 cursor-not-allowed'
-                                        : isVerificationDragging
-                                            ? 'border-primary bg-primary/5 cursor-pointer'
-                                            : verificationPhoto
-                                                ? 'border-green-300 bg-green-50/50 cursor-pointer'
-                                                : 'border-border hover:border-primary/50 cursor-pointer'
+                                className={`relative p-6 border-dashed transition-colors ${isVerificationDragging
+                                    ? 'border-primary bg-primary/5 cursor-pointer'
+                                    : verificationPhoto
+                                        ? 'border-green-300 bg-green-50/50 cursor-pointer'
+                                        : 'border-border hover:border-primary/50 cursor-pointer'
                                     }`}
-                                onDragOver={!ocrLimitReached && !isLoadingQuota ? handleDragOver : undefined}
-                                onDragEnter={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragEnter : undefined}
-                                onDragLeave={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragLeave : undefined}
-                                onDrop={!ocrLimitReached && !isLoadingQuota ? handleVerificationDrop : undefined}
-                                onClick={!ocrLimitReached && !isLoadingQuota ? openVerificationFileDialog : undefined}
+                                onDragOver={handleDragOver}
+                                onDragEnter={handleVerificationDragEnter}
+                                onDragLeave={handleVerificationDragLeave}
+                                onDrop={handleVerificationDrop}
+                                onClick={openVerificationFileDialog}
                             >
                                 <div className="flex flex-col items-center gap-4">
                                     {verificationPhoto ? (
@@ -895,32 +939,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 사진 제거
                                             </Button>
                                         </div>
-                                    ) : isLoadingQuota ? (
-                                        <div className="w-full text-center space-y-3 py-4">
-                                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                                            <p className="text-sm text-muted-foreground">분석 가능 횟수 확인 중...</p>
-                                        </div>
-                                    ) : ocrLimitReached ? (
-                                        <div className="w-full text-center space-y-3 p-2">
-                                            <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 transition-colors">
-                                                <AlertTriangle className="h-8 w-8 text-amber-600" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium mb-1 text-amber-700">
-                                                    일일 무료 분석 한도(5회)를 사용했습니다
-                                                </p>
-                                                <p className="text-sm text-muted-foreground mb-3">
-                                                    {quota?.resetAt ? (
-                                                        <>
-                                                            {new Date(quota.resetAt).toLocaleTimeString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}에 다시 분석할 수 있습니다
-                                                        </>
-                                                    ) : (
-                                                        <>내일 00시에 다시 분석할 수 있습니다</>
-                                                    )}
-                                                </p>
-
-                                            </div>
-                                        </div>
                                     ) : (
                                         <div className="w-full text-center space-y-3">
                                             <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
@@ -933,7 +951,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground mb-3">
-                                                    <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
+                                                    {verificationInputMode === "ai" ? (
+                                                        <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
+                                                    ) : (
+                                                        <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
+                                                    )}
                                                 </p>
                                                 <Button
                                                     variant="outline"
@@ -1355,7 +1377,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         </p>
                                         <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
                                             <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                            <li><b>AI 자동 분석</b>으로 정보를 편리하게 채워보세요 ✨</li>
+                                            <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
                                             <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
                                         </ul>
                                     </div>
@@ -1363,33 +1385,62 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                 {/* 인증 사진 (최상단 배치) */}
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label className="flex items-center gap-2">
-                                            인증 사진 <span className="text-red-500">*</span>
-                                        </Label>
-                                        {quota && (
-                                            <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
-                                                AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
-                                            </Badge>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                            <Label className="flex items-center gap-2">
+                                                인증 사진 <span className="text-red-500">*</span>
+                                            </Label>
+                                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                                                <Button
+                                                    type="button"
+                                                    variant={verificationInputMode === "ai" ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="h-7 px-2 text-xs"
+                                                    disabled={ocrLimitReached}
+                                                    onClick={() => setVerificationInputMode("ai")}
+                                                >
+                                                    AI 자동 입력
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant={verificationInputMode === "manual" ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="h-7 px-2 text-xs"
+                                                    onClick={() => setVerificationInputMode("manual")}
+                                                >
+                                                    사진만 첨부
+                                                </Button>
+                                                {quota && (
+                                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {verificationInputMode === "manual" && (
+                                            <p className="text-xs text-muted-foreground">
+                                                AI 분석 없이 사진만 첨부합니다. 방문 맛집/일시/카테고리/리뷰 내용을 직접 입력해주세요.
+                                            </p>
+                                        )}
+                                        {ocrLimitReached && (
+                                            <p className="text-xs text-amber-600">
+                                                AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
+                                            </p>
                                         )}
                                     </div>
                                     <Card
                                         ref={verificationDropRef}
-                                        className={`relative p-6 border-dashed transition-colors ${isLoadingQuota
-                                            ? 'border-muted bg-muted/20 cursor-wait'
-                                            : ocrLimitReached
-                                                ? 'border-muted bg-muted/50 cursor-not-allowed'
-                                                : isVerificationDragging
-                                                    ? 'border-primary bg-primary/5 cursor-pointer'
-                                                    : verificationPhoto
-                                                        ? 'border-green-300 bg-green-50/50 cursor-pointer'
-                                                        : 'border-border hover:border-primary/50 cursor-pointer'
+                                        className={`relative p-6 border-dashed transition-colors ${isVerificationDragging
+                                            ? 'border-primary bg-primary/5 cursor-pointer'
+                                            : verificationPhoto
+                                                ? 'border-green-300 bg-green-50/50 cursor-pointer'
+                                                : 'border-border hover:border-primary/50 cursor-pointer'
                                             }`}
-                                        onDragOver={!ocrLimitReached && !isLoadingQuota ? handleDragOver : undefined}
-                                        onDragEnter={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragEnter : undefined}
-                                        onDragLeave={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragLeave : undefined}
-                                        onDrop={!ocrLimitReached && !isLoadingQuota ? handleVerificationDrop : undefined}
-                                        onClick={!ocrLimitReached && !isLoadingQuota ? openVerificationFileDialog : undefined}
+                                        onDragOver={handleDragOver}
+                                        onDragEnter={handleVerificationDragEnter}
+                                        onDragLeave={handleVerificationDragLeave}
+                                        onDrop={handleVerificationDrop}
+                                        onClick={openVerificationFileDialog}
                                     >
                                         <div className="flex flex-col items-center gap-4">
                                             {verificationPhoto ? (
@@ -1434,31 +1485,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         사진 제거
                                                     </Button>
                                                 </div>
-                                            ) : isLoadingQuota ? (
-                                                <div className="w-full text-center space-y-3 py-4">
-                                                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                                                    <p className="text-sm text-muted-foreground">분석 가능 횟수 확인 중...</p>
-                                                </div>
-                                            ) : ocrLimitReached ? (
-                                                <div className="w-full text-center space-y-3 p-2">
-                                                    <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 transition-colors">
-                                                        <Clock className="h-8 w-8 text-amber-600" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-amber-700 mb-1">
-                                                            일일 무료 분석 한도(5회)를 사용했습니다
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground mb-3">
-                                                            {quota?.resetAt ? (
-                                                                <>
-                                                                    {new Date(quota.resetAt).toLocaleTimeString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}에 다시 분석할 수 있습니다
-                                                                </>
-                                                            ) : (
-                                                                <>내일 00시에 다시 분석할 수 있습니다</>
-                                                            )}
-                                                        </p>
-                                                    </div>
-                                                </div>
                                             ) : (
                                                 <div className="w-full text-center space-y-3">
                                                     <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
@@ -1471,7 +1497,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                             {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
                                                         </p>
                                                         <p className="text-sm text-muted-foreground mb-3">
-                                                            <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
+                                                            {verificationInputMode === "ai" ? (
+                                                                <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
+                                                            ) : (
+                                                                <span className="font-medium">AI 분석 없이 인증 사진만 첨부됩니다. 필요한 정보는 아래에서 직접 입력해주세요.</span>
+                                                            )}
                                                         </p>
                                                         <Button
                                                             variant="outline"

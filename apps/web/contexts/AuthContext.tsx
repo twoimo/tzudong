@@ -31,53 +31,31 @@ const isRefreshTokenNotFoundError = (error: unknown) => {
     return message.includes('invalid refresh token') || message.includes('refresh token not found');
 };
 
+const isExpiredJwtError = (error: unknown) => {
+    if (!error || typeof error !== 'object') return false;
+
+    const code = 'code' in error ? String(error.code) : '';
+    if (code === 'PGRST303') return true;
+
+    const message = 'message' in error ? String(error.message).toLowerCase() : '';
+    return message.includes('jwt expired') || message.includes('invalid jwt');
+};
+
+const isAuthSessionInvalidError = (error: unknown) => {
+    return isRefreshTokenNotFoundError(error) || isExpiredJwtError(error);
+};
+
+const isSessionExpired = (currentSession: Session | null) => {
+    if (!currentSession?.expires_at) return false;
+    return currentSession.expires_at * 1000 <= Date.now();
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
-
-    const checkAdminRole = useCallback(async (userId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from("user_roles")
-                .select("role")
-                .eq("user_id", userId)
-                .eq("role", "admin")
-                .maybeSingle();
-
-            setIsAdmin(!error && !!data);
-        } catch (error) {
-            console.error("Error checking admin role:", error);
-            setIsAdmin(false);
-        }
-    }, []);
-
-    const checkProfileStatus = useCallback(async (userId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from("profiles")
-                .select("nickname")
-                .eq("user_id", userId)
-                .maybeSingle();
-
-            const profileData = data as { nickname?: string } | null;
-            const nickname = profileData?.nickname;
-
-            if (error) {
-                console.error("Profile check error:", error);
-                setNeedsNicknameSetup(false);
-            } else if (!profileData || nickname === "탈퇴한 사용자") {
-                setNeedsNicknameSetup(true);
-            } else {
-                setNeedsNicknameSetup(false);
-            }
-        } catch (error) {
-            console.error("Error checking profile status:", error);
-            setNeedsNicknameSetup(false);
-        }
-    }, []);
 
     const clearStaleSession = useCallback(async () => {
         try {
@@ -92,27 +70,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setNeedsNicknameSetup(false);
     }, []);
 
+    const checkAdminRole = useCallback(async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from("user_roles")
+                .select("role")
+                .eq("user_id", userId)
+                .eq("role", "admin")
+                .maybeSingle();
+
+            if (error) {
+                if (isAuthSessionInvalidError(error)) {
+                    await clearStaleSession();
+                    return;
+                }
+                setIsAdmin(false);
+                return;
+            }
+
+            setIsAdmin(!!data);
+        } catch (error) {
+            if (isAuthSessionInvalidError(error)) {
+                await clearStaleSession();
+                return;
+            }
+            console.error("Error checking admin role:", error);
+            setIsAdmin(false);
+        }
+    }, [clearStaleSession]);
+
+    const checkProfileStatus = useCallback(async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from("profiles")
+                .select("nickname")
+                .eq("user_id", userId)
+                .maybeSingle();
+
+            const profileData = data as { nickname?: string } | null;
+            const nickname = profileData?.nickname;
+
+            if (error) {
+                if (isAuthSessionInvalidError(error)) {
+                    await clearStaleSession();
+                    return;
+                }
+                console.error("Profile check error:", error);
+                setNeedsNicknameSetup(false);
+                return;
+            }
+
+            if (!profileData || nickname === "탈퇴한 사용자") {
+                setNeedsNicknameSetup(true);
+            } else {
+                setNeedsNicknameSetup(false);
+            }
+        } catch (error) {
+            if (isAuthSessionInvalidError(error)) {
+                await clearStaleSession();
+                return;
+            }
+            console.error("Error checking profile status:", error);
+            setNeedsNicknameSetup(false);
+        }
+    }, [clearStaleSession]);
+
     useEffect(() => {
         // 초기 세션 가져오기
         // 초기 세션 가져오기
         supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-            if (error && isRefreshTokenNotFoundError(error)) {
+            if (error && isAuthSessionInvalidError(error)) {
                 await clearStaleSession();
                 setIsLoading(false);
                 return;
             }
 
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
+            let nextSession = session;
+
+            if (isSessionExpired(nextSession)) {
+                const { data, error: refreshError } = await supabase.auth.refreshSession();
+                if (refreshError || !data.session) {
+                    if (refreshError && !isAuthSessionInvalidError(refreshError)) {
+                        console.error('Error refreshing session:', refreshError);
+                    }
+                    await clearStaleSession();
+                    setIsLoading(false);
+                    return;
+                }
+                nextSession = data.session;
+            }
+
+            setSession(nextSession);
+            setUser(nextSession?.user ?? null);
+            if (nextSession?.user) {
                 await Promise.all([
-                    checkAdminRole(session.user.id),
-                    checkProfileStatus(session.user.id)
+                    checkAdminRole(nextSession.user.id),
+                    checkProfileStatus(nextSession.user.id)
                 ]);
             }
             setIsLoading(false);
         }).catch(async (error) => {
-            if (isRefreshTokenNotFoundError(error)) {
+            if (isAuthSessionInvalidError(error)) {
                 await clearStaleSession();
             } else {
                 console.error('Error loading session:', error);
@@ -124,6 +182,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (isSessionExpired(session)) {
+                clearStaleSession();
+                return;
+            }
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
@@ -184,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.auth.signOut();
         if (!error) return;
 
-        if (isRefreshTokenNotFoundError(error)) {
+        if (isAuthSessionInvalidError(error)) {
             await clearStaleSession();
             return;
         }
