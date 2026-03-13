@@ -77,6 +77,12 @@ bun run qa:insights-chat
 # Supabase DB 데이터/RPC 점검 (서비스 롤 키 필요)
 bun run qa:insights-chat:db
 
+# youtube_link 정규화 dry-run (DB 미변경)
+bun run qa:insights-chat:db -- --fix-video-links --dry-run
+
+# youtube_link 정규화 실제 반영 (명시적 확인 필요)
+bun run qa:insights-chat:db -- --fix-video-links --confirm-fix-video-links
+
 # 단위 + DB 점검 + 라이브 API를 한 번에
 INSIGHTS_CHAT_ADMIN_COOKIE="sb-xxx=..." \
 INSIGHT_CHAT_QA_BASE_URL="http://localhost:8080" \

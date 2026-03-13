@@ -19,12 +19,25 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             sessionStorage.removeItem(RELOAD_KEY);
         }, 30000);
 
+        const hasChunkScriptPath = (value: unknown) => {
+            const text = String(value ?? '');
+            return text.includes('/_next/static/chunks/');
+        };
+
         const hasChunkLoadError = (value: unknown) => {
             const text = String(value ?? '');
             return (
                 text.includes('ChunkLoadError')
                 || text.includes('Loading chunk')
-                || text.includes('/_next/static/chunks/')
+                || hasChunkScriptPath(text)
+            );
+        };
+
+        const hasChunkSyntaxError = (value: unknown) => {
+            const text = String(value ?? '');
+            return (
+                text.includes('Invalid or unexpected token')
+                || text.includes('Unexpected token')
             );
         };
 
@@ -34,23 +47,43 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             window.location.reload();
         };
 
-        const getProperty = (value: unknown, key: 'name' | 'message') => {
+        const getProperty = (value: unknown, key: 'name' | 'message' | 'stack') => {
             if (!value || typeof value !== 'object') return undefined;
             const record = value as Record<string, unknown>;
             return record[key];
         };
 
         const onError = (event: ErrorEvent) => {
-            if (hasChunkLoadError(event.message) || hasChunkLoadError(getProperty(event.error, 'name'))) {
+            const errorName = getProperty(event.error, 'name');
+            const errorMessage = getProperty(event.error, 'message');
+            const errorStack = getProperty(event.error, 'stack');
+
+            const shouldRecoverChunkLoad =
+                hasChunkLoadError(event.message)
+                || hasChunkLoadError(errorName)
+                || hasChunkLoadError(errorMessage)
+                || hasChunkLoadError(errorStack);
+
+            const shouldRecoverChunkSyntax =
+                (hasChunkSyntaxError(event.message) || hasChunkSyntaxError(errorMessage))
+                && (hasChunkScriptPath(event.filename) || hasChunkScriptPath(errorStack));
+
+            if (shouldRecoverChunkLoad || shouldRecoverChunkSyntax) {
                 tryRecoveryReload();
             }
         };
 
         const onUnhandledRejection = (event: PromiseRejectionEvent) => {
             const reason = event.reason;
+            const reasonStack = getProperty(reason, 'stack');
             if (
                 hasChunkLoadError(getProperty(reason, 'name'))
                 || hasChunkLoadError(getProperty(reason, 'message'))
+                || hasChunkLoadError(reasonStack)
+                || (
+                    hasChunkSyntaxError(getProperty(reason, 'message'))
+                    && hasChunkScriptPath(reasonStack)
+                )
             ) {
                 tryRecoveryReload();
             }

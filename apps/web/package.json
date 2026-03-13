@@ -5,14 +5,16 @@
   "scripts": {
     "dev": "node scripts/clean-next.mjs && next dev --webpack --port 8080",
     "dev:clean": "node scripts/clean-next.mjs && next dev --webpack --port 8080",
+    "dev:playwright": "node scripts/clean-next.mjs && next dev --webpack --port 8080",
     "build": "next build",
     "start": "next start",
+    "start:playwright": "PORT=8080 HOSTNAME=127.0.0.1 node .next/standalone/apps/web/server.js",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "analyze": "set ANALYZE=true&& next build --webpack",
     "supabase:gen-types": "node scripts/supabase-gen-types.mjs",
     "test:unit": "bun test tests-unit",
-    "test:responsive": "playwright test tests/responsive-overflow.spec.ts",
+    "test:responsive": "node scripts/run-responsive-tests.mjs",
     "qa:insights-chat": "bun run scripts/insight-chat-qa.mjs",
     "qa:insights-chat:db": "bun run scripts/insight-chat-db-ops.mjs"
   },

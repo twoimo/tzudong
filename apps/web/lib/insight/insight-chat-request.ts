@@ -45,6 +45,21 @@ const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
 ]);
 const ALLOWED_RESPONSE_MODES = new Set<InsightChatResponseMode>(['fast', 'deep', 'structured']);
 const ALLOWED_MEMORY_MODES = new Set<InsightChatMemoryMode>(['off', 'session', 'pinned']);
+const ALLOWED_PROVIDER_MODELS: Record<NonNullable<LlmRequestConfig['provider']>, ReadonlySet<string>> = {
+    gemini: new Set([
+        'gemini-3.1-pro-preview',
+        'gemini-3-flash-preview',
+    ]),
+    openai: new Set([
+        'gpt-5.3',
+        'gpt-4o',
+        'gpt-4o-mini',
+    ]),
+    anthropic: new Set([
+        'claude-opus-4-6',
+        'claude-sonnet-4-6',
+    ]),
+};
 
 function normalizeResponseMode(raw: unknown): InsightChatResponseMode | undefined {
     return ALLOWED_RESPONSE_MODES.has(raw as InsightChatResponseMode) ? raw as InsightChatResponseMode : undefined;
@@ -128,7 +143,7 @@ function normalizeModel(raw: unknown, provider: LlmRequestConfig['provider'] | u
         return undefined;
     }
 
-    return value;
+    return ALLOWED_PROVIDER_MODELS[provider]?.has(value) ? value : undefined;
 }
 
 function normalizeStoryboardProfile(raw: unknown): StoryboardModelProfile | undefined {

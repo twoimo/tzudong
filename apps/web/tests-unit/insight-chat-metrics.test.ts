@@ -617,7 +617,7 @@ describe('insight chat metrics endpoint', () => {
                 message: 'chat-success-gemini',
                 requestId: 'chat-success-gemini',
                 provider: 'gemini',
-                model: 'gemini-pro',
+                model: 'gemini-3-flash-preview',
                 responseMode: 'fast',
                 memoryMode: 'session',
                 feedbackContext: {
@@ -629,7 +629,7 @@ describe('insight chat metrics endpoint', () => {
                 message: '   ',
                 requestId: 'chat-invalid-input',
                 provider: 'openai',
-                model: 'gpt-4',
+                model: 'gpt-4o',
                 responseMode: 'deep',
                 memoryMode: 'pinned',
                 feedbackContext: {
@@ -640,7 +640,7 @@ describe('insight chat metrics endpoint', () => {
                 message: 'chat-timeout',
                 requestId: 'chat-timeout',
                 provider: 'gemini',
-                model: 'gemini-pro',
+                model: 'gemini-3-flash-preview',
                 responseMode: 'structured',
                 memoryMode: 'off',
             }));
@@ -648,7 +648,7 @@ describe('insight chat metrics endpoint', () => {
                 message: 'stream-local',
                 requestId: 'stream-local',
                 provider: 'anthropic',
-                model: 'claude-3',
+                model: 'claude-sonnet-4-6',
                 responseMode: 'fast',
                 memoryMode: 'session',
                 feedbackContext: {
@@ -660,7 +660,7 @@ describe('insight chat metrics endpoint', () => {
                 message: 'stream-timeout',
                 requestId: 'stream-timeout',
                 provider: 'openai',
-                model: 'gpt-4',
+                model: 'gpt-4o',
                 responseMode: 'deep',
                 memoryMode: 'pinned',
                 feedbackContext: {
@@ -671,7 +671,7 @@ describe('insight chat metrics endpoint', () => {
                 message: 'stream-success',
                 requestId: 'stream-success',
                 provider: 'openai',
-                model: 'gpt-4',
+                model: 'gpt-4o',
                 responseMode: 'structured',
                 memoryMode: 'off',
                 feedbackContext: {

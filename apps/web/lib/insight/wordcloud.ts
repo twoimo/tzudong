@@ -323,6 +323,10 @@ function buildLikeSearchPattern(keyword: string): string {
   return `%${escaped}%`;
 }
 
+const KEYWORD_CAPTION_SELECT_FIELDS = 'id,video_id,recollect_id,rank,start_sec,raw_caption,chronological_analysis,highlight_keywords';
+const KEYWORD_CAPTION_TEXT_COLUMNS = ['raw_caption', 'chronological_analysis'] as const;
+type KeywordCaptionTextColumn = (typeof KEYWORD_CAPTION_TEXT_COLUMNS)[number];
+
 type VideoRow = {
   id: string;
   title?: string | null;
@@ -428,7 +432,7 @@ async function fetchKeywordCaptions(keyword: string): Promise<CaptionRow[]> {
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
     .from('video_frame_captions' as never)
-    .select('id,video_id,recollect_id,rank,start_sec,raw_caption,chronological_analysis,highlight_keywords')
+    .select(KEYWORD_CAPTION_SELECT_FIELDS)
     .contains('highlight_keywords', [keyword])
     .order('rank', { ascending: true })
     .limit(80)
@@ -441,22 +445,39 @@ async function fetchKeywordCaptions(keyword: string): Promise<CaptionRow[]> {
   return data || [];
 }
 
-async function fetchKeywordCaptionsByCaptionText(keyword: string): Promise<CaptionRow[]> {
+async function fetchKeywordCaptionsByTextColumn(column: KeywordCaptionTextColumn, pattern: string): Promise<CaptionRow[]> {
   const supabase = createSupabaseServiceRoleClient();
-  const pattern = buildLikeSearchPattern(keyword);
   const { data, error } = await supabase
     .from('video_frame_captions' as never)
-    .select('id,video_id,recollect_id,rank,start_sec,raw_caption,chronological_analysis,highlight_keywords')
-    .or(`raw_caption.ilike.${pattern},chronological_analysis.ilike.${pattern}`)
+    .select(KEYWORD_CAPTION_SELECT_FIELDS)
+    .ilike(column, pattern)
     .order('rank', { ascending: true })
     .limit(80)
     .returns<CaptionRow[]>();
 
   if (error) {
-    throw new Error(`Failed to fetch keyword captions by caption text: ${error.message}`);
+    throw new Error(`Failed to fetch keyword captions by ${column}: ${error.message}`);
   }
 
   return data || [];
+}
+
+async function fetchKeywordCaptionsByCaptionText(keyword: string): Promise<CaptionRow[]> {
+  const pattern = buildLikeSearchPattern(keyword);
+  const captionMatches = await Promise.all(
+    KEYWORD_CAPTION_TEXT_COLUMNS.map((column) => fetchKeywordCaptionsByTextColumn(column, pattern)),
+  );
+
+  const byId = new Map<number, CaptionRow>();
+  for (const rows of captionMatches) {
+    for (const row of rows) {
+      byId.set(row.id, row);
+    }
+  }
+
+  return [...byId.values()]
+    .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
+    .slice(0, 80);
 }
 
 async function fetchVideosByIds(videoIds: string[]): Promise<Map<string, VideoRow>> {

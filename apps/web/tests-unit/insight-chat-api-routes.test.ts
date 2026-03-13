@@ -27,6 +27,55 @@ type CapturedCall = {
 
 let lastChatCall: CapturedCall | null = null;
 let lastStreamCall: CapturedCall | null = null;
+let chatTimeoutAbortObserved = false;
+let streamTimeoutAbortObserved = false;
+
+async function waitForAbortAwareDelay(
+    signal: AbortSignal | undefined,
+    delayMs: number,
+    onAbort: () => void,
+    throwOnAbort = false,
+) {
+    await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const finish = (runner: () => void) => {
+            if (settled) return;
+            settled = true;
+            runner();
+        };
+        const handleAbort = () => {
+            if (timer) {
+                clearTimeout(timer);
+            }
+            onAbort();
+            if (signal) {
+                signal.removeEventListener('abort', handleAbort);
+            }
+            if (throwOnAbort) {
+                const abortError = new Error('mocked abort');
+                abortError.name = 'AbortError';
+                finish(() => reject(abortError));
+                return;
+            }
+            finish(resolve);
+        };
+
+        timer = setTimeout(() => {
+            if (signal) {
+                signal.removeEventListener('abort', handleAbort);
+            }
+            finish(resolve);
+        }, delayMs);
+
+        if (!signal) return;
+        if (signal.aborted) {
+            handleAbort();
+            return;
+        }
+        signal.addEventListener('abort', handleAbort, { once: true });
+    });
+}
 
 function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode: StreamResponseMode) {
     const mockSourcePool = [
@@ -78,6 +127,7 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
             _attachments?: unknown,
             contextMessages?: unknown,
             memoryProfileNote?: unknown,
+            requestSignal?: AbortSignal,
         ) => {
             lastChatCall = {
                 message,
@@ -92,7 +142,14 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
                 throw new Error('mocked chat error');
             }
             if (message === '__chat_delay__') {
-                await new Promise((resolve) => setTimeout(resolve, 40));
+                await waitForAbortAwareDelay(
+                    requestSignal,
+                    40,
+                    () => {
+                        chatTimeoutAbortObserved = true;
+                    },
+                    true,
+                );
             }
 
             return {
@@ -108,7 +165,7 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
         streamAdminInsightChat: async (
             _message: string,
             llmConfig: unknown,
-            _signal: AbortSignal | undefined,
+            signal: AbortSignal | undefined,
             requestId?: string,
             _responseMode?: unknown,
             memoryMode?: unknown,
@@ -127,7 +184,14 @@ function installChatRouteMocks(requireAdminState: AuthState, streamResponseMode:
             llmConfig,
         };
             if (_message === '__stream_delay__') {
-                await new Promise((resolve) => setTimeout(resolve, 40));
+                await waitForAbortAwareDelay(
+                    signal,
+                    40,
+                    () => {
+                        streamTimeoutAbortObserved = true;
+                    },
+                    true,
+                );
             }
             if (streamResponseMode === 'error') {
                 throw new Error('mocked stream error');
@@ -214,6 +278,8 @@ test('insight chat API routes (mocked runtime harness)', async () => {
     installChatRouteMocks(requireAdminState, streamResponseMode);
     lastChatCall = null;
     lastStreamCall = null;
+    chatTimeoutAbortObserved = false;
+    streamTimeoutAbortObserved = false;
     process.env.INSIGHT_CHAT_GUARDRAILS_ENABLED = 'true';
     process.env.INSIGHT_CHAT_LATENCY_BUDGET_MS = '5';
     process.env.INSIGHT_CHAT_FALLBACK_STREAK_THRESHOLD = '2';
@@ -269,18 +335,23 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         });
         expect(memoryChatPayload.meta.toolTrace).toContain('memoryMode:session');
 
-        // legacy model payload should remain backward compatible (no invalid_model short-circuit)
+        // invalid provider+model payload should now hard-fail with invalid_model
         response = await chatPOST(createRequest('/api/admin/insight/chat', {
             message: '안녕하세요',
             provider: 'gemini',
             model: 'wrong-model-id',
             requestId: 'req-invalid-model',
         }));
-        expect(response.status).toBe(200);
-        expect(await response.json()).toMatchObject({
-            content: 'chat-response:안녕하세요',
-            meta: { requestId: 'req-invalid-model' },
+        expect(response.status).toBe(400);
+        const chatInvalidLegacyModelPayload = await response.json();
+        expect(chatInvalidLegacyModelPayload).toMatchObject({
+            meta: {
+                source: 'fallback',
+                fallbackReason: 'invalid_model',
+                requestId: 'req-invalid-model',
+            },
         });
+        expect(chatInvalidLegacyModelPayload).not.toHaveProperty('error');
 
         response = await chatPOST(createRequest('/api/admin/insight/chat', {
             message: '안녕하세요',
@@ -570,6 +641,7 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         expect(chatTimeoutPayload.meta.toolTrace).toContain('request.timeout');
         expect(chatTimeoutPayload.meta.toolTrace).toContain('guardrail:latency_budget_exceeded');
         expect(chatTimeoutPayload.meta.toolTrace).toContain('memoryMode:pinned');
+        expect(chatTimeoutAbortObserved).toBe(true);
         process.env.INSIGHT_CHAT_ROUTE_TIMEOUT_MS = originalChatRouteTimeout;
 
         // stream local fallback
@@ -657,6 +729,7 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         expect(streamTimeoutSessionPayload.meta.toolTrace).toContain('request.timeout');
         expect(streamTimeoutSessionPayload.meta.toolTrace).toContain('guardrail:latency_budget_exceeded');
         expect(streamTimeoutSessionPayload.meta.toolTrace).toContain('memoryMode:session');
+        expect(streamTimeoutAbortObserved).toBe(true);
         process.env.INSIGHT_CHAT_STREAM_ROUTE_TIMEOUT_MS = originalStreamRouteTimeout;
 
         // stream passthrough should send SSE-formatted bytes
@@ -673,7 +746,7 @@ test('insight chat API routes (mocked runtime harness)', async () => {
         expect(body).toContain('data: {"text":"hello","requestId":"stream-pass"}');
         expect(body).toContain('data: [DONE]');
 
-        // legacy model payload should remain backward compatible in stream route
+        // invalid provider+model payload should now hard-fail in stream route
         streamResponseMode = 'local';
         installChatRouteMocks(requireAdminState, streamResponseMode);
         response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
@@ -682,12 +755,17 @@ test('insight chat API routes (mocked runtime harness)', async () => {
             model: 'bad-openai',
             requestId: 'stream-invalid-model',
         }));
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(400);
         expect(response.headers.get('content-type')).toContain('application/json');
-        expect(await response.json()).toMatchObject({
-            content: 'stream-local-fallback',
-            meta: { requestId: 'stream-invalid-model' },
+        const streamInvalidLegacyModelPayload = await response.json();
+        expect(streamInvalidLegacyModelPayload).toMatchObject({
+            meta: {
+                source: 'fallback',
+                fallbackReason: 'invalid_model',
+                requestId: 'stream-invalid-model',
+            },
         });
+        expect(streamInvalidLegacyModelPayload).not.toHaveProperty('error');
 
         response = await streamPOST(createRequest('/api/admin/insight/chat/stream', {
             message: '안녕',
