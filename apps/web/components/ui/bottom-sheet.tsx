@@ -150,6 +150,7 @@ function BottomSheetComponent({
     const handleSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
     const contentSwipeDirectionRef = useRef<'horizontal' | 'vertical' | null>(null);
     const sheetTouchSourceRef = useRef<'handle' | 'content' | null>(null);
+    const isCarouselTouchRef = useRef(false);
     const sheetHeightRef = useRef(defaultHeight);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
@@ -574,6 +575,8 @@ function BottomSheetComponent({
     }, [handleDragStartCore, isMobileOrTablet]);
 
     const handleSwipeTouchMove = useCallback((e: React.TouchEvent, isFromHandle = false) => {
+        // [Fix] 캐러셀 내부 터치는 스와이프 처리 건너뛰기
+        if (isCarouselTouchRef.current) return;
         const currentY = e.touches[0].clientY;
         const currentX = e.touches[0].clientX;
         const currentStartY = isFromHandle ? startYRef.current : contentTouchStartYRef.current;
@@ -641,6 +644,12 @@ function BottomSheetComponent({
     ]);
 
     const handleSwipeTouchEnd = useCallback((e: React.TouchEvent, isFromHandle = false) => {
+        // [Fix] 캐러셀 내부 터치는 스와이프 처리 건너뛰기
+        if (isCarouselTouchRef.current) {
+            isCarouselTouchRef.current = false;
+            return;
+        }
+
         const currentTouch = e.changedTouches?.[0] ?? e.touches?.[0];
         if (!currentTouch) return;
         const currentDirectionRef = isFromHandle ? handleSwipeDirectionRef : contentSwipeDirectionRef;
@@ -715,6 +724,14 @@ function BottomSheetComponent({
         contentScrollTargetRef.current = null;
         contentStartBoundaryRef.current = null;
         sheetTouchSourceRef.current = null;
+
+        // [Fix] 캐러셀 내부 터치는 스와이프/드래그 처리 건너뛰기
+        if (target instanceof HTMLElement && target.closest('[aria-roledescription="carousel"]')) {
+            isCarouselTouchRef.current = true;
+            sheetTouchSourceRef.current = 'content';
+            return;
+        }
+        isCarouselTouchRef.current = false;
 
         const isFromHandle = target instanceof Node && handleRef.current?.contains(target);
 
