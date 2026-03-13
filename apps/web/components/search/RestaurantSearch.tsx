@@ -279,13 +279,13 @@ const RestaurantSearch = ({
     onSearchExecute?.();
     setSearchQuery("");
     setIsFocused(false);
-  }, [addToHistory, onRestaurantSearch, onRestaurantSelect, onSearchExecute, queryClient]);
+  }, [addToHistory, onRestaurantSearch, onRestaurantSelect, onSearchExecute, queryClient, setSearchQuery]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
     setIsFocused(false);
 
-  }, []);
+  }, [setSearchQuery]);
 
   const toggleSearchType = useCallback(() => {
     setSearchType(searchType === 'name' ? 'youtube' : 'name');
