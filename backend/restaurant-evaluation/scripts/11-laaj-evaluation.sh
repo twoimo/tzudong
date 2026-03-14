@@ -225,9 +225,16 @@ if [ ! -d "$RULE_RESULTS_DIR" ]; then
 fi
 
 # Gemini CLI 확인 (Fallback용)
-if ! command -v gemini > /dev/null 2>&1; then
-    log_error "Gemini CLI 미설치 (Fallback 불가)"
-    exit 1
+HAS_GEMINI_CLI=false
+if command -v gemini > /dev/null 2>&1; then
+    HAS_GEMINI_CLI=true
+else
+    log_warning "Gemini CLI 미설치 - Node.js API 모드로 진행합니다."
+    # Node.js API가 없으면 진행 불가
+    if [ -z "$NODE_EXE" ] || [ ! -f "$SCRIPT_DIR/gemini_api_request.mjs" ]; then
+        log_error "Gemini CLI도 없고 Node.js API(gemini_api_request.mjs)도 없습니다. 평가 불가."
+        exit 1
+    fi
 fi
 
 GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
@@ -266,12 +273,17 @@ fi
 
 # 2. CLI Check (Fallback or Primary)
 if [ "$HEALTH_CHECK_PASSED" = false ]; then
-    if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
-        HEALTH_CHECK_PASSED=true
-        log_success "Health Check 성공 (Gemini CLI)"
+    if [ "$HAS_GEMINI_CLI" = true ]; then
+        if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
+            HEALTH_CHECK_PASSED=true
+            log_success "Health Check 성공 (Gemini CLI)"
+        else
+            log_error "Health Check 실패 (Gemini CLI)"
+            log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
+            exit 1
+        fi
     else
-        log_error "Health Check 실패 (Gemini CLI)"
-        log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
+        log_error "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가 불가."
         exit 1
     fi
 fi
@@ -456,7 +468,7 @@ $TRANSCRIPT
     fi
     
     # 2. Gemini CLI 시도 (Node 실패 또는 Sticky 모드일 때)
-    if [ "$GEMINI_SUCCESS" = false ]; then
+    if [ "$GEMINI_SUCCESS" = false ] && [ "$HAS_GEMINI_CLI" = true ]; then
         log_debug "Gemini CLI 호출 (모델: $CURRENT_MODEL)"
         
         if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
@@ -510,7 +522,11 @@ $TRANSCRIPT
                 if [ $PARSE_ATTEMPT -lt 3 ]; then
                     log_warning "파싱 실패 (${PARSE_ATTEMPT}/3) - 재요청..."
                     sleep 10
-                    gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
+                    if [ "$HAS_GEMINI_CLI" = true ]; then
+                        gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
+                    elif [ -n "$NODE_EXE" ]; then
+                        "$NODE_EXE" "$(normalize_path "$GEMINI_API_SCRIPT")" "$(normalize_path "$TEMP_PROMPT")" "$(normalize_path "$TEMP_RESPONSE")" 2>/dev/null
+                    fi
                 fi
             fi
         done
