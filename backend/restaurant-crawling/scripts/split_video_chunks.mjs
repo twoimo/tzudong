@@ -18,6 +18,7 @@ import ffmpegStatic from 'ffmpeg-static';
 
 const execPromise = util.promisify(exec);
 
+/** ffmpeg 실행 경로를 환경변수 → ffmpeg-static → 시스템 PATH 순으로 탐색 */
 function resolveFfmpegPath() {
     if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
     if (fs.existsSync(ffmpegStatic)) return ffmpegStatic;
@@ -25,10 +26,12 @@ function resolveFfmpegPath() {
     if (fs.existsSync(exePath)) return exePath;
     return 'ffmpeg';
 }
+
 const ffmpegPath = resolveFfmpegPath();
 const isWindowsExe = ffmpegPath.endsWith('.exe');
 
-function toExePath(p) {
+/** WSL 마운트 경로(/mnt/c/...)를 Windows 경로(C:/...)로 변환 */
+function toWindowsPath(p) {
     if (!isWindowsExe) return p;
     const m = p.match(/^\/mnt\/([a-z])\/(.*)/);
     return m ? `${m[1].toUpperCase()}:/${m[2]}` : p;
@@ -37,22 +40,20 @@ function toExePath(p) {
 async function main() {
     const args = process.argv.slice(2);
     if (args.length < 3) {
-        console.error('Usage: node split_video_chunks.mjs <video_path> <chunks_json> <output_dir>');
+        console.error('사용법: node split_video_chunks.mjs <video_path> <chunks_json> <output_dir>');
         process.exit(1);
     }
 
-    const videoPath = args[0];
-    const chunksJsonPath = args[1];
-    const outputDir = args[2];
+    const [videoPath, chunksJsonPath, outputDir] = args;
 
     if (!fs.existsSync(videoPath)) {
-        console.error(`Video not found: ${videoPath}`);
+        console.error(`비디오 파일을 찾을 수 없음: ${videoPath}`);
         process.exit(1);
     }
 
     const chunks = JSON.parse(fs.readFileSync(chunksJsonPath, 'utf8'));
     if (!Array.isArray(chunks) || chunks.length === 0) {
-        console.error('No chunks in plan');
+        console.error('청크 계획이 비어있음');
         process.exit(1);
     }
 
@@ -61,7 +62,7 @@ async function main() {
     const ext = path.extname(videoPath).toLowerCase();
     const needsReencode = ext !== '.mp4';
 
-    console.log(`[Split] ${chunks.length} chunks, source: ${ext}, reencode: ${needsReencode}`);
+    console.log(`[분할] 총 ${chunks.length}개 청크, 소스: ${ext}, 재인코딩: ${needsReencode}`);
 
     for (const chunk of chunks) {
         const { chunk_index, start_sec, end_sec } = chunk;
@@ -69,7 +70,7 @@ async function main() {
         const outFile = path.join(outputDir, `chunk_${chunk_index}.mp4`);
 
         if (fs.existsSync(outFile)) {
-            console.log(`[Skip] chunk_${chunk_index}.mp4 already exists`);
+            console.log(`[건너뜀] chunk_${chunk_index}.mp4 이미 존재`);
             continue;
         }
 
@@ -77,22 +78,21 @@ async function main() {
             ? '-c:v libx264 -c:a aac -preset ultrafast -crf 28'
             : '-c copy';
 
-        const cmd = `"${ffmpegPath}" -y -ss ${start_sec} -t ${duration} -i "${toExePath(videoPath)}" ${codecArgs} "${toExePath(outFile)}"`;
-
+        const cmd = `"${ffmpegPath}" -y -ss ${start_sec} -t ${duration} -i "${toWindowsPath(videoPath)}" ${codecArgs} "${toWindowsPath(outFile)}"`;
 
         try {
-            console.log(`[Split] chunk ${chunk_index}: ${start_sec}s ~ ${end_sec}s (${duration}s)`);
+            console.log(`[분할] 청크 ${chunk_index}: ${start_sec}초 ~ ${end_sec}초 (${duration}초)`);
             await execPromise(cmd, { timeout: 120000 });
             const stat = fs.statSync(outFile);
-            console.log(`[OK] chunk_${chunk_index}.mp4 (${(stat.size / 1024 / 1024).toFixed(1)}MB)`);
+            console.log(`[완료] chunk_${chunk_index}.mp4 (${(stat.size / 1024 / 1024).toFixed(1)}MB)`);
         } catch (error) {
-            console.error(`[ERROR] chunk ${chunk_index}: ${error.message}`);
+            console.error(`[오류] 청크 ${chunk_index}: ${error.message}`);
             if (fs.existsSync(outFile)) fs.unlinkSync(outFile);
             process.exit(1);
         }
     }
 
-    console.log(`[Done] ${chunks.length} segments created in ${outputDir}`);
+    console.log(`[완료] ${outputDir}에 ${chunks.length}개 세그먼트 생성`);
 }
 
 main();
