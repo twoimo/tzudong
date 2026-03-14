@@ -16,17 +16,18 @@ permissions:
   contents: write
 
 # [PERF] 동시 실행 방지 - 이전 실행 중이면 새 실행이 대기 (취소하지 않음)
-# 이중 실행으로 인한 분 낭비와 git 충돌을 방지
 concurrency:
   group: daily-crawl-pipeline
   cancel-in-progress: false
 
+# 전역 설정
+env:
+  # [FIX] Node.js 20 deprecation 경고 방지 - Node.js 24 강제 사용
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   daily-crawl:
     runs-on: ubuntu-latest
-    # [FIX] Node.js 20 deprecation 경고 방지 - Node.js 24 강제 사용
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     # [PERF] 안전 타임아웃: 최대 120분 (3000분/월 예산 고려)
     # 일일 평균 ~40-60분, 최악의 경우에도 120분 내 완료
     # 120분 * 30일 = 3600분이지만 대부분 60분 이내 종료하므로 예산 내 운영
@@ -72,8 +73,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/puppeteer
-          key: ${{ runner.os }}-puppeteer-${{ hashFiles('backend/package-lock.json') }}
+          key: ${{ runner.os }}-puppeteer-v2-${{ hashFiles('backend/package-lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-puppeteer-v2-
             ${{ runner.os }}-puppeteer-
 
       - name: Set up Node.js
@@ -160,8 +162,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama
-          key: ${{ runner.os }}-ollama-models-v2
+          key: ${{ runner.os }}-ollama-models-v3
           restore-keys: |
+            ${{ runner.os }}-ollama-models-v2
             ${{ runner.os }}-ollama-models-
 
       - name: Setup Ollama
