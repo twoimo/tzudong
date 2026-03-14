@@ -18,7 +18,7 @@ import re
 import sys
 import argparse
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 
 def normalize_name(name: str) -> str:
@@ -30,21 +30,16 @@ def normalize_name(name: str) -> str:
 
 
 def names_are_similar(name1: str, name2: str) -> bool:
-    """두 식당 이름이 동일한지 판단"""
+    """두 식당 이름이 동일 또는 포함 관계인지 판단"""
     n1 = normalize_name(name1)
     n2 = normalize_name(name2)
 
     if not n1 or not n2:
         return False
-
     if n1 == n2:
         return True
 
-    if n1 in n2 or n2 in n1:
-        if min(len(n1), len(n2)) >= 2:
-            return True
-
-    return False
+    return (n1 in n2 or n2 in n1) and min(len(n1), len(n2)) >= 2
 
 
 def merge_restaurant_pair(
@@ -129,11 +124,11 @@ def merge_all_restaurants(
         if not name:
             continue
 
-        found_idx: Optional[int] = None
-        for i, existing in enumerate(merged):
-            if names_are_similar(existing.get("origin_name", ""), name):
-                found_idx = i
-                break
+        found_idx = next(
+            (i for i, existing in enumerate(merged)
+             if names_are_similar(existing.get("origin_name", ""), name)),
+            None,
+        )
 
         if found_idx is not None:
             merged[found_idx] = merge_restaurant_pair(merged[found_idx], restaurant)
@@ -144,9 +139,11 @@ def merge_all_restaurants(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Merge chunk crawling results")
-    parser.add_argument("files", nargs="*", help="Response JSON files")
-    parser.add_argument("--dir", help="Directory containing response files")
+    parser = argparse.ArgumentParser(
+        description="청크별 크롤링 결과 병합 및 중복 제거"
+    )
+    parser.add_argument("files", nargs="*", help="응답 JSON 파일 목록")
+    parser.add_argument("--dir", help="응답 파일이 있는 디렉토리 경로")
     args = parser.parse_args()
 
     files: List[Path] = []

@@ -374,11 +374,15 @@ else
 fi
 echo "::endgroup::"
 
-# Step 4 완료 대기
+# Step 4 완료 대기 (실시간 로그 스트리밍)
 echo "::group::[Step 4] Heatmap & Frames (Awaiting)"
+log "INFO" "--- [Step 4 Frames] (실시간 로그) ---"
+tail -f "$TEMP_LOG_4" 2>/dev/null &
+TAIL_PID=$!
 wait $PID_4; EXIT_4=$?
-log "INFO" "--- [Step 4 Frames] ---"
-cat "$TEMP_LOG_4" | tee -a "$LOG_FILE"
+sleep 1
+kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
+cat "$TEMP_LOG_4" >> "$LOG_FILE"
 if [ $EXIT_4 -ne 0 ]; then
     log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
 fi
@@ -424,7 +428,8 @@ echo "::endgroup::"
 echo "::group::[Step 08] Chunk Multimodal Crawling"
 step_start
 log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
-bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+# [TEST] 최근 영상 1개로 테스트 — 정상 확인 후 전체 영상 대상으로 전환 예정
+bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang --url "https://www.youtube.com/watch?v=U2bg6PUn_NI" --force 2>&1 | tee -a "$LOG_FILE"
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
 
