@@ -420,24 +420,32 @@ bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang
 step_end "Step 7 (Gemini)"
 echo "::endgroup::"
 
-# 8. 평가 대상 선정
-echo "::group::[Step 08] Target Selection"
+# 8. 구간(Chunk) 분할 멀티모달 크롤링
+echo "::group::[Step 08] Chunk Multimodal Crawling"
 step_start
-log "INFO" "[Step 08] Target Selection..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/08-target-selection.py --channel tzuyang \
-  --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 08 (Target)"
+log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
+bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
 
-# 9. Rule 기반 평가 (위치/상호 검증)
-echo "::group::[Step 09] Rule Evaluation"
+# 9. 평가 대상 선정
+echo "::group::[Step 09] Target Selection"
 step_start
-log "INFO" "[Step 09] Rule Evaluation..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/09-rule-evaluation.py --channel tzuyang \
+log "INFO" "[Step 09] Target Selection..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/09-target-selection.py --channel tzuyang \
+  --crawling-path backend/restaurant-crawling/data/tzuyang \
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+step_end "Step 09 (Target)"
+echo "::endgroup::"
+
+# 10. Rule 기반 평가 (위치/상호 검증)
+echo "::group::[Step 10] Rule Evaluation"
+step_start
+log "INFO" "[Step 10] Rule Evaluation..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/10-rule-evaluation.py --channel tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 grep "Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
-step_end "Step 09 (Rule Eval)"
+step_end "Step 10 (Rule Eval)"
 echo "::endgroup::"
 
 # [PERF] Sync #3: Rule 평가 완료 후 저장 (LAAJ 전 백업 - 중요)
@@ -448,37 +456,37 @@ if ! check_timeout 90; then
     log "WARN" "시간 제한으로 LAAJ 평가를 건너뜁니다. 다음 실행에서 이어집니다."
 else
 
-# 10. LAAJ (LLM) 기반 평가
-echo "::group::[Step 10] LAAJ Evaluation"
+# 11. LAAJ (LLM) 기반 평가
+echo "::group::[Step 11] LAAJ Evaluation"
 step_start
-log "INFO" "[Step 10] LAAJ Evaluation..."
-bash backend/restaurant-evaluation/scripts/10-laaj-evaluation.sh --channel tzuyang \
+log "INFO" "[Step 11] LAAJ Evaluation..."
+bash backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
-step_end "Step 10 (LAAJ Eval)"
+step_end "Step 11 (LAAJ Eval)"
 echo "::endgroup::"
 
 fi # LAAJ 타임아웃 체크 종료
 
-# 11. 결과 변환 (Transforms)
-echo "::group::[Step 11] Transform Results"
+# 12. 결과 변환 (Transforms)
+echo "::group::[Step 12] Transform Results"
 step_start
-log "INFO" "[Step 11] Transform Results..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/11-transform.py --channel tzuyang \
+log "INFO" "[Step 12] Transform Results..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/12-transform.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 11 (Transform)"
+step_end "Step 12 (Transform)"
 echo "::endgroup::"
 
-# 12. Supabase 결과 삽입
-echo "::group::[Step 12] Insert to Supabase"
+# 13. Supabase 결과 삽입
+echo "::group::[Step 13] Insert to Supabase"
 step_start
-log "INFO" "[Step 12] Insert to Supabase..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/12-supabase-insert.py --channel tzuyang \
+log "INFO" "[Step 13] Insert to Supabase..."
+$PYTHON_CMD backend/restaurant-evaluation/scripts/13-supabase-insert.py --channel tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
 grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
-step_end "Step 12 (Supabase)"
+step_end "Step 13 (Supabase)"
 echo "::endgroup::"
 
 fi # SKIP_PHASE3 종료
@@ -614,31 +622,37 @@ if [ -f "$LOG_FILE" ]; then
         echo "| Gemini Analysis | - | Skipped |" >> "$SUMMARY_MD"
     fi
 
-    # 08. 평가 대상 선정
+    # 08. Chunk Multimodal
+    CHUNK_SUCCESS=$(grep -c "청크 멀티모달 크롤링 완료" "$LOG_FILE" 2>/dev/null || true)
+    if [ "$CHUNK_SUCCESS" -gt 0 ]; then
+        echo "| Chunk Multimodal | $CHUNK_SUCCESS | Analyzed |" >> "$SUMMARY_MD"
+    fi
+
+    # 09. 평가 대상 선정
     if grep -q "대상 비디오:" "$LOG_FILE"; then
         TARGET_CNT=$(grep "대상 비디오:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*비디오: //;s/개.*//')
         echo "| Target Selection | $TARGET_CNT | Selected |" >> "$SUMMARY_MD"
     fi
 
-    # 09. 규칙 기반 평가
+    # 10. 규칙 기반 평가
     if grep -q "Rule 평가 완료!" "$LOG_FILE"; then
         RULE_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep -v "LAAJ" | tail -n 1 | strip_ansi | sed 's/.*: //')
         echo "| Rule Eval | $RULE_SUCCESS | Verified |" >> "$SUMMARY_MD"
     fi
 
-    # 10. LAAJ 평가
+    # 11. LAAJ 평가
     if grep -q "LAAJ 평가 완료" "$LOG_FILE"; then
         LAAJ_SUCCESS=$(grep "성공:" "$LOG_FILE" | grep "LAAJ" -A 5 | tail -n 5 | grep "성공:" | strip_ansi | sed 's/.*: //')
         echo "| LAAJ Eval | $LAAJ_SUCCESS | Verified |" >> "$SUMMARY_MD"
     fi
 
-    # 11. 결과 변환
+    # 12. 결과 변환
     if grep -q "변환 완료:" "$LOG_FILE"; then
         TRANS_CNT=$(grep "변환 완료:" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.* 완료: //;s/개.*//')
         echo "| Transform | $TRANS_CNT | Processed |" >> "$SUMMARY_MD"
     fi
 
-    # 12. Supabase 저장
+    # 13. Supabase 저장
     SUPA_INSERTED=$(grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*Insert): //' | tr -cd '0-9')
     if [ -n "$SUPA_INSERTED" ]; then
         SUPA_SKIPPED=$(grep "건너뜀 (중복):" "$LOG_FILE" | tail -n 1 | strip_ansi | sed 's/.*중복): //' | tr -cd '0-9')
@@ -772,8 +786,8 @@ cat <<'EOF' >> "$SUMMARY_MD"
 |  [Step 3+4: Transcript+Frames (Parallel)] → [Step 3.1: Context] ══► [Git Sync #2]                       |
 |                                                                                                          |
 |  [Phase 3: AI Analysis]  ── (Timeout Check) ──                                                           |
-|  [Step 6.1: Enrich] → [Step 7: Gemini] → [Step 08: Target] → [Step 09: Rule] ══► [Git Sync #3]         |
-|  → [Step 10: LAAJ] → [Step 11: Transform] → [Step 12: Supabase]                                         |
+|  [Step 6.1: Enrich] → [Step 7: Gemini] → [Step 08: Chunk] → [Step 09: Target] → [Step 10: Rule]         |
+|  ══► [Git Sync #3] → [Step 11: LAAJ] → [Step 12: Transform] → [Step 13: Supabase]                                         |
 |                                                                                                          |
 |  [Phase 4: Finalize]                                                                                     |
 |  [Final Git Sync] → [Summary Report] ══► Done!                                                           |
