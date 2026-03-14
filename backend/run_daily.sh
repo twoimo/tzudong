@@ -416,13 +416,14 @@ $PYTHON_CMD backend/restaurant-crawling/scripts/06.1-transcript-document-with-me
 step_end "Step 6.1 (Enrich)"
 echo "::endgroup::"
 
-# 7. Gemini 기반 데이터 분석
-echo "::group::[Step 7] Gemini Data Analysis"
-step_start
-log "INFO" "[Step 7] Gemini 데이터 분석 중..."
-bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 7 (Gemini)"
-echo "::endgroup::"
+# 7. Gemini 기반 데이터 분석 (비활성화: 08-chunk-multimodal-crawling.sh가 전담)
+# echo "::group::[Step 7] Gemini Data Analysis"
+# step_start
+# log "INFO" "[Step 7] Gemini 데이터 분석 중..."
+# bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+# step_end "Step 7 (Gemini)"
+# echo "::endgroup::"
+log "INFO" "[Step 7] 비활성화됨 → Step 08 (Chunk Multimodal)이 전담 처리"
 
 # 8. 구간(Chunk) 분할 멀티모달 크롤링
 echo "::group::[Step 08] Chunk Multimodal Crawling"
