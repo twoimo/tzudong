@@ -550,7 +550,11 @@ $TRANSCRIPT_TRUNCATED
                     if [ $PARSE_ATTEMPT -lt 3 ]; then
                         log_warning "파싱 실패 (${PARSE_ATTEMPT}/3) - 재요청..."
                         sleep 10
-                        gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
+                        if command -v gemini &>/dev/null; then
+                            gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
+                        elif [ -n "$NODE_EXE" ]; then
+                            "$NODE_EXE" "$(normalize_path "$GEMINI_API_SCRIPT")" "$(normalize_path "$TEMP_PROMPT")" "$(normalize_path "$TEMP_RESPONSE")" 2>/dev/null
+                        fi
                     fi
                 fi
             done
@@ -643,12 +647,17 @@ main() {
     fi
     
     # Gemini CLI 확인 (Global)
-    if ! command -v gemini &> /dev/null; then
-        log_error "Gemini CLI 미설치. 'npm install -g @google/gemini-cli' 실행"
-        exit 1
+    HAS_GEMINI_CLI=false
+    if command -v gemini &> /dev/null; then
+        HAS_GEMINI_CLI=true
+        log_success "Gemini CLI 확인 완료"
+    else
+        log_warning "Gemini CLI 미설치 - Node.js API 모드로 진행합니다."
+        if [ -z "$NODE_EXE" ]; then
+            log_error "Gemini CLI도 없고 Node.js도 없습니다. 평가 불가."
+            exit 1
+        fi
     fi
-    
-    log_success "Gemini CLI 확인 완료"
     
     # API Key 정리 (Windows 호환성)
     if [ -n "$GEMINI_API_KEY" ]; then
@@ -710,12 +719,17 @@ main() {
     
     # 2. CLI Check (Fallback or Primary)
     if [ "$HEALTH_CHECK_PASSED" = false ]; then
-        if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
-            HEALTH_CHECK_PASSED=true
-            log_success "Health Check 성공 (Gemini CLI)"
+        if [ "$HAS_GEMINI_CLI" = true ]; then
+            if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
+                HEALTH_CHECK_PASSED=true
+                log_success "Health Check 성공 (Gemini CLI)"
+            else
+                log_error "Health Check 실패 (Gemini CLI)"
+                log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
+                exit 1
+            fi
         else
-            log_error "Health Check 실패 (Gemini CLI)"
-            log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
+            log_error "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가 불가."
             exit 1
         fi
     fi
