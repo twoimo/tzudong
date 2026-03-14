@@ -232,6 +232,7 @@ download_video() {
 
     log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"
     $yt_dlp_cmd --js-runtimes node $cookie_arg \
+        --impersonate Chrome \
         --extractor-args "youtube:player-client=ios,android,web" \
         -S "res:360" \
         -o "$output_template" \
