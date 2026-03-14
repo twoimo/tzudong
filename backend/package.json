@@ -1,6 +1,7 @@
 {
   "type": "module",
   "dependencies": {
+    "@google/genai": "^1.45.0",
     "@google/generative-ai": "^0.24.1",
     "browser-image-compression": "^2.0.2",
     "dotenv": "^16.4.5",
