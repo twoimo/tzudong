@@ -198,14 +198,14 @@ def validate_gemini_node(state: PipelineState) -> dict:
 
 
 def run_target(state: PipelineState) -> dict:
-    """Step 8: 평가 대상 선정"""
+    """Step 9: 평가 대상 선정"""
     step = StepName.TARGET.value
     _log(step, "평가 대상 선정 시작...")
     start = time.time()
 
     result = _run_script([
         _python_cmd(),
-        "backend/restaurant-evaluation/scripts/08-target-selection.py",
+        "backend/restaurant-evaluation/scripts/09-target-selection.py",
         "--channel", state["channel"],
         "--crawling-path", state["crawling_path"],
         "--evaluation-path", state["evaluation_path"],
@@ -224,7 +224,7 @@ def run_target(state: PipelineState) -> dict:
 
 
 def validate_target_node(state: PipelineState) -> dict:
-    """Step 8 후 검증: Selection 결과 검증"""
+    """Step 9 후 검증: Selection 결과 검증"""
     step = "validate_target"
     _log(step, "Selection 결과 검증 중...")
 
@@ -266,14 +266,14 @@ def validate_target_node(state: PipelineState) -> dict:
 
 
 def run_rule(state: PipelineState) -> dict:
-    """Step 9: Rule 기반 평가"""
+    """Step 10: Rule 기반 평가"""
     step = StepName.RULE.value
     _log(step, "Rule 기반 평가 시작...")
     start = time.time()
 
     result = _run_script([
         _python_cmd(),
-        "backend/restaurant-evaluation/scripts/09-rule-evaluation.py",
+        "backend/restaurant-evaluation/scripts/10-rule-evaluation.py",
         "--channel", state["channel"],
         "--evaluation-path", state["evaluation_path"],
     ])
@@ -291,7 +291,7 @@ def run_rule(state: PipelineState) -> dict:
 
 
 def validate_rule_node(state: PipelineState) -> dict:
-    """Step 9 후 검증: Rule 평가 결과 검증"""
+    """Step 10 후 검증: Rule 평가 결과 검증"""
     step = "validate_rule"
     _log(step, "Rule 평가 결과 검증 중...")
 
@@ -333,14 +333,14 @@ def validate_rule_node(state: PipelineState) -> dict:
 
 
 def run_laaj(state: PipelineState) -> dict:
-    """Step 10: LAAJ (LLM) 기반 평가"""
+    """Step 11: LAAJ (LLM) 기반 평가"""
     step = StepName.LAAJ.value
     _log(step, "LAAJ 평가 시작...")
     start = time.time()
 
     result = _run_script([
         "bash",
-        "backend/restaurant-evaluation/scripts/10-laaj-evaluation.sh",
+        "backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh",
         "--channel", state["channel"],
         "--crawling-path", state["crawling_path"],
         "--evaluation-path", state["evaluation_path"],
@@ -359,7 +359,7 @@ def run_laaj(state: PipelineState) -> dict:
 
 
 def validate_laaj_node(state: PipelineState) -> dict:
-    """Step 10 후 검증: LAAJ 평가 결과 검증 + 교차 검증"""
+    """Step 11 후 검증: LAAJ 평가 결과 검증 + 교차 검증"""
     step = "validate_laaj"
     _log(step, "LAAJ 평가 결과 및 교차 검증 중...")
 
@@ -410,14 +410,14 @@ def validate_laaj_node(state: PipelineState) -> dict:
 
 
 def run_transform(state: PipelineState) -> dict:
-    """Step 11: 결과 변환"""
+    """Step 12: 결과 변환"""
     step = StepName.TRANSFORM.value
     _log(step, "결과 변환 시작...")
     start = time.time()
 
     result = _run_script([
         _python_cmd(),
-        "backend/restaurant-evaluation/scripts/11-transform.py",
+        "backend/restaurant-evaluation/scripts/12-transform.py",
         "--channel", state["channel"],
         "--crawling-path", state["crawling_path"],
         "--evaluation-path", state["evaluation_path"],
@@ -436,7 +436,7 @@ def run_transform(state: PipelineState) -> dict:
 
 
 def validate_transform_node(state: PipelineState) -> dict:
-    """Step 11 후 검증: Transform 출력 검증"""
+    """Step 12 후 검증: Transform 출력 검증"""
     step = "validate_transform"
     _log(step, "Transform 결과 검증 중...")
 
@@ -514,7 +514,7 @@ def validate_transform_node(state: PipelineState) -> dict:
 
 
 def run_insert(state: PipelineState) -> dict:
-    """Step 12: Supabase 데이터 삽입"""
+    """Step 13: Supabase 데이터 삽입"""
     step = StepName.INSERT.value
 
     if state.get("dry_run"):
@@ -529,7 +529,7 @@ def run_insert(state: PipelineState) -> dict:
 
     result = _run_script([
         _python_cmd(),
-        "backend/restaurant-evaluation/scripts/12-supabase-insert.py",
+        "backend/restaurant-evaluation/scripts/13-supabase-insert.py",
         "--channel", state["channel"],
         "--evaluation-path", state["evaluation_path"],
     ])

@@ -109,7 +109,12 @@ async function main() {
         // 환경변수 CURRENT_MODEL 우선, 없으면 기본 모델 사용
         const modelName = process.env.CURRENT_MODEL || 'gemini-3.1-flash-lite-preview'; 
         console.log(`DEBUG: Getting Model=${modelName}...`);
-        const model = genAI.getGenerativeModel({ model: modelName });
+        const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+                thinkingConfig: { thinkingLevel: "HIGH" }
+            }
+        });
 
         console.log("DEBUG: Calling generateContent...");
         

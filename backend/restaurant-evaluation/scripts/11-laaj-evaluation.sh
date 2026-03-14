@@ -9,7 +9,7 @@
 # - 에러 처리 및 재시도
 #
 # 사용법:
-#   ./10-laaj-evaluation.sh --channel tzuyang --crawling-path data/tzuyang --evaluation-path data/tzuyang
+#   ./11-laaj-evaluation.sh --channel tzuyang --crawling-path data/tzuyang --evaluation-path data/tzuyang
 
 set -e
 
