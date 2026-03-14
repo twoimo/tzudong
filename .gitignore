@@ -88,3 +88,6 @@ backend/supabase/backup_db/*.sql
 apps/web/.cache
 OMX_MODERNIZATION_WORKLOG.md
 AGENTS.md
+
+.gemini/
+gha-creds-*.json
