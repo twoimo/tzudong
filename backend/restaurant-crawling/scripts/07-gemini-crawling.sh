@@ -271,6 +271,17 @@ process_channel() {
     local crawling_dir="$full_data_path/crawling"
     local errors_dir="$full_data_path/crawling_errors"
     local error_log="$full_data_path/crawling_errors.log"
+    local heatmap_dir="$full_data_path/heatmap"
+    
+    # FRAMES_ROOT_DIR: 04-extract-frames-with-heatmap.js와 동일 경로 사용
+    # 우선순위: 환경변수 > 로컬 Google Drive > data 하위 폴더
+    local FRAMES_ROOT_DIR="${FRAMES_ROOT_DIR:-$full_data_path/frames}"
+    if [ ! -d "$FRAMES_ROOT_DIR" ]; then
+        # Google Drive 로컬 경로 fallback (Windows 개발 환경)
+        if [ -d "H:/My Drive/04_빠른공유/tzudong_tzuyang_data/frames" ]; then
+            FRAMES_ROOT_DIR="H:/My Drive/04_빠른공유/tzudong_tzuyang_data/frames"
+        fi
+    fi
     
     # 폴더 생성 (errors_dir은 필요 시 생성)
     mkdir -p "$crawling_dir"
@@ -421,13 +432,39 @@ process_channel() {
         
         # 자막 추가 (30000자 제한)
         TRANSCRIPT_TRUNCATED=$(echo "$TRANSCRIPT" | head -c 30000)
+        
+        # 히트맵 프레임 폴더 탐색 (04-extract-frames-with-heatmap.js 에서 생성한 구조)
+        # 구조: FRAMES_ROOT_DIR/{videoId}/{recollectId}/{segIdx}/{ext}/{quality_fps}/
+        VIDEO_FRAMES_DIR="$FRAMES_ROOT_DIR/${VIDEO_ID}"
+        if [ ! -d "$VIDEO_FRAMES_DIR" ]; then
+            VIDEO_FRAMES_DIR=""  # 프레임이 아예 없거나 실패했을 경우 빈값
+            log_debug "프레임 없음: $FRAMES_ROOT_DIR/${VIDEO_ID} (텍스트 전용 모드)"
+        else
+            FRAME_COUNT=$(find "$VIDEO_FRAMES_DIR" -type f \( -name '*.jpg' -o -name '*.png' -o -name '*.jpeg' -o -name '*.webp' \) 2>/dev/null | wc -l)
+            log_info "히트맵 프레임 발견: ${FRAME_COUNT}장 (멀티모달 모드)"
+        fi
+        # 멀티모달 시스템 프롬프트 (히트맵 프레임이 있을 경우만 추가)
+        MULTIMODAL_INSTRUCTION=""
+        if [ -n "$VIDEO_FRAMES_DIR" ] && [ -d "$VIDEO_FRAMES_DIR" ]; then
+            MULTIMODAL_INSTRUCTION="
+
+<참고: 영상 프레임 이미지>
+아래에 첨부된 이미지들은 이 영상의 '가장 많이 다시 본 구간(히트맵 피크)'에서 추출된 프레임입니다.
+프레임에서 다음 정보를 추가로 추출해 주세요:
+- 식당 간판, 메뉴판, 외관 사진에서 음식점 이름 확인
+- 메뉴 가격표가 보이면 가격 정보 추출
+- 지역 특징(거리 풍경, 랑드마크 등)에서 위치 힌트 파악
+- 자막에서 얻은 정보와 이미지에서 얻은 정보를 교차 검증하여 정확도를 높여주세요.
+</참고: 영상 프레임 이미지>"
+        fi
+        
         PROMPT="$PROMPT_TEMPLATE
 
 <영상 정보>
 영상 제목: $TITLE
 유튜브 링크: $YOUTUBE_LINK
 </영상 정보>
-
+$MULTIMODAL_INSTRUCTION
 <참고: YouTube 자막>
 아래는 해당 영상의 자막입니다. 음식점 이름, 위치 힌트, 메뉴 정보 등을 파악하는 데 참고하세요.
 [자막 언어: $TRANSCRIPT_LANGUAGE]
@@ -447,12 +484,6 @@ $TRANSCRIPT_TRUNCATED
         URL_START_TIME=$(date +%s)
         GEMINI_START=$(date +%s)
         GEMINI_SUCCESS=false
-        
-        # 프레임 폴더를 찾아서 인자로 넣어줌
-        VIDEO_FRAMES_DIR="$full_data_path/frames/${VIDEO_ID}"
-        if [ ! -d "$VIDEO_FRAMES_DIR" ]; then
-            VIDEO_FRAMES_DIR=""  # 프레임이 아예 없거나 실패했을 경우 빈값
-        fi
         
         if [ -n "$NODE_EXE" ]; then
             log_debug "Node.js 멀티모달 API 호출 시도 ($CURRENT_MODEL)..."

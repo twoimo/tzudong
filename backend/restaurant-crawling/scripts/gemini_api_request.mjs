@@ -2,8 +2,50 @@ import fs from 'fs';
 import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+/**
+ * 히트맵 프레임 디렉토리 구조를 재귀 탐색하여 이미지 파일 목록을 수집
+ * 구조: {videoId}/{recollectId}/{segIdx}/{ext}/{quality_fps}/frame_*.jpg
+ * @param {string} rootDir - 프레임 루트 디렉토리
+ * @param {number} maxFrames - 최대 수집 프레임 수
+ * @returns {{ filePath: string, segIndex: string }[]} - 세그먼트 정보 포함 이미지 경로 배열
+ */
+function collectFramesRecursive(rootDir, maxFrames = 50) {
+    const imageFiles = [];
+
+    function walk(dir) {
+        if (!fs.existsSync(dir)) return;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (imageFiles.length >= maxFrames) return; // 상한 도달 시 즉시 중단
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                walk(fullPath);
+            } else if (/\.(jpg|jpeg|png|webp)$/i.test(entry.name)) {
+                imageFiles.push(fullPath);
+            }
+        }
+    }
+
+    walk(rootDir);
+
+    // 경로 기반 정렬 (세그먼트 순서 → 프레임 순서 자연 보존)
+    imageFiles.sort();
+
+    // 프레임이 maxFrames보다 많으면 균등 샘플링 (앞뒤 + 중간 고르게 뽑기)
+    if (imageFiles.length > maxFrames) {
+        const sampled = [];
+        const step = imageFiles.length / maxFrames;
+        for (let i = 0; i < maxFrames; i++) {
+            sampled.push(imageFiles[Math.floor(i * step)]);
+        }
+        return sampled;
+    }
+
+    return imageFiles;
+}
+
 async function main() {
-    console.log("DEBUG: JS Script Started (Multimodal Array Mode)");
+    console.log("DEBUG: JS Script Started (Multimodal Heatmap Frame Mode)");
     const args = process.argv.slice(2);
     // Usage: node gemini_api_request.mjs <prompt_file> <output_file> [frames_dir]
     if (args.length < 2) {
@@ -13,7 +55,7 @@ async function main() {
 
     const promptFile = args[0];
     const outputFile = args[1];
-    const framesDir = args[2] || ""; // 세 번째 인자로 프레임 폴더를 받을 수 있음 (옵션)
+    const framesDir = args[2] || ""; // 세 번째 인자: 히트맵 프레임 폴더 (옵션)
     
     console.log(`DEBUG: PromptFile=${promptFile}, OutputFile=${outputFile}, FramesDir=${framesDir}`);
     const apiKey = (process.env.GEMINI_API_KEY || '').trim();
@@ -31,44 +73,47 @@ async function main() {
         // 프롬프트 및 멀티모달(이미지) 데이터를 담을 배열
         const promptParts = [ promptText ];
 
-        // 프레임 폴더가 제공되었고, 실제로 존재할 경우 이미지 목록을 추가
+        // 히트맵 프레임 폴더가 제공되었고, 실제로 존재할 경우 이미지를 재귀 수집
         if (framesDir && fs.existsSync(framesDir)) {
-            console.log(`DEBUG: Scanning images in ${framesDir}...`);
-            const files = fs.readdirSync(framesDir)
-                .filter(file => file.endsWith('.jpg') || file.endsWith('.png') || file.endsWith('.jpeg'))
-                .sort(); // 이름 순 정렬 (프레임 순서대로)
-            
-            console.log(`DEBUG: Found ${files.length} images.`);
-            
-            // 이미지 최대 치 제한 (30~50장 정도로 너무 많으면 슬라이싱 추천)
-            const MAX_FRAMES = 50; 
-            const targetFiles = files.slice(0, MAX_FRAMES);
-            
-            for (const file of targetFiles) {
-                const filePath = path.join(framesDir, file);
+            console.log(`DEBUG: Recursively scanning heatmap frames in ${framesDir}...`);
+
+            const MAX_FRAMES = 50; // API Payload 크기 제한 (Base64 인코딩 시 ~20MB 이내 권장)
+            const imageFiles = collectFramesRecursive(framesDir, MAX_FRAMES);
+
+            console.log(`DEBUG: Collected ${imageFiles.length} frames (max ${MAX_FRAMES}).`);
+
+            // 프레임 이미지 → Base64 InlineData 변환
+            for (const filePath of imageFiles) {
                 const imageData = fs.readFileSync(filePath);
-                
+                const ext = path.extname(filePath).toLowerCase();
+                const mimeType = ext === '.png' ? 'image/png'
+                               : ext === '.webp' ? 'image/webp'
+                               : 'image/jpeg'; // jpg, jpeg 기본값
+
                 promptParts.push({
                     inlineData: {
                         data: imageData.toString("base64"),
-                        mimeType: file.endsWith('.png') ? "image/png" : "image/jpeg"
+                        mimeType
                     }
                 });
             }
-            console.log(`DEBUG: Appended ${targetFiles.length} images to prompt payload.`);
+
+            console.log(`DEBUG: Appended ${imageFiles.length} frames to prompt payload.`);
+        } else if (framesDir) {
+            console.log(`DEBUG: Frames directory not found: ${framesDir} (text-only mode)`);
         }
 
         console.log("DEBUG: Initializing GoogleGenerativeAI...");
         const genAI = new GoogleGenerativeAI(apiKey);
         
-        // --- 🤖 여기서 사용자 요구 모델 지정! 🤖 ---
+        // 환경변수 CURRENT_MODEL 우선, 없으면 기본 모델 사용
         const modelName = process.env.CURRENT_MODEL || 'gemini-3.1-flash-lite-preview'; 
         console.log(`DEBUG: Getting Model=${modelName}...`);
         const model = genAI.getGenerativeModel({ model: modelName });
 
         console.log("DEBUG: Calling generateContent...");
         
-        // 문자열 하나가 아니라, 배열(문자열 + 여러 Base64 이미지 객체)을 넘김!
+        // 텍스트 프롬프트 + Base64 이미지 배열을 함께 전송 (멀티모달)
         const result = await model.generateContent(promptParts);
         
         console.log("DEBUG: Content Generated. Getting response...");
