@@ -230,11 +230,9 @@ download_video() {
         [ -f "$cookie_file" ] && cookie_arg="--cookies $cookie_file"
     fi
 
-    log_info "yt-dlp 다운로드: $video_id (360p 우선, cmd=$yt_dlp_cmd)"
-    # [Fix] 360p 이하가 없는 영상 대응 — 점진적 해상도 fallback
-    # bestvideo[height<=360]+bestaudio → best[height<=360] → bestvideo[height<=480]+bestaudio → best[height<=480] → worst → best
+    log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"
     $yt_dlp_cmd --js-runtimes node $cookie_arg \
-        -f "bestvideo[height<=360]+bestaudio/best[height<=360]/bestvideo[height<=480]+bestaudio/best[height<=480]/worst/best" \
+        -S "res:360" \
         -o "$output_template" \
         "https://www.youtube.com/watch?v=$video_id" >&2
 
