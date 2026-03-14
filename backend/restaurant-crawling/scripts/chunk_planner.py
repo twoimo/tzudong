@@ -162,12 +162,18 @@ def main():
     parser.add_argument("--video-id", required=True)
     parser.add_argument("--duration", required=True, type=float, help="Video duration in seconds")
     parser.add_argument("--transcript-file", required=True, help="Path to transcript JSONL")
+    parser.add_argument("--output", default=None, help="Output file path (default: stdout)")
     args = parser.parse_args()
 
     segments = load_transcript_segments(Path(args.transcript_file))
     chunks = plan_chunks(args.video_id, args.duration, segments)
 
-    json.dump(chunks, sys.stdout, ensure_ascii=False)
+    if args.output:
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+        with open(args.output, "w", encoding="utf-8") as f:
+            json.dump(chunks, f, ensure_ascii=False)
+    else:
+        json.dump(chunks, sys.stdout, ensure_ascii=False)
 
 
 if __name__ == "__main__":

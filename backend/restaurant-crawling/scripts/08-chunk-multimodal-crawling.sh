@@ -91,16 +91,17 @@ else echo "python not found"; exit 1; fi
 
 jq_wrapper() { "$JQ_EXE" "$@" | tr -d '\r'; }
 
-mkdir -p "$SCRIPT_DIR/../temp"
+TEMP_BASE="$(cd "$SCRIPT_DIR/.." && pwd)/temp"
+mkdir -p "$TEMP_BASE"
 
 # ================================
 # 로그 함수
 # ================================
-log_info()    { echo -e "${BLUE}[$(date '+%H:%M:%S')] [INFO] $1${NC}"; }
-log_success() { echo -e "${GREEN}[$(date '+%H:%M:%S')] [OK] $1${NC}"; }
-log_warning() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] [WARN] $1${NC}"; }
+log_info()    { echo -e "${BLUE}[$(date '+%H:%M:%S')] [INFO] $1${NC}" >&2; }
+log_success() { echo -e "${GREEN}[$(date '+%H:%M:%S')] [OK] $1${NC}" >&2; }
+log_warning() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] [WARN] $1${NC}" >&2; }
 log_error()   { echo -e "${RED}[$(date '+%H:%M:%S')] [ERROR] $1${NC}" >&2; }
-log_debug()   { echo -e "${CYAN}[$(date '+%H:%M:%S')] [DEBUG] $1${NC}"; }
+log_debug()   { echo -e "${CYAN}[$(date '+%H:%M:%S')] [DEBUG] $1${NC}" >&2; }
 
 format_duration() {
     local seconds=$1
@@ -138,12 +139,12 @@ get_channels() {
 
 get_channel_data_path() {
     local channel=$1
-    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "  data_path:" | awk '{print $2}' | tr -d '"'
+    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "  data_path:" | awk '{print $2}' | tr -d '"' | tr -d '\r'
 }
 
 get_channel_name() {
     local channel=$1
-    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "name:" | sed 's/.*name: *//' | tr -d '"'
+    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "name:" | sed 's/.*name: *//' | tr -d '"' | tr -d '\r'
 }
 
 get_latest_jsonl_data() {
@@ -188,7 +189,7 @@ download_video() {
 
         if [ -n "$gdrive_file" ]; then
             log_info "GDrive 다운로드: $gdrive_file"
-            rclone copy "$GDRIVE_REMOTE_PATH/$gdrive_file" "$output_dir" --progress 2>/dev/null
+            rclone copy "$GDRIVE_REMOTE_PATH/$gdrive_file" "$output_dir" --progress >&2 2>/dev/null
             local downloaded="$output_dir/$gdrive_file"
             if [ -f "$downloaded" ]; then
                 echo "$downloaded"
@@ -199,24 +200,33 @@ download_video() {
     fi
 
     # 3. yt-dlp 다운로드
-    local yt_dlp_cmd="yt-dlp"
-    if ! command -v yt-dlp &> /dev/null; then
-        if command -v python &> /dev/null; then yt_dlp_cmd="python -m yt_dlp"
-        elif command -v python3 &> /dev/null; then yt_dlp_cmd="python3 -m yt_dlp"
-        else log_error "yt-dlp not found"; return 1; fi
-    fi
+    local yt_dlp_cmd=""
+    if command -v yt-dlp &> /dev/null; then yt_dlp_cmd="yt-dlp"
+    elif command -v yt-dlp.exe &> /dev/null; then yt_dlp_cmd="yt-dlp.exe"
+    elif command -v python3 &> /dev/null && python3 -m yt_dlp --version &> /dev/null; then yt_dlp_cmd="python3 -m yt_dlp"
+    elif command -v python &> /dev/null && python -m yt_dlp --version &> /dev/null; then yt_dlp_cmd="python -m yt_dlp"
+    else log_error "yt-dlp not found"; return 1; fi
 
     local output_template="$output_dir/${video_id}.%(ext)s"
+    local cookie_file="$PROJECT_ROOT/restaurant-crawling/data/cookies.txt"
     local cookie_arg=""
-    if [ -f "$PROJECT_ROOT/restaurant-crawling/data/cookies.txt" ]; then
-        cookie_arg="--cookies $PROJECT_ROOT/restaurant-crawling/data/cookies.txt"
+
+    if [[ "$yt_dlp_cmd" == *".exe"* ]] && command -v wslpath &> /dev/null; then
+        output_template="$(wslpath -w "$output_dir")\\${video_id}.%(ext)s"
+        if [ -f "$cookie_file" ]; then
+            cookie_arg="--cookies $(wslpath -w "$cookie_file")"
+        fi
+    else
+        if [ -f "$cookie_file" ]; then
+            cookie_arg="--cookies $cookie_file"
+        fi
     fi
 
-    log_info "yt-dlp 다운로드: $video_id (360p)"
-    $yt_dlp_cmd $cookie_arg \
+    log_info "yt-dlp 다운로드: $video_id (360p, cmd=$yt_dlp_cmd)"
+    $yt_dlp_cmd --js-runtimes node $cookie_arg \
         -f "bestvideo[height<=360]+bestaudio/best[height<=360]/best" \
         -o "$output_template" \
-        "https://www.youtube.com/watch?v=$video_id" 2>/dev/null
+        "https://www.youtube.com/watch?v=$video_id" >&2
 
     for ext in mp4 webm mkv; do
         local downloaded="$output_dir/${video_id}.${ext}"
@@ -244,7 +254,7 @@ process_video_chunks() {
 
     local crawling_dir="$full_data_path/crawling"
     local errors_dir="$full_data_path/crawling_errors"
-    local temp_dir="$SCRIPT_DIR/../temp/chunk_${video_id}"
+    local temp_dir="$TEMP_BASE/chunk_${video_id}"
 
     mkdir -p "$temp_dir" "$crawling_dir"
 
@@ -252,18 +262,18 @@ process_video_chunks() {
     local META_DATA
     META_DATA=$(get_latest_jsonl_data "$meta_file")
     local TITLE
-    TITLE=$(echo "$META_DATA" | "$JQ_EXE" -r '.title // ""' 2>/dev/null | head -c 100)
+    TITLE=$(echo "$META_DATA" | jq_wrapper -r '.title // ""' 2>/dev/null | head -c 100)
     local DURATION
-    DURATION=$(echo "$META_DATA" | "$JQ_EXE" -r '.duration // 0' 2>/dev/null)
+    DURATION=$(echo "$META_DATA" | jq_wrapper -r '.duration // 0' 2>/dev/null)
     local META_RECOLLECT_ID
-    META_RECOLLECT_ID=$(echo "$META_DATA" | "$JQ_EXE" -r '.recollect_id // 0' 2>/dev/null)
+    META_RECOLLECT_ID=$(echo "$META_DATA" | jq_wrapper -r '.recollect_id // 0' 2>/dev/null)
 
     local TRANSCRIPT_DATA
     TRANSCRIPT_DATA=$(get_latest_jsonl_data "$transcript_file")
     local TRANSCRIPT_LANGUAGE
-    TRANSCRIPT_LANGUAGE=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '.language // "ko"' 2>/dev/null)
+    TRANSCRIPT_LANGUAGE=$(echo "$TRANSCRIPT_DATA" | jq_wrapper -r '.language // "ko"' 2>/dev/null)
     local TRANSCRIPT_RECOLLECT_ID
-    TRANSCRIPT_RECOLLECT_ID=$(echo "$TRANSCRIPT_DATA" | "$JQ_EXE" -r '.recollect_id // 0' 2>/dev/null)
+    TRANSCRIPT_RECOLLECT_ID=$(echo "$TRANSCRIPT_DATA" | jq_wrapper -r '.recollect_id // 0' 2>/dev/null)
 
     if [ "$DURATION" = "0" ] || [ -z "$DURATION" ]; then
         log_warning "영상 길이 정보 없음: $video_id"
@@ -278,16 +288,18 @@ process_video_chunks() {
     $PYTHON_CMD "$CHUNK_PLANNER" \
         --video-id "$video_id" \
         --duration "$DURATION" \
-        --transcript-file "$transcript_file" > "$chunks_json"
+        --transcript-file "$transcript_file" \
+        --output "$chunks_json"
+    local PLANNER_EXIT=$?
 
-    if [ $? -ne 0 ] || [ ! -s "$chunks_json" ]; then
-        log_error "청크 계획 생성 실패"
+    if [ $PLANNER_EXIT -ne 0 ] || [ ! -s "$chunks_json" ]; then
+        log_error "청크 계획 생성 실패 (exit=$PLANNER_EXIT)"
         rm -rf "$temp_dir"
         return 1
     fi
 
     local TOTAL_CHUNKS
-    TOTAL_CHUNKS=$(jq_wrapper 'length' "$chunks_json")
+    TOTAL_CHUNKS=$(cat "$chunks_json" | jq_wrapper 'length')
     log_success "청크 계획: ${TOTAL_CHUNKS}개 청크"
 
     # Step 2: 비디오 다운로드
@@ -332,9 +344,9 @@ process_video_chunks() {
 
     for i in $(seq 0 $((TOTAL_CHUNKS - 1))); do
         local chunk_start chunk_end chunk_transcript
-        chunk_start=$(jq_wrapper -r ".[$i].start_sec" "$chunks_json")
-        chunk_end=$(jq_wrapper -r ".[$i].end_sec" "$chunks_json")
-        chunk_transcript=$(jq_wrapper -r ".[$i].transcript_text" "$chunks_json")
+        chunk_start=$(cat "$chunks_json" | jq_wrapper -r ".[$i].start_sec")
+        chunk_end=$(cat "$chunks_json" | jq_wrapper -r ".[$i].end_sec")
+        chunk_transcript=$(cat "$chunks_json" | jq_wrapper -r ".[$i].transcript_text")
 
         local start_mm=$(printf "%02d:%02d" $((${chunk_start%.*} / 60)) $((${chunk_start%.*} % 60)))
         local end_mm=$(printf "%02d:%02d" $((${chunk_end%.*} / 60)) $((${chunk_end%.*} % 60)))
@@ -493,16 +505,15 @@ process_channel() {
     log_info "채널: $channel ($channel_name) - 청크 멀티모달"
     log_info "=========================================="
 
-    if [ ! -f "$urls_file" ]; then
-        log_warning "urls.txt 없음: $urls_file"
-        return 0
-    fi
-
     # 대상 URL 결정
     local URLS=()
     if [ -n "$SINGLE_URL" ]; then
         URLS=("$SINGLE_URL")
     else
+        if [ ! -f "$urls_file" ]; then
+            log_warning "urls.txt 없음: $urls_file"
+            return 0
+        fi
         mapfile -t URLS < <($PYTHON_CMD "$PARSER_SCRIPT" scan --channel "$channel" | tr -d '\r')
     fi
 
@@ -622,9 +633,9 @@ main() {
     local HC_RESPONSE="$SCRIPT_DIR/../temp/hc_response.json"
     echo "1+1=? Answer with just the number." > "$HC_PROMPT"
 
-    # 간단한 텍스트 헬스체크 (비디오 없이)
+    # 간단한 텍스트 헬스체크 (비디오 없이, backend/에서 실행하여 node_modules 해결)
     set +e
-    "$NODE_EXE" -e "
+    (cd "$PROJECT_ROOT" && "$NODE_EXE" --input-type=module -e "
 import { GoogleGenAI } from '@google/genai';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const r = await ai.models.generateContent({
@@ -632,7 +643,7 @@ const r = await ai.models.generateContent({
     contents: '1+1=?'
 });
 console.log(r.text);
-" > "$HC_RESPONSE" 2>/dev/null
+" > "$HC_RESPONSE" 2>"$SCRIPT_DIR/../temp/hc_stderr.log")
     local HC_EXIT=$?
     set -e
 
@@ -641,8 +652,11 @@ console.log(r.text);
     if [ $HC_EXIT -eq 0 ]; then
         log_success "Health Check 성공"
     else
-        log_error "Health Check 실패 - API Key 또는 네트워크 확인"
-        rm -f "$HC_RESPONSE"
+        log_error "Health Check 실패 (exit: $HC_EXIT)"
+        if [ -f "$SCRIPT_DIR/../temp/hc_stderr.log" ]; then
+            log_error "Stderr: $(cat "$SCRIPT_DIR/../temp/hc_stderr.log")"
+        fi
+        rm -f "$HC_RESPONSE" "$SCRIPT_DIR/../temp/hc_stderr.log"
         exit 1
     fi
     rm -f "$HC_RESPONSE"
