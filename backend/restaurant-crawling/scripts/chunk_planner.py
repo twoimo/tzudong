@@ -16,14 +16,14 @@ import json
 import sys
 import argparse
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from utils.chunk_utils import format_time, Segment
 
 
 def compute_chunk_duration(total_duration: float) -> float:
-    """영상 길이에 따른 적응형 청크 크기 (초 단위)
+    """영상 길이에 따른 적응형 청크 크기 반환 (초 단위)
 
     360p mp4 비트레이트 ~500-1000kbps 기준, Gemini File API 업로드 제한(~20MB) 고려.
     """
@@ -46,16 +46,14 @@ def align_to_subtitle_boundary(
     if not segments:
         return target_sec
 
-    best = target_sec
-    best_dist = tolerance + 1
+    within_tolerance = [
+        seg["start"] for seg in segments
+        if abs(seg["start"] - target_sec) <= tolerance
+    ]
+    if not within_tolerance:
+        return target_sec
 
-    for seg in segments:
-        dist = abs(seg["start"] - target_sec)
-        if dist < best_dist and dist <= tolerance:
-            best = seg["start"]
-            best_dist = dist
-
-    return best
+    return min(within_tolerance, key=lambda s: abs(s - target_sec))
 
 
 def format_transcript_range(
@@ -69,9 +67,7 @@ def format_transcript_range(
             break
         if seg_start < start_sec:
             seg_dur = seg.get("duration")
-            if seg_dur and seg_start + seg_dur <= start_sec:
-                continue
-            if not seg_dur:
+            if not seg_dur or seg_start + seg_dur <= start_sec:
                 continue
         lines.append(f"[{format_time(seg_start)}] {seg['text']}")
     return "\n".join(lines)
@@ -80,6 +76,7 @@ def format_transcript_range(
 def plan_chunks(
     video_id: str, duration: float, segments: List[Segment]
 ) -> List[dict]:
+    """영상을 자막 경계에 맞춰 청크 목록으로 분할"""
     chunk_sec = compute_chunk_duration(duration)
 
     if chunk_sec >= duration:
@@ -111,14 +108,14 @@ def plan_chunks(
         if aligned_end <= current_start:
             aligned_end = raw_end
 
-        transcript_text = format_transcript_range(segments, current_start, aligned_end)
-
         chunks.append(
             {
                 "chunk_index": chunk_index,
                 "start_sec": round(current_start, 1),
                 "end_sec": round(aligned_end, 1),
-                "transcript_text": transcript_text,
+                "transcript_text": format_transcript_range(
+                    segments, current_start, aligned_end
+                ),
             }
         )
 
@@ -129,6 +126,7 @@ def plan_chunks(
 
 
 def load_transcript_segments(transcript_file: Path) -> List[Segment]:
+    """자막 JSONL 파일의 마지막 줄에서 세그먼트 목록을 로드"""
     if not transcript_file.exists():
         return []
 
@@ -141,28 +139,34 @@ def load_transcript_segments(transcript_file: Path) -> List[Segment]:
     data = json.loads(lines[-1])
     raw_segments = data.get("transcript", [])
 
-    result: List[Segment] = []
-    for raw in raw_segments:
-        result.append(
-            Segment(
-                start=float(raw.get("start", 0)),
-                duration=(
-                    float(raw["duration"])
-                    if raw.get("duration") is not None
-                    else None
-                ),
-                text=raw.get("text", ""),
-            )
+    return [
+        Segment(
+            start=float(raw.get("start", 0)),
+            duration=(
+                float(raw["duration"])
+                if raw.get("duration") is not None
+                else None
+            ),
+            text=raw.get("text", ""),
         )
-    return result
+        for raw in raw_segments
+    ]
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Adaptive video chunk planner")
-    parser.add_argument("--video-id", required=True)
-    parser.add_argument("--duration", required=True, type=float, help="Video duration in seconds")
-    parser.add_argument("--transcript-file", required=True, help="Path to transcript JSONL")
-    parser.add_argument("--output", default=None, help="Output file path (default: stdout)")
+    parser = argparse.ArgumentParser(
+        description="적응형 영상 청크 계획 생성기"
+    )
+    parser.add_argument("--video-id", required=True, help="영상 ID")
+    parser.add_argument(
+        "--duration", required=True, type=float, help="영상 길이 (초)"
+    )
+    parser.add_argument(
+        "--transcript-file", required=True, help="자막 JSONL 파일 경로"
+    )
+    parser.add_argument(
+        "--output", default=None, help="출력 파일 경로 (기본값: stdout)"
+    )
     args = parser.parse_args()
 
     segments = load_transcript_segments(Path(args.transcript_file))
