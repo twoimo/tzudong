@@ -236,9 +236,21 @@ jobs:
         env:
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
         run: |
-          if [ -d "backend/restaurant-crawling/data/frames" ]; then
-            echo "Syncing frames to GDrive..."
-            rclone copy "backend/restaurant-crawling/data/frames" "$GDRIVE_FRAMES_PATH" --progress
-          else
+          if [ ! -d "backend/restaurant-crawling/data/frames" ]; then
             echo "No frames directory found, skipping upload."
+            exit 0
+          fi
+
+          # [PERF] 최근 2시간 내 생성된 파일만 카운트 (신규 프레임 여부 확인)
+          NEW_COUNT=$(find "backend/restaurant-crawling/data/frames" -name "*.jpg" -mmin -120 2>/dev/null | wc -l)
+          
+          if [ "$NEW_COUNT" -gt 0 ]; then
+            echo "Uploading $NEW_COUNT new frames to GDrive..."
+            # --no-traverse: 리모트 전체 리스팅 스킵 (15,000+ 파일 checking 방지)
+            # --max-age 2h: 최근 2시간 내 변경된 파일만 업로드 대상
+            # --transfers 8 --checkers 16: 병렬 전송/체크로 속도 향상
+            rclone copy "backend/restaurant-crawling/data/frames" "$GDRIVE_FRAMES_PATH" \
+              --progress --no-traverse --max-age 2h --transfers 8 --checkers 16
+          else
+            echo "No new frames detected, skipping GDrive upload."
           fi
