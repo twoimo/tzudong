@@ -89,6 +89,16 @@ if command -v python &> /dev/null; then PYTHON_CMD="python"
 elif command -v python3 &> /dev/null; then PYTHON_CMD="python3"
 else echo "[ERROR] python을 찾을 수 없습니다"; exit 1; fi
 
+# ffmpeg 감지: 시스템 PATH → node_modules/ffmpeg-static 폴백
+# yt-dlp 비디오+오디오 병합에 ffmpeg이 필요
+if ! command -v ffmpeg &> /dev/null && [ -n "$NODE_EXE" ]; then
+    FFMPEG_STATIC_PATH=$("$NODE_EXE" -e "try{console.log(require('ffmpeg-static'))}catch(e){}" 2>/dev/null)
+    if [ -n "$FFMPEG_STATIC_PATH" ] && [ -f "$FFMPEG_STATIC_PATH" ]; then
+        export PATH="$(dirname "$FFMPEG_STATIC_PATH"):$PATH"
+        echo "[$(date '+%H:%M:%S')] [INFO] ffmpeg-static → PATH 추가: $FFMPEG_STATIC_PATH" >&2
+    fi
+fi
+
 # Windows jq.exe는 WSL 경로를 직접 읽지 못하므로 반드시 stdin으로 전달
 jq_wrapper() { "$JQ_EXE" "$@" | tr -d '\r'; }
 
@@ -226,6 +236,7 @@ download_video() {
         -o "$output_template" \
         "https://www.youtube.com/watch?v=$video_id" >&2
 
+    # 정확한 파일명 또는 형식 코드 포함 파일명(*.f396.mp4 등) 모두 탐색
     for ext in mp4 webm mkv; do
         local downloaded="$output_dir/${video_id}.${ext}"
         if [ -f "$downloaded" ]; then
@@ -233,6 +244,14 @@ download_video() {
             return 0
         fi
     done
+    # ffmpeg 미설치 시 yt-dlp가 형식 코드 포함 파일명으로 저장하는 경우 대응
+    local fallback
+    fallback=$(find "$output_dir" -maxdepth 1 -name "${video_id}.*" -type f \( -name "*.mp4" -o -name "*.webm" -o -name "*.mkv" \) 2>/dev/null | head -1)
+    if [ -n "$fallback" ] && [ -f "$fallback" ]; then
+        log_warning "형식 코드 포함 파일 발견: $(basename "$fallback")"
+        echo "$fallback"
+        return 0
+    fi
 
     log_error "비디오 다운로드 실패: $video_id"
     return 1
