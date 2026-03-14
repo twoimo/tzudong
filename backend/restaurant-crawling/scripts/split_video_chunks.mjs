@@ -17,7 +17,22 @@ import util from 'util';
 import ffmpegStatic from 'ffmpeg-static';
 
 const execPromise = util.promisify(exec);
-const ffmpegPath = ffmpegStatic;
+
+function resolveFfmpegPath() {
+    if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
+    if (fs.existsSync(ffmpegStatic)) return ffmpegStatic;
+    const exePath = ffmpegStatic + '.exe';
+    if (fs.existsSync(exePath)) return exePath;
+    return 'ffmpeg';
+}
+const ffmpegPath = resolveFfmpegPath();
+const isWindowsExe = ffmpegPath.endsWith('.exe');
+
+function toExePath(p) {
+    if (!isWindowsExe) return p;
+    const m = p.match(/^\/mnt\/([a-z])\/(.*)/);
+    return m ? `${m[1].toUpperCase()}:/${m[2]}` : p;
+}
 
 async function main() {
     const args = process.argv.slice(2);
@@ -62,7 +77,8 @@ async function main() {
             ? '-c:v libx264 -c:a aac -preset ultrafast -crf 28'
             : '-c copy';
 
-        const cmd = `"${ffmpegPath}" -y -ss ${start_sec} -t ${duration} -i "${videoPath}" ${codecArgs} "${outFile}"`;
+        const cmd = `"${ffmpegPath}" -y -ss ${start_sec} -t ${duration} -i "${toExePath(videoPath)}" ${codecArgs} "${toExePath(outFile)}"`;
+
 
         try {
             console.log(`[Split] chunk ${chunk_index}: ${start_sec}s ~ ${end_sec}s (${duration}s)`);
