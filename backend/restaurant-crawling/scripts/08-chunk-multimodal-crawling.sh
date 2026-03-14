@@ -233,8 +233,7 @@ download_video() {
     log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"
     $yt_dlp_cmd --js-runtimes node $cookie_arg \
         --impersonate Chrome \
-        --extractor-args "youtube:player-client=ios,android,web" \
-        -S "res:360" \
+        -f "bestvideo[height<=360]+bestaudio/best[height<=360]/best" \
         -o "$output_template" \
         "https://www.youtube.com/watch?v=$video_id" >&2
 
@@ -242,6 +241,10 @@ download_video() {
     for ext in mp4 webm mkv; do
         local downloaded="$output_dir/${video_id}.${ext}"
         if [ -f "$downloaded" ]; then
+            if [ -n "$GDRIVE_REMOTE_PATH" ] && command -v rclone &> /dev/null; then
+                log_info "GDrive 캐시에 로컬 비디오 업로드 중..."
+                rclone copy "$downloaded" "$GDRIVE_REMOTE_PATH" --progress >&2 2>/dev/null || true
+            fi
             echo "$downloaded"
             return 0
         fi
@@ -251,6 +254,10 @@ download_video() {
     fallback=$(find "$output_dir" -maxdepth 1 -name "${video_id}.*" -type f \( -name "*.mp4" -o -name "*.webm" -o -name "*.mkv" \) 2>/dev/null | head -1)
     if [ -n "$fallback" ] && [ -f "$fallback" ]; then
         log_warning "형식 코드 포함 파일 발견: $(basename "$fallback")"
+        if [ -n "$GDRIVE_REMOTE_PATH" ] && command -v rclone &> /dev/null; then
+            log_info "GDrive 캐시에 로컬 비디오 확장 업로드 중..."
+            rclone copy "$fallback" "$GDRIVE_REMOTE_PATH" --progress >&2 2>/dev/null || true
+        fi
         echo "$fallback"
         return 0
     fi
