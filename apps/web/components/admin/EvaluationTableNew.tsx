@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
-import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -26,7 +25,6 @@ import {
 } from '@/components/ui/tooltip';
 import { ChevronDown, ChevronUp, Check, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X, Undo2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatCategoryText } from '@/lib/category-utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 
 interface EvaluationTableProps {
@@ -362,13 +360,10 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
                   {/* 성공 상태 - 썸네일 표시 */}
                   {thumbnailState === 'loaded' && thumbnailUrl && (
-                    <NextImage
+                    <img
                       src={thumbnailUrl}
                       alt="유튜브 썸네일"
-                      fill
-                      unoptimized
-                      sizes="(max-width: 640px) 80px, 96px"
-                      className="object-cover"
+                      className="w-full h-full object-cover"
                     />
                   )}
 
@@ -601,8 +596,6 @@ export function EvaluationTable({
   hasMore = false,
   isLoadingMore = false,
 }: EvaluationTableProps) {
-  void onRegisterMissing;
-  void onResolveConflict;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showMobileAdvancedFilters, setShowMobileAdvancedFilters] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
@@ -1213,7 +1206,9 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
           ? '-'
           : getBooleanLabel(record.evaluation_results?.category_TF?.eval_value);
 
-        const categoryText = formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-');
+        const categoryText = record.categories && record.categories.length > 0
+          ? record.categories.join(', ')
+          : (record.restaurant_info?.category || '-');
         const originAddress = getOriginAddress(record);
         const roadAddress = record.restaurant_info?.naver_address_info?.road_address || record.road_address || '-';
         const jibunAddress = record.restaurant_info?.naver_address_info?.jibun_address || record.jibun_address || '-';
@@ -1266,14 +1261,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 >
                   <div className="relative h-16 w-24 overflow-hidden rounded bg-muted">
                     {thumbnailInfo?.state === 'loaded' && thumbnailInfo.url ? (
-                      <NextImage
-                        src={thumbnailInfo.url}
-                        alt="유튜브 썸네일"
-                        fill
-                        unoptimized
-                        sizes="96px"
-                        className="object-cover"
-                      />
+                      <img src={thumbnailInfo.url} alt="유튜브 썸네일" className="h-full w-full object-cover" />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -1421,7 +1409,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   </dl>
                   {record.evaluation_results?.category_TF?.category_revision && (
                     <p className="mt-2 text-amber-700">
-                      카테고리 수정안: {formatCategoryText(record.evaluation_results?.category_TF.category_revision, '-')}
+                      카테고리 수정안: {record.evaluation_results.category_TF.category_revision}
                     </p>
                   )}
                 </div>

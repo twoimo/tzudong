@@ -18,9 +18,6 @@ interface UseNaverMapsOptions {
     strategy?: 'afterInteractive' | 'lazyOnload';
 }
 
-type IdleCallbackHandle = number;
-type RequestIdleCallbackLike = (callback: () => void, options?: { timeout: number }) => IdleCallbackHandle;
-
 export function useNaverMaps(options: UseNaverMapsOptions = {}) {
     const { autoLoad = false, strategy = 'afterInteractive' } = options;
 
@@ -107,11 +104,8 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
         // 전략에 따른 로드 실행
         if (strategy === 'lazyOnload') {
             // 브라우저 유휴 상태일 때 로드하거나 2초 후 로드
-            const idleWindow = window as Window & {
-                requestIdleCallback?: RequestIdleCallbackLike;
-            };
-            if (typeof idleWindow.requestIdleCallback === 'function') {
-                idleWindow.requestIdleCallback(() => injectScript(), { timeout: 2000 });
+            if ('requestIdleCallback' in window) {
+                (window as any).requestIdleCallback(() => injectScript(), { timeout: 2000 });
             } else {
                 setTimeout(injectScript, 2000);
             }
@@ -131,3 +125,4 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
 
     return { isLoaded, loadError, isLoading, load };
 }
+

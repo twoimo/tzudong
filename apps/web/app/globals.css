@@ -110,11 +110,6 @@ All colors MUST be HSL.
 
     /* 모바일 하단 네비게이션 높이 (동적 업데이트) */
     --mobile-bottom-nav-height: 60px;
-    --mobile-bottom-nav-effective-height: 60px;
-    --mobile-sheet-hide-bottom-nav: 0;
-    --mobile-sheet-header-progress: 0;
-    --mobile-sheet-header-offset: 0px;
-    --app-header-height: 56px;
 
     --sidebar-background: 38 30% 98%;
     --sidebar-foreground: 24 10% 10%;
@@ -245,21 +240,6 @@ div[style*="z-index"]>div>.custom-marker {
   }
 }
 
-/* 인사이트 채팅 타이핑 인디케이터 */
-@keyframes chatTypingPulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
 /* 네이버 지도 로고 숨기기 CSS 제거됨 (약관 준수) */
 
 /* ============================================
@@ -278,41 +258,6 @@ div[style*="z-index"]>div>.custom-marker {
 .text-wrap-anywhere {
   overflow-wrap: anywhere;
   word-break: break-word;
-}
-
-/* ==========================
-   접근성/키보드 탐색 개선
-   ========================== */
-
-.skip-link {
-  position: fixed;
-  inset-inline: auto 0;
-  top: 0;
-  z-index: 9999;
-  transform: translateY(-150%);
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  padding: 0.5rem 1rem;
-  border-radius: 0 0 0.75rem 0.75rem;
-  font-weight: 700;
-  transition: transform 0.2s ease;
-}
-
-.skip-link:focus-visible {
-  transform: translateY(0);
-}
-
-:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
-}
-
-/* SVG 기반 인터랙티브 텍스트 전용 포커스 표시 */
-.wordcloud-keyword:focus-visible {
-  outline: none;
-  stroke: hsl(var(--ring));
-  stroke-width: 0.8px;
-  paint-order: stroke;
 }
 
 /* [PERF] GPU 가속 레이어 프로모션 */

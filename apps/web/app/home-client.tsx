@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
-import { toast } from "@/lib/no-toast";
+import { toast } from "sonner";
 import { Restaurant } from "@/types/restaurant";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
@@ -71,24 +70,10 @@ const ReviewModal = dynamic(
 import { Announcement } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
-
-type AnnouncementRow = {
-    id: string;
-    title: string;
-    content: string;
-    is_active: boolean;
-    show_on_banner: boolean;
-    priority: number;
-    created_at: string;
-    updated_at: string;
-};
-
-const ANNOUNCEMENT_HALF_HEIGHT = 50;
-
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
-    const { isDesktop, isMobileOrTablet } = useDeviceType();
+    const { isDesktop } = useDeviceType();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
     const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
@@ -100,9 +85,9 @@ export default function HomeClient() {
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-    const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
-    const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
-    const openDetailPanelRef = useRef<(restaurant: Restaurant, focusZoom?: number) => void>(() => {});
+
+    // [리뷰 공유] 공유 링크로 접속 시 리뷰 하이라이트용 ID
+    const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
 
     // [Fix] 마운트 시점 기록 - 라우트 변경 후 돌아왔을 때 지도 강제 리마운트
     const [mapMountKey] = useState(() => Date.now());
@@ -119,42 +104,44 @@ export default function HomeClient() {
 
         return () => clearTimeout(timer);
     }, []);
+
+
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
         const restaurantId = searchParams.get('r') || searchParams.get('restaurant'); // 피드에서 restaurant 파라미터 사용
+        const restaurantName = searchParams.get('q'); // 공유 URL에서 맛집 이름
 
         if (panelParam === 'announcement') {
             if (announcementId) {
                 (async () => {
                     try {
                         const { supabase } = await import('@/integrations/supabase/client');
-                        const announcementsTable = supabase.from('announcements' as never);
-                        const { data: rawAnnouncement, error } = await announcementsTable
+                        const { data, error } = await (supabase as any)
+                            .from('announcements')
                             .select('id, title, content, is_active, show_on_banner, priority, created_at, updated_at')
                             .eq('id', announcementId)
                             .maybeSingle();
 
-                        const announcementRow = rawAnnouncement as AnnouncementRow | null;
-                        if (error || !announcementRow) {
+                        if (error || !data) {
                             return;
                         }
 
                         const announcement: Announcement = {
-                            id: announcementRow.id,
-                            title: announcementRow.title,
-                            content: announcementRow.content,
-                            isActive: announcementRow.is_active,
-                            showOnBanner: announcementRow.show_on_banner,
-                            priority: announcementRow.priority,
-                            createdAt: announcementRow.created_at,
-                            updatedAt: announcementRow.updated_at,
+                            id: data.id,
+                            title: data.title,
+                            content: data.content,
+                            isActive: data.is_active,
+                            showOnBanner: data.show_on_banner,
+                            priority: data.priority,
+                            createdAt: data.created_at,
+                            updatedAt: data.updated_at,
                         };
 
                         // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
                         setTimeout(() => {
                             setSelectedAnnouncement(announcement);
-                            openPanelRef.current('announcement');
+                            openPanel('announcement');
 
                             // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
                             router.replace('/', { scroll: false });
@@ -167,7 +154,7 @@ export default function HomeClient() {
                 // 공지 목록 오픈 (상세 ID 없이 panel만 전달된 경우)
                 setTimeout(() => {
                     setSelectedAnnouncement(null);
-                    openPanelRef.current('announcement');
+                    openPanel('announcement');
                     router.replace('/', { scroll: false });
                 }, 350);
             }
@@ -197,16 +184,16 @@ export default function HomeClient() {
                     const { data: sameNameRestaurants } = await supabase
                         .from('restaurants')
                         .select('*')
-                        .eq('approved_name', (targetRestaurant as Restaurant).name)
+                        .eq('approved_name', (targetRestaurant as any).name)
                         .eq('status', 'approved');
 
                     // 병합 로직 적용
-                    const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as Restaurant[]);
+                    const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
                     const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
-                        if (mergedRestaurant) {
-                            const zoomParam = searchParams.get('z');
-                            const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
+                    if (mergedRestaurant) {
+                        const zoomParam = searchParams.get('z');
+                        const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
 
                         // [New] URL 파라미터 또는 좌표 기반 모드 설정
                         const modeParam = searchParams.get('mode');
@@ -227,7 +214,7 @@ export default function HomeClient() {
                         }
 
                         setTimeout(() => {
-                            openDetailPanelRef.current(mergedRestaurant, !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined);
+                            openDetailPanel(mergedRestaurant, !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined);
                             // URL 정리
                             router.replace('/', { scroll: false });
                         }, 300);
@@ -242,6 +229,9 @@ export default function HomeClient() {
         const urlLat = searchParams.get('lat');
         const urlLng = searchParams.get('lng');
         const urlZoom = searchParams.get('z');
+        // const reviewId = searchParams.get('review'); <-- this was causing error if already defined?
+        // Let's check the context.
+        // Actually, I will just fix the variable name to be safe `sharedReviewId`.
         const sharedReviewId = searchParams.get('review');
 
 
@@ -274,12 +264,12 @@ export default function HomeClient() {
                         }
 
                         // 병합 로직 적용
-                        const merged = mergeRestaurants(restaurants as Restaurant[]);
+                        const merged = mergeRestaurants(restaurants as any);
                         const restaurant = merged[0];
 
                         if (restaurant) {
                             setTimeout(() => {
-                                openDetailPanelRef.current(restaurant);
+                                openDetailPanel(restaurant);
                                 // [URL 안정화] URL 유지
                             }, 500);
                         }
@@ -299,6 +289,7 @@ export default function HomeClient() {
 
             if (!isMobileWidth) {
                 // 데스크탑: 피드 오버레이 열기 (selectedReviewId로 스크롤)
+                setSelectedReviewId(reviewId);
                 window.dispatchEvent(new CustomEvent('openFeedOverlay', { detail: { reviewId } }));
             } else {
                 // 모바일/태블릿: 피드 페이지로 리다이렉트
@@ -336,30 +327,18 @@ export default function HomeClient() {
         // 맛집 상세 패널 닫기
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
-        if (panel === 'announcement' && isMobileOrTablet) {
-            setActiveRightPanel(null);
-            setIsAnnouncementSheetOpen(true);
-            setIsPanelCollapsed(false);
-            return;
-        }
-
-        setIsAnnouncementSheetOpen(false);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
-    }, [isMobileOrTablet, state]);
-    openPanelRef.current = openPanel;
+    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 모든 패널 닫기
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const closeAllPanels = useCallback(() => {
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
-        state.setSelectedRestaurant(null);
-        state.setSearchedRestaurant(null);
         setActiveRightPanel(null);
-        setIsAnnouncementSheetOpen(false);
         setIsPanelCollapsed(false);
-    }, [state]);
+    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 패널 접기/펼치기
     // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -372,10 +351,11 @@ export default function HomeClient() {
         if (state.isPanelOpen) {
             // 맛집 상세 패널이 열리면 다른 패널들 모두 닫기
             setActiveRightPanel(null);
-            setIsAnnouncementSheetOpen(false);
             setIsPanelCollapsed(false);
         }
     }, [state.isPanelOpen]);
+
+
 
     // 우측 패널 너비 계산 (접힌 상태면 0)
     const rightPanelWidth = (state.isPanelOpen || activeRightPanel) && !isPanelCollapsed ? 400 : 0;
@@ -432,13 +412,12 @@ export default function HomeClient() {
             router.replace('/', { scroll: false });
         }
         // q 파라미터(공유 URL)는 유지
-    }, [state, router]);
-    openDetailPanelRef.current = openDetailPanel;
+    }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setSearchedRestaurant, state.setIsPanelOpen, router]);
 
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
         state.setSelectedRestaurant(restaurant);
         state.setPanelRestaurant(restaurant);
-    }, [state]);
+    }, [state.setPanelRestaurant, state.setSelectedRestaurant]);
 
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({
@@ -462,30 +441,6 @@ export default function HomeClient() {
             return;
         }
         setIsSubmissionModalOpen(true);
-    }, [user]);
-
-    const handleTopShellUserIconClick = useCallback(() => {
-        if (typeof window === 'undefined') return;
-
-        if (!user) {
-            window.dispatchEvent(new CustomEvent('home:mobile-auth-request', {
-                detail: {
-                    source: 'mobile-top-shell',
-                    route: '/',
-                    ts: Date.now(),
-                },
-            }));
-            return;
-        }
-
-        window.dispatchEvent(new CustomEvent('home:mobile-profile-request', {
-            detail: {
-                source: 'mobile-top-shell',
-                route: '/',
-                userId: user.id,
-                ts: Date.now(),
-            },
-        }));
     }, [user]);
 
     // 헤더에서 패널 열기 이벤트 리스너
@@ -552,26 +507,24 @@ export default function HomeClient() {
 
                 if (error || !targetRestaurant) return;
 
-                const tr = targetRestaurant as Restaurant;
+                const tr = targetRestaurant as any;
                 // 모드 자동 감지 (이벤트에 모드가 없었을 경우)
                 if (!mode) {
-                    if (typeof tr.lat === 'number' && typeof tr.lng === 'number') {
-                        const isOverseasCoord = tr.lat < 33 || tr.lat > 39 || tr.lng < 124 || tr.lng > 132;
-                        if (isOverseasCoord) {
-                            setMapMode('overseas');
-                        } else {
-                            setMapMode('domestic');
-                        }
+                    const isOverseasCoord = tr.lat && (tr.lat < 33 || tr.lat > 39 || tr.lng < 124 || tr.lng > 132);
+                    if (isOverseasCoord) {
+                        setMapMode('overseas');
+                    } else {
+                        setMapMode('domestic');
                     }
                 }
 
                 const { data: sameNameRestaurants } = await supabase
                     .from('restaurants')
                     .select('*')
-                    .eq('approved_name', (targetRestaurant as Restaurant).name)
+                    .eq('approved_name', (targetRestaurant as any).name)
                     .eq('status', 'approved');
 
-                const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as Restaurant[]);
+                const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
                 const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
 
                 if (mergedRestaurant) {
@@ -637,7 +590,6 @@ export default function HomeClient() {
                 }}
                 user={user}
                 onSubmissionClick={handleSubmissionButtonClick}
-                onTopShellUserIconClick={handleTopShellUserIconClick}
             />
 
             <HomeMapContainer
@@ -738,51 +690,19 @@ export default function HomeClient() {
             )}
 
             {/* 공지사항 패널 (관리자/사용자 통합) */}
-            {!isMobileOrTablet ? (
-                <RightPanelWrapper
-                    isOpen={activeRightPanel === 'announcement'}
+            <RightPanelWrapper
+                isOpen={activeRightPanel === 'announcement'}
+                isCollapsed={isPanelCollapsed}
+            >
+                <AnnouncementPanel
+                    isOpen={!isPanelCollapsed}
+                    onClose={closeAllPanels}
+                    onToggleCollapse={togglePanelCollapse}
                     isCollapsed={isPanelCollapsed}
-                >
-                    <AnnouncementPanel
-                        isOpen={!isPanelCollapsed}
-                        onClose={closeAllPanels}
-                        onToggleCollapse={togglePanelCollapse}
-                        isCollapsed={isPanelCollapsed}
-                        isAdmin={isAdmin}
-                        initialAnnouncement={selectedAnnouncement}
-                    />
-                </RightPanelWrapper>
-            ) : (
-                <BottomSheet
-                    isOpen={isAnnouncementSheetOpen}
-                    onClose={() => {
-                        setIsAnnouncementSheetOpen(false);
-                        setActiveRightPanel(null);
-                        setIsPanelCollapsed(false);
-                        setSelectedAnnouncement(null);
-                    }}
-                    defaultHeight={ANNOUNCEMENT_HALF_HEIGHT}
-                    minHeight={25}
-                    maxHeight={100}
-                    enablePeek
-                    hideBottomNavWhenOpen
-                    progressiveHeaderHide
-                    showBackdrop={false}
-                    closeOnOutsidePointerDown
-                    layoutSource="home-announcement-bottom-sheet"
-                    className="z-[95] p-0"
-                >
-                    <div className="h-full min-h-0 overflow-hidden bg-background">
-                        <AnnouncementPanel
-                            isOpen={isAnnouncementSheetOpen}
-                            onClose={closeAllPanels}
-                            isAdmin={isAdmin}
-                            initialAnnouncement={selectedAnnouncement}
-                            isBottomSheet
-                        />
-                    </div>
-                </BottomSheet>
-            )}
+                    isAdmin={isAdmin}
+                    initialAnnouncement={selectedAnnouncement}
+                />
+            </RightPanelWrapper>
 
 
         </>

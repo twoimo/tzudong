@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/lib/no-toast';
+import { toast } from 'sonner';
 import {
     CheckCircle2,
     XCircle,
@@ -15,6 +14,7 @@ import {
     Loader2,
     Clock,
     AlertCircle,
+    User,
     Youtube,
     Edit,
     Search,
@@ -42,7 +42,6 @@ import {
     ApprovalData,
     GeocodingResult,
     ItemDecision,
-    NaverSearchResult,
 } from './SubmissionDetailView';
 import {
     TooltipProvider,
@@ -59,8 +58,6 @@ import {
     ADMIN_MODAL_SCROLL_BODY,
     ADMIN_MODAL_SCROLL_BODY_COMPACT,
 } from './admin-modal-styles';
-
-const SUBMISSION_TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
 
 // Supabase Storage에서 리뷰 사진 public URL 생성
 function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
@@ -80,6 +77,21 @@ function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
         url += `?t=${new Date(cacheBuster).getTime()}`;
     }
     return url;
+}
+
+// YouTube 비디오 ID 추출
+function getYoutubeVideoId(url: string | undefined): string | null {
+    if (!url) return null;
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
+        /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
+        /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) return match[1];
+    }
+    return null;
 }
 
 // 리뷰 타입 정의
@@ -143,26 +155,21 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
     const isReceipt = labelVariant === 'receipt';
 
     return (
-        <button
-            type="button"
+        <div
             className={cn(
                 "flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all",
                 isReceipt ? "h-48 min-w-28" : "h-32 min-w-24"  // 영수증은 더 크게
             )}
             onClick={onClick}
-            aria-label={alt}
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
             )}
-            <Image
+            <img
                 src={src}
                 alt={alt}
-                fill
-                unoptimized
-                sizes={isReceipt ? "256px" : "192px"}
                 className={cn(
                     "w-auto object-contain transition-opacity",  // object-cover -> object-contain으로 변경
                     isReceipt ? "h-48 max-w-64" : "h-32 max-w-48",
@@ -182,7 +189,7 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
             >
                 {label}
             </Badge>
-        </button>
+        </div>
     );
 }, (prev, next) =>
     prev.src === next.src &&
@@ -271,7 +278,7 @@ export function SubmissionListView({
 
     // 네이버 검색 검증 상태
     const [naverSearchLoading, setNaverSearchLoading] = useState(false);
-    const [naverSearchResults, setNaverSearchResults] = useState<NaverSearchResult[]>([]);
+    const [naverSearchResults, setNaverSearchResults] = useState<any[]>([]);
     const [showWarningModal, setShowWarningModal] = useState(false);
     const [verificationDone, setVerificationDone] = useState(false);
 
@@ -308,6 +315,7 @@ export function SubmissionListView({
 
     const handleClearSubmissionSearch = useCallback(() => setSearchQuery(''), []);
 
+    const TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
     const SUBMISSION_TAB_SWIPE_DISTANCE = 24;
 
     const handleSubmissionTabTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -370,16 +378,16 @@ export function SubmissionListView({
             return false;
         }
 
-        const currentIndex = SUBMISSION_TAB_ORDER.indexOf(activeTab);
+        const currentIndex = TAB_ORDER.indexOf(activeTab);
         if (currentIndex === -1) return false;
 
-        if (distanceX > 0 && currentIndex < SUBMISSION_TAB_ORDER.length - 1) {
-            setActiveTabWithReset(SUBMISSION_TAB_ORDER[currentIndex + 1]);
+        if (distanceX > 0 && currentIndex < TAB_ORDER.length - 1) {
+            setActiveTabWithReset(TAB_ORDER[currentIndex + 1]);
             return true;
         }
 
         if (distanceX < 0 && currentIndex > 0) {
-            setActiveTabWithReset(SUBMISSION_TAB_ORDER[currentIndex - 1]);
+            setActiveTabWithReset(TAB_ORDER[currentIndex - 1]);
             return true;
         }
 
@@ -495,7 +503,7 @@ export function SubmissionListView({
             } else {
                 toast.error(`OCR 처리 실패: ${data.error || '알 수 없는 오류'}`);
             }
-        } catch {
+        } catch (error) {
             toast.error('OCR 처리 중 오류가 발생했습니다.');
         } finally {
             setIsOcrRunning(false);
@@ -518,7 +526,7 @@ export function SubmissionListView({
             } else {
                 toast.error(`OCR 전체 재실행 실패: ${data.error || '알 수 없는 오류'}`);
             }
-        } catch {
+        } catch (error) {
             toast.error('OCR 전체 재실행 중 오류가 발생했습니다.');
         } finally {
             setIsOcrRunning(false);
@@ -536,11 +544,10 @@ export function SubmissionListView({
     }, [activeTab, fetchOcrStatus]);
 
     // OCR 카운트다운 타이머 관리
-    const hasOcrCountdowns = useMemo(() => Object.keys(ocrCountdowns).length > 0, [ocrCountdowns]);
-
     useEffect(() => {
         // 카운트다운이 있는 리뷰가 있으면 1초마다 감소
-        if (!hasOcrCountdowns) {
+        const hasCountdowns = Object.keys(ocrCountdowns).length > 0;
+        if (!hasCountdowns) {
             if (ocrCountdownRef.current) {
                 clearInterval(ocrCountdownRef.current);
                 ocrCountdownRef.current = null;
@@ -567,7 +574,7 @@ export function SubmissionListView({
                 ocrCountdownRef.current = null;
             }
         };
-    }, [hasOcrCountdowns]);
+    }, [Object.keys(ocrCountdowns).length]);
 
     // 단일 리뷰 OCR 재실행 (GitHub Actions 트리거)
     const handleRerunOcr = useCallback(async (reviewId: string) => {
@@ -610,7 +617,7 @@ export function SubmissionListView({
                     return next;
                 });
             }
-        } catch {
+        } catch (error) {
             toast.error('OCR 재실행 중 오류가 발생했습니다.');
             setOcrRerunningIds(prev => {
                 const next = new Set(prev);
@@ -1344,7 +1351,7 @@ export function SubmissionListView({
     };
 
     // 승인 핸들러
-    const handleApprove = async () => {
+    const handleApprove = useCallback(async () => {
         if (!selectedSubmission) return;
 
         if (!approvalData.lat || !approvalData.lng || !approvalData.road_address) {
@@ -1374,7 +1381,8 @@ export function SubmissionListView({
 
         // 검증 실행
         await handleNaverSearchAndVerify();
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canApprove, approvalData, selectedSubmission, itemDecisions, forceApprove, editableData, onApprove, closeDetailModal, verificationDone, geocodingResults]);
 
     // 거부 핸들러
     const handleReject = useCallback(() => {
@@ -1684,11 +1692,7 @@ export function SubmissionListView({
                                                     <span>{review.profiles?.nickname || '익명'}</span>
                                                 </div>
 
-                                                <div
-                                                    className="mt-2 flex items-center gap-1.5"
-                                                    onPointerDownCapture={(e) => e.stopPropagation()}
-                                                    onClickCapture={(e) => e.stopPropagation()}
-                                                >
+                                                <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                                     {isPending && (
                                                         <>
                                                             <Button
@@ -1842,11 +1846,7 @@ export function SubmissionListView({
                                                     )}
                                                 </div>
 
-                                                <div
-                                                    className="mt-2 flex items-center gap-1.5"
-                                                    onPointerDownCapture={(e) => e.stopPropagation()}
-                                                    onClickCapture={(e) => e.stopPropagation()}
-                                                >
+                                                <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                                     {isPending && (
                                                         <Button
                                                             size="sm"
@@ -2371,13 +2371,10 @@ export function SubmissionListView({
                         </DialogHeader>
                         {previewImage && (
                             <div className="relative">
-                                <Image
+                                <img
                                     src={previewImage.url}
                                     alt={previewImage.alt}
-                                    width={1600}
-                                    height={1200}
-                                    unoptimized
-                                    className="w-full max-h-[80dvh] h-auto object-contain rounded-lg"
+                                    className="w-full max-h-[80dvh] object-contain rounded-lg"
                                 />
                                 <Button
                                     variant="secondary"
@@ -2395,3 +2392,4 @@ export function SubmissionListView({
         </TooltipProvider>
     );
 }
+

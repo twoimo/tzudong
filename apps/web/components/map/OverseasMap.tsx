@@ -195,21 +195,20 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             }
         };
 
-        const mapContainerEl = mapContainer.current;
-        if (mapContainerEl) {
-            mapContainerEl.addEventListener('wheel', handleWheel, { passive: false });
+        if (mapContainer.current) {
+            mapContainer.current.addEventListener('wheel', handleWheel, { passive: false });
         }
 
         return () => {
-            if (mapContainerEl) {
-                mapContainerEl.removeEventListener('wheel', handleWheel);
+            if (mapContainer.current) {
+                mapContainer.current.removeEventListener('wheel', handleWheel);
             }
             if (map.current) {
                 map.current.remove();
                 map.current = null;
             }
         };
-    }, [selectedCountry]);
+    }, []);
 
     const moveToRestaurant = useCallback((restaurant: Restaurant) => {
         if (!map.current) return;
@@ -323,11 +322,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
     return (
         <div className={`relative w-full h-full bg-[#E5E5E5] ${className}`}>
-            <div
-                ref={mapContainer}
-                className="w-full h-full"
-                data-testid="map-container"
-            />
+            <div ref={mapContainer} className="w-full h-full" />
 
             {(!isMapLoaded || isLoadingRestaurants) && (
                 <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm">

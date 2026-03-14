@@ -13,6 +13,7 @@ import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
 import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
 import CombinedPopup from '@/components/layout/CombinedPopup';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
 
@@ -38,6 +39,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [targetReviewId, setTargetReviewId] = useState<string | null>(null);
 
 
@@ -82,7 +84,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
             await signOut();
             queryClient.clear();
             router.push('/');
-        } catch {
+        } catch (error) {
             // Logout error ignored
         }
     }, [signOut, queryClient, router]);
@@ -120,6 +122,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
     // 관리자 모달 핸들러
     const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
         queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+        setRefreshTrigger(prev => prev + 1);
         if (updatedRestaurant) {
             setSelectedRestaurant(updatedRestaurant);
         }

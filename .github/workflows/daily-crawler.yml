@@ -24,6 +24,9 @@ concurrency:
 jobs:
   daily-crawl:
     runs-on: ubuntu-latest
+    # [FIX] Node.js 20 deprecation 경고 방지 - Node.js 24 강제 사용
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     # [PERF] 안전 타임아웃: 최대 120분 (3000분/월 예산 고려)
     # 일일 평균 ~40-60분, 최악의 경우에도 120분 내 완료
     # 120분 * 30일 = 3600분이지만 대부분 60분 이내 종료하므로 예산 내 운영
@@ -95,7 +98,9 @@ jobs:
           path: |
             /usr/bin/rclone
             /usr/local/bin/ollama
-          key: ${{ runner.os }}-tools-rclone-ollama-v2
+          key: ${{ runner.os }}-tools-rclone-ollama-v3
+          restore-keys: |
+            ${{ runner.os }}-tools-rclone-ollama-
 
       - name: Install RClone
         if: steps.cache-tools.outputs.cache-hit != 'true'

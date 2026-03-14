@@ -1,3 +1,4 @@
+declare var google: any;
 import { useEffect, useRef, useState, memo, useCallback, useMemo } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
@@ -7,10 +8,14 @@ import { FilterState } from "@/components/filters/FilterPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 // 국가별 지도 중심 좌표
+const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
 const USA_CENTER = { lat: 39.8283, lng: -98.5795 };
+const INITIAL_ZOOM = 12;
 const USA_ZOOM = 4;
 const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
   "미국": { lat: 39.8283, lng: -98.5795, zoom: 5 },
@@ -22,29 +27,6 @@ const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }
   "헝가리": { lat: 47.4979, lng: 19.0402, zoom: 11 }, // 줌인 +3
   "오스트레일리아": { lat: -33.8688, lng: 151.2093, zoom: 10 }, // 시드니 중심으로 변경
 };
-
-interface MapPointLike {
-  lat: () => number;
-  lng: () => number;
-}
-
-interface MapBoundsLike {
-  getNorthEast: () => MapPointLike;
-  getSouthWest: () => MapPointLike;
-}
-
-interface GoogleMapLike {
-  panTo: (position: { lat: number; lng: number }) => void;
-  setZoom: (zoom: number) => void;
-  setCenter: (position: { lat: number; lng: number }) => void;
-  getBounds: () => MapBoundsLike | null;
-  addListener: (eventName: string, handler: (...args: unknown[]) => void) => unknown;
-}
-
-interface GoogleMarkerLike {
-  map: GoogleMapLike | null;
-  content: Element | null;
-}
 
 interface MapViewProps {
   filters: FilterState;
@@ -97,25 +79,22 @@ const MapErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetEr
 const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant, onMarkerClick, panelWidth: propPanelWidth, activePanel, onPanelClick, isPanelOpen: propIsPanelOpen, onPanelClose, onTogglePanelCollapse }: MapViewProps) => {
   // 필터 객체 메모이제이션
   const memoizedFilters = useMemo(() => filters, [filters]);
+  const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<GoogleMapLike | null>(null);
-  const markersRef = useRef<GoogleMarkerLike[]>([]);
+  const googleMapRef = useRef<any | null>(null);
+  const markersRef = useRef<any[]>([]);
   const detailPanelRef = useRef<HTMLDivElement>(null);
-  const selectedCountryRef = useRef<string | null | undefined>(selectedCountry);
 
   // [상태] 지도 이동 - 선택된 맛집으로 이동 (한 번만 수행)
   const lastCenteredRestaurantId = useRef<string | null>(null);
 
   // 패널 상태 관리 (내부적으로 관리하거나 props로 제어)
-  const [mapBounds, setMapBounds] = useState<MapBoundsLike | null>(null);
+  const [mapBounds, setMapBounds] = useState<any | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [panelWidth, setPanelWidth] = useState(0);
   const [showRestaurantCount, setShowRestaurantCount] = useState(false);
   const [localIsPanelOpen, setLocalIsPanelOpen] = useState(false);
-
-  useEffect(() => {
-    selectedCountryRef.current = selectedCountry;
-  }, [selectedCountry]);
 
   // props로 전달된 isPanelOpen이 있으면 우선 사용, 없으면 로컬 상태 사용
   const isPanelOpen = propIsPanelOpen !== undefined ? propIsPanelOpen : localIsPanelOpen;
@@ -126,15 +105,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       setLocalIsPanelOpen(isOpen);
     }
   };
-
-  const handleDetailPanelMouseDownCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    event.stopPropagation();
-    onPanelClick?.('detail');
-  }, [onPanelClick]);
-
-  const handleDetailPanelFocusCapture = useCallback(() => {
-    onPanelClick?.('detail');
-  }, [onPanelClick]);
 
   // props로 전달된 panelWidth가 있으면 우선 사용
   const effectivePanelWidth = propPanelWidth !== undefined ? propPanelWidth : panelWidth;
@@ -243,7 +213,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
     try {
       const map = googleMapRef.current;
-      if (!map) return;
       const bounds = map.getBounds();
       if (!bounds) return;
 
@@ -371,8 +340,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
 
     // 선택된 국가에 따라 중심점과 줌 설정 (기본값: 미국)
-    const initialSelectedCountry = selectedCountryRef.current;
-    const countryConfig = initialSelectedCountry && COUNTRY_CENTERS[initialSelectedCountry];
+    const countryConfig = selectedCountry && COUNTRY_CENTERS[selectedCountry];
     const center = countryConfig ? { lat: countryConfig.lat, lng: countryConfig.lng } : USA_CENTER;
     const zoom = countryConfig ? countryConfig.zoom : USA_ZOOM;
 
@@ -395,11 +363,14 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         const bounds = map.getBounds();
         if (bounds) {
           setMapBounds(bounds);
+          // 첫 번째 idle 이벤트에서 사용자 상호작용으로 간주
+          setHasUserInteracted(true);
         }
       });
     } catch (error) {
       console.error("Error creating Google Map:", error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
   // [국가 변경] 선택된 국가에 따라 지도 중심 및 줌 레벨 조정
@@ -519,7 +490,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       markersRef.current.push(marker);
     });
-  }, [isLoaded, moveToRestaurant, onMarkerClick, onRestaurantSelect, restaurantsToShow, searchedRestaurant?.id, selectedRestaurant?.id]);
+  }, [restaurants, isLoaded, onRestaurantSelect, onMarkerClick]);
 
   // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
   useEffect(() => {
@@ -601,7 +572,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         google.maps.event.removeListener(zoomListener);
       }
     };
-  }, [isLoaded, selectedRestaurant?.id, searchedRestaurant?.id, restaurantsToShow]);
+  }, [isLoaded, selectedRestaurant?.id, restaurantsToShow]);
 
   if (loadError) {
     return (
@@ -658,6 +629,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         <div
           ref={mapRef}
           className="flex-1 h-full"
+          onClick={() => {
+            // 지도 클릭 시 패널 닫기/모드 변경 등의 동작이 필요하다면 여기서 처리
+            // 단, 드래그 시에는 발생하지 않아야 함.
+            // onPanelClick?.('map');
+          }}
         />
 
 
@@ -695,8 +671,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           <div
             className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
             style={{ overflow: 'visible' }}
-            onMouseDownCapture={handleDetailPanelMouseDownCapture}
-            onFocusCapture={handleDetailPanelFocusCapture}
+            onClick={(e) => {
+              // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
+              e.stopPropagation();
+              onPanelClick?.('detail');
+            }}
           >
             <div ref={detailPanelRef} className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
               <RestaurantDetailPanel

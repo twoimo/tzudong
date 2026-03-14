@@ -1,12 +1,11 @@
 'use client';
 
-import { memo, useCallback, useMemo, useRef, useEffect, useTransition, type CSSProperties } from 'react';
+import { memo, useCallback, useMemo, useRef, useEffect, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, MessageSquareText, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { AUTH_NAV_ROUTES } from '@/components/layout/navigation-routes';
-import { updateMobileBottomNavHeight } from '@/lib/mobile-sheet-layout';
 
 interface NavItem {
     icon: typeof Home;
@@ -26,14 +25,13 @@ const MYPAGE_SUB_ROUTES = AUTH_NAV_ROUTES.filter((route) => route !== '/mypage/p
 
 interface MobileBottomNavProps {
     className?: string;
-    style?: CSSProperties;
 }
 
 /**
  * 모바일/태블릿용 하단 네비게이션바 컴포넌트
  * [OPTIMIZATION] useCallback으로 이벤트 핸들러 메모이제이션
  */
-function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
+function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
     const pathname = usePathname();
     const router = useRouter();
     const navRef = useRef<HTMLElement>(null);
@@ -93,7 +91,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
         const updateNavHeight = () => {
             if (navRef.current) {
                 const height = navRef.current.offsetHeight;
-                updateMobileBottomNavHeight(height);
+                document.documentElement.style.setProperty('--mobile-bottom-nav-height', `${height}px`);
             }
         };
 
@@ -112,9 +110,8 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
     return (
         <nav
             ref={navRef}
-            aria-label="주요 탐색"
             data-testid="bottom-nav"
-            style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))`, ...style }}
+            style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))` }}
             className={cn(
                 // 기본 스타일 및 고정 위치
                 'fixed bottom-0 left-0 right-0 z-50',
@@ -139,9 +136,6 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                     <button
                         key={item.path}
                         data-testid={`bottom-nav-${item.path === '/' ? 'home' : item.path.replace('/', '').replace('/profile', '')}`}
-                        type="button"
-                        aria-label={`${item.label} 페이지로 이동`}
-                        aria-current={isActive ? 'page' : undefined}
                         onClick={() => handleNavClick(item.path)}
                         onTouchStart={() => handleNavIntent(item.path, isActive)}
                         onMouseEnter={() => handleNavIntent(item.path, isActive)}

@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { APP_HEADER_HEIGHT_VAR } from '@/lib/mobile-sheet-layout';
 
 interface RightPanelWrapperProps {
     isOpen: boolean;
@@ -19,12 +18,8 @@ export default function RightPanelWrapper({ isOpen, isCollapsed, children }: Rig
 
     return (
         <div
-            className={`fixed right-0 z-50 shadow-xl bg-background transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0' : 'w-[min(400px,calc(100vw-1rem))]'}`}
-            style={{
-                top: `var(${APP_HEADER_HEIGHT_VAR}, 56px)`,
-                height: `calc(100vh - var(${APP_HEADER_HEIGHT_VAR}, 56px))`,
-                overflow: 'visible',
-            }}
+            className={`fixed top-16 right-0 h-[calc(100vh-64px)] z-50 shadow-xl bg-background transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0' : 'w-[min(400px,calc(100vw-1rem))]'}`}
+            style={{ overflow: 'visible' }}
         >
             <div className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
                 {children}
