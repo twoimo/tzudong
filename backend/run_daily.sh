@@ -428,8 +428,7 @@ echo "::endgroup::"
 echo "::group::[Step 08] Chunk Multimodal Crawling"
 step_start
 log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
-# [TEST] 최근 영상 1개로 테스트 — 정상 확인 후 전체 영상 대상으로 전환 예정
-bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang --url "https://www.youtube.com/watch?v=U2bg6PUn_NI" --force 2>&1 | tee -a "$LOG_FILE"
+bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
 
