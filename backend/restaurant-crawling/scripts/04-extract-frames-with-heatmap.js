@@ -1567,25 +1567,50 @@ async function processBatch(params) {
         return;
     }
 
-    let processedCount = 0; // 리셋 (실제 처리 수)
+    // [PERF] 병렬 처리: 동시 N개 영상 처리 (다운로드 I/O와 ffmpeg CPU가 자연스럽게 겹침)
+    // GitHub Actions runner = 2 vCPU → 동시 4개가 적정 (I/O bound 비중 높음)
+    // 로컬 환경 = 3개 (안정성 우선)
+    const CONCURRENCY = process.env.CI ? 4 : 3;
+    log('info', `[PERF] 병렬 처리 모드: 동시 ${CONCURRENCY}개 (${process.env.CI ? 'CI' : 'Local'})`);
 
-    for (const url of pendingUrls) {
-        const videoId = extractVideoId(url);
-        // shouldCollect는 위에서 이미 했으므로 생략 가능하지만, 
-        // 안전을 위해 더블 체크 하거나 그냥 진행. 
-        // 위에서 체크했으니 바로 진행.
+    let processedCount = 0;
+    let activeCount = 0;
+    let urlIndex = 0;
 
-        log('info', `\n--- [${processedCount + 1}/${pendingUrls.length}] 처리 시작: ${videoId} ---`);
-        params.url = url; // 현재 URL 설정
-        const downloadPerformed = await processSingleVideo(videoId, params);
-        processedCount++;
+    // [PERF] Promise 기반 동시성 제어 (외부 의존성 없음)
+    const processNext = async () => {
+        while (urlIndex < pendingUrls.length) {
+            const currentIndex = urlIndex++;
+            const url = pendingUrls[currentIndex];
+            const videoId = extractVideoId(url);
 
-        // [변경] 다운로드가 실제로 수행되었을 때만 대기 (캐시 사용 시 즉시 진행)
-        if (downloadPerformed) {
-            // [수정] 사용자 요청으로 대기 시간 최소화 (1초)
-            await new Promise(r => setTimeout(r, 1000));
+            log('info', `\n--- [${currentIndex + 1}/${pendingUrls.length}] 처리 시작: ${videoId} (Active: ${activeCount + 1}/${CONCURRENCY}) ---`);
+            
+            // params를 복사하여 병렬 작업 간 url 충돌 방지
+            const taskParams = { ...params, url };
+            
+            try {
+                const downloadPerformed = await processSingleVideo(videoId, taskParams);
+                processedCount++;
+
+                // [변경] 다운로드가 실제로 수행되었을 때만 짧은 대기 (속도 제한 방지)
+                if (downloadPerformed) {
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            } catch (e) {
+                log('error', `[${videoId}] 처리 중 오류: ${e.message}`);
+                processedCount++;
+            }
         }
+    };
+
+    // N개의 worker를 동시에 시작
+    const workers = [];
+    for (let i = 0; i < Math.min(CONCURRENCY, pendingUrls.length); i++) {
+        activeCount++;
+        workers.push(processNext());
     }
+    await Promise.all(workers);
 
     log('info', `=== 배치 작업 완료: 처리 ${processedCount}개, 스킵 ${skippedCount}개 ===`);
 }
