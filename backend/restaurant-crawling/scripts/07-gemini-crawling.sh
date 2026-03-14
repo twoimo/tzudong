@@ -56,9 +56,9 @@ if [ "$ENV_LOADED" = false ]; then
     fi
 fi
 
-# Gemini 모델 설정
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-2.5-flash}"
+# Gemini 모델 설정 (최신 Preview 모델 우선)
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.1-flash-lite-preview}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 
 # 한국 시간대 설정
@@ -443,21 +443,27 @@ $TRANSCRIPT_TRUNCATED
         TEMP_STDERR="$SCRIPT_DIR/../temp/stderr_${VIDEO_ID}.log"
         echo "$PROMPT" > "$TEMP_PROMPT"
         
-        # Gemini API 호출 (Node.js -> CLI Sticky Fallback)
+        # Gemini API 호출 (Node.js SDK Direct Mode)
         URL_START_TIME=$(date +%s)
         GEMINI_START=$(date +%s)
         GEMINI_SUCCESS=false
         
-        # 1. Node.js API 시도 (Sticky Fallback이 아닐 때만)
-        if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
-            log_debug "Node.js API 호출 시도..."
+        # 프레임 폴더를 찾아서 인자로 넣어줌
+        VIDEO_FRAMES_DIR="$full_data_path/frames/${VIDEO_ID}"
+        if [ ! -d "$VIDEO_FRAMES_DIR" ]; then
+            VIDEO_FRAMES_DIR=""  # 프레임이 아예 없거나 실패했을 경우 빈값
+        fi
+        
+        if [ -n "$NODE_EXE" ]; then
+            log_debug "Node.js 멀티모달 API 호출 시도 ($CURRENT_MODEL)..."
             
             WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
             WIN_PROMPT=$(normalize_path "$TEMP_PROMPT")
             WIN_RESPONSE=$(normalize_path "$TEMP_RESPONSE")
+            WIN_FRAMES_DIR=$(normalize_path "$VIDEO_FRAMES_DIR")
             
             set +e
-            "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE"
+            "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE" "$WIN_FRAMES_DIR" 2>"$TEMP_STDERR"
             EXIT_CODE=$?
             set -e
             
@@ -465,37 +471,31 @@ $TRANSCRIPT_TRUNCATED
                 GEMINI_SUCCESS=true
                 log_debug "Node.js API 호출 성공"
             else
-                log_warning "Node.js API 호출 실패 (Code: $EXIT_CODE) - Sticky Fallback 활성화 (이후 CLI 사용)"
-                FORCE_CLI_FALLBACK=true
-            fi
-        fi
-
-        # 2. Gemini CLI 시도 (Node 실패 또는 Sticky 모드일 때)
-        if [ "$GEMINI_SUCCESS" = false ]; then
-            log_debug "Gemini CLI 호출 (모델: $CURRENT_MODEL)"
-            
-            if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
-                GEMINI_SUCCESS=true
-            else
-                # Error logging
-                log_error "Gemini CLI Error Output:"
-                if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
-                    cat "$TEMP_STDERR"
-                fi
+                log_warning "Node.js API 호출 실패 (Code: $EXIT_CODE) - Error Output:"
+                if [ -s "$TEMP_STDERR" ]; then cat "$TEMP_STDERR"; fi
                 
-                # Rate Limit 체크
-                ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
-                if [ -f "$ERROR_REPORT" ] && grep -q "exhausted\|429" "$ERROR_REPORT" 2>/dev/null; then
-                    if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
-                        log_warning "할당량 소진 -> Fallback 모델($FALLBACK_MODEL) 전환"
-                        CURRENT_MODEL="$FALLBACK_MODEL"
-                        sleep 10
-                        if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
-                            GEMINI_SUCCESS=true
-                        fi
+                # 할당량 초과(429) 등의 이유면 Fallback 모델로 재시도
+                if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
+                    log_warning "Fallback 모델($FALLBACK_MODEL)로 전환하여 10초 대기 후 재시도..."
+                    CURRENT_MODEL="$FALLBACK_MODEL"
+                    export CURRENT_MODEL
+                    sleep 10
+                    
+                    set +e
+                    "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE" "$WIN_FRAMES_DIR" 2>>"$TEMP_STDERR"
+                    EXIT_CODE_FALLBACK=$?
+                    set -e
+                    
+                    if [ $EXIT_CODE_FALLBACK -eq 0 ]; then
+                        GEMINI_SUCCESS=true
+                        log_debug "Fallback API 호출 성공"
+                    else
+                        log_error "Fallback 호출도 실패했습니다."
                     fi
                 fi
             fi
+        else
+            log_error "Node.js가 설치되어 있지 않아 API 실행이 불가능합니다."
         fi
         
         GEMINI_END=$(date +%s)
@@ -625,30 +625,23 @@ main() {
         export GEMINI_API_KEY
     fi
     
-    # OAuth 설정 체크
-    FORCE_CLI_FALLBACK=false
+    # API Key 설정 (Google AI Studio Free Tier 권장)
+    if [ -n "$GEMINI_API_KEY" ]; then
+        GEMINI_API_KEY=$(echo "$GEMINI_API_KEY" | tr -d '\r')
+        export GEMINI_API_KEY
+    fi
     
+    # Github Actions에 꼬여있던 복잡한 OAuth / Fallback 로직 일괄 제거
     if [ -z "$GEMINI_API_KEY" ]; then
         if [ -n "$GEMINI_API_KEY_BYEON" ]; then
             export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
-            log_success "GEMINI_API_KEY 설정 완료 (from GEMINI_API_KEY_BYEON)"
-        elif [ -f "$HOME/.gemini/oauth_creds.json" ]; then
-            log_warning "GEMINI_API_KEY 없음. OAuth 모드(CLI)로 강제 전환합니다."
-            FORCE_CLI_FALLBACK=true
-        elif [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
-            log_info "GEMINI_CREDENTIALS_BASE64 감지됨 - 인증 파일 생성 중..."
-            mkdir -p "$HOME/.gemini"
-            echo "$GEMINI_CREDENTIALS_BASE64" | base64 -d > "$HOME/.gemini/oauth_creds.json"
-            FORCE_CLI_FALLBACK=true
+            log_success "GEMINI_API_KEY 로드 완료 (API Studio Free Tier 연동 성공)"
         else
-            log_error "GEMINI_API_KEY 또는 OAuth 자격 증명이 없습니다."
+            log_error "GEMINI_API_KEY 환경변수가 존재하지 않습니다. 스크립트를 중지합니다."
             exit 1
         fi
     fi
-    
-    if [ -n "$USE_OAUTH" ] && [ "$USE_OAUTH" = "true" ]; then
-        FORCE_CLI_FALLBACK=true
-    fi
+    # 더 이상 쓰레기 OAuth로 인한 FORCE_CLI_FALLBACK은 쓰지 않습니다.
     
     log_info "시작 시간: $START_DATETIME"
     log_info "모드: $(if [ "$FORCE_CLI_FALLBACK" = true ]; then echo "Gemini CLI only"; else echo "Node.js API + Sticky Fallback"; fi)"

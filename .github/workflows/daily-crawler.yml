@@ -116,12 +116,8 @@ jobs:
           (cd backend && npm ci --prefer-offline) &
           NPM_PID=$!
           
-          # Gemini CLI 전역 설치 (병렬)
-          sudo npm install -g @google/gemini-cli -q &
-          GEMINI_PID=$!
-          
           # 모든 설치 완료 대기
-          wait $PY_PID $NPM_PID $GEMINI_PID
+          wait $PY_PID $NPM_PID
           echo "[OK] All dependencies installed"
 
       # ============================================================
@@ -140,11 +136,8 @@ jobs:
             echo "${{ secrets.YOUTUBE_COOKIES_TXT }}" > backend/restaurant-crawling/data/cookies.txt
           fi
           
-          # Gemini Credentials
-          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
-            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
-            chmod 600 ~/.gemini/oauth_creds.json
-          fi
+          # Gemini Credentials (OAuth 인증 제거 및 API Key 티어 사용)
+          # Note: API Key is injected manually as GEMINI_API_KEY_BYEON
           
           # RClone Config
           if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
@@ -204,7 +197,6 @@ jobs:
           # API Keys
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY_BYEON }}
-          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
