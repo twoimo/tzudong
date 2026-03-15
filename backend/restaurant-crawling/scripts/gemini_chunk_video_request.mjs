@@ -65,11 +65,17 @@ async function runSingleAttempt(ai, modelName, promptText, videoPath, outputFile
         const processedFile = await waitForProcessing(ai, uploadedFile.name);
         console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
 
-        console.log('[생성] Gemini API 호출 중...');
+        console.log(`[생성] Gemini API 호출 중 (모델: ${modelName})...`);
+        
+        // [Troubleshoot] 3.1 모델에서 thinkingLevel: HIGH 사용 시 간헐적으로 500 에러 발생 가능성 배제
+        // 일단 thinkingConfig를 비활성화하고 기본 생성으로 테스트
+        const generateConfig = {}; 
+        /*
         const isThinkingModel = modelName.includes('thinking') || modelName.includes('3.1');
         const generateConfig = isThinkingModel 
             ? { thinkingConfig: { thinkingLevel: 'HIGH' } } 
             : {};
+        */
 
         const response = await fetchWithRetry(() => ai.models.generateContent({
             model: modelName,
