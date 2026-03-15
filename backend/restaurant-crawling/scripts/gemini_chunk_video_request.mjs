@@ -10,28 +10,46 @@ import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 
 /** 파일 처리 상태 폴링 간격 (밀리초) */
 const POLL_INTERVAL_MS = 15000;
-/** 최대 폴링 시도 횟수 (약 10분 대기) */
-const MAX_POLL_ATTEMPTS = 40;
+/** 최대 폴링 시도 횟수 (약 5분 대기) */
+const MAX_POLL_ATTEMPTS = 20;
 /** 전체 프로세스(업로드 포함) 최대 재시도 횟수 */
 const MAX_PROCESS_RETRIES = 3;
+
+/** API 호출 타임아웃 래퍼 */
+async function fetchWithTimeout(fn, timeoutMs = 60000) {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`API 호출 타임아웃 (${timeoutMs}ms)`)), timeoutMs);
+    });
+    return Promise.race([fn(), timeoutPromise]).finally(() => clearTimeout(timeoutId));
+}
 
 /** 업로드된 파일이 ACTIVE 상태가 될 때까지 폴링 대기 */
 async function waitForProcessing(fileManager, fileName) {
     // [GitHub Action 최적화] 업로드 직후 바로 상태를 찌르지 않고 잠시 대기하여 500 에러 방지
     console.log('  [대기] 서버 파싱을 위해 20초간 초기 대기...');
-    await new Promise(r => setTimeout(r, 20000));
+    for (let s = 1; s <= 20; s++) {
+        await new Promise(r => setTimeout(r, 1000));
+        if (s % 5 === 0) console.log(`    초기 대기 진행 중... ${s}초/20초`);
+    }
 
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         try {
-            const file = await fileManager.getFile(fileName);
+            console.log(`  [상태 확인 요청] ${fileName} 상태 확인 중... (${i + 1}/${MAX_POLL_ATTEMPTS})`);
+            const file = await fetchWithTimeout(() => fileManager.getFile(fileName), 30000);
+            console.log(`  [상태 응답] ${fileName} 상태: ${file.state}`);
             if (file.state === FileState.ACTIVE) return file;
             if (file.state === FileState.FAILED) throw new Error(`파일 처리 실패: ${fileName}`);
-            console.log(`  처리 중... (${i + 1}/${MAX_POLL_ATTEMPTS}) - 상태: ${file.state}`);
         } catch (error) {
             // 구글 서버가 비정상 응답(HTML 등)을 보낼 경우 catch됨
             console.warn(`  [경고] 상태 확인 중 통신 에러 (재시도 예정): ${error.message}`);
         }
-        await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+        
+        console.log(`    [폴링 대기] 다음 확인까지 ${POLL_INTERVAL_MS / 1000}초 대기 시작...`);
+        for (let s = 1; s <= (POLL_INTERVAL_MS / 1000); s++) {
+            await new Promise(r => setTimeout(r, 1000));
+            if (s % 5 === 0) console.log(`      폴링 대기 진행 중... ${s}초/${POLL_INTERVAL_MS / 1000}초`);
+        }
     }
     throw new Error(`파일 처리 타임아웃: ${fileName}`);
 }
@@ -46,10 +64,10 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         const displayName = `${path.basename(videoPath)}-${timestamp}`;
         
         console.log(`[업로드] Gemini File API에 비디오 업로드 중 (${displayName})...`);
-        uploadedFile = await fileManager.uploadFile(videoPath, {
+        uploadedFile = await fetchWithTimeout(() => fileManager.uploadFile(videoPath, {
             mimeType: 'video/mp4',
             displayName: displayName,
-        });
+        }), 60000);
         console.log(`[업로드] 완료: ${uploadedFile.file.name}`);
 
         console.log('[대기] 비디오 처리 상태 확인 중...');
@@ -60,7 +78,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         const model = genAI.getGenerativeModel({ model: modelName });
         
         // 3.1 모델 호환성을 고려하되, 500 에러 유발 가능성이 있는 thinkingConfig는 명시적 제외 (기본값 사용)
-        const result = await model.generateContent([
+        const result = await fetchWithTimeout(() => model.generateContent([
             { text: promptText },
             {
                 fileData: {
@@ -68,7 +86,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
                     mimeType: processedFile.mimeType,
                 },
             },
-        ]);
+        ]), 120000);
 
         const response = await result.response;
         const text = response.text();
@@ -80,7 +98,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
     } finally {
         if (uploadedFile) {
             try {
-                await fileManager.deleteFile(uploadedFile.file.name);
+                await fetchWithTimeout(() => fileManager.deleteFile(uploadedFile.file.name), 15000);
                 console.log('[정리] 업로드된 파일 삭제 완료');
             } catch (e) {
                 console.warn(`[경고] 파일 정리 실패: ${e.message}`);
