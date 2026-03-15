@@ -461,7 +461,7 @@ PROMPT_EOF
 
         # Rate limit 대기 (마지막 청크 제외)
         if [ $i -lt $((total_chunks - 1)) ]; then
-            sleep "${GEMINI_RATE_LIMIT_DELAY:-15}"
+            sleep "${GEMINI_RATE_LIMIT_DELAY:-30}"
         fi
     done
 
