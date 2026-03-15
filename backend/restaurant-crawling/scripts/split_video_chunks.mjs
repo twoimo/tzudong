@@ -59,10 +59,12 @@ async function main() {
 
     fs.mkdirSync(outputDir, { recursive: true });
 
+    // 강제 재인코딩: Gemini API의 500 에러를 방지하기 위해 해상도를 최대 720p로 제한하고 
+    // 오디오를 Mono + 44.1kHz로 규격화합니다.
     const ext = path.extname(videoPath).toLowerCase();
-    const needsReencode = ext !== '.mp4';
+    const needsReencode = true; // 무조건 재인코딩하여 스트림 오류 방지
 
-    console.log(`[분할] 총 ${chunks.length}개 청크, 소스: ${ext}, 재인코딩: ${needsReencode}`);
+    console.log(`[분할] 총 ${chunks.length}개 청크, 소스: ${ext}, 재인코딩 강제 적용`);
 
     for (const chunk of chunks) {
         const { chunk_index, start_sec, end_sec } = chunk;
@@ -74,15 +76,15 @@ async function main() {
             continue;
         }
 
-        const codecArgs = needsReencode
-            ? '-c:v libx264 -c:a aac -preset ultrafast -crf 28'
-            : '-c copy';
+        // 비디오: x264, 최대 720p (scale), 30fps 제한, 빠른 처리(ultrafast)
+        // 오디오: aac, mono (ac 1), 44.1kHz (ar 44100), 오디오 트랙이 깨진 경우 무시
+        const codecArgs = '-c:v libx264 -vf "scale=-2:\'min(720,ih)\'" -r 30 -preset ultrafast -crf 28 -c:a aac -ac 1 -ar 44100 -b:a 96k -movflags +faststart';
 
         const cmd = `"${ffmpegPath}" -y -ss ${start_sec} -t ${duration} -i "${toWindowsPath(videoPath)}" ${codecArgs} "${toWindowsPath(outFile)}"`;
 
         try {
             console.log(`[분할] 청크 ${chunk_index}: ${start_sec}초 ~ ${end_sec}초 (${duration}초)`);
-            await execPromise(cmd, { timeout: 120000 });
+            await execPromise(cmd, { timeout: 180000 });
             const stat = fs.statSync(outFile);
             console.log(`[완료] chunk_${chunk_index}.mp4 (${(stat.size / 1024 / 1024).toFixed(1)}MB)`);
         } catch (error) {
