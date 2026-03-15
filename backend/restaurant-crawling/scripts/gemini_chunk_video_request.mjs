@@ -12,13 +12,13 @@ import fs from 'fs';
 import path from 'path';
 import { GoogleGenAI } from '@google/genai';
 
-/** 파일 처리 상태 폴링 간격 (밀리초) */
-const POLL_INTERVAL_MS = 5000;
-/** 최대 폴링 시도 횟수 */
-const MAX_POLL_ATTEMPTS = 60;
+/** 파일 처리 상태 폴링 간격 (밀리초) - 구글 권장 10초로 변경하여 서버 과부하 방지 */
+const POLL_INTERVAL_MS = 10000;
+/** 최대 폴링 시도 횟수 - 최대 15분 대기 (90 * 10초) */
+const MAX_POLL_ATTEMPTS = 90;
 
 /** API 호출 재시도 유틸리티 */
-async function fetchWithRetry(fn, retries = 3, delayMs = 5000) {
+async function fetchWithRetry(fn, retries = 3, delayMs = 10000) {
     for (let i = 0; i < retries; i++) {
         try {
             return await fn();
@@ -39,7 +39,7 @@ async function waitForProcessing(ai, fileName) {
             if (file.state === 'FAILED') throw new Error(`파일 처리 실패: ${fileName}`);
             console.log(`  처리 중... (${i + 1}/${MAX_POLL_ATTEMPTS})`);
         } catch (error) {
-            if (error.message.includes('파일 처리 실패')) throw error;
+            if (error.message && error.message.includes('파일 처리 실패')) throw error;
             console.warn(`  [경고] 상태 확인 중 에러: ${error.message} (계속 대기)`);
         }
         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
