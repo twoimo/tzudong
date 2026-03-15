@@ -13,17 +13,35 @@ import path from 'path';
 import { GoogleGenAI } from '@google/genai';
 
 /** 파일 처리 상태 폴링 간격 (밀리초) */
-const POLL_INTERVAL_MS = 3000;
+const POLL_INTERVAL_MS = 5000;
 /** 최대 폴링 시도 횟수 */
 const MAX_POLL_ATTEMPTS = 60;
+
+/** API 호출 재시도 유틸리티 */
+async function fetchWithRetry(fn, retries = 3, delayMs = 5000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (err) {
+            if (i === retries - 1) throw err;
+            console.warn(`  [경고] API 호출 실패 (${err.message}). ${delayMs/1000}초 후 재시도... (${i+1}/${retries})`);
+            await new Promise(r => setTimeout(r, delayMs));
+        }
+    }
+}
 
 /** 업로드된 파일이 ACTIVE 상태가 될 때까지 폴링 대기 */
 async function waitForProcessing(ai, fileName) {
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-        const file = await ai.files.get({ name: fileName });
-        if (file.state === 'ACTIVE') return file;
-        if (file.state === 'FAILED') throw new Error(`파일 처리 실패: ${fileName}`);
-        console.log(`  처리 중... (${i + 1}/${MAX_POLL_ATTEMPTS})`);
+        try {
+            const file = await ai.files.get({ name: fileName });
+            if (file.state === 'ACTIVE') return file;
+            if (file.state === 'FAILED') throw new Error(`파일 처리 실패: ${fileName}`);
+            console.log(`  처리 중... (${i + 1}/${MAX_POLL_ATTEMPTS})`);
+        } catch (error) {
+            if (error.message.includes('파일 처리 실패')) throw error;
+            console.warn(`  [경고] 상태 확인 중 에러: ${error.message} (계속 대기)`);
+        }
         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
     }
     throw new Error(`파일 처리 타임아웃: ${fileName}`);
@@ -57,10 +75,10 @@ async function main() {
         const ai = new GoogleGenAI({ apiKey });
 
         console.log('[업로드] Gemini File API에 비디오 업로드 중...');
-        const uploadResult = await ai.files.upload({
+        const uploadResult = await fetchWithRetry(() => ai.files.upload({
             file: videoPath,
             config: { mimeType: 'video/mp4' },
-        });
+        }), 3, 5000);
         console.log(`[업로드] 완료: ${uploadResult.name}`);
 
         console.log('[대기] 비디오 처리 대기 중...');
@@ -68,7 +86,7 @@ async function main() {
         console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
 
         console.log('[생성] Gemini API 호출 중 (thinkingLevel: HIGH)...');
-        const response = await ai.models.generateContent({
+        const response = await fetchWithRetry(() => ai.models.generateContent({
             model: modelName,
             contents: [
                 {
@@ -89,7 +107,7 @@ async function main() {
                     thinkingLevel: 'HIGH',
                 },
             },
-        });
+        }), 3, 10000);
 
         const text = response.text;
         if (!text) throw new Error('Gemini 응답이 비어있음');
@@ -98,7 +116,7 @@ async function main() {
         console.log(`[완료] 응답 저장됨: ${outputFile}`);
 
         try {
-            await ai.files.delete({ name: processedFile.name });
+            await fetchWithRetry(() => ai.files.delete({ name: processedFile.name }), 3, 2000);
             console.log('[정리] 업로드된 파일 삭제 완료');
         } catch (e) {
             console.warn(`[경고] 파일 정리 실패: ${e.message}`);
