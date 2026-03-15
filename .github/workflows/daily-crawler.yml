@@ -24,10 +24,9 @@ concurrency:
 jobs:
   daily-crawl:
     runs-on: ubuntu-latest
-    # [PERF] 안전 타임아웃: 최대 120분 (3000분/월 예산 고려)
-    # 일일 평균 ~40-60분, 최악의 경우에도 120분 내 완료
-    # 120분 * 30일 = 3600분이지만 대부분 60분 이내 종료하므로 예산 내 운영
-    timeout-minutes: 120
+    # [PERF] 안전 타임아웃: 최대 60분 (월 3000분 한도 보호)
+    # 무한 대기로 인한 크레딧 낭비를 방지하기 위해 엄격하게 60분으로 제한합니다.
+    timeout-minutes: 60
     
     steps:
 
@@ -192,7 +191,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run Daily Pipeline
-        timeout-minutes: 100
+        timeout-minutes: 40
         env:
           # API Keys
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
