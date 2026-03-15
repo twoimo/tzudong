@@ -60,7 +60,12 @@ async function runSingleAttempt(ai, modelName, promptText, videoPath, outputFile
         const processedFile = await waitForProcessing(ai, uploadedFile.name);
         console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
 
-        console.log('[생성] Gemini API 호출 중 (thinkingLevel: HIGH)...');
+        console.log('[생성] Gemini API 호출 중...');
+        const isThinkingModel = modelName.includes('thinking') || modelName.includes('3.1');
+        const generateConfig = isThinkingModel 
+            ? { thinkingConfig: { thinkingLevel: 'HIGH' } } 
+            : {};
+
         const response = await fetchWithRetry(() => ai.models.generateContent({
             model: modelName,
             contents: [
@@ -77,9 +82,7 @@ async function runSingleAttempt(ai, modelName, promptText, videoPath, outputFile
                     ],
                 },
             ],
-            config: {
-                thinkingConfig: { thinkingLevel: 'HIGH' },
-            },
+            config: generateConfig,
         }), 2, 10000);
 
         const text = response.text;
