@@ -49,10 +49,15 @@ async function waitForProcessing(ai, fileName) {
 async function runSingleAttempt(ai, modelName, promptText, videoPath, outputFile) {
     let uploadedFile = null;
     try {
-        console.log('[업로드] Gemini File API에 비디오 업로드 중...');
+        const timestamp = Date.now();
+        const displayName = `${path.basename(videoPath)}-${timestamp}`;
+        console.log(`[업로드] Gemini File API에 비디오 업로드 중 (${displayName})...`);
         uploadedFile = await fetchWithRetry(() => ai.files.upload({
             file: videoPath,
-            config: { mimeType: 'video/mp4' },
+            config: { 
+                mimeType: 'video/mp4',
+                displayName: displayName
+            },
         }), 2, 5000);
         console.log(`[업로드] 완료: ${uploadedFile.name}`);
 
