@@ -3,19 +3,18 @@
  *
  * 사용법:
  *   node gemini_chunk_video_request.mjs <prompt_file> <output_file> <video_path>
- *
- * 비디오를 Gemini File API로 업로드한 뒤, 프롬프트 + 비디오를 함께 분석 요청합니다.
- * thinkingLevel: HIGH로 설정하여 최대 추론 깊이를 활성화합니다.
  */
 
 import fs from 'fs';
 import path from 'path';
 import { GoogleGenAI } from '@google/genai';
 
-/** 파일 처리 상태 폴링 간격 (밀리초) - 구글 권장 10초로 변경하여 서버 과부하 방지 */
+/** 파일 처리 상태 폴링 간격 (밀리초) */
 const POLL_INTERVAL_MS = 10000;
-/** 최대 폴링 시도 횟수 - 최대 15분 대기 (90 * 10초) */
-const MAX_POLL_ATTEMPTS = 90;
+/** 최대 폴링 시도 횟수 (5분 대기) */
+const MAX_POLL_ATTEMPTS = 30;
+/** 전체 프로세스(업로드 포함) 최대 재시도 횟수 */
+const MAX_PROCESS_RETRIES = 3;
 
 /** API 호출 재시도 유틸리티 */
 async function fetchWithRetry(fn, retries = 3, delayMs = 10000) {
@@ -39,12 +38,66 @@ async function waitForProcessing(ai, fileName) {
             if (file.state === 'FAILED') throw new Error(`파일 처리 실패: ${fileName}`);
             console.log(`  처리 중... (${i + 1}/${MAX_POLL_ATTEMPTS})`);
         } catch (error) {
-            if (error.message && error.message.includes('파일 처리 실패')) throw error;
+            // 500 에러 등 일시적 통신 오류는 무시하고 계속 폴링
             console.warn(`  [경고] 상태 확인 중 에러: ${error.message} (계속 대기)`);
         }
         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
     }
     throw new Error(`파일 처리 타임아웃: ${fileName}`);
+}
+
+async function runSingleAttempt(ai, modelName, promptText, videoPath, outputFile) {
+    let uploadedFile = null;
+    try {
+        console.log('[업로드] Gemini File API에 비디오 업로드 중...');
+        uploadedFile = await fetchWithRetry(() => ai.files.upload({
+            file: videoPath,
+            config: { mimeType: 'video/mp4' },
+        }), 2, 5000);
+        console.log(`[업로드] 완료: ${uploadedFile.name}`);
+
+        console.log('[대기] 비디오 처리 대기 중...');
+        const processedFile = await waitForProcessing(ai, uploadedFile.name);
+        console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
+
+        console.log('[생성] Gemini API 호출 중 (thinkingLevel: HIGH)...');
+        const response = await fetchWithRetry(() => ai.models.generateContent({
+            model: modelName,
+            contents: [
+                {
+                    role: 'user',
+                    parts: [
+                        { text: promptText },
+                        {
+                            fileData: {
+                                fileUri: processedFile.uri,
+                                mimeType: processedFile.mimeType,
+                            },
+                        },
+                    ],
+                },
+            ],
+            config: {
+                thinkingConfig: { thinkingLevel: 'HIGH' },
+            },
+        }), 2, 10000);
+
+        const text = response.text;
+        if (!text) throw new Error('Gemini 응답이 비어있음');
+
+        fs.writeFileSync(outputFile, text);
+        console.log(`[완료] 응답 저장됨: ${outputFile}`);
+        return true;
+    } finally {
+        if (uploadedFile) {
+            try {
+                await ai.files.delete({ name: uploadedFile.name });
+                console.log('[정리] 업로드된 파일 삭제 완료');
+            } catch (e) {
+                console.warn(`[경고] 파일 정리 실패: ${e.message}`);
+            }
+        }
+    }
 }
 
 async function main() {
@@ -70,60 +123,24 @@ async function main() {
     const modelName = process.env.CURRENT_MODEL || 'gemini-3.1-flash-lite-preview';
     console.log(`[Gemini] 모델: ${modelName}, 비디오: ${path.basename(videoPath)}`);
 
-    try {
-        const promptText = fs.readFileSync(promptFile, 'utf8');
-        const ai = new GoogleGenAI({ apiKey });
+    const promptText = fs.readFileSync(promptFile, 'utf8');
+    const ai = new GoogleGenAI({ apiKey });
 
-        console.log('[업로드] Gemini File API에 비디오 업로드 중...');
-        const uploadResult = await fetchWithRetry(() => ai.files.upload({
-            file: videoPath,
-            config: { mimeType: 'video/mp4' },
-        }), 3, 5000);
-        console.log(`[업로드] 완료: ${uploadResult.name}`);
-
-        console.log('[대기] 비디오 처리 대기 중...');
-        const processedFile = await waitForProcessing(ai, uploadResult.name);
-        console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
-
-        console.log('[생성] Gemini API 호출 중 (thinkingLevel: HIGH)...');
-        const response = await fetchWithRetry(() => ai.models.generateContent({
-            model: modelName,
-            contents: [
-                {
-                    role: 'user',
-                    parts: [
-                        { text: promptText },
-                        {
-                            fileData: {
-                                fileUri: processedFile.uri,
-                                mimeType: processedFile.mimeType,
-                            },
-                        },
-                    ],
-                },
-            ],
-            config: {
-                thinkingConfig: {
-                    thinkingLevel: 'HIGH',
-                },
-            },
-        }), 3, 10000);
-
-        const text = response.text;
-        if (!text) throw new Error('Gemini 응답이 비어있음');
-
-        fs.writeFileSync(outputFile, text);
-        console.log(`[완료] 응답 저장됨: ${outputFile}`);
-
+    for (let retry = 0; retry < MAX_PROCESS_RETRIES; retry++) {
         try {
-            await fetchWithRetry(() => ai.files.delete({ name: processedFile.name }), 3, 2000);
-            console.log('[정리] 업로드된 파일 삭제 완료');
-        } catch (e) {
-            console.warn(`[경고] 파일 정리 실패: ${e.message}`);
+            const success = await runSingleAttempt(ai, modelName, promptText, videoPath, outputFile);
+            if (success) return;
+        } catch (error) {
+            console.error(`[시도 ${retry + 1}/${MAX_PROCESS_RETRIES}] 오류 발생: ${error.message}`);
+            if (retry < MAX_PROCESS_RETRIES - 1) {
+                const waitSec = 15;
+                console.log(`  ${waitSec}초 후 재시도 시작 (파일 재업로드)...`);
+                await new Promise(r => setTimeout(r, waitSec * 1000));
+            } else {
+                console.error('모든 재시도 실패.');
+                process.exit(1);
+            }
         }
-    } catch (error) {
-        console.error(`[오류] ${error.message}`);
-        process.exit(1);
     }
 }
 
