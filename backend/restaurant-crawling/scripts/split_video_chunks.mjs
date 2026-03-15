@@ -76,9 +76,9 @@ async function main() {
             continue;
         }
 
-        // 비디오: x264, 최대 720p (scale), 30fps 제한, 빠른 처리(ultrafast)
-        // 오디오: aac, mono (ac 1), 44.1kHz (ar 44100), 오디오 트랙이 깨진 경우 무시
-        const codecArgs = '-c:v libx264 -vf "scale=-2:\'min(720,ih)\'" -r 30 -preset ultrafast -crf 28 -c:a aac -ac 1 -ar 44100 -b:a 96k -movflags +faststart';
+        // 비디오: x264, 최대 360p (scale), 30fps 제한, 빠른 처리(fast)
+        // 오디오: aac, mono (ac 1), 44.1kHz (ar 44100)
+        const codecArgs = '-c:v libx264 -vf "scale=-2:\'min(360,ih)\'" -r 30 -preset fast -crf 28 -c:a aac -ac 1 -ar 44100 -b:a 128k -movflags +faststart';
 
         const cmd = `"${ffmpegPath}" -y -ss ${start_sec} -t ${duration} -i "${toWindowsPath(videoPath)}" ${codecArgs} "${toWindowsPath(outFile)}"`;
 
