@@ -42,8 +42,8 @@ for env_file in "$PROJECT_ROOT/.env" "$PROJECT_ROOT/../.env"; do
 done
 
 # Gemini 모델 설정
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-1.5-flash}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-lite-preview}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.1-flash-lite-preview}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
 PYTHON_CMD="${PYTHON_CMD:-python}"
