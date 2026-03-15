@@ -25,18 +25,14 @@ from utils.chunk_utils import format_time, Segment
 def compute_chunk_duration(total_duration: float) -> float:
     """영상 길이에 따른 적응형 청크 크기 반환 (초 단위)
 
-    360p mp4 비트레이트 ~500-1000kbps 기준, Gemini File API 업로드 제한(~20MB) 고려.
+    Gemini API 안정성을 위해 최대 90초로 제한합니다.
     """
-    if total_duration <= 180:
+    if total_duration <= 90:
         return total_duration
-    elif total_duration <= 600:
-        return 120
-    elif total_duration <= 1200:
-        return 180
-    elif total_duration <= 2400:
-        return 240
+    elif total_duration <= 300:
+        return 60
     else:
-        return 300
+        return 90
 
 
 def align_to_subtitle_boundary(
