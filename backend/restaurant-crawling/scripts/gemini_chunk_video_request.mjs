@@ -1,102 +1,77 @@
 /**
  * Gemini File API를 사용한 청크 비디오 멀티모달 분석
- *
- * 사용법:
- *   node gemini_chunk_video_request.mjs <prompt_file> <output_file> <video_path>
+ * (표준 SDK @google/generative-ai 사용 버전)
  */
 
 import fs from 'fs';
 import path from 'path';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 
 /** 파일 처리 상태 폴링 간격 (밀리초) */
-const POLL_INTERVAL_MS = 10000;
-/** 최대 폴링 시도 횟수 (5분 대기) */
-const MAX_POLL_ATTEMPTS = 30;
+const POLL_INTERVAL_MS = 15000;
+/** 최대 폴링 시도 횟수 (약 10분 대기) */
+const MAX_POLL_ATTEMPTS = 40;
 /** 전체 프로세스(업로드 포함) 최대 재시도 횟수 */
 const MAX_PROCESS_RETRIES = 3;
 
-/** API 호출 재시도 유틸리티 */
-async function fetchWithRetry(fn, retries = 3, delayMs = 10000) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            return await fn();
-        } catch (err) {
-            if (i === retries - 1) throw err;
-            console.warn(`  [경고] API 호출 실패 (${err.message}). ${delayMs/1000}초 후 재시도... (${i+1}/${retries})`);
-            await new Promise(r => setTimeout(r, delayMs));
-        }
-    }
-}
-
 /** 업로드된 파일이 ACTIVE 상태가 될 때까지 폴링 대기 */
-async function waitForProcessing(ai, fileName) {
+async function waitForProcessing(fileManager, fileName) {
+    // [GitHub Action 최적화] 업로드 직후 바로 상태를 찌르지 않고 잠시 대기하여 500 에러 방지
+    console.log('  [대기] 서버 파싱을 위해 20초간 초기 대기...');
+    await new Promise(r => setTimeout(r, 20000));
+
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         try {
-            const file = await ai.files.get({ name: fileName });
-            if (file.state === 'ACTIVE') return file;
-            if (file.state === 'FAILED') throw new Error(`파일 처리 실패: ${fileName}`);
-            console.log(`  처리 중... (${i + 1}/${MAX_POLL_ATTEMPTS})`);
+            const file = await fileManager.getFile(fileName);
+            if (file.state === FileState.ACTIVE) return file;
+            if (file.state === FileState.FAILED) throw new Error(`파일 처리 실패: ${fileName}`);
+            console.log(`  처리 중... (${i + 1}/${MAX_POLL_ATTEMPTS}) - 상태: ${file.state}`);
         } catch (error) {
-            // 500 에러 등 일시적 통신 오류는 무시하고 계속 폴링
-            console.warn(`  [경고] 상태 확인 중 에러: ${error.message} (계속 대기)`);
+            // 구글 서버가 비정상 응답(HTML 등)을 보낼 경우 catch됨
+            console.warn(`  [경고] 상태 확인 중 통신 에러 (재시도 예정): ${error.message}`);
         }
         await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
     }
     throw new Error(`파일 처리 타임아웃: ${fileName}`);
 }
 
-async function runSingleAttempt(ai, modelName, promptText, videoPath, outputFile) {
+async function runSingleAttempt(apiKey, modelName, promptText, videoPath, outputFile) {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const fileManager = new GoogleAIFileManager(apiKey);
     let uploadedFile = null;
+
     try {
         const timestamp = Date.now();
         const displayName = `${path.basename(videoPath)}-${timestamp}`;
+        
         console.log(`[업로드] Gemini File API에 비디오 업로드 중 (${displayName})...`);
-        uploadedFile = await fetchWithRetry(() => ai.files.upload({
-            file: videoPath,
-            config: { 
-                mimeType: 'video/mp4',
-                displayName: displayName
-            },
-        }), 2, 5000);
-        console.log(`[업로드] 완료: ${uploadedFile.name}`);
+        uploadedFile = await fileManager.uploadFile(videoPath, {
+            mimeType: 'video/mp4',
+            displayName: displayName,
+        });
+        console.log(`[업로드] 완료: ${uploadedFile.file.name}`);
 
-        console.log('[대기] 비디오 처리 대기 중...');
-        const processedFile = await waitForProcessing(ai, uploadedFile.name);
+        console.log('[대기] 비디오 처리 상태 확인 중...');
+        const processedFile = await waitForProcessing(fileManager, uploadedFile.file.name);
         console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
 
         console.log(`[생성] Gemini API 호출 중 (모델: ${modelName})...`);
+        const model = genAI.getGenerativeModel({ model: modelName });
         
-        // [Troubleshoot] 3.1 모델에서 thinkingLevel: HIGH 사용 시 간헐적으로 500 에러 발생 가능성 배제
-        // 일단 thinkingConfig를 비활성화하고 기본 생성으로 테스트
-        const generateConfig = {}; 
-        /*
-        const isThinkingModel = modelName.includes('thinking') || modelName.includes('3.1');
-        const generateConfig = isThinkingModel 
-            ? { thinkingConfig: { thinkingLevel: 'HIGH' } } 
-            : {};
-        */
-
-        const response = await fetchWithRetry(() => ai.models.generateContent({
-            model: modelName,
-            contents: [
-                {
-                    role: 'user',
-                    parts: [
-                        { text: promptText },
-                        {
-                            fileData: {
-                                fileUri: processedFile.uri,
-                                mimeType: processedFile.mimeType,
-                            },
-                        },
-                    ],
+        // 3.1 모델 호환성을 고려하되, 500 에러 유발 가능성이 있는 thinkingConfig는 명시적 제외 (기본값 사용)
+        const result = await model.generateContent([
+            { text: promptText },
+            {
+                fileData: {
+                    fileUri: processedFile.uri,
+                    mimeType: processedFile.mimeType,
                 },
-            ],
-            config: generateConfig,
-        }), 2, 10000);
+            },
+        ]);
 
-        const text = response.text;
+        const response = await result.response;
+        const text = response.text();
         if (!text) throw new Error('Gemini 응답이 비어있음');
 
         fs.writeFileSync(outputFile, text);
@@ -105,7 +80,7 @@ async function runSingleAttempt(ai, modelName, promptText, videoPath, outputFile
     } finally {
         if (uploadedFile) {
             try {
-                await ai.files.delete({ name: uploadedFile.name });
+                await fileManager.deleteFile(uploadedFile.file.name);
                 console.log('[정리] 업로드된 파일 삭제 완료');
             } catch (e) {
                 console.warn(`[경고] 파일 정리 실패: ${e.message}`);
@@ -138,17 +113,16 @@ async function main() {
     console.log(`[Gemini] 모델: ${modelName}, 비디오: ${path.basename(videoPath)}`);
 
     const promptText = fs.readFileSync(promptFile, 'utf8');
-    const ai = new GoogleGenAI({ apiKey });
 
     for (let retry = 0; retry < MAX_PROCESS_RETRIES; retry++) {
         try {
-            const success = await runSingleAttempt(ai, modelName, promptText, videoPath, outputFile);
+            const success = await runSingleAttempt(apiKey, modelName, promptText, videoPath, outputFile);
             if (success) return;
         } catch (error) {
             console.error(`[시도 ${retry + 1}/${MAX_PROCESS_RETRIES}] 오류 발생: ${error.message}`);
             if (retry < MAX_PROCESS_RETRIES - 1) {
-                const waitSec = 15;
-                console.log(`  ${waitSec}초 후 재시도 시작 (파일 재업로드)...`);
+                const waitSec = 30;
+                console.log(`  ${waitSec}초 후 재시도 시작 (처음부터 다시 업로드)...`);
                 await new Promise(r => setTimeout(r, waitSec * 1000));
             } else {
                 console.error('모든 재시도 실패.');
