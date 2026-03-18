@@ -22,64 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check-new-data:
-    runs-on: ubuntu-latest
-    outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: data
-          fetch-depth: 1
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies for check
-        run: |
-          python -m pip install --upgrade pip -q
-          pip install google-api-python-client -q
-
-      - name: Check new URLs and pending work
-        id: check
-        env:
-          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
-        run: |
-          mkdir -p backend/log/cron
-          # 1. URL 수집 실행 (새로운 영상 탐색)
-          python backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang > backend/log/cron/check.log 2>&1
-          NEW_URL_COUNT=$(grep -c "\[New URL\]" backend/log/cron/check.log || true)
-          echo "New URLs: $NEW_URL_COUNT"
-          
-          SHOULD_RUN="false"
-          if [ "$NEW_URL_COUNT" -gt 0 ]; then
-            SHOULD_RUN="true"
-          fi
-          
-          # 2. 보류 중인 LAAJ 평가가 있는지 확인 (이전 타임아웃 등)
-          PENDING_LAAJ=0
-          if [ -d "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results" ]; then
-            for file in backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/*.jsonl; do
-              [ -e "$file" ] || continue
-              filename=$(basename "$file")
-              if [ ! -f "backend/restaurant-evaluation/data/tzuyang/evaluation/laaj_results/$filename" ]; then
-                PENDING_LAAJ=$((PENDING_LAAJ + 1))
-              fi
-            done
-          fi
-          echo "Pending LAAJ: $PENDING_LAAJ"
-          if [ "$PENDING_LAAJ" -gt 0 ]; then
-            SHOULD_RUN="true"
-          fi
-          
-          echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
-
   daily-crawl:
-    needs: check-new-data
-    if: needs.check-new-data.outputs.should_run == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # [PERF] 안전 타임아웃: 최대 60분 (월 3000분 한도 보호)
     timeout-minutes: 60
