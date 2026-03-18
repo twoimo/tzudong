@@ -70,9 +70,9 @@ def format_transcript_range(
 
 
 def plan_chunks(
-    video_id: str, duration: float, segments: List[Segment]
+    video_id: str, duration: float, segments: List[Segment], overlap_sec: float = 10.0
 ) -> List[dict]:
-    """영상을 자막 경계에 맞춰 청크 목록으로 분할"""
+    """영상을 자막 경계에 맞춰 청크 목록으로 분할하며 앞뒤 문맥 연결을 위해 오버랩을 둡니다."""
     chunk_sec = compute_chunk_duration(duration)
 
     if chunk_sec >= duration:
@@ -90,7 +90,7 @@ def plan_chunks(
     chunk_index = 0
 
     while current_start < duration:
-        raw_end = min(current_start + chunk_sec, duration)
+        raw_end = min(current_start + chunk_sec + overlap_sec, duration)
 
         if 0 < duration - raw_end < 30:
             raw_end = duration
@@ -115,7 +115,14 @@ def plan_chunks(
             }
         )
 
-        current_start = aligned_end
+        # 오버랩을 위해 다음 청크의 시작 지점을 현재 청크 끝에서 overlap_sec 만큼 뒤로 당깁니다.
+        next_start = aligned_end - overlap_sec
+        current_start = max(current_start + 1.0, next_start)
+        
+        # 만약 다음 시작점이 duration과 너무 가깝다면 루프 종료
+        if duration - current_start < 10:
+            break
+
         chunk_index += 1
 
     return chunks
