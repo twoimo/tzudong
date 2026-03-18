@@ -42,7 +42,11 @@ async function waitForProcessing(fileManager, fileName) {
             if (file.state === FileState.FAILED) throw new Error(`파일 처리 실패: ${fileName}`);
         } catch (error) {
             // 구글 서버가 비정상 응답(HTML 등)을 보낼 경우 catch됨
-            console.warn(`  [경고] 상태 확인 중 통신 에러 (재시도 예정): ${error.message}`);
+            console.log(`  [경고] 상태 확인 중 통신 에러 (재시도 예정): ${error.message}`);
+            // [Quota Error 감지] 500 에러나 429 에러가 반복될 경우, 쿼타/내부 서버 문제로 판단하고 즉시 중단
+            if (error.message.includes('500 Internal Server Error') || error.message.includes('429') || error.message.includes('403')) {
+                throw new Error(`[QUOTA_ERROR] ${error.message}`);
+            }
         }
         
         console.log(`    [폴링 대기] 다음 확인까지 ${POLL_INTERVAL_MS / 1000}초 대기 시작...`);
@@ -95,6 +99,11 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         fs.writeFileSync(outputFile, text);
         console.log(`[완료] 응답 저장됨: ${outputFile}`);
         return true;
+    } catch (error) {
+        if (error.message.includes('429') || error.message.includes('QUOTA_ERROR') || error.message.includes('RESOURCE_EXHAUSTED')) {
+             throw new Error(`[QUOTA_ERROR] ${error.message}`);
+        }
+        throw error;
     } finally {
         if (uploadedFile) {
             try {
@@ -138,6 +147,17 @@ async function main() {
             if (success) return;
         } catch (error) {
             console.error(`[시도 ${retry + 1}/${MAX_PROCESS_RETRIES}] 오류 발생: ${error.message}`);
+            
+            // 쿼타 에러 감지 시 특수 종료 코드(42) 반환
+            if (error.message.includes('[QUOTA_ERROR]') || error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED')) {
+                console.error('[치명적 오류] API 할당량(Quota) 초과 또는 심각한 API 에러 발생. 스크립트를 즉시 종료합니다.');
+                process.exit(42);
+            }
+
+            console.error('=== 상세 에러 로그 ===');
+            console.error(error);
+            console.error('======================');
+            
             if (retry < MAX_PROCESS_RETRIES - 1) {
                 const waitSec = 30;
                 console.log(`  ${waitSec}초 후 재시도 시작 (처음부터 다시 업로드)...`);
