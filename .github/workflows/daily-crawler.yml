@@ -22,19 +22,77 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check-new-data:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies for check
+        run: |
+          python -m pip install --upgrade pip -q
+          pip install google-api-python-client -q
+
+      - name: Check new URLs and pending work
+        id: check
+        env:
+          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+        run: |
+          mkdir -p backend/log/cron
+          # 1. URL 수집 실행 (새로운 영상 탐색)
+          python backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang > backend/log/cron/check.log 2>&1
+          NEW_URL_COUNT=$(grep -c "\[New URL\]" backend/log/cron/check.log || true)
+          echo "New URLs: $NEW_URL_COUNT"
+          
+          SHOULD_RUN="false"
+          if [ "$NEW_URL_COUNT" -gt 0 ]; then
+            SHOULD_RUN="true"
+          fi
+          
+          # 2. 보류 중인 LAAJ 평가가 있는지 확인 (이전 타임아웃 등)
+          PENDING_LAAJ=0
+          if [ -d "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results" ]; then
+            for file in backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/*.jsonl; do
+              [ -e "$file" ] || continue
+              filename=$(basename "$file")
+              if [ ! -f "backend/restaurant-evaluation/data/tzuyang/evaluation/laaj_results/$filename" ]; then
+                PENDING_LAAJ=$((PENDING_LAAJ + 1))
+              fi
+            done
+          fi
+          echo "Pending LAAJ: $PENDING_LAAJ"
+          if [ "$PENDING_LAAJ" -gt 0 ]; then
+            SHOULD_RUN="true"
+          fi
+          
+          echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
+
   daily-crawl:
+    needs: check-new-data
+    if: needs.check-new-data.outputs.should_run == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # [PERF] 안전 타임아웃: 최대 60분 (월 3000분 한도 보호)
-    # 무한 대기로 인한 크레딧 낭비를 방지하기 위해 엄격하게 60분으로 제한합니다.
     timeout-minutes: 60
+    env:
+      MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
     
     steps:
-
       # ============================================================
       # 환경 준비 (Setup) - 캐시 최대 활용으로 시간 절약
       # ============================================================
 
       - name: System Setup (Disk + Swap)
+        if: env.MAX_CONTEXT_VIDEOS != '-1'
         run: |
           # [PERF] 디스크 정리를 백그라운드에서 실행 (스왑 생성과 병렬)
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL &
@@ -59,6 +117,11 @@ jobs:
         with:
           ref: data
           fetch-depth: 1
+
+      - name: Install System Dependencies (ffmpeg, jq, rclone)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg jq rclone
 
       # ============================================================
       # 의존성 설치 (Dependencies) - 캐시 활용 극대화
@@ -86,29 +149,15 @@ jobs:
           cache: 'pip'
           cache-dependency-path: backend/restaurant-crawling/scripts/requirements.txt
 
-      # [PERF] RClone + Ollama 바이너리 캐시 (매번 다운로드 방지)
-      - name: Cache RClone & Ollama
-        id: cache-tools
-        uses: actions/cache@v4
-        with:
-          path: |
-            /usr/bin/rclone
-            /usr/local/bin/ollama
-          key: ${{ runner.os }}-tools-rclone-ollama-v2
-
-      - name: Install RClone
-        if: steps.cache-tools.outputs.cache-hit != 'true'
-        run: |
-          sudo -v ; curl -fsSL https://rclone.org/install.sh | sudo bash
-
-      # [PERF] Python + Node 의존성 완전 병렬 설치
+      # [PERF] Python + Node 의존성 완전 병렬 설치 (yt-dlp 최신화 포함)
       - name: Install Dependencies (Python + Node.js)
         env:
           PUPPETEER_CACHE_DIR: /home/runner/.cache/puppeteer
         run: |
-          # Python: pip upgrade + requirements 통합 (백그라운드)
+          # Python: pip upgrade + requirements + yt-dlp 최신버전 (백그라운드)
           (python -m pip install --upgrade pip -q && \
-           pip install -r backend/restaurant-crawling/scripts/requirements.txt -q) &
+           pip install -r backend/restaurant-crawling/scripts/requirements.txt -q && \
+           pip install -U yt-dlp -q) &
           PY_PID=$!
           
           # Node.js 의존성 (병렬)
@@ -146,11 +195,11 @@ jobs:
           echo "[OK] All credentials configured"
 
       # ============================================================
-      # Ollama 설정 (AI Model) - 캐시 활용
+      # Ollama 설정 (AI Model) - 조건부 실행
       # ============================================================
 
-      # [PERF] Ollama 모델 캐시를 Pull 전에 복원하여 ~2.5분 다운로드 시간 절약
       - name: Cache Ollama Models
+        if: env.MAX_CONTEXT_VIDEOS != '-1'
         uses: actions/cache@v4
         with:
           path: ~/.ollama
@@ -159,12 +208,13 @@ jobs:
             ${{ runner.os }}-ollama-models-
 
       - name: Setup Ollama
-        if: steps.cache-tools.outputs.cache-hit != 'true'
+        if: env.MAX_CONTEXT_VIDEOS != '-1'
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           echo "[OK] Ollama installed"
 
       - name: Start Ollama & Pull Model
+        if: env.MAX_CONTEXT_VIDEOS != '-1'
         run: |
           ollama serve &
           
@@ -213,8 +263,6 @@ jobs:
           OLLAMA_HOST: http://localhost:11434
           # CI
           CI: true
-          # [PERF] 자막 문맥 생성 배치 크기 (기본: 1, 메모리 보호)
-          MAX_CONTEXT_VIDEOS: ${{ inputs.max_videos || '-1' }}
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
