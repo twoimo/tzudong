@@ -483,18 +483,32 @@ PROMPT_EOF
 
     # [5/5] 결과 병합 (if로 직접 종료 코드 검사 — set -e 안전)
     log_info "[5/5] 결과 병합..."
-    local merged_response="$temp_dir/merged_response.json"
+    local raw_merged_response="$temp_dir/raw_merged_response.json"
 
-    if ! $PYTHON_CMD "$MERGE_RESULTS" --dir "$responses_dir" > "$merged_response" || [ ! -s "$merged_response" ]; then
+    if ! $PYTHON_CMD "$MERGE_RESULTS" --dir "$responses_dir" > "$raw_merged_response" || [ ! -s "$raw_merged_response" ]; then
         log_error "결과 병합 실패"
         rm -rf "$temp_dir"
         return 1
     fi
 
+    # [6/5] LLM 기반 최종 정리 및 환각 필터링 (새로운 단계)
+    log_info "[6/5] LLM 기반 최종 결과 정리..."
+    local final_merged_response="$temp_dir/merged_response.json"
+    local win_final_merge=$(normalize_path "$SCRIPT_DIR/final_merge_chunk.mjs")
+    local win_final_prompt=$(normalize_path "$SCRIPT_DIR/../prompts/final_merge_prompt.txt")
+    local win_raw_merged=$(normalize_path "$raw_merged_response")
+    local win_transcript=$(normalize_path "$transcript_file")
+    local win_final_out=$(normalize_path "$final_merged_response")
+
+    if ! "$NODE_EXE" "$win_final_merge" "$win_final_prompt" "$win_final_out" "$win_raw_merged" "$win_transcript"; then
+        log_warning "LLM 최종 정리 실패, Raw 병합본으로 대체합니다."
+        cp "$raw_merged_response" "$final_merged_response"
+    fi
+
     # parse_result.py로 최종 저장
     local crawling_file="$crawling_dir/${video_id}.jsonl"
 
-    if $PYTHON_CMD "$PARSER_SCRIPT" parse "$youtube_link" "$merged_response" "$crawling_file" "$meta_recollect_id" "$transcript_recollect_id" "$channel"; then
+    if $PYTHON_CMD "$PARSER_SCRIPT" parse "$youtube_link" "$final_merged_response" "$crawling_file" "$meta_recollect_id" "$transcript_recollect_id" "$channel"; then
         log_success "최종 저장 완료: $crawling_file"
     else
         log_error "파서 실패: $video_id"
