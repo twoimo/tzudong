@@ -298,6 +298,24 @@ if [ "$NEW_URL_COUNT" -gt 0 ]; then
     log "INFO" "신규 URL ${NEW_URL_COUNT}개 감지 -> 전체 파이프라인 실행"
 else
     log "INFO" "신규 URL 없음 -> 스마트 모드 (변경분만 처리)"
+    # [PERF] 신규 URL이 없으면 고비용 AI 분석(Phase 3)을 건너뜁니다.
+    # 단, 보류 중인 LAAJ 평가가 있는지 확인합니다.
+    PENDING_LAAJ=0
+    if [ -d "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results" ]; then
+        for file in backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/*.jsonl; do
+            [ -e "$file" ] || continue
+            filename=$(basename "$file")
+            if [ ! -f "backend/restaurant-evaluation/data/tzuyang/evaluation/laaj_results/$filename" ]; then
+                PENDING_LAAJ=$((PENDING_LAAJ + 1))
+            fi
+        done
+    fi
+    if [ "$PENDING_LAAJ" -gt 0 ]; then
+        log "INFO" "보류 중인 LAAJ 평가 ${PENDING_LAAJ}건 발견 -> Phase 3 실행"
+        HAS_NEW_DATA=true
+    else
+        SKIP_PHASE3=true
+    fi
 fi
 
 # 2. 메타데이터 수집 & 스케줄링 (관제탑 역할)
