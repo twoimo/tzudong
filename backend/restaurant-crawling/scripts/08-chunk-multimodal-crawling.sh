@@ -366,6 +366,7 @@ process_video_chunks() {
     local win_gemini=$(normalize_path "$GEMINI_CHUNK_API")
 
     local chunk_success=0 chunk_failed=0
+    local max_jobs=3
 
     # seq 서브프로세스 제거 — C 스타일 for 루프 사용
     for ((i = 0; i < total_chunks; i++)); do
@@ -424,44 +425,51 @@ PROMPT_EOF
         local win_response=$(normalize_path "$response_file")
         local win_segment=$(normalize_path "$segment_file")
 
-        set +e
-        "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>"$temp_dir/stderr_${i}.log"
-        local exit_code=$?
-        set -e
+        (
+            set +e
+            "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>"$temp_dir/stderr_${i}.log"
+            local exit_code=$?
+            set -e
 
-        if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
+            if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
+                log_success "  청크 $((i + 1)) 성공"
+            else
+                log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
+                [ -f "$temp_dir/stderr_${i}.log" ] && cat "$temp_dir/stderr_${i}.log" >&2
+
+                # 폴백 모델로 재시도
+                if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
+                    log_warning "  청크 $((i + 1)) 폴백 모델($FALLBACK_MODEL)로 재시도..."
+                    CURRENT_MODEL="$FALLBACK_MODEL"
+                    export CURRENT_MODEL
+                    sleep 5
+
+                    set +e
+                    "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>>"$temp_dir/stderr_${i}.log"
+                    local fb_exit=$?
+                    set -e
+
+                    if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
+                        log_success "  청크 $((i + 1)) 폴백 성공"
+                    fi
+                fi
+            fi
+        ) &
+
+        # 일정 개수(max_jobs)만큼 실행 후 대기 (병렬 실행 제어)
+        if (( (i + 1) % max_jobs == 0 )) || (( i == total_chunks - 1 )); then
+            wait
+            sleep 2
+        fi
+    done
+
+    # 병렬 실행 후 결과 수합
+    for ((i = 0; i < total_chunks; i++)); do
+        local response_file="$responses_dir/chunk_response_${i}.json"
+        if [ -s "$response_file" ]; then
             chunk_success=$((chunk_success + 1))
-            log_success "  청크 $((i + 1)) 성공"
         else
             chunk_failed=$((chunk_failed + 1))
-            log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
-            [ -f "$temp_dir/stderr_${i}.log" ] && cat "$temp_dir/stderr_${i}.log" >&2
-
-            # 폴백 모델로 재시도
-            if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
-                log_warning "  폴백 모델($FALLBACK_MODEL)로 재시도..."
-                CURRENT_MODEL="$FALLBACK_MODEL"
-                export CURRENT_MODEL
-                sleep 5
-
-                set +e
-                "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>>"$temp_dir/stderr_${i}.log"
-                local fb_exit=$?
-                set -e
-
-                if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
-                    chunk_failed=$((chunk_failed - 1))
-                    chunk_success=$((chunk_success + 1))
-                    log_success "  폴백 성공"
-                fi
-                CURRENT_MODEL="$PRIMARY_MODEL"
-                export CURRENT_MODEL
-            fi
-        fi
-
-        # Rate limit 대기 (마지막 청크 제외)
-        if [ $i -lt $((total_chunks - 1)) ]; then
-            sleep "${GEMINI_RATE_LIMIT_DELAY:-30}"
         fi
     done
 
