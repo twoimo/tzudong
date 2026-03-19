@@ -25,14 +25,17 @@ from utils.chunk_utils import format_time, Segment
 def compute_chunk_duration(total_duration: float) -> float:
     """영상 길이에 따른 적응형 청크 크기 반환 (초 단위)
 
-    Gemini API 안정성을 위해 최대 90초로 제한합니다.
+    Gemini API 1.5/3.1 (Context Window 1M+ 토큰) 스펙에 맞추어
+    최대 30분(1800초) 단위로 청크를 크게 가져갑니다.
+    대부분의 영상은 이보다 작으므로 1개의 청크로 처리되어 RPD를 크게 아낍니다.
     """
-    if total_duration <= 90:
+    if total_duration <= 1800:
         return total_duration
-    elif total_duration <= 300:
-        return 60
+    elif total_duration <= 3600:
+        return 1800
     else:
-        return 90
+        return 1800
+
 
 
 def align_to_subtitle_boundary(
