@@ -462,9 +462,18 @@ log "INFO" "[Step 7] 비활성화됨 → Step 08 (Chunk Multimodal)이 전담 �
 echo "::group::[Step 08] Chunk Multimodal Crawling"
 step_start
 log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
+set +o pipefail
 bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+CHUNK_EXIT_CODE=${PIPESTATUS[0]}
+set -o pipefail
+if [ $CHUNK_EXIT_CODE -eq 42 ]; then
+    log "WARN" "할당량 초과(Quota Error) 감지됨. 이후 단계를 건너뜁니다."
+    SKIP_PHASE3=true
+fi
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
+
+if [ "${SKIP_PHASE3:-false}" != "true" ]; then
 
 # 9. 평가 대상 선정
 echo "::group::[Step 09] Target Selection"
@@ -527,6 +536,7 @@ grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r lin
 step_end "Step 13 (Supabase)"
 echo "::endgroup::"
 
+fi # SKIP_PHASE3 종료 (after Chunk Multimodal)
 fi # SKIP_PHASE3 종료
 
 # ============================================================
