@@ -105,7 +105,7 @@ step_end() {
 
 # [PERF] 파이프라인 경과 시간 확인 (타임아웃 보호)
 check_timeout() {
-    local MAX_MINUTES=${1:-90}  # 기본 90분 타임아웃
+    local MAX_MINUTES=${1:-45}  # 기본 45분 타임아웃 (GH 스텝 50분 - 5분 여유)
     local ELAPSED=$(( $(date +%s) - PIPELINE_START ))
     local ELAPSED_MIN=$((ELAPSED / 60))
     if [ "$ELAPSED_MIN" -ge "$MAX_MINUTES" ]; then
@@ -413,7 +413,7 @@ echo "::endgroup::"
 sync_data_to_remote "Phase 2 (Transcript/Frames)"
 
 # [PERF] 타임아웃 체크 - Phase 3 진입 전 시간 확인
-if ! check_timeout 90; then
+if ! check_timeout 45; then
     log "WARN" "시간 제한으로 Phase 3 건너뜁니다. 다음 실행에서 이어집니다."
     sync_data_to_remote "Timeout Safety Sync"
     # Summary 생성으로 점프
@@ -475,7 +475,7 @@ echo "::endgroup::"
 sync_data_to_remote "Phase 3a (Rule Eval)"
 
 # [PERF] 타임아웃 체크 - LAAJ 진입 전 시간 확인 (가장 오래 걸리는 단계)
-if ! check_timeout 90; then
+if ! check_timeout 45; then
     log "WARN" "시간 제한으로 LAAJ 평가를 건너뜁니다. 다음 실행에서 이어집니다."
 else
 

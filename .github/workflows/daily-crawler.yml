@@ -78,6 +78,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-puppeteer-
 
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -100,7 +101,7 @@ jobs:
           # Python: pip upgrade + requirements + yt-dlp 최신버전 (백그라운드)
           (python -m pip install --upgrade pip -q && \
            pip install -r backend/restaurant-crawling/scripts/requirements.txt -q && \
-           pip install -U yt-dlp -q) &
+           pip install -U "yt-dlp[default]" -q) &
           PY_PID=$!
           
           # Node.js 의존성 (병렬)
@@ -145,8 +146,10 @@ jobs:
         if: env.MAX_CONTEXT_VIDEOS != '-1'
         uses: actions/cache@v4
         with:
-          path: ~/.ollama
-          key: ${{ runner.os }}-ollama-models-v2
+          path: |
+            ~/.ollama
+            /usr/share/ollama/.ollama
+          key: ${{ runner.os }}-ollama-models-v3
           restore-keys: |
             ${{ runner.os }}-ollama-models-
 
@@ -154,6 +157,10 @@ jobs:
         if: env.MAX_CONTEXT_VIDEOS != '-1'
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
+          # [Fix] 캐시 복원 시 모델 디렉토리 권한 보정 (ollama 사용자에게 소유권 이전)
+          if [ -d /usr/share/ollama/.ollama ]; then
+            sudo chown -R ollama:ollama /usr/share/ollama/.ollama 2>/dev/null || true
+          fi
           echo "[OK] Ollama installed"
 
       - name: Start Ollama & Pull Model
@@ -184,7 +191,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run Daily Pipeline
-        timeout-minutes: 40
+        timeout-minutes: 50
         env:
           # API Keys
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
