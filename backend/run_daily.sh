@@ -46,6 +46,18 @@ export PYTHONUNBUFFERED=1
 # [Local Config] RClone 경로 추가 (사용자 환경)
 export PYTHON_CMD
 export PATH="$PATH:/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64"
+# [Cross-Platform] Deno 런타임 PATH 자동 탐색 (yt-dlp n challenge 해결용)
+if ! command -v deno &> /dev/null; then
+    case "$(uname -s)" in
+        CYGWIN*|MINGW*|MSYS*)
+            [ -n "$USERPROFILE" ] && _DENO_DIR="$(cygpath -u "$USERPROFILE" 2>/dev/null)/.deno/bin"
+            [ -z "$_DENO_DIR" ] && _DENO_DIR="$HOME/.deno/bin"
+            ;;
+        *)  _DENO_DIR="$HOME/.deno/bin" ;;
+    esac
+    [ -d "$_DENO_DIR" ] && export PATH="$PATH:$_DENO_DIR"
+    unset _DENO_DIR
+fi
 
 # 로그 디렉토리 생성
 LOG_DIR="$PROJECT_ROOT/backend/log/cron"
