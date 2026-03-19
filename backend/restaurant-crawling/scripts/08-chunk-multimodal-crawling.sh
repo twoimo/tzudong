@@ -46,6 +46,35 @@ export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.1-flash-lite-preview}"
 export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
+# [Cross-Platform] Deno 런타임 PATH 자동 탐색 (yt-dlp n challenge 해결용)
+# Git Bash(MINGW): /c/Users/<user>/.deno/bin
+# WSL:            /mnt/c/Users/<user>/.deno/bin
+# Linux(CI):      $HOME/.deno/bin
+if ! command -v deno &> /dev/null; then
+    DENO_SEARCH_PATHS=()
+    case "${OS_NAME:-$(uname -s)}" in
+        Windows|CYGWIN*|MINGW*|MSYS*)
+            # Git Bash: 현재 사용자의 .deno/bin
+            [ -n "$USERPROFILE" ] && DENO_SEARCH_PATHS+=("$(cygpath -u "$USERPROFILE" 2>/dev/null)/.deno/bin")
+            [ -n "$HOME" ] && DENO_SEARCH_PATHS+=("$HOME/.deno/bin")
+            ;;
+        *)
+            # Linux/macOS/WSL
+            DENO_SEARCH_PATHS+=("$HOME/.deno/bin")
+            # WSL에서 Windows Deno 사용 폴백
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                WIN_USER=$(cmd.exe /C "echo %USERPROFILE%" 2>/dev/null | tr -d '\r')
+                [ -n "$WIN_USER" ] && DENO_SEARCH_PATHS+=("$(wslpath -u "$WIN_USER" 2>/dev/null)/.deno/bin")
+            fi
+            ;;
+    esac
+    for deno_path in "${DENO_SEARCH_PATHS[@]}"; do
+        if [ -d "$deno_path" ]; then
+            export PATH="$deno_path:$PATH"
+            break
+        fi
+    done
+fi
 PYTHON_CMD="${PYTHON_CMD:-python}"
 
 # 터미널 색상 (비터미널 환경에선 비활성)
@@ -231,7 +260,7 @@ download_video() {
     fi
 
     log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"
-    $yt_dlp_cmd --js-runtimes node $cookie_arg \
+    $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg \
         --impersonate Chrome \
         -f "bestvideo[height<=360]+bestaudio/best[height<=360]/best" \
         -o "$output_template" \
