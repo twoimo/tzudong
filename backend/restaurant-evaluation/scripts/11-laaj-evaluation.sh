@@ -168,9 +168,10 @@ if [ -n "$USE_OAUTH" ] && [ "$USE_OAUTH" = "true" ]; then
     FORCE_CLI_FALLBACK=true
 fi
 
-# Gemini 모델 설정
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-2.5-flash}"
+# Gemini API 키 및 모델 설정
+export GEMINI_API_KEY="${GEMINI_API_KEY_BYEON:-$GEMINI_API_KEY}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.1-flash-lite-preview}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
 
