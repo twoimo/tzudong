@@ -10,8 +10,8 @@ import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 
 /** 파일 처리 상태 폴링 간격 (밀리초) */
 const POLL_INTERVAL_MS = 15000;
-/** 최대 폴링 시도 횟수 (약 2.5분 대기 - 강력한 차단) */
-const MAX_POLL_ATTEMPTS = 10;
+/** 최대 폴링 시도 횟수 (약 5분 대기 - 긴 영상 처리 대응) */
+const MAX_POLL_ATTEMPTS = 20;
 /** 전체 프로세스(업로드 포함) 최대 재시도 횟수 (1회: 재시도 없음, 무한 루프 방지) */
 const MAX_PROCESS_RETRIES = 1;
 
@@ -90,7 +90,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
                     mimeType: processedFile.mimeType,
                 },
             },
-        ]), 120000);
+        ]), 300000); // 전체 영상 분석을 위해 타임아웃 5분(300000ms)으로 연장
 
         const response = await result.response;
         const text = response.text();
