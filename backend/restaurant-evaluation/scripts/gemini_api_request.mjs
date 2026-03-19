@@ -43,6 +43,10 @@ async function main() {
 
     } catch (error) {
         console.error(`Gemini API Error: ${error.message}`);
+        if (error.message.includes('429') || error.message.includes('QUOTA_ERROR') || error.message.includes('RESOURCE_EXHAUSTED')) {
+            console.error('[치명적 오류] API 할당량(Quota) 초과. 스크립트를 즉시 종료합니다.');
+            process.exit(42);
+        }
         process.exit(1);
     }
 }
