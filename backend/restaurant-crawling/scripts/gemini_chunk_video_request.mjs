@@ -66,10 +66,16 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
     try {
         const timestamp = Date.now();
         const displayName = `${path.basename(videoPath)}-${timestamp}`;
+        const ext = path.extname(videoPath).toLowerCase();
+        let mimeType = 'video/mp4';
+        if (ext === '.webm') mimeType = 'video/webm';
+        else if (ext === '.mov') mimeType = 'video/quicktime';
+        else if (ext === '.mpeg' || ext === '.mpg') mimeType = 'video/mpeg';
+        else if (ext === '.wmv') mimeType = 'video/x-ms-wmv';
         
-        console.log(`[업로드] Gemini File API에 비디오 업로드 중 (${displayName})...`);
+        console.log(`[업로드] Gemini File API에 비디오 업로드 중 (${displayName}, Mime: ${mimeType})...`);
         uploadedFile = await fetchWithTimeout(() => fileManager.uploadFile(videoPath, {
-            mimeType: 'video/mp4',
+            mimeType: mimeType,
             displayName: displayName,
         }), 60000);
         console.log(`[업로드] 완료: ${uploadedFile.file.name}`);

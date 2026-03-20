@@ -366,20 +366,26 @@ process_video_chunks() {
     fi
     log_success "비디오 준비 완료: $(basename "$video_path")"
 
-    # [3/5] mp4 세그먼트 분할 (if로 직접 종료 코드 검사)
-    log_info "[3/5] mp4 세그먼트 분할..."
+    # [3/5] mp4 세그먼트 분할 (청크가 1개면 생략)
     local segments_dir="$temp_dir/segments"
-    local win_split=$(normalize_path "$SPLIT_VIDEO")
-    local win_video=$(normalize_path "$video_path")
-    local win_chunks=$(normalize_path "$chunks_json")
-    local win_segments=$(normalize_path "$segments_dir")
+    mkdir -p "$segments_dir"
+    
+    if [ "$total_chunks" -eq 1 ]; then
+        log_info "청크가 1개이므로 비디오 분할을 생략하고 원본을 사용합니다."
+    else
+        log_info "[3/5] mp4 세그먼트 분할..."
+        local win_split=$(normalize_path "$SPLIT_VIDEO")
+        local win_video=$(normalize_path "$video_path")
+        local win_chunks=$(normalize_path "$chunks_json")
+        local win_segments=$(normalize_path "$segments_dir")
 
-    if ! "$NODE_EXE" "$win_split" "$win_video" "$win_chunks" "$win_segments"; then
-        log_error "비디오 분할 실패"
-        rm -rf "$temp_dir"
-        return 1
+        if ! "$NODE_EXE" "$win_split" "$win_video" "$win_chunks" "$win_segments"; then
+            log_error "비디오 분할 실패"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        log_success "세그먼트 분할 완료"
     fi
-    log_success "세그먼트 분할 완료"
 
     # [4/5] 청크별 Gemini API 호출
     log_info "[4/5] Gemini API 호출 (${total_chunks} 청크)..."
@@ -420,7 +426,13 @@ process_video_chunks() {
 
         local prompt_file="$temp_dir/prompt_chunk_${i}.txt"
         local response_file="$responses_dir/chunk_response_${i}.json"
-        local segment_file="$segments_dir/chunk_${i}.mp4"
+        
+        local segment_file
+        if [ "$total_chunks" -eq 1 ]; then
+            segment_file="$video_path"
+        else
+            segment_file="$segments_dir/chunk_${i}.mp4"
+        fi
 
         cat > "$prompt_file" <<PROMPT_EOF
 $chunk_prompt
