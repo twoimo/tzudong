@@ -467,8 +467,7 @@ bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --chann
 CHUNK_EXIT_CODE=${PIPESTATUS[0]}
 set -o pipefail
 if [ $CHUNK_EXIT_CODE -eq 42 ]; then
-    log "WARN" "할당량 초과(Quota Error) 감지됨. 추가 크롤링은 중지하지만, 수집된 데이터의 평가 및 DB 저장은 진행합니다 (LAAJ 평가는 생략)."
-    SKIP_LAAJ=true
+    log "WARN" "할당량 초과(Quota Error) 감지됨. 추가 영상 크롤링은 중지하지만, 이미 수집된 데이터에 대한 평가(LAAJ 포함) 및 DB 저장은 진행합니다."
 fi
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
@@ -501,7 +500,6 @@ if ! check_timeout 45; then
     log "WARN" "시간 제한으로 LAAJ 평가를 건너뜁니다. 다음 실행에서 이어집니다."
 else
 
-if [ "${SKIP_LAAJ:-false}" != "true" ]; then
 # 11. LAAJ (LLM) 기반 평가
 echo "::group::[Step 11] LAAJ Evaluation"
 step_start
@@ -512,9 +510,6 @@ bash backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh --channel tzuya
 grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 step_end "Step 11 (LAAJ Eval)"
 echo "::endgroup::"
-else
-    log "INFO" "할당량 초과 플래그로 인해 [Step 11] LAAJ 평가를 생략합니다."
-fi
 
 fi # LAAJ 타임아웃 체크 종료
 
