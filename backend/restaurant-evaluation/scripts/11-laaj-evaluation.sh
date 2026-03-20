@@ -143,14 +143,29 @@ if [ -n "$GEMINI_API_KEY" ]; then
     export GEMINI_API_KEY
 fi
 
+# OAuth 설정 체크 (LAAJ 평가는 텍스트 전용이므로 CLI/OAuth 가능)
+FORCE_CLI_FALLBACK=false
+
 if [ -z "$GEMINI_API_KEY" ]; then
     if [ -n "$GEMINI_API_KEY_BYEON" ]; then
         export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
         log_success "GEMINI_API_KEY 설정 완료 (from GEMINI_API_KEY_BYEON)"
+    elif [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+        log_warning "GEMINI_API_KEY 없음. OAuth 모드(CLI)로 강제 전환합니다."
+        FORCE_CLI_FALLBACK=true
+    elif [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
+        log_info "GEMINI_CREDENTIALS_BASE64 감지됨 - 인증 파일 생성 중..."
+        mkdir -p "$HOME/.gemini"
+        echo "$GEMINI_CREDENTIALS_BASE64" | base64 -d > "$HOME/.gemini/oauth_creds.json"
+        FORCE_CLI_FALLBACK=true
     else
-        log_error "GEMINI_API_KEY가 없습니다."
+        log_error "GEMINI_API_KEY 또는 OAuth 자격 증명이 없습니다."
         exit 1
     fi
+fi
+
+if [ -n "$USE_OAUTH" ] && [ "$USE_OAUTH" = "true" ]; then
+    FORCE_CLI_FALLBACK=true
 fi
 
 # Gemini API 키 및 모델 설정
@@ -197,7 +212,7 @@ log_info "============================================================"
 log_info "  LAAJ 음식점 평가 시작 (Cross-Platform)"
 log_info "============================================================"
 log_info "채널: $CHANNEL"
-log_info "모드: Node.js API (No Fallback)"
+log_info "모드: $(if [ "$FORCE_CLI_FALLBACK" = true ]; then echo "Gemini CLI only"; else echo "Node.js API + Sticky Fallback"; fi)"
 log_info "모델: $CURRENT_MODEL"
 
 # 필수 파일 확인
@@ -210,10 +225,16 @@ if [ ! -d "$RULE_RESULTS_DIR" ]; then
     exit 1
 fi
 
-# Node.js API가 없으면 진행 불가
-if [ -z "$NODE_EXE" ] || [ ! -f "$SCRIPT_DIR/gemini_api_request.mjs" ]; then
-    log_error "Node.js API(gemini_api_request.mjs)가 없습니다. 평가 불가."
-    exit 1
+# Gemini CLI 확인 (Fallback용)
+HAS_GEMINI_CLI=false
+if command -v gemini > /dev/null 2>&1; then
+    HAS_GEMINI_CLI=true
+else
+    log_warning "Gemini CLI 미설치 - Node.js API 모드로 진행합니다."
+    if [ -z "$NODE_EXE" ] || [ ! -f "$SCRIPT_DIR/gemini_api_request.mjs" ]; then
+        log_error "Gemini CLI도 없고 Node.js API(gemini_api_request.mjs)도 없습니다. 평가 불가."
+        exit 1
+    fi
 fi
 
 GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
@@ -228,7 +249,10 @@ HEALTH_CHECK_PROMPT="$TEMP_DIR/health_check_prompt.txt"
 HEALTH_CHECK_RESPONSE="$TEMP_DIR/health_check_response.json"
 echo "1+1=?" > "$HEALTH_CHECK_PROMPT"
 
-if [ -n "$NODE_EXE" ]; then
+HEALTH_CHECK_PASSED=false
+
+# 1. Node.js Check
+if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
     WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
     WIN_PROMPT=$(normalize_path "$HEALTH_CHECK_PROMPT")
     WIN_RESPONSE=$(normalize_path "$HEALTH_CHECK_RESPONSE")
@@ -239,17 +263,32 @@ if [ -n "$NODE_EXE" ]; then
     set -e
     
     if [ $EXIT_CODE -eq 0 ]; then
+        HEALTH_CHECK_PASSED=true
         log_success "Health Check 성공 (Node.js API)"
     elif [ $EXIT_CODE -eq 42 ]; then
-        log_error "할당량 초과(Quota Error)로 파이프라인을 중지합니다. 다음 날 다시 시도하세요."
-        exit 42
+        log_warning "Node.js API 할당량 초과(Quota Error) 감지 -> Sticky Fallback (Gemini CLI) 활성화"
+        FORCE_CLI_FALLBACK=true
     else
-        log_error "Health Check 실패 (Node.js API)"
+        log_warning "Health Check 실패 (Node.js API) -> Sticky Fallback (Gemini CLI) 활성화"
+        FORCE_CLI_FALLBACK=true
+    fi
+fi
+
+# 2. CLI Check (Fallback or Primary)
+if [ "$HEALTH_CHECK_PASSED" = false ]; then
+    if [ "$HAS_GEMINI_CLI" = true ]; then
+        if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
+            HEALTH_CHECK_PASSED=true
+            log_success "Health Check 성공 (Gemini CLI)"
+        else
+            log_error "Health Check 실패 (Gemini CLI)"
+            log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
+            exit 1
+        fi
+    else
+        log_error "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가 불가."
         exit 1
     fi
-else
-    log_error "Node.js 환경이 없습니다."
-    exit 1
 fi
 
 rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
@@ -404,12 +443,13 @@ $TRANSCRIPT
     echo "$PROMPT" > "$TEMP_PROMPT"
     
     # ---------------------------
-    # Gemini API 호출 (Node.js 전용)
+    # Gemini API 호출 (Node.js -> CLI Fallback)
     # ---------------------------
     GEMINI_START=$(date +%s)
     GEMINI_SUCCESS=false
 
-    if [ -n "$NODE_EXE" ]; then
+    # 1. Node.js API 시도 (Sticky Fallback이 아닐 때만)
+    if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
         log_debug "Node.js API 호출 시도..."
 
         WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
@@ -424,33 +464,38 @@ $TRANSCRIPT
         if [ $EXIT_CODE -eq 0 ]; then
             GEMINI_SUCCESS=true
             log_debug "Node.js 호출 성공"
-        elif [ $EXIT_CODE -eq 42 ]; then
-            log_error "할당량 초과(Quota Error) 발생! 전체 프로세스를 종료합니다."
-            exit 42
         else
-            log_warning "Node.js 호출 실패 (Code: $EXIT_CODE) - Fallback 모델($FALLBACK_MODEL)로 재시도..."
-            if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
-                CURRENT_MODEL="$FALLBACK_MODEL"
-                export CURRENT_MODEL
-                sleep 5
+            log_warning "Node.js 호출 실패 (Code: $EXIT_CODE) - Sticky Fallback 활성화 (이후 CLI 사용)"
+            FORCE_CLI_FALLBACK=true
+        fi
+    fi
 
-                set +e
-                "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE"
-                FB_EXIT_CODE=$?
-                set -e
+    # 2. Gemini CLI 시도 (Node 실패 또는 Sticky 모드일 때)
+    if [ "$GEMINI_SUCCESS" = false ] && [ "$HAS_GEMINI_CLI" = true ]; then
+        log_debug "Gemini CLI 호출 (모델: $CURRENT_MODEL)"
 
-                if [ $FB_EXIT_CODE -eq 0 ]; then
-                    GEMINI_SUCCESS=true
-                    log_debug "Node.js (Fallback) 호출 성공"
-                elif [ $FB_EXIT_CODE -eq 42 ]; then
-                    log_error "할당량 초과(Quota Error) 발생! 전체 프로세스를 종료합니다."
-                    exit 42
-                fi
+        if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+            GEMINI_SUCCESS=true
+        else
+            # Error logging
+            log_error "Gemini CLI Error Output:"
+            if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
+                cat "$TEMP_STDERR"
+            fi
+
+            # Rate Limit 체크
+            ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
+            if [ -f "$ERROR_REPORT" ] && grep -q "exhausted\|429" "$ERROR_REPORT" 2>/dev/null; then
+               if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
+                   log_warning "할당량 소진 -> Fallback 모델($FALLBACK_MODEL) 전환"
+                   CURRENT_MODEL="$FALLBACK_MODEL"
+                   sleep 10
+                   if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                       GEMINI_SUCCESS=true
+                   fi
+               fi
             fi
         fi
-    else
-        log_error "Node.js 환경이 없어 API 호출 불가"
-        exit 1
     fi
 
     GEMINI_END=$(date +%s)
