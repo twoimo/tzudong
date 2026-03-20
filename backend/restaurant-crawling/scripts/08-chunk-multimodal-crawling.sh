@@ -336,7 +336,7 @@ process_video_chunks() {
     log_info "[1/5] 청크 계획 생성..."
     local chunks_json="$temp_dir/chunks.json"
     if ! $PYTHON_CMD "$CHUNK_PLANNER" \
-            --video-id "$video_id" \
+            --video-id="$video_id" \
             --duration "$duration" \
             --transcript-file "$transcript_file" \
             --output "$chunks_json" || [ ! -s "$chunks_json" ]; then
