@@ -462,6 +462,9 @@ PROMPT_EOF
 
             if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
                 log_success "  청크 $((i + 1)) 성공"
+            elif [ $exit_code -eq 42 ]; then
+                log_error "  [QUOTA_ERROR] 할당량 초과. 파이프라인 중지 플래그 생성."
+                touch "$TEMP_BASE/quota_exceeded.flag"
             else
                 log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
                 [ -f "$temp_dir/stderr_${i}.log" ] && cat "$temp_dir/stderr_${i}.log" >&2
@@ -480,6 +483,9 @@ PROMPT_EOF
 
                     if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
                         log_success "  청크 $((i + 1)) 폴백 성공"
+                    elif [ $fb_exit -eq 42 ]; then
+                        log_error "  [QUOTA_ERROR] 할당량 초과. 파이프라인 중지 플래그 생성."
+                        touch "$TEMP_BASE/quota_exceeded.flag"
                     fi
                 fi
             fi
@@ -489,6 +495,12 @@ PROMPT_EOF
         if (( (i + 1) % max_jobs == 0 )) || (( i == total_chunks - 1 )); then
             wait
             sleep 2
+        fi
+        
+        # 쿼타 초과 플래그 감지
+        if [ -f "$TEMP_BASE/quota_exceeded.flag" ]; then
+            log_error "할당량 초과(Quota Error)가 감지되어 해당 채널/영상의 남은 청크 처리를 즉시 중단합니다."
+            return 42
         fi
     done
 
@@ -640,13 +652,21 @@ process_channel() {
         local video_start
         video_start=$(date +%s)
 
-        if process_video_chunks "$channel" "$channel_name" "$video_id" "$url" "$full_data_path" "$meta_file" "$transcript_file"; then
+        set +e
+        process_video_chunks "$channel" "$channel_name" "$video_id" "$url" "$full_data_path" "$meta_file" "$transcript_file"
+        local proc_exit=$?
+        set -e
+        
+        if [ $proc_exit -eq 0 ]; then
             success_count=$((success_count + 1))
             local video_end
             video_end=$(date +%s)
             local video_elapsed=$((video_end - video_start))
             total_time=$((total_time + video_elapsed))
             log_success "[$index/$total] 완료 (${video_elapsed}s)"
+        elif [ $proc_exit -eq 42 ]; then
+            log_error "할당량 초과(Quota Error) 감지. 채널 처리를 완전히 중단합니다. 다음 날 이어서 진행됩니다."
+            exit 42
         else
             failed_count=$((failed_count + 1))
             log_error "[$index/$total] 실패: $video_id"
