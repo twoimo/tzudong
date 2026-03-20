@@ -538,8 +538,8 @@ NCP_MAPS_KEY_BYEON=xxx
 
 # Gemini
 GEMINI_API_KEY=xxx
-PRIMARY_MODEL=gemini-2.5-flash
-FALLBACK_MODEL=gemini-2.5-flash
+PRIMARY_MODEL=gemini-3.1-flash-lite-preview
+FALLBACK_MODEL=gemini-3.1-flash-preview
 
 # Supabase
 SUPABASE_URL=xxx

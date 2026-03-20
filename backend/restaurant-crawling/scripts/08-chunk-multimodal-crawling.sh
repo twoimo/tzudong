@@ -533,17 +533,23 @@ PROMPT_EOF
     fi
 
     # [6/5] LLM 기반 최종 정리 및 환각 필터링 (새로운 단계)
-    log_info "[6/5] LLM 기반 최종 결과 정리..."
     local final_merged_response="$temp_dir/merged_response.json"
-    local win_final_merge=$(normalize_path "$SCRIPT_DIR/final_merge_chunk.mjs")
-    local win_final_prompt=$(normalize_path "$SCRIPT_DIR/../prompts/final_merge_prompt.txt")
-    local win_raw_merged=$(normalize_path "$raw_merged_response")
-    local win_transcript=$(normalize_path "$transcript_file")
-    local win_final_out=$(normalize_path "$final_merged_response")
 
-    if ! "$NODE_EXE" "$win_final_merge" "$win_final_prompt" "$win_final_out" "$win_raw_merged" "$win_transcript"; then
-        log_warning "LLM 최종 정리 실패, Raw 병합본으로 대체합니다."
+    if [ "$total_chunks" -eq 1 ]; then
+        log_info "청크가 1개이므로 LLM 최종 정리(Step 6/5)를 생략하고 즉시 저장합니다."
         cp "$raw_merged_response" "$final_merged_response"
+    else
+        log_info "[6/5] LLM 기반 최종 결과 정리..."
+        local win_final_merge=$(normalize_path "$SCRIPT_DIR/final_merge_chunk.mjs")
+        local win_final_prompt=$(normalize_path "$SCRIPT_DIR/../prompts/final_merge_prompt.txt")
+        local win_raw_merged=$(normalize_path "$raw_merged_response")
+        local win_transcript=$(normalize_path "$transcript_file")
+        local win_final_out=$(normalize_path "$final_merged_response")
+
+        if ! "$NODE_EXE" "$win_final_merge" "$win_final_prompt" "$win_final_out" "$win_raw_merged" "$win_transcript"; then
+            log_warning "LLM 최종 정리 실패, Raw 병합본으로 대체합니다."
+            cp "$raw_merged_response" "$final_merged_response"
+        fi
     fi
 
     # parse_result.py로 최종 저장
