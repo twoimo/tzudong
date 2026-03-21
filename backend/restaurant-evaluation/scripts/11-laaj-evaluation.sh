@@ -143,6 +143,32 @@ if [ -n "$GEMINI_API_KEY" ]; then
     export GEMINI_API_KEY
 fi
 
+# ========================================================
+# WSL 환경 특화: Windows의 OAuth 인증 파일 자동 연동
+# ========================================================
+if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
+    if [ ! -f "$HOME/.gemini/oauth_creds.json" ]; then
+        # cmd.exe를 통해 Windows의 USERPROFILE 환경변수 추출
+        WIN_USER_PROFILE=$(cmd.exe /c "echo %USERPROFILE%" 2>/dev/null | tr -d '\r\n' || true)
+        if [ -n "$WIN_USER_PROFILE" ] && [ "$WIN_USER_PROFILE" != "%USERPROFILE%" ]; then
+            # WSL 경로로 변환 (wslpath가 없으면 수동 변환)
+            if command -v wslpath >/dev/null 2>&1; then
+                WSL_WIN_PROFILE=$(wslpath -u "$WIN_USER_PROFILE")
+            else
+                WSL_WIN_PROFILE="/mnt/c/${WIN_USER_PROFILE#C:\\}"
+                WSL_WIN_PROFILE=$(echo "$WSL_WIN_PROFILE" | tr '\\' '/')
+            fi
+            
+            WIN_OAUTH_FILE="$WSL_WIN_PROFILE/.gemini/oauth_creds.json"
+            if [ -f "$WIN_OAUTH_FILE" ]; then
+                echo "[INFO] WSL 환경 감지: Windows의 OAuth 인증 파일을 동기화합니다."
+                mkdir -p "$HOME/.gemini"
+                cp "$WIN_OAUTH_FILE" "$HOME/.gemini/oauth_creds.json"
+            fi
+        fi
+    fi
+fi
+
 # OAuth 설정 체크 (LAAJ 평가는 텍스트 전용이므로 CLI/OAuth 가능)
 FORCE_CLI_FALLBACK=false
 
