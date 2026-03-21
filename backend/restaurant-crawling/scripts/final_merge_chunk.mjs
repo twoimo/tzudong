@@ -46,7 +46,7 @@ async function main() {
             .replace('{FULL_TRANSCRIPT}', fullTranscriptText);
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.1-flash-lite-preview';
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3-flash-preview';
         
         const model = genAI.getGenerativeModel({
             model: modelName,

@@ -162,11 +162,11 @@ if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
             WIN_OAUTH_FILE="$WSL_WIN_PROFILE/.gemini/oauth_creds.json"
             if [ -f "$WIN_OAUTH_FILE" ]; then
                 echo "[INFO] WSL 환경 감지: Windows의 OAuth 인증 파일을 동기화합니다."
-                mkdir -p "$HOME/.gemini"
+                mkdir -p "$HOME/.gemini" || true
                 if [ -d "$HOME/.gemini/oauth_creds.json" ]; then
-                    rm -rf "$HOME/.gemini/oauth_creds.json"
+                    rm -rf "$HOME/.gemini/oauth_creds.json" || true
                 fi
-                cp "$WIN_OAUTH_FILE" "$HOME/.gemini/oauth_creds.json"
+                cp "$WIN_OAUTH_FILE" "$HOME/.gemini/oauth_creds.json" || true
             fi
         fi
     fi
@@ -200,7 +200,7 @@ fi
 # Gemini API 키 및 모델 설정
 export GEMINI_API_KEY="${GEMINI_API_KEY_BYEON:-$GEMINI_API_KEY}"
 export PRIMARY_MODEL="gemini-3-flash-preview"
-export FALLBACK_MODEL="gemini-3.1-flash-lite-preview"
+export FALLBACK_MODEL="gemini-3-flash-preview"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
 
