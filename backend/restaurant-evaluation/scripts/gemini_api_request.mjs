@@ -26,7 +26,7 @@ async function main() {
 
         console.log("DEBUG: Initializing GoogleGenerativeAI...");
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.PRIMARY_MODEL || 'gemini-3.1-flash-lite-preview';
+        const modelName = process.env.PRIMARY_MODEL || 'gemini-3-flash-preview';
         console.log(`DEBUG: Getting Model=${modelName}...`);
         const model = genAI.getGenerativeModel({ model: modelName });
 
