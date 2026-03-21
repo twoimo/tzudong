@@ -27,28 +27,24 @@ if [ -f "$HOME/.bashrc" ]; then
     source "$HOME/.bashrc"
 fi
 
-# [Local Config] Anaconda Python 우선 사용 (패키지 설치 환경)
-if [ -f "/c/Users/twoimo/anaconda3/python.exe" ]; then
-    PYTHON_CMD="/c/Users/twoimo/anaconda3/python.exe"
-    export PATH="/c/Users/twoimo/anaconda3:/c/Users/twoimo/anaconda3/Scripts:$PATH"
-elif [ -f "/mnt/c/Users/twoimo/anaconda3/python.exe" ]; then
-    PYTHON_CMD="/mnt/c/Users/twoimo/anaconda3/python.exe"
-    export PATH="/mnt/c/Users/twoimo/anaconda3:/mnt/c/Users/twoimo/anaconda3/Scripts:$PATH"
+# [Local Config] Python 런타임 탐색
+if [ -n "$PYTHON_CMD" ] && command -v "$PYTHON_CMD" >/dev/null 2>&1; then
+    : # 이미 환경변수로 설정된 PYTHON_CMD 유지
 elif command -v python3 >/dev/null 2>&1; then
     PYTHON_CMD="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_CMD="python"
 else
-    if command -v python >/dev/null 2>&1; then
-        PYTHON_CMD="python"
-    else
-        echo "[ERROR] Python을 찾을 수 없습니다."
-        exit 1
-    fi
+    echo "[ERROR] Python을 찾을 수 없습니다. 환경변수를 확인하세요."
+    exit 1
 fi
 export PYTHONUNBUFFERED=1
 
-# [Local Config] RClone 경로 추가 (사용자 환경)
+# [Local Config] RClone 및 추가 PATH 설정 (필요 시 환경변수로 주입)
 export PYTHON_CMD
-export PATH="$PATH:/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64"
+if [ -d "/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64" ]; then
+    export PATH="$PATH:/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64"
+fi
 # [Cross-Platform] Deno 런타임 PATH 자동 탐색 (yt-dlp n challenge 해결용)
 if ! command -v deno &> /dev/null; then
     case "$(uname -s)" in
@@ -274,17 +270,24 @@ TARGET_BRANCH="data"
 log "INFO" "현재 브랜치 확인: $CURRENT_BRANCH"
 
 if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
-    log "WARN" "현재 브랜치가 '$TARGET_BRANCH'가 아닙니다. '$TARGET_BRANCH'로 전환을 시도합니다."
+    log "WARN" "현재 브랜치가 '$TARGET_BRANCH'가 아닙니다. (현재: $CURRENT_BRANCH)"
     
-    git fetch origin
-    
-    if git show-ref --verify --quiet refs/heads/$TARGET_BRANCH; then
-        git checkout $TARGET_BRANCH || { log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."; exit 1; }
+    if [ "${FORCE_BRANCH_SWITCH:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; then
+        log "INFO" "FORCE_BRANCH_SWITCH=1 또는 CI 환경 감지됨. '$TARGET_BRANCH'로 전환을 시도합니다."
+        git fetch origin
+        
+        if git show-ref --verify --quiet refs/heads/$TARGET_BRANCH; then
+            git checkout $TARGET_BRANCH || { log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."; exit 1; }
+        else
+            git checkout -b $TARGET_BRANCH origin/$TARGET_BRANCH || { log "ERROR" "원격 브랜치 체크아웃 실패."; exit 1; }
+        fi
+        
+        log "OK" "브랜치 전환 완료: $TARGET_BRANCH"
     else
-        git checkout -b $TARGET_BRANCH origin/$TARGET_BRANCH || { log "ERROR" "원격 브랜치 체크아웃 실패."; exit 1; }
+        log "ERROR" "안전 모드: FORCE_BRANCH_SWITCH=1 환경변수 없이 자동으로 브랜치를 전환하지 않습니다."
+        log "ERROR" "작업 중인 파일이 유실될 수 있으므로 직접 'git checkout $TARGET_BRANCH' 후 다시 실행해주세요."
+        exit 1
     fi
-    
-    log "OK" "브랜치 전환 완료: $TARGET_BRANCH"
 fi
 
 # 충돌 방지를 위해 최신 변경사항 Pull
@@ -481,10 +484,13 @@ bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --chann
 CHUNK_EXIT_CODE=${PIPESTATUS[0]}
 set -o pipefail
 if [ $CHUNK_EXIT_CODE -eq 42 ]; then
-    log "WARN" "할당량 초과(Quota Error) 감지됨. 추가 영상 크롤링은 중지하지만, 이미 수집된 데이터에 대한 평가(LAAJ 포함) 및 DB 저장은 진행합니다."
+    log "WARN" "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
+    SKIP_EVALUATION=true
 fi
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
+
+if [ "${SKIP_EVALUATION:-false}" != "true" ]; then
 
 # 9. 평가 대상 선정
 echo "::group::[Step 09] Target Selection"
@@ -546,6 +552,8 @@ $PYTHON_CMD backend/restaurant-evaluation/scripts/13-supabase-insert.py --channe
 grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
 step_end "Step 13 (Supabase)"
 echo "::endgroup::"
+
+fi # SKIP_EVALUATION 종료
 
 fi # SKIP_PHASE3 종료 (Timeout)
 
