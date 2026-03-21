@@ -163,6 +163,9 @@ if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
             if [ -f "$WIN_OAUTH_FILE" ]; then
                 echo "[INFO] WSL 환경 감지: Windows의 OAuth 인증 파일을 동기화합니다."
                 mkdir -p "$HOME/.gemini"
+                if [ -d "$HOME/.gemini/oauth_creds.json" ]; then
+                    rm -rf "$HOME/.gemini/oauth_creds.json"
+                fi
                 cp "$WIN_OAUTH_FILE" "$HOME/.gemini/oauth_creds.json"
             fi
         fi
