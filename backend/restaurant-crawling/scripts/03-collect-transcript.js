@@ -266,15 +266,12 @@ async function tryYtDlpWithOptions(videoId, url, tempPrefix, options) {
     // 1. Python 모듈 사용 (최신 버전 보장)
     // 2. Node.js 경로 명시 (n-challenge 해결 필수)
     // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
-    let pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
-    if (!fs.existsSync(pythonPath)) {
-        pythonPath = "python3";
-    }
+    let pythonPath = process.env.PYTHON_CMD || "python";
+    // [보완] 만약 환경변수가 없고 기본 python 명령어가 실패할 경우를 대비한 폴백 로직 등은 생략하거나 추가할 수 있습니다.
+    // 여기서는 환경 변수나 기본 명령어 사용
 
-    const nodePath = "C:\\Program Files\\nodejs\\node.exe";
-    const runtimesArg = process.platform === 'win32' && fs.existsSync(nodePath)
-        ? `--js-runtimes "node:${nodePath}"`
-        : '--js-runtimes "node:node"';
+    const nodePath = process.execPath;
+    const runtimesArg = `--js-runtimes "node:${nodePath}"`;
 
     let cmdParts = [`"${pythonPath}" -m yt_dlp`];
 
