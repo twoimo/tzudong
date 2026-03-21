@@ -58,7 +58,7 @@ fi
 
 # Gemini 모델 설정 (최신 Preview 모델 우선)
 export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-preview}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 
 # 한국 시간대 설정
