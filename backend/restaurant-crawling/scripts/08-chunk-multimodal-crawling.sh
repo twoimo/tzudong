@@ -42,7 +42,7 @@ for env_file in "$PROJECT_ROOT/.env" "$PROJECT_ROOT/../.env"; do
 done
 
 # Gemini 모델 설정
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.1-flash-lite-preview}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
 export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
@@ -750,7 +750,7 @@ main() {
 import { GoogleGenAI } from '@google/genai';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const r = await ai.models.generateContent({
-    model: process.env.CURRENT_MODEL || 'gemini-3.1-flash-lite-preview',
+    model: process.env.CURRENT_MODEL || 'gemini-3-flash-preview',
     contents: '1+1=?'
 });
 console.log(r.text);

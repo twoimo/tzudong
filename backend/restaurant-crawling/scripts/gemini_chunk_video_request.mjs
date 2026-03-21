@@ -142,7 +142,7 @@ async function main() {
         process.exit(1);
     }
 
-    const modelName = process.env.CURRENT_MODEL || 'gemini-3.1-flash-lite-preview';
+    const modelName = process.env.CURRENT_MODEL || 'gemini-3-flash-preview';
     console.log(`[Gemini] 모델: ${modelName}, 비디오: ${path.basename(videoPath)}`);
 
     const promptText = fs.readFileSync(promptFile, 'utf8');

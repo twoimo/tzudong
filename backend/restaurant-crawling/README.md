@@ -612,5 +612,5 @@ NCP_MAPS_KEY_BYEON=xxx
 
 # Gemini CLI
 GEMINI_API_KEY=xxx
-PRIMARY_MODEL=gemini-3.1-flash-lite-preview
+PRIMARY_MODEL=gemini-3-flash-preview
 ```
