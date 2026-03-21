@@ -43,7 +43,7 @@ done
 
 # Gemini 모델 설정
 export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.1-flash-preview}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
 # [Cross-Platform] Deno 런타임 PATH 자동 탐색 (yt-dlp n challenge 해결용)
