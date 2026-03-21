@@ -314,7 +314,19 @@ if [ "$NEW_URL_COUNT" -gt 0 ]; then
 else
     log "INFO" "신규 URL 없음 -> 스마트 모드 (변경분만 처리)"
     # [PERF] 신규 URL이 없으면 고비용 AI 분석(Phase 3)을 건너뜁니다.
-    # 단, 보류 중인 LAAJ 평가가 있는지 확인합니다.
+    # 단, 보류 중인 크롤링(Step 8) 또는 LAAJ 평가(Step 11)가 있는지 확인합니다.
+    
+    PENDING_CRAWL=0
+    if [ -d "backend/restaurant-crawling/data/tzuyang/transcript" ]; then
+        for file in backend/restaurant-crawling/data/tzuyang/transcript/*.jsonl; do
+            [ -e "$file" ] || continue
+            filename=$(basename "$file")
+            if [ ! -f "backend/restaurant-crawling/data/tzuyang/crawling/$filename" ]; then
+                PENDING_CRAWL=$((PENDING_CRAWL + 1))
+            fi
+        done
+    fi
+
     PENDING_LAAJ=0
     if [ -d "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results" ]; then
         for file in backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/*.jsonl; do
@@ -325,11 +337,13 @@ else
             fi
         done
     fi
-    if [ "$PENDING_LAAJ" -gt 0 ]; then
-        log "INFO" "보류 중인 LAAJ 평가 ${PENDING_LAAJ}건 발견 -> Phase 3 실행"
+
+    if [ "$PENDING_CRAWL" -gt 0 ] || [ "$PENDING_LAAJ" -gt 0 ]; then
+        log "INFO" "보류 중인 크롤링 ${PENDING_CRAWL}건, LAAJ 평가 ${PENDING_LAAJ}건 발견 -> Phase 3 실행"
         HAS_NEW_DATA=true
     else
         SKIP_PHASE3=true
+        log "INFO" "처리 대기 중인 데이터가 없습니다. (Phase 3 스킵)"
     fi
 fi
 
