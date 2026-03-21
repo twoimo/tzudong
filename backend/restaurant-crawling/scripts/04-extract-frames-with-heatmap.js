@@ -989,19 +989,11 @@ async function downloadVideo(videoId, outputDir, quality) {
 
 
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
-    // [수정] 시스템 python 대신 Anaconda python 명시적 사용 (yt-dlp 모듈 보유)
     // [수정] GitHub Actions 등 환경에 따라 python 경로 유연화
-    let pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
-    if (!fs.existsSync(pythonPath)) {
-        // 윈도우가 아니거나 해당 경로 없으면 시스템 python 시도
-        pythonPath = "python3";
-    }
+    let pythonPath = process.env.PYTHON_CMD || "python";
 
-    // Windows가 아닌 경우 nodePath 조정 필요할 수 있음
-    // Linux/Mac 환경에서는 PATH의 node를 사용하도록 설정
-    const runtimesArg = process.platform === 'win32'
-        ? `--js-runtimes "node:${nodePath}"`
-        : '--js-runtimes "node:node"';
+    const nodePath = process.execPath;
+    const runtimesArg = `--js-runtimes "node:${nodePath}"`;
 
     // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
     // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐

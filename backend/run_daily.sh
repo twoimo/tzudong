@@ -42,8 +42,13 @@ export PYTHONUNBUFFERED=1
 
 # [Local Config] RClone 및 추가 PATH 설정 (필요 시 환경변수로 주입)
 export PYTHON_CMD
-if [ -d "/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64" ]; then
-    export PATH="$PATH:/c/Users/twoimo/Documents/rclone-v1.72.1-windows-amd64"
+if [ -n "$USERPROFILE" ] && command -v cygpath >/dev/null 2>&1; then
+    _DOC_DIR="$(cygpath -u "$USERPROFILE")/Documents/rclone-v1.72.1-windows-amd64"
+    if [ -d "$_DOC_DIR" ]; then
+        export PATH="$PATH:$_DOC_DIR"
+    fi
+elif [ -d "$HOME/Documents/rclone-v1.72.1-windows-amd64" ]; then
+    export PATH="$PATH:$HOME/Documents/rclone-v1.72.1-windows-amd64"
 fi
 # [Cross-Platform] Deno 런타임 PATH 자동 탐색 (yt-dlp n challenge 해결용)
 if ! command -v deno &> /dev/null; then
