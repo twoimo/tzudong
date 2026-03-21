@@ -688,7 +688,7 @@ ${placeNames.join('\n')}
         log('info', `Gemini API 호출 시도 (${naverPlaces.length}개 장소)`);
         try {
             const genAI = new GoogleGenerativeAI(geminiApiKey);
-            const model = genAI.getGenerativeModel({ model: process.env.PRIMARY_MODEL || 'gemini-3.1-flash-lite-preview' });
+            const model = genAI.getGenerativeModel({ model: process.env.PRIMARY_MODEL || 'gemini-3-flash-preview' });
 
             const result = await model.generateContent(prompt);
             const response = await result.response;
@@ -711,7 +711,7 @@ ${placeNames.join('\n')}
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const model = process.env.PRIMARY_MODEL || 'gemini-3.1-flash-lite-preview';
+            const model = process.env.PRIMARY_MODEL || 'gemini-3-flash-preview';
             const cliResult = execSync(`gemini --model ${model} --output-format json --yolo`, {
                 input: prompt,
                 timeout: 120000,
