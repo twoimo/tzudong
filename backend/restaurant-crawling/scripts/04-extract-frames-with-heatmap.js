@@ -1559,11 +1559,27 @@ async function processBatch(params) {
         return;
     }
 
-    // [PERF] 병렬 처리: 동시 N개 영상 처리 (다운로드 I/O와 ffmpeg CPU가 자연스럽게 겹침)
-    // GitHub Actions runner = 2 vCPU → 동시 4개가 적정 (I/O bound 비중 높음)
-    // 로컬 환경 = 3개 (안정성 우선)
-    const CONCURRENCY = process.env.CI ? 4 : 3;
-    log('info', `[PERF] 병렬 처리 모드: 동시 ${CONCURRENCY}개 (${process.env.CI ? 'CI' : 'Local'})`);
+    // [PERF] 병렬 처리: OS 리소스(CPU/메모리) 기반 동적 동시성 설정
+    const os = require('os');
+    const cpuCores = os.cpus().length;
+    const freeMemGB = os.freemem() / (1024 * 1024 * 1024);
+    
+    // CPU 코어 수와 가용 메모리(작업당 최소 500MB 여유분 가정)를 고려하여 계산
+    // GitHub Actions(보통 2~4코어) 및 로컬 환경(8~16코어) 자동 최적화
+    const memBasedLimit = Math.max(1, Math.floor(freeMemGB / 0.5)); 
+    let CONCURRENCY = Math.min(cpuCores, memBasedLimit, 8); // 최대 8개 제한 (Rate limit 방지)
+    
+    // CI 환경의 경우 메모리 부족 킬(OOM)을 방지하기 위해 조금 더 보수적으로 접근
+    if (process.env.CI) {
+        CONCURRENCY = Math.min(CONCURRENCY, 4);
+    }
+    
+    // 명시적 환경변수가 있으면 최우선 적용
+    if (process.env.MAX_JOBS) {
+        CONCURRENCY = parseInt(process.env.MAX_JOBS, 10) || CONCURRENCY;
+    }
+    
+    log('info', `[PERF] 병렬 처리 모드: 동시 ${CONCURRENCY}개 (CPU: ${cpuCores}코어, 여유 메모리: ${freeMemGB.toFixed(1)}GB)`);
 
     let processedCount = 0;
     let activeCount = 0;
