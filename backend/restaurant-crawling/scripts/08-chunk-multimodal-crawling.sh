@@ -133,6 +133,8 @@ jq_wrapper() { "$JQ_EXE" "$@" | tr -d '\r'; }
 
 TEMP_BASE="$(cd "$SCRIPT_DIR/.." && pwd)/temp"
 mkdir -p "$TEMP_BASE"
+# 이전 실행에서 남은 Quota 에러 플래그 초기화
+rm -f "$TEMP_BASE/quota_exceeded.flag"
 
 # ================================
 # 로그 함수 (모두 stderr 출력 — stdout은 함수 반환값 전용)
