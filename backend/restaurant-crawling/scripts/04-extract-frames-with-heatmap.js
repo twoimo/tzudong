@@ -24,6 +24,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import util from 'util';
@@ -1559,7 +1560,6 @@ async function processBatch(params) {
     }
 
     // [PERF] 병렬 처리: OS 리소스(CPU/메모리) 기반 동적 동시성 설정
-    const os = require('os');
     const cpuCores = os.cpus().length;
     const freeMemGB = os.freemem() / (1024 * 1024 * 1024);
     
