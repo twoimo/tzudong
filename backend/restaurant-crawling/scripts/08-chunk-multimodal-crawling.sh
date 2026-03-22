@@ -478,15 +478,8 @@ PROMPT_EOF
         local win_segment=$(normalize_path "$segment_file")
 
         (
-            set +e
-            "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>"$temp_dir/stderr_${i}.log"
-            local exit_code=$?
-            set -e
-
-            if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
-                log_success "  청크 $((i + 1)) 성공"
-            elif [ $exit_code -eq 42 ]; then
-                log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
+            if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ]; then
+                log_info "  청크 $((i + 1)) (Web Fallback 강제 모드)"
                 local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
                 local web_model="${WEB_GEMINI_MODEL:-Pro}"
                 
@@ -505,41 +498,73 @@ PROMPT_EOF
                     touch "$TEMP_BASE/quota_exceeded.flag"
                 fi
             else
-                log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
-                [ -f "$temp_dir/stderr_${i}.log" ] && cat "$temp_dir/stderr_${i}.log" >&2
-
-                # 폴백 모델로 재시도
-                if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
-                    log_warning "  청크 $((i + 1)) 폴백 모델($FALLBACK_MODEL)로 재시도..."
-                    CURRENT_MODEL="$FALLBACK_MODEL"
-                    export CURRENT_MODEL
-                    sleep 5
-
+                set +e
+                "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>"$temp_dir/stderr_${i}.log"
+                local exit_code=$?
+                set -e
+    
+                if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
+                    log_success "  청크 $((i + 1)) 성공"
+                elif [ $exit_code -eq 42 ]; then
+                    log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
+                    
+                    # 앞으로 남은 청크들도 모두 API 호출을 생략하도록 부모 변수는 서브쉘에서 변경 불가. 
+                    # 대신 temp_base에 플래그를 두는 방식을 쓰거나, 그냥 개별로 429 맞고 넘어오게 둠.
+                    # 여기서는 그냥 폴백 실행. (차후 개선 가능)
+                    local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
+                    local web_model="${WEB_GEMINI_MODEL:-Pro}"
+                    
                     set +e
-                    "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>>"$temp_dir/stderr_${i}.log"
-                    local fb_exit=$?
+                    $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                    local py_exit=$?
                     set -e
-
-                    if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
-                        log_success "  청크 $((i + 1)) 폴백 성공"
-                    elif [ $fb_exit -eq 42 ]; then
-                        log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
-                        local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
-                        local web_model="${WEB_GEMINI_MODEL:-Pro}"
-                        
+                    
+                    if [ $py_exit -eq 0 ]; then
+                        log_success "  청크 $((i + 1)) 웹 폴백 성공"
+                    elif [ $py_exit -eq 43 ]; then
+                        log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
+                        touch "$TEMP_BASE/quota_exceeded.flag"
+                    else
+                        log_error "  웹 폴백도 실패했습니다 (exit: $py_exit). 파이프라인 중지 플래그 생성."
+                        touch "$TEMP_BASE/quota_exceeded.flag"
+                    fi
+                else
+                    log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
+                    [ -f "$temp_dir/stderr_${i}.log" ] && cat "$temp_dir/stderr_${i}.log" >&2
+    
+                    # 폴백 모델로 재시도
+                    if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
+                        log_warning "  청크 $((i + 1)) 폴백 모델($FALLBACK_MODEL)로 재시도..."
+                        CURRENT_MODEL="$FALLBACK_MODEL"
+                        export CURRENT_MODEL
+                        sleep 5
+    
                         set +e
-                        $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
-                        local py_exit=$?
+                        "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>>"$temp_dir/stderr_${i}.log"
+                        local fb_exit=$?
                         set -e
-                        
-                        if [ $py_exit -eq 0 ]; then
-                            log_success "  청크 $((i + 1)) 웹 폴백 성공"
-                        elif [ $py_exit -eq 43 ]; then
-                            log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
-                            touch "$TEMP_BASE/quota_exceeded.flag"
-                        else
-                            log_error "  웹 폴백도 실패했습니다 (exit: $py_exit). 파이프라인 중지 플래그 생성."
-                            touch "$TEMP_BASE/quota_exceeded.flag"
+    
+                        if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
+                            log_success "  청크 $((i + 1)) 폴백 성공"
+                        elif [ $fb_exit -eq 42 ]; then
+                            log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
+                            local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
+                            local web_model="${WEB_GEMINI_MODEL:-Pro}"
+                            
+                            set +e
+                            $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                            local py_exit=$?
+                            set -e
+                            
+                            if [ $py_exit -eq 0 ]; then
+                                log_success "  청크 $((i + 1)) 웹 폴백 성공"
+                            elif [ $py_exit -eq 43 ]; then
+                                log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
+                                touch "$TEMP_BASE/quota_exceeded.flag"
+                            else
+                                log_error "  웹 폴백도 실패했습니다 (exit: $py_exit). 파이프라인 중지 플래그 생성."
+                                touch "$TEMP_BASE/quota_exceeded.flag"
+                            fi
                         fi
                     fi
                 fi
@@ -787,6 +812,7 @@ main() {
     log_info "Health Check..."
     local hc_response="$TEMP_BASE/hc_response.json"
     local hc_stderr="$TEMP_BASE/hc_stderr.log"
+    export FORCE_WEB_FALLBACK=0
 
     set +e
     (cd "$PROJECT_ROOT" && "$NODE_EXE" --input-type=module -e "
@@ -802,12 +828,23 @@ console.log(r.text);
     set -e
 
     if [ $hc_exit -eq 0 ]; then
-        log_success "Health Check 성공"
+        log_success "Health Check 성공. API 사용 가능."
     else
-        log_warning "Health Check 실패했지만 테스트를 위해 강행합니다. (exit: $hc_exit)"
-        [ -f "$hc_stderr" ] && log_error "Stderr: $(<"$hc_stderr")"
+        log_warning "Health Check 실패. (exit: $hc_exit)"
+        if [ -f "$hc_stderr" ]; then
+            local err_msg=$(<"$hc_stderr")
+            log_error "Stderr: $err_msg"
+            # 429 Quota Exceeded 에러인지 확인
+            if [[ "$err_msg" == *"429"* ]] || [[ "$err_msg" == *"exceeded your current quota"* ]]; then
+                log_warning "🚨 [QUOTA_ERROR] API 할당량 초과가 Health Check에서 감지되었습니다."
+                log_warning "▶ 이후의 모든 크롤링 작업을 API 대신 '웹 브라우저 자동화(Web Fallback)'로 강제 전환합니다!"
+                export FORCE_WEB_FALLBACK=1
+            else
+                log_warning "일반 API 에러입니다. 웹 폴백으로 진행을 강행합니다."
+                export FORCE_WEB_FALLBACK=1
+            fi
+        fi
         rm -f "$hc_response" "$hc_stderr"
-        # exit 1 (disabled for testing fallback)
     fi
     rm -f "$hc_response" "$hc_stderr"
 
