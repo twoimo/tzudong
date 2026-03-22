@@ -28,7 +28,16 @@ if [ -f "$HOME/.bashrc" ]; then
 fi
 
 # [Local Config] Python 런타임 탐색
-PYTHON_CMD="python.exe"
+if [ -n "$PYTHON_CMD" ] && command -v "$PYTHON_CMD" >/dev/null 2>&1; then
+    : # 이미 환경변수로 설정된 PYTHON_CMD 유지
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_CMD="python"
+else
+    echo "[ERROR] Python을 찾을 수 없습니다. 환경변수를 확인하세요."
+    exit 1
+fi
 export PYTHONUNBUFFERED=1
 
 # [Local Config] RClone 및 추가 PATH 설정 (필요 시 환경변수로 주입)
