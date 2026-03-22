@@ -28,7 +28,7 @@ def check_for_soft_ban(page):
         return False
 
 def run_fallback(prompt_path, video_path, output_path, target_model=None):
-    with open(prompt_path, "r", encoding="utf-8") as f:
+    with open(prompt_path, "r", encoding="utf-8", errors="replace") as f:
         prompt_text = f.read()
 
     video_abs_path = os.path.abspath(video_path)
@@ -186,7 +186,8 @@ def run_fallback(prompt_path, video_path, output_path, target_model=None):
                 log("응답 생성 대기 시간 초과(Timeout).")
                 if check_for_soft_ban(page):
                     sys.exit(43)
-            
+                # 타임아웃 발생 시 에러로 간주하여 종료
+                
             elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
             if elements:
                 last_elem = elements[-1]
@@ -204,6 +205,19 @@ def run_fallback(prompt_path, video_path, output_path, target_model=None):
                         f.write(page.content())
                         
                 log(f"추출된 텍스트 일부: {last_response[:100]}...")
+                
+                # Gemini에서 비디오 처리를 거부하는 에러 메시지 필터링
+                error_keywords = ["업로드하신 파일을 읽을 수 없습니다", "파일에 문제가 없는지 확인해 주세요", "언어 모델일 뿐이라서", "I am just a language model"]
+                if any(keyword in last_response for keyword in error_keywords):
+                    log("Gemini에서 비디오 파일 처리를 거부했습니다. (API 폴백 실패로 간주)")
+                    sys.exit(1)
+                
+                # 타임아웃 발생 시에도 응답 거부(에러 메시지)가 없다면 실패로 처리해야 함.
+                if not success:
+                    log("에러 패턴은 아니지만 타임아웃으로 인해 정상 처리를 신뢰할 수 없어 종료합니다.")
+                    sys.exit(1)
+
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 with open(output_path, "w", encoding="utf-8") as out_f:
                     out_f.write(last_response)
                 log(f"결과 저장 성공!")
