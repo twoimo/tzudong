@@ -948,7 +948,6 @@ async function downloadVideo(videoId, outputDir, quality) {
     // 2. Node.js 경로 명시 (n-challenge 해결 필수)
     // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
     // 4. Output Template: 확장자 자동 결정 (%(ext)s) - Merge 에러 방지
-    const nodePath = "C:\\Program Files\\nodejs\\node.exe";
     const outputFileTemplate = path.join(outputDir, `${videoId}.%(ext)s`);
 
     // [최적화] 캐시된 파일 확인
