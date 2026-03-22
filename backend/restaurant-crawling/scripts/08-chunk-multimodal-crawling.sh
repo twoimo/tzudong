@@ -401,7 +401,16 @@ process_video_chunks() {
     local win_gemini=$(normalize_path "$GEMINI_CHUNK_API")
 
     local chunk_success=0 chunk_failed=0
-    local max_jobs=3
+
+    # CPU 코어 수 기반으로 동적 병렬 처리 개수(max_jobs) 할당
+    local OPTIMAL_JOBS_SCRIPT="$SCRIPT_DIR/get_optimal_jobs.py"
+    local max_jobs
+    if [ -f "$OPTIMAL_JOBS_SCRIPT" ]; then
+        max_jobs=$("$PYTHON_CMD" "$OPTIMAL_JOBS_SCRIPT")
+    else
+        max_jobs=3
+    fi
+    log_info "동적 병렬 처리 적용: $max_jobs 개의 청크 동시 처리"
 
     # seq 서브프로세스 제거 — C 스타일 for 루프 사용
     for ((i = 0; i < total_chunks; i++)); do
@@ -475,8 +484,15 @@ PROMPT_EOF
             if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
                 log_success "  청크 $((i + 1)) 성공"
             elif [ $exit_code -eq 42 ]; then
-                log_error "  [QUOTA_ERROR] 할당량 초과. 파이프라인 중지 플래그 생성."
-                touch "$TEMP_BASE/quota_exceeded.flag"
+                log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
+                local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
+                local web_model="${WEB_GEMINI_MODEL:-Pro}"
+                if $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"; then
+                    log_success "  청크 $((i + 1)) 웹 폴백 성공"
+                else
+                    log_error "  웹 폴백도 실패했습니다. 파이프라인 중지 플래그 생성."
+                    touch "$TEMP_BASE/quota_exceeded.flag"
+                fi
             else
                 log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
                 [ -f "$temp_dir/stderr_${i}.log" ] && cat "$temp_dir/stderr_${i}.log" >&2
@@ -496,8 +512,15 @@ PROMPT_EOF
                     if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
                         log_success "  청크 $((i + 1)) 폴백 성공"
                     elif [ $fb_exit -eq 42 ]; then
-                        log_error "  [QUOTA_ERROR] 할당량 초과. 파이프라인 중지 플래그 생성."
-                        touch "$TEMP_BASE/quota_exceeded.flag"
+                        log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
+                        local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
+                        local web_model="${WEB_GEMINI_MODEL:-Pro}"
+                        if $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"; then
+                            log_success "  청크 $((i + 1)) 웹 폴백 성공"
+                        else
+                            log_error "  웹 폴백도 실패했습니다. 파이프라인 중지 플래그 생성."
+                            touch "$TEMP_BASE/quota_exceeded.flag"
+                        fi
                     fi
                 fi
             fi

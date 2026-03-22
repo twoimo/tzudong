@@ -407,8 +407,27 @@ function updateNoTranscriptPermanent(youtubeUrl) {
 }
 
 // Puppeteer 설정
-const isGitHubActionsEnv = !!process.env.GITHUB_ACTIONS;
-const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 3;
+// [PERF] 병렬 처리: OS 리소스(CPU/메모리) 기반 동적 동시성 설정
+const os = require('os');
+const cpuCores = os.cpus().length;
+const freeMemGB = os.freemem() / (1024 * 1024 * 1024);
+
+// Puppeteer(Chrome) 탭 하나당 약 300~500MB 메모리 사용 가정
+const memBasedLimit = Math.max(1, Math.floor(freeMemGB / 0.5));
+let PUPPETEER_CONCURRENCY = Math.min(cpuCores, memBasedLimit, 5); // 최대 5개 제한 (YouTube 밴 방지)
+
+const isGitHubActionsEnv = !!process.env.GITHUB_ACTIONS || !!process.env.CI;
+if (isGitHubActionsEnv) {
+    // CI 환경은 OOM 방지를 위해 보수적 접근
+    PUPPETEER_CONCURRENCY = Math.min(PUPPETEER_CONCURRENCY, 2);
+}
+
+// 명시적 환경변수가 있으면 최우선 적용
+if (process.env.MAX_JOBS) {
+    PUPPETEER_CONCURRENCY = parseInt(process.env.MAX_JOBS, 10) || PUPPETEER_CONCURRENCY;
+}
+
+log('info', `[PERF] Puppeteer 병렬 탭 동시성: ${PUPPETEER_CONCURRENCY} (CPU: ${cpuCores}코어, 여유 메모리: ${freeMemGB.toFixed(1)}GB)`);
 let puppeteerActiveCount = 0;
 const puppeteerQueue = [];
 let puppeteerBrowser = null;
