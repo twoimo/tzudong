@@ -141,9 +141,9 @@ def run_fallback(prompt_path, video_path, output_path, target_model=None):
                 log("파일 업로드 대기 (진행 표시줄 확인)...")
                 try:
                     remove_btn = page.locator('button[aria-label*="Remove file"], button[aria-label*="삭제"], button[aria-label*="Delete"], button[aria-label*="지우기"]').first
-                    remove_btn.wait_for(state="visible", timeout=90000) # 용량 고려 최대 90초
+                    remove_btn.wait_for(state="visible", timeout=120000) # 용량 고려 최대 120초
                     
-                    page.wait_for_selector('mat-progress-spinner, mat-spinner', state="hidden", timeout=30000)
+                    page.wait_for_selector('mat-progress-spinner, mat-spinner', state="hidden", timeout=120000) # 용량 고려 120초
                     log("업로드 완료!")
                 except Exception as e:
                     log(f"업로드 완료 감지 지연 (계속 진행): {e}")
@@ -160,9 +160,14 @@ def run_fallback(prompt_path, video_path, output_path, target_model=None):
             
             prev_msg_count = page.locator('.message-content, message-content, div[data-message-author-role="model"]').count()
             
-            if send_button.is_visible():
-                send_button.click()
-            else:
+            log("전송 버튼 활성화 대기 및 클릭...")
+            try:
+                # 업로드가 완전히 끝나야 버튼이 활성화됨 (최대 60초 추가 대기)
+                send_button.wait_for(state="visible", timeout=60000)
+                # Playwright click()은 자동으로 element가 enabled 될 때까지 대기하지만, 명시적으로 확인
+                send_button.click(timeout=60000)
+            except Exception as e:
+                log(f"전송 버튼 클릭 실패, 엔터키로 대체 시도: {e}")
                 textarea.press('Enter')
             
             log("답변 생성 대기 중... (최대 150초)")
