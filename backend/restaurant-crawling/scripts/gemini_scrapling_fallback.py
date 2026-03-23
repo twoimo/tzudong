@@ -212,16 +212,18 @@ def run_fallback(prompt_path, video_path, output_path, target_model=None):
                 log(f"추출된 텍스트 일부: {last_response[:100]}...")
                 
                 # Gemini에서 비디오 처리를 거부하는 에러 메시지 필터링
-                error_keywords = ["업로드하신 파일을 읽을 수 없습니다", "파일에 문제가 없는지 확인해 주세요", "언어 모델일 뿐이라서", "I am just a language model"]
+                error_keywords = ["업로드하신 파일을 읽을 수 없습니다", "파일에 문제가 없는지 확인해 주세요", "언어 모델일 뿐이라서", "I am just a language model", "단지 언어 모델일 뿐이고"]
                 if any(keyword in last_response for keyword in error_keywords):
-                    log("Gemini에서 비디오 파일 처리를 거부했습니다. (API 폴백 실패로 간주)")
-                    sys.exit(1)
-                
+                    log("Gemini에서 비디오 파일 처리를 거부했습니다. (빈 JSON을 반환하여 해당 청크를 안전하게 스킵합니다)")
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    with open(output_path, "w", encoding="utf-8") as out_f:
+                        out_f.write('{"restaurants": []}')
+                    sys.exit(0)
+
                 # 타임아웃 발생 시에도 응답 거부(에러 메시지)가 없다면 실패로 처리해야 함.
                 if not success:
                     log("에러 패턴은 아니지만 타임아웃으로 인해 정상 처리를 신뢰할 수 없어 종료합니다.")
                     sys.exit(1)
-
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 with open(output_path, "w", encoding="utf-8") as out_f:
                     out_f.write(last_response)
