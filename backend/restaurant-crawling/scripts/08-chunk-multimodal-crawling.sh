@@ -133,8 +133,8 @@ jq_wrapper() { "$JQ_EXE" "$@" | tr -d '\r'; }
 
 TEMP_BASE="$(cd "$SCRIPT_DIR/.." && pwd)/temp"
 mkdir -p "$TEMP_BASE"
-# 이전 실행에서 남은 Quota 에러 플래그 초기화
-rm -f "$TEMP_BASE/quota_exceeded.flag"
+# 이전 실행에서 남은 에러 플래그 초기화
+rm -f "$TEMP_BASE/quota_exceeded.flag" "$TEMP_BASE/force_web_fallback.flag"
 
 # ================================
 # 로그 함수 (모두 stderr 출력 — stdout은 함수 반환값 전용)
@@ -474,7 +474,7 @@ PROMPT_EOF
         local win_segment=$(normalize_path "$segment_file")
 
         (
-            if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ]; then
+            if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ] || [ -f "$TEMP_BASE/force_web_fallback.flag" ]; then
                 log_info "  청크 $((i + 1)) (Web Fallback 강제 모드)"
                 local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
                 local web_model="${WEB_GEMINI_MODEL:-Pro}"
