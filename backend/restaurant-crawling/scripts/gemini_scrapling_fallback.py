@@ -205,6 +205,23 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             while time.time() - start_wait < max_wait_time:
                 current_count = page.locator('.message-content, message-content, div[data-message-author-role="model"]').count()
                 
+                # A/B 테스트 답변(Draft) 선택 UI가 나타난 경우 첫 번째 답변 강제 선택
+                try:
+                    # 답변 A/B 선택 버튼, 초안 보기, Draft 등의 패턴
+                    draft_btn = page.locator('button[aria-label*="초안 1"], button[aria-label*="답변 A"], button[aria-label*="Draft 1"], button:has-text("초안 1"), button:has-text("답변 A"), button:has-text("Draft 1"), button.draft-button').first
+                    if draft_btn.is_visible():
+                        log("A/B 답변 선택(Draft) UI가 감지되었습니다. 첫 번째 답변을 강제 선택합니다.")
+                        draft_btn.click()
+                        human_delay(1, 2)
+                        
+                        # 선택 후 적용 버튼이 따로 있다면 클릭 (있는 경우에만)
+                        apply_btn = page.locator('button[aria-label*="적용"], button:has-text("적용"), button:has-text("Apply")').first
+                        if apply_btn.is_visible():
+                            apply_btn.click()
+                            human_delay(1, 2)
+                except Exception:
+                    pass
+
                 if send_button.is_visible() and send_button.is_enabled():
                     if current_count > prev_msg_count:
                         human_delay(2, 4) # 스트리밍 완전 종료 대기
