@@ -489,6 +489,9 @@ PROMPT_EOF
                 elif [ $py_exit -eq 43 ]; then
                     log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
                     touch "$TEMP_BASE/quota_exceeded.flag"
+                elif [ $py_exit -eq 44 ]; then
+                    log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
+                    touch "$TEMP_BASE/quota_exceeded.flag"
                 else
                     log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
                 fi
@@ -503,9 +506,9 @@ PROMPT_EOF
                 elif [ $exit_code -eq 42 ]; then
                     log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
                     
-                    # 앞으로 남은 청크들도 모두 API 호출을 생략하도록 부모 변수는 서브쉘에서 변경 불가. 
-                    # 대신 temp_base에 플래그를 두는 방식을 쓰거나, 그냥 개별로 429 맞고 넘어오게 둠.
-                    # 여기서는 그냥 폴백 실행. (차후 개선 가능)
+                    # 앞으로 남은 청크들도 모두 API 호출을 생략하도록 플래그 생성
+                    touch "$TEMP_BASE/force_web_fallback.flag"
+                    
                     local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
                     local web_model="${WEB_GEMINI_MODEL:-Pro}"
                     
@@ -519,9 +522,11 @@ PROMPT_EOF
                     elif [ $py_exit -eq 43 ]; then
                         log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
                         touch "$TEMP_BASE/quota_exceeded.flag"
-                    else
-                        log_error "  웹 폴백도 실패했습니다 (exit: $py_exit). 파이프라인 중지 플래그 생성."
+                    elif [ $py_exit -eq 44 ]; then
+                        log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
                         touch "$TEMP_BASE/quota_exceeded.flag"
+                    else
+                        log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
                     fi
                 else
                     log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
@@ -555,6 +560,9 @@ PROMPT_EOF
                                 log_success "  청크 $((i + 1)) 웹 폴백 성공"
                             elif [ $py_exit -eq 43 ]; then
                                 log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
+                                touch "$TEMP_BASE/quota_exceeded.flag"
+                            elif [ $py_exit -eq 44 ]; then
+                                log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
                                 touch "$TEMP_BASE/quota_exceeded.flag"
                             else
                                 log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
