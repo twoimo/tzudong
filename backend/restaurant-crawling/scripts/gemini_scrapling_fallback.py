@@ -205,6 +205,44 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             while time.time() - start_wait < max_wait_time:
                 current_count = page.locator('.message-content, message-content, div[data-message-author-role="model"]').count()
                 
+                # A/B 테스트 답변(Draft) 선택 UI가 나타난 경우 스마트하게 올바른 포맷 선택
+                draft_btns = page.locator('button:has-text("답변 A"), button:has-text("초안 1"), button:has-text("Draft 1"), button[aria-label*="답변 A"], button[aria-label*="초안 1"]').all()
+                if draft_btns and current_count > prev_msg_count:
+                    human_delay(3, 5) # 초안 텍스트가 렌더링될 때까지 충분히 대기
+                    log("A/B 답변 선택(Draft) 화면 감지. 올바른 JSON 포맷을 포함한 답변을 찾아 선택합니다.")
+                    
+                    messages = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
+                    selected_index = 0
+                    
+                    # 새로 생성된 답변 블록들만 검사
+                    new_messages = messages[prev_msg_count:]
+                    for idx, msg in enumerate(new_messages):
+                        text = msg.inner_text()
+                        if '"origin_name"' in text or '"restaurants"' in text:
+                            selected_index = idx
+                            log(f"올바른 JSON 패턴을 포함한 초안 {selected_index+1}을 선택합니다.")
+                            break
+                            
+                    # 해당하는 버튼 클릭 시도
+                    all_draft_btns = page.locator('button:has-text("답변"), button:has-text("초안"), button:has-text("Draft"), button[aria-label*="답변"], button[aria-label*="초안"]').all()
+                    
+                    try:
+                        if selected_index < len(all_draft_btns):
+                            all_draft_btns[selected_index].click()
+                        else:
+                            draft_btns[0].click() # 매칭 실패 시 첫 번째 기본 선택
+                        
+                        human_delay(1, 2)
+                        apply_btn = page.locator('button:has-text("적용"), button:has-text("Apply")').first
+                        if apply_btn.is_visible():
+                            apply_btn.click()
+                    except Exception as e:
+                        log(f"초안 선택 버튼 클릭 실패 (무시): {e}")
+                        
+                    human_delay(2, 4)
+                    success = True
+                    break
+
                 if send_button.is_visible() and send_button.is_enabled():
                     if current_count > prev_msg_count:
                         human_delay(2, 4) # 스트리밍 완전 종료 대기
