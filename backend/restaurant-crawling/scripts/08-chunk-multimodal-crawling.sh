@@ -494,8 +494,7 @@ PROMPT_EOF
                     log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
                     touch "$TEMP_BASE/quota_exceeded.flag"
                 else
-                    log_error "  웹 폴백도 실패했습니다 (exit: $py_exit). 파이프라인 중지 플래그 생성."
-                    touch "$TEMP_BASE/quota_exceeded.flag"
+                    log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
                 fi
             else
                 set +e
@@ -562,8 +561,7 @@ PROMPT_EOF
                                 log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
                                 touch "$TEMP_BASE/quota_exceeded.flag"
                             else
-                                log_error "  웹 폴백도 실패했습니다 (exit: $py_exit). 파이프라인 중지 플래그 생성."
-                                touch "$TEMP_BASE/quota_exceeded.flag"
+                                log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
                             fi
                         fi
                     fi
