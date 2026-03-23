@@ -195,29 +195,28 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             max_wait_time = 600
             start_wait = time.time()
             success = False
-            last_text_length = -1
+            last_text = ""
             stable_time_start = None
             
             while time.time() - start_wait < max_wait_time:
-                current_count = page.locator('.message-content, message-content, div[data-message-author-role="model"]').count()
-                
                 # A/B 테스트 답변(Draft) 선택 UI가 나타난 경우 스마트하게 올바른 포맷 선택
                 draft_btns = page.locator('button:has-text("답변 A"), button:has-text("초안 1"), button:has-text("Draft 1"), button[aria-label*="답변 A"], button[aria-label*="초안 1"]').all()
-                if draft_btns and current_count > prev_msg_count:
+                if draft_btns:
                     human_delay(3, 5) # 초안 텍스트가 렌더링될 때까지 충분히 대기
                     log("A/B 답변 선택(Draft) 화면 감지. 올바른 JSON 포맷을 포함한 답변을 찾아 선택합니다.")
                     
                     messages = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
                     selected_index = 0
                     
-                    # 새로 생성된 답변 블록들만 검사
-                    new_messages = messages[prev_msg_count:]
-                    for idx, msg in enumerate(new_messages):
-                        text = msg.inner_text()
-                        if '"origin_name"' in text or '"restaurants"' in text:
-                            selected_index = idx
-                            log(f"올바른 JSON 패턴을 포함한 초안 {selected_index+1}을 선택합니다.")
-                            break
+                    for idx, msg in enumerate(messages):
+                        try:
+                            text = msg.inner_text()
+                            if '"origin_name"' in text or '"restaurants"' in text:
+                                selected_index = idx
+                                log(f"올바른 JSON 패턴을 포함한 초안 {selected_index+1}을 선택합니다.")
+                                break
+                        except Exception:
+                            pass
                             
                     # 해당하는 버튼 클릭 시도
                     all_draft_btns = page.locator('button:has-text("답변"), button:has-text("초안"), button:has-text("Draft"), button[aria-label*="답변"], button[aria-label*="초안"]').all()
@@ -240,29 +239,32 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     break
 
                 if send_button.is_visible() and send_button.is_enabled():
-                    if current_count > prev_msg_count:
-                        human_delay(2, 4) # 스트리밍 완전 종료 대기
-                        success = True
-                        break
+                    # Send 버튼이 완전히 돌아온 경우, 스트리밍이 끝났다고 확신할 수 있음
+                    human_delay(2, 4)
+                    success = True
+                    break
                         
                 # UI 버그로 Send 버튼이 돌아오지 않고 'thinking' 상태에서 멈춰있을 때를 대비한 텍스트 안정화 감지
-                if current_count > prev_msg_count:
-                    try:
-                        current_text = page.locator('.message-content, message-content, div[data-message-author-role="model"]').last.inner_text()
-                        current_length = len(current_text)
-                        
-                        if current_length > 50 and current_length == last_text_length:
-                            if stable_time_start is None:
-                                stable_time_start = time.time()
-                            elif time.time() - stable_time_start > 15: # 15초간 텍스트 변화가 없으면 완료로 간주
-                                log("Send 버튼은 비활성화 상태이나, 답변 텍스트가 15초 이상 멈춰있어 생성 완료로 간주합니다.")
-                                success = True
-                                break
-                        else:
-                            last_text_length = current_length
-                            stable_time_start = None
-                    except Exception:
-                        pass
+                try:
+                    elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
+                    if elements:
+                        current_text = elements[-1].inner_text().strip()
+                        if current_text:
+                            # 텍스트가 이전과 동일하다면 안정화 시간 체크
+                            if current_text == last_text:
+                                if stable_time_start is None:
+                                    stable_time_start = time.time()
+                                elif time.time() - stable_time_start > 10: # 10초간 텍스트 변화가 없으면 완료로 간주
+                                    # 우리가 원하는 JSON 키워드가 들어있는지 확인
+                                    if '"origin_name"' in current_text or '"restaurants"' in current_text or '업로드하신 파일을 읽을 수 없습니다' in current_text:
+                                        log("답변 텍스트가 10초 이상 안정화되어 생성이 완료된 것으로 간주합니다.")
+                                        success = True
+                                        break
+                            else:
+                                last_text = current_text
+                                stable_time_start = None
+                except Exception as e:
+                    pass
                 
                 time.sleep(3)
                 
