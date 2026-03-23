@@ -202,6 +202,8 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             max_wait_time = 600
             start_wait = time.time()
             success = False
+            last_text_length = -1
+            stable_time_start = None
             
             while time.time() - start_wait < max_wait_time:
                 current_count = page.locator('.message-content, message-content, div[data-message-author-role="model"]').count()
@@ -249,6 +251,25 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                         human_delay(2, 4) # 스트리밍 완전 종료 대기
                         success = True
                         break
+                        
+                # UI 버그로 Send 버튼이 돌아오지 않고 'thinking' 상태에서 멈춰있을 때를 대비한 텍스트 안정화 감지
+                if current_count > prev_msg_count:
+                    try:
+                        current_text = page.locator('.message-content, message-content, div[data-message-author-role="model"]').last.inner_text()
+                        current_length = len(current_text)
+                        
+                        if current_length > 50 and current_length == last_text_length:
+                            if stable_time_start is None:
+                                stable_time_start = time.time()
+                            elif time.time() - stable_time_start > 15: # 15초간 텍스트 변화가 없으면 완료로 간주
+                                log("Send 버튼은 비활성화 상태이나, 답변 텍스트가 15초 이상 멈춰있어 생성 완료로 간주합니다.")
+                                success = True
+                                break
+                        else:
+                            last_text_length = current_length
+                            stable_time_start = None
+                    except Exception:
+                        pass
                 
                 time.sleep(3)
                 
