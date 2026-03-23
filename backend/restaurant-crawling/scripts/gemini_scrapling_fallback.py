@@ -70,15 +70,8 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
     
     with sync_playwright() as p:
         # CI 환경(GitHub Actions) 최적화 및 봇 탐지 회피
-        browser = p.chromium.launch(
-            headless=False, # 테스트/CI 효율을 위해 Headless 전환. 쿠키가 완벽하면 화면이 필요없음.
-            args=[
-                "--disable-blink-features=AutomationControlled", # 핵심 봇 회피 옵션
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--window-size=1280,800"
-            ]
-        )
+        # patchright 자체의 stealth 기능에 의존하고 불필요한 args는 제거하여 쿠키 만료 방지
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             viewport={'width': 1280, 'height': 800}
