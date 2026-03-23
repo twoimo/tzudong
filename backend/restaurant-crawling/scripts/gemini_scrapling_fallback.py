@@ -71,7 +71,8 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
     with sync_playwright() as p:
         # CI 환경(GitHub Actions) 최적화 및 봇 탐지 회피
         # patchright 자체의 stealth 기능에 의존하고 불필요한 args는 제거하여 쿠키 만료 방지
-        browser = p.chromium.launch(headless=True)
+        # 헤드리스 봇 탐지를 회피하기 위해 login 스크립트와 동일하게 headless=False 로 실행
+        browser = p.chromium.launch(headless=False, args=["--start-maximized"])
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             viewport={'width': 1280, 'height': 800}
@@ -93,12 +94,15 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
         
         log("gemini.google.com 으로 이동 중...")
         page.goto("https://gemini.google.com/")
+        # 완전히 로드될 때까지 넉넉히 대기
+        page.wait_for_load_state("networkidle", timeout=15000)
         human_delay(2, 4)
         
         if check_for_soft_ban(page):
             sys.exit(43) # 특수 종료 코드 (43: Soft Ban)
         
-        if "accounts.google.com" in page.url or page.locator('text="Sign in"').count() > 0 or page.locator('text="로그인"').count() > 0:
+        # 로그인 실패 조건 완화: URL이 account.google.com이거나 화면에 특정 텍스트가 강하게 존재할 때
+        if "accounts.google.com" in page.url or page.locator('input[type="email"]').count() > 0:
             log("⚠️ 쿠키 만료 또는 로그인 풀림 감지!")
             log("해결 방법: 로컬 터미널에서 'python backend/restaurant-crawling/scripts/login_and_save_cookies.py' 명령어를 실행하여 새로운 쿠키를 발급받으세요.")
             sys.exit(44) # 특수 종료 코드 (44: Auth Error / Cookie Expired)
@@ -244,25 +248,26 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     success = True
                     break
                         
-                # UI 버그로 Send 버튼이 돌아오지 않고 'thinking' 상태에서 멈춰있을 때를 대비한 텍스트 안정화 감지
+                # UI 버그로 Send 버튼이 돌아오지 않고 'thinking' 상태에서 멈춰있을 때를 대비한 텍스트 완성 감지
                 try:
                     elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
                     if elements:
                         current_text = elements[-1].inner_text().strip()
-                        if current_text:
-                            # 텍스트가 이전과 동일하다면 안정화 시간 체크
-                            if current_text == last_text:
-                                if stable_time_start is None:
-                                    stable_time_start = time.time()
-                                elif time.time() - stable_time_start > 10: # 10초간 텍스트 변화가 없으면 완료로 간주
-                                    # 우리가 원하는 JSON 키워드가 들어있는지 확인
-                                    if '"origin_name"' in current_text or '"restaurants"' in current_text or '업로드하신 파일을 읽을 수 없습니다' in current_text:
-                                        log("답변 텍스트가 10초 이상 안정화되어 생성이 완료된 것으로 간주합니다.")
-                                        success = True
-                                        break
-                            else:
-                                last_text = current_text
-                                stable_time_start = None
+                        
+                        # JSON 형태의 응답이 완전히 출력되었는지 검사 (마지막 글자가 } 이거나 ] 인지)
+                        if ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
+                            # 혹시 덜 써진 상태일 수 있으니 3초만 대기 후 한 번 더 체크해서 똑같으면 진짜 끝
+                            time.sleep(3)
+                            final_text = elements[-1].inner_text().strip()
+                            if final_text == current_text:
+                                log("답변 JSON 텍스트 렌더링이 완전하게 끝난 것으로 감지되어 대기를 강제 종료합니다.")
+                                success = True
+                                break
+                        elif '업로드하신 파일을 읽을 수 없습니다' in current_text or '언어 모델일 뿐' in current_text:
+                            time.sleep(3)
+                            log("거부 메시지가 렌더링된 것으로 감지되어 대기를 강제 종료합니다.")
+                            success = True
+                            break
                 except Exception as e:
                     pass
                 
