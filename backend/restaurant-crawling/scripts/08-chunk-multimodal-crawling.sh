@@ -264,7 +264,8 @@ download_video() {
     log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"
     $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg \
         --impersonate Chrome \
-        -f "bestvideo[height<=360]+bestaudio/best[height<=360]/best" \
+        --no-part --ignore-errors \
+        -f "b[ext=mp4][height<=360]/b[height<=360]/b" \
         -o "$output_template" \
         "https://www.youtube.com/watch?v=$video_id" >&2
 
@@ -368,36 +369,30 @@ process_video_chunks() {
     fi
     log_success "비디오 준비 완료: $(basename "$video_path")"
 
-    # [3/5] mp4 세그먼트 분할 (청크가 1개면 생략)
+    # [3/5] mp4 세그먼트 분할 (재인코딩 강제 적용하여 포맷 안정성 확보)
     local segments_dir="$temp_dir/segments"
     mkdir -p "$segments_dir"
-    
-    if [ "$total_chunks" -eq 1 ]; then
-        log_info "청크가 1개이므로 비디오 분할을 생략하고 원본을 사용합니다."
-    else
-        log_info "[3/5] mp4 세그먼트 분할..."
-        local win_split=$(normalize_path "$SPLIT_VIDEO")
-        local win_video=$(normalize_path "$video_path")
-        local win_chunks=$(normalize_path "$chunks_json")
-        local win_segments=$(normalize_path "$segments_dir")
 
-        if ! "$NODE_EXE" "$win_split" "$win_video" "$win_chunks" "$win_segments"; then
-            log_error "비디오 분할 실패"
-            rm -rf "$temp_dir"
-            return 1
-        fi
-        log_success "세그먼트 분할 완료"
+    log_info "[3/5] mp4 세그먼트 분할 및 안정화 인코딩..."
+    local win_split=$(normalize_path "$SPLIT_VIDEO")
+    local win_video=$(normalize_path "$video_path")
+    local win_chunks=$(normalize_path "$chunks_json")
+    local win_segments=$(normalize_path "$segments_dir")
+
+    if ! "$NODE_EXE" "$win_split" "$win_video" "$win_chunks" "$win_segments"; then
+        log_error "비디오 분할 실패"
+        rm -rf "$temp_dir"
+        return 1
     fi
-
+    log_success "세그먼트 분할 완료"
     # [4/5] 청크별 Gemini API 호출
     log_info "[4/5] Gemini API 호출 (${total_chunks} 청크)..."
     local responses_dir="$temp_dir/responses"
     mkdir -p "$responses_dir"
 
-    # cat+sed 제거 — 파일 직접 읽기 + 순수 bash 문자열 치환
-    local prompt_raw
-    prompt_raw=$(<"$PROMPT_FILE")
-    local prompt_template="${prompt_raw//{YOUTUBER_NAME}/$channel_name}"
+    # prompt_raw에서 YOUTUBER_NAME 1차 치환 (공통)
+    local prompt_template
+    prompt_template=$(sed "s/{YOUTUBER_NAME}/$channel_name/g" "$PROMPT_FILE")
 
     # 불변 경로는 루프 밖에서 한 번만 정규화
     local win_gemini=$(normalize_path "$GEMINI_CHUNK_API")
@@ -429,11 +424,12 @@ process_video_chunks() {
         printf -v start_mm "%02d:%02d" $((start_int / 60)) $((start_int % 60))
         printf -v end_mm "%02d:%02d" $((end_int / 60)) $((end_int % 60))
 
-        # 4회 echo|sed 호출 제거 — 순수 bash 문자열 치환
-        local chunk_prompt="${prompt_template//{CHUNK_INDEX}/$((i + 1))}"
-        chunk_prompt="${chunk_prompt//{TOTAL_CHUNKS}/${total_chunks}}"
-        chunk_prompt="${chunk_prompt//{START_TIME}/${start_mm}}"
-        chunk_prompt="${chunk_prompt//{END_TIME}/${end_mm}}"
+        # sed를 사용하여 동적 변수 치환
+        local chunk_prompt
+        chunk_prompt=$(echo "$prompt_template" | sed -e "s/{CHUNK_INDEX}/$((i + 1))/g" \
+            -e "s/{TOTAL_CHUNKS}/${total_chunks}/g" \
+            -e "s/{START_TIME}/${start_mm}/g" \
+            -e "s/{END_TIME}/${end_mm}/g")
 
         local prompt_file="$temp_dir/prompt_chunk_${i}.txt"
         local response_file="$responses_dir/chunk_response_${i}.json"
