@@ -106,8 +106,9 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             sys.exit(43) # 특수 종료 코드 (43: Soft Ban)
         
         if "accounts.google.com" in page.url or page.locator('text="Sign in"').count() > 0 or page.locator('text="로그인"').count() > 0:
-            log("⚠️ 쿠키 만료/로그인 풀림 감지. CI 환경에서는 수동 로그인이 불가능하므로 종료합니다.")
-            sys.exit(1)
+            log("⚠️ 쿠키 만료 또는 로그인 풀림 감지!")
+            log("해결 방법: 로컬 터미널에서 'python backend/restaurant-crawling/scripts/login_and_save_cookies.py' 명령어를 실행하여 새로운 쿠키를 발급받으세요.")
+            sys.exit(44) # 특수 종료 코드 (44: Auth Error / Cookie Expired)
         
         if target_model:
             log(f"모델 변경 시도: {target_model}")
