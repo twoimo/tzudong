@@ -210,7 +210,7 @@ sync_data_to_remote() {
 
     # 원격 변경사항 동기화 (충돌 방지)
     log "INFO" "원격 변경사항 확인 및 Rebase..."
-    if ! git pull --rebase origin data 2>&1 | tee -a "$LOG_FILE"; then
+    if ! git pull --rebase --autostash origin data 2>&1 | tee -a "$LOG_FILE"; then
         local LOCAL_HEAD REMOTE_HEAD DIVERGENCE_STATE
         log "WARN" "Rebase 실패 - rebase 중단 후 안전 동기화 전략으로 전환"
         git rebase --abort 2>/dev/null || true
