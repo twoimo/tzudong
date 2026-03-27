@@ -66,8 +66,21 @@ format_duration() {
 normalize_path() {
     if [[ "$OS_NAME" == "Windows" ]] && command -v cygpath > /dev/null 2>&1; then
         cygpath -m "$1"
+    elif command -v wslpath > /dev/null 2>&1; then
+        wslpath -m "$1"
     else
         echo "$1"
+    fi
+}
+
+# 도구가 Windows용(.exe)인 경우에만 경로를 정규화하는 유틸리티
+maybe_normalize() {
+    local tool="$1"
+    local path="$2"
+    if [[ "$tool" == *".exe"* ]]; then
+        normalize_path "$path"
+    else
+        echo "$path"
     fi
 }
 
@@ -98,7 +111,9 @@ else
 fi
 
 # 3. Python 감지
-if command -v python &> /dev/null; then
+if command -v python.exe &> /dev/null; then
+    PYTHON_EXE="python.exe"
+elif command -v python &> /dev/null; then
     PYTHON_EXE="python"
 elif command -v python3 &> /dev/null; then
     PYTHON_EXE="python3"
@@ -282,9 +297,9 @@ HEALTH_CHECK_PASSED=false
 
 # 1. Node.js Check
 if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
-    WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
-    WIN_PROMPT=$(normalize_path "$HEALTH_CHECK_PROMPT")
-    WIN_RESPONSE=$(normalize_path "$HEALTH_CHECK_RESPONSE")
+    WIN_SCRIPT=$(maybe_normalize "$NODE_EXE" "$GEMINI_API_SCRIPT")
+    WIN_PROMPT=$(maybe_normalize "$NODE_EXE" "$HEALTH_CHECK_PROMPT")
+    WIN_RESPONSE=$(maybe_normalize "$NODE_EXE" "$HEALTH_CHECK_RESPONSE")
     
     set +e
     "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE" > /dev/null 2>&1
@@ -481,9 +496,9 @@ $TRANSCRIPT
     if [ "$FORCE_CLI_FALLBACK" = false ] && [ -n "$NODE_EXE" ]; then
         log_debug "Node.js API 호출 시도..."
 
-        WIN_SCRIPT=$(normalize_path "$GEMINI_API_SCRIPT")
-        WIN_PROMPT=$(normalize_path "$TEMP_PROMPT")
-        WIN_RESPONSE=$(normalize_path "$TEMP_RESPONSE")
+        WIN_SCRIPT=$(maybe_normalize "$NODE_EXE" "$GEMINI_API_SCRIPT")
+        WIN_PROMPT=$(maybe_normalize "$NODE_EXE" "$TEMP_PROMPT")
+        WIN_RESPONSE=$(maybe_normalize "$NODE_EXE" "$TEMP_RESPONSE")
 
         set +e
         "$NODE_EXE" "$WIN_SCRIPT" "$WIN_PROMPT" "$WIN_RESPONSE"
@@ -537,12 +552,16 @@ $TRANSCRIPT
     if [ "$GEMINI_SUCCESS" = true ]; then
         PARSE_SUCCESS=false
         for PARSE_ATTEMPT in 1 2 3; do
-            if "$PYTHON_EXE" "$PARSER_SCRIPT" \
+            local win_parser=$(maybe_normalize "$PYTHON_EXE" "$PARSER_SCRIPT")
+            local win_eval_path=$(maybe_normalize "$PYTHON_EXE" "$EVALUATION_PATH")
+            local win_temp_response=$(maybe_normalize "$PYTHON_EXE" "$TEMP_RESPONSE")
+            local win_rule_file=$(maybe_normalize "$PYTHON_EXE" "$RULE_FILE")
+            if "$PYTHON_EXE" "$win_parser" \
                 --channel "$CHANNEL" \
-                --evaluation-path "$EVALUATION_PATH" \
+                --evaluation-path "$win_eval_path" \
                 --video-id="$VIDEO_ID" \
-                --response-file "$TEMP_RESPONSE" \
-                --rule-file "$RULE_FILE"; then
+                --response-file "$win_temp_response" \
+                --rule-file "$win_rule_file"; then
                 
                 SUCCESS=$((SUCCESS + 1))
                 PARSE_SUCCESS=true
@@ -556,7 +575,7 @@ $TRANSCRIPT
                     if [ "$HAS_GEMINI_CLI" = true ]; then
                         gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
                     elif [ -n "$NODE_EXE" ]; then
-                        "$NODE_EXE" "$(normalize_path "$GEMINI_API_SCRIPT")" "$(normalize_path "$TEMP_PROMPT")" "$(normalize_path "$TEMP_RESPONSE")" 2>/dev/null
+                        "$NODE_EXE" "$(maybe_normalize "$NODE_EXE" "$GEMINI_API_SCRIPT")" "$(maybe_normalize "$NODE_EXE" "$TEMP_PROMPT")" "$(maybe_normalize "$NODE_EXE" "$TEMP_RESPONSE")" 2>/dev/null
                     fi
                 fi
             fi
