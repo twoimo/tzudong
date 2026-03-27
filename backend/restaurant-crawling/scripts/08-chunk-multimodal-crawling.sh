@@ -104,6 +104,17 @@ normalize_path() {
     fi
 }
 
+# 도구가 Windows용(.exe)인 경우에만 경로를 정규화하는 유틸리티
+maybe_normalize() {
+    local tool="$1"
+    local path="$2"
+    if [[ "$tool" == *".exe"* ]]; then
+        normalize_path "$path"
+    else
+        echo "$path"
+    fi
+}
+
 # ================================
 # 명령어 감지
 # ================================
@@ -121,7 +132,7 @@ PYTHON_CMD="python.exe"
 # ffmpeg 감지: 시스템 PATH → node_modules/ffmpeg-static 폴백
 # yt-dlp 비디오+오디오 병합에 ffmpeg이 필요
 if ! command -v ffmpeg &> /dev/null && [ -n "$NODE_EXE" ]; then
-    FFMPEG_STATIC_PATH=$("$NODE_EXE" -e "try{console.log(require('ffmpeg-static'))}catch(e){}" 2>/dev/null)
+    FFMPEG_STATIC_PATH=$("$NODE_EXE" -e "try{console.log(require('ffmpeg-static'))}catch(e){}" 2>/dev/null | tr -d '\r')
     if [ -n "$FFMPEG_STATIC_PATH" ] && [ -f "$FFMPEG_STATIC_PATH" ]; then
         export PATH="$(dirname "$FFMPEG_STATIC_PATH"):$PATH"
         echo "[$(date '+%H:%M:%S')] [INFO] ffmpeg-static → PATH 추가: $FFMPEG_STATIC_PATH" >&2
@@ -338,11 +349,14 @@ process_video_chunks() {
     # [1/5] 청크 계획 생성 (if로 직접 종료 코드 검사 — set -e 안전)
     log_info "[1/5] 청크 계획 생성..."
     local chunks_json="$temp_dir/chunks.json"
-    if ! $PYTHON_CMD "$CHUNK_PLANNER" \
+    local win_planner=$(maybe_normalize "$PYTHON_CMD" "$CHUNK_PLANNER")
+    local win_transcript=$(maybe_normalize "$PYTHON_CMD" "$transcript_file")
+    local win_chunks_json=$(maybe_normalize "$PYTHON_CMD" "$chunks_json")
+    if ! "$PYTHON_CMD" "$win_planner" \
             --video-id="$video_id" \
             --duration "$duration" \
-            --transcript-file "$transcript_file" \
-            --output "$chunks_json" || [ ! -s "$chunks_json" ]; then
+            --transcript-file "$win_transcript" \
+            --output "$win_chunks_json" || [ ! -s "$chunks_json" ]; then
         log_error "청크 계획 생성 실패"
         rm -rf "$temp_dir"
         return 1
@@ -374,10 +388,10 @@ process_video_chunks() {
     mkdir -p "$segments_dir"
 
     log_info "[3/5] mp4 세그먼트 분할 및 안정화 인코딩..."
-    local win_split=$(normalize_path "$SPLIT_VIDEO")
-    local win_video=$(normalize_path "$video_path")
-    local win_chunks=$(normalize_path "$chunks_json")
-    local win_segments=$(normalize_path "$segments_dir")
+    local win_split=$(maybe_normalize "$NODE_EXE" "$SPLIT_VIDEO")
+    local win_video=$(maybe_normalize "$NODE_EXE" "$video_path")
+    local win_chunks=$(maybe_normalize "$NODE_EXE" "$chunks_json")
+    local win_segments=$(maybe_normalize "$NODE_EXE" "$segments_dir")
 
     if ! "$NODE_EXE" "$win_split" "$win_video" "$win_chunks" "$win_segments"; then
         log_error "비디오 분할 실패"
@@ -395,7 +409,7 @@ process_video_chunks() {
     prompt_template=$(sed "s/{YOUTUBER_NAME}/$channel_name/g" "$PROMPT_FILE")
 
     # 불변 경로는 루프 밖에서 한 번만 정규화
-    local win_gemini=$(normalize_path "$GEMINI_CHUNK_API")
+    local win_gemini=$(maybe_normalize "$NODE_EXE" "$GEMINI_CHUNK_API")
 
     local chunk_success=0 chunk_failed=0
 
@@ -403,7 +417,8 @@ process_video_chunks() {
     local OPTIMAL_JOBS_SCRIPT="$SCRIPT_DIR/get_optimal_jobs.py"
     local max_jobs
     if [ -f "$OPTIMAL_JOBS_SCRIPT" ]; then
-        max_jobs=$("$PYTHON_CMD" "$OPTIMAL_JOBS_SCRIPT")
+        local win_optimal_jobs=$(maybe_normalize "$PYTHON_CMD" "$OPTIMAL_JOBS_SCRIPT")
+        max_jobs=$("$PYTHON_CMD" "$win_optimal_jobs" | tr -d '\r')
     else
         max_jobs=3
     fi
@@ -469,14 +484,19 @@ PROMPT_EOF
         log_info "  청크 $((i + 1))/${total_chunks}: ${start_mm}~${end_mm}"
 
         # 반복 변하는 경로만 루프 내에서 정규화
-        local win_prompt=$(normalize_path "$prompt_file")
-        local win_response=$(normalize_path "$response_file")
-        local win_segment=$(normalize_path "$segment_file")
+        local win_prompt=$(maybe_normalize "$PYTHON_CMD" "$prompt_file")
+        local win_response=$(maybe_normalize "$PYTHON_CMD" "$response_file")
+        local win_segment=$(maybe_normalize "$PYTHON_CMD" "$segment_file")
+
+        # Node.js 호출을 위한 정규화 (보통 Node.js는 WSL용일 가능성이 높으므로 maybe_normalize 사용)
+        local node_win_prompt=$(maybe_normalize "$NODE_EXE" "$prompt_file")
+        local node_win_response=$(maybe_normalize "$NODE_EXE" "$response_file")
+        local node_win_segment=$(maybe_normalize "$NODE_EXE" "$segment_file")
 
         (
             if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ] || [ -f "$TEMP_BASE/force_web_fallback.flag" ]; then
                 log_info "  청크 $((i + 1)) (Web Fallback 강제 모드)"
-                local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
+                local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                 local web_model="${WEB_GEMINI_MODEL:-Pro}"
                 
                 set +e
@@ -497,7 +517,7 @@ PROMPT_EOF
                 fi
             else
                 set +e
-                "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>"$temp_dir/stderr_${i}.log"
+                "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>"$temp_dir/stderr_${i}.log"
                 local exit_code=$?
                 set -e
     
@@ -509,7 +529,7 @@ PROMPT_EOF
                     # 앞으로 남은 청크들도 모두 API 호출을 생략하도록 플래그 생성
                     touch "$TEMP_BASE/force_web_fallback.flag"
                     
-                    local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
+                    local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                     local web_model="${WEB_GEMINI_MODEL:-Pro}"
                     
                     set +e
@@ -526,7 +546,7 @@ PROMPT_EOF
                         log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
                         touch "$TEMP_BASE/quota_exceeded.flag"
                     else
-                        log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
+                        log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜜"
                     fi
                 else
                     log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
@@ -540,7 +560,7 @@ PROMPT_EOF
                         sleep 5
     
                         set +e
-                        "$NODE_EXE" "$win_gemini" "$win_prompt" "$win_response" "$win_segment" 2>>"$temp_dir/stderr_${i}.log"
+                        "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>>"$temp_dir/stderr_${i}.log"
                         local fb_exit=$?
                         set -e
     
@@ -548,7 +568,7 @@ PROMPT_EOF
                             log_success "  청크 $((i + 1)) 폴백 성공"
                         elif [ $fb_exit -eq 42 ]; then
                             log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
-                            local SCRAPLING_FALLBACK="$SCRIPT_DIR/gemini_scrapling_fallback.py"
+                            local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                             local web_model="${WEB_GEMINI_MODEL:-Pro}"
                             
                             set +e
@@ -565,7 +585,7 @@ PROMPT_EOF
                                 log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
                                 touch "$TEMP_BASE/quota_exceeded.flag"
                             else
-                                log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
+                                log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜜"
                             fi
                         fi
                     fi
@@ -608,7 +628,10 @@ PROMPT_EOF
     log_info "[5/5] 결과 병합..."
     local raw_merged_response="$temp_dir/raw_merged_response.json"
 
-    if ! $PYTHON_CMD "$MERGE_RESULTS" --dir "$responses_dir" > "$raw_merged_response" || [ ! -s "$raw_merged_response" ]; then
+    local win_merge=$(maybe_normalize "$PYTHON_CMD" "$MERGE_RESULTS")
+    local win_responses_dir=$(maybe_normalize "$PYTHON_CMD" "$responses_dir")
+    local win_raw_merged_response=$(maybe_normalize "$PYTHON_CMD" "$raw_merged_response")
+    if ! "$PYTHON_CMD" "$win_merge" --dir "$win_responses_dir" > "$raw_merged_response" || [ ! -s "$raw_merged_response" ]; then
         log_error "결과 병합 실패"
         rm -rf "$temp_dir"
         return 1
@@ -622,13 +645,13 @@ PROMPT_EOF
         cp "$raw_merged_response" "$final_merged_response"
     else
         log_info "[6/5] LLM 기반 최종 결과 정리..."
-        local win_final_merge=$(normalize_path "$SCRIPT_DIR/final_merge_chunk.mjs")
-        local win_final_prompt=$(normalize_path "$SCRIPT_DIR/../prompts/final_merge_prompt.txt")
-        local win_raw_merged=$(normalize_path "$raw_merged_response")
-        local win_transcript=$(normalize_path "$transcript_file")
-        local win_final_out=$(normalize_path "$final_merged_response")
+        local win_final_merge=$(maybe_normalize "$NODE_EXE" "$SCRIPT_DIR/final_merge_chunk.mjs")
+        local node_win_final_prompt=$(maybe_normalize "$NODE_EXE" "$SCRIPT_DIR/../prompts/final_merge_prompt.txt")
+        local node_win_raw_merged=$(maybe_normalize "$NODE_EXE" "$raw_merged_response")
+        local node_win_transcript=$(maybe_normalize "$NODE_EXE" "$transcript_file")
+        local node_win_final_out=$(maybe_normalize "$NODE_EXE" "$final_merged_response")
 
-        if ! "$NODE_EXE" "$win_final_merge" "$win_final_prompt" "$win_final_out" "$win_raw_merged" "$win_transcript"; then
+        if ! "$NODE_EXE" "$win_final_merge" "$node_win_final_prompt" "$node_win_final_out" "$node_win_raw_merged" "$node_win_transcript"; then
             log_warning "LLM 최종 정리 실패, Raw 병합본으로 대체합니다."
             cp "$raw_merged_response" "$final_merged_response"
         fi
@@ -637,7 +660,10 @@ PROMPT_EOF
     # parse_result.py로 최종 저장
     local crawling_file="$crawling_dir/${video_id}.jsonl"
 
-    if $PYTHON_CMD "$PARSER_SCRIPT" parse "$youtube_link" "$final_merged_response" "$crawling_file" "$meta_recollect_id" "$transcript_recollect_id" "$channel"; then
+    local win_parser=$(maybe_normalize "$PYTHON_CMD" "$PARSER_SCRIPT")
+    local win_final_merged_response=$(maybe_normalize "$PYTHON_CMD" "$final_merged_response")
+    local win_crawling_file=$(maybe_normalize "$PYTHON_CMD" "$crawling_file")
+    if "$PYTHON_CMD" "$win_parser" parse "$youtube_link" "$win_final_merged_response" "$win_crawling_file" "$meta_recollect_id" "$transcript_recollect_id" "$channel"; then
         log_success "최종 저장 완료: $crawling_file"
     else
         log_error "파서 실패: $video_id"
@@ -691,7 +717,8 @@ process_channel() {
             log_warning "urls.txt 없음: $urls_file"
             return 0
         fi
-        mapfile -t urls < <($PYTHON_CMD "$PARSER_SCRIPT" scan --channel "$channel" | tr -d '\r')
+        local win_parser=$(maybe_normalize "$PYTHON_CMD" "$PARSER_SCRIPT")
+        mapfile -t urls < <("$PYTHON_CMD" "$win_parser" scan --channel "$channel" | tr -d '\r')
     fi
 
     local total=${#urls[@]}
@@ -703,16 +730,27 @@ process_channel() {
     log_info "처리 대상: ${total}개"
 
     local success_count=0 failed_count=0 skipped_count=0 total_time=0
+    local skip_already_processed=0 skip_missing_meta=0 skip_missing_transcript=0 skip_invalid_url=0
 
     for i in "${!urls[@]}"; do
         local url="${urls[$i]}"
         local index=$((i + 1))
 
-        [ -z "$url" ] && continue
+        if [ -z "$url" ]; then
+            skipped_count=$((skipped_count + 1))
+            skip_invalid_url=$((skip_invalid_url + 1))
+            log_warning "[$index/$total] SKIP: invalid_url (empty)"
+            continue
+        fi
 
         local video_id
         video_id=$(extract_video_id "$url")
-        [ -z "$video_id" ] && continue
+        if [ -z "$video_id" ]; then
+            skipped_count=$((skipped_count + 1))
+            skip_invalid_url=$((skip_invalid_url + 1))
+            log_warning "[$index/$total] SKIP: invalid_url (video_id parse 실패)"
+            continue
+        fi
 
         local crawling_file="$crawling_dir/${video_id}.jsonl"
         local map_file="$full_data_path/map_url_crawling/${video_id}.jsonl"
@@ -720,6 +758,8 @@ process_channel() {
         # 이미 처리 완료 시 건너뜀 (--force 제외)
         if [ "$FORCE_MODE" = false ] && { [ -f "$crawling_file" ] || [ -f "$map_file" ]; }; then
             skipped_count=$((skipped_count + 1))
+            skip_already_processed=$((skip_already_processed + 1))
+            log_info "[$index/$total] SKIP: already_processed ($video_id)"
             continue
         fi
 
@@ -727,12 +767,16 @@ process_channel() {
         local transcript_file="$transcript_dir/${video_id}.jsonl"
 
         if [ ! -f "$meta_file" ]; then
-            log_warning "[$index/$total] 메타 없음: $video_id"
+            skipped_count=$((skipped_count + 1))
+            skip_missing_meta=$((skip_missing_meta + 1))
+            log_warning "[$index/$total] SKIP: missing_meta ($video_id)"
             continue
         fi
 
         if [ ! -f "$transcript_file" ]; then
-            log_warning "[$index/$total] 자막 없음: $video_id"
+            skipped_count=$((skipped_count + 1))
+            skip_missing_transcript=$((skip_missing_transcript + 1))
+            log_warning "[$index/$total] SKIP: missing_transcript ($video_id)"
             continue
         fi
 
@@ -767,6 +811,10 @@ process_channel() {
     log_info "=========================================="
     log_success "  성공: $success_count"
     log_warning "  스킵: $skipped_count"
+    log_info "    - already_processed: $skip_already_processed"
+    log_info "    - missing_meta: $skip_missing_meta"
+    log_info "    - missing_transcript: $skip_missing_transcript"
+    log_info "    - invalid_url: $skip_invalid_url"
     log_error "  실패: $failed_count"
     log_info "  총 소요: $(format_duration $total_time)"
 }
@@ -835,7 +883,13 @@ console.log(r.text);
         log_warning "Health Check 실패. (exit: $hc_exit)"
         if [ -f "$hc_stderr" ]; then
             local err_msg=$(<"$hc_stderr")
-            log_error "Stderr: $err_msg"
+            local err_preview
+            err_preview=$(printf "%s" "$err_msg" \
+                | tr '\r' '\n' \
+                | head -n 1 \
+                | sed -E 's/AIza[0-9A-Za-z_-]{20,}/[REDACTED_API_KEY]/g' \
+                | cut -c1-240)
+            log_error "Stderr(요약): $err_preview"
             # 429 Quota Exceeded 에러인지 확인
             if [[ "$err_msg" == *"429"* ]] || [[ "$err_msg" == *"exceeded your current quota"* ]]; then
                 log_warning "🚨 [QUOTA_ERROR] API 할당량 초과가 Health Check에서 감지되었습니다."
