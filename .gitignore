@@ -91,3 +91,8 @@ AGENTS.md
 
 .gemini/
 gha-creds-*.json
+backend/restaurant-crawling/data/*
+backend/.sync_trigger
+backend/restaurant-crawling/temp/*
+.codex/*
+.omx/

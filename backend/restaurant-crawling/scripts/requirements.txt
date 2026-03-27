@@ -9,3 +9,5 @@ langchain-community
 langchain-ollama
 supabase
 curl_cffi
+scrapling[fetchers]
+camoufox

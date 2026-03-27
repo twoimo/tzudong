@@ -12,8 +12,8 @@ import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 const POLL_INTERVAL_MS = 15000;
 /** 최대 폴링 시도 횟수 (약 5분 대기 - 긴 영상 처리 대응) */
 const MAX_POLL_ATTEMPTS = 20;
-/** 전체 프로세스(업로드 포함) 최대 재시도 횟수 (1회: 재시도 없음, 무한 루프 방지) */
-const MAX_PROCESS_RETRIES = 1;
+/** 전체 프로세스(업로드 포함) 최대 재시도 횟수 (3회 시도) */
+const MAX_PROCESS_RETRIES = 3;
 
 /** API 호출 타임아웃 래퍼 */
 async function fetchWithTimeout(fn, timeoutMs = 60000) {
@@ -106,6 +106,12 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         console.log(`[완료] 응답 저장됨: ${outputFile}`);
         return true;
     } catch (error) {
+        const msg = error.message || '';
+        // 503 (Service Unavailable)은 일시적인 과부하임. QUOTA_ERROR로 분류하지 않고 상위에서 재시도하게 함.
+        if (msg.includes('503') || msg.includes('Service Unavailable')) {
+            throw error; // 일반 에러로 던져서 메인 루프에서 재시도 유도
+        }
+        
         if (error.message.includes('429') || error.message.includes('QUOTA_ERROR') || error.message.includes('RESOURCE_EXHAUSTED')) {
              throw new Error(`[QUOTA_ERROR] ${error.message}`);
         }
@@ -152,12 +158,18 @@ async function main() {
             const success = await runSingleAttempt(apiKey, modelName, promptText, videoPath, outputFile);
             if (success) return;
         } catch (error) {
-            console.error(`[시도 ${retry + 1}/${MAX_PROCESS_RETRIES}] 오류 발생: ${error.message}`);
+            const msg = error.message || '';
+            console.error(`[시도 ${retry + 1}/${MAX_PROCESS_RETRIES}] 오류 발생: ${msg}`);
             
             // 쿼타 에러 감지 시 특수 종료 코드(42) 반환
-            if (error.message.includes('[QUOTA_ERROR]') || error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED')) {
+            if (msg.includes('[QUOTA_ERROR]') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
                 console.error('[치명적 오류] API 할당량(Quota) 초과 또는 심각한 API 에러 발생. 스크립트를 즉시 종료합니다.');
                 process.exit(42);
+            }
+
+            // 503 Service Unavailable 또는 500 에러 등에 대한 상세 로그
+            if (msg.includes('503') || msg.includes('500') || msg.includes('Service Unavailable')) {
+                console.warn('  [서버 에러] 구글 Gemini 서버 일시적 과부하 또는 오류 감지. 잠시 후 재시도합니다.');
             }
 
             console.error('=== 상세 에러 로그 ===');
@@ -165,7 +177,8 @@ async function main() {
             console.error('======================');
             
             if (retry < MAX_PROCESS_RETRIES - 1) {
-                const waitSec = 30;
+                // 지수 백오프 적용 (30초, 60초...)
+                const waitSec = 30 * (retry + 1);
                 console.log(`  ${waitSec}초 후 재시도 시작 (처음부터 다시 업로드)...`);
                 await new Promise(r => setTimeout(r, waitSec * 1000));
             } else {

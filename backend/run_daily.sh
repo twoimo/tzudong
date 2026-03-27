@@ -30,10 +30,12 @@ fi
 # [Local Config] Python 런타임 탐색
 if [ -n "$PYTHON_CMD" ] && command -v "$PYTHON_CMD" >/dev/null 2>&1; then
     : # 이미 환경변수로 설정된 PYTHON_CMD 유지
-elif command -v python3 >/dev/null 2>&1; then
-    PYTHON_CMD="python3"
+elif command -v python.exe >/dev/null 2>&1; then
+    PYTHON_CMD="python.exe"
 elif command -v python >/dev/null 2>&1; then
     PYTHON_CMD="python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD="python3"
 else
     echo "[ERROR] Python을 찾을 수 없습니다. 환경변수를 확인하세요."
     exit 1
@@ -491,6 +493,10 @@ set -o pipefail
 if [ $CHUNK_EXIT_CODE -eq 42 ]; then
     log "WARN" "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
     SKIP_EVALUATION=true
+elif [ $CHUNK_EXIT_CODE -eq 44 ]; then
+    log "ERROR" "[CRITICAL] 구글 로그인 세션 만료! 웹 폴백을 더 이상 진행할 수 없습니다."
+    log "INFO" "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
+    exit 1
 fi
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
