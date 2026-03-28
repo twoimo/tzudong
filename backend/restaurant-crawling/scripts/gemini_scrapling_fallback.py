@@ -4,6 +4,7 @@ import random
 import argparse
 import os
 import json
+from contextlib import contextmanager
 
 from camoufox.sync_api import Camoufox
 
@@ -70,6 +71,7 @@ def validate_response_payload(text):
 COOKIE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.json"))
 BROWSER_PROFILE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "camoufox_profile"))
 ALLOWED_IO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+PROFILE_LOCK_FILE = os.path.join(BROWSER_PROFILE_DIR, ".session.lock")
 
 
 def _create_camoufox(headless=False):
@@ -91,6 +93,135 @@ def _create_camoufox(headless=False):
     )
 
 
+def _try_acquire_lock(lock_fp):
+    try:
+        lock_fp.seek(0, os.SEEK_END)
+        if lock_fp.tell() == 0:
+            lock_fp.write("0")
+            lock_fp.flush()
+        lock_fp.seek(0)
+
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(lock_fp.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except Exception:
+        return False
+
+
+def _release_lock(lock_fp):
+    if os.name == "nt":
+        import msvcrt
+        lock_fp.seek(0)
+        msvcrt.locking(lock_fp.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(lock_fp.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def profile_session_lock(timeout_sec=600, poll_sec=0.5):
+    """동일 프로필 동시 실행을 막아 쿠키/세션 손상을 방지."""
+    os.makedirs(BROWSER_PROFILE_DIR, exist_ok=True)
+    lock_fp = open(PROFILE_LOCK_FILE, "a+", encoding="utf-8")
+    start = time.time()
+    acquired = False
+
+    try:
+        while True:
+            if _try_acquire_lock(lock_fp):
+                acquired = True
+                break
+
+            waited = time.time() - start
+            if waited >= timeout_sec:
+                raise TimeoutError(f"브라우저 프로필 락 대기 시간 초과 ({int(waited)}s)")
+            time.sleep(poll_sec)
+
+        lock_fp.seek(0)
+        lock_fp.truncate()
+        lock_fp.write(f"pid={os.getpid()} ts={int(time.time())}\n")
+        lock_fp.flush()
+        yield
+    finally:
+        if acquired:
+            try:
+                _release_lock(lock_fp)
+            except Exception as e:
+                log(f"프로필 락 해제 경고: {compact_error(e)}")
+        try:
+            lock_fp.close()
+        except Exception:
+            pass
+
+
+def load_cookie_backup(context):
+    """백업 쿠키를 컨텍스트에 로드 (가능할 때만)."""
+    if not os.path.exists(COOKIE_FILE):
+        return False
+
+    try:
+        with open(COOKIE_FILE, "r", encoding="utf-8") as f:
+            cookies = json.load(f)
+    except Exception as e:
+        log(f"쿠키 백업 로드 실패: {compact_error(e)}")
+        return False
+
+    if not isinstance(cookies, list) or not cookies:
+        log("쿠키 백업 로드 건너뜀: 유효한 쿠키가 없음")
+        return False
+
+    now = time.time()
+    valid_cookies = []
+    for cookie in cookies:
+        if not isinstance(cookie, dict):
+            continue
+        if not cookie.get("name") or "value" not in cookie:
+            continue
+        expires = cookie.get("expires")
+        if isinstance(expires, (int, float)) and expires > 0 and expires < (now - 60):
+            continue
+        valid_cookies.append(cookie)
+
+    if not valid_cookies:
+        log("쿠키 백업 로드 건너뜀: 만료되지 않은 쿠키가 없음")
+        return False
+
+    try:
+        context.add_cookies(valid_cookies)
+        log(f"쿠키 백업 로드 완료: {len(valid_cookies)}개")
+        return True
+    except Exception as e:
+        log(f"쿠키 백업 적용 실패: {compact_error(e)}")
+        return False
+
+
+def save_cookie_backup(context, reason="runtime"):
+    """현재 세션 쿠키를 백업 파일로 저장."""
+    try:
+        cookies = context.cookies()
+        if not isinstance(cookies, list) or not cookies:
+            log(f"쿠키 백업 저장 건너뜀 ({reason}): 저장할 쿠키 없음")
+            return False
+
+        os.makedirs(os.path.dirname(COOKIE_FILE), mode=0o700, exist_ok=True)
+        with open(COOKIE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cookies, f, ensure_ascii=False, indent=2)
+        try:
+            os.chmod(COOKIE_FILE, 0o600)
+        except Exception as perm_err:
+            log(f"쿠키 파일 권한 설정 경고: {compact_error(perm_err)}")
+
+        log(f"✅ 쿠키 백업 저장 완료 ({reason}, {len(cookies)}개)")
+        return True
+    except Exception as e:
+        log(f"쿠키 백업 저장 실패 ({reason}): {compact_error(e)}")
+        return False
+
+
 def check_for_soft_ban(page):
     """구글 Soft Ban 또는 Captcha 화면 감지"""
     try:
@@ -110,15 +241,55 @@ def is_logged_in(page):
     try:
         if "accounts.google.com" in page.url:
             return False
-        login_btn = page.locator('a[href*="accounts.google.com/ServiceLogin"]').first
-        if login_btn.is_visible():
-            return False
-        textbox = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first
-        if textbox.is_visible():
+
+        # Gemini 입력창이 보이면 로그인 완료 (가장 강한 신호)
+        textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]')
+        if textbox_locator.count() > 0:
+            try:
+                if textbox_locator.first.is_visible():
+                    return True
+            except Exception:
+                pass
+            # headless 환경에서 visibility 계산이 불안정할 수 있어 count 기반으로도 인정
             return True
+
+        # 입력창이 아직 없어도 계정 아바타/계정 버튼이 보이면 로그인 완료로 간주
+        account_badge_locator = page.locator(
+            'button[aria-label*="Google"], a[aria-label*="Google"], '
+            'img[referrerpolicy="no-referrer"], button[aria-label*="@"]'
+        )
+        if account_badge_locator.count() > 0:
+            try:
+                if account_badge_locator.first.is_visible():
+                    return True
+            except Exception:
+                pass
+            return True
+
+        # 명시적인 로그인 CTA(텍스트 포함)가 보이면 미로그인으로 간주
+        explicit_login_cta = page.locator(
+            'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
+            'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
+            'button:has-text("Sign in"), button:has-text("로그인")'
+        ).first
+        if explicit_login_cta.is_visible():
+            return False
+
         return False
     except:
         return False
+
+
+def wait_for_login_detection(page, timeout_sec=600, poll_sec=3):
+    """수동 로그인 완료를 자동 감지한다."""
+    log(f"로그인 상태 자동 감지 대기 중... (최대 {timeout_sec}초)")
+    start = time.time()
+    while time.time() - start < timeout_sec:
+        if is_logged_in(page):
+            log("✅ 로그인 상태 자동 감지 성공")
+            return True
+        time.sleep(poll_sec)
+    return False
 
 
 def reset_chat_context(page):
@@ -179,36 +350,34 @@ def manual_login():
     log(f"프로필 경로: {BROWSER_PROFILE_DIR}")
     log("Firefox 브라우저가 열리면 구글 계정으로 로그인해 주세요.")
 
-    with _create_camoufox(headless=False) as context:
-        page = context.new_page()
-        try:
-            page.goto(
-                "https://accounts.google.com/ServiceLogin?continue=https://gemini.google.com/",
-                wait_until="domcontentloaded",
-                timeout=30000
-            )
-        except Exception as e:
-            log(f"페이지 로딩 지연 (무시하고 계속 진행): {e}")
-
-        log("로그인 완료 후 브라우저를 닫지 말고, 이 터미널에서 Enter를 눌러주세요.")
-        input(">>> 로그인을 마쳤다면 Enter를 누르세요...")
-
-        # 쿠키 백업 저장
-        try:
-            new_cookies = context.cookies()
-            os.makedirs(os.path.dirname(COOKIE_FILE), mode=0o700, exist_ok=True)
-            with open(COOKIE_FILE, "w", encoding="utf-8") as f:
-                json.dump(new_cookies, f, ensure_ascii=False, indent=2)
+    with profile_session_lock():
+        with _create_camoufox(headless=False) as context:
+            load_cookie_backup(context)
+            page = context.new_page()
             try:
-                os.chmod(COOKIE_FILE, 0o600)
-            except Exception as perm_err:
-                log(f"쿠키 파일 권한 설정 경고: {compact_error(perm_err)}")
-            log(f"✅ 쿠키 백업 저장 완료: {COOKIE_FILE}")
-        except Exception as e:
-            log(f"쿠키 백업 저장 실패: {e}")
+                page.goto(
+                    "https://accounts.google.com/ServiceLogin?continue=https://gemini.google.com/",
+                    wait_until="domcontentloaded",
+                    timeout=30000
+                )
+            except Exception as e:
+                log(f"페이지 로딩 지연 (무시하고 계속 진행): {compact_error(e)}")
 
-        log("✅ 영구 프로필에 로그인 상태가 저장되었습니다.")
-        log("다음번 실행 시 자동으로 로그인 상태가 유지됩니다.")
+            log("로그인 후 자동 감지를 기다려 주세요. (필요 시 Enter 수동 확인도 지원)")
+            detected = wait_for_login_detection(page, timeout_sec=900, poll_sec=3)
+
+            if not detected:
+                if sys.stdin and sys.stdin.isatty():
+                    log("자동 감지 시간 초과. 수동 확인(Enter)로 계속할 수 있습니다.")
+                    input(">>> 로그인을 마쳤다면 Enter를 누르세요...")
+                else:
+                    log("❌ 비대화형 모드에서 로그인 자동 감지에 실패했습니다.")
+                    sys.exit(1)
+
+            save_cookie_backup(context, reason="manual-login")
+
+            log("✅ 영구 프로필에 로그인 상태가 저장되었습니다.")
+            log("다음번 실행 시 자동으로 로그인 상태가 유지됩니다.")
 
     sys.exit(0)
 
@@ -265,210 +434,224 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
     log("Camoufox(Firefox) 영구 프로필 세션 시작")
 
-    with _create_camoufox(headless=True) as context:
-        page = context.new_page()
+    with profile_session_lock():
+        with _create_camoufox(headless=True) as context:
+            restored_cookies = load_cookie_backup(context)
+            page = context.new_page()
 
-        log("gemini.google.com 으로 이동 중...")
-        try:
-            page.goto("https://gemini.google.com/", wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_load_state("networkidle", timeout=15000)
-        except Exception as e:
-            log(f"페이지 로딩 지연 (계속 진행): {compact_error(e)}")
-        human_delay(2, 4)
-
-        if check_for_soft_ban(page):
-            return 43
-
-        if not is_logged_in(page):
-            log("❌ [CRITICAL] 로그인이 되어 있지 않습니다!")
-            log("해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 로그인하세요.")
-            return 44
-
-        authenticated = True
-        reset_chat_context(page)
-
-        stale_marker = detect_stale_context(page)
-        if stale_marker:
-            log(f"stale context marker 감지: {stale_marker} (RETRY)")
-            return "RETRY"
-
-        if target_model:
-            log(f"모델 변경 시도: {target_model}")
+            log("gemini.google.com 으로 이동 중...")
             try:
-                import re
-                mode_picker_btn = page.locator('button[aria-label="Open mode picker"], button.input-area-switch').first
-                if mode_picker_btn.is_visible():
-                    mode_picker_btn.click()
-                    human_delay(1, 2)
-
-                    menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
-                    model_clicked = False
-                    for item in menu_items:
-                        text = item.inner_text()
-                        if re.search(r'\b' + re.escape(target_model) + r'\b', text, re.IGNORECASE):
-                            item.click()
-                            log(f"모델 선택 완료: {text.strip().split(chr(10))[0]}")
-                            model_clicked = True
-                            human_delay(1, 2)
-                            break
-
-                    if not model_clicked:
-                        page.mouse.click(0, 0)
+                page.goto("https://gemini.google.com/", wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_load_state("networkidle", timeout=15000)
             except Exception as e:
-                log(f"모델 변경 오류 (무시): {compact_error(e)}")
+                log(f"페이지 로딩 지연 (계속 진행): {compact_error(e)}")
+            human_delay(2, 4)
 
-        try:
-            page.wait_for_selector('div.ql-editor[contenteditable="true"], div[role="textbox"]', timeout=30000)
-            page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first.click()
-            human_delay(0.5, 1.5)
+            if check_for_soft_ban(page):
+                return 43
 
-            log("동영상 업로드 메뉴 시도...")
-            upload_menu_btn = page.locator('button[aria-label="Open upload file menu"], button[aria-label*="Upload file"], button[aria-label*="첨부"]').first
-
-            if upload_menu_btn.is_visible():
-                with page.expect_file_chooser(timeout=20000) as fc_info:
-                    upload_menu_btn.click()
-                    human_delay(1, 2)
-
-                    menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
-                    if menu_items:
-                        clicked = False
-                        for item in menu_items:
-                            text = item.inner_text().lower()
-                            if 'upload' in text or 'computer' in text or '업로드' in text or '컴퓨터' in text or '파일' in text:
-                                item.click()
-                                clicked = True
-                                break
-                        if not clicked:
-                            menu_items[0].click()
-
-                file_chooser = fc_info.value
-                file_chooser.set_files(video_abs_path)
-
-                log("파일 업로드 대기 (진행 표시줄 확인)...")
+            if not is_logged_in(page) and restored_cookies:
+                log("쿠키 백업 적용 후 로그인 상태 재확인...")
                 try:
-                    remove_btn = page.locator('button[aria-label*="Remove file"], button[aria-label*="삭제"], button[aria-label*="Delete"], button[aria-label*="지우기"]').first
-                    remove_btn.wait_for(state="visible", timeout=120000)
-                    page.wait_for_selector('mat-progress-spinner, mat-spinner', state="hidden", timeout=120000)
-                    log("업로드 완료!")
+                    page.goto("https://gemini.google.com/", wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_load_state("networkidle", timeout=15000)
                 except Exception as e:
-                    log(f"업로드 완료 감지 지연 (계속 진행): {compact_error(e)}")
-            else:
-                log("업로드 메뉴 버튼을 찾을 수 없습니다.")
-                return 1
+                    log(f"재확인 페이지 로딩 지연 (계속 진행): {compact_error(e)}")
+                human_delay(1, 2)
 
-            human_delay(1, 2)
-            textarea = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first
-            textarea.fill(prompt_text)
+            if not is_logged_in(page):
+                log("❌ [CRITICAL] 로그인이 되어 있지 않습니다!")
+                log("해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 로그인하세요.")
+                return 44
 
-            human_delay(1, 2)
-            send_button = page.locator('button[aria-label*="Send"], button[aria-label*="보내기"], button.send-button').first
+            authenticated = True
+            save_cookie_backup(context, reason="auth-verified")
+            reset_chat_context(page)
 
-            log("전송 버튼 활성화 대기 및 클릭...")
-            try:
-                send_button.wait_for(state="visible", timeout=60000)
-                send_button.click(timeout=60000)
-            except Exception as e:
-                log(f"전송 버튼 클릭 실패, 엔터키로 대체 시도: {compact_error(e)}")
-                textarea.press('Enter')
+            stale_marker = detect_stale_context(page)
+            if stale_marker:
+                log(f"stale context marker 감지: {stale_marker} (RETRY)")
+                return "RETRY"
 
-            log("답변 생성 대기 중... (최대 600초)")
-            max_wait_time = 600
-            start_wait = time.time()
-            success = False
-
-            while time.time() - start_wait < max_wait_time:
-                draft_btns = page.locator('button:has-text("답변 A"), button:has-text("초안 1"), button:has-text("Draft 1"), button[aria-label*="답변 A"], button[aria-label*="초안 1"]').all()
-                if draft_btns:
-                    human_delay(3, 5)
-                    log("A/B 답변 선택(Draft) 화면 감지.")
-                    messages = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
-                    selected_index = 0
-                    for idx, msg in enumerate(messages):
-                        try:
-                            text = msg.inner_text()
-                            if '"origin_name"' in text or '"restaurants"' in text:
-                                selected_index = idx
-                                break
-                        except Exception: pass
-                    all_draft_btns = page.locator('button:has-text("답변"), button:has-text("초안"), button:has-text("Draft"), button[aria-label*="답변"], button[aria-label*="초안"]').all()
-                    try:
-                        if selected_index < len(all_draft_btns): all_draft_btns[selected_index].click()
-                        else: draft_btns[0].click()
-                        human_delay(1, 2)
-                        apply_btn = page.locator('button:has-text("적용"), button:has-text("Apply")').first
-                        if apply_btn.is_visible(): apply_btn.click()
-                    except: pass
-                    human_delay(2, 4)
-                    success = True
-                    break
-
-                if send_button.is_visible() and send_button.is_enabled():
-                    human_delay(2, 4)
-                    success = True
-                    break
-
+            if target_model:
+                log(f"모델 변경 시도: {target_model}")
                 try:
-                    elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
-                    if elements:
-                        current_text = elements[-1].inner_text().strip()
-                        if ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
-                            time.sleep(3)
-                            if elements[-1].inner_text().strip() == current_text:
-                                log("답변 JSON 텍스트 렌더링 완료 감지.")
+                    import re
+                    mode_picker_btn = page.locator('button[aria-label="Open mode picker"], button.input-area-switch').first
+                    if mode_picker_btn.is_visible():
+                        mode_picker_btn.click()
+                        human_delay(1, 2)
+
+                        menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
+                        model_clicked = False
+                        for item in menu_items:
+                            text = item.inner_text()
+                            if re.search(r'\b' + re.escape(target_model) + r'\b', text, re.IGNORECASE):
+                                item.click()
+                                log(f"모델 선택 완료: {text.strip().split(chr(10))[0]}")
+                                model_clicked = True
+                                human_delay(1, 2)
+                                break
+
+                        if not model_clicked:
+                            page.mouse.click(0, 0)
+                except Exception as e:
+                    log(f"모델 변경 오류 (무시): {compact_error(e)}")
+
+            try:
+                page.wait_for_selector('div.ql-editor[contenteditable="true"], div[role="textbox"]', timeout=30000)
+                page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first.click()
+                human_delay(0.5, 1.5)
+
+                log("동영상 업로드 메뉴 시도...")
+                upload_menu_btn = page.locator('button[aria-label="Open upload file menu"], button[aria-label*="Upload file"], button[aria-label*="첨부"]').first
+
+                if upload_menu_btn.is_visible():
+                    with page.expect_file_chooser(timeout=20000) as fc_info:
+                        upload_menu_btn.click()
+                        human_delay(1, 2)
+
+                        menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
+                        if menu_items:
+                            clicked = False
+                            for item in menu_items:
+                                text = item.inner_text().lower()
+                                if 'upload' in text or 'computer' in text or '업로드' in text or '컴퓨터' in text or '파일' in text:
+                                    item.click()
+                                    clicked = True
+                                    break
+                            if not clicked:
+                                menu_items[0].click()
+
+                    file_chooser = fc_info.value
+                    file_chooser.set_files(video_abs_path)
+
+                    log("파일 업로드 대기 (진행 표시줄 확인)...")
+                    try:
+                        remove_btn = page.locator('button[aria-label*="Remove file"], button[aria-label*="삭제"], button[aria-label*="Delete"], button[aria-label*="지우기"]').first
+                        remove_btn.wait_for(state="visible", timeout=120000)
+                        page.wait_for_selector('mat-progress-spinner, mat-spinner', state="hidden", timeout=120000)
+                        log("업로드 완료!")
+                    except Exception as e:
+                        log(f"업로드 완료 감지 지연 (계속 진행): {compact_error(e)}")
+                else:
+                    log("업로드 메뉴 버튼을 찾을 수 없습니다.")
+                    return 1
+
+                human_delay(1, 2)
+                textarea = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first
+                textarea.fill(prompt_text)
+
+                human_delay(1, 2)
+                send_button = page.locator('button[aria-label*="Send"], button[aria-label*="보내기"], button.send-button').first
+
+                log("전송 버튼 활성화 대기 및 클릭...")
+                try:
+                    send_button.wait_for(state="visible", timeout=60000)
+                    send_button.click(timeout=60000)
+                except Exception as e:
+                    log(f"전송 버튼 클릭 실패, 엔터키로 대체 시도: {compact_error(e)}")
+                    textarea.press('Enter')
+
+                log("답변 생성 대기 중... (최대 600초)")
+                max_wait_time = 600
+                start_wait = time.time()
+                success = False
+
+                while time.time() - start_wait < max_wait_time:
+                    draft_btns = page.locator('button:has-text("답변 A"), button:has-text("초안 1"), button:has-text("Draft 1"), button[aria-label*="답변 A"], button[aria-label*="초안 1"]').all()
+                    if draft_btns:
+                        human_delay(3, 5)
+                        log("A/B 답변 선택(Draft) 화면 감지.")
+                        messages = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
+                        selected_index = 0
+                        for idx, msg in enumerate(messages):
+                            try:
+                                text = msg.inner_text()
+                                if '"origin_name"' in text or '"restaurants"' in text:
+                                    selected_index = idx
+                                    break
+                            except Exception: pass
+                        all_draft_btns = page.locator('button:has-text("답변"), button:has-text("초안"), button:has-text("Draft"), button[aria-label*="답변"], button[aria-label*="초안"]').all()
+                        try:
+                            if selected_index < len(all_draft_btns): all_draft_btns[selected_index].click()
+                            else: draft_btns[0].click()
+                            human_delay(1, 2)
+                            apply_btn = page.locator('button:has-text("적용"), button:has-text("Apply")').first
+                            if apply_btn.is_visible(): apply_btn.click()
+                        except: pass
+                        human_delay(2, 4)
+                        success = True
+                        break
+
+                    if send_button.is_visible() and send_button.is_enabled():
+                        human_delay(2, 4)
+                        success = True
+                        break
+
+                    try:
+                        elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
+                        if elements:
+                            current_text = elements[-1].inner_text().strip()
+                            if ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
+                                time.sleep(3)
+                                if elements[-1].inner_text().strip() == current_text:
+                                    log("답변 JSON 텍스트 렌더링 완료 감지.")
+                                    success = True
+                                    break
+                            elif '업로드하신 파일을 읽을 수 없습니다' in current_text or '언어 모델일 뿐' in current_text:
+                                time.sleep(3)
                                 success = True
                                 break
-                        elif '업로드하신 파일을 읽을 수 없습니다' in current_text or '언어 모델일 뿐' in current_text:
-                            time.sleep(3)
-                            success = True
-                            break
-                except: pass
-                time.sleep(3)
+                    except: pass
+                    time.sleep(3)
 
-            if not success:
-                log("응답 생성 대기 시간 초과(Timeout).")
-                return "RETRY"
-
-            elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
-            if elements:
-                last_elem = elements[-1]
-                last_response = ""
-                for _ in range(15):
-                    last_response = last_elem.inner_text().strip()
-                    if last_response: break
-                    time.sleep(2)
-
-                if not last_response:
-                    log("경고: 텍스트 추출 실패.")
+                if not success:
+                    log("응답 생성 대기 시간 초과(Timeout).")
                     return "RETRY"
 
-                error_keywords = ["업로드하신 파일을 읽을 수 없습니다", "파일에 문제가 없는지 확인해 주세요", "언어 모델일 뿐이라서", "I am just a language model", "단지 언어 모델일 뿐이고"]
-                if any(keyword in last_response for keyword in error_keywords):
-                    log("Gemini에서 비디오 파일 처리를 거부했습니다.")
-                    return "RETRY"
+                elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
+                if elements:
+                    last_elem = elements[-1]
+                    last_response = ""
+                    for _ in range(15):
+                        last_response = last_elem.inner_text().strip()
+                        if last_response: break
+                        time.sleep(2)
 
-                for marker in STALE_CONTEXT_MARKERS:
-                    if marker in last_response:
-                        log(f"응답 본문에서 stale marker 감지: {marker}")
+                    if not last_response:
+                        log("경고: 텍스트 추출 실패.")
                         return "RETRY"
 
-                valid, payload_or_reason = validate_response_payload(last_response)
-                if not valid:
-                    log(f"응답 JSON 검증 실패: {payload_or_reason}")
+                    error_keywords = ["업로드하신 파일을 읽을 수 없습니다", "파일에 문제가 없는지 확인해 주세요", "언어 모델일 뿐이라서", "I am just a language model", "단지 언어 모델일 뿐이고"]
+                    if any(keyword in last_response for keyword in error_keywords):
+                        log("Gemini에서 비디오 파일 처리를 거부했습니다.")
+                        return "RETRY"
+
+                    for marker in STALE_CONTEXT_MARKERS:
+                        if marker in last_response:
+                            log(f"응답 본문에서 stale marker 감지: {marker}")
+                            return "RETRY"
+
+                    valid, payload_or_reason = validate_response_payload(last_response)
+                    if not valid:
+                        log(f"응답 JSON 검증 실패: {payload_or_reason}")
+                        return "RETRY"
+
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    with open(output_abs_path, "w", encoding="utf-8") as out_f:
+                        json.dump(payload_or_reason, out_f, ensure_ascii=False)
+                    if authenticated:
+                        save_cookie_backup(context, reason="response-success")
+                    log(f"결과 저장 성공!")
+                    return 0
+                else:
+                    log("답변 요소를 찾을 수 없습니다.")
                     return "RETRY"
 
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                with open(output_abs_path, "w", encoding="utf-8") as out_f:
-                    json.dump(payload_or_reason, out_f, ensure_ascii=False)
-                log(f"결과 저장 성공!")
-                return 0
-            else:
-                log("답변 요소를 찾을 수 없습니다.")
+            except Exception as e:
+                log(f"제어 중 오류: {compact_error(e)}")
                 return "RETRY"
-
-        except Exception as e:
-            log(f"제어 중 오류: {compact_error(e)}")
-            return "RETRY"
 
 
 if __name__ == "__main__":
