@@ -4,11 +4,11 @@
 
 **Live Demo**: [https://tzudong.app](https://tzudong.app)
 
-## 시스템 아키텍처 (System Architecture)
+## 전체 시스템 아키텍처 (System Architecture)
 
 ![System Architecture](apps/web/public/images/architecture.png)
 
-## 랭그래프 멀티 에이전트 체제 (LangGraph Orchestration)
+## 멀티 에이전트 아키텍처 (LangGraph Orchestration)
 
 ![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
 
