@@ -24,7 +24,10 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 
 # 유틸리티 모듈 경로 추가
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+BASE_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BASE_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BASE_BACKEND_ROOT))
+
 from utils.config_loader import (
     get_channel_info,
     get_all_channels,
@@ -34,27 +37,26 @@ from utils.config_loader import (
 )
 from utils.logger import PipelineLogger
 from utils.duplicate_checker import append_to_jsonl
+from utils.runtime_paths import load_backend_env, get_backend_log_dir, resolve_backend_root
 
 try:
     from googleapiclient.discovery import build
     from openai import OpenAI
-    from dotenv import load_dotenv
 except ImportError:
     print("[ERROR] 필수 패키지 설치 필요:")
-    print("   pip install google-api-python-client openai python-dotenv requests")
+    print("   pip install google-api-python-client openai requests")
     sys.exit(1)
 
 # .env 로드
-env_path = Path(__file__).parent.parent.parent / ".env.local"
-if not env_path.exists():
-    env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(env_path)
+BACKEND_ROOT = resolve_backend_root(Path(__file__).resolve())
+load_backend_env(BACKEND_ROOT, prefer_local=True)
 
 # KST (UTC+9)
 KST = timezone(timedelta(hours=9))
 
 # 로그 디렉토리
-LOG_DIR = Path(__file__).parent.parent.parent / "log" / "restaurant-crawling"
+LOG_DIR = get_backend_log_dir(BACKEND_ROOT, "restaurant-crawling")
+OPENAI_AD_ANALYSIS_DISABLED_REASON: Optional[str] = None
 
 
 def extract_video_id(url: str) -> Optional[str]:
@@ -289,6 +291,11 @@ def analyze_ad_content(
     openai_client: OpenAI, text: str, logger: PipelineLogger
 ) -> Optional[List[str]]:
     """광고/협찬 주체를 GPT-4o-mini로 분석"""
+    global OPENAI_AD_ANALYSIS_DISABLED_REASON
+
+    if OPENAI_AD_ANALYSIS_DISABLED_REASON:
+        return None
+
     text_preview = text[:100]
 
     try:
@@ -334,6 +341,18 @@ def analyze_ad_content(
         return parsed if parsed else None
 
     except Exception as e:
+        err_text = str(e).lower()
+        if (
+            "invalid_api_key" in err_text
+            or "incorrect api key" in err_text
+            or "error code: 401" in err_text
+        ):
+            OPENAI_AD_ANALYSIS_DISABLED_REASON = "invalid_api_key"
+            logger.warning(
+                "광고 분석 비활성화: OpenAI API 키 인증 실패(401). "
+                "--skip-ads 사용 또는 OPENAI_API_KEY_BYEON/OPENAI_API_KEY를 점검하세요."
+            )
+            return None
         logger.warning(f"광고 분석 실패: {e}")
         return None
 
@@ -685,7 +704,7 @@ def main():
     args = parser.parse_args()
 
     youtube_api_key = get_api_key("youtube")
-    openai_api_key = get_api_key("openai")
+    openai_api_key = (get_api_key("openai") or os.environ.get("OPENAI_API_KEY") or "").strip()
 
     if not youtube_api_key:
         print("[ERROR] YOUTUBE_API_KEY 누락됨")

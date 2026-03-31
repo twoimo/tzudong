@@ -48,7 +48,21 @@ try {
     console.error(`[오류] ${error.message}`);
     process.exit(1);
 }
-const isWindowsExe = ffmpegPath.endsWith('.exe');
+function detectWindowsExecutable(binPath) {
+    if (!binPath) return false;
+    if (binPath.toLowerCase().endsWith('.exe')) return true;
+
+    try {
+        const realPath = fs.realpathSync(binPath);
+        if (realPath.toLowerCase().endsWith('.exe')) return true;
+    } catch {
+        // ignore: fallback to non-windows
+    }
+
+    return false;
+}
+
+const isWindowsExe = detectWindowsExecutable(ffmpegPath);
 const MIN_TIMEOUT_MS = 15 * 60 * 1000; // 15분
 const DELETE_RETRY_COUNT = 8;
 const DELETE_RETRY_DELAY_MS = 500;
