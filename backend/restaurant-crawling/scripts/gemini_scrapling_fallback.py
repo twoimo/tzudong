@@ -76,6 +76,27 @@ PROFILE_LOCK_FILE = os.path.join(BROWSER_PROFILE_DIR, ".session.lock")
 WEB_DUMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "temp", "web_fallback_dumps"))
 
 
+def resolve_headless_mode():
+    """웹 폴백 브라우저 headless 모드 결정.
+
+    우선순위:
+    1) WEB_FALLBACK_HEADLESS env (1/true/on 또는 0/false/off)
+    2) Windows(os.name == 'nt') 기본값: headful(False)  # filechooser 안정성 우선
+    3) 기타 OS 기본값: headless(True)
+    """
+    raw = os.getenv("WEB_FALLBACK_HEADLESS")
+    if raw is not None:
+        val = raw.strip().lower()
+        if val in {"1", "true", "yes", "on"}:
+            return True
+        if val in {"0", "false", "no", "off"}:
+            return False
+
+    if os.name == "nt":
+        return False
+    return True
+
+
 def _create_camoufox(headless=False):
     """Camoufox 영구 프로필 컨텍스트 생성.
 
@@ -93,6 +114,30 @@ def _create_camoufox(headless=False):
         locale="ko-KR",
         i_know_what_im_doing=True,
     )
+
+
+def should_use_profile_lock():
+    """프로필 파일 락 사용 여부.
+
+    WEB_FALLBACK_USE_PROFILE_LOCK env가 있으면 그 값을 우선 사용한다.
+    기본값은 Windows에서 비활성(False), 그 외 OS에서 활성(True).
+    """
+    raw = os.getenv("WEB_FALLBACK_USE_PROFILE_LOCK")
+    if raw is not None:
+        val = raw.strip().lower()
+        return val in {"1", "true", "yes", "on"}
+
+    return os.name != "nt"
+
+
+@contextmanager
+def optional_profile_session_lock(timeout_sec=600, poll_sec=0.5):
+    if not should_use_profile_lock():
+        yield
+        return
+
+    with profile_session_lock(timeout_sec=timeout_sec, poll_sec=poll_sec):
+        yield
 
 
 def _try_acquire_lock(lock_fp):
@@ -465,7 +510,7 @@ def manual_login():
     log(f"프로필 경로: {BROWSER_PROFILE_DIR}")
     log("Firefox 브라우저가 열리면 구글 계정으로 로그인해 주세요.")
 
-    with profile_session_lock():
+    with optional_profile_session_lock(timeout_sec=120):
         with _create_camoufox(headless=False) as context:
             load_cookie_backup(context)
             page = context.new_page()
@@ -547,10 +592,11 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
     authenticated = False
 
-    log("Camoufox(Firefox) 영구 프로필 세션 시작")
+    headless_mode = resolve_headless_mode()
+    log(f"Camoufox(Firefox) 영구 프로필 세션 시작 (headless={headless_mode})")
 
-    with profile_session_lock():
-        with _create_camoufox(headless=True) as context:
+    with optional_profile_session_lock(timeout_sec=120):
+        with _create_camoufox(headless=headless_mode) as context:
             restored_cookies = load_cookie_backup(context)
             page = context.new_page()
 
