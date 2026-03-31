@@ -25,6 +25,32 @@ def extract_video_id(url: str) -> Optional[str]:
         return url.split("youtu.be/")[1].split("?")[0]
     return None
 
+
+def load_last_jsonl_record(path: Path) -> Optional[Dict[str, Any]]:
+    """JSONL 파일의 마지막 유효 라인을 dict로 로드"""
+    try:
+        if not path.exists():
+            return None
+        last_line: Optional[str] = None
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped:
+                    last_line = stripped
+        if not last_line:
+            return None
+        return json.loads(last_line)
+    except Exception:
+        return None
+
+
+def has_non_empty_restaurants(record: Optional[Dict[str, Any]]) -> bool:
+    """records.restaurants가 비어있지 않은 배열인지 판별"""
+    if not isinstance(record, dict):
+        return False
+    restaurants = record.get("restaurants")
+    return isinstance(restaurants, list) and len(restaurants) > 0
+
 def scan_pending(args: argparse.Namespace) -> None:
     """
     크롤링 대상(Pending) URL 스캔하여 stdout으로 출력
@@ -73,12 +99,18 @@ def scan_pending(args: argparse.Namespace) -> None:
         meta_file = channel_dir / "meta" / f"{vid}.jsonl"
         transcript_file = channel_dir / "transcript" / f"{vid}.jsonl"
 
-        # (1) 이미 처리됨 (crawling 완료)
-        if crawling_file.exists():
-            continue
-        
-        # (2) 이미 처리됨 (map_url_crawling 완료)
+        # (1) map_url_crawling이 있으면 이미 후속 단계까지 처리 완료로 간주
         if map_crawling_file.exists():
+            continue
+
+        # (2) crawling 파일이 있어도 restaurants가 비어있거나 깨졌으면 재시도 대상으로 간주
+        if crawling_file.exists():
+            crawling_last = load_last_jsonl_record(crawling_file)
+            if has_non_empty_restaurants(crawling_last):
+                # 정상 결과가 이미 있으면 스킵
+                continue
+            # 빈 배열/깨진 JSON/빈 파일은 재시도 대상으로 유지
+            pending_urls.append(url)
             continue
             
         # (3) 에러 파일 있음 -> 재시도 대상 (Bash 스크립트에서 처리)
@@ -165,6 +197,10 @@ def validate_restaurant_data(data: Dict[str, Any]) -> bool:
 
     if not isinstance(data["restaurants"], list):
         print("[ERROR] 'restaurants'가 배열이 아닙니다", file=sys.stderr)
+        return False
+
+    if len(data["restaurants"]) == 0:
+        print("[ERROR] 'restaurants'가 빈 배열입니다 (재시도 대상)", file=sys.stderr)
         return False
 
     required_fields = ["origin_name", "address", "category"]

@@ -240,6 +240,22 @@ get_latest_jsonl_data() {
     fi
 }
 
+# crawling JSONL 마지막 레코드의 restaurants 길이 반환
+# - 정상 배열이면 0 이상의 정수
+# - 손상/파싱불가/형식오류면 -1
+get_restaurants_len_from_jsonl() {
+    local file=$1
+    local last_line
+    last_line=$(get_latest_jsonl_data "$file" | tr -d '\r')
+
+    if [ -z "$last_line" ]; then
+        echo -1
+        return
+    fi
+
+    jq_wrapper -r 'if (.restaurants | type) == "array" then (.restaurants | length) else -1 end' <<< "$last_line" 2>/dev/null || echo -1
+}
+
 # ================================
 # URL에서 video_id 추출
 # ================================
@@ -359,13 +375,21 @@ process_channel() {
         PROCESSED=$((PROCESSED + 1))
         
         # 이미 처리된 경우 스킵
+        # 단, crawling 결과가 빈 restaurants/깨진 JSON/빈 파일이면 재시도 대상으로 간주
         CRAWLING_FILE="$crawling_dir/${VIDEO_ID}.jsonl"
         if [ -f "$CRAWLING_FILE" ]; then
-            SKIPPED=$((SKIPPED + 1))
-            if [ $((SKIPPED % 50)) -eq 1 ]; then
-                log_warning "[$INDEX/$TOTAL] 이미 처리됨 (스킵 ${SKIPPED}개)"
+            RESTAURANTS_LEN=$(get_restaurants_len_from_jsonl "$CRAWLING_FILE")
+
+            if [[ "$RESTAURANTS_LEN" =~ ^[0-9]+$ ]] && [ "$RESTAURANTS_LEN" -gt 0 ]; then
+                SKIPPED=$((SKIPPED + 1))
+                if [ $((SKIPPED % 50)) -eq 1 ]; then
+                    log_warning "[$INDEX/$TOTAL] 이미 처리됨 (스킵 ${SKIPPED}개)"
+                fi
+                continue
             fi
-            continue
+
+            log_warning "[$INDEX/$TOTAL] 빈/손상 crawling 결과 감지 → 재시도: $VIDEO_ID"
+            rm -f "$CRAWLING_FILE" || true
         fi
         
         # map_url_crawling 파일 존재 시 스킵 (05-map-url-crawling.js에서 처리됨)
