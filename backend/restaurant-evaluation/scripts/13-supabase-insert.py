@@ -16,6 +16,13 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
+# shared utils import (backend/utils)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.runtime_paths import load_backend_env, resolve_backend_root
+
 try:
     from supabase import create_client, Client
 except ImportError:
@@ -41,17 +48,16 @@ def main():
     dry_run = args.dry_run
 
     # .env 로드
-    # .env 로드 (backend/.env)
-    # 1. backend/restaurant-evaluation/.env (기존)
-    env_path = Path(__file__).parent.parent / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
-    
-    # 2. backend/.env (표준)
-    env_path_backend = Path(__file__).parent.parent.parent / ".env"
-    if env_path_backend.exists():
-        load_dotenv(env_path_backend)
-        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드: {env_path_backend}")
+    # 1) legacy: backend/restaurant-evaluation/.env
+    legacy_env = Path(__file__).parent.parent / ".env"
+    if legacy_env.exists():
+        load_dotenv(legacy_env)
+
+    # 2) 표준: backend/.env (없으면 .env.local fallback)
+    backend_root = resolve_backend_root(Path(__file__).resolve())
+    loaded_env = load_backend_env(backend_root, prefer_local=False)
+    if loaded_env is not None:
+        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드: {loaded_env}")
 
     # Supabase 설정
     supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
