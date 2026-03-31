@@ -202,6 +202,64 @@ is_truthy() {
     esac
 }
 
+# git 명령 타임아웃 실행 헬퍼 (GNU timeout 사용 가능 시)
+run_git_with_timeout() {
+    local timeout_sec="${1:-30}"
+    shift
+    if command -v timeout >/dev/null 2>&1; then
+        timeout --foreground "${timeout_sec}s" "$@"
+    else
+        "$@"
+    fi
+}
+
+# 데이터 경로 변경 여부를 빠르게 판별 (status 스캔 정체 회피)
+has_pending_data_changes() {
+    local detect_timeout="${RUN_DAILY_GIT_DETECT_TIMEOUT_SEC:-20}"
+    local diff_exit ls_exit untracked_sample
+
+    # 1) tracked 변경 감지
+    run_git_with_timeout "$detect_timeout" \
+        git diff --quiet -- backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/
+    diff_exit=$?
+    case "$diff_exit" in
+        0) ;;
+        1)
+            return 0
+            ;;
+        124|137)
+            log "WARN" "데이터 변경 감지(diff) 시간 초과(${detect_timeout}s). 안전하게 동기화를 시도합니다."
+            return 0
+            ;;
+        *)
+            log "WARN" "데이터 변경 감지(diff) 실패(exit=$diff_exit). 안전하게 동기화를 시도합니다."
+            return 0
+            ;;
+    esac
+
+    # 2) untracked 변경 감지
+    untracked_sample="$(
+        run_git_with_timeout "$detect_timeout" \
+            git ls-files --others --exclude-standard -- \
+                backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ 2>/dev/null | head -n 1
+    )"
+    ls_exit=$?
+    if [ "$ls_exit" -ne 0 ]; then
+        case "$ls_exit" in
+            124|137)
+                log "WARN" "데이터 변경 감지(ls-files) 시간 초과(${detect_timeout}s). 안전하게 동기화를 시도합니다."
+                return 0
+                ;;
+            *)
+                log "WARN" "데이터 변경 감지(ls-files) 실패(exit=$ls_exit). 안전하게 동기화를 시도합니다."
+                return 0
+                ;;
+        esac
+    fi
+
+    [ -n "$untracked_sample" ]
+}
+
 # [PERF] 스텝 타이밍 함수 - 각 단계의 실행 시간 측정
 step_start() {
     STEP_START_TIME=$(date +%s)
@@ -290,11 +348,13 @@ count_pending_jsonl() {
 # [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
 sync_data_to_remote() {
     local STEP_NAME="$1"
+    local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-120}"
+    local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
     log "INFO" "------------------------------------------------------------"
     log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
 
-    # 데이터 폴더 변경 감지 (Modified + Untracked)
-    if [ -z "$(git status --porcelain backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/)" ]; then
+    # 데이터 폴더 변경 감지 (status 전체 스캔 대신 diff/ls-files 기반)
+    if ! has_pending_data_changes; then
         log "INFO" "변경 된 데이터가 없습니다. (Skip)"
         return 0
     fi
@@ -302,8 +362,11 @@ sync_data_to_remote() {
     log "INFO" "변경 된 데이터를 커밋합니다."
 
     # 데이터 파일 추가
-    git add backend/restaurant-crawling/data/ 2>&1 | tee -a "$LOG_FILE"
-    git add backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"
+    if ! run_git_with_timeout "$stage_timeout" \
+        git add -A backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"; then
+        log "ERROR" "데이터 파일 stage 실패 (timeout=${stage_timeout}s)"
+        return 1
+    fi
 
     # 대용량 폴더는 추적에서 제외
     git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
@@ -332,20 +395,20 @@ sync_data_to_remote() {
 
     # 원격 변경사항 동기화 (충돌 방지)
     log "INFO" "원격 변경사항 확인 및 Rebase..."
-    if ! git pull --rebase --autostash origin data 2>&1 | tee -a "$LOG_FILE"; then
+    if ! run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin data 2>&1 | tee -a "$LOG_FILE"; then
         local LOCAL_HEAD REMOTE_HEAD DIVERGENCE_STATE
         log "WARN" "Rebase 실패 - rebase 중단 후 안전 동기화 전략으로 전환"
         git rebase --abort 2>/dev/null || true
 
         # 네트워크/일시 오류 가능성을 고려해 일반 push를 한 번 더 시도
         log "INFO" "Rebase 실패 후 일반 push 재시도..."
-        if git push origin data 2>&1 | tee -a "$LOG_FILE"; then
+        if run_git_with_timeout "$network_timeout" git push origin data 2>&1 | tee -a "$LOG_FILE"; then
             log "OK" "data 브랜치 업데이트 완료 ($STEP_NAME)"
             return 0
         fi
 
         # push 실패 시 로컬/원격 관계를 로그로 남겨 원인 파악 용이하게 함
-        if ! git fetch origin data 2>&1 | tee -a "$LOG_FILE"; then
+        if ! run_git_with_timeout "$network_timeout" git fetch origin data 2>&1 | tee -a "$LOG_FILE"; then
             log "WARN" "원격 상태 재조회(fetch) 실패 - divergence 판별 정확도가 낮을 수 있습니다."
         fi
 
@@ -362,7 +425,7 @@ sync_data_to_remote() {
 
         if is_truthy "$ALLOW_DATA_FORCE_PUSH"; then
             log "WARN" "ALLOW_DATA_FORCE_PUSH=$ALLOW_DATA_FORCE_PUSH 감지 - force-with-lease를 명시적으로 수행합니다."
-            if ! git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
+            if ! run_git_with_timeout "$network_timeout" git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
                 log "ERROR" "force-with-lease push 실패"
                 return 1
             fi
@@ -373,7 +436,7 @@ sync_data_to_remote() {
         fi
     else
         log "INFO" "Pushing to remote..."
-        if ! git push origin data 2>&1 | tee -a "$LOG_FILE"; then
+        if ! run_git_with_timeout "$network_timeout" git push origin data 2>&1 | tee -a "$LOG_FILE"; then
             log "ERROR" "Failed to push to data branch"
             return 1
         fi
