@@ -8,7 +8,11 @@
 
 ![System Architecture](apps/web/public/images/architecture.png)
 
+<<<<<<< HEAD
+## 멀티 에이전트 아키텍처 (Multi-Agent Architecture)
+=======
 ## 멀티 에이전트 아키텍처 (Multi-Agent Orchestration)
+>>>>>>> origin/main
 
 ![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
 
@@ -81,3 +85,25 @@
 - **Bundle 최적화**: Dynamic imports, Code splitting
 - **Image 최적화**: AVIF/WebP, Lazy loading
 - **Cache**: React Query (staleTime: 60s, gcTime: 5m)
+
+## 스크린샷
+
+### 모바일 페이지 (메인 페이지, 리뷰 페이지, 도장 페이지)
+
+<div align="center">
+  <img src="apps/web/public/images/mobile_main_page.png" width="32%" alt="모바일 페이지 1">
+  <img src="apps/web/public/images/mobile_review_page.png" width="32%" alt="모바일 페이지 2">
+  <img src="apps/web/public/images/mobile_stamp_page.png" width="32%" alt="모바일 페이지 3">
+</div>
+
+### 데스크탑 메인 페이지 (Naver Map, OpenFreeMap)
+
+![메인 페이지](apps/web/public/images/main_page.png)
+
+### 데스크탑 관리자 검수 페이지 (승인, 수정, 삭제 등)
+
+![관리자 검수 페이지](apps/web/public/images/admin_page.png)
+
+### 스토리보드 생성 에이전트 (Nano Banana)
+
+![스토리보드 생성 에이전트](apps/web/public/images/storyboard_agent.png)
