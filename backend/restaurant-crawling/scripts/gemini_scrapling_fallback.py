@@ -4,6 +4,7 @@ import random
 import argparse
 import os
 import json
+import re
 from contextlib import contextmanager
 
 from camoufox.sync_api import Camoufox
@@ -72,6 +73,7 @@ COOKIE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dat
 BROWSER_PROFILE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "camoufox_profile"))
 ALLOWED_IO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PROFILE_LOCK_FILE = os.path.join(BROWSER_PROFILE_DIR, ".session.lock")
+WEB_DUMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "temp", "web_fallback_dumps"))
 
 
 def _create_camoufox(headless=False):
@@ -222,6 +224,52 @@ def save_cookie_backup(context, reason="runtime"):
         return False
 
 
+def save_web_dump(page, stage, extra=None):
+    """웹 폴백 실패 진단용 HTML/스크린샷 덤프를 저장한다."""
+    try:
+        os.makedirs(WEB_DUMP_DIR, exist_ok=True)
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        safe_stage = re.sub(r"[^a-zA-Z0-9._-]+", "_", str(stage or "unknown")).strip("_") or "unknown"
+        dump_dir = os.path.join(WEB_DUMP_DIR, f"{ts}_{safe_stage}_{os.getpid()}")
+        os.makedirs(dump_dir, exist_ok=True)
+
+        current_url = None
+        if page is not None:
+            try:
+                current_url = page.url
+            except Exception:
+                current_url = None
+
+            try:
+                html = page.content()
+                with open(os.path.join(dump_dir, "page.html"), "w", encoding="utf-8", errors="replace") as f:
+                    f.write(html)
+            except Exception as html_err:
+                log(f"웹 덤프 HTML 저장 실패: {compact_error(html_err)}")
+
+            try:
+                page.screenshot(path=os.path.join(dump_dir, "page.png"), full_page=True)
+            except Exception as shot_err:
+                log(f"웹 덤프 스크린샷 저장 실패: {compact_error(shot_err)}")
+
+        meta = {
+            "timestamp": int(time.time()),
+            "stage": stage,
+            "pid": os.getpid(),
+            "url": current_url,
+        }
+        if extra:
+            meta["extra"] = extra
+        with open(os.path.join(dump_dir, "meta.json"), "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+
+        log(f"🧾 웹 덤프 저장 완료: {dump_dir}")
+        return dump_dir
+    except Exception as dump_err:
+        log(f"웹 덤프 저장 실패: {compact_error(dump_err)}")
+        return None
+
+
 def check_for_soft_ban(page):
     """구글 Soft Ban 또는 Captcha 화면 감지"""
     try:
@@ -324,6 +372,34 @@ def reset_chat_context(page):
     log("Fresh chat reset: url-reset")
 
 
+def accept_upload_disclaimer_if_present(page):
+    """업로드 동의 모달이 뜨면 자동으로 Agree 처리."""
+    log("업로드 동의 팝업 확인/Agree 처리 시도")
+    agree_btn_selectors = [
+        '[data-test-id="upload-image-agree-button"]',
+        'button:has-text("Agree")',
+        'button:has-text("동의")',
+    ]
+
+    for selector in agree_btn_selectors:
+        btn = page.locator(selector).first
+        try:
+            if btn.count() == 0:
+                continue
+            btn.click(timeout=5000, force=True)
+            human_delay(0.5, 1.5)
+            try:
+                page.wait_for_selector("upload-image-disclaimer-dialog", state="hidden", timeout=5000)
+            except Exception:
+                pass
+            log("업로드 동의 팝업 Agree 처리 완료")
+            return True
+        except Exception as e:
+            log(f"업로드 동의 팝업 버튼 클릭 실패({selector}): {compact_error(e)}")
+
+    return False
+
+
 def detect_stale_context(page):
     """DOM에 이전 작업 마커가 있으면 stale context 가능성을 반환."""
     try:
@@ -342,6 +418,45 @@ def is_subpath(target_path, base_path):
         return os.path.commonpath([target_path, base_path]) == base_path
     except Exception:
         return False
+
+
+def try_direct_file_input_upload(page, file_path):
+    """DOM의 file input을 직접 순회하며 업로드를 시도한다."""
+    input_selectors = [
+        'input[type="file"][accept*="video"]',
+        'input[type="file"][accept*="mp4"]',
+        'input[type="file"][accept*="*/*"]',
+        'input[type="file"]',
+    ]
+
+    last_error = None
+
+    for selector in input_selectors:
+        locator = page.locator(selector)
+        try:
+            count = locator.count()
+        except Exception as e:
+            last_error = e
+            continue
+
+        if count == 0:
+            continue
+
+        for idx in range(min(count, 6)):
+            candidate = locator.nth(idx)
+            try:
+                if candidate.get_attribute("disabled") is not None:
+                    continue
+            except Exception:
+                pass
+
+            try:
+                candidate.set_input_files(file_path)
+                return True, selector, idx, None
+            except Exception as e:
+                last_error = e
+
+    return False, None, None, last_error
 
 
 def manual_login():
@@ -448,6 +563,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             human_delay(2, 4)
 
             if check_for_soft_ban(page):
+                save_web_dump(page, "soft_ban_detected")
                 return 43
 
             if not is_logged_in(page) and restored_cookies:
@@ -462,6 +578,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             if not is_logged_in(page):
                 log("❌ [CRITICAL] 로그인이 되어 있지 않습니다!")
                 log("해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 로그인하세요.")
+                save_web_dump(page, "login_required")
                 return 44
 
             authenticated = True
@@ -471,6 +588,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
             stale_marker = detect_stale_context(page)
             if stale_marker:
                 log(f"stale context marker 감지: {stale_marker} (RETRY)")
+                save_web_dump(page, "stale_context_marker", {"marker": stale_marker})
                 return "RETRY"
 
             if target_model:
@@ -502,30 +620,123 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                 page.wait_for_selector('div.ql-editor[contenteditable="true"], div[role="textbox"]', timeout=30000)
                 page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first.click()
                 human_delay(0.5, 1.5)
+                accept_upload_disclaimer_if_present(page)
 
                 log("동영상 업로드 메뉴 시도...")
-                upload_menu_btn = page.locator('button[aria-label="Open upload file menu"], button[aria-label*="Upload file"], button[aria-label*="첨부"]').first
+                uploaded = False
+                upload_button_selectors = [
+                    'button[aria-label="Open upload file menu"]',
+                    'button[aria-label*="Upload file"]',
+                    'button[aria-label*="upload file menu"]',
+                    'button[aria-label*="파일 업로드 메뉴"]',
+                    'button[aria-label*="파일 업로드"]',
+                    'button[aria-label*="업로드 메뉴"]',
+                    'button[aria-label*="첨부"]',
+                    'button:has-text("Upload")',
+                    'button:has-text("업로드")',
+                    'button:has-text("첨부")',
+                ]
 
-                if upload_menu_btn.is_visible():
-                    with page.expect_file_chooser(timeout=20000) as fc_info:
-                        upload_menu_btn.click()
-                        human_delay(1, 2)
+                for selector in upload_button_selectors:
+                    if uploaded:
+                        break
 
-                        menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
-                        if menu_items:
-                            clicked = False
-                            for item in menu_items:
-                                text = item.inner_text().lower()
-                                if 'upload' in text or 'computer' in text or '업로드' in text or '컴퓨터' in text or '파일' in text:
-                                    item.click()
-                                    clicked = True
+                    btn_locator = page.locator(selector)
+                    try:
+                        btn_count = btn_locator.count()
+                    except Exception:
+                        continue
+
+                    for btn_idx in range(min(btn_count, 4)):
+                        if uploaded:
+                            break
+
+                        btn = btn_locator.nth(btn_idx)
+                        try:
+                            if not btn.is_visible():
+                                continue
+                        except Exception:
+                            continue
+
+                        for click_try in range(2):
+                            try:
+                                with page.expect_file_chooser(timeout=20000) as fc_info:
+                                    btn.click()
+                                    human_delay(1, 2)
+
+                                    menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
+                                    if menu_items:
+                                        clicked = False
+                                        for item in menu_items:
+                                            text = item.inner_text().lower()
+                                            if 'upload' in text or 'computer' in text or '업로드' in text or '컴퓨터' in text or '파일' in text:
+                                                item.click()
+                                                clicked = True
+                                                break
+                                        if not clicked:
+                                            menu_items[0].click()
+
+                                file_chooser = fc_info.value
+                                file_chooser.set_files(video_abs_path)
+                                uploaded = True
+                                log(f"업로드 버튼 경로 성공: {selector} (idx={btn_idx})")
+                                break
+                            except Exception as e:
+                                if click_try == 0 and accept_upload_disclaimer_if_present(page):
+                                    log("동의 팝업 처리 후 업로드 버튼 재시도")
+                                    continue
+                                log(f"업로드 버튼 경로 실패({selector}, idx={btn_idx}): {compact_error(e)}")
+                                break
+
+                if not uploaded:
+                    # 버튼 경로 실패 시 DOM의 file input을 직접 순회
+                    direct_ok, direct_selector, direct_idx, direct_err = try_direct_file_input_upload(page, video_abs_path)
+                    if direct_ok:
+                        uploaded = True
+                        log(f"직접 file input 경로 성공: {direct_selector} (idx={direct_idx})")
+                    elif direct_err is not None:
+                        log(f"직접 file input 업로드 실패: {compact_error(direct_err)}")
+
+                if not uploaded:
+                    # Gemini 내부 hidden 업로드 트리거 버튼 경로(버튼 비가시 상태 포함)
+                    hidden_trigger_selectors = [
+                        'button[data-test-id="hidden-local-file-upload-button"]',
+                        'button[data-test-id="hidden-local-image-upload-button"]',
+                        'button[xapfileselectortrigger]',
+                    ]
+                    for trigger_sel in hidden_trigger_selectors:
+                        trigger = page.locator(trigger_sel).first
+                        try:
+                            if trigger.count() == 0:
+                                continue
+                            with page.expect_file_chooser(timeout=12000) as fc_info:
+                                try:
+                                    trigger.click(force=True, timeout=4000)
+                                except Exception:
+                                    trigger.dispatch_event("click")
+                            fc_info.value.set_files(video_abs_path)
+                            uploaded = True
+                            log(f"hidden trigger 업로드 성공: {trigger_sel}")
+                            break
+                        except Exception as e:
+                            if accept_upload_disclaimer_if_present(page):
+                                log("동의 팝업 처리 후 hidden trigger 재시도")
+                                try:
+                                    with page.expect_file_chooser(timeout=12000) as fc_info:
+                                        try:
+                                            trigger.click(force=True, timeout=4000)
+                                        except Exception:
+                                            trigger.dispatch_event("click")
+                                    fc_info.value.set_files(video_abs_path)
+                                    uploaded = True
+                                    log(f"hidden trigger 업로드 성공(재시도): {trigger_sel}")
                                     break
-                            if not clicked:
-                                menu_items[0].click()
+                                except Exception as retry_err:
+                                    log(f"hidden trigger 업로드 재시도 실패({trigger_sel}): {compact_error(retry_err)}")
+                            else:
+                                log(f"hidden trigger 업로드 실패({trigger_sel}): {compact_error(e)}")
 
-                    file_chooser = fc_info.value
-                    file_chooser.set_files(video_abs_path)
-
+                if uploaded:
                     log("파일 업로드 대기 (진행 표시줄 확인)...")
                     try:
                         remove_btn = page.locator('button[aria-label*="Remove file"], button[aria-label*="삭제"], button[aria-label*="Delete"], button[aria-label*="지우기"]').first
@@ -535,8 +746,9 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     except Exception as e:
                         log(f"업로드 완료 감지 지연 (계속 진행): {compact_error(e)}")
                 else:
-                    log("업로드 메뉴 버튼을 찾을 수 없습니다.")
-                    return 1
+                    log("업로드 메뉴/입력 요소를 찾지 못했습니다. 새 세션으로 재시도합니다.")
+                    save_web_dump(page, "upload_menu_missing", {"selectors": upload_button_selectors})
+                    return "RETRY"
 
                 human_delay(1, 2)
                 textarea = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first
@@ -544,6 +756,11 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                 human_delay(1, 2)
                 send_button = page.locator('button[aria-label*="Send"], button[aria-label*="보내기"], button.send-button').first
+                response_selector = (
+                    '.message-content, message-content, div[data-message-author-role="model"], '
+                    'model-response, response-container .response-container-content, '
+                    '.response-container-content .markdown'
+                )
 
                 log("전송 버튼 활성화 대기 및 클릭...")
                 try:
@@ -553,8 +770,38 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     log(f"전송 버튼 클릭 실패, 엔터키로 대체 시도: {compact_error(e)}")
                     textarea.press('Enter')
 
+                def get_model_text_blocks():
+                    blocks = []
+                    try:
+                        for elem in page.locator(response_selector).all():
+                            try:
+                                txt = elem.inner_text().strip()
+                            except Exception:
+                                continue
+                            if txt:
+                                blocks.append(txt)
+                    except Exception:
+                        pass
+                    return blocks
+
+                def is_generation_in_progress():
+                    try:
+                        if not send_button.is_visible():
+                            return False
+                        aria = (send_button.get_attribute("aria-label") or "").lower()
+                        cls = (send_button.get_attribute("class") or "").lower()
+                        return "stop" in aria or " stop" in f" {cls} "
+                    except Exception:
+                        return False
+
+                def is_send_ready():
+                    try:
+                        return send_button.is_visible() and send_button.is_enabled() and not is_generation_in_progress()
+                    except Exception:
+                        return False
+
                 log("답변 생성 대기 중... (최대 600초)")
-                max_wait_time = 600
+                max_wait_time = 900
                 start_wait = time.time()
                 success = False
 
@@ -563,7 +810,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     if draft_btns:
                         human_delay(3, 5)
                         log("A/B 답변 선택(Draft) 화면 감지.")
-                        messages = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
+                        messages = page.locator(response_selector).all()
                         selected_index = 0
                         for idx, msg in enumerate(messages):
                             try:
@@ -584,18 +831,18 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                         success = True
                         break
 
-                    if send_button.is_visible() and send_button.is_enabled():
+                    if is_send_ready():
                         human_delay(2, 4)
                         success = True
                         break
 
                     try:
-                        elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
-                        if elements:
-                            current_text = elements[-1].inner_text().strip()
+                        text_blocks = get_model_text_blocks()
+                        if text_blocks:
+                            current_text = text_blocks[-1]
                             if ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
                                 time.sleep(3)
-                                if elements[-1].inner_text().strip() == current_text:
+                                if get_model_text_blocks() and get_model_text_blocks()[-1].strip() == current_text:
                                     log("답변 JSON 텍스트 렌더링 완료 감지.")
                                     success = True
                                     break
@@ -603,39 +850,47 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                                 time.sleep(3)
                                 success = True
                                 break
-                    except: pass
+                    except Exception:
+                        pass
                     time.sleep(3)
 
                 if not success:
                     log("응답 생성 대기 시간 초과(Timeout).")
+                    save_web_dump(page, "response_wait_timeout")
                     return "RETRY"
 
-                elements = page.locator('.message-content, message-content, div[data-message-author-role="model"]').all()
-                if elements:
-                    last_elem = elements[-1]
+                text_blocks = get_model_text_blocks()
+                if text_blocks:
                     last_response = ""
-                    for _ in range(15):
-                        last_response = last_elem.inner_text().strip()
-                        if last_response: break
+                    for _ in range(20):
+                        text_blocks = get_model_text_blocks()
+                        if text_blocks:
+                            last_response = text_blocks[-1].strip()
+                        if last_response:
+                            break
                         time.sleep(2)
 
                     if not last_response:
                         log("경고: 텍스트 추출 실패.")
+                        save_web_dump(page, "response_text_empty_after_ready")
                         return "RETRY"
 
                     error_keywords = ["업로드하신 파일을 읽을 수 없습니다", "파일에 문제가 없는지 확인해 주세요", "언어 모델일 뿐이라서", "I am just a language model", "단지 언어 모델일 뿐이고"]
                     if any(keyword in last_response for keyword in error_keywords):
                         log("Gemini에서 비디오 파일 처리를 거부했습니다.")
+                        save_web_dump(page, "gemini_rejected_video", {"response_excerpt": last_response[:280]})
                         return "RETRY"
 
                     for marker in STALE_CONTEXT_MARKERS:
                         if marker in last_response:
                             log(f"응답 본문에서 stale marker 감지: {marker}")
+                            save_web_dump(page, "stale_marker_in_response", {"marker": marker})
                             return "RETRY"
 
                     valid, payload_or_reason = validate_response_payload(last_response)
                     if not valid:
                         log(f"응답 JSON 검증 실패: {payload_or_reason}")
+                        save_web_dump(page, "invalid_json_response", {"reason": payload_or_reason, "response_excerpt": last_response[:280]})
                         return "RETRY"
 
                     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -647,10 +902,12 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     return 0
                 else:
                     log("답변 요소를 찾을 수 없습니다.")
+                    save_web_dump(page, "model_response_not_found")
                     return "RETRY"
 
             except Exception as e:
                 log(f"제어 중 오류: {compact_error(e)}")
+                save_web_dump(page, "control_exception", {"error": compact_error(e)})
                 return "RETRY"
 
 

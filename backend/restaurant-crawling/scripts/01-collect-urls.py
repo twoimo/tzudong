@@ -18,7 +18,10 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Set
 
 # 유틸리티 모듈 경로 추가 (backend/)
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+BASE_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BASE_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BASE_BACKEND_ROOT))
+
 from utils.config_loader import (
     get_channel_info,
     get_all_channels,
@@ -27,27 +30,25 @@ from utils.config_loader import (
     get_collection_config,
 )
 from utils.logger import PipelineLogger
+from utils.runtime_paths import load_backend_env, get_backend_log_dir, resolve_backend_root
 
 try:
     from googleapiclient.discovery import build
     from googleapiclient.errors import HttpError
-    from dotenv import load_dotenv
 except ImportError:
     print("[ERROR] 필수 패키지 설치 필요:")
-    print("   pip install google-api-python-client python-dotenv")
+    print("   pip install google-api-python-client")
     sys.exit(1)
 
 # .env 로드
-env_path = Path(__file__).parent.parent.parent / ".env.local"
-if not env_path.exists():
-    env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(env_path)
+BACKEND_ROOT = resolve_backend_root(Path(__file__).resolve())
+load_backend_env(BACKEND_ROOT, prefer_local=True)
 
 # 한국 시간대 (KST, UTC+9)
 KST = timezone(timedelta(hours=9))
 
 # 로그 디렉토리 (backend/log/restaurant-crawling/)
-LOG_DIR = Path(__file__).parent.parent.parent / "log" / "restaurant-crawling"
+LOG_DIR = get_backend_log_dir(BACKEND_ROOT, "restaurant-crawling")
 
 
 def load_existing_urls(urls_file: Path) -> Set[str]:
