@@ -4,11 +4,15 @@
 
 **Live Demo**: [https://tzudong.app](https://tzudong.app)
 
-## 시스템 아키텍처 (System Architecture)
+## 전체 시스템 아키텍처 (System Architecture)
 
 ![System Architecture](apps/web/public/images/architecture.png)
 
+<<<<<<< HEAD
 ## 멀티 에이전트 아키텍처 (Multi-Agent Architecture)
+=======
+## 멀티 에이전트 아키텍처 (Multi-Agent Orchestration)
+>>>>>>> origin/main
 
 ![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
 
@@ -75,6 +79,12 @@
 - **LangGraph**: RAG 기반 Storyboard Agent Orchestrator (Supervisor/Researcher/Designer/Intern)
 - **APIs**: YouTube Data API, Kakao/Naver Geocoding, Tavily Web Search
 - **Runtime**: Python 3.11+ (FastAPI), Node.js 20+, Bun
+
+### Performance
+- **Lighthouse 점수**: Performance 85-90/100
+- **Bundle 최적화**: Dynamic imports, Code splitting
+- **Image 최적화**: AVIF/WebP, Lazy loading
+- **Cache**: React Query (staleTime: 60s, gcTime: 5m)
 
 ## 스크린샷
 
