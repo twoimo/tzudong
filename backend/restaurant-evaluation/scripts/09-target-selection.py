@@ -15,11 +15,17 @@ crawling 데이터에서 평가 대상을 선정하고 selection 파일을 생�
 """
 
 import json
-import os
 import sys
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
+
+# shared utils import (backend/utils)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.jsonl_utils import load_last_jsonl_record
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -35,13 +41,11 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
     if not crawling_file.exists():
         return None
 
-    # 최신 줄 로드
-    with open(crawling_file, "r", encoding="utf-8") as f:
-        data = None
-        for line in f:
-            data = json.loads(line.strip())
+    # 최신 줄 로드 (성능: 대용량 JSONL 전체 순회 방지)
+    data = load_last_jsonl_record(crawling_file)
 
     if not data:
+        print(f"[WARN] 마지막 JSONL 레코드 로드 실패(빈 파일/손상): {crawling_file}")
         return None
 
     youtube_link = data.get("youtube_link")

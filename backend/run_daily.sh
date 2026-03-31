@@ -22,6 +22,19 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # 프로젝트 루트로 이동
 cd "$PROJECT_ROOT" || { echo "[ERROR] 프로젝트 루트로 이동 실패: $PROJECT_ROOT"; exit 1; }
 
+# 공통 런타임 경로 로드 (ENV override > shared default > legacy fallback)
+RUNTIME_PATHS_SH="$PROJECT_ROOT/backend/config/runtime_paths.sh"
+if [ -f "$RUNTIME_PATHS_SH" ]; then
+    # shellcheck source=/dev/null
+    source "$RUNTIME_PATHS_SH"
+    if declare -f tzudong_runtime_paths_init >/dev/null 2>&1; then
+        tzudong_runtime_paths_init "$PROJECT_ROOT"
+    fi
+    if declare -f tzudong_runtime_paths_ensure >/dev/null 2>&1; then
+        tzudong_runtime_paths_ensure
+    fi
+fi
+
 # 환경 변수 로드 (Node, Python 경로 등)
 if [ -f "$HOME/.bashrc" ]; then
     source "$HOME/.bashrc"
@@ -65,17 +78,69 @@ if ! command -v deno &> /dev/null; then
     unset _DENO_DIR
 fi
 
-# 로그 디렉토리 생성
-LOG_DIR="$PROJECT_ROOT/backend/log/cron"
-mkdir -p "$LOG_DIR"
+# 로그 디렉토리 생성 (shared path 우선)
+LOG_DIR="${RUN_DAILY_LOG_DIR:-$PROJECT_ROOT/backend/log/cron}"
+LOG_ARCHIVE_DIR="${RUN_DAILY_ARCHIVE_DIR:-$LOG_DIR/archive}"
+CURRENT_LOG_LINK="${RUN_DAILY_CURRENT_LOG_LINK:-$LOG_DIR/current.log}"
+mkdir -p "$LOG_DIR" "$LOG_ARCHIVE_DIR"
+
+# [TimeZone] 기본 로그 기준 시간대를 KST로 고정 (이미 TZ가 있으면 존중)
+export TZ="${TZ:-Asia/Seoul}"
 
 DATE=$(date +%Y-%m-%d)
 LOG_FILE="$LOG_DIR/daily_$DATE.log"
+ARCHIVED_LOG=""
 # [Safety] 기본값은 force-push 비활성화 (필요 시 ALLOW_DATA_FORCE_PUSH=1로 명시적 허용)
 ALLOW_DATA_FORCE_PUSH="${ALLOW_DATA_FORCE_PUSH:-0}"
+# 로그 모드: compact(기본) | debug
+PIPELINE_LOG_MODE="${PIPELINE_LOG_MODE:-compact}"
+# 크롤링 하위 스크립트 로그 모드 전달: normal(기본) | debug
+export CRAWL_LOG_VERBOSITY="${CRAWL_LOG_VERBOSITY:-normal}"
 
 # [PERF] 파이프라인 시작 시간 기록 (전체 실행 시간 측정)
 PIPELINE_START=$(date +%s)
+
+# [Reliability] 같은 날짜 재실행 시 이전 로그를 archive로 이동해
+# 현재 실행 집계를 오염시키지 않도록 분리합니다.
+if [ -f "$LOG_FILE" ] && [ -s "$LOG_FILE" ]; then
+    mkdir -p "$LOG_ARCHIVE_DIR"
+    ARCHIVED_LOG="$LOG_ARCHIVE_DIR/daily_${DATE}_$(date +%H%M%S).log"
+    mv "$LOG_FILE" "$ARCHIVED_LOG"
+fi
+touch "$LOG_FILE"
+
+# monitor 데몬이 최신 로그를 안정적으로 찾도록 current.log 갱신
+# 실패 시 warn-only (파이프라인 중단 금지)
+if ! (cd "$LOG_DIR" && ln -sfn "$(basename "$LOG_FILE")" "$(basename "$CURRENT_LOG_LINK")") 2>/dev/null; then
+    if ! ln -sfn "$LOG_FILE" "$CURRENT_LOG_LINK" 2>/dev/null; then
+        echo "[WARN] current.log 링크 갱신 실패 (warn-only): $CURRENT_LOG_LINK"
+    fi
+fi
+
+# [Stability] 비대화형(non-tty) 환경에서 stdout pipe 역압으로 tee가 정체되는 문제 방지
+# - auto(기본): TTY 또는 CI=true에서만 stdout 유지, 그 외에는 /dev/null로 전환
+# - on: stdout 유지
+# - off: stdout 비활성화
+PIPELINE_STDOUT_MODE="${PIPELINE_STDOUT_MODE:-auto}"
+PIPELINE_EMIT_STDOUT=1
+case "$PIPELINE_STDOUT_MODE" in
+    on|ON|true|TRUE|1)
+        PIPELINE_EMIT_STDOUT=1
+        ;;
+    off|OFF|false|FALSE|0)
+        PIPELINE_EMIT_STDOUT=0
+        ;;
+    auto|AUTO|*)
+        if [ -t 1 ] || [ "${CI:-false}" = "true" ]; then
+            PIPELINE_EMIT_STDOUT=1
+        else
+            PIPELINE_EMIT_STDOUT=0
+        fi
+        ;;
+esac
+if [ "$PIPELINE_EMIT_STDOUT" -eq 0 ]; then
+    exec >/dev/null 2>&1
+fi
 
 # ============================================================
 # 유틸리티 함수
@@ -97,6 +162,36 @@ log() {
 # ANSI 색상 코드 제거 함수
 strip_ansi() {
     sed 's/\x1b\[[0-9;]*m//g'
+}
+
+# 명령 출력 로그 필터 (기본 compact)
+filter_step_log() {
+    if [ "${PIPELINE_LOG_MODE}" = "debug" ]; then
+        cat
+        return 0
+    fi
+
+    awk '
+    {
+        gsub(/\r/, "", $0)
+        line=$0
+
+        # yt-dlp/rclone 진행률 바 노이즈 제거
+        if (line ~ /^\[download\][[:space:]]+[0-9.]+% of/) next
+        if (line ~ /^Transferred:[[:space:]]/) next
+        if (line ~ /^Elapsed time:[[:space:]]/) next
+
+        # 연속 공백 라인 압축
+        if (line ~ /^[[:space:]]*$/) {
+            if (blank == 1) next
+            blank=1
+            print ""
+            next
+        }
+        blank=0
+        print line
+        fflush()
+    }'
 }
 
 # truthy 환경변수 판별 (1/true/yes/on)
@@ -152,9 +247,9 @@ run_parallel() {
 
     # 로그 순서대로 출력 (섞임 방지)
     log "INFO" "--- [$LABEL_A] ---"
-    cat "$TEMP_LOG_A" | tee -a "$LOG_FILE"
+    cat "$TEMP_LOG_A" | strip_ansi | filter_step_log | tee -a "$LOG_FILE"
     log "INFO" "--- [$LABEL_B] ---"
-    cat "$TEMP_LOG_B" | tee -a "$LOG_FILE"
+    cat "$TEMP_LOG_B" | strip_ansi | filter_step_log | tee -a "$LOG_FILE"
 
     rm -f "$TEMP_LOG_A" "$TEMP_LOG_B"
 
@@ -165,6 +260,31 @@ run_parallel() {
         log "WARN" "[$LABEL_B] 비정상 종료 (exit: $EXIT_B)"
     fi
     return 0
+}
+
+# [PERF] source_dir에는 있고 target_dir에는 없는 *.jsonl 파일 수 계산
+count_pending_jsonl() {
+    local source_dir="$1"
+    local target_dir="$2"
+    local source_list target_list
+
+    if [ ! -d "$source_dir" ]; then
+        echo 0
+        return 0
+    fi
+
+    source_list=$(mktemp)
+    target_list=$(mktemp)
+
+    find "$source_dir" -maxdepth 1 -type f -name "*.jsonl" -exec basename {} \; | sort > "$source_list"
+    if [ -d "$target_dir" ]; then
+        find "$target_dir" -maxdepth 1 -type f -name "*.jsonl" -exec basename {} \; | sort > "$target_list"
+    else
+        : > "$target_list"
+    fi
+
+    comm -23 "$source_list" "$target_list" | grep -c "." || true
+    rm -f "$source_list" "$target_list"
 }
 
 # [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
@@ -326,27 +446,13 @@ else
     # [PERF] 신규 URL이 없으면 고비용 AI 분석(Phase 3)을 건너뜁니다.
     # 단, 보류 중인 크롤링(Step 8) 또는 LAAJ 평가(Step 11)가 있는지 확인합니다.
     
-    PENDING_CRAWL=0
-    if [ -d "backend/restaurant-crawling/data/tzuyang/transcript" ]; then
-        for file in backend/restaurant-crawling/data/tzuyang/transcript/*.jsonl; do
-            [ -e "$file" ] || continue
-            filename=$(basename "$file")
-            if [ ! -f "backend/restaurant-crawling/data/tzuyang/crawling/$filename" ]; then
-                PENDING_CRAWL=$((PENDING_CRAWL + 1))
-            fi
-        done
-    fi
+    PENDING_CRAWL=$(count_pending_jsonl \
+        "backend/restaurant-crawling/data/tzuyang/transcript" \
+        "backend/restaurant-crawling/data/tzuyang/crawling")
 
-    PENDING_LAAJ=0
-    if [ -d "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results" ]; then
-        for file in backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/*.jsonl; do
-            [ -e "$file" ] || continue
-            filename=$(basename "$file")
-            if [ ! -f "backend/restaurant-evaluation/data/tzuyang/evaluation/laaj_results/$filename" ]; then
-                PENDING_LAAJ=$((PENDING_LAAJ + 1))
-            fi
-        done
-    fi
+    PENDING_LAAJ=$(count_pending_jsonl \
+        "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results" \
+        "backend/restaurant-evaluation/data/tzuyang/evaluation/laaj_results")
 
     if [ "$PENDING_CRAWL" -gt 0 ] || [ "$PENDING_LAAJ" -gt 0 ]; then
         log "INFO" "보류 중인 크롤링 ${PENDING_CRAWL}건, LAAJ 평가 ${PENDING_LAAJ}건 발견 -> Phase 3 실행"
@@ -487,7 +593,7 @@ echo "::group::[Step 08] Chunk Multimodal Crawling"
 step_start
 log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
 set +o pipefail
-bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | filter_step_log | tee -a "$LOG_FILE"
 CHUNK_EXIT_CODE=${PIPESTATUS[0]}
 set -o pipefail
 if [ $CHUNK_EXIT_CODE -eq 42 ]; then
@@ -598,7 +704,7 @@ log "OK" "============================================================"
 # GitHub Actions Summary 생성
 # ============================================================
 
-SUMMARY_MD="$PROJECT_ROOT/summary.md"
+SUMMARY_MD="${RUN_DAILY_SUMMARY_PATH:-$PROJECT_ROOT/summary.md}"
 echo "## Daily Crawling Report ($DATE)" > "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
@@ -609,6 +715,9 @@ echo "|--------|-------|" >> "$SUMMARY_MD"
 echo "| Total Runtime | **${TOTAL_MIN}분 ${TOTAL_SEC}초** |" >> "$SUMMARY_MD"
 echo "| New Videos | ${NEW_URL_COUNT:-0} |" >> "$SUMMARY_MD"
 echo "| Mode | $([ "${HAS_NEW_DATA}" = "true" ] && echo "Full Pipeline" || echo "Smart (Delta Only)") |" >> "$SUMMARY_MD"
+if [ -n "$ARCHIVED_LOG" ]; then
+    echo "| Archived Previous Log | \`${ARCHIVED_LOG#"$PROJECT_ROOT/"}\` |" >> "$SUMMARY_MD"
+fi
 if [ "${SKIP_PHASE3:-false}" = "true" ]; then
     echo "| Note | Phase 3 skipped (timeout) |" >> "$SUMMARY_MD"
 fi
@@ -845,7 +954,11 @@ fi
 echo "" >> "$SUMMARY_MD"
 
 echo "### Quick Links" >> "$SUMMARY_MD"
-echo "- **Log File**: \`backend/log/cron/daily_$DATE.log\`" >> "$SUMMARY_MD"
+LOG_FILE_REL="${LOG_FILE#$PROJECT_ROOT/}"
+echo "- **Log File**: \`$LOG_FILE_REL\`" >> "$SUMMARY_MD"
+if [ -n "${ARCHIVED_LOG:-}" ]; then
+    echo "- **Archived Previous Log**: \`${ARCHIVED_LOG#$PROJECT_ROOT/}\`" >> "$SUMMARY_MD"
+fi
 echo "- **Data Branch**: [\`data\`](https://github.com/twoimo/tzudong/tree/data)" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 

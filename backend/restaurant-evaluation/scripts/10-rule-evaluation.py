@@ -29,15 +29,21 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone, timedelta
 import requests
-from dotenv import load_dotenv
+
+# shared utils import (backend/utils)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.jsonl_utils import load_last_jsonl_record
+from utils.runtime_paths import load_backend_env, resolve_backend_root
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
 
 # 환경변수 로드
-env_path = Path(__file__).parent.parent.parent / ".env"
-if env_path.exists():
-    load_dotenv(env_path)
+BACKEND_ROOT = resolve_backend_root(Path(__file__).resolve())
+load_backend_env(BACKEND_ROOT, prefer_local=False)
 
 # API 설정
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID_BYEON", "")
@@ -549,13 +555,11 @@ def main():
                 print(f"이미 처리됨 (스킵 {stats['skipped']}개)")
             continue
 
-        # 데이터 로드
-        with open(input_file, "r", encoding="utf-8") as f:
-            data = None
-            for line in f:
-                data = json.loads(line.strip())
+        # 데이터 로드 (성능: 대용량 JSONL 전체 순회 방지)
+        data = load_last_jsonl_record(input_file)
 
         if not data:
+            print(f"[WARN] 마지막 JSONL 레코드 로드 실패(빈 파일/손상): {input_file}")
             continue
 
         # evaluation_target에 true 값이 있는 경우에만 평가 진행

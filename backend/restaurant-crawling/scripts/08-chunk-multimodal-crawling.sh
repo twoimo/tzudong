@@ -46,6 +46,8 @@ export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3-flash-preview}"
 export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3-flash-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
+# 로그 모드: normal(기본) | debug
+LOG_VERBOSITY="${CRAWL_LOG_VERBOSITY:-normal}"
 # [Cross-Platform] Deno 런타임 PATH 자동 탐색 (yt-dlp n challenge 해결용)
 # Git Bash(MINGW): /c/Users/<user>/.deno/bin
 # WSL:            /mnt/c/Users/<user>/.deno/bin
@@ -75,7 +77,6 @@ if ! command -v deno &> /dev/null; then
         fi
     done
 fi
-PYTHON_CMD="python.exe"
 
 # 터미널 색상 (비터미널 환경에선 비활성)
 if [ -t 1 ]; then
@@ -125,9 +126,22 @@ else echo "[ERROR] jq를 찾을 수 없습니다"; exit 1; fi
 
 if command -v node &> /dev/null; then NODE_EXE="node"
 elif [ -f "/c/Program Files/nodejs/node.exe" ]; then NODE_EXE="/c/Program Files/nodejs/node.exe"
+elif [ -f "/mnt/c/Program Files/nodejs/node.exe" ]; then NODE_EXE="/mnt/c/Program Files/nodejs/node.exe"
 else NODE_EXE=""; fi
 
-PYTHON_CMD="python.exe"
+# Python 런타임 탐색 (환경변수 우선)
+if [ -n "$PYTHON_CMD" ] && command -v "$PYTHON_CMD" >/dev/null 2>&1; then
+    : # 외부에서 주입된 PYTHON_CMD 유지
+elif command -v python.exe >/dev/null 2>&1; then
+    PYTHON_CMD="python.exe"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_CMD="python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_CMD="python3"
+else
+    echo "[ERROR] python/python3/python.exe 를 찾을 수 없습니다"
+    exit 1
+fi
 
 # ffmpeg 감지: 시스템 PATH → node_modules/ffmpeg-static 폴백
 # yt-dlp 비디오+오디오 병합에 ffmpeg이 필요
@@ -164,6 +178,11 @@ format_duration() {
     if [ $hours -gt 0 ]; then echo "${hours}h ${minutes}m ${secs}s"
     elif [ $minutes -gt 0 ]; then echo "${minutes}m ${secs}s"
     else echo "${secs}s"; fi
+}
+
+is_debug_mode() {
+    local mode="${LOG_VERBOSITY,,}"
+    [ "$mode" = "debug" ] || [ "$mode" = "verbose" ]
 }
 
 # ================================
@@ -208,6 +227,22 @@ get_latest_jsonl_data() {
     if [ -f "$file" ]; then tail -n 1 "$file"; else echo ""; fi
 }
 
+# crawling JSONL 마지막 레코드의 restaurants 길이 반환
+# - 정상 배열이면 0 이상의 정수
+# - 손상/파싱불가/형식오류면 -1
+get_restaurants_len_from_jsonl() {
+    local file=$1
+    local last_line
+    last_line=$(get_latest_jsonl_data "$file" | tr -d '\r')
+
+    if [ -z "$last_line" ]; then
+        echo -1
+        return
+    fi
+
+    jq_wrapper -r 'if (.restaurants | type) == "array" then (.restaurants | length) else -1 end' <<< "$last_line" 2>/dev/null || echo -1
+}
+
 extract_video_id() {
     echo "$1" | sed -n 's/.*v=\([^&]*\).*/\1/p'
 }
@@ -243,7 +278,11 @@ download_video() {
 
         if [ -n "$gdrive_file" ]; then
             log_info "GDrive 다운로드: $gdrive_file"
-            rclone copy "$GDRIVE_REMOTE_PATH/$gdrive_file" "$output_dir" --progress >&2 2>/dev/null
+            if is_debug_mode; then
+                rclone copy "$GDRIVE_REMOTE_PATH/$gdrive_file" "$output_dir" --progress >&2 2>/dev/null
+            else
+                rclone copy "$GDRIVE_REMOTE_PATH/$gdrive_file" "$output_dir" >&2 2>/dev/null
+            fi
             local downloaded="$output_dir/$gdrive_file"
             if [ -f "$downloaded" ]; then
                 echo "$downloaded"
@@ -273,9 +312,16 @@ download_video() {
     fi
 
     log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"
+    local yt_quiet_flags=()
+    if is_debug_mode; then
+        yt_quiet_flags=(--newline)
+    else
+        yt_quiet_flags=(--no-progress --no-warnings)
+    fi
     $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg \
         --impersonate Chrome \
         --no-part --ignore-errors \
+        "${yt_quiet_flags[@]}" \
         -f "b[ext=mp4][height<=360]/b[height<=360]/b" \
         -o "$output_template" \
         "https://www.youtube.com/watch?v=$video_id" >&2
@@ -286,7 +332,11 @@ download_video() {
         if [ -f "$downloaded" ]; then
             if [ -n "$GDRIVE_REMOTE_PATH" ] && command -v rclone &> /dev/null; then
                 log_info "GDrive 캐시에 로컬 비디오 업로드 중..."
-                rclone copy "$downloaded" "$GDRIVE_REMOTE_PATH" --progress >&2 2>/dev/null || true
+                if is_debug_mode; then
+                    rclone copy "$downloaded" "$GDRIVE_REMOTE_PATH" --progress >&2 2>/dev/null || true
+                else
+                    rclone copy "$downloaded" "$GDRIVE_REMOTE_PATH" >&2 2>/dev/null || true
+                fi
             fi
             echo "$downloaded"
             return 0
@@ -299,7 +349,11 @@ download_video() {
         log_warning "형식 코드 포함 파일 발견: $(basename "$fallback")"
         if [ -n "$GDRIVE_REMOTE_PATH" ] && command -v rclone &> /dev/null; then
             log_info "GDrive 캐시에 로컬 비디오 확장 업로드 중..."
-            rclone copy "$fallback" "$GDRIVE_REMOTE_PATH" --progress >&2 2>/dev/null || true
+            if is_debug_mode; then
+                rclone copy "$fallback" "$GDRIVE_REMOTE_PATH" --progress >&2 2>/dev/null || true
+            else
+                rclone copy "$fallback" "$GDRIVE_REMOTE_PATH" >&2 2>/dev/null || true
+            fi
         fi
         echo "$fallback"
         return 0
@@ -417,11 +471,18 @@ process_video_chunks() {
     local OPTIMAL_JOBS_SCRIPT="$SCRIPT_DIR/get_optimal_jobs.py"
     local max_jobs
     if [ -f "$OPTIMAL_JOBS_SCRIPT" ]; then
-        local win_optimal_jobs=$(maybe_normalize "$PYTHON_CMD" "$OPTIMAL_JOBS_SCRIPT")
-        max_jobs=$("$PYTHON_CMD" "$win_optimal_jobs" | tr -d '\r')
+        local win_optimal_jobs
+        win_optimal_jobs=$(maybe_normalize "$PYTHON_CMD" "$OPTIMAL_JOBS_SCRIPT")
+        max_jobs=$("$PYTHON_CMD" "$win_optimal_jobs" 2>/dev/null | tr -d '\r')
     else
         max_jobs=3
     fi
+
+    if ! [[ "$max_jobs" =~ ^[0-9]+$ ]] || [ "$max_jobs" -lt 1 ]; then
+        log_warning "max_jobs 계산 실패('$max_jobs'). 기본값 3으로 대체합니다."
+        max_jobs=3
+    fi
+
     log_info "동적 병렬 처리 적용: $max_jobs 개의 청크 동시 처리"
 
     # seq 서브프로세스 제거 — C 스타일 for 루프 사용
@@ -674,6 +735,8 @@ PROMPT_EOF
             --arg meta "$meta_recollect_id" --arg trans "$transcript_recollect_id" \
             '{youtube_link: $yl, video_id: $vid, error: $err, recollect_version: {meta: ($meta | tonumber), transcript: ($trans | tonumber)}}' \
             > "$errors_dir/${video_id}.jsonl"
+        rm -rf "$temp_dir"
+        return 1
     fi
 
     rm -rf "$temp_dir"
@@ -756,11 +819,29 @@ process_channel() {
         local map_file="$full_data_path/map_url_crawling/${video_id}.jsonl"
 
         # 이미 처리 완료 시 건너뜀 (--force 제외)
-        if [ "$FORCE_MODE" = false ] && { [ -f "$crawling_file" ] || [ -f "$map_file" ]; }; then
-            skipped_count=$((skipped_count + 1))
-            skip_already_processed=$((skip_already_processed + 1))
-            log_info "[$index/$total] SKIP: already_processed ($video_id)"
-            continue
+        # 단, crawling 결과가 빈 restaurants/깨진 JSON/빈 파일이면 재시도 대상으로 간주
+        if [ "$FORCE_MODE" = false ]; then
+            if [ -f "$map_file" ]; then
+                skipped_count=$((skipped_count + 1))
+                skip_already_processed=$((skip_already_processed + 1))
+                log_info "[$index/$total] SKIP: already_processed(map) ($video_id)"
+                continue
+            fi
+
+            if [ -f "$crawling_file" ]; then
+                local restaurants_len
+                restaurants_len=$(get_restaurants_len_from_jsonl "$crawling_file")
+
+                if [[ "$restaurants_len" =~ ^[0-9]+$ ]] && [ "$restaurants_len" -gt 0 ]; then
+                    skipped_count=$((skipped_count + 1))
+                    skip_already_processed=$((skip_already_processed + 1))
+                    log_info "[$index/$total] SKIP: already_processed(crawling) ($video_id, restaurants=$restaurants_len)"
+                    continue
+                fi
+
+                log_warning "[$index/$total] RETRY: empty_or_invalid_crawling_result ($video_id)"
+                rm -f "$crawling_file" 2>/dev/null || true
+            fi
         fi
 
         local meta_file="$meta_dir/${video_id}.jsonl"
