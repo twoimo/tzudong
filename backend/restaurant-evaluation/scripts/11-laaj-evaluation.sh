@@ -12,6 +12,7 @@
 #   ./11-laaj-evaluation.sh --channel tzuyang --crawling-path data/tzuyang --evaluation-path data/tzuyang
 
 set -e
+set -o pipefail
 
 # ================================
 # 환경 설정 및 유틸리티
@@ -340,10 +341,11 @@ rm -f "$HEALTH_CHECK_PROMPT" "$HEALTH_CHECK_RESPONSE"
 # ================================
 # 처리할 video_id 수집
 # ================================
-VIDEO_IDS=()
-for f in "$RULE_RESULTS_DIR"/*.jsonl; do
-    [ -f "$f" ] && VIDEO_IDS+=("$(basename "$f" .jsonl)")
-done
+mapfile -t VIDEO_IDS < <(
+    find "$RULE_RESULTS_DIR" -maxdepth 1 -type f -name "*.jsonl" -exec basename {} \; \
+        | sed 's/\.jsonl$//' \
+        | sort
+)
 
 TOTAL=${#VIDEO_IDS[@]}
 log_info "총 대상 파일: $TOTAL 개"
@@ -552,10 +554,10 @@ $TRANSCRIPT
     if [ "$GEMINI_SUCCESS" = true ]; then
         PARSE_SUCCESS=false
         for PARSE_ATTEMPT in 1 2 3; do
-            local win_parser=$(maybe_normalize "$PYTHON_EXE" "$PARSER_SCRIPT")
-            local win_eval_path=$(maybe_normalize "$PYTHON_EXE" "$EVALUATION_PATH")
-            local win_temp_response=$(maybe_normalize "$PYTHON_EXE" "$TEMP_RESPONSE")
-            local win_rule_file=$(maybe_normalize "$PYTHON_EXE" "$RULE_FILE")
+            win_parser=$(maybe_normalize "$PYTHON_EXE" "$PARSER_SCRIPT")
+            win_eval_path=$(maybe_normalize "$PYTHON_EXE" "$EVALUATION_PATH")
+            win_temp_response=$(maybe_normalize "$PYTHON_EXE" "$TEMP_RESPONSE")
+            win_rule_file=$(maybe_normalize "$PYTHON_EXE" "$RULE_FILE")
             if "$PYTHON_EXE" "$win_parser" \
                 --channel "$CHANNEL" \
                 --evaluation-path "$win_eval_path" \
