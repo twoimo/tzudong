@@ -2,8 +2,6 @@
 
 **쯔양이 다녀간 맛집을 한눈에! 전국 & 해외 맛집 지도 플랫폼**
 
-Next.js 16 (Turbopack) + Supabase 기반의 풀스택 맛집 정보 플랫폼입니다.
-
 **Live Demo**: [https://tzudong.app](https://tzudong.app)
 
 ## 시스템 아키텍처 (System Architecture)
