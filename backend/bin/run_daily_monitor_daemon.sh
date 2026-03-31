@@ -125,6 +125,7 @@ is_log_stale() {
 }
 
 start_run_daily() {
+  local reuse_existing="${1:-1}"
   log "INFO" "run_daily.sh 시작 시도"
 
   if [ ! -f "$RUN_DAILY_SCRIPT_PATH" ]; then
@@ -132,12 +133,14 @@ start_run_daily() {
     return 1
   fi
 
-  local existing_pid
-  existing_pid="$(find_existing_run_daily_pid 2>/dev/null || true)"
-  if [ -n "$existing_pid" ] && is_pid_alive "$existing_pid" && is_run_daily_pid "$existing_pid"; then
-    echo "$existing_pid" > "$RUN_DAILY_PID_FILE"
-    log "INFO" "기존 run_daily 프로세스 재사용 (pid=$existing_pid)"
-    return 0
+  if [ "$reuse_existing" = "1" ]; then
+    local existing_pid
+    existing_pid="$(find_existing_run_daily_pid 2>/dev/null || true)"
+    if [ -n "$existing_pid" ] && is_pid_alive "$existing_pid" && is_run_daily_pid "$existing_pid"; then
+      echo "$existing_pid" > "$RUN_DAILY_PID_FILE"
+      log "INFO" "기존 run_daily 프로세스 재사용 (pid=$existing_pid)"
+      return 0
+    fi
   fi
 
   # 새 실행은 세션 분리(setsid)하여 프로세스 그룹 단위로 제어 가능하게 함
@@ -187,7 +190,11 @@ ensure_run_daily() {
     # 프로세스는 살아있음. 로그 정체면 재시작.
     if is_log_stale; then
       stop_run_daily_tree "$pid"
-      start_run_daily
+      if is_pid_alive "$pid"; then
+        log "ERROR" "정체 run_daily 종료 실패 (pid=$pid). 중복 실행 방지를 위해 재시작을 보류합니다."
+        return 1
+      fi
+      start_run_daily 0
     fi
     return 0
   fi
