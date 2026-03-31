@@ -2,15 +2,13 @@
 
 **쯔양이 다녀간 맛집을 한눈에! 전국 & 해외 맛집 지도 플랫폼**
 
-Next.js 16 (Turbopack) + Supabase 기반의 풀스택 맛집 정보 플랫폼입니다.
-
 **Live Demo**: [https://tzudong.app](https://tzudong.app)
 
 ## 시스템 아키텍처 (System Architecture)
 
 ![System Architecture](apps/web/public/images/architecture.png)
 
-## 랭그래프 멀티 에이전트 체제 (LangGraph Orchestration)
+## 멀티 에이전트 아키텍처 (Multi-Agent Architecture)
 
 ![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
 
@@ -78,8 +76,24 @@ Next.js 16 (Turbopack) + Supabase 기반의 풀스택 맛집 정보 플랫폼입
 - **APIs**: YouTube Data API, Kakao/Naver Geocoding, Tavily Web Search
 - **Runtime**: Python 3.11+ (FastAPI), Node.js 20+, Bun
 
-### Performance
-- **Lighthouse 점수**: Performance 85-90/100
-- **Bundle 최적화**: Dynamic imports, Code splitting
-- **Image 최적화**: AVIF/WebP, Lazy loading
-- **Cache**: React Query (staleTime: 60s, gcTime: 5m)
+## 스크린샷
+
+### 모바일 페이지 (메인 페이지, 리뷰 페이지, 도장 페이지)
+
+<div align="center">
+  <img src="apps/web/public/images/mobile_main_page.png" width="32%" alt="모바일 페이지 1">
+  <img src="apps/web/public/images/mobile_review_page.png" width="32%" alt="모바일 페이지 2">
+  <img src="apps/web/public/images/mobile_stamp_page.png" width="32%" alt="모바일 페이지 3">
+</div>
+
+### 데스크탑 메인 페이지 (Naver Map, OpenFreeMap)
+
+![메인 페이지](apps/web/public/images/main_page.png)
+
+### 데스크탑 관리자 검수 페이지 (승인, 수정, 삭제 등)
+
+![관리자 검수 페이지](apps/web/public/images/admin_page.png)
+
+### 스토리보드 생성 에이전트 (Nano Banana)
+
+![스토리보드 생성 에이전트](apps/web/public/images/storyboard_agent.png)

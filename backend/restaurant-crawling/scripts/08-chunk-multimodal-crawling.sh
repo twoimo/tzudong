@@ -555,7 +555,7 @@ PROMPT_EOF
         local node_win_segment=$(maybe_normalize "$NODE_EXE" "$segment_file")
 
         (
-            if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ] || [ -f "$TEMP_BASE/force_web_fallback.flag" ]; then
+            if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ]; then
                 log_info "  청크 $((i + 1)) (Web Fallback 강제 모드)"
                 local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                 local web_model="${WEB_GEMINI_MODEL:-Pro}"
@@ -586,9 +586,6 @@ PROMPT_EOF
                     log_success "  청크 $((i + 1)) 성공"
                 elif [ $exit_code -eq 42 ]; then
                     log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
-                    
-                    # 앞으로 남은 청크들도 모두 API 호출을 생략하도록 플래그 생성
-                    touch "$TEMP_BASE/force_web_fallback.flag"
                     
                     local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                     local web_model="${WEB_GEMINI_MODEL:-Pro}"
@@ -973,12 +970,10 @@ console.log(r.text);
             log_error "Stderr(요약): $err_preview"
             # 429 Quota Exceeded 에러인지 확인
             if [[ "$err_msg" == *"429"* ]] || [[ "$err_msg" == *"exceeded your current quota"* ]]; then
-                log_warning "🚨 [QUOTA_ERROR] API 할당량 초과가 Health Check에서 감지되었습니다."
-                log_warning "▶ 이후의 모든 크롤링 작업을 API 대신 '웹 브라우저 자동화(Web Fallback)'로 강제 전환합니다!"
-                export FORCE_WEB_FALLBACK=1
+                log_warning "🚨 [QUOTA_ERROR] API 할당량 이슈가 감지되었습니다."
+                log_warning "청크별 API 우선 시도 + 실패 시 웹 폴백으로 처리합니다. (전역 강제 폴백 비활성)"
             else
-                log_warning "일반 API 에러입니다. 웹 폴백으로 진행을 강행합니다."
-                export FORCE_WEB_FALLBACK=1
+                log_warning "일반 API 에러입니다. 청크별로 API 재시도 후 웹 폴백을 사용합니다."
             fi
         fi
         rm -f "$hc_response" "$hc_stderr"
