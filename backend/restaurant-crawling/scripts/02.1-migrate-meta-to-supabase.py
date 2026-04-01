@@ -24,19 +24,22 @@ except ImportError:
     print("supabase 패키지가 필요합니다: pip install supabase")
     sys.exit(1)
 
-from dotenv import load_dotenv
+# shared utils import (backend/utils)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.runtime_paths import load_backend_env, resolve_backend_root
 
 # 경로 설정
 SCRIPT_DIR = Path(__file__).parent
 DATA_DIR = SCRIPT_DIR.parent / "data"
-# 상위 레벨 .env 우선 로드
-ENV_FILES = [
-    SCRIPT_DIR.parent.parent.parent / ".env",
-    SCRIPT_DIR.parent.parent / ".env"
-]
-for env_file in ENV_FILES:
-    if env_file.exists():
-        load_dotenv(env_file)
+
+# .env 로드 (backend/.env 우선)
+backend_root = resolve_backend_root(Path(__file__).resolve())
+loaded_env = load_backend_env(backend_root, prefer_local=False)
+if loaded_env is not None:
+    print(f"[INFO] .env 로드: {loaded_env}")
 
 def get_supabase_client() -> Client:
     """Supabase 클라이언트 생성"""

@@ -329,35 +329,55 @@ def check_for_soft_ban(page):
     except:
         return False
 
-def is_logged_in(page):
+def is_logged_in(page, debug=False):
     """로그인 상태 확인 (URL 및 특정 요소 감지)"""
     try:
-        if "accounts.google.com" in page.url:
+        current_url = page.url
+        if debug:
+            log(f"[login-check] URL: {current_url}")
+
+        if "accounts.google.com" in current_url:
+            if debug:
+                log("[login-check] accounts.google.com 감지 → 미로그인")
             return False
 
+        # gemini.google.com/app 에 도달했으면 로그인 완료 가능성 높음
+        on_gemini = "gemini.google.com" in current_url
+
         # Gemini 입력창이 보이면 로그인 완료 (가장 강한 신호)
-        textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]')
+        textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"], [contenteditable="true"]')
         if textbox_locator.count() > 0:
-            try:
-                if textbox_locator.first.is_visible():
-                    return True
-            except Exception:
-                pass
-            # headless 환경에서 visibility 계산이 불안정할 수 있어 count 기반으로도 인정
+            if debug:
+                log("[login-check] 입력창 감지 → 로그인 완료")
             return True
 
         # 입력창이 아직 없어도 계정 아바타/계정 버튼이 보이면 로그인 완료로 간주
         account_badge_locator = page.locator(
             'button[aria-label*="Google"], a[aria-label*="Google"], '
-            'img[referrerpolicy="no-referrer"], button[aria-label*="@"]'
+            'img[referrerpolicy="no-referrer"], button[aria-label*="@"], '
+            'a[aria-label*="계정"], button[aria-label*="계정"], '
+            'img[data-iml], [data-ogsr-up]'
         )
         if account_badge_locator.count() > 0:
-            try:
-                if account_badge_locator.first.is_visible():
-                    return True
-            except Exception:
-                pass
+            if debug:
+                log(f"[login-check] 계정 배지 감지 ({account_badge_locator.count()}개) → 로그인 완료")
             return True
+
+        # gemini.google.com에 있고 로그인 CTA가 없으면 로그인된 것으로 간주
+        if on_gemini:
+            explicit_login_cta = page.locator(
+                'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
+                'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
+                'button:has-text("Sign in"), button:has-text("로그인")'
+            )
+            if explicit_login_cta.count() == 0:
+                if debug:
+                    log("[login-check] gemini.google.com + 로그인 CTA 없음 → 로그인 완료")
+                return True
+            else:
+                if debug:
+                    log("[login-check] gemini.google.com + 로그인 CTA 발견 → 미로그인")
+                return False
 
         # 명시적인 로그인 CTA(텍스트 포함)가 보이면 미로그인으로 간주
         explicit_login_cta = page.locator(
@@ -365,22 +385,48 @@ def is_logged_in(page):
             'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
             'button:has-text("Sign in"), button:has-text("로그인")'
         ).first
-        if explicit_login_cta.is_visible():
-            return False
+        try:
+            if explicit_login_cta.is_visible():
+                if debug:
+                    log("[login-check] 로그인 CTA 가시 → 미로그인")
+                return False
+        except Exception:
+            pass
 
+        if debug:
+            log("[login-check] 판별 불가 → 미로그인 반환")
         return False
-    except:
+    except Exception as e:
+        if debug:
+            log(f"[login-check] 예외: {compact_error(e)}")
         return False
 
 
-def wait_for_login_detection(page, timeout_sec=600, poll_sec=3):
+def wait_for_login_detection(page, timeout_sec=600, poll_sec=3, context=None):
     """수동 로그인 완료를 자동 감지한다."""
     log(f"로그인 상태 자동 감지 대기 중... (최대 {timeout_sec}초)")
     start = time.time()
+    check_count = 0
     while time.time() - start < timeout_sec:
-        if is_logged_in(page):
+        check_count += 1
+        debug = (check_count % 10 == 1)  # 매 30초마다 디버그 로그 출력
+
+        # 현재 페이지 체크
+        if is_logged_in(page, debug=debug):
             log("✅ 로그인 상태 자동 감지 성공")
             return True
+
+        # 컨텍스트의 다른 페이지(탭)도 체크
+        if context is not None:
+            try:
+                all_pages = context.pages
+                for p in all_pages:
+                    if p != page and is_logged_in(p, debug=False):
+                        log("✅ 로그인 상태 자동 감지 성공 (다른 탭에서 감지)")
+                        return True
+            except Exception:
+                pass
+
         time.sleep(poll_sec)
     return False
 
@@ -513,7 +559,7 @@ def manual_login():
     with optional_profile_session_lock(timeout_sec=120):
         with _create_camoufox(headless=False) as context:
             load_cookie_backup(context)
-            page = context.new_page()
+            page = context.pages[0] if context.pages else context.new_page()
             try:
                 page.goto(
                     "https://accounts.google.com/ServiceLogin?continue=https://gemini.google.com/",
@@ -524,7 +570,7 @@ def manual_login():
                 log(f"페이지 로딩 지연 (무시하고 계속 진행): {compact_error(e)}")
 
             log("로그인 후 자동 감지를 기다려 주세요. (필요 시 Enter 수동 확인도 지원)")
-            detected = wait_for_login_detection(page, timeout_sec=900, poll_sec=3)
+            detected = wait_for_login_detection(page, timeout_sec=900, poll_sec=3, context=context)
 
             if not detected:
                 if sys.stdin and sys.stdin.isatty():
@@ -598,7 +644,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
     with optional_profile_session_lock(timeout_sec=120):
         with _create_camoufox(headless=headless_mode) as context:
             restored_cookies = load_cookie_backup(context)
-            page = context.new_page()
+            page = context.pages[0] if context.pages else context.new_page()
 
             log("gemini.google.com 으로 이동 중...")
             try:

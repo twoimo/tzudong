@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from typing import Optional
 
 
@@ -53,6 +54,22 @@ def load_backend_env(
     try:
         from dotenv import load_dotenv
     except Exception:
+        # python-dotenv 미설치 환경에서도 최소 동작을 보장하기 위한 수동 로더
+        try:
+            for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if not key:
+                    continue
+                if override or key not in os.environ:
+                    os.environ[key] = value
+        except Exception:
+            # env 파일 파싱 실패 시에도 호출 측에서 경로 참조는 가능하도록 반환
+            return env_path
         return env_path
 
     load_dotenv(env_path, override=override)
