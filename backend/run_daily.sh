@@ -41,16 +41,27 @@ if [ -f "$HOME/.bashrc" ]; then
 fi
 
 # [Local Config] Python 런타임 탐색
-if [ -n "$PYTHON_CMD" ] && command -v "$PYTHON_CMD" >/dev/null 2>&1; then
+python_cmd_usable() {
+    local cmd="$1"
+    command -v "$cmd" >/dev/null 2>&1 || return 1
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 8s "$cmd" -V >/dev/null 2>&1
+    else
+        "$cmd" -V >/dev/null 2>&1
+    fi
+}
+
+if [ -n "$PYTHON_CMD" ] && python_cmd_usable "$PYTHON_CMD"; then
     : # 이미 환경변수로 설정된 PYTHON_CMD 유지
-elif command -v python.exe >/dev/null 2>&1; then
+elif python_cmd_usable python.exe; then
     PYTHON_CMD="python.exe"
-elif command -v python >/dev/null 2>&1; then
+elif python_cmd_usable python; then
     PYTHON_CMD="python"
-elif command -v python3 >/dev/null 2>&1; then
+elif python_cmd_usable python3; then
     PYTHON_CMD="python3"
 else
-    echo "[ERROR] Python을 찾을 수 없습니다. 환경변수를 확인하세요."
+    echo "[ERROR] 사용 가능한 Python 런타임을 찾을 수 없습니다. 환경변수를 확인하세요."
     exit 1
 fi
 export PYTHONUNBUFFERED=1
@@ -482,7 +493,9 @@ fi
 
 # 충돌 방지를 위해 최신 변경사항 Pull
 log "INFO" "'$TARGET_BRANCH' 브랜치 최신화 (Pull)..."
-git pull origin $TARGET_BRANCH || { log "WARN" "Pull 실패 (무시하고 진행)."; }
+if ! run_git_with_timeout "${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"     git pull origin "$TARGET_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+    log "WARN" "Pull 실패 (무시하고 진행)."
+fi
 
 log "INFO" "현재 작업 브랜치: $(git rev-parse --abbrev-ref HEAD)"
 
