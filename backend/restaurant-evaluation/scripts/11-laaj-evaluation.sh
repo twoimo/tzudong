@@ -607,7 +607,7 @@ $TRANSCRIPT
     
     PROCESSED=$((PROCESSED + 1))
     rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
-    sleep 10 # Rate Limit
+    sleep 2 # Rate Limit
 done
 
 log_info "============================================================"

@@ -361,6 +361,7 @@ def get_video_meta_batch(
     youtube, video_ids: List[str], channel_name: str = None
 ) -> Dict[str, Dict]:
     """YouTube API 배치 요청 (최대 50개)"""
+    import concurrent.futures
     results = {}
     try:
         response = (
@@ -369,17 +370,15 @@ def get_video_meta_batch(
             .execute()
         )
 
+        items_data = []
+        urls_to_fetch = []
         for item in response.get("items", []):
             vid = item["id"]
             snippet = item.get("snippet", {})
             content_details = item.get("contentDetails", {})
             statistics = item.get("statistics", {})
 
-            duration_seconds = parse_duration(content_details.get("duration", "PT0S"))
-
-            # 썸네일 처리
             thumbnails = snippet.get("thumbnails", {})
-            # 최고 화질 선택
             thumb_url = (
                 thumbnails.get("maxres", {}).get("url")
                 or thumbnails.get("standard", {}).get("url")
@@ -388,8 +387,29 @@ def get_video_meta_batch(
                 or thumbnails.get("default", {}).get("url")
             )
 
-            # 해시 계산 (비용이 높지만 감지에 필수)
-            thumb_hash = get_image_hash(thumb_url) if thumb_url else None
+            items_data.append({
+                "vid": vid,
+                "snippet": snippet,
+                "content_details": content_details,
+                "statistics": statistics,
+                "thumb_url": thumb_url
+            })
+            urls_to_fetch.append(thumb_url)
+
+        def fetch_hash(url):
+            return get_image_hash(url) if url else None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            hashes = list(executor.map(fetch_hash, urls_to_fetch))
+
+        for data, thumb_hash in zip(items_data, hashes):
+            vid = data["vid"]
+            snippet = data["snippet"]
+            content_details = data["content_details"]
+            statistics = data["statistics"]
+            thumb_url = data["thumb_url"]
+
+            duration_seconds = parse_duration(content_details.get("duration", "PT0S"))
 
             results[vid] = {
                 "youtube_link": f"https://www.youtube.com/watch?v={vid}",
