@@ -180,6 +180,30 @@ format_duration() {
     else echo "${secs}s"; fi
 }
 
+# Cross-Platform Timeout Wrapper (GNU timeout, gtimeout, or bash background sleep)
+run_with_timeout() {
+    local timeout_sec="$1"
+    shift
+    if command -v timeout >/dev/null 2>&1; then
+        if timeout --version 2>&1 | grep -qi "GNU\|BusyBox"; then
+            timeout "${timeout_sec}s" "$@"
+            return $?
+        fi
+    elif command -v gtimeout >/dev/null 2>&1; then
+        gtimeout "${timeout_sec}s" "$@"
+        return $?
+    fi
+    # Fallback for macOS/Windows where timeout is missing or incompatible
+    "$@" &
+    local pid=$!
+    ( sleep "$timeout_sec"; kill -9 $pid 2>/dev/null ) &
+    local watchdog_pid=$!
+    wait $pid 2>/dev/null
+    local exit_code=$?
+    kill -9 $watchdog_pid 2>/dev/null
+    return $exit_code
+}
+
 is_debug_mode() {
     local mode="${LOG_VERBOSITY,,}"
     [ "$mode" = "debug" ] || [ "$mode" = "verbose" ]
@@ -561,7 +585,7 @@ PROMPT_EOF
                 local web_model="${WEB_GEMINI_MODEL:-Pro}"
                 
                 set +e
-                $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                run_with_timeout 1800 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
                 local py_exit=$?
                 set -e
                 
@@ -578,7 +602,7 @@ PROMPT_EOF
                 fi
             else
                 set +e
-                "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>"$temp_dir/stderr_${i}.log"
+                run_with_timeout 900 "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>"$temp_dir/stderr_${i}.log"
                 local exit_code=$?
                 set -e
     
@@ -591,7 +615,7 @@ PROMPT_EOF
                     local web_model="${WEB_GEMINI_MODEL:-Pro}"
                     
                     set +e
-                    $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                    run_with_timeout 1800 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
                     local py_exit=$?
                     set -e
                     
@@ -618,7 +642,7 @@ PROMPT_EOF
                         sleep 5
     
                         set +e
-                        "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>>"$temp_dir/stderr_${i}.log"
+                        run_with_timeout 900 "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>>"$temp_dir/stderr_${i}.log"
                         local fb_exit=$?
                         set -e
     
@@ -630,7 +654,7 @@ PROMPT_EOF
                             local web_model="${WEB_GEMINI_MODEL:-Pro}"
                             
                             set +e
-                            $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                            run_with_timeout 1800 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
                             local py_exit=$?
                             set -e
                             
@@ -651,18 +675,19 @@ PROMPT_EOF
             fi
         ) &
 
-        # 일정 개수(max_jobs)만큼 실행 후 대기 (병렬 실행 제어)
-        if (( (i + 1) % max_jobs == 0 )) || (( i == total_chunks - 1 )); then
-            wait
-            sleep 2
-        fi
+        # 일정 개수(max_jobs)만큼 실행 후 대기 (병렬 실행 제어) - Sliding Window 적용
+        while [ $(jobs -p | wc -l) -ge $max_jobs ]; do
+            sleep 1
+        done
         
         # 쿼타 초과 플래그 감지
         if [ -f "$TEMP_BASE/quota_exceeded.flag" ]; then
             log_error "할당량 초과(Quota Error)가 감지되어 해당 채널/영상의 남은 청크 처리를 즉시 중단합니다."
-            return 42
+            break
         fi
     done
+    
+    wait
 
     # 병렬 실행 후 결과 수합
     for ((i = 0; i < total_chunks; i++)); do

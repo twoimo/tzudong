@@ -131,11 +131,10 @@ async function main() {
 
     fs.mkdirSync(outputDir, { recursive: true });
 
-    // 강제 재인코딩: Gemini API의 500 에러를 방지하기 위해 해상도를 최대 360p로 제한하고
-    // 오디오를 Mono + 44.1kHz로 규격화합니다.
     const ext = path.extname(videoPath).toLowerCase();
+    const isMp4 = ext === '.mp4';
 
-    console.log(`[분할] 총 ${chunks.length}개 청크, 소스: ${ext}, 재인코딩 강제 적용`);
+    console.log(`[분할] 총 ${chunks.length}개 청크, 소스: ${ext}, ${isMp4 ? '스트림 복사(빠름) 적용' : '재인코딩(ultrafast) 적용'}`);
 
     for (const chunk of chunks) {
         const { chunk_index, start_sec, end_sec } = chunk;
@@ -150,23 +149,23 @@ async function main() {
 
         await removeFileBestEffort(tempOutFile, 3, 200);
 
-        // 비디오: x264, 최대 360p (scale), 30fps 제한, Baseline profile (안정성 극대화)
-        // 오디오: aac, mono (ac 1), 44.1kHz (ar 44100)
-        const ffmpegArgs = [
+        const ffmpegArgs = isMp4 ? [
+            '-y',
+            '-ss', String(start_sec),
+            '-t', String(duration),
+            '-i', toWindowsPath(videoPath),
+            '-c', 'copy',
+            '-avoid_negative_ts', 'make_zero',
+            toWindowsPath(tempOutFile),
+        ] : [
             '-y',
             '-ss', String(start_sec),
             '-t', String(duration),
             '-i', toWindowsPath(videoPath),
             '-c:v', 'libx264',
-            // NOTE: min(360,ih) 형태는 쉼표가 필터 구분자로 오인되어
-            // 일부 ffmpeg 빌드에서 "No such filter: 'ih)'" 오류를 유발할 수 있음.
-            // force_original_aspect_ratio=decrease로 동일 의도를 안전하게 표현.
             '-vf', 'scale=-2:360:force_original_aspect_ratio=decrease',
             '-r', '30',
-            '-profile:v', 'baseline',
-            '-level', '3.0',
-            '-pix_fmt', 'yuv420p',
-            '-preset', 'fast',
+            '-preset', 'ultrafast',
             '-crf', '28',
             '-c:a', 'aac',
             '-ac', '1',
