@@ -13,18 +13,28 @@
     python 06.1-transcript-document-with-meta.py --channel tzuyang
 """
 
+from __future__ import annotations
+
+
 import json
 import os
 import re
 import argparse
+import sys
 from pathlib import Path
 from collections import defaultdict
 from tqdm import tqdm
 from supabase import create_client, Client
-from dotenv import load_dotenv
+# shared utils import (backend/utils)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
 
-# .env 로드
-load_dotenv()
+from utils.runtime_paths import load_backend_env, resolve_backend_root
+
+# .env 로드 (backend/.env 우선)
+backend_root = resolve_backend_root(Path(__file__).resolve())
+load_backend_env(backend_root, prefer_local=False)
 
 # Supabase 설정
 SUPABASE_URL = os.getenv("SUPABASE_URL")

@@ -14,7 +14,10 @@ import time
 import argparse
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
 
 # shared utils import (backend/utils)
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -50,7 +53,7 @@ def main():
     # .env 로드
     # 1) legacy: backend/restaurant-evaluation/.env
     legacy_env = Path(__file__).parent.parent / ".env"
-    if legacy_env.exists():
+    if legacy_env.exists() and load_dotenv is not None:
         load_dotenv(legacy_env)
 
     # 2) 표준: backend/.env (없으면 .env.local fallback)
