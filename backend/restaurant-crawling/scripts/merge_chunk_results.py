@@ -79,14 +79,18 @@ def merge_restaurant_pair(
     return merged
 
 
-def parse_response_file(filepath: Path) -> List[Dict[str, Any]]:
-    """Gemini 응답 파일에서 레스토랑 목록 추출"""
+def parse_response_file(filepath: Path) -> tuple:
+    """Gemini 응답 파일에서 레스토랑 목록 및 no_restaurant_reason 추출.
+
+    Returns:
+        (restaurants_list, no_restaurant_reason_or_none)
+    """
     if not filepath.exists():
-        return []
+        return [], None
 
     text = filepath.read_text(encoding="utf-8").strip()
     if not text:
-        return []
+        return [], None
 
     if "```json" in text:
         start = text.find("```json") + 7
@@ -103,14 +107,15 @@ def parse_response_file(filepath: Path) -> List[Dict[str, Any]]:
         data = json.loads(text)
     except json.JSONDecodeError:
         print(f"[WARN] JSON 파싱 실패: {filepath}", file=sys.stderr)
-        return []
+        return [], None
 
     if isinstance(data, dict) and "restaurants" in data:
         restaurants = data["restaurants"]
+        reason = data.get("no_restaurant_reason")
         if isinstance(restaurants, list):
-            return restaurants
+            return restaurants, reason
 
-    return []
+    return [], None
 
 
 def merge_all_restaurants(
@@ -158,9 +163,12 @@ def main():
         return
 
     all_restaurants: List[Dict[str, Any]] = []
+    all_reasons: List[str] = []
     for f in files:
-        restaurants = parse_response_file(f)
+        restaurants, reason = parse_response_file(f)
         all_restaurants.extend(restaurants)
+        if reason:
+            all_reasons.append(reason)
         if restaurants:
             print(
                 f"[INFO] {f.name}: {len(restaurants)}개 식당 발견",
@@ -173,7 +181,10 @@ def main():
         file=sys.stderr,
     )
 
-    result = {"restaurants": merged}
+    result: Dict[str, Any] = {"restaurants": merged}
+    # 모든 청크에서 음식점이 없고 사유가 존재하면 전달
+    if not merged and all_reasons:
+        result["no_restaurant_reason"] = all_reasons[0]
     json.dump(result, sys.stdout, ensure_ascii=False)
 
 

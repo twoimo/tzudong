@@ -45,11 +45,20 @@ def load_last_jsonl_record(path: Path) -> Optional[Dict[str, Any]]:
 
 
 def has_non_empty_restaurants(record: Optional[Dict[str, Any]]) -> bool:
-    """records.restaurants가 비어있지 않은 배열인지 판별"""
+    """records.restaurants가 비어있지 않은 배열인지 판별.
+
+    no_restaurant_reason 필드가 존재하면 빈 배열도 유효한 결과로 인정한다.
+    (자택 먹방, 제품 광고 등 정말 음식점이 없는 영상)
+    """
     if not isinstance(record, dict):
         return False
     restaurants = record.get("restaurants")
-    return isinstance(restaurants, list) and len(restaurants) > 0
+    if not isinstance(restaurants, list):
+        return False
+    if len(restaurants) > 0:
+        return True
+    # 빈 배열이지만 사유가 명시되어 있으면 유효한 결과
+    return bool(record.get("no_restaurant_reason"))
 
 def scan_pending(args: argparse.Namespace) -> None:
     """
@@ -200,6 +209,10 @@ def validate_restaurant_data(data: Dict[str, Any]) -> bool:
         return False
 
     if len(data["restaurants"]) == 0:
+        reason = data.get("no_restaurant_reason")
+        if reason:
+            print(f"[INFO] 음식점 없음 (사유: {reason})", file=sys.stderr)
+            return True
         print("[ERROR] 'restaurants'가 빈 배열입니다 (재시도 대상)", file=sys.stderr)
         return False
 
