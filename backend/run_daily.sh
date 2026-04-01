@@ -359,7 +359,7 @@ count_pending_jsonl() {
 # [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
 sync_data_to_remote() {
     local STEP_NAME="$1"
-    local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-120}"
+    local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-300}"
     local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
     log "INFO" "------------------------------------------------------------"
     log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
@@ -379,17 +379,15 @@ sync_data_to_remote() {
         return 1
     fi
 
-    # 대용량 폴더는 추적에서 제외
-    git rm -r --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
-    git rm -r --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
-    git rm -r --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
-    git rm -r --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
-
-    # [Fix] CI 환경 등에서 생성된 루트 frames 폴더 추적 제외
-    git rm -r --cached backend/restaurant-crawling/data/frames 2>/dev/null || true
-    # [Security] 민감 정보 추적 제외
-    git rm --cached backend/restaurant-crawling/data/credentials.json 2>/dev/null || true
-    git rm --cached backend/restaurant-crawling/data/cookies.txt 2>/dev/null || true
+    # [PERF] .gitignore에 크롤링 임시/대용량 데이터가 선언되어 있으므로, git rm -r --cached 연산을 최소화
+    # 만약 추적된 흔적이 남아있을 경우를 대비해 빠른 fail-soft를 지정합니다.
+    git rm -r --quiet --cached backend/restaurant-crawling/data/*/frames 2>/dev/null || true
+    git rm -r --quiet --cached backend/restaurant-crawling/data/*/video_cache 2>/dev/null || true
+    git rm -r --quiet --cached backend/restaurant-crawling/data/*/temp_video 2>/dev/null || true
+    git rm -r --quiet --cached backend/restaurant-crawling/data/*/thumbnails 2>/dev/null || true
+    git rm -r --quiet --cached backend/restaurant-crawling/data/frames 2>/dev/null || true
+    git rm --quiet --cached backend/restaurant-crawling/data/credentials.json 2>/dev/null || true
+    git rm --quiet --cached backend/restaurant-crawling/data/cookies.txt 2>/dev/null || true
 
     COMMIT_MSG="chore(data): update crawling data ($DATE) - $STEP_NAME"
 
