@@ -1,25 +1,5 @@
 [
   {
-    "name": "_ga",
-    "value": "GA1.1.2082305227.1774643886",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1809204267,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "Lax"
-  },
-  {
-    "name": "_ga_WC57KJ50ZZ",
-    "value": "GS2.1.s1774643886$o1$g1$t1774644266$j60$l0$h0",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1809204266,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "Lax"
-  },
-  {
     "name": "_ga_BF8Q35BMLM",
     "value": "GS2.1.s1774643887$o1$g1$t1774644267$j60$l0$h0",
     "domain": ".gemini.google.com",
@@ -57,16 +37,6 @@
     "expires": 1809158666,
     "httpOnly": true,
     "secure": true,
-    "sameSite": "None"
-  },
-  {
-    "name": "_gcl_au",
-    "value": "1.1.74830357.1774643885",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1782419885,
-    "httpOnly": false,
-    "secure": false,
     "sameSite": "None"
   },
   {
@@ -220,51 +190,81 @@
     "sameSite": "None"
   },
   {
+    "name": "_ga",
+    "value": "GA1.1.2082305227.1774643886",
+    "domain": ".gemini.google.com",
+    "path": "/",
+    "expires": 1809596375,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "None"
+  },
+  {
     "name": "__Secure-1PSIDTS",
-    "value": "sidts-CjIBWhotCRMhreBEPNOEgyKyj9kEjMQNHJdN3tQaW6H-wt99tvz50XLdKY5vfouQMGFALhAA",
+    "value": "sidts-CjIBWhotCdVNPpxA8hyrNdWoTa9opt_9AJjlt6Fy5fE4_jSAMrx3KigM1TGybEPljh8MuBAA",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806571222,
+    "expires": 1806572378,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
   },
   {
     "name": "__Secure-3PSIDTS",
-    "value": "sidts-CjIBWhotCRMhreBEPNOEgyKyj9kEjMQNHJdN3tQaW6H-wt99tvz50XLdKY5vfouQMGFALhAA",
+    "value": "sidts-CjIBWhotCdVNPpxA8hyrNdWoTa9opt_9AJjlt6Fy5fE4_jSAMrx3KigM1TGybEPljh8MuBAA",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806571222,
+    "expires": 1806572378,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
   },
   {
+    "name": "_ga_WC57KJ50ZZ",
+    "value": "GS2.1.s1775036375$o2$g1$t1775036389$j46$l0$h0",
+    "domain": ".gemini.google.com",
+    "path": "/",
+    "expires": 1809596389,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "None"
+  },
+  {
+    "name": "_gcl_au",
+    "value": "1.1.74830357.1774643885",
+    "domain": ".gemini.google.com",
+    "path": "/",
+    "expires": 1782419885,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "None"
+  },
+  {
     "name": "SIDCC",
-    "value": "AKEyXzXzAiQKhU1FEFikfWlT2GjQVSqZXbjlI7lOY92KuJj1cc06-NG6BqsNObzTQ5xzI3PLwA",
+    "value": "AKEyXzXJGMxaMpMDAbIk2IBqeDazes4hnNShhnxAAvYGUD1h9HJXc_-wxJXGtOgdF7PyrdCGiw",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806571399,
+    "expires": 1806572850,
     "httpOnly": false,
     "secure": false,
     "sameSite": "None"
   },
   {
     "name": "__Secure-1PSIDCC",
-    "value": "AKEyXzXGKxAcP9BjW6owtNmu_itlfyoMDpVAAHLDZoyc09npjtvOQsTnpdyUO995Bq8e8Yx_PQo",
+    "value": "AKEyXzWbsUdjbkYoiY9IxWthqkJK1iNCK2LfKonnvbmxwWtkNYyvUnUrjdViwDTfeZyuRCC8pmc",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806571399,
+    "expires": 1806572850,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
   },
   {
     "name": "__Secure-3PSIDCC",
-    "value": "AKEyXzUO0iGGaNn8gjwb20-kxbAyVimJnzIh0f2H7Rs-3BEMeK-PTHLWvShELmXQDzFFK2_vru0",
+    "value": "AKEyXzXLYsKR9uRqrlXMEGbyM0PJ4AYO8wpE71tAV-HNoBr7q7NlQnkkeIyIR768mL5K6r_SwwY",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806571399,
+    "expires": 1806572850,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
