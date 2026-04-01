@@ -1,16 +1,18 @@
-# ── 의존성 ────────────────────────────────────────────────
+# ── 의존성 / Dependency ──────────────────────────────────
 node_modules/
 __pycache__/
 backend/bun.lock
 
-# ── 빌드 / 출력 ───────────────────────────────────────────
+# ── 빌드 / 출력 / Build & Output ─────────────────────────
 .next/
+.next-stale-*/
 .turbo/
 dist/
-.vercel
+.vercel/
+apps/web/.cache/
 
-# ── 로그 ──────────────────────────────────────────────────
-logs
+# ── 로그 / Logs ──────────────────────────────────────────
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -19,26 +21,26 @@ backend/log/
 daily_run.log
 run_*.log
 
-# ── 런타임 데이터 ─────────────────────────────────────────
-pids
+# ── 런타임 데이터 / Runtime ──────────────────────────────
+pids/
 *.pid
 *.seed
 *.pid.lock
 
-# ── 환경 변수 ─────────────────────────────────────────────
+# ── 환경 변수 / Environment ──────────────────────────────
 .env
 .env.test
 .env.local
 *.env.local
 backend/.env
 
-# ── OS 메타데이터 ─────────────────────────────────────────
+# ── OS 메타데이터 / OS Meta ──────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
 *.desktop.ini
 
-# ── IDE / 에디터 ──────────────────────────────────────────
+# ── IDE / 에디터 / Editor ────────────────────────────────
 .vscode/
 .idea/
 *.suo
@@ -47,52 +49,34 @@ desktop.ini
 *.sln
 *.sw?
 
-# ── Supabase ──────────────────────────────────────────────
+# ── Supabase / DB / Auth ────────────────────────────────
 supabase/.temp/
 supabase/backup_db/
+backend/supabase/backup_db/*.sql
 supabase/.env*
 
-# ── 프로젝트 데이터 (대용량 / 자동 생성) ──────────────────
-backend/data/cookies.txt
-backend/restaurant-crawling/data/cookies.txt
-backend/restaurant-crawling/data/cookies.json
-backend/restaurant-crawling/data/*/frames
-backend/restaurant-crawling/data/*/video_cache
-backend/restaurant-crawling/data/*/temp_video
-backend/restaurant-crawling/data/*/thumbnails
-backend/restaurant-crawling/data/frames/
-backend/restaurant-crawling/data/credentials.json
-backend/restaurant-crawling/data/tzuyang/checked_cache.json
+# ── 프로젝트 데이터 (대용량 / 임시) ──────────────────────
 backend/restaurant-evaluation/temp/health_check_prompt.txt
 backend/restaurant-evaluation/temp/health_check_response.json
-backend/.sync_trigger
 
-# ── CI / 임시 파일 ────────────────────────────────────────
+# 대용량/자동 생성 폴더
+backend/restaurant-crawling/temp/
+
+# 브라우저 프로필 데이터
+backend/restaurant-crawling/data/browser_profile/
+backend/restaurant-crawling/data/camoufox_profile/
+backend/restaurant-crawling/data/chromium_profile/
+
+# ── CI / 인증 / 임시 문서 ─────────────────────────────────
 summary.md
-pr_body.md
-pr_body_develop.md
-pr_body_main.md
-
-# Large DB backup files
-backend/supabase/backup_db/*.sql
-
-# omx
-.omx
-
-# codex
-.codex
-.agents
-
-# Next.js stale cache fallback directories
-.next-stale-*
-apps/web/.cache
-OMX_MODERNIZATION_WORKLOG.md
-AGENTS.md
-
-.gemini/
+body.md
+pr_body*.md
 gha-creds-*.json
-backend/restaurant-crawling/data/*
-backend/.sync_trigger
-backend/restaurant-crawling/temp/*
-.codex/*
+
+# ── AI 코딩 / 에이전트 도구 (Codex/OMX/Gemini) ─────────────
 .omx/
+.codex/
+.agents/
+.gemini/
+AGENTS.md
+OMX_MODERNIZATION_WORKLOG.md
