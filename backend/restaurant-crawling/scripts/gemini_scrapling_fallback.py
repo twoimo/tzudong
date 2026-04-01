@@ -81,8 +81,7 @@ def resolve_headless_mode():
 
     우선순위:
     1) WEB_FALLBACK_HEADLESS env (1/true/on 또는 0/false/off)
-    2) Windows(os.name == 'nt') 기본값: headful(False)  # filechooser 안정성 우선
-    3) 기타 OS 기본값: headless(True)
+    2) 기본값: headless(True)
     """
     raw = os.getenv("WEB_FALLBACK_HEADLESS")
     if raw is not None:
@@ -92,8 +91,6 @@ def resolve_headless_mode():
         if val in {"0", "false", "no", "off"}:
             return False
 
-    if os.name == "nt":
-        return False
     return True
 
 
