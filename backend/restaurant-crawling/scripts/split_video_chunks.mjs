@@ -136,7 +136,11 @@ async function main() {
 
     console.log(`[분할] 총 ${chunks.length}개 청크, 소스: ${ext}, ${isMp4 ? '스트림 복사(빠름) 적용' : '재인코딩(ultrafast) 적용'}`);
 
-    for (const chunk of chunks) {
+    const CONCURRENCY_LIMIT = isMp4 ? 4 : 2; // 스트림 복사는 가볍게 병렬처리 4개, 재인코딩은 무거우므로 2개
+    const executing = new Set();
+    const results = [];
+
+    const processChunk = async (chunk) => {
         const { chunk_index, start_sec, end_sec } = chunk;
         const duration = end_sec - start_sec;
         const outFile = path.join(outputDir, `chunk_${chunk_index}.mp4`);
@@ -144,7 +148,7 @@ async function main() {
 
         if (fs.existsSync(outFile)) {
             console.log(`[건너뜀] chunk_${chunk_index}.mp4 이미 존재`);
-            continue;
+            return;
         }
 
         await removeFileBestEffort(tempOutFile, 3, 200);
@@ -177,7 +181,7 @@ async function main() {
         const timeoutMs = computeTimeoutMs(duration);
 
         try {
-            console.log(`[분할] 청크 ${chunk_index}: ${start_sec}초 ~ ${end_sec}초 (${duration}초)`);
+            console.log(`[분할] 청크 ${chunk_index} 시작: ${start_sec}초 ~ ${end_sec}초 (${duration}초)`);
             await execFilePromise(ffmpegPath, ffmpegArgs, { timeout: timeoutMs, maxBuffer: 100 * 1024 * 1024 });
 
             if (!fs.existsSync(tempOutFile)) {
@@ -190,8 +194,25 @@ async function main() {
         } catch (error) {
             console.error(`[오류] 청크 ${chunk_index}: ${error.message}`);
             await removeFileBestEffort(tempOutFile);
-            process.exit(1);
+            throw error; // 에러 던져서 전체 프로세스 중단
         }
+    };
+
+    for (const chunk of chunks) {
+        const p = Promise.resolve().then(() => processChunk(chunk));
+        results.push(p);
+        executing.add(p);
+        const clean = () => executing.delete(p);
+        p.then(clean).catch(clean);
+        if (executing.size >= CONCURRENCY_LIMIT) {
+            await Promise.race(executing);
+        }
+    }
+
+    try {
+        await Promise.all(results);
+    } catch (err) {
+        process.exit(1);
     }
 
     console.log(`[완료] ${outputDir}에 ${chunks.length}개 세그먼트 생성`);
