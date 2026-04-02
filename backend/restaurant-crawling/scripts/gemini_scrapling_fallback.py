@@ -728,6 +728,11 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     'button:has-text("Upload")',
                     'button:has-text("업로드")',
                     'button:has-text("첨부")',
+                    'button[aria-label*="업로드 유형"]',
+                    'button[aria-label*="upload type"]',
+                    'button[aria-label*="입력 영역 메뉴"]',
+                    'button[aria-label*="input area menu"]',
+                    'button.menu-button.open.mat-primary',
                 ]
 
                 for selector in upload_button_selectors:
@@ -1022,7 +1027,7 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(1)
 
-    max_attempts = 1
+    max_attempts = 2
     for attempt in range(max_attempts):
         if attempt > 0:
             log(f"--- ⚠️ 재시도 ({attempt+1}/{max_attempts}) 시작 ---")
