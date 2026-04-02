@@ -251,21 +251,15 @@ has_pending_data_changes() {
     # 2) untracked 변경 감지
     untracked_sample="$(
         run_git_with_timeout "$detect_timeout" \
-            git ls-files --others --exclude-standard -- \
-                backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ 2>/dev/null | head -n 1
+            bash -c 'git ls-files --others --exclude-standard -- backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ 2>/dev/null | grep -E "\.(jsonl|txt|json)$" | head -n 1'
     )"
     ls_exit=$?
-    if [ "$ls_exit" -ne 0 ]; then
-        case "$ls_exit" in
-            124|137)
-                log "WARN" "데이터 변경 감지(ls-files) 시간 초과(${detect_timeout}s). 안전하게 동기화를 시도합니다."
-                return 0
-                ;;
-            *)
-                log "WARN" "데이터 변경 감지(ls-files) 실패(exit=$ls_exit). 안전하게 동기화를 시도합니다."
-                return 0
-                ;;
-        esac
+    if [ "$ls_exit" -eq 124 ] || [ "$ls_exit" -eq 137 ]; then
+        log "WARN" "데이터 변경 감지(ls-files) 시간 초과(${detect_timeout}s). 안전하게 동기화를 시도합니다."
+        return 0
+    elif [ "$ls_exit" -ne 0 ] && [ "$ls_exit" -ne 1 ]; then # grep -vE pipe exit code 1 if empty
+        log "WARN" "데이터 변경 감지(ls-files) 실패(exit=$ls_exit). 안전하게 동기화를 시도합니다."
+        return 0
     fi
 
     [ -n "$untracked_sample" ]
@@ -359,7 +353,7 @@ count_pending_jsonl() {
 # [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
 sync_data_to_remote() {
     local STEP_NAME="$1"
-    local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-300}"
+    local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-1200}"
     local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
     log "INFO" "------------------------------------------------------------"
     log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
@@ -372,9 +366,9 @@ sync_data_to_remote() {
 
     log "INFO" "변경 된 데이터를 커밋합니다."
 
-    # 데이터 파일 추가
+    # 데이터 파일 추가 (git ls-files 기반으로 매우 빠르고 효율적으로 staging)
     if ! run_git_with_timeout "$stage_timeout" \
-        git add -A backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ 2>&1 | tee -a "$LOG_FILE"; then
+        bash -c 'git ls-files --others --modified --exclude-standard backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ | grep -E "\.(jsonl|txt|json)$" | xargs -r git add' 2>&1 | tee -a "$LOG_FILE"; then
         log "ERROR" "데이터 파일 stage 실패 (timeout=${stage_timeout}s)"
         return 1
     fi

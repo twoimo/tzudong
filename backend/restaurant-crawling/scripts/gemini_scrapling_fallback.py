@@ -586,7 +586,7 @@ def manual_login():
 
 
 def run_fallback(prompt_path, video_path, output_path, target_model=None):
-    max_retries = 3
+    max_retries = 1
     for attempt in range(1, max_retries + 1):
         log(f"--- 시도 {attempt}/{max_retries} ---")
         try:
@@ -717,6 +717,10 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     'button[aria-label="Open upload file menu"]',
                     'button[aria-label*="Upload file"]',
                     'button[aria-label*="upload file menu"]',
+                    'button[aria-label*="Upload image"]',
+                    'button[aria-label*="Upload"]',
+                    'button[mattooltip*="Upload"]',
+                    'button.upload-button',
                     'button[aria-label*="파일 업로드 메뉴"]',
                     'button[aria-label*="파일 업로드"]',
                     'button[aria-label*="업로드 메뉴"]',
@@ -749,7 +753,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                         for click_try in range(2):
                             try:
-                                with page.expect_file_chooser(timeout=20000) as fc_info:
+                                with page.expect_file_chooser(timeout=5000) as fc_info:
                                     btn.click()
                                     human_delay(1, 2)
 
@@ -811,7 +815,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                             if accept_upload_disclaimer_if_present(page):
                                 log("동의 팝업 처리 후 hidden trigger 재시도")
                                 try:
-                                    with page.expect_file_chooser(timeout=12000) as fc_info:
+                                    with page.expect_file_chooser(timeout=5000) as fc_info:
                                         try:
                                             trigger.click(force=True, timeout=4000)
                                         except Exception:
@@ -829,8 +833,8 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     log("파일 업로드 대기 (진행 표시줄 확인)...")
                     try:
                         remove_btn = page.locator('button[aria-label*="Remove file"], button[aria-label*="삭제"], button[aria-label*="Delete"], button[aria-label*="지우기"]').first
-                        remove_btn.wait_for(state="visible", timeout=120000)
-                        page.wait_for_selector('mat-progress-spinner, mat-spinner', state="hidden", timeout=120000)
+                        remove_btn.wait_for(state="visible", timeout=30000)
+                        page.wait_for_selector('mat-progress-spinner, mat-spinner', state="hidden", timeout=30000)
                         log("업로드 완료!")
                     except Exception as e:
                         log(f"업로드 완료 감지 지연 (계속 진행): {compact_error(e)}")
@@ -844,7 +848,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                 textarea.fill(prompt_text)
 
                 human_delay(1, 2)
-                send_button = page.locator('button[aria-label*="Send"], button[aria-label*="보내기"], button.send-button').first
+                send_button = page.locator('button[aria-label*="Send"], button[aria-label*="보내기"], button.send-button, button[mattooltip*="Send"], button[mattooltip*="Submit"], button[aria-label*="Submit"]').first
                 response_selector = (
                     '.message-content, message-content, div[data-message-author-role="model"], '
                     'model-response, response-container .response-container-content, '
@@ -1018,7 +1022,7 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(1)
 
-    max_attempts = 3
+    max_attempts = 1
     for attempt in range(max_attempts):
         if attempt > 0:
             log(f"--- ⚠️ 재시도 ({attempt+1}/{max_attempts}) 시작 ---")
