@@ -233,11 +233,11 @@ run_chunk_web_fallback() {
     local fallback_segment
     local fallback_response
     local web_model="${WEB_GEMINI_MODEL:-Pro}"
-    local web_fallback_timeout_sec="${WEB_FALLBACK_TIMEOUT_SEC:-900}"
+    local web_fallback_timeout_sec="${WEB_FALLBACK_TIMEOUT_SEC:-1200}"
 
     if ! [[ "$web_fallback_timeout_sec" =~ ^[0-9]+$ ]] || [ "$web_fallback_timeout_sec" -lt 1 ]; then
-        log_warning "WEB_FALLBACK_TIMEOUT_SEC 값이 잘못되어 기본값 900초를 사용합니다: $web_fallback_timeout_sec"
-        web_fallback_timeout_sec=900
+        log_warning "WEB_FALLBACK_TIMEOUT_SEC 값이 잘못되어 기본값 1200초를 사용합니다: $web_fallback_timeout_sec"
+        web_fallback_timeout_sec=1200
     fi
 
     fallback_script=$(maybe_normalize "$fallback_python" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
