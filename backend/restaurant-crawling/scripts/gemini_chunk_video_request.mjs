@@ -9,9 +9,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
 
 /** 파일 처리 상태 폴링 간격 (밀리초) */
-const POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 3000;
 /** 최대 폴링 시도 횟수 (약 5분 대기 - 긴 영상 처리 대응) */
-const MAX_POLL_ATTEMPTS = 20;
+const MAX_POLL_ATTEMPTS = 100;
 /** 전체 프로세스(업로드 포함) 최대 재시도 횟수 (3회 시도) */
 const MAX_PROCESS_RETRIES = 3;
 
@@ -27,10 +27,10 @@ async function fetchWithTimeout(fn, timeoutMs = 60000) {
 /** 업로드된 파일이 ACTIVE 상태가 될 때까지 폴링 대기 */
 async function waitForProcessing(fileManager, fileName) {
     // [GitHub Action 최적화] 업로드 직후 바로 상태를 찌르지 않고 잠시 대기하여 500 에러 방지
-    console.log('  [대기] 서버 파싱을 위해 20초간 초기 대기...');
-    for (let s = 1; s <= 20; s++) {
+    console.log('  [대기] 서버 파싱을 위해 2초간 초기 대기...');
+    for (let s = 1; s <= 2; s++) {
         await new Promise(r => setTimeout(r, 1000));
-        if (s % 5 === 0) console.log(`    초기 대기 진행 중... ${s}초/20초`);
+        if (s % 2 === 0) console.log(`    초기 대기 진행 중... ${s}초/2초`);
     }
 
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
@@ -52,7 +52,6 @@ async function waitForProcessing(fileManager, fileName) {
         console.log(`    [폴링 대기] 다음 확인까지 ${POLL_INTERVAL_MS / 1000}초 대기 시작...`);
         for (let s = 1; s <= (POLL_INTERVAL_MS / 1000); s++) {
             await new Promise(r => setTimeout(r, 1000));
-            if (s % 5 === 0) console.log(`      폴링 대기 진행 중... ${s}초/${POLL_INTERVAL_MS / 1000}초`);
         }
     }
     throw new Error(`파일 처리 타임아웃: ${fileName}`);
