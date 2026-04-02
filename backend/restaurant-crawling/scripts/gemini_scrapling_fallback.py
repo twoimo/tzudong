@@ -1006,7 +1006,18 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                         text_blocks = get_model_text_blocks()
                         if text_blocks:
                             current_text = text_blocks[-1]
-                            if ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
+                            is_valid_payload, _ = validate_response_payload(current_text)
+                            if is_valid_payload:
+                                time.sleep(3)
+                                latest_blocks = get_model_text_blocks()
+                                if latest_blocks:
+                                    latest_text = latest_blocks[-1].strip()
+                                    latest_valid, _ = validate_response_payload(latest_text)
+                                    if latest_valid:
+                                        log("답변 JSON 텍스트 렌더링 완료 감지.")
+                                        success = True
+                                        break
+                            elif ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
                                 time.sleep(3)
                                 if get_model_text_blocks() and get_model_text_blocks()[-1].strip() == current_text:
                                     log("답변 JSON 텍스트 렌더링 완료 감지.")
