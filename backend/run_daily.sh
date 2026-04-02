@@ -279,6 +279,78 @@ step_end() {
     log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
 }
 
+FAILED_REQUIRED_STEPS=()
+SKIPPED_STEPS=()
+
+record_required_failure() {
+    local step_name="$1"
+    local reason="${2:-}"
+    local entry="$step_name"
+
+    if [ -n "$reason" ]; then
+        entry="$entry - $reason"
+    fi
+
+    FAILED_REQUIRED_STEPS+=("$entry")
+    log "ERROR" "$step_name 실패${reason:+: $reason}"
+}
+
+record_skipped_step() {
+    local step_name="$1"
+    local reason="${2:-}"
+    local entry="$step_name"
+
+    if [ -n "$reason" ]; then
+        entry="$entry - $reason"
+    fi
+
+    SKIPPED_STEPS+=("$entry")
+    log "WARN" "$step_name 건너뜀${reason:+: $reason}"
+}
+
+record_exit_if_failed() {
+    local step_name="$1"
+    local exit_code="$2"
+    local reason="${3:-}"
+
+    if [ "$exit_code" -eq 0 ]; then
+        return 0
+    fi
+
+    if [ -n "$reason" ]; then
+        record_required_failure "$step_name" "$reason (exit=$exit_code)"
+    else
+        record_required_failure "$step_name" "exit=$exit_code"
+    fi
+    return 1
+}
+
+has_git_identity() {
+    [ -n "$(git config user.name 2>/dev/null)" ] && [ -n "$(git config user.email 2>/dev/null)" ]
+}
+
+has_supabase_credentials() {
+    [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_KEY:-}" ]
+}
+
+emit_step_summary_log() {
+    local item
+
+    if [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
+        log "WARN" "건너뛴 단계 요약 (${#SKIPPED_STEPS[@]}건)"
+        for item in "${SKIPPED_STEPS[@]}"; do
+            log "WARN" " - $item"
+        done
+    fi
+
+    if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
+        log "ERROR" "실패한 필수 단계 요약 (${#FAILED_REQUIRED_STEPS[@]}건)"
+        for item in "${FAILED_REQUIRED_STEPS[@]}"; do
+            log "ERROR" " - $item"
+        done
+    fi
+}
+
 # [PERF] 파이프라인 경과 시간 확인 (타임아웃 보호)
 check_timeout() {
     local MAX_MINUTES=${1:-45}  # 기본 45분 타임아웃 (GH 스텝 50분 - 5분 여유)
@@ -322,6 +394,10 @@ run_parallel() {
     if [ $EXIT_B -ne 0 ]; then
         log "WARN" "[$LABEL_B] 비정상 종료 (exit: $EXIT_B)"
     fi
+
+    if [ $EXIT_A -ne 0 ] || [ $EXIT_B -ne 0 ]; then
+        return 1
+    fi
     return 0
 }
 
@@ -362,6 +438,11 @@ sync_data_to_remote() {
     if ! has_pending_data_changes; then
         log "INFO" "변경 된 데이터가 없습니다. (Skip)"
         return 0
+    fi
+
+    if ! has_git_identity; then
+        log "ERROR" "git user.name/user.email 미설정으로 데이터 동기화를 진행할 수 없습니다."
+        return 1
     fi
 
     log "INFO" "변경 된 데이터를 커밋합니다."
@@ -500,6 +581,8 @@ echo "::group::[Step 1] URL Collection"
 step_start
 log "INFO" "[Step 1] URL 수집 중..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+STEP_1_EXIT=${PIPESTATUS[0]}
+record_exit_if_failed "Step 1 (URL Collection)" "$STEP_1_EXIT"
 step_end "Step 1 (URL Collection)"
 echo "::endgroup::"
 
@@ -536,6 +619,8 @@ echo "::group::[Step 2] Metadata Collection"
 step_start
 log "INFO" "[Step 2] 메타데이터 수집 및 스케줄링..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+STEP_2_EXIT=${PIPESTATUS[0]}
+record_exit_if_failed "Step 2 (Metadata)" "$STEP_2_EXIT"
 step_end "Step 2 (Metadata)"
 echo "::endgroup::"
 
@@ -548,11 +633,17 @@ run_parallel \
     "$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang" \
     "Step 2.5 Orphan Cleanup" \
     "$PYTHON_CMD backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py --channel tzuyang"
+STEP_21_EXIT=$?
+if [ $STEP_21_EXIT -ne 0 ]; then
+    record_required_failure "Step 2.1+2.5 (Migration+Cleanup)" "parallel step 중 하나 이상 실패"
+fi
 step_end "Step 2.1+2.5 (Migration+Cleanup)"
 echo "::endgroup::"
 
 # [PERF] Sync #1: 메타데이터/정리 완료 후 저장
-sync_data_to_remote "Phase 1 (Meta/Cleanup)"
+if ! sync_data_to_remote "Phase 1 (Meta/Cleanup)"; then
+    record_required_failure "Sync #1 (Phase 1 Meta/Cleanup)" "data 동기화 실패"
+fi
 
 # ============================================================
 # [Phase 2] 멀티모달 데이터 확보 (Multi-modal Processing)
@@ -579,6 +670,7 @@ log "INFO" "--- [Step 3 Transcript] ---"
 cat "$TEMP_LOG_3" | tee -a "$LOG_FILE"
 if [ $EXIT_3 -ne 0 ]; then
     log "WARN" "[Step 3] Transcript 비정상 종료 (exit: $EXIT_3)"
+    record_required_failure "Step 3 (Transcript)" "exit=$EXIT_3"
 fi
 rm -f "$TEMP_LOG_3"
 echo "::endgroup::"
@@ -593,7 +685,9 @@ else
     MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
 fi
 
-if [[ "$MAX_VIDEOS" -eq -1 ]]; then
+if [ $EXIT_3 -ne 0 ]; then
+    record_skipped_step "Step 3.1 (Context Generation)" "Step 3 transcript 실패"
+elif [[ "$MAX_VIDEOS" -eq -1 ]]; then
     log "INFO" "Context Generation Skipped (Configured as -1)"
 else
     if [[ "$MAX_VIDEOS" -gt 0 ]]; then
@@ -602,6 +696,8 @@ else
         log "INFO" "Context Generation Limit: Unlimited"
     fi
     $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
+    STEP_31_EXIT=${PIPESTATUS[0]}
+    record_exit_if_failed "Step 3.1 (Context Generation)" "$STEP_31_EXIT"
 fi
 echo "::endgroup::"
 
@@ -616,6 +712,7 @@ kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
 cat "$TEMP_LOG_4" >> "$LOG_FILE"
 if [ $EXIT_4 -ne 0 ]; then
     log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
+    record_required_failure "Step 4 (Heatmap & Frames)" "exit=$EXIT_4"
 fi
 rm -f "$TEMP_LOG_4"
 
@@ -623,12 +720,17 @@ step_end "Step 3+4 (Transcript+Frames+Context)"
 echo "::endgroup::"
 
 # [PERF] Sync #2: 자막/프레임 완료 후 저장 (Phase 2 통합 - 기존 3회 → 1회)
-sync_data_to_remote "Phase 2 (Transcript/Frames)"
+if ! sync_data_to_remote "Phase 2 (Transcript/Frames)"; then
+    record_required_failure "Sync #2 (Phase 2 Transcript/Frames)" "data 동기화 실패"
+fi
 
 # [PERF] 타임아웃 체크 - Phase 3 진입 전 시간 확인
 if ! check_timeout 45; then
     log "WARN" "시간 제한으로 Phase 3 건너뜁니다. 다음 실행에서 이어집니다."
-    sync_data_to_remote "Timeout Safety Sync"
+    record_skipped_step "Phase 3" "전체 타임아웃 도달"
+    if ! sync_data_to_remote "Timeout Safety Sync"; then
+        record_required_failure "Sync (Timeout Safety Sync)" "data 동기화 실패"
+    fi
     # Summary 생성으로 점프
     SKIP_PHASE3=true
 fi
@@ -644,6 +746,8 @@ echo "::group::[Step 6.1] Enrich Subtitles"
 step_start
 log "INFO" "[Step 6.1] 자막 문서 메타데이터 추가 중..."
 $PYTHON_CMD backend/restaurant-crawling/scripts/06.1-transcript-document-with-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+STEP_61_EXIT=${PIPESTATUS[0]}
+record_exit_if_failed "Step 6.1 (Enrich)" "$STEP_61_EXIT"
 step_end "Step 6.1 (Enrich)"
 echo "::endgroup::"
 
@@ -667,10 +771,17 @@ set -o pipefail
 if [ $CHUNK_EXIT_CODE -eq 42 ]; then
     log "WARN" "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
     SKIP_EVALUATION=true
+    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 quota 초과"
 elif [ $CHUNK_EXIT_CODE -eq 44 ]; then
     log "ERROR" "[CRITICAL] 구글 로그인 세션 만료! 웹 폴백을 더 이상 진행할 수 없습니다."
     log "INFO" "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
-    exit 1
+    record_required_failure "Step 08 (Chunk Multimodal)" "Google 로그인 세션 만료 (exit=44)"
+    SKIP_EVALUATION=true
+    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 로그인 prerequisite 미충족"
+elif [ $CHUNK_EXIT_CODE -ne 0 ]; then
+    record_required_failure "Step 08 (Chunk Multimodal)" "exit=$CHUNK_EXIT_CODE"
+    SKIP_EVALUATION=true
+    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 실패"
 fi
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
@@ -684,59 +795,105 @@ log "INFO" "[Step 09] Target Selection..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/09-target-selection.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+STEP_09_EXIT=${PIPESTATUS[0]}
+STEP_09_OK=true
+if ! record_exit_if_failed "Step 09 (Target Selection)" "$STEP_09_EXIT"; then
+    STEP_09_OK=false
+    record_skipped_step "Step 10~13 (Evaluation downstream)" "Step 09 실패"
+fi
 step_end "Step 09 (Target)"
 echo "::endgroup::"
 
 # 10. Rule 기반 평가 (위치/상호 검증)
+if [ "${STEP_09_OK}" = "true" ]; then
+
 echo "::group::[Step 10] Rule Evaluation"
 step_start
 log "INFO" "[Step 10] Rule Evaluation..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/10-rule-evaluation.py --channel tzuyang \
   --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+STEP_10_EXIT=${PIPESTATUS[0]}
 grep "Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
+STEP_10_OK=true
+if ! record_exit_if_failed "Step 10 (Rule Evaluation)" "$STEP_10_EXIT"; then
+    STEP_10_OK=false
+    record_skipped_step "Step 11~13 (Evaluation downstream)" "Step 10 실패"
+fi
 step_end "Step 10 (Rule Eval)"
 echo "::endgroup::"
 
-# [PERF] Sync #3: Rule 평가 완료 후 저장 (LAAJ 전 백업 - 중요)
-sync_data_to_remote "Phase 3a (Rule Eval)"
+if [ "${STEP_10_OK}" = "true" ]; then
+    # [PERF] Sync #3: Rule 평가 완료 후 저장 (LAAJ 전 백업 - 중요)
+    if ! sync_data_to_remote "Phase 3a (Rule Eval)"; then
+        record_required_failure "Sync #3 (Phase 3a Rule Eval)" "data 동기화 실패"
+    fi
 
-# [PERF] 타임아웃 체크 - LAAJ 진입 전 시간 확인 (가장 오래 걸리는 단계)
-if ! check_timeout 45; then
-    log "WARN" "시간 제한으로 LAAJ 평가를 건너뜁니다. 다음 실행에서 이어집니다."
-else
+    # [PERF] 타임아웃 체크 - LAAJ 진입 전 시간 확인 (가장 오래 걸리는 단계)
+    STEP_11_OK=true
+    if ! check_timeout 45; then
+        log "WARN" "시간 제한으로 LAAJ 평가를 건너뜁니다. 다음 실행에서 이어집니다."
+        STEP_11_OK=false
+        record_skipped_step "Step 11 (LAAJ Evaluation)" "LAAJ 진입 전 타임아웃 도달"
+    else
 
-# 11. LAAJ (LLM) 기반 평가
-echo "::group::[Step 11] LAAJ Evaluation"
-step_start
-log "INFO" "[Step 11] LAAJ Evaluation..."
-bash backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh --channel tzuyang \
-  --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
-step_end "Step 11 (LAAJ Eval)"
-echo "::endgroup::"
+    # 11. LAAJ (LLM) 기반 평가
+    echo "::group::[Step 11] LAAJ Evaluation"
+    step_start
+    log "INFO" "[Step 11] LAAJ Evaluation..."
+    bash backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh --channel tzuyang \
+      --crawling-path backend/restaurant-crawling/data/tzuyang \
+      --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+    STEP_11_EXIT=${PIPESTATUS[0]}
+    grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
+    if ! record_exit_if_failed "Step 11 (LAAJ Evaluation)" "$STEP_11_EXIT"; then
+        STEP_11_OK=false
+        record_skipped_step "Step 12~13 (Evaluation downstream)" "Step 11 실패"
+    fi
+    step_end "Step 11 (LAAJ Eval)"
+    echo "::endgroup::"
 
-fi # LAAJ 타임아웃 체크 종료
+    fi # LAAJ 타임아웃 체크 종료
 
-# 12. 결과 변환 (Transforms)
-echo "::group::[Step 12] Transform Results"
-step_start
-log "INFO" "[Step 12] Transform Results..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/12-transform.py --channel tzuyang \
-  --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-step_end "Step 12 (Transform)"
-echo "::endgroup::"
+    if [ "${STEP_11_OK}" = "true" ]; then
+        # 12. 결과 변환 (Transforms)
+        echo "::group::[Step 12] Transform Results"
+        step_start
+        log "INFO" "[Step 12] Transform Results..."
+        $PYTHON_CMD backend/restaurant-evaluation/scripts/12-transform.py --channel tzuyang \
+          --crawling-path backend/restaurant-crawling/data/tzuyang \
+          --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+        STEP_12_EXIT=${PIPESTATUS[0]}
+        STEP_12_OK=true
+        if ! record_exit_if_failed "Step 12 (Transform Results)" "$STEP_12_EXIT"; then
+            STEP_12_OK=false
+            record_skipped_step "Step 13 (Supabase)" "Step 12 실패"
+        fi
+        step_end "Step 12 (Transform)"
+        echo "::endgroup::"
 
-# 13. Supabase 결과 삽입
-echo "::group::[Step 13] Insert to Supabase"
-step_start
-log "INFO" "[Step 13] Insert to Supabase..."
-$PYTHON_CMD backend/restaurant-evaluation/scripts/13-supabase-insert.py --channel tzuyang \
-  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
-grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
-step_end "Step 13 (Supabase)"
-echo "::endgroup::"
+        if [ "${STEP_12_OK}" = "true" ]; then
+            # 13. Supabase 결과 삽입
+            echo "::group::[Step 13] Insert to Supabase"
+            step_start
+            if ! has_supabase_credentials; then
+                log "WARN" "[Step 13] SUPABASE_URL/SUPABASE_KEY 미설정 → Supabase 삽입을 건너뜁니다."
+                record_skipped_step "Step 13 (Supabase)" "SUPABASE_URL/SUPABASE_KEY 미설정"
+            else
+                log "INFO" "[Step 13] Insert to Supabase..."
+                $PYTHON_CMD backend/restaurant-evaluation/scripts/13-supabase-insert.py --channel tzuyang \
+                  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+                STEP_13_EXIT=${PIPESTATUS[0]}
+                record_exit_if_failed "Step 13 (Supabase)" "$STEP_13_EXIT"
+                if [ $STEP_13_EXIT -eq 0 ]; then
+                    grep "성공 (Insert):" "$LOG_FILE" | tail -n 1 | strip_ansi | while read -r line; do echo "::notice::DB Sync - $line"; done
+                fi
+            fi
+            step_end "Step 13 (Supabase)"
+            echo "::endgroup::"
+        fi
+    fi
+fi
+fi
 
 fi # SKIP_EVALUATION 종료
 
@@ -752,7 +909,9 @@ log "INFO" "============================================================"
 
 # [PERF] Final Sync (모든 Phase의 남은 변경사항 통합 커밋)
 log "INFO" "[Final] 'data' 브랜치에 최종 데이터 저장..."
-sync_data_to_remote "Final Sync"
+if ! sync_data_to_remote "Final Sync"; then
+    record_required_failure "Final Sync" "data 동기화 실패"
+fi
 
 # 코드 에디터 동기화 신호
 SYNC_TRIGGER_FILE="$PROJECT_ROOT/backend/.sync_trigger"
@@ -764,9 +923,24 @@ PIPELINE_END=$(date +%s)
 TOTAL_DURATION=$((PIPELINE_END - PIPELINE_START))
 TOTAL_MIN=$((TOTAL_DURATION / 60))
 TOTAL_SEC=$((TOTAL_DURATION % 60))
-log "OK" "============================================================"
-log "OK" "모든 단계가 완료되었습니다! (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
-log "OK" "============================================================"
+emit_step_summary_log
+
+FINAL_EXIT_CODE=0
+FINAL_STATUS_LABEL="OK"
+FINAL_STATUS_MESSAGE="모든 필수 단계가 완료되었습니다! (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
+
+if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
+    FINAL_EXIT_CODE=1
+    FINAL_STATUS_LABEL="ERROR"
+    FINAL_STATUS_MESSAGE="필수 단계 실패가 감지되었습니다. summary/log를 확인하세요. (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
+elif [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
+    FINAL_STATUS_LABEL="WARN"
+    FINAL_STATUS_MESSAGE="일부 단계가 건너뛰어졌지만 필수 단계는 완료되었습니다. (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
+fi
+
+log "$FINAL_STATUS_LABEL" "============================================================"
+log "$FINAL_STATUS_LABEL" "$FINAL_STATUS_MESSAGE"
+log "$FINAL_STATUS_LABEL" "============================================================"
 
 # ============================================================
 # GitHub Actions Summary 생성
@@ -789,7 +963,29 @@ fi
 if [ "${SKIP_PHASE3:-false}" = "true" ]; then
     echo "| Note | Phase 3 skipped (timeout) |" >> "$SUMMARY_MD"
 fi
+if [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
+    echo "| Skipped Steps | ${#SKIPPED_STEPS[@]} |" >> "$SUMMARY_MD"
+fi
+if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
+    echo "| Failed Required Steps | ${#FAILED_REQUIRED_STEPS[@]} |" >> "$SUMMARY_MD"
+fi
 echo "" >> "$SUMMARY_MD"
+
+if [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
+    echo "### Skipped Steps" >> "$SUMMARY_MD"
+    for item in "${SKIPPED_STEPS[@]}"; do
+        echo "- $item" >> "$SUMMARY_MD"
+    done
+    echo "" >> "$SUMMARY_MD"
+fi
+
+if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
+    echo "### Failed Required Steps" >> "$SUMMARY_MD"
+    for item in "${FAILED_REQUIRED_STEPS[@]}"; do
+        echo "- $item" >> "$SUMMARY_MD"
+    done
+    echo "" >> "$SUMMARY_MD"
+fi
 
 # 스텝별 타이밍 로그 추출
 echo "### Step Timings" >> "$SUMMARY_MD"
@@ -998,7 +1194,10 @@ echo "" >> "$SUMMARY_MD"
 # 실패 목록 (유튜브 다운로드 실패)
 FAILED_DOWNLOADS=$(grep "비디오 파일 확보 실패" "$LOG_FILE" 2>/dev/null | head -n 10)
 
-if [ -n "$FAILED_DOWNLOADS" ]; then
+if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
+    echo "### Pipeline Attention Required" >> "$SUMMARY_MD"
+    echo "> 필수 단계 실패가 감지되었습니다. 위 Failed Required Steps / 로그를 확인하세요." >> "$SUMMARY_MD"
+elif [ -n "$FAILED_DOWNLOADS" ]; then
     echo "### Manual Action Required (Missing Videos)" >> "$SUMMARY_MD"
     echo "> **Note**: 아래 영상들은 구글 드라이브에 없어 수집에 실패했습니다. 로컬에서 받아 드라이브에 올려주세요." >> "$SUMMARY_MD"
     echo "" >> "$SUMMARY_MD"
@@ -1052,3 +1251,4 @@ cat <<'EOF' >> "$SUMMARY_MD"
 +----------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
+exit "$FINAL_EXIT_CODE"
