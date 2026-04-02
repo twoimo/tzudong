@@ -41,15 +41,43 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode, self._format_process_output(result))
         self.assertIn("simulated git add failure", self._format_process_output(result))
 
+    def test_missing_gemini_key_skips_chunk_step_and_returns_non_zero_exit(self) -> None:
+        result = self._run_script(env_overrides={"GEMINI_API_KEY_BYEON": None}, force_phase3=True)
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Step 08 (Chunk Multimodal) 실패", result.stdout)
+        self.assertIn("Gemini API 키", result.stdout)
+        self.assertNotIn("모든 필수 단계가 완료되었습니다!", result.stdout)
+
+    def test_supabase_key_only_skips_insert_stage_in_local_mode(self) -> None:
+        result = self._run_script(
+            env_overrides={
+                "SUPABASE_SERVICE_ROLE_KEY": None,
+                "VITE_SUPABASE_PUBLISHABLE_KEY": None,
+                "SUPABASE_KEY": "stub-legacy-key",
+            },
+            force_phase3=True,
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Step 13 (Supabase) 건너뜀", result.stdout)
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY 또는 VITE_SUPABASE_PUBLISHABLE_KEY", result.stdout)
+
     def _run_script(
         self,
         *,
         transcript_exit: int = 0,
         final_sync_stage_failure: bool = False,
+        env_overrides: dict[str, str | None] | None = None,
+        force_phase3: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         project_root = self.root / "project"
         state_dir = self.root / "state"
         self._build_fixture(project_root, state_dir)
+        if force_phase3:
+            (project_root / "backend" / "restaurant-crawling" / "data" / "tzuyang" / "transcript" / "pending.jsonl").write_text(
+                '{"stub": true}\n', encoding="utf-8"
+            )
 
         env = os.environ.copy()
         env.update(
@@ -57,6 +85,10 @@ class RunDailyRegressionTests(unittest.TestCase):
                 "HOME": str(self.root / "home"),
                 "PATH": f"{project_root / 'bin'}:{env.get('PATH', '')}",
                 "PIPELINE_STDOUT_MODE": "on",
+                "YOUTUBE_API_KEY_BYEON": "stub-youtube-key",
+                "GEMINI_API_KEY_BYEON": "stub-gemini-key",
+                "SUPABASE_URL": "https://stub.supabase.co",
+                "SUPABASE_SERVICE_ROLE_KEY": "stub-service-role",
                 "RUN_DAILY_LOG_DIR": str(project_root / "tmp" / "logs"),
                 "RUN_DAILY_ARCHIVE_DIR": str(project_root / "tmp" / "logs" / "archive"),
                 "RUN_DAILY_CURRENT_LOG_LINK": str(project_root / "tmp" / "logs" / "current.log"),
@@ -67,6 +99,12 @@ class RunDailyRegressionTests(unittest.TestCase):
                 "PYTHON_CMD": "python3",
             }
         )
+        if env_overrides:
+            for key, value in env_overrides.items():
+                if value is None:
+                    env.pop(key, None)
+                else:
+                    env[key] = value
         Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
 
         return subprocess.run(
@@ -106,6 +144,10 @@ class RunDailyRegressionTests(unittest.TestCase):
             / "evaluation"
             / "laaj_results"
         ).mkdir(parents=True, exist_ok=True)
+        (project_root / "backend" / "node_modules" / "dotenv").mkdir(parents=True, exist_ok=True)
+        (project_root / "backend" / "node_modules" / "ffmpeg-static").mkdir(parents=True, exist_ok=True)
+        (project_root / "backend" / "node_modules" / "ffprobe-static").mkdir(parents=True, exist_ok=True)
+        (project_root / "backend" / "node_modules" / "@google" / "genai").mkdir(parents=True, exist_ok=True)
         (project_root / "bin").mkdir(parents=True, exist_ok=True)
         state_dir.mkdir(parents=True, exist_ok=True)
 
@@ -265,6 +307,16 @@ class RunDailyRegressionTests(unittest.TestCase):
         shift || true
 
         case "$cmd" in
+          config)
+            if [ "${1:-}" = "user.name" ]; then
+              echo "Test Runner"
+              exit 0
+            fi
+            if [ "${1:-}" = "user.email" ]; then
+              echo "test@example.com"
+              exit 0
+            fi
+            ;;
           rev-parse)
             if [ "${1:-}" = "--abbrev-ref" ] && [ "${2:-}" = "HEAD" ]; then
               echo "data"

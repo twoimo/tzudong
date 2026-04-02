@@ -28,6 +28,7 @@ CHUNK_PLANNER="$SCRIPT_DIR/chunk_planner.py"
 SPLIT_VIDEO="$SCRIPT_DIR/split_video_chunks.mjs"
 GEMINI_CHUNK_API="$SCRIPT_DIR/gemini_chunk_video_request.mjs"
 MERGE_RESULTS="$SCRIPT_DIR/merge_chunk_results.py"
+RUNTIME_DATA_DIR="$PROJECT_ROOT/restaurant-crawling/data"
 
 echo "[$(date '+%H:%M:%S')] [INFO] SCRIPT_DIR: $SCRIPT_DIR"
 echo "[$(date '+%H:%M:%S')] [INFO] PROJECT_ROOT: $PROJECT_ROOT"
@@ -204,6 +205,70 @@ run_with_timeout() {
     return $exit_code
 }
 
+get_web_fallback_python() {
+    if [ -n "${WEB_FALLBACK_PYTHON:-}" ] && command -v "${WEB_FALLBACK_PYTHON}" >/dev/null 2>&1; then
+        echo "$WEB_FALLBACK_PYTHON"
+    elif [ "$OS_NAME" != "Windows" ] && command -v python3 >/dev/null 2>&1; then
+        echo "python3"
+    else
+        echo "$PYTHON_CMD"
+    fi
+}
+
+get_local_python_cmd() {
+    if [ "$OS_NAME" != "Windows" ] && command -v python3 >/dev/null 2>&1; then
+        echo "python3"
+    else
+        echo "$PYTHON_CMD"
+    fi
+}
+
+run_chunk_web_fallback() {
+    local prompt_file="$1" segment_file="$2" response_file="$3" stderr_file="$4" chunk_label="$5"
+    local fallback_python
+    fallback_python="$(get_web_fallback_python)"
+
+    local fallback_script
+    local fallback_prompt
+    local fallback_segment
+    local fallback_response
+    local web_model="${WEB_GEMINI_MODEL:-Pro}"
+    local web_fallback_timeout_sec="${WEB_FALLBACK_TIMEOUT_SEC:-900}"
+
+    if ! [[ "$web_fallback_timeout_sec" =~ ^[0-9]+$ ]] || [ "$web_fallback_timeout_sec" -lt 1 ]; then
+        log_warning "WEB_FALLBACK_TIMEOUT_SEC 값이 잘못되어 기본값 900초를 사용합니다: $web_fallback_timeout_sec"
+        web_fallback_timeout_sec=900
+    fi
+
+    fallback_script=$(maybe_normalize "$fallback_python" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
+    fallback_prompt=$(maybe_normalize "$fallback_python" "$prompt_file")
+    fallback_segment=$(maybe_normalize "$fallback_python" "$segment_file")
+    fallback_response=$(maybe_normalize "$fallback_python" "$response_file")
+
+    set +e
+    run_with_timeout "$web_fallback_timeout_sec" "$fallback_python" "$fallback_script" \
+        --prompt "$fallback_prompt" \
+        --video "$fallback_segment" \
+        --output "$fallback_response" \
+        --model "$web_model" 2>>"$stderr_file"
+    local py_exit=$?
+    set -e
+
+    if [ $py_exit -eq 0 ]; then
+        log_success "  ${chunk_label} 웹 폴백 성공"
+    elif [ $py_exit -eq 43 ]; then
+        log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
+        touch "$TEMP_BASE/quota_exceeded.flag"
+    elif [ $py_exit -eq 44 ]; then
+        log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
+        touch "$TEMP_BASE/quota_exceeded.flag"
+    else
+        log_error "  ${chunk_label} 웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
+    fi
+
+    return $py_exit
+}
+
 is_debug_mode() {
     local mode="${LOG_VERBOSITY,,}"
     [ "$mode" = "debug" ] || [ "$mode" = "verbose" ]
@@ -234,6 +299,10 @@ get_channels() {
     else
         grep -E "^  [a-z]+:" "$CONFIG_FILE" | sed 's/://g' | awk '{print $1}'
     fi
+}
+
+has_gemini_web_fallback_session() {
+    [ -s "$RUNTIME_DATA_DIR/gemini_cookies.json" ] || [ -d "$RUNTIME_DATA_DIR/camoufox_profile" ]
 }
 
 get_channel_data_path() {
@@ -318,7 +387,8 @@ download_video() {
 
     # yt-dlp 다운로드
     local yt_dlp_cmd=""
-    if command -v yt-dlp &> /dev/null; then yt_dlp_cmd="yt-dlp"
+    if [ -x "$HOME/.local/bin/yt-dlp" ]; then yt_dlp_cmd="$HOME/.local/bin/yt-dlp"
+    elif command -v yt-dlp &> /dev/null; then yt_dlp_cmd="yt-dlp"
     elif command -v yt-dlp.exe &> /dev/null; then yt_dlp_cmd="yt-dlp.exe"
     elif command -v python3 &> /dev/null && python3 -m yt_dlp --version &> /dev/null; then yt_dlp_cmd="python3 -m yt_dlp"
     elif command -v python &> /dev/null && python -m yt_dlp --version &> /dev/null; then yt_dlp_cmd="python -m yt_dlp"
@@ -395,6 +465,8 @@ process_video_chunks() {
     local full_data_path=$5 meta_file=$6 transcript_file=$7
     local crawling_dir="$full_data_path/crawling" errors_dir="$full_data_path/crawling_errors"
     local temp_dir="$TEMP_BASE/chunk_${video_id}"
+    local local_python
+    local_python="$(get_local_python_cmd)"
 
     mkdir -p "$temp_dir" "$crawling_dir"
 
@@ -427,10 +499,10 @@ process_video_chunks() {
     # [1/5] 청크 계획 생성 (if로 직접 종료 코드 검사 — set -e 안전)
     log_info "[1/5] 청크 계획 생성..."
     local chunks_json="$temp_dir/chunks.json"
-    local win_planner=$(maybe_normalize "$PYTHON_CMD" "$CHUNK_PLANNER")
-    local win_transcript=$(maybe_normalize "$PYTHON_CMD" "$transcript_file")
-    local win_chunks_json=$(maybe_normalize "$PYTHON_CMD" "$chunks_json")
-    if ! "$PYTHON_CMD" "$win_planner" \
+    local win_planner=$(maybe_normalize "$local_python" "$CHUNK_PLANNER")
+    local win_transcript=$(maybe_normalize "$local_python" "$transcript_file")
+    local win_chunks_json=$(maybe_normalize "$local_python" "$chunks_json")
+    if ! "$local_python" "$win_planner" \
             --video-id="$video_id" \
             --duration "$duration" \
             --transcript-file "$win_transcript" \
@@ -488,6 +560,8 @@ process_video_chunks() {
 
     # 불변 경로는 루프 밖에서 한 번만 정규화
     local win_gemini=$(maybe_normalize "$NODE_EXE" "$GEMINI_CHUNK_API")
+    local local_python
+    local_python="$(get_local_python_cmd)"
 
     local chunk_success=0 chunk_failed=0
 
@@ -496,8 +570,8 @@ process_video_chunks() {
     local max_jobs
     if [ -f "$OPTIMAL_JOBS_SCRIPT" ]; then
         local win_optimal_jobs
-        win_optimal_jobs=$(maybe_normalize "$PYTHON_CMD" "$OPTIMAL_JOBS_SCRIPT")
-        max_jobs=$("$PYTHON_CMD" "$win_optimal_jobs" 2>/dev/null | tr -d '\r')
+        win_optimal_jobs=$(maybe_normalize "$local_python" "$OPTIMAL_JOBS_SCRIPT")
+        max_jobs=$("$local_python" "$win_optimal_jobs" 2>/dev/null | tr -d '\r')
     else
         max_jobs=3
     fi
@@ -581,25 +655,7 @@ PROMPT_EOF
         (
             if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ] || [ -f "$TEMP_BASE/force_web_fallback.flag" ]; then
                 log_info "  청크 $((i + 1)) (Web Fallback 강제 모드)"
-                local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
-                local web_model="${WEB_GEMINI_MODEL:-Pro}"
-                
-                set +e
-                run_with_timeout 300 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
-                local py_exit=$?
-                set -e
-                
-                if [ $py_exit -eq 0 ]; then
-                    log_success "  청크 $((i + 1)) 웹 폴백 성공"
-                elif [ $py_exit -eq 43 ]; then
-                    log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
-                    touch "$TEMP_BASE/quota_exceeded.flag"
-                elif [ $py_exit -eq 44 ]; then
-                    log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
-                    touch "$TEMP_BASE/quota_exceeded.flag"
-                else
-                    log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
-                fi
+                run_chunk_web_fallback "$prompt_file" "$segment_file" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
             else
                 set +e
                 run_with_timeout 900 "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>"$temp_dir/stderr_${i}.log"
@@ -611,26 +667,7 @@ PROMPT_EOF
                 elif [ $exit_code -eq 42 ]; then
                     log_warning "  [QUOTA_ERROR] API 할당량 초과. 남은 청크 및 파이프라인에 웹 자동화 폴백을 강제(FORCE)로 적용합니다."
                     touch "$TEMP_BASE/force_web_fallback.flag"
-                    
-                    local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
-                    local web_model="${WEB_GEMINI_MODEL:-Pro}"
-                    
-                    set +e
-                    run_with_timeout 300 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
-                    local py_exit=$?
-                    set -e
-                    
-                    if [ $py_exit -eq 0 ]; then
-                        log_success "  청크 $((i + 1)) 웹 폴백 성공"
-                    elif [ $py_exit -eq 43 ]; then
-                        log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
-                        touch "$TEMP_BASE/quota_exceeded.flag"
-                    elif [ $py_exit -eq 44 ]; then
-                        log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
-                        touch "$TEMP_BASE/quota_exceeded.flag"
-                    else
-                        log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜜"
-                    fi
+                    run_chunk_web_fallback "$prompt_file" "$segment_file" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
                 else
                     log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
                     [ -f "$temp_dir/stderr_${i}.log" ] && cat "$temp_dir/stderr_${i}.log" >&2
@@ -652,25 +689,7 @@ PROMPT_EOF
                         elif [ $fb_exit -eq 42 ]; then
                             log_warning "  [QUOTA_ERROR] API 할당량 초과. 남은 청크 및 파이프라인에 웹 자동화 폴백을 강제(FORCE)로 적용합니다."
                             touch "$TEMP_BASE/force_web_fallback.flag"
-                            local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
-                            local web_model="${WEB_GEMINI_MODEL:-Pro}"
-                            
-                            set +e
-                            run_with_timeout 300 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
-                            local py_exit=$?
-                            set -e
-                            
-                            if [ $py_exit -eq 0 ]; then
-                                log_success "  청크 $((i + 1)) 웹 폴백 성공"
-                            elif [ $py_exit -eq 43 ]; then
-                                log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
-                                touch "$TEMP_BASE/quota_exceeded.flag"
-                            elif [ $py_exit -eq 44 ]; then
-                                log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
-                                touch "$TEMP_BASE/quota_exceeded.flag"
-                            else
-                                log_error "  웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜜"
-                            fi
+                            run_chunk_web_fallback "$prompt_file" "$segment_file" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
                         fi
                     fi
                 fi
@@ -713,10 +732,10 @@ PROMPT_EOF
     log_info "[5/5] 결과 병합..."
     local raw_merged_response="$temp_dir/raw_merged_response.json"
 
-    local win_merge=$(maybe_normalize "$PYTHON_CMD" "$MERGE_RESULTS")
-    local win_responses_dir=$(maybe_normalize "$PYTHON_CMD" "$responses_dir")
-    local win_raw_merged_response=$(maybe_normalize "$PYTHON_CMD" "$raw_merged_response")
-    if ! "$PYTHON_CMD" "$win_merge" --dir "$win_responses_dir" > "$raw_merged_response" || [ ! -s "$raw_merged_response" ]; then
+    local win_merge=$(maybe_normalize "$local_python" "$MERGE_RESULTS")
+    local win_responses_dir=$(maybe_normalize "$local_python" "$responses_dir")
+    local win_raw_merged_response=$(maybe_normalize "$local_python" "$raw_merged_response")
+    if ! "$local_python" "$win_merge" --dir "$win_responses_dir" > "$raw_merged_response" || [ ! -s "$raw_merged_response" ]; then
         log_error "결과 병합 실패"
         rm -rf "$temp_dir"
         return 1
@@ -745,10 +764,10 @@ PROMPT_EOF
     # parse_result.py로 최종 저장
     local crawling_file="$crawling_dir/${video_id}.jsonl"
 
-    local win_parser=$(maybe_normalize "$PYTHON_CMD" "$PARSER_SCRIPT")
-    local win_final_merged_response=$(maybe_normalize "$PYTHON_CMD" "$final_merged_response")
-    local win_crawling_file=$(maybe_normalize "$PYTHON_CMD" "$crawling_file")
-    if "$PYTHON_CMD" "$win_parser" parse "$youtube_link" "$win_final_merged_response" "$win_crawling_file" "$meta_recollect_id" "$transcript_recollect_id" "$channel"; then
+    local win_parser=$(maybe_normalize "$local_python" "$PARSER_SCRIPT")
+    local win_final_merged_response=$(maybe_normalize "$local_python" "$final_merged_response")
+    local win_crawling_file=$(maybe_normalize "$local_python" "$crawling_file")
+    if "$local_python" "$win_parser" parse "$youtube_link" "$win_final_merged_response" "$win_crawling_file" "$meta_recollect_id" "$transcript_recollect_id" "$channel"; then
         log_success "최종 저장 완료: $crawling_file"
     else
         log_error "파서 실패: $video_id"
@@ -772,6 +791,8 @@ PROMPT_EOF
 # ================================
 process_channel() {
     local channel=$1
+    local local_python
+    local_python="$(get_local_python_cmd)"
     local data_path
     data_path=$(get_channel_data_path "$channel")
 
@@ -804,8 +825,8 @@ process_channel() {
             log_warning "urls.txt 없음: $urls_file"
             return 0
         fi
-        local win_parser=$(maybe_normalize "$PYTHON_CMD" "$PARSER_SCRIPT")
-        mapfile -t urls < <("$PYTHON_CMD" "$win_parser" scan --channel "$channel" | tr -d '\r')
+        local win_parser=$(maybe_normalize "$local_python" "$PARSER_SCRIPT")
+        mapfile -t urls < <("$local_python" "$win_parser" scan --channel "$channel" | tr -d '\r')
     fi
 
     local total=${#urls[@]}
@@ -922,6 +943,12 @@ process_channel() {
     log_info "    - invalid_url: $skip_invalid_url"
     log_error "  실패: $failed_count"
     log_info "  총 소요: $(format_duration $total_time)"
+
+    if [ $failed_count -gt 0 ]; then
+        return 1
+    fi
+
+    return 0
 }
 
 # ================================
@@ -949,14 +976,21 @@ main() {
         exit 1
     fi
 
+    local use_api_key=0
+
     # API 키 설정
     if [ -n "$GEMINI_API_KEY" ]; then
         GEMINI_API_KEY=$(echo "$GEMINI_API_KEY" | tr -d '\r')
         export GEMINI_API_KEY
+        use_api_key=1
     elif [ -n "$GEMINI_API_KEY_BYEON" ]; then
         export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
+        use_api_key=1
+    elif has_gemini_web_fallback_session; then
+        log_warning "GEMINI_API_KEY 없음 → 저장된 Web fallback 세션으로 진행합니다."
+        export FORCE_WEB_FALLBACK=1
     else
-        log_error "GEMINI_API_KEY 없음"
+        log_error "GEMINI_API_KEY 없음, 그리고 Web fallback 세션도 없습니다."
         exit 1
     fi
 
@@ -964,13 +998,17 @@ main() {
     log_info "모드: 청크 비디오 멀티모달 (thinkingLevel: HIGH)"
 
     # 헬스 체크 (임시 파일은 $TEMP_BASE 경로 통일)
-    log_info "Health Check..."
     local hc_response="$TEMP_BASE/hc_response.json"
     local hc_stderr="$TEMP_BASE/hc_stderr.log"
-    export FORCE_WEB_FALLBACK=0
+    if [ "${FORCE_WEB_FALLBACK:-0}" = "1" ] || [ $use_api_key -eq 0 ]; then
+        export FORCE_WEB_FALLBACK=1
+        log_info "Health Check 생략: Web fallback 강제 모드"
+    else
+        export FORCE_WEB_FALLBACK=0
+        log_info "Health Check..."
 
-    set +e
-    (cd "$PROJECT_ROOT" && "$NODE_EXE" --input-type=module -e "
+        set +e
+        (cd "$PROJECT_ROOT" && "$NODE_EXE" --input-type=module -e "
 import { GoogleGenAI } from '@google/genai';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const r = await ai.models.generateContent({
@@ -979,33 +1017,34 @@ const r = await ai.models.generateContent({
 });
 console.log(r.text);
 " > "$hc_response" 2>"$hc_stderr")
-    local hc_exit=$?
-    set -e
+        local hc_exit=$?
+        set -e
 
-    if [ $hc_exit -eq 0 ]; then
-        log_success "Health Check 성공. API 사용 가능."
-    else
-        log_warning "Health Check 실패. (exit: $hc_exit)"
-        if [ -f "$hc_stderr" ]; then
-            local err_msg=$(<"$hc_stderr")
-            local err_preview
-            err_preview=$(printf "%s" "$err_msg" \
-                | tr '\r' '\n' \
-                | head -n 1 \
-                | sed -E 's/AIza[0-9A-Za-z_-]{20,}/[REDACTED_API_KEY]/g' \
-                | cut -c1-240)
-            log_error "Stderr(요약): $err_preview"
-            # 429 Quota Exceeded 에러인지 확인
-            if [[ "$err_msg" == *"429"* ]] || [[ "$err_msg" == *"exceeded your current quota"* ]]; then
-                log_warning "🚨 [QUOTA_ERROR] API 할당량 이슈가 감지되었습니다."
-                log_warning "청크별 API 우선 시도 + 실패 시 웹 폴백으로 처리합니다. (전역 강제 폴백 비활성)"
-            else
-                log_warning "일반 API 에러입니다. 청크별로 API 재시도 후 웹 폴백을 사용합니다."
+        if [ $hc_exit -eq 0 ]; then
+            log_success "Health Check 성공. API 사용 가능."
+        else
+            log_warning "Health Check 실패. (exit: $hc_exit)"
+            if [ -f "$hc_stderr" ]; then
+                local err_msg=$(<"$hc_stderr")
+                local err_preview
+                err_preview=$(printf "%s" "$err_msg" \
+                    | tr '\r' '\n' \
+                    | head -n 1 \
+                    | sed -E 's/AIza[0-9A-Za-z_-]{20,}/[REDACTED_API_KEY]/g' \
+                    | cut -c1-240)
+                log_error "Stderr(요약): $err_preview"
+                # 429 Quota Exceeded 에러인지 확인
+                if [[ "$err_msg" == *"429"* ]] || [[ "$err_msg" == *"exceeded your current quota"* ]]; then
+                    log_warning "🚨 [QUOTA_ERROR] API 할당량 이슈가 감지되었습니다."
+                    log_warning "청크별 API 우선 시도 + 실패 시 웹 폴백으로 처리합니다. (전역 강제 폴백 비활성)"
+                else
+                    log_warning "일반 API 에러입니다. 청크별로 API 재시도 후 웹 폴백을 사용합니다."
+                fi
             fi
+            rm -f "$hc_response" "$hc_stderr"
         fi
         rm -f "$hc_response" "$hc_stderr"
     fi
-    rm -f "$hc_response" "$hc_stderr"
 
     # 쿼타 초과 방지 폴백용 플래그 초기화
     rm -f "$TEMP_BASE"/*.flag 2>/dev/null || true
@@ -1015,8 +1054,11 @@ console.log(r.text);
     channels=$(get_channels)
     log_info "대상 채널: $channels"
 
+    local channel_failed=0
     for channel in $channels; do
-        process_channel "$channel"
+        if ! process_channel "$channel"; then
+            channel_failed=1
+        fi
     done
 
     # 임시 파일 정리 ($TEMP_BASE 경로 통일)
@@ -1031,7 +1073,12 @@ console.log(r.text);
 
     log_info ""
     log_info "============================================================"
-    log_success "전체 파이프라인 완료: $(format_duration $total_duration)"
+    if [ $channel_failed -eq 0 ]; then
+        log_success "전체 파이프라인 완료: $(format_duration $total_duration)"
+    else
+        log_error "전체 파이프라인 실패: $(format_duration $total_duration)"
+        return 1
+    fi
     log_info "============================================================"
 }
 
