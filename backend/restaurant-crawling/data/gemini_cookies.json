@@ -180,16 +180,6 @@
     "sameSite": "None"
   },
   {
-    "name": "_ga",
-    "value": "GA1.1.2082305227.1774643886",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1809596375,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "None"
-  },
-  {
     "name": "__Secure-1PSIDTS",
     "value": "sidts-CjIBWhotCdVNPpxA8hyrNdWoTa9opt_9AJjlt6Fy5fE4_jSAMrx3KigM1TGybEPljh8MuBAA",
     "domain": ".google.com",
@@ -207,26 +197,6 @@
     "expires": 1806572378,
     "httpOnly": true,
     "secure": true,
-    "sameSite": "None"
-  },
-  {
-    "name": "_ga_WC57KJ50ZZ",
-    "value": "GS2.1.s1775036375$o2$g1$t1775036389$j46$l0$h0",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1809596389,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "None"
-  },
-  {
-    "name": "_gcl_au",
-    "value": "1.1.74830357.1774643885",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1782419885,
-    "httpOnly": false,
-    "secure": false,
     "sameSite": "None"
   },
   {
@@ -267,6 +237,36 @@
     "expires": 1790919772,
     "httpOnly": true,
     "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_ga",
+    "value": "GA1.1.2082305227.1774643886",
+    "domain": ".gemini.google.com",
+    "path": "/",
+    "expires": 1809673110,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "None"
+  },
+  {
+    "name": "_ga_WC57KJ50ZZ",
+    "value": "GS2.1.s1775113110$o3$g0$t1775113110$j60$l0$h0",
+    "domain": ".gemini.google.com",
+    "path": "/",
+    "expires": 1809673110,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "None"
+  },
+  {
+    "name": "_gcl_au",
+    "value": "1.1.74830357.1774643885",
+    "domain": ".gemini.google.com",
+    "path": "/",
+    "expires": 1782419885,
+    "httpOnly": false,
+    "secure": false,
     "sameSite": "None"
   },
   {
