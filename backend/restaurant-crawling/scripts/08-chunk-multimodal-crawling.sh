@@ -579,20 +579,20 @@ PROMPT_EOF
         local node_win_segment=$(maybe_normalize "$NODE_EXE" "$segment_file")
 
         (
-            if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ]; then
+            if [ "${FORCE_WEB_FALLBACK:-0}" -eq 1 ] || [ -f "$TEMP_BASE/force_web_fallback.flag" ]; then
                 log_info "  청크 $((i + 1)) (Web Fallback 강제 모드)"
                 local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                 local web_model="${WEB_GEMINI_MODEL:-Pro}"
                 
                 set +e
-                run_with_timeout 1800 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                run_with_timeout 300 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
                 local py_exit=$?
                 set -e
                 
                 if [ $py_exit -eq 0 ]; then
                     log_success "  청크 $((i + 1)) 웹 폴백 성공"
                 elif [ $py_exit -eq 43 ]; then
-                    log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
+                    log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
                     touch "$TEMP_BASE/quota_exceeded.flag"
                 elif [ $py_exit -eq 44 ]; then
                     log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
@@ -609,20 +609,21 @@ PROMPT_EOF
                 if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
                     log_success "  청크 $((i + 1)) 성공"
                 elif [ $exit_code -eq 42 ]; then
-                    log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
+                    log_warning "  [QUOTA_ERROR] API 할당량 초과. 남은 청크 및 파이프라인에 웹 자동화 폴백을 강제(FORCE)로 적용합니다."
+                    touch "$TEMP_BASE/force_web_fallback.flag"
                     
                     local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                     local web_model="${WEB_GEMINI_MODEL:-Pro}"
                     
                     set +e
-                    run_with_timeout 1800 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                    run_with_timeout 300 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
                     local py_exit=$?
                     set -e
                     
                     if [ $py_exit -eq 0 ]; then
                         log_success "  청크 $((i + 1)) 웹 폴백 성공"
                     elif [ $py_exit -eq 43 ]; then
-                        log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
+                        log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
                         touch "$TEMP_BASE/quota_exceeded.flag"
                     elif [ $py_exit -eq 44 ]; then
                         log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
@@ -649,19 +650,20 @@ PROMPT_EOF
                         if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
                             log_success "  청크 $((i + 1)) 폴백 성공"
                         elif [ $fb_exit -eq 42 ]; then
-                            log_warning "  [QUOTA_ERROR] API 할당량 초과. Scrapling 웹 브라우저 자동화 폴백을 시도합니다..."
+                            log_warning "  [QUOTA_ERROR] API 할당량 초과. 남은 청크 및 파이프라인에 웹 자동화 폴백을 강제(FORCE)로 적용합니다."
+                            touch "$TEMP_BASE/force_web_fallback.flag"
                             local SCRAPLING_FALLBACK=$(maybe_normalize "$PYTHON_CMD" "$SCRIPT_DIR/gemini_scrapling_fallback.py")
                             local web_model="${WEB_GEMINI_MODEL:-Pro}"
                             
                             set +e
-                            run_with_timeout 1800 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
+                            run_with_timeout 300 $PYTHON_CMD "$SCRAPLING_FALLBACK" --prompt "$win_prompt" --video "$win_segment" --output "$win_response" --model "$web_model" 2>>"$temp_dir/stderr_${i}.log"
                             local py_exit=$?
                             set -e
                             
                             if [ $py_exit -eq 0 ]; then
                                 log_success "  청크 $((i + 1)) 웹 폴백 성공"
                             elif [ $py_exit -eq 43 ]; then
-                                log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 웹 폴백을 즉시 중단하고 파이프라인 중지 플래그를 생성합니다."
+                                log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
                                 touch "$TEMP_BASE/quota_exceeded.flag"
                             elif [ $py_exit -eq 44 ]; then
                                 log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
@@ -682,8 +684,8 @@ PROMPT_EOF
         
         # 쿼타 초과 플래그 감지
         if [ -f "$TEMP_BASE/quota_exceeded.flag" ]; then
-            log_error "할당량 초과(Quota Error)가 감지되어 해당 채널/영상의 남은 청크 처리를 즉시 중단합니다."
-            break
+            log_error "할당량 초과(Quota Error)가 감지되어 해당 채널/영상의 남은 청크 처리 시 웹 폴백을 강제 적용합니다."
+            export FORCE_WEB_FALLBACK=1
         fi
     done
     
@@ -1005,6 +1007,9 @@ console.log(r.text);
     fi
     rm -f "$hc_response" "$hc_stderr"
 
+    # 쿼타 초과 방지 폴백용 플래그 초기화
+    rm -f "$TEMP_BASE"/*.flag 2>/dev/null || true
+
     # 채널 처리
     local channels
     channels=$(get_channels)
@@ -1020,6 +1025,9 @@ console.log(r.text);
     local end_time
     end_time=$(date +%s)
     local total_duration=$((end_time - start_time))
+
+    # 임시 파일 및 상태 플래그 정리
+    rm -rf "$TEMP_BASE"/chunk_* "$TEMP_BASE"/*.txt "$TEMP_BASE"/*.json "$TEMP_BASE"/*.log "$TEMP_BASE"/*.flag 2>/dev/null || true
 
     log_info ""
     log_info "============================================================"
