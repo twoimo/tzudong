@@ -964,8 +964,10 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     except Exception:
                         return False
 
-                log("답변 생성 대기 중... (최대 600초)")
-                max_wait_time = 900
+                max_wait_time = int(os.getenv("WEB_FALLBACK_RESPONSE_WAIT_SEC", "900"))
+                if max_wait_time < 60:
+                    max_wait_time = 60
+                log(f"답변 생성 대기 중... (최대 {max_wait_time}초)")
                 start_wait = time.time()
                 success = False
 
