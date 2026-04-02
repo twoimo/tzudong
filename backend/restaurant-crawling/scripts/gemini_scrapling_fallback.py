@@ -547,6 +547,68 @@ def try_direct_file_input_upload(page, file_path):
     return False, None, None, last_error
 
 
+def expose_hidden_upload_trigger(page, selector, idx):
+    """aria-hidden + 0x0 상태의 내부 업로드 트리거를 실제 클릭 가능한 크기로 노출한다."""
+    page.evaluate(
+        """
+        ({ selector, idx }) => {
+            const el = document.querySelectorAll(selector)[idx];
+            if (!el) return false;
+            el.removeAttribute('aria-hidden');
+            Object.assign(el.style, {
+                position: 'fixed',
+                left: `${16 + (idx * 48)}px`,
+                top: '16px',
+                width: '40px',
+                height: '40px',
+                minWidth: '40px',
+                minHeight: '40px',
+                opacity: '1',
+                zIndex: '2147483647',
+                pointerEvents: 'auto',
+            });
+            return true;
+        }
+        """,
+        {"selector": selector, "idx": idx},
+    )
+
+
+def click_hidden_upload_trigger(page, hidden_trigger_selectors):
+    """Gemini 내부 hidden upload button을 trusted click 가능한 상태로 노출 후 클릭한다."""
+    last_error = None
+
+    for trigger_sel in hidden_trigger_selectors:
+        locator = page.locator(trigger_sel)
+        try:
+            count = locator.count()
+        except Exception as e:
+            last_error = e
+            continue
+
+        if count == 0:
+            continue
+
+        for idx in range(min(count, 4)):
+            trigger = locator.nth(idx)
+            try:
+                expose_hidden_upload_trigger(page, trigger_sel, idx)
+                try:
+                    trigger.scroll_into_view_if_needed(timeout=1000)
+                except Exception:
+                    pass
+                trigger.click(timeout=4000)
+                return True, trigger_sel, idx, None
+            except Exception as e:
+                last_error = e
+                try:
+                    page.keyboard.press("Escape")
+                except Exception:
+                    pass
+
+    return False, None, None, last_error
+
+
 def manual_login():
     """Camoufox(Firefox) 영구 프로필 기반 수동 로그인"""
     log("🔑 수동 로그인 모드 시작 (Camoufox Firefox 기반)")
@@ -713,6 +775,11 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                 log("동영상 업로드 메뉴 시도...")
                 uploaded = False
+                hidden_trigger_selectors = [
+                    'button[data-test-id="hidden-local-file-upload-button"]',
+                    'button[data-test-id="hidden-local-image-upload-button"]',
+                    'button[xapfileselectortrigger]',
+                ]
                 upload_button_selectors = [
                     'button[aria-label="Open upload file menu"]',
                     'button[aria-label*="Upload file"]',
@@ -732,6 +799,8 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     'button[aria-label*="upload type"]',
                     'button[aria-label*="입력 영역 메뉴"]',
                     'button[aria-label*="input area menu"]',
+                    'button[aria-controls="upload-file-menu"]',
+                    'button.upload-card-button',
                     'button.menu-button.open.mat-primary',
                 ]
 
@@ -758,13 +827,14 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                         for click_try in range(2):
                             try:
+                                chooser_source = selector
                                 with page.expect_file_chooser(timeout=5000) as fc_info:
                                     btn.click()
                                     human_delay(1, 2)
 
                                     menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
+                                    clicked = False
                                     if menu_items:
-                                        clicked = False
                                         for item in menu_items:
                                             text = item.inner_text().lower()
                                             if 'upload' in text or 'computer' in text or '업로드' in text or '컴퓨터' in text or '파일' in text:
@@ -773,11 +843,20 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                                                 break
                                         if not clicked:
                                             menu_items[0].click()
+                                            clicked = True
+
+                                    if not clicked:
+                                        hidden_ok, hidden_sel, hidden_idx, hidden_err = click_hidden_upload_trigger(page, hidden_trigger_selectors)
+                                        if hidden_ok:
+                                            clicked = True
+                                            chooser_source = f"{selector} -> {hidden_sel} (hidden idx={hidden_idx})"
+                                        elif hidden_err is not None:
+                                            raise hidden_err
 
                                 file_chooser = fc_info.value
                                 file_chooser.set_files(video_abs_path)
                                 uploaded = True
-                                log(f"업로드 버튼 경로 성공: {selector} (idx={btn_idx})")
+                                log(f"업로드 버튼 경로 성공: {chooser_source} (btn idx={btn_idx})")
                                 break
                             except Exception as e:
                                 if click_try == 0 and accept_upload_disclaimer_if_present(page):
@@ -797,42 +876,29 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                 if not uploaded:
                     # Gemini 내부 hidden 업로드 트리거 버튼 경로(버튼 비가시 상태 포함)
-                    hidden_trigger_selectors = [
-                        'button[data-test-id="hidden-local-file-upload-button"]',
-                        'button[data-test-id="hidden-local-image-upload-button"]',
-                        'button[xapfileselectortrigger]',
-                    ]
-                    for trigger_sel in hidden_trigger_selectors:
-                        trigger = page.locator(trigger_sel).first
-                        try:
-                            if trigger.count() == 0:
-                                continue
-                            with page.expect_file_chooser(timeout=12000) as fc_info:
-                                try:
-                                    trigger.click(force=True, timeout=4000)
-                                except Exception:
-                                    trigger.dispatch_event("click")
-                            fc_info.value.set_files(video_abs_path)
-                            uploaded = True
-                            log(f"hidden trigger 업로드 성공: {trigger_sel}")
-                            break
-                        except Exception as e:
-                            if accept_upload_disclaimer_if_present(page):
-                                log("동의 팝업 처리 후 hidden trigger 재시도")
-                                try:
-                                    with page.expect_file_chooser(timeout=5000) as fc_info:
-                                        try:
-                                            trigger.click(force=True, timeout=4000)
-                                        except Exception:
-                                            trigger.dispatch_event("click")
-                                    fc_info.value.set_files(video_abs_path)
-                                    uploaded = True
-                                    log(f"hidden trigger 업로드 성공(재시도): {trigger_sel}")
-                                    break
-                                except Exception as retry_err:
-                                    log(f"hidden trigger 업로드 재시도 실패({trigger_sel}): {compact_error(retry_err)}")
-                            else:
-                                log(f"hidden trigger 업로드 실패({trigger_sel}): {compact_error(e)}")
+                    try:
+                        with page.expect_file_chooser(timeout=12000) as fc_info:
+                            hidden_ok, hidden_sel, hidden_idx, hidden_err = click_hidden_upload_trigger(page, hidden_trigger_selectors)
+                            if not hidden_ok and hidden_err is not None:
+                                raise hidden_err
+                        fc_info.value.set_files(video_abs_path)
+                        uploaded = True
+                        log(f"hidden trigger 업로드 성공: {hidden_sel} (idx={hidden_idx})")
+                    except Exception as e:
+                        if accept_upload_disclaimer_if_present(page):
+                            log("동의 팝업 처리 후 hidden trigger 재시도")
+                            try:
+                                with page.expect_file_chooser(timeout=5000) as fc_info:
+                                    hidden_ok, hidden_sel, hidden_idx, hidden_err = click_hidden_upload_trigger(page, hidden_trigger_selectors)
+                                    if not hidden_ok and hidden_err is not None:
+                                        raise hidden_err
+                                fc_info.value.set_files(video_abs_path)
+                                uploaded = True
+                                log(f"hidden trigger 업로드 성공(재시도): {hidden_sel} (idx={hidden_idx})")
+                            except Exception as retry_err:
+                                log(f"hidden trigger 업로드 재시도 실패: {compact_error(retry_err)}")
+                        else:
+                            log(f"hidden trigger 업로드 실패: {compact_error(e)}")
 
                 if uploaded:
                     log("파일 업로드 대기 (진행 표시줄 확인)...")

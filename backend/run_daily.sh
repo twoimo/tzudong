@@ -325,12 +325,76 @@ record_exit_if_failed() {
     return 1
 }
 
+has_any_env() {
+    local key
+    for key in "$@"; do
+        if [ -n "${!key:-}" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 has_git_identity() {
     [ -n "$(git config user.name 2>/dev/null)" ] && [ -n "$(git config user.email 2>/dev/null)" ]
 }
 
-has_supabase_credentials() {
-    [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_KEY:-}" ]
+is_ci_mode() {
+    [ "${CI:-false}" = "true" ]
+}
+
+record_external_dependency_issue() {
+    local step_name="$1"
+    local reason="$2"
+
+    if is_ci_mode; then
+        record_required_failure "$step_name" "$reason"
+    else
+        record_skipped_step "$step_name" "$reason"
+    fi
+}
+
+has_supabase_migration_credentials() {
+    [ -n "${SUPABASE_URL:-}" ] && has_any_env SUPABASE_SERVICE_ROLE_KEY SUPABASE_KEY
+}
+
+has_supabase_insert_credentials() {
+    [ -n "${SUPABASE_URL:-}" ] && has_any_env SUPABASE_SERVICE_ROLE_KEY VITE_SUPABASE_PUBLISHABLE_KEY
+}
+
+has_youtube_api_key() {
+    [ -n "${YOUTUBE_API_KEY_BYEON:-}" ]
+}
+
+has_gemini_api_key() {
+    has_any_env GEMINI_API_KEY GEMINI_API_KEY_BYEON
+}
+
+has_gemini_web_fallback_session() {
+    [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.json" ] || [ -d "$PROJECT_ROOT/backend/restaurant-crawling/data/camoufox_profile" ]
+}
+
+has_gemini_chunk_runtime() {
+    has_gemini_api_key || has_gemini_web_fallback_session
+}
+
+missing_backend_node_packages() {
+    local pkg path
+    local missing=()
+
+    for pkg in "$@"; do
+        path="$PROJECT_ROOT/backend/node_modules/$pkg"
+        if [ ! -e "$path" ]; then
+            missing+=("$pkg")
+        fi
+    done
+
+    if [ "${#missing[@]}" -gt 0 ]; then
+        printf '%s' "${missing[*]}"
+        return 0
+    fi
+
+    return 1
 }
 
 emit_step_summary_log() {
@@ -579,10 +643,14 @@ log "INFO" "현재 작업 브랜치: $(git rev-parse --abbrev-ref HEAD)"
 # 1. URL 수집 (새로운 영상 탐색)
 echo "::group::[Step 1] URL Collection"
 step_start
-log "INFO" "[Step 1] URL 수집 중..."
-$PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-STEP_1_EXIT=${PIPESTATUS[0]}
-record_exit_if_failed "Step 1 (URL Collection)" "$STEP_1_EXIT"
+if ! has_youtube_api_key; then
+    record_external_dependency_issue "Step 1 (URL Collection)" "YouTube API 키(YOUTUBE_API_KEY_BYEON) 미설정으로 실행 생략"
+else
+    log "INFO" "[Step 1] URL 수집 중..."
+    $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+    STEP_1_EXIT=${PIPESTATUS[0]}
+    record_exit_if_failed "Step 1 (URL Collection)" "$STEP_1_EXIT"
+fi
 step_end "Step 1 (URL Collection)"
 echo "::endgroup::"
 
@@ -617,10 +685,14 @@ fi
 # 2. 메타데이터 수집 & 스케줄링 (관제탑 역할)
 echo "::group::[Step 2] Metadata Collection"
 step_start
-log "INFO" "[Step 2] 메타데이터 수집 및 스케줄링..."
-$PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
-STEP_2_EXIT=${PIPESTATUS[0]}
-record_exit_if_failed "Step 2 (Metadata)" "$STEP_2_EXIT"
+if ! has_youtube_api_key; then
+    record_external_dependency_issue "Step 2 (Metadata)" "YouTube API 키(YOUTUBE_API_KEY_BYEON) 미설정으로 실행 생략"
+else
+    log "INFO" "[Step 2] 메타데이터 수집 및 스케줄링..."
+    $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+    STEP_2_EXIT=${PIPESTATUS[0]}
+    record_exit_if_failed "Step 2 (Metadata)" "$STEP_2_EXIT"
+fi
 step_end "Step 2 (Metadata)"
 echo "::endgroup::"
 
@@ -628,14 +700,21 @@ echo "::endgroup::"
 echo "::group::[Step 2.1+2.5] Meta Migration + Orphan Cleanup (Parallel)"
 step_start
 log "INFO" "[Step 2.1+2.5] Meta Migration + Orphan Cleanup (병렬 실행)..."
-run_parallel \
-    "Step 2.1 Meta Migration" \
-    "$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang" \
-    "Step 2.5 Orphan Cleanup" \
-    "$PYTHON_CMD backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py --channel tzuyang"
-STEP_21_EXIT=$?
-if [ $STEP_21_EXIT -ne 0 ]; then
-    record_required_failure "Step 2.1+2.5 (Migration+Cleanup)" "parallel step 중 하나 이상 실패"
+if has_supabase_migration_credentials; then
+    run_parallel \
+        "Step 2.1 Meta Migration" \
+        "$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang" \
+        "Step 2.5 Orphan Cleanup" \
+        "$PYTHON_CMD backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py --channel tzuyang"
+    STEP_21_EXIT=$?
+    if [ $STEP_21_EXIT -ne 0 ]; then
+        record_required_failure "Step 2.1+2.5 (Migration+Cleanup)" "parallel step 중 하나 이상 실패"
+    fi
+else
+    record_external_dependency_issue "Step 2.1 (Meta Migration)" "SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY 미설정으로 실행 생략"
+    $PYTHON_CMD backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+    STEP_25_EXIT=${PIPESTATUS[0]}
+    record_exit_if_failed "Step 2.5 (Orphan Cleanup)" "$STEP_25_EXIT"
 fi
 step_end "Step 2.1+2.5 (Migration+Cleanup)"
 echo "::endgroup::"
@@ -655,24 +734,37 @@ echo "::group::[Step 3+4] Transcript + Frames (Parallel)"
 step_start
 log "INFO" "[Step 3+4] 자막 수집 + 프레임 추출 (병렬 실행)..."
 
-TEMP_LOG_3=$(mktemp)
-TEMP_LOG_4=$(mktemp)
+STEP34_NODE_MISSING=""
+TEMP_LOG_3=""
+TEMP_LOG_4=""
+EXIT_3=0
+EXIT_4=0
 
-# Step 3 (Transcript) + Step 4 (Frames) 동시 시작
-node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang > "$TEMP_LOG_3" 2>&1 &
-PID_3=$!
-node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache > "$TEMP_LOG_4" 2>&1 &
-PID_4=$!
+if STEP34_NODE_MISSING="$(missing_backend_node_packages dotenv ffmpeg-static ffprobe-static 2>/dev/null)"; then
+    record_required_failure "Step 3 (Transcript)" "필수 Node 패키지 누락(${STEP34_NODE_MISSING})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
+    record_required_failure "Step 4 (Heatmap & Frames)" "필수 Node 패키지 누락(${STEP34_NODE_MISSING})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
+    EXIT_3=1
+    EXIT_4=1
+else
+    TEMP_LOG_3=$(mktemp)
+    TEMP_LOG_4=$(mktemp)
 
-# Step 3 완료 대기 -> 로그 출력
-wait $PID_3; EXIT_3=$?
-log "INFO" "--- [Step 3 Transcript] ---"
-cat "$TEMP_LOG_3" | tee -a "$LOG_FILE"
-if [ $EXIT_3 -ne 0 ]; then
-    log "WARN" "[Step 3] Transcript 비정상 종료 (exit: $EXIT_3)"
-    record_required_failure "Step 3 (Transcript)" "exit=$EXIT_3"
+    # Step 3 (Transcript) + Step 4 (Frames) 동시 시작
+    node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang > "$TEMP_LOG_3" 2>&1 &
+    PID_3=$!
+    node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache > "$TEMP_LOG_4" 2>&1 &
+    PID_4=$!
+
+    # Step 3 완료 대기 -> 로그 출력
+    wait $PID_3; EXIT_3=$?
+    log "INFO" "--- [Step 3 Transcript] ---"
+    cat "$TEMP_LOG_3" | tee -a "$LOG_FILE"
+    if [ $EXIT_3 -ne 0 ]; then
+        log "WARN" "[Step 3] Transcript 비정상 종료 (exit: $EXIT_3)"
+        record_required_failure "Step 3 (Transcript)" "exit=$EXIT_3"
+    fi
+    rm -f "$TEMP_LOG_3"
 fi
-rm -f "$TEMP_LOG_3"
 echo "::endgroup::"
 
 # Step 3.1 실행 (Step 3 완료 필요, Step 4는 백그라운드 계속)
@@ -704,17 +796,21 @@ echo "::endgroup::"
 # Step 4 완료 대기 (실시간 로그 스트리밍)
 echo "::group::[Step 4] Heatmap & Frames (Awaiting)"
 log "INFO" "--- [Step 4 Frames] (실시간 로그) ---"
-tail -f "$TEMP_LOG_4" 2>/dev/null &
-TAIL_PID=$!
-wait $PID_4; EXIT_4=$?
-sleep 1
-kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
-cat "$TEMP_LOG_4" >> "$LOG_FILE"
-if [ $EXIT_4 -ne 0 ]; then
-    log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
-    record_required_failure "Step 4 (Heatmap & Frames)" "exit=$EXIT_4"
+if [ -n "$TEMP_LOG_4" ]; then
+    tail -f "$TEMP_LOG_4" 2>/dev/null &
+    TAIL_PID=$!
+    wait $PID_4; EXIT_4=$?
+    sleep 1
+    kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
+    cat "$TEMP_LOG_4" >> "$LOG_FILE"
+    if [ $EXIT_4 -ne 0 ]; then
+        log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
+        record_required_failure "Step 4 (Heatmap & Frames)" "exit=$EXIT_4"
+    fi
+    rm -f "$TEMP_LOG_4"
+else
+    log "WARN" "[Step 4] 필수 Node 패키지 누락으로 프레임 추출을 실행하지 않았습니다."
 fi
-rm -f "$TEMP_LOG_4"
 
 step_end "Step 3+4 (Transcript+Frames+Context)"
 echo "::endgroup::"
@@ -764,24 +860,35 @@ log "INFO" "[Step 7] 비활성화됨 → Step 08 (Chunk Multimodal)이 전담 �
 echo "::group::[Step 08] Chunk Multimodal Crawling"
 step_start
 log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
-set +o pipefail
-bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | filter_step_log | tee -a "$LOG_FILE"
-CHUNK_EXIT_CODE=${PIPESTATUS[0]}
-set -o pipefail
-if [ $CHUNK_EXIT_CODE -eq 42 ]; then
-    log "WARN" "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
+STEP08_NODE_MISSING=""
+if STEP08_NODE_MISSING="$(missing_backend_node_packages @google/genai 2>/dev/null)"; then
+    record_required_failure "Step 08 (Chunk Multimodal)" "필수 Node 패키지 누락(${STEP08_NODE_MISSING})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
     SKIP_EVALUATION=true
-    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 quota 초과"
-elif [ $CHUNK_EXIT_CODE -eq 44 ]; then
-    log "ERROR" "[CRITICAL] 구글 로그인 세션 만료! 웹 폴백을 더 이상 진행할 수 없습니다."
-    log "INFO" "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
-    record_required_failure "Step 08 (Chunk Multimodal)" "Google 로그인 세션 만료 (exit=44)"
+    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 Node prerequisite 미충족"
+elif ! has_gemini_chunk_runtime; then
+    record_required_failure "Step 08 (Chunk Multimodal)" "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
     SKIP_EVALUATION=true
-    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 로그인 prerequisite 미충족"
-elif [ $CHUNK_EXIT_CODE -ne 0 ]; then
-    record_required_failure "Step 08 (Chunk Multimodal)" "exit=$CHUNK_EXIT_CODE"
-    SKIP_EVALUATION=true
-    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 실패"
+    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 Gemini runtime prerequisite 미충족"
+else
+    set +o pipefail
+    bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | filter_step_log | tee -a "$LOG_FILE"
+    CHUNK_EXIT_CODE=${PIPESTATUS[0]}
+    set -o pipefail
+    if [ $CHUNK_EXIT_CODE -eq 42 ]; then
+        log "WARN" "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
+        SKIP_EVALUATION=true
+        record_skipped_step "Step 09~13 (Evaluation)" "Step 08 quota 초과"
+    elif [ $CHUNK_EXIT_CODE -eq 44 ]; then
+        log "ERROR" "[CRITICAL] 구글 로그인 세션 만료! 웹 폴백을 더 이상 진행할 수 없습니다."
+        log "INFO" "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
+        record_required_failure "Step 08 (Chunk Multimodal)" "Google 로그인 세션 만료 (exit=44)"
+        SKIP_EVALUATION=true
+        record_skipped_step "Step 09~13 (Evaluation)" "Step 08 로그인 prerequisite 미충족"
+    elif [ $CHUNK_EXIT_CODE -ne 0 ]; then
+        record_required_failure "Step 08 (Chunk Multimodal)" "exit=$CHUNK_EXIT_CODE"
+        SKIP_EVALUATION=true
+        record_skipped_step "Step 09~13 (Evaluation)" "Step 08 실패"
+    fi
 fi
 step_end "Step 08 (Chunk Multimodal)"
 echo "::endgroup::"
@@ -875,9 +982,8 @@ if [ "${STEP_10_OK}" = "true" ]; then
             # 13. Supabase 결과 삽입
             echo "::group::[Step 13] Insert to Supabase"
             step_start
-            if ! has_supabase_credentials; then
-                log "WARN" "[Step 13] SUPABASE_URL/SUPABASE_KEY 미설정 → Supabase 삽입을 건너뜁니다."
-                record_skipped_step "Step 13 (Supabase)" "SUPABASE_URL/SUPABASE_KEY 미설정"
+            if ! has_supabase_insert_credentials; then
+                record_external_dependency_issue "Step 13 (Supabase)" "SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY 또는 VITE_SUPABASE_PUBLISHABLE_KEY 미설정으로 실행 생략"
             else
                 log "INFO" "[Step 13] Insert to Supabase..."
                 $PYTHON_CMD backend/restaurant-evaluation/scripts/13-supabase-insert.py --channel tzuyang \
@@ -904,7 +1010,7 @@ fi # SKIP_PHASE3 종료 (Timeout)
 # ============================================================
 
 log "INFO" "============================================================"
-log "INFO" "일일 데이터 수집 파이프라인 완료"
+log "INFO" "일일 데이터 수집 파이프라인 종료 (최종 상태 집계 중)"
 log "INFO" "============================================================"
 
 # [PERF] Final Sync (모든 Phase의 남은 변경사항 통합 커밋)
