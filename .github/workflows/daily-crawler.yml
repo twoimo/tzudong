@@ -106,11 +106,12 @@ jobs:
           # Python: pip upgrade + requirements + yt-dlp 최신버전 (백그라운드)
           (python -m pip install --upgrade pip -q && \
            pip install -r backend/restaurant-crawling/scripts/requirements.txt -q && \
-           pip install -U "yt-dlp[default]" -q) &
+           pip install -U "yt-dlp[default]" -q && \
+           python -m camoufox fetch) &
           PY_PID=$!
           
           # Node.js 의존성 (병렬)
-          (cd backend && npm ci --prefer-offline) &
+          (cd backend && npm ci --prefer-offline && npm install -g @google/gemini-cli) &
           NPM_PID=$!
           
           # 모든 설치 완료 대기
@@ -135,6 +136,9 @@ jobs:
           
           # Gemini Credentials (OAuth 인증 제거 및 API Key 티어 사용)
           # Note: API Key is injected manually as GEMINI_API_KEY_BYEON
+          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
+            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
+          fi
           
           # RClone Config
           if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
