@@ -95,10 +95,16 @@ run_gemini_cli_request() {
         timeout_sec=240
     fi
 
+    # OAuth 폴백 시 API Key 대신 인증 파일을 강제 사용하도록 GEMINI_API_KEY 해제
+    local env_cmd=""
+    if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+        env_cmd="env GEMINI_API_KEY="
+    fi
+
     if command -v timeout >/dev/null 2>&1 && [ "$OS_NAME" != "Windows" ]; then
-        timeout --foreground "$timeout_sec" gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
+        $env_cmd timeout --foreground "$timeout_sec" gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
     else
-        gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
+        $env_cmd gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
     fi
 }
 
@@ -347,11 +353,17 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
             if [ "$candidate_model" != "$CURRENT_MODEL" ]; then
                 log_warning "Gemini CLI Health Check를 fallback 모델($candidate_model)로 재시도합니다."
             fi
+            
+            local env_cmd=""
+            if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+                env_cmd="env GEMINI_API_KEY="
+            fi
+            
             set +e
             if command -v timeout >/dev/null 2>&1 && [ "$OS_NAME" != "Windows" ]; then
-                timeout --foreground "${GEMINI_CLI_TIMEOUT_SEC:-240}" gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null
+                $env_cmd timeout --foreground "${GEMINI_CLI_TIMEOUT_SEC:-240}" gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null
             else
-                gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null
+                $env_cmd gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null
             fi
             EXIT_CODE=$?
             set -e
