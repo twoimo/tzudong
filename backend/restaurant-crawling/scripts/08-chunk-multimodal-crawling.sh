@@ -935,7 +935,7 @@ process_channel() {
                 local restaurants_len
                 restaurants_len=$(get_restaurants_len_from_jsonl "$crawling_file")
 
-                if [[ "$restaurants_len" =~ ^[0-9]+$ ]] && [ "$restaurants_len" -gt 0 ]; then
+                if [[ "$restaurants_len" =~ ^[0-9]+$ ]] && [ "$restaurants_len" -ge 0 ]; then
                     skipped_count=$((skipped_count + 1))
                     skip_already_processed=$((skip_already_processed + 1))
                     log_info "[$index/$total] SKIP: already_processed(crawling) ($video_id, restaurants=$restaurants_len)"
