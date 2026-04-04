@@ -354,7 +354,7 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
                 log_warning "Gemini CLI Health Check를 fallback 모델($candidate_model)로 재시도합니다."
             fi
             
-            local env_cmd=""
+            env_cmd=""
             if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
                 env_cmd="env GEMINI_API_KEY="
             fi
