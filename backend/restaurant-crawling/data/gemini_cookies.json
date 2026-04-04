@@ -170,61 +170,51 @@
     "sameSite": "None"
   },
   {
-    "name": "_gcl_au",
-    "value": "1.1.834011806.1775308582",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1783084582,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "None"
-  },
-  {
     "name": "__Secure-1PSIDTS",
-    "value": "sidts-CjIBWhotCctC5xBCYNGJpmrPQUJEC9ykR5zwN4ElmfBTrIe5L360U1x3fHKFYl_ForGzLxAA",
+    "value": "sidts-CjIBWhotCQxUFCEmiZz52Hw2LHNICx6XmvV03fMdeA6zWgMTU_kKAlQzbNZ-32tMcc0nXRAA",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806844583,
+    "expires": 1806846208,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
   },
   {
     "name": "__Secure-3PSIDTS",
-    "value": "sidts-CjIBWhotCctC5xBCYNGJpmrPQUJEC9ykR5zwN4ElmfBTrIe5L360U1x3fHKFYl_ForGzLxAA",
+    "value": "sidts-CjIBWhotCQxUFCEmiZz52Hw2LHNICx6XmvV03fMdeA6zWgMTU_kKAlQzbNZ-32tMcc0nXRAA",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806844583,
+    "expires": 1806846208,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
   },
   {
     "name": "SIDCC",
-    "value": "AKEyXzWk41kIfKFQoBjmt8Hd8qxxhoviAyqbD_qjgEZcE9RpamcaqUnxfNwe4hs6LkG1FIgHk4E",
+    "value": "AKEyXzXI_Uw9YWxyrotQeMxMUUo3McWKAkYnu7U3J7ihzw5tEXHdjURQ9swDYsUeGB3usscSlv4",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806844659,
+    "expires": 1806846288,
     "httpOnly": false,
     "secure": false,
     "sameSite": "None"
   },
   {
     "name": "__Secure-1PSIDCC",
-    "value": "AKEyXzWF_sppz-WspfReInRVKCQQZWJr0MymwOtPBDgMpYyJpB5VVHAiMj9lXbr1G0Y7R0C3hA",
+    "value": "AKEyXzVPmkOOgWSbb4-aEFZZyBrs8w2jVIlTAoZlPHDKP7lTM1HWfJZEk_3vdcYVUHJ4y0SH8A",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806844659,
+    "expires": 1806846288,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
   },
   {
     "name": "__Secure-3PSIDCC",
-    "value": "AKEyXzV1XGWvRSVudE5xXjHqXuf_cFczQvtBepQyih0ZLd02CFw1jFNNUEFhKDExAgpc0euvlg",
+    "value": "AKEyXzX3v8DZXIBssBtoKws9DzDxuZOy04nLk-1DL_lO1SXo7wcQzLcBeHh6Z_mQ-EpazqRkaA",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806844659,
+    "expires": 1806846288,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
@@ -335,16 +325,6 @@
     "domain": ".youtube.com",
     "path": "/",
     "expires": 1809851264,
-    "httpOnly": true,
-    "secure": true,
-    "sameSite": "None"
-  },
-  {
-    "name": "_cfuvid",
-    "value": ".pc8RemgUlXo5FVZuDbnKvF4gE.BMyRP8uz8_KgKzx4-1775308624313-0.0.1.1-604800000",
-    "domain": ".gitlab.com",
-    "path": "/",
-    "expires": -1,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
