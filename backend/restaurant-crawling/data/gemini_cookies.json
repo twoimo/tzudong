@@ -170,31 +170,51 @@
     "sameSite": "None"
   },
   {
-    "name": "SIDCC",
-    "value": "AKEyXzWO-wIGufKIyKUBke7FypSDj6deYXdWsdB_1LMd7JCh4qPL1Q9iNXQUw5CuZpIv50lJBg",
+    "name": "__Secure-1PSIDTS",
+    "value": "sidts-CjIBWhotCanoiwQ8Ek1Oi254mXZbEPLjrsuGqsaJZxLfJIxmNyturfRrYnZ9aCepK-PIahAA",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806827264,
+    "expires": 1806828006,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "__Secure-3PSIDTS",
+    "value": "sidts-CjIBWhotCanoiwQ8Ek1Oi254mXZbEPLjrsuGqsaJZxLfJIxmNyturfRrYnZ9aCepK-PIahAA",
+    "domain": ".google.com",
+    "path": "/",
+    "expires": 1806828006,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "SIDCC",
+    "value": "AKEyXzUT8HlrIUTKR2KPx8zwEctqGt9JEIBtCHXyWJsAoCm8w8PIUqmkZmP3a7QQfisic3F_VF8",
+    "domain": ".google.com",
+    "path": "/",
+    "expires": 1806828068,
     "httpOnly": false,
     "secure": false,
     "sameSite": "None"
   },
   {
     "name": "__Secure-1PSIDCC",
-    "value": "AKEyXzWbd1AdcVi003HG3PajdDfDnZgH-gm6qOBO4n426f5tWG7R6JFwUaL1ELR62rgBU36U",
+    "value": "AKEyXzVkhD_3PEt7MR7-P7UCYKs4bPfJQbcoyFjy8tlL_4xE7N-lP8qloiSx7eJxIe_Q4FLYow",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806827264,
+    "expires": 1806828068,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
   },
   {
     "name": "__Secure-3PSIDCC",
-    "value": "AKEyXzW_Oo1K40OKk_ZIV3X5rFBgbdlhy7vNAFv1FNX1jNZtawj8tqrGxUJm3eonv0P_IFGB",
+    "value": "AKEyXzVa8vZM7BMt9CrFIv3lFZ3oDDeRyF5ZCUNCq8aNi9qSFSqNj8jDHuR5ic0ZkjGCemZnmA",
     "domain": ".google.com",
     "path": "/",
-    "expires": 1806827264,
+    "expires": 1806828068,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
@@ -305,6 +325,16 @@
     "domain": ".youtube.com",
     "path": "/",
     "expires": 1809851264,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_cfuvid",
+    "value": ".lj4QNEiAlGhEMBZvOHZLY7PwhI01qXBmCuGFITuGEo-1775291479946-0.0.1.1-604800000",
+    "domain": ".gitlab.com",
+    "path": "/",
+    "expires": -1,
     "httpOnly": true,
     "secure": true,
     "sameSite": "None"
