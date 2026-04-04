@@ -138,6 +138,8 @@ jobs:
           # Note: API Key is injected manually as GEMINI_API_KEY_BYEON
           if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
             echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
+            echo '{"security": {"auth": {"selectedType": "oauth-personal"}}}' > ~/.gemini/settings.json
+            echo '{}' > ~/.gemini/projects.json
           fi
           
           # RClone Config
