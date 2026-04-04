@@ -359,11 +359,12 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
                 env_cmd="env GEMINI_API_KEY="
             fi
             
+            health_check_err="$TEMP_DIR/health_check_err.log"
             set +e
             if command -v timeout >/dev/null 2>&1 && [ "$OS_NAME" != "Windows" ]; then
-                $env_cmd timeout --foreground "${GEMINI_CLI_TIMEOUT_SEC:-240}" gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null
+                $env_cmd timeout --foreground "${GEMINI_CLI_TIMEOUT_SEC:-240}" gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
             else
-                $env_cmd gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null
+                $env_cmd gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
             fi
             EXIT_CODE=$?
             set -e
@@ -371,7 +372,12 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
                 CURRENT_MODEL="$candidate_model"
                 HEALTH_CHECK_PASSED=true
                 log_success "Health Check 성공 (Gemini CLI, model=$candidate_model)"
+                rm -f "$health_check_err"
                 break
+            else
+                log_error "Gemini CLI Error for $candidate_model (exit: $EXIT_CODE):"
+                cat "$health_check_err"
+                rm -f "$health_check_err"
             fi
         done
 
