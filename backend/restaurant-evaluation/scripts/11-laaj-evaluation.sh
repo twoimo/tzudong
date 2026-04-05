@@ -485,7 +485,7 @@ for i in "${!VIDEO_IDS[@]}"; do
             . as $r |
             ($loc_evals | map(select(.origin_name == $origin_name)) | first // null) as $loc |
             del(.origin_name) |
-            . + {name: (if $loc and $loc.naver_name then $loc.naver_name else $origin_name end)}
+            . + {name: (if $loc and $loc.naver_name then $loc.naver_name elif $loc and $loc.google_name then $loc.google_name else $origin_name end)}
         )
     ')
     

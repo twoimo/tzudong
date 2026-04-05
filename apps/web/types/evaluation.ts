@@ -141,6 +141,7 @@ export interface EvaluationRecord {
   approved_name?: string | null; // 관리자 승인 시 저장된 맛집 이름
   origin_name?: string | null; // AI가 추출한 맛집 이름
   naver_name?: string | null; // 네이버 지도 검색 결과 맛집 이름
+  google_name?: string | null; // 구글 지도 검색 결과 맛집 이름
   db_error_message?: string | null;
   db_error_details?: {
     error_type: 'duplicate';
