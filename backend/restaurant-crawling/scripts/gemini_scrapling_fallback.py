@@ -329,6 +329,15 @@ def check_for_soft_ban(page):
 def is_logged_in(page, debug=False):
     """로그인 상태 확인 (URL 및 특정 요소 감지)"""
     try:
+        try:
+            cookies = page.context.cookies()
+            if any(c.get('name') == '__Secure-1PSID' for c in cookies):
+                if debug:
+                    log("[login-check] __Secure-1PSID 쿠키 감지됨 → 로그인 완료")
+                return True
+        except Exception:
+            pass
+
         current_url = page.url
         if debug:
             log(f"[login-check] URL: {current_url}")
@@ -338,11 +347,16 @@ def is_logged_in(page, debug=False):
                 log("[login-check] accounts.google.com 감지 → 미로그인")
             return False
 
+        # 입력창보다 로그인 CTA를 우선 본다.
+        # Gemini 랜딩/마케팅 화면도 입력창이 있어 false positive가 날 수 있다.
+        if has_visible_login_cta(page, debug=debug):
+            return False
+
         # gemini.google.com/app 에 도달했으면 로그인 완료 가능성 높음
         on_gemini = "gemini.google.com" in current_url
 
         # Gemini 입력창이 보이면 로그인 완료 (가장 강한 신호)
-        textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"], [contenteditable="true"]')
+        textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"], [contenteditable="true"], textarea')
         if textbox_locator.count() > 0:
             if debug:
                 log("[login-check] 입력창 감지 → 로그인 완료")
@@ -362,33 +376,9 @@ def is_logged_in(page, debug=False):
 
         # gemini.google.com에 있고 로그인 CTA가 없으면 로그인된 것으로 간주
         if on_gemini:
-            explicit_login_cta = page.locator(
-                'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
-                'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
-                'button:has-text("Sign in"), button:has-text("로그인")'
-            )
-            if explicit_login_cta.count() == 0:
-                if debug:
-                    log("[login-check] gemini.google.com + 로그인 CTA 없음 → 로그인 완료")
-                return True
-            else:
-                if debug:
-                    log("[login-check] gemini.google.com + 로그인 CTA 발견 → 미로그인")
-                return False
-
-        # 명시적인 로그인 CTA(텍스트 포함)가 보이면 미로그인으로 간주
-        explicit_login_cta = page.locator(
-            'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
-            'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
-            'button:has-text("Sign in"), button:has-text("로그인")'
-        ).first
-        try:
-            if explicit_login_cta.is_visible():
-                if debug:
-                    log("[login-check] 로그인 CTA 가시 → 미로그인")
-                return False
-        except Exception:
-            pass
+            if debug:
+                log("[login-check] gemini.google.com + 로그인 CTA 없음 → 로그인 완료")
+            return True
 
         if debug:
             log("[login-check] 판별 불가 → 미로그인 반환")
@@ -399,12 +389,68 @@ def is_logged_in(page, debug=False):
         return False
 
 
-def wait_for_login_detection(page, timeout_sec=600, poll_sec=3, context=None):
+def has_visible_login_cta(page, debug=False):
+    selectors = (
+        'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
+        'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
+        'button:has-text("Sign in"), button:has-text("로그인")'
+    )
+
+    try:
+        login_cta = page.locator(selectors)
+        if login_cta.count() == 0:
+            return False
+
+        try:
+            visible = login_cta.first.is_visible()
+        except Exception:
+            visible = login_cta.is_visible()
+
+        if visible and debug:
+            log("[login-check] 로그인 CTA 가시 → 미로그인")
+        return visible
+    except Exception as e:
+        if debug:
+            log(f"[login-check] 로그인 CTA 확인 예외: {compact_error(e)}")
+        return False
+
+
+def detect_retryable_ui_problem(page):
+    """응답 대기 전에 감지 가능한 세션/앱 문제를 RETRY 사유로 표준화."""
+    try:
+        if has_visible_login_cta(page):
+            hero_text = page.locator('text=개인 AI 어시스턴트인 Gemini를 만나 보세요')
+            if hero_text.count() > 0:
+                return "logged_out_landing_page"
+            return "login_cta_visible"
+    except Exception:
+        pass
+
+    for text in [
+        "문제가 발생했습니다",
+        "Something went wrong",
+        "오류가 발생했습니다",
+        "Try again later",
+    ]:
+        try:
+            if page.locator(f"text={text}").count() > 0:
+                return "gemini_issue_banner"
+        except Exception:
+            pass
+
+    return None
+
+
+def wait_for_login_detection(page, timeout_sec=600, poll_sec=3, context=None, stop_event=None):
     """수동 로그인 완료를 자동 감지한다."""
     log(f"로그인 상태 자동 감지 대기 중... (최대 {timeout_sec}초)")
     start = time.time()
     check_count = 0
     while time.time() - start < timeout_sec:
+        if stop_event and stop_event.is_set():
+            log("✅ 사용자 수동 확인(Enter) 감지됨")
+            return True
+
         check_count += 1
         debug = (check_count % 10 == 1)  # 매 30초마다 디버그 로그 출력
 
@@ -547,8 +593,71 @@ def try_direct_file_input_upload(page, file_path):
     return False, None, None, last_error
 
 
+def expose_hidden_upload_trigger(page, selector, idx):
+    """aria-hidden + 0x0 상태의 내부 업로드 트리거를 실제 클릭 가능한 크기로 노출한다."""
+    page.evaluate(
+        """
+        ({ selector, idx }) => {
+            const el = document.querySelectorAll(selector)[idx];
+            if (!el) return false;
+            el.removeAttribute('aria-hidden');
+            Object.assign(el.style, {
+                position: 'fixed',
+                left: `${16 + (idx * 48)}px`,
+                top: '16px',
+                width: '40px',
+                height: '40px',
+                minWidth: '40px',
+                minHeight: '40px',
+                opacity: '1',
+                zIndex: '2147483647',
+                pointerEvents: 'auto',
+            });
+            return true;
+        }
+        """,
+        {"selector": selector, "idx": idx},
+    )
+
+
+def click_hidden_upload_trigger(page, hidden_trigger_selectors):
+    """Gemini 내부 hidden upload button을 trusted click 가능한 상태로 노출 후 클릭한다."""
+    last_error = None
+
+    for trigger_sel in hidden_trigger_selectors:
+        locator = page.locator(trigger_sel)
+        try:
+            count = locator.count()
+        except Exception as e:
+            last_error = e
+            continue
+
+        if count == 0:
+            continue
+
+        for idx in range(min(count, 4)):
+            trigger = locator.nth(idx)
+            try:
+                expose_hidden_upload_trigger(page, trigger_sel, idx)
+                try:
+                    trigger.scroll_into_view_if_needed(timeout=1000)
+                except Exception:
+                    pass
+                trigger.click(timeout=4000)
+                return True, trigger_sel, idx, None
+            except Exception as e:
+                last_error = e
+                try:
+                    page.keyboard.press("Escape")
+                except Exception:
+                    pass
+
+    return False, None, None, last_error
+
+
 def manual_login():
     """Camoufox(Firefox) 영구 프로필 기반 수동 로그인"""
+    import threading
     log("🔑 수동 로그인 모드 시작 (Camoufox Firefox 기반)")
     log(f"프로필 경로: {BROWSER_PROFILE_DIR}")
     log("Firefox 브라우저가 열리면 구글 계정으로 로그인해 주세요.")
@@ -567,9 +676,22 @@ def manual_login():
                 log(f"페이지 로딩 지연 (무시하고 계속 진행): {compact_error(e)}")
 
             log("로그인 후 자동 감지를 기다려 주세요. (필요 시 Enter 수동 확인도 지원)")
-            detected = wait_for_login_detection(page, timeout_sec=900, poll_sec=3, context=context)
+            
+            stop_event = threading.Event()
+            def wait_for_enter():
+                try:
+                    if sys.stdin and sys.stdin.isatty():
+                        input(">>> 로그인을 마쳤다면 언제든 Enter를 누르세요...\n")
+                        stop_event.set()
+                except Exception:
+                    pass
 
-            if not detected:
+            t = threading.Thread(target=wait_for_enter, daemon=True)
+            t.start()
+
+            detected = wait_for_login_detection(page, timeout_sec=900, poll_sec=3, context=context, stop_event=stop_event)
+
+            if not detected and not stop_event.is_set():
                 if sys.stdin and sys.stdin.isatty():
                     log("자동 감지 시간 초과. 수동 확인(Enter)로 계속할 수 있습니다.")
                     input(">>> 로그인을 마쳤다면 Enter를 누르세요...")
@@ -586,7 +708,13 @@ def manual_login():
 
 
 def run_fallback(prompt_path, video_path, output_path, target_model=None):
-    max_retries = 1
+    max_retries_raw = os.getenv("WEB_FALLBACK_SESSION_RETRIES", "2").strip()
+    try:
+        max_retries = max(1, int(max_retries_raw))
+    except ValueError:
+        log(f"WEB_FALLBACK_SESSION_RETRIES 값이 잘못되어 기본값 2를 사용합니다: {max_retries_raw}")
+        max_retries = 2
+
     for attempt in range(1, max_retries + 1):
         log(f"--- 시도 {attempt}/{max_retries} ---")
         try:
@@ -713,6 +841,11 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                 log("동영상 업로드 메뉴 시도...")
                 uploaded = False
+                hidden_trigger_selectors = [
+                    'button[data-test-id="hidden-local-file-upload-button"]',
+                    'button[data-test-id="hidden-local-image-upload-button"]',
+                    'button[xapfileselectortrigger]',
+                ]
                 upload_button_selectors = [
                     'button[aria-label="Open upload file menu"]',
                     'button[aria-label*="Upload file"]',
@@ -732,6 +865,8 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     'button[aria-label*="upload type"]',
                     'button[aria-label*="입력 영역 메뉴"]',
                     'button[aria-label*="input area menu"]',
+                    'button[aria-controls="upload-file-menu"]',
+                    'button.upload-card-button',
                     'button.menu-button.open.mat-primary',
                 ]
 
@@ -758,13 +893,14 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                         for click_try in range(2):
                             try:
+                                chooser_source = selector
                                 with page.expect_file_chooser(timeout=5000) as fc_info:
                                     btn.click()
                                     human_delay(1, 2)
 
                                     menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
+                                    clicked = False
                                     if menu_items:
-                                        clicked = False
                                         for item in menu_items:
                                             text = item.inner_text().lower()
                                             if 'upload' in text or 'computer' in text or '업로드' in text or '컴퓨터' in text or '파일' in text:
@@ -773,11 +909,20 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                                                 break
                                         if not clicked:
                                             menu_items[0].click()
+                                            clicked = True
+
+                                    if not clicked:
+                                        hidden_ok, hidden_sel, hidden_idx, hidden_err = click_hidden_upload_trigger(page, hidden_trigger_selectors)
+                                        if hidden_ok:
+                                            clicked = True
+                                            chooser_source = f"{selector} -> {hidden_sel} (hidden idx={hidden_idx})"
+                                        elif hidden_err is not None:
+                                            raise hidden_err
 
                                 file_chooser = fc_info.value
                                 file_chooser.set_files(video_abs_path)
                                 uploaded = True
-                                log(f"업로드 버튼 경로 성공: {selector} (idx={btn_idx})")
+                                log(f"업로드 버튼 경로 성공: {chooser_source} (btn idx={btn_idx})")
                                 break
                             except Exception as e:
                                 if click_try == 0 and accept_upload_disclaimer_if_present(page):
@@ -797,42 +942,29 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
                 if not uploaded:
                     # Gemini 내부 hidden 업로드 트리거 버튼 경로(버튼 비가시 상태 포함)
-                    hidden_trigger_selectors = [
-                        'button[data-test-id="hidden-local-file-upload-button"]',
-                        'button[data-test-id="hidden-local-image-upload-button"]',
-                        'button[xapfileselectortrigger]',
-                    ]
-                    for trigger_sel in hidden_trigger_selectors:
-                        trigger = page.locator(trigger_sel).first
-                        try:
-                            if trigger.count() == 0:
-                                continue
-                            with page.expect_file_chooser(timeout=12000) as fc_info:
-                                try:
-                                    trigger.click(force=True, timeout=4000)
-                                except Exception:
-                                    trigger.dispatch_event("click")
-                            fc_info.value.set_files(video_abs_path)
-                            uploaded = True
-                            log(f"hidden trigger 업로드 성공: {trigger_sel}")
-                            break
-                        except Exception as e:
-                            if accept_upload_disclaimer_if_present(page):
-                                log("동의 팝업 처리 후 hidden trigger 재시도")
-                                try:
-                                    with page.expect_file_chooser(timeout=5000) as fc_info:
-                                        try:
-                                            trigger.click(force=True, timeout=4000)
-                                        except Exception:
-                                            trigger.dispatch_event("click")
-                                    fc_info.value.set_files(video_abs_path)
-                                    uploaded = True
-                                    log(f"hidden trigger 업로드 성공(재시도): {trigger_sel}")
-                                    break
-                                except Exception as retry_err:
-                                    log(f"hidden trigger 업로드 재시도 실패({trigger_sel}): {compact_error(retry_err)}")
-                            else:
-                                log(f"hidden trigger 업로드 실패({trigger_sel}): {compact_error(e)}")
+                    try:
+                        with page.expect_file_chooser(timeout=12000) as fc_info:
+                            hidden_ok, hidden_sel, hidden_idx, hidden_err = click_hidden_upload_trigger(page, hidden_trigger_selectors)
+                            if not hidden_ok and hidden_err is not None:
+                                raise hidden_err
+                        fc_info.value.set_files(video_abs_path)
+                        uploaded = True
+                        log(f"hidden trigger 업로드 성공: {hidden_sel} (idx={hidden_idx})")
+                    except Exception as e:
+                        if accept_upload_disclaimer_if_present(page):
+                            log("동의 팝업 처리 후 hidden trigger 재시도")
+                            try:
+                                with page.expect_file_chooser(timeout=5000) as fc_info:
+                                    hidden_ok, hidden_sel, hidden_idx, hidden_err = click_hidden_upload_trigger(page, hidden_trigger_selectors)
+                                    if not hidden_ok and hidden_err is not None:
+                                        raise hidden_err
+                                fc_info.value.set_files(video_abs_path)
+                                uploaded = True
+                                log(f"hidden trigger 업로드 성공(재시도): {hidden_sel} (idx={hidden_idx})")
+                            except Exception as retry_err:
+                                log(f"hidden trigger 업로드 재시도 실패: {compact_error(retry_err)}")
+                        else:
+                            log(f"hidden trigger 업로드 실패: {compact_error(e)}")
 
                 if uploaded:
                     log("파일 업로드 대기 (진행 표시줄 확인)...")
@@ -898,12 +1030,20 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     except Exception:
                         return False
 
-                log("답변 생성 대기 중... (최대 600초)")
-                max_wait_time = 900
+                max_wait_time = int(os.getenv("WEB_FALLBACK_RESPONSE_WAIT_SEC", "900"))
+                if max_wait_time < 60:
+                    max_wait_time = 60
+                log(f"답변 생성 대기 중... (최대 {max_wait_time}초)")
                 start_wait = time.time()
                 success = False
 
                 while time.time() - start_wait < max_wait_time:
+                    retryable_problem = detect_retryable_ui_problem(page)
+                    if retryable_problem:
+                        log(f"응답 대기 중 재시도 가능한 UI 문제 감지: {retryable_problem}")
+                        save_web_dump(page, retryable_problem)
+                        return "RETRY"
+
                     draft_btns = page.locator('button:has-text("답변 A"), button:has-text("초안 1"), button:has-text("Draft 1"), button[aria-label*="답변 A"], button[aria-label*="초안 1"]').all()
                     if draft_btns:
                         human_delay(3, 5)
@@ -938,7 +1078,18 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                         text_blocks = get_model_text_blocks()
                         if text_blocks:
                             current_text = text_blocks[-1]
-                            if ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
+                            is_valid_payload, _ = validate_response_payload(current_text)
+                            if is_valid_payload:
+                                time.sleep(3)
+                                latest_blocks = get_model_text_blocks()
+                                if latest_blocks:
+                                    latest_text = latest_blocks[-1].strip()
+                                    latest_valid, _ = validate_response_payload(latest_text)
+                                    if latest_valid:
+                                        log("답변 JSON 텍스트 렌더링 완료 감지.")
+                                        success = True
+                                        break
+                            elif ('"origin_name"' in current_text or '"restaurants"' in current_text) and (current_text.endswith('}') or current_text.endswith(']') or current_text.endswith('```')):
                                 time.sleep(3)
                                 if get_model_text_blocks() and get_model_text_blocks()[-1].strip() == current_text:
                                     log("답변 JSON 텍스트 렌더링 완료 감지.")
