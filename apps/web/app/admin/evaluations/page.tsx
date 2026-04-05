@@ -781,7 +781,8 @@ function AdminEvaluationPage() {
           .from('restaurants')
           .select('*')
           .range(from, from + PAGE_LIMIT - 1)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: true });
 
         if (pageError) {
           console.error('Supabase error:', pageError);
@@ -859,6 +860,7 @@ function AdminEvaluationPage() {
           restaurant_name: (r.origin_name as string) || (r.name as string) || '이름 없음',
           origin_name: r.origin_name,
           naver_name: r.naver_name,
+          google_name: r.google_name,
           approved_name: r.approved_name,
 
           youtube_link: r.youtube_link as string || '',
@@ -1132,30 +1134,32 @@ function AdminEvaluationPage() {
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
   const performApproval = async (record: EvaluationRecord) => {
-    // Naver Name 추출 로직
-    // 1. DB 컬럼(naver_name)을 최우선으로 사용
-    let naverName: string | null = record.naver_name || null;
+    // Approved Name 추출 로직
+    // 1. DB 컬럼(naver_name, google_name)을 최우선으로 사용
+    let approvedName: string | null = record.naver_name || record.google_name || null;
 
-    // 2. naver_name이 없는 경우 evaluation_results에서 추출 시도 (Fallback)
-    if (!naverName) {
+    // 2. 컬럼이 없는 경우 evaluation_results에서 추출 시도 (Fallback)
+    if (!approvedName) {
       const locationMatch = record.evaluation_results?.location_match_TF as LocationMatchResult | undefined;
       if (locationMatch) {
         if (locationMatch.matched_name) {
-          naverName = locationMatch.matched_name;
+          approvedName = locationMatch.matched_name;
+        } else if (locationMatch.google_name) {
+          approvedName = locationMatch.google_name;
         } else if (locationMatch.name && !['Location Match', '주소 정합성', 'location_match_TF'].includes(locationMatch.name)) {
-          naverName = locationMatch.name;
+          approvedName = locationMatch.name;
         }
       }
     }
 
     // 3. 그래도 없으면 기존 이름 사용 (매우 드문 케이스)
-    if (!naverName) {
-      naverName = record.restaurant_name || record.name || '이름 없음';
+    if (!approvedName) {
+      approvedName = record.restaurant_name || record.name || '이름 없음';
     }
 
     debugLog('🚀 승인 요청 시작:', {
       id: record.id,
-      naverName,
+      approvedName,
       original_status: record.status
     });
 
@@ -1165,7 +1169,7 @@ function AdminEvaluationPage() {
       // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
         status: 'approved',
-        approved_name: naverName,
+        approved_name: approvedName,
         db_error_message: null, // 에러 메시지 초기화
         db_error_details: null, // 에러 상세 초기화
         updated_at: new Date().toISOString(),
@@ -1189,7 +1193,7 @@ function AdminEvaluationPage() {
     // 상태 업데이트 (새로고침 없이 UI 반영)
     updateRecordInState(record.id, {
       status: 'approved',
-      approved_name: naverName,
+      approved_name: approvedName,
       db_error_message: null,
       db_error_details: null,
       updated_at: new Date().toISOString(),

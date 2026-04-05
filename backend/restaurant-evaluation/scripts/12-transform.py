@@ -123,6 +123,7 @@ def get_location_data(
     """location_match_TF에서 위치 데이터 추출 (기존 백업 로직 유지)"""
     loc_data = {
         "naver_name": None,  # ★ 추가
+        "google_name": None, # ★ 구글맵 지원 추가
         "roadAddress": None,
         "jibunAddress": None,
         "englishAddress": None,
@@ -143,6 +144,7 @@ def get_location_data(
 
     if loc_match_item:
         loc_data["naver_name"] = loc_match_item.get("naver_name")  # ★ 추가
+        loc_data["google_name"] = loc_match_item.get("google_name") # ★ 구글맵 지원 추가
         loc_data["geocoding_success"] = loc_match_item.get("eval_value", False)
 
         if not loc_data["geocoding_success"]:
@@ -257,10 +259,11 @@ def transform_json_object(
 
             youtuber_review = restaurant_data.get("youtuber_review")
 
-            # trace_id 생성: naver_name이 있으면 naver_name, 없으면 원본 name
+            # trace_id 생성: naver_name이 있으면 naver_name, 구글 있으면 google_name, 없으면 원본 name
             naver_name = loc_data.get("naver_name")
-            trace_id_name = naver_name or restaurant_name
-            trace_id_name_source = "naver" if naver_name else "original"
+            google_name = loc_data.get("google_name")
+            trace_id_name = naver_name or google_name or restaurant_name
+            trace_id_name_source = "naver" if naver_name else ("google" if google_name else "original")
 
             output = {
                 "youtube_link": youtube_link,
@@ -272,6 +275,7 @@ def transform_json_object(
                 "youtube_meta": youtube_meta,
                 "origin_name": restaurant_name,
                 "naver_name": naver_name,  # 없으면 null 그대로
+                "google_name": loc_data.get("google_name"),
                 "trace_id_name_source": trace_id_name_source,
                 "category": restaurant_data.get("category"),
                 "reasoning_basis": restaurant_data.get("reasoning_basis"),
@@ -414,6 +418,7 @@ def transform_json_object(
                 "youtube_meta": youtube_meta,
                 "origin_name": restaurant_name,
                 "naver_name": None,  # notSelection은 평가 안 하므로 null
+                "google_name": None,
                 "trace_id_name_source": "original",
                 "category": restaurant_data.get("category"),
                 "reasoning_basis": restaurant_data.get("reasoning_basis"),
@@ -472,8 +477,9 @@ def transform_map_url_crawling_object(
         youtuber_review = restaurant_data.get("youtuber_review")
         naver_name = restaurant_data.get("naver_name")  # 네이버 검색 결과
 
-        # trace_id 생성: naver_name 있으면 naver_name, 없으면 origin_name
-        trace_id_name = naver_name or origin_name
+        # trace_id 생성: naver_name 있으면 naver_name, 구글 있으면 google_name, 없으면 origin_name
+        google_name = restaurant_data.get("google_name")
+        trace_id_name = naver_name or google_name or origin_name
 
         output = {
             "youtube_link": youtube_link,
@@ -483,7 +489,8 @@ def transform_map_url_crawling_object(
             "youtube_meta": youtube_meta,
             "origin_name": origin_name,  # 크롤링에서 받은 원본 상호명
             "naver_name": naver_name,  # 네이버 검색 결과 상호명
-            "trace_id_name_source": "naver" if naver_name else "original",
+            "google_name": google_name,
+            "trace_id_name_source": "naver" if naver_name else ("google" if google_name else "original"),
             "category": restaurant_data.get("category"),
             "reasoning_basis": restaurant_data.get(
                 "reasoning_basis"
@@ -686,3 +693,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+n()

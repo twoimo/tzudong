@@ -50,6 +50,7 @@ NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID_BYEON", "")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET_BYEON", "")
 NCP_KEY_ID = os.getenv("NCP_MAPS_KEY_ID_BYEON", "")
 NCP_KEY = os.getenv("NCP_MAPS_KEY_BYEON", "")
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "") or os.getenv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY", "")
 
 LOCAL_URL = "https://openapi.naver.com/v1/search/local.json"
 GEOCODE_URL = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
@@ -269,24 +270,95 @@ def evaluate_category_validity(
     """
     # origin_name -> naver_name 매핑 생성
     naver_name_map = {}
+    google_name_map = {}
     for loc_item in location_match_results:
         origin_name = loc_item.get("origin_name")
         naver_name = loc_item.get("naver_name")
+        google_name = loc_item.get("google_name")
         if origin_name:
-            naver_name_map[origin_name] = naver_name
+            if naver_name:
+                naver_name_map[origin_name] = naver_name
+            if google_name:
+                google_name_map[origin_name] = google_name
 
     results = []
     evaluation_name_source = {}
     for restaurant in restaurants:
         origin_name = _norm_space(str(restaurant.get("origin_name", "")))
-        # name: naver_name 있으면 naver_name, 없으면 origin_name
-        name = naver_name_map.get(origin_name) or origin_name
-        name_source = "naver_name" if naver_name_map.get(origin_name) else "origin_name"
+        # name: naver_name 있으면 naver_name, 구글 있으면 google_name, 없으면 origin_name
+        name = naver_name_map.get(origin_name) or google_name_map.get(origin_name) or origin_name
+        name_source = "naver_name" if naver_name_map.get(origin_name) else ("google_name" if google_name_map.get(origin_name) else "origin_name")
         category = restaurant.get("category")
         is_valid = category is not None and category in VALID_CATEGORIES
         results.append({"name": name, "eval_value": is_valid})
         evaluation_name_source[origin_name] = name_source
     return results, evaluation_name_source
+
+
+def google_places_text_search(query: str) -> Optional[Dict[str, Any]]:
+    """구글 Places Text Search API 호출"""
+    if not GOOGLE_MAPS_API_KEY:
+        return None
+    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    params = {
+        "query": query,
+        "key": GOOGLE_MAPS_API_KEY,
+        "language": "ko"
+    }
+    for attempt in range(3):
+        try:
+            r = requests.get(url, params=params, timeout=8)
+            r.raise_for_status()
+            data = r.json()
+            if data.get("status") == "OK" and data.get("results"):
+                return data["results"][0]
+            if attempt < 2:
+                time.sleep(1)
+        except Exception as e:
+            print(f"[WARN] Google Maps API 실패 (시도 {attempt+1}/3): {e}")
+            if attempt < 2:
+                time.sleep(2**attempt)
+            else:
+                return None
+    return None
+
+def evaluate_with_google_fallback(name: str, origin_address: str, naver_fail_msg: str) -> Dict[str, Any]:
+    """네이버 지도 실패 시 구글 지도로 폴백 평가"""
+    query = f"{name} {_norm_space(origin_address)}"
+    google_res = google_places_text_search(query)
+    
+    if google_res:
+        google_name = google_res.get("name")
+        location = google_res.get("geometry", {}).get("location", {})
+        formatted_address = google_res.get("formatted_address", "")
+        google_address = {
+            "roadAddress": formatted_address,
+            "jibunAddress": formatted_address,
+            "englishAddress": "",
+            "addressElements": [],
+            "x": str(location.get("lng", "")),
+            "y": str(location.get("lat", "")),
+            "distance": 0.0,
+        }
+        return {
+            "origin_name": name,
+            "naver_name": None,
+            "google_name": google_name,
+            "eval_value": True,
+            "origin_address": origin_address,
+            "naver_address": [google_address], # 호환성을 위해 naver_address 필드에 구글 주소 정보 저장
+            "falseMessage": None,
+        }
+    
+    return {
+        "origin_name": name,
+        "naver_name": None,
+        "google_name": None,
+        "eval_value": False,
+        "origin_address": origin_address,
+        "naver_address": None,
+        "falseMessage": f"Naver 실패 ({naver_fail_msg}), Google 검색 실패",
+    }
 
 
 def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
@@ -373,14 +445,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     if not matched_result:
         geocoded_addresses = ncp_geocode_addresses(origin_address)
         if not geocoded_addresses or len(geocoded_addresses) == 0:
-            return {
-                "origin_name": name,
-                "naver_name": None,  # ★ 추가
-                "eval_value": False,
-                "origin_address": origin_address,
-                "naver_address": None,
-                "falseMessage": "2단계 실패: 지오코딩 정보 없음",
-            }
+            return evaluate_with_google_fallback(name, origin_address, "2단계 실패: 지오코딩 정보 없음")
         geocoded_lat = float(geocoded_addresses[0].get("y", 0))
         geocoded_lng = float(geocoded_addresses[0].get("x", 0))
 
@@ -479,6 +544,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
             res = {
                 "origin_name": name,
                 "naver_name": None,
+                "google_name": None,
                 "eval_value": False,
                 "origin_address": _norm_space(str(r.get("address", ""))),
                 "naver_address": None,
@@ -604,3 +670,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+_ == "__main__":
+    main()
+n()
