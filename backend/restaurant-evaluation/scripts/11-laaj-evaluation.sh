@@ -85,6 +85,29 @@ maybe_normalize() {
     fi
 }
 
+run_gemini_cli_request() {
+    local prompt_file="$1"
+    local response_file="$2"
+    local stderr_file="$3"
+    local timeout_sec="${GEMINI_CLI_TIMEOUT_SEC:-240}"
+
+    if ! [[ "$timeout_sec" =~ ^[0-9]+$ ]] || [ "$timeout_sec" -lt 1 ]; then
+        timeout_sec=240
+    fi
+
+    # OAuth 폴백 시 API Key 대신 인증 파일을 강제 사용하도록 GEMINI_API_KEY 해제
+    local env_cmd=""
+    if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+        env_cmd="env GEMINI_API_KEY="
+    fi
+
+    if command -v timeout >/dev/null 2>&1 && [ "$OS_NAME" != "Windows" ]; then
+        $env_cmd timeout --foreground "$timeout_sec" gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
+    else
+        $env_cmd gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$prompt_file" > "$response_file" 2>"$stderr_file"
+    fi
+}
+
 # ================================
 # 명령어 감지
 # ================================
@@ -216,7 +239,7 @@ fi
 # Gemini API 키 및 모델 설정
 export GEMINI_API_KEY="${GEMINI_API_KEY_BYEON:-$GEMINI_API_KEY}"
 export PRIMARY_MODEL="gemini-3-flash-preview"
-export FALLBACK_MODEL="gemini-3-flash-preview"
+export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.1-pro-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export TZ="Asia/Seoul"
 
@@ -258,7 +281,7 @@ log_info "  LAAJ 음식점 평가 시작 (Cross-Platform)"
 log_info "============================================================"
 log_info "채널: $CHANNEL"
 log_info "모드: $(if [ "$FORCE_CLI_FALLBACK" = true ]; then echo "Gemini CLI only"; else echo "Node.js API + Sticky Fallback"; fi)"
-log_info "모델: $CURRENT_MODEL"
+log_info "모델: $CURRENT_MODEL (fallback: $FALLBACK_MODEL)"
 
 # 필수 파일 확인
 if [ ! -f "$PROMPT_FILE" ]; then
@@ -322,17 +345,50 @@ fi
 # 2. CLI Check (Fallback or Primary)
 if [ "$HEALTH_CHECK_PASSED" = false ]; then
     if [ "$HAS_GEMINI_CLI" = true ]; then
-        if gemini -p "1+1=?" --model "$CURRENT_MODEL" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>/dev/null; then
-            HEALTH_CHECK_PASSED=true
-            log_success "Health Check 성공 (Gemini CLI)"
-        else
-            log_error "Health Check 실패 (Gemini CLI)"
-            log_error "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key를 확인하세요."
-            exit 1
+        for candidate_model in "$CURRENT_MODEL" "$FALLBACK_MODEL"; do
+            [ -n "$candidate_model" ] || continue
+            if [ "$candidate_model" != "$CURRENT_MODEL" ] && [ "$candidate_model" = "$PRIMARY_MODEL" ]; then
+                continue
+            fi
+            if [ "$candidate_model" != "$CURRENT_MODEL" ]; then
+                log_warning "Gemini CLI Health Check를 fallback 모델($candidate_model)로 재시도합니다."
+            fi
+            
+            env_cmd=""
+            if [ -f "$HOME/.gemini/oauth_creds.json" ]; then
+                env_cmd="env GEMINI_API_KEY="
+            fi
+            
+            health_check_err="$TEMP_DIR/health_check_err.log"
+            set +e
+            if command -v timeout >/dev/null 2>&1 && [ "$OS_NAME" != "Windows" ]; then
+                $env_cmd timeout --foreground "${GEMINI_CLI_TIMEOUT_SEC:-240}" gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
+            else
+                $env_cmd gemini -p "1+1=?" --model "$candidate_model" --output-format json < /dev/null > "$HEALTH_CHECK_RESPONSE" 2>"$health_check_err"
+            fi
+            EXIT_CODE=$?
+            set -e
+            if [ $EXIT_CODE -eq 0 ]; then
+                CURRENT_MODEL="$candidate_model"
+                HEALTH_CHECK_PASSED=true
+                log_success "Health Check 성공 (Gemini CLI, model=$candidate_model)"
+                rm -f "$health_check_err"
+                break
+            else
+                log_error "Gemini CLI Error for $candidate_model (exit: $EXIT_CODE):"
+                cat "$health_check_err"
+                rm -f "$health_check_err"
+            fi
+        done
+
+        if [ "$HEALTH_CHECK_PASSED" = false ]; then
+            log_warning "Health Check 실패 (Gemini CLI)"
+            log_warning "제미나이 API/CLI가 모두 응답하지 않습니다. 네트워크나 API Key(할당량)를 확인하세요. 평가를 건너뜁니다."
+            exit 0
         fi
     else
-        log_error "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가 불가."
-        exit 1
+        log_warning "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가를 건너뜁니다."
+        exit 0
     fi
 fi
 
@@ -424,11 +480,12 @@ for i in "${!VIDEO_IDS[@]}"; do
         .evaluation_target as $targets |
         .evaluation_results.location_match_TF as $loc_evals |
         $rests | map(
-            select($targets[.origin_name] == true) |
+            .origin_name as $origin_name |
+            select(($origin_name | type) == "string" and ($origin_name | length) > 0 and ($targets[$origin_name] == true)) |
             . as $r |
-            ($loc_evals | map(select(.origin_name == $r.origin_name)) | first // null) as $loc |
+            ($loc_evals | map(select(.origin_name == $origin_name)) | first // null) as $loc |
             del(.origin_name) |
-            . + {name: (if $loc and $loc.naver_name then $loc.naver_name else $r.origin_name end)}
+            . + {name: (if $loc and $loc.naver_name then $loc.naver_name else $origin_name end)}
         )
     ')
     
@@ -520,7 +577,7 @@ $TRANSCRIPT
     if [ "$GEMINI_SUCCESS" = false ] && [ "$HAS_GEMINI_CLI" = true ]; then
         log_debug "Gemini CLI 호출 (모델: $CURRENT_MODEL)"
 
-        if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+        if run_gemini_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
             GEMINI_SUCCESS=true
         else
             # Error logging
@@ -536,10 +593,12 @@ $TRANSCRIPT
                    log_warning "할당량 소진 -> Fallback 모델($FALLBACK_MODEL) 전환"
                    CURRENT_MODEL="$FALLBACK_MODEL"
                    sleep 10
-                   if gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                   if run_gemini_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR"; then
                        GEMINI_SUCCESS=true
                    fi
                fi
+            elif grep -qi 'timed out\|SIGTERM\|signal 15' "$TEMP_STDERR" 2>/dev/null; then
+               log_warning "Gemini CLI 타임아웃 감지 -> 다음 비디오로 진행합니다."
             fi
         fi
     fi
@@ -575,7 +634,7 @@ $TRANSCRIPT
                     log_warning "파싱 실패 (${PARSE_ATTEMPT}/3) - 재요청..."
                     sleep 10
                     if [ "$HAS_GEMINI_CLI" = true ]; then
-                        gemini --model "$CURRENT_MODEL" --output-format json --yolo < "$TEMP_PROMPT" > "$TEMP_RESPONSE" 2>/dev/null
+                        run_gemini_cli_request "$TEMP_PROMPT" "$TEMP_RESPONSE" "$TEMP_STDERR" >/dev/null 2>&1 || true
                     elif [ -n "$NODE_EXE" ]; then
                         "$NODE_EXE" "$(maybe_normalize "$NODE_EXE" "$GEMINI_API_SCRIPT")" "$(maybe_normalize "$NODE_EXE" "$TEMP_PROMPT")" "$(maybe_normalize "$NODE_EXE" "$TEMP_RESPONSE")" 2>/dev/null
                     fi

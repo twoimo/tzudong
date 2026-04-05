@@ -25,6 +25,7 @@ LOG_DIR="${RUN_DAILY_LOG_DIR:-$BACKEND_DIR/log/cron}"
 CURRENT_LOG_LINK="${RUN_DAILY_CURRENT_LOG_LINK:-$LOG_DIR/current.log}"
 
 MONITOR_PID_FILE="${RUN_DAILY_MONITOR_PID_FILE:-$LOG_DIR/run_daily_monitor.pid}"
+MONITOR_LOCK_FILE="${RUN_DAILY_MONITOR_LOCK_FILE:-$LOG_DIR/run_daily_monitor.lock}"
 MONITOR_LOG="${RUN_DAILY_MONITOR_LOG:-$LOG_DIR/monitor.log}"
 RUN_DAILY_PID_FILE="${RUN_DAILY_PID_FILE:-$LOG_DIR/run_daily.pid}"
 
@@ -215,6 +216,13 @@ ensure_run_daily() {
 }
 
 run_loop() {
+  # Leader orchestration using flock to prevent multiple monitor instances
+  exec 9> "$MONITOR_LOCK_FILE"
+  if ! flock -n 9; then
+    log "INFO" "Another monitor daemon is already running (leader election failed). Exiting."
+    return 0
+  fi
+
   echo "$BASHPID" > "$MONITOR_PID_FILE"
   trap 'log "WARN" "monitor daemon 종료 신호 수신"; rm -f "$MONITOR_PID_FILE"; exit 0' TERM INT
   trap 'ec=$?; if [ "$ec" -ne 0 ]; then log "ERROR" "monitor daemon 비정상 종료 (exit=$ec, cmd=${BASH_COMMAND:-unknown})"; else log "INFO" "monitor daemon 정상 종료"; fi; rm -f "$MONITOR_PID_FILE"' EXIT
