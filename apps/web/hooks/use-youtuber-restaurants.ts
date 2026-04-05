@@ -90,7 +90,7 @@ export function useYoutuberRestaurants(
         try {
             let query = supabase
                 .from('restaurants')
-                .select('id, trace_id, approved_name, origin_name, phone, categories, status, source_type, channel_name, youtube_link, youtube_meta, reasoning_basis, tzuyang_review, origin_address, road_address, jibun_address, lat, lng, geocoding_success, created_at, updated_at', {
+                .select('id, trace_id, approved_name, origin_name, naver_name, google_name, phone, categories, status, source_type, channel_name, youtube_link, youtube_meta, reasoning_basis, tzuyang_review, origin_address, road_address, jibun_address, lat, lng, geocoding_success, created_at, updated_at', {
                     count: 'exact'
                 })
                 .in('source_type', ['geminiCLI', 'perplexity'])
@@ -125,6 +125,8 @@ export function useYoutuberRestaurants(
                 trace_id: string | null;
                 approved_name: string | null;
                 origin_name: string | null;
+                naver_name: string | null;
+                google_name: string | null;
                 phone: string | null;
                 categories: string[] | null;
                 status: string;
