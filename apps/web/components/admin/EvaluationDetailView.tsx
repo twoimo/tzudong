@@ -147,6 +147,13 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 </span>
                                 <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
                             </div>
+                            <div className="flex items-start gap-2">
+                                <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Google Name:</span>
+                                <span className="font-bold text-orange-600 break-all">
+                                    {record.google_name || locationMatchResult?.google_name || '-'}
+                                </span>
+                                <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
+                            </div>
                         </div>
                     </div>
 
