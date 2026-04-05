@@ -40,6 +40,12 @@ if [ -f "$HOME/.bashrc" ]; then
     source "$HOME/.bashrc"
 fi
 
+if [ -f "$PROJECT_ROOT/backend/.env" ]; then
+    set -a
+    source "$PROJECT_ROOT/backend/.env"
+    set +a
+fi
+
 # [Local Config] Python 런타임 탐색
 python_cmd_usable() {
     local cmd="$1"
@@ -1056,6 +1062,14 @@ SUMMARY_MD="${RUN_DAILY_SUMMARY_PATH:-$PROJECT_ROOT/summary.md}"
 echo "## Daily Crawling Report ($DATE)" > "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
+echo "### 🔰 초보자를 위한 파이프라인 요약 가이드" >> "$SUMMARY_MD"
+echo "이 리포트는 쯔양 채널에 새로 올라온 영상을 자동으로 찾아 분석해주는 로봇의 작업 결과입니다! 🤖" >> "$SUMMARY_MD"
+echo "1. **수집 단계**: 유튜브에서 누락된 영상이나 신규 영상을 찾고, 자막과 화면을 가져옵니다." >> "$SUMMARY_MD"
+echo "2. **AI 분석 단계**: AI(Gemini)가 똑똑하게 영상을 보고 '어떤 식당을 갔는지', '위치가 어디인지' 찾아냅니다." >> "$SUMMARY_MD"
+echo "3. **저장 단계**: 찾아낸 식당 정보를 한 번 더 검증한 뒤, 우리 서비스 앱(지도)에 보여줄 수 있도록 데이터베이스(Supabase)에 반영합니다." >> "$SUMMARY_MD"
+echo "아래 항목들에서 오늘 얼마나 많은 영상이 수집되고 성공적으로 처리되었는지 한눈에 확인할 수 있습니다. 🚀" >> "$SUMMARY_MD"
+echo "" >> "$SUMMARY_MD"
+
 # [PERF] 실행 시간 요약 (가장 먼저 표시)
 echo "### Execution Time" >> "$SUMMARY_MD"
 echo "| Metric | Value |" >> "$SUMMARY_MD"
@@ -1335,25 +1349,27 @@ fi
 echo "- **Data Branch**: [\`data\`](https://github.com/twoimo/tzudong/tree/data)" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
-echo "### Pipeline Architecture" >> "$SUMMARY_MD"
+echo "### 🗺️ 파이프라인 전체 흐름도 (초보자용)" >> "$SUMMARY_MD"
 echo "\`\`\`" >> "$SUMMARY_MD"
 cat <<'EOF' >> "$SUMMARY_MD"
 +----------------------------------------------------------------------------------------------------------+
-|                                    TZUDONG PIPELINE FLOW (Optimized)                                      |
+|                                    TZUDONG PIPELINE FLOW (데이터 자동 수집)                                |
 +----------------------------------------------------------------------------------------------------------+
 |                                                                                                          |
-|  [Phase 1: Collection]                                                                                   |
-|  [Step 1: URLs] → [Step 2: Meta] → [Step 2.1+2.5: Migr+Clean (Parallel)] ══► [Git Sync #1]             |
+|  [Phase 1: 데이터 수집 준비]                                                                             |
+|  1. 최신 영상/누락 영상의 주소를 찾습니다.                                                                 |
+|  2. 제목, 재생시간 등 껍데기(메타데이터) 정보를 채워 넣습니다.                                               |
 |                                                                                                          |
-|  [Phase 2: Multi-modal]                                                                                  |
-|  [Step 3+4: Transcript+Frames (Parallel)] → [Step 3.1: Context] ══► [Git Sync #2]                       |
+|  [Phase 2: 영상 본문 뜯어오기]                                                                             |
+|  3. 영상의 자막과 영상 캡처 화면(프레임)을 추출합니다.                                                       |
 |                                                                                                          |
-|  [Phase 3: AI Analysis]  ── (Timeout Check) ──                                                           |
-|  [Step 6.1: Enrich] → [Step 7: Gemini] → [Step 08: Chunk] → [Step 09: Target] → [Step 10: Rule]         |
-|  ══► [Git Sync #3] → [Step 11: LAAJ] → [Step 12: Transform] → [Step 13: Supabase]                                         |
+|  [Phase 3: 인공지능(AI) 식당 탐색 & 검증]                                                                  |
+|  4. Gemini AI에게 자막과 화면을 보여주고 "어떤 식당을 방문했는지" 찾게 시킵니다.                             |
+|  5. AI가 찾은 정보가 맞는지, 이상한 말은 없는지 규칙과 다른 AI(LAAJ 평가)로 두 번, 세 번 검증합니다.             |
 |                                                                                                          |
-|  [Phase 4: Finalize]                                                                                     |
-|  [Final Git Sync] → [Summary Report] ══► Done!                                                           |
+|  [Phase 4: 데이터베이스 등록]                                                                              |
+|  6. 최종적으로 합격한 식당 정보들만 모아서 서비스 데이터베이스(Supabase)에 정식으로 올립니다! 🎉             |
+|                                                                                                          |
 +----------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
