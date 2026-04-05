@@ -329,6 +329,15 @@ def check_for_soft_ban(page):
 def is_logged_in(page, debug=False):
     """로그인 상태 확인 (URL 및 특정 요소 감지)"""
     try:
+        try:
+            cookies = page.context.cookies()
+            if any(c.get('name') == '__Secure-1PSID' for c in cookies):
+                if debug:
+                    log("[login-check] __Secure-1PSID 쿠키 감지됨 → 로그인 완료")
+                return True
+        except Exception:
+            pass
+
         current_url = page.url
         if debug:
             log(f"[login-check] URL: {current_url}")
@@ -338,11 +347,16 @@ def is_logged_in(page, debug=False):
                 log("[login-check] accounts.google.com 감지 → 미로그인")
             return False
 
+        # 입력창보다 로그인 CTA를 우선 본다.
+        # Gemini 랜딩/마케팅 화면도 입력창이 있어 false positive가 날 수 있다.
+        if has_visible_login_cta(page, debug=debug):
+            return False
+
         # gemini.google.com/app 에 도달했으면 로그인 완료 가능성 높음
         on_gemini = "gemini.google.com" in current_url
 
         # Gemini 입력창이 보이면 로그인 완료 (가장 강한 신호)
-        textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"], [contenteditable="true"]')
+        textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"], [contenteditable="true"], textarea')
         if textbox_locator.count() > 0:
             if debug:
                 log("[login-check] 입력창 감지 → 로그인 완료")
@@ -362,33 +376,9 @@ def is_logged_in(page, debug=False):
 
         # gemini.google.com에 있고 로그인 CTA가 없으면 로그인된 것으로 간주
         if on_gemini:
-            explicit_login_cta = page.locator(
-                'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
-                'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
-                'button:has-text("Sign in"), button:has-text("로그인")'
-            )
-            if explicit_login_cta.count() == 0:
-                if debug:
-                    log("[login-check] gemini.google.com + 로그인 CTA 없음 → 로그인 완료")
-                return True
-            else:
-                if debug:
-                    log("[login-check] gemini.google.com + 로그인 CTA 발견 → 미로그인")
-                return False
-
-        # 명시적인 로그인 CTA(텍스트 포함)가 보이면 미로그인으로 간주
-        explicit_login_cta = page.locator(
-            'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
-            'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
-            'button:has-text("Sign in"), button:has-text("로그인")'
-        ).first
-        try:
-            if explicit_login_cta.is_visible():
-                if debug:
-                    log("[login-check] 로그인 CTA 가시 → 미로그인")
-                return False
-        except Exception:
-            pass
+            if debug:
+                log("[login-check] gemini.google.com + 로그인 CTA 없음 → 로그인 완료")
+            return True
 
         if debug:
             log("[login-check] 판별 불가 → 미로그인 반환")
@@ -399,12 +389,68 @@ def is_logged_in(page, debug=False):
         return False
 
 
-def wait_for_login_detection(page, timeout_sec=600, poll_sec=3, context=None):
+def has_visible_login_cta(page, debug=False):
+    selectors = (
+        'a[href*="accounts.google.com/ServiceLogin"]:has-text("Sign in"), '
+        'a[href*="accounts.google.com/ServiceLogin"]:has-text("로그인"), '
+        'button:has-text("Sign in"), button:has-text("로그인")'
+    )
+
+    try:
+        login_cta = page.locator(selectors)
+        if login_cta.count() == 0:
+            return False
+
+        try:
+            visible = login_cta.first.is_visible()
+        except Exception:
+            visible = login_cta.is_visible()
+
+        if visible and debug:
+            log("[login-check] 로그인 CTA 가시 → 미로그인")
+        return visible
+    except Exception as e:
+        if debug:
+            log(f"[login-check] 로그인 CTA 확인 예외: {compact_error(e)}")
+        return False
+
+
+def detect_retryable_ui_problem(page):
+    """응답 대기 전에 감지 가능한 세션/앱 문제를 RETRY 사유로 표준화."""
+    try:
+        if has_visible_login_cta(page):
+            hero_text = page.locator('text=개인 AI 어시스턴트인 Gemini를 만나 보세요')
+            if hero_text.count() > 0:
+                return "logged_out_landing_page"
+            return "login_cta_visible"
+    except Exception:
+        pass
+
+    for text in [
+        "문제가 발생했습니다",
+        "Something went wrong",
+        "오류가 발생했습니다",
+        "Try again later",
+    ]:
+        try:
+            if page.locator(f"text={text}").count() > 0:
+                return "gemini_issue_banner"
+        except Exception:
+            pass
+
+    return None
+
+
+def wait_for_login_detection(page, timeout_sec=600, poll_sec=3, context=None, stop_event=None):
     """수동 로그인 완료를 자동 감지한다."""
     log(f"로그인 상태 자동 감지 대기 중... (최대 {timeout_sec}초)")
     start = time.time()
     check_count = 0
     while time.time() - start < timeout_sec:
+        if stop_event and stop_event.is_set():
+            log("✅ 사용자 수동 확인(Enter) 감지됨")
+            return True
+
         check_count += 1
         debug = (check_count % 10 == 1)  # 매 30초마다 디버그 로그 출력
 
@@ -611,6 +657,7 @@ def click_hidden_upload_trigger(page, hidden_trigger_selectors):
 
 def manual_login():
     """Camoufox(Firefox) 영구 프로필 기반 수동 로그인"""
+    import threading
     log("🔑 수동 로그인 모드 시작 (Camoufox Firefox 기반)")
     log(f"프로필 경로: {BROWSER_PROFILE_DIR}")
     log("Firefox 브라우저가 열리면 구글 계정으로 로그인해 주세요.")
@@ -629,9 +676,22 @@ def manual_login():
                 log(f"페이지 로딩 지연 (무시하고 계속 진행): {compact_error(e)}")
 
             log("로그인 후 자동 감지를 기다려 주세요. (필요 시 Enter 수동 확인도 지원)")
-            detected = wait_for_login_detection(page, timeout_sec=900, poll_sec=3, context=context)
+            
+            stop_event = threading.Event()
+            def wait_for_enter():
+                try:
+                    if sys.stdin and sys.stdin.isatty():
+                        input(">>> 로그인을 마쳤다면 언제든 Enter를 누르세요...\n")
+                        stop_event.set()
+                except Exception:
+                    pass
 
-            if not detected:
+            t = threading.Thread(target=wait_for_enter, daemon=True)
+            t.start()
+
+            detected = wait_for_login_detection(page, timeout_sec=900, poll_sec=3, context=context, stop_event=stop_event)
+
+            if not detected and not stop_event.is_set():
                 if sys.stdin and sys.stdin.isatty():
                     log("자동 감지 시간 초과. 수동 확인(Enter)로 계속할 수 있습니다.")
                     input(">>> 로그인을 마쳤다면 Enter를 누르세요...")
@@ -648,7 +708,13 @@ def manual_login():
 
 
 def run_fallback(prompt_path, video_path, output_path, target_model=None):
-    max_retries = 1
+    max_retries_raw = os.getenv("WEB_FALLBACK_SESSION_RETRIES", "2").strip()
+    try:
+        max_retries = max(1, int(max_retries_raw))
+    except ValueError:
+        log(f"WEB_FALLBACK_SESSION_RETRIES 값이 잘못되어 기본값 2를 사용합니다: {max_retries_raw}")
+        max_retries = 2
+
     for attempt in range(1, max_retries + 1):
         log(f"--- 시도 {attempt}/{max_retries} ---")
         try:
@@ -972,6 +1038,12 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                 success = False
 
                 while time.time() - start_wait < max_wait_time:
+                    retryable_problem = detect_retryable_ui_problem(page)
+                    if retryable_problem:
+                        log(f"응답 대기 중 재시도 가능한 UI 문제 감지: {retryable_problem}")
+                        save_web_dump(page, retryable_problem)
+                        return "RETRY"
+
                     draft_btns = page.locator('button:has-text("답변 A"), button:has-text("초안 1"), button:has-text("Draft 1"), button[aria-label*="답변 A"], button[aria-label*="초안 1"]').all()
                     if draft_btns:
                         human_delay(3, 5)

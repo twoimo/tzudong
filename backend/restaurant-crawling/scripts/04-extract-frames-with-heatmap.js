@@ -989,16 +989,19 @@ async function downloadVideo(videoId, outputDir, quality) {
 
 
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
-    // [수정] GitHub Actions 등 환경에 따라 python 경로 유연화
+    // Linux/WSL에서는 standalone yt-dlp binary를 우선 사용한다.
+    // python -m yt_dlp는 시스템 Python에 모듈이 없을 때 쉽게 깨지므로 fallback으로만 둔다.
     const defaultPythonPath = process.platform === 'win32' ? 'python' : 'python3';
-    let pythonPath = process.env.PYTHON_CMD || defaultPythonPath;
+    const pythonPath = process.env.PYTHON_CMD || defaultPythonPath;
+    const ytDlpCmd = process.env.YT_DLP_CMD
+        || (process.platform === 'win32' ? `"${pythonPath}" -m yt_dlp` : 'yt-dlp');
 
     const nodePath = process.execPath;
     const runtimesArg = `--js-runtimes "node:${nodePath}"`;
 
     // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
     // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐
-    const cmd = `"${pythonPath}" -m yt_dlp --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    const cmd = `${ytDlpCmd} --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
