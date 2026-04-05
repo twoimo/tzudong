@@ -46,6 +46,9 @@ if [ -f "$PROJECT_ROOT/backend/.env" ]; then
     set +a
 fi
 
+# [Local Config] 쿼타 우회를 위한 gemini CLI 래퍼 경로 설정
+export PATH="$PROJECT_ROOT/backend/bin:$PATH"
+
 # [Local Config] Python 런타임 탐색
 python_cmd_usable() {
     local cmd="$1"
