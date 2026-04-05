@@ -989,15 +989,19 @@ async function downloadVideo(videoId, outputDir, quality) {
 
 
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
-    // [수정] GitHub Actions 등 환경에 따라 python 경로 유연화
-    let pythonPath = process.env.PYTHON_CMD || "python";
+    // Linux/WSL에서는 standalone yt-dlp binary를 우선 사용한다.
+    // python -m yt_dlp는 시스템 Python에 모듈이 없을 때 쉽게 깨지므로 fallback으로만 둔다.
+    const defaultPythonPath = process.platform === 'win32' ? 'python' : 'python3';
+    const pythonPath = process.env.PYTHON_CMD || defaultPythonPath;
+    const ytDlpCmd = process.env.YT_DLP_CMD
+        || (process.platform === 'win32' ? `"${pythonPath}" -m yt_dlp` : 'yt-dlp');
 
     const nodePath = process.execPath;
     const runtimesArg = `--js-runtimes "node:${nodePath}"`;
 
     // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
     // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐
-    const cmd = `"${pythonPath}" -m yt_dlp --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    const cmd = `${ytDlpCmd} --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -1044,7 +1048,9 @@ async function downloadVideo(videoId, outputDir, quality) {
 
 // [수정] quality 인자 추가, compress -> ext 변경
 async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, bufferSec, ext) {
-    if (!fs.existsSync(videoPath)) return;
+    if (!fs.existsSync(videoPath)) {
+        return { totalSegments: segments.length, failedSegments: segments.length, totalFrames: 0 };
+    }
 
     let duration = 0;
     try {
@@ -1070,7 +1076,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
     }
 
     // [최적화] Promise.all을 사용하여 모든 구간을 병렬로 처리 (CPU 활용 극대화)
-    await Promise.all(segments.map(async (seg, i) => {
+    const results = await Promise.all(segments.map(async (seg, i) => {
         // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
         const startTime = Math.max(0, seg.startSec - bufferSec);
         const endTime = Math.min(duration || 99999, seg.endSec + bufferSec);
@@ -1088,7 +1094,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         const existingFiles = fs.readdirSync(segDirPath).filter(f => f.endsWith(`.${ext}`));
         if (existingFiles.length > 0) {
             log('info', `   [Skip] 이미 프레임이 존재하여 건너뜀 [${i + 1}/${segments.length}]: ${toRelativePath(segDirPath)}`);
-            return;
+            return { failed: false, frameCount: existingFiles.length };
         }
 
         log('info', `   [Extract] 구간 추출 시작 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 -> .../${configDirName}`);
@@ -1120,16 +1126,30 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                     count++;
                 }
             }
+            if (count === 0) {
+                log('error', `      [Error] FFmpeg 출력 없음 [${i + 1}/${segments.length}]: 추출된 프레임이 없습니다.`);
+                return { failed: true, frameCount: 0 };
+            }
             log('info', `      [Done] 추출 완료 [${i + 1}/${segments.length}]: ${count}장`);
+            return { failed: false, frameCount: count };
 
         } catch (e) {
             log('error', `      [Error] FFmpeg 오류 [${i + 1}/${segments.length}]: ${e.message}`);
+            return { failed: true, frameCount: 0 };
         }
     }));
+
+    return {
+        totalSegments: results.length,
+        failedSegments: results.filter(r => r.failed).length,
+        totalFrames: results.reduce((sum, r) => sum + (r.frameCount || 0), 0),
+    };
 }
 
 async function processSingleVideo(videoId, params) {
     let downloadPerformed = false;
+    let videoHadFailure = false;
+    let latestRecollectId = null;
     const { channel, fps, buffer, quality, url, ext } = params; // quality는 이제 배열입니다
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
@@ -1169,6 +1189,7 @@ async function processSingleVideo(videoId, params) {
             const duration = metaInfo ? metaInfo.duration : 0; // Duration 확보
 
             const recollectId = getMetaRecollectId(channel, videoId);
+            latestRecollectId = recollectId;
             const outputDir = getFramesOutputDir(channel, videoId, recollectId);
             const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
             const configDirName = `${currentQuality}_${fpsStr}fps`;
@@ -1264,7 +1285,6 @@ async function processSingleVideo(videoId, params) {
                     // 만약 모든 구간이 재사용되었다면 다운로드 불필요
                     if (reusedCount === segments.length) {
                         log('info', `[Skip] 모든 구간 재사용 완료. 비디오 다운로드 스킵.`);
-                        markFrameCollectionCompleted(channel, videoId, recollectId); // [Fix] 스킵 시에도 완료 마킹
                         continue; // 다음 화질 처리 Loop (processSingleVideo 내)
                     } else {
                         log('info', `[Partial] ${segments.length - reusedCount}개 신규 구간 추출 필요.`);
@@ -1325,6 +1345,7 @@ async function processSingleVideo(videoId, params) {
             if (!videoPath) {
                 log('error', `[Fail] 비디오 파일 확보 실패 (${currentQuality}). 건너뜁니다.`);
                 logFailedUrl(channel, url); // [추가] 실패 로깅
+                videoHadFailure = true;
                 continue; // 다음 화질 처리
             }
 
@@ -1335,48 +1356,17 @@ async function processSingleVideo(videoId, params) {
 
 
             for (const currentExt of extensions) {
-                await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
-                log('info', `[Frames Extracted] ${videoId} (${currentExt})`);
-            }
-
-            // [추가] 모든 작업 완료 후 상태 로그 업데이트
-            markFrameCollectionCompleted(channel, videoId, recollectId);
-
-            // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
-            // 주의: 모든 확장자 처리가 끝난 후 삭제해야 함
-            if (params.deleteCache) {
-                // 1. 현재 사용한 videoPath 삭제 (tempDir에 있는 경우 finally에서 삭제되지만, 여기서 명시적으로 해도 됨)
-                // (이미 tempDir 정리는 finally에 있으므로 패스)
-
-                // 2. 캐시 디렉토리에 복사된 파일 삭제 (중요: downloadVideo에서 복사해둠)
-                try {
-                    const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
-                    // 정확한 파일명을 모르므로 videoId로 시작하는 파일 찾기 (확장자 무관)
-                    const targetCacheFiles = cacheFiles.filter(f => f.startsWith(videoId + '.'));
-
-                    for (const f of targetCacheFiles) {
-                        const targetPath = path.join(VIDEO_CACHE_DIR, f);
-                        if (fs.existsSync(targetPath)) {
-                            fs.unlinkSync(targetPath);
-                            log('info', `[Clean] 비디오 캐시 파일 삭제 완료: ${toRelativePath(targetPath)}`);
-                        }
-                    }
-
-                    // 폴더가 비었으면 폴더도 삭제 (비활성화: 배치 처리 시 다음 루프에서 ENOENT 오류 발생 방지)
-                    // if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {
-                    //    fs.rmdirSync(VIDEO_CACHE_DIR);
-                    //    log('info', `[Clean] 비디오 캐시 폴더 삭제 완료: ${toRelativePath(VIDEO_CACHE_DIR)}`);
-                    // }
-                } catch (e) {
-                    log('warn', `캐시 삭제 실패: ${e.message}`);
+                const extractionSummary = await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
+                if (extractionSummary.failedSegments > 0) {
+                    throw new Error(`[${currentExt}] 프레임 추출 실패: ${extractionSummary.failedSegments}/${extractionSummary.totalSegments} 구간 실패`);
                 }
+                log('info', `[Frames Extracted] ${videoId} (${currentExt}) - ${extractionSummary.totalFrames}장`);
             }
-
-            // [추가] 성공 시 실패 목록에서 제거
-            removeFailedUrl(channel, url);
 
         } catch (e) {
             log('error', `오류 발생 (${currentQuality}): ${e.message}`);
+            logFailedUrl(channel, url);
+            videoHadFailure = true;
         } finally {
             // 4. 임시 파일 정리 (항상 수행)
             // tempDir은 매번 생성되는 고유 임시 폴더이므로 무조건 삭제해도 안전함 (캐시 폴더와 무관)
@@ -1396,6 +1386,34 @@ async function processSingleVideo(videoId, params) {
         }
     }
 
+    if (videoHadFailure) {
+        throw new Error(`${videoId}: one or more quality/extension jobs failed`);
+    }
+
+    if (latestRecollectId !== null) {
+        markFrameCollectionCompleted(channel, videoId, latestRecollectId);
+    }
+
+    // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
+    // 주의: 모든 확장자/화질 처리가 끝난 후 삭제해야 함
+    if (params.deleteCache) {
+        try {
+            const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
+            const targetCacheFiles = cacheFiles.filter(f => f.startsWith(videoId + '.'));
+
+            for (const f of targetCacheFiles) {
+                const targetPath = path.join(VIDEO_CACHE_DIR, f);
+                if (fs.existsSync(targetPath)) {
+                    fs.unlinkSync(targetPath);
+                    log('info', `[Clean] 비디오 캐시 파일 삭제 완료: ${toRelativePath(targetPath)}`);
+                }
+            }
+        } catch (e) {
+            log('warn', `캐시 삭제 실패: ${e.message}`);
+        }
+    }
+
+    removeFailedUrl(channel, url);
     return downloadPerformed;
 }
 
@@ -1581,6 +1599,7 @@ async function processBatch(params) {
     log('info', `[PERF] 병렬 처리 모드: 동시 ${CONCURRENCY}개 (CPU: ${cpuCores}코어, 여유 메모리: ${freeMemGB.toFixed(1)}GB)`);
 
     let processedCount = 0;
+    let failedCount = 0;
     let activeCount = 0;
     let urlIndex = 0;
 
@@ -1606,6 +1625,7 @@ async function processBatch(params) {
                 }
             } catch (e) {
                 log('error', `[${videoId}] 처리 중 오류: ${e.message}`);
+                failedCount++;
                 processedCount++;
             }
         }
@@ -1619,7 +1639,13 @@ async function processBatch(params) {
     }
     await Promise.all(workers);
 
-    log('info', `=== 배치 작업 완료: 처리 ${processedCount}개, 스킵 ${skippedCount}개 ===`);
+    log('info', `=== 배치 작업 완료: 처리 ${processedCount}개, 스킵 ${skippedCount}개, 실패 ${failedCount}개 ===`);
+    if (failedCount > 0) {
+        throw new Error(`batch frame extraction failed for ${failedCount} video(s)`);
+    }
 }
 
-main().catch(e => console.error(e));
+main().catch(e => {
+    console.error(e);
+    process.exitCode = 1;
+});
