@@ -188,6 +188,7 @@ def main():
                     "status": data.get("status", "pending"),
                     "origin_name": data.get("origin_name"),
                     "naver_name": data.get("naver_name"),
+                    "google_name": data.get("google_name"),
                     "trace_id_name_source": data.get("trace_id_name_source"),
                     "categories": categories,
                     "reasoning_basis": data.get("reasoning_basis"),

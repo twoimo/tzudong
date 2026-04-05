@@ -887,7 +887,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
           {/* 레스토랑 이름 */}
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-3 gap-2 text-sm">
               <div className="p-2 bg-muted rounded-md border text-xs" title={record?.origin_name || ''}>
                 <span className="block text-muted-foreground mb-0.5">Origin Name</span>
                 <span className="font-medium text-foreground truncate block">{record?.origin_name || '-'}</span>
@@ -895,6 +895,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-800 text-xs" title={record?.naver_name || ''}>
                 <span className="block text-blue-600 dark:text-blue-400 mb-0.5">Naver Name</span>
                 <span className="font-medium text-foreground truncate block">{record?.naver_name || '-'}</span>
+              </div>
+              <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-md border border-orange-100 dark:border-orange-800 text-xs" title={record?.google_name || ''}>
+                <span className="block text-orange-600 dark:text-orange-400 mb-0.5">Google Name</span>
+                <span className="font-medium text-foreground truncate block">{record?.google_name || '-'}</span>
               </div>
             </div>
             <Label htmlFor="edit-name">레스토랑 이름</Label>
