@@ -1,0 +1,1 @@
+Error: type object 'YouTubeTranscriptApi' has no attribute 'get_transcript'
