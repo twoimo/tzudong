@@ -127,6 +127,10 @@ jobs:
         run: |
           mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.config/rclone
           
+          # Add wrapper to PATH
+          echo "${{ github.workspace }}/backend/bin" >> $GITHUB_PATH
+          chmod +x ${{ github.workspace }}/backend/bin/gemini
+          
           # Google Credentials
           echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 -d > backend/restaurant-crawling/data/credentials.json
           
@@ -135,12 +139,17 @@ jobs:
             echo "${{ secrets.YOUTUBE_COOKIES_TXT }}" > backend/restaurant-crawling/data/cookies.txt
           fi
           
-          # Gemini Credentials (OAuth 인증 제거 및 API Key 티어 사용)
+          # Gemini Credentials (자동 계정 우회 지원)
           # Note: API Key is injected manually as GEMINI_API_KEY_BYEON
           if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
             echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
             echo '{"security": {"auth": {"selectedType": "oauth-personal"}}}' > ~/.gemini/settings.json
             echo '{"projects": {}}' > ~/.gemini/projects.json
+          fi
+          
+          # 백업 계정 (쿼타 우회용)
+          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}" ]; then
+            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}" | base64 -d > ~/.gemini/oauth_creds_backup.json
           fi
           
           # RClone Config
