@@ -28,6 +28,7 @@ jobs:
     timeout-minutes: 60
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
       # ============================================================
