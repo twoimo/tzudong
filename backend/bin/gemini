@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# Gemini CLI Wrapper for Automatic Quota Bypass
+# Find the real gemini executable path
+WRAPPER_PATH=$(readlink -f "$0")
+REAL_GEMINI=""
+for cmd in $(which -a gemini 2>/dev/null); do
+    cmd_path=$(readlink -f "$cmd")
+    if [ "$cmd_path" != "$WRAPPER_PATH" ]; then
+        REAL_GEMINI="$cmd"
+        break
+    fi
+done
+
+if [ -z "$REAL_GEMINI" ]; then
+    # Fallback to globally installed gemini via npm if not in PATH
+    if [ -x "$HOME/.npm-global/bin/gemini" ]; then
+        REAL_GEMINI="$HOME/.npm-global/bin/gemini"
+    else
+        echo "Error: Could not find the real gemini CLI executable." >&2
+        exit 1
+    fi
+fi
+
+GEMINI_DIR="$HOME/.gemini"
+CURRENT_CREDS="$GEMINI_DIR/oauth_creds.json"
+TMP_STDERR=$(mktemp)
+
+# Calculate max retries based on available backup credentials
+BACKUPS_INIT=($(ls "$GEMINI_DIR"/oauth_creds_*.json 2>/dev/null | grep -Ev "/oauth_creds\.json$" | sort))
+MAX_RETRIES=${#BACKUPS_INIT[@]}
+ATTEMPT=0
+
+# Execute the real command, teeing stderr to both the console and our temp file
+"$REAL_GEMINI" "$@" 2> >(tee "$TMP_STDERR" >&2)
+EXIT_CODE=$?
+
+# Detect Quota or Rate Limit errors and retry up to MAX_RETRIES times
+while grep -qi -E '429 Too Many Requests|Quota|rate limit|RESOURCE_EXHAUSTED' "$TMP_STDERR" && [ $ATTEMPT -lt $MAX_RETRIES ]; do
+    echo "[gemini-wrapper] Quota error detected. Checking for alternate accounts... (Attempt $((ATTEMPT+1))/$MAX_RETRIES)" >&2
+    
+    # Get all backup credentials sorted alphabetically
+    BACKUPS=($(ls "$GEMINI_DIR"/oauth_creds_*.json 2>/dev/null | grep -Ev "/oauth_creds\.json$" | sort))
+    
+    if [ ${#BACKUPS[@]} -gt 0 ]; then
+        NEXT_CRED="${BACKUPS[0]}"
+        echo "[gemini-wrapper] Switching account to $NEXT_CRED" >&2
+        
+        # To maintain a queue, move current to a name that sorts last
+        NEW_BACKUP_NAME="$GEMINI_DIR/oauth_creds_z_$(date +%s)_$ATTEMPT.json"
+        
+        # 1. Move current to end of queue
+        if [ -f "$CURRENT_CREDS" ]; then
+            mv "$CURRENT_CREDS" "$NEW_BACKUP_NAME"
+        fi
+        
+        # 2. Move next to current
+        mv "$NEXT_CRED" "$CURRENT_CREDS"
+        
+        echo "[gemini-wrapper] Retrying command with new account..." >&2
+        rm -f "$TMP_STDERR"
+        
+        "$REAL_GEMINI" "$@" 2> >(tee "$TMP_STDERR" >&2)
+        EXIT_CODE=$?
+        
+        ATTEMPT=$((ATTEMPT+1))
+    else
+        echo "[gemini-wrapper] No backup credentials found. Cannot rotate." >&2
+        break
+    fi
+done
+
+if grep -qi -E '429 Too Many Requests|Quota|rate limit|RESOURCE_EXHAUSTED' "$TMP_STDERR"; then
+    echo "[gemini-wrapper] All accounts exhausted or quota limits reached. Giving up." >&2
+fi
+
+rm -f "$TMP_STDERR"
+exit $EXIT_CODE
