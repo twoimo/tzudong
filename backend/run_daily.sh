@@ -639,8 +639,9 @@ fi
 
 # 충돌 방지를 위해 최신 변경사항 Pull
 log "INFO" "'$TARGET_BRANCH' 브랜치 최신화 (Pull)..."
-if ! run_git_with_timeout "${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"     git pull origin "$TARGET_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
-    log "WARN" "Pull 실패 (무시하고 진행)."
+if ! run_git_with_timeout "${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}" git pull --rebase --autostash origin "$TARGET_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+    log "WARN" "Pull 실패. 충돌 상태 복구(abort) 후 진행합니다."
+    git rebase --abort 2>/dev/null || true
 fi
 
 log "INFO" "현재 작업 브랜치: $(git rev-parse --abbrev-ref HEAD)"
