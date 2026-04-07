@@ -24,8 +24,8 @@ concurrency:
 jobs:
   daily-crawl:
     runs-on: ubuntu-latest
-    # [PERF] 안전 타임아웃: 최대 60분 (월 3000분 한도 보호)
-    timeout-minutes: 60
+    # [PERF] 안전 타임아웃: 최대 90분 (월 3000분 한도 보호)
+    timeout-minutes: 90
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: data
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Install System Dependencies (ffmpeg, jq, rclone)
         run: |
@@ -212,7 +212,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run Daily Pipeline
-        timeout-minutes: 50
+        timeout-minutes: 80
         env:
           # API Keys
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
