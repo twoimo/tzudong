@@ -251,6 +251,8 @@ jobs:
           
       - name: Upload Results to GDrive
         if: always()
+        continue-on-error: true
+        timeout-minutes: 10
         env:
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
         run: |
@@ -264,11 +266,11 @@ jobs:
           
           if [ "$NEW_COUNT" -gt 0 ]; then
             echo "Uploading $NEW_COUNT new frames to GDrive..."
-            # --no-traverse: 리모트 전체 리스팅 스킵 (15,000+ 파일 checking 방지)
+            # --fast-list: API 호출 최적화 (1000개 단위 리스팅)
             # --max-age 2h: 최근 2시간 내 변경된 파일만 업로드 대상
-            # --transfers 8 --checkers 16: 병렬 전송/체크로 속도 향상
+            # --transfers 4 --checkers 4 --tpslimit 4: 구글 드라이브 API 할당량 초과(403) 방지
             rclone copy "backend/restaurant-crawling/data/frames" "$GDRIVE_FRAMES_PATH" \
-              --progress --no-traverse --max-age 2h --transfers 8 --checkers 16
+              --progress --fast-list --max-age 2h --transfers 4 --checkers 4 --tpslimit 4
           else
             echo "No new frames detected, skipping GDrive upload."
           fi
