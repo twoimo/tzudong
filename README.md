@@ -8,11 +8,7 @@
 
 ![System Architecture](apps/web/public/images/architecture.png)
 
-<<<<<<< HEAD
-## 멀티 에이전트 아키텍처 (Multi-Agent Architecture)
-=======
 ## 멀티 에이전트 아키텍처 (Multi-Agent Orchestration)
->>>>>>> origin/main
 
 ![Storyboard Agent Diagram](apps/web/public/images/storyboard_agent_diagram.png)
 
