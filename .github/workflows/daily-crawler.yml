@@ -251,6 +251,8 @@ jobs:
           
       - name: Upload Results to GDrive
         if: always()
+        continue-on-error: true
+        timeout-minutes: 10
         env:
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
         run: |
