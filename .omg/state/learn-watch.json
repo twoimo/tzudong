@@ -1,11 +1,11 @@
 {
-  "last_session_id": "e3f0802f-8923-4443-9f0b-10923cb98bd9",
-  "last_event_key": "e3f0802f-8923-4443-9f0b-10923cb98bd9:transcript:39e845b132ae6e74baf475bb8260d6259e71103f9b84e00eca687b4c79b9a722",
+  "last_session_id": "0e708b07-65ce-4e54-822b-6354e350ffdf",
+  "last_event_key": "0e708b07-65ce-4e54-822b-6354e350ffdf:transcript:1b56bb27e897bbc32fc31a95ea291733774fc16227269ff2fa6b9cdb3eca6fa0",
   "last_prompted_session_id": "ffa835d1-ba6b-4dc0-ad68-bd4f92af35b0",
   "last_reason": "short-session",
   "last_user_message_count": 1,
-  "last_actionable_message_count": 1,
+  "last_actionable_message_count": 0,
   "deep_interview_lock_active": false,
   "deep_interview_lock_source": "/home/twoimo/workspaces/tzudong/.omg/state/deep-interview.json",
-  "updated_at": "2026-04-07T12:30:04.173Z"
+  "updated_at": "2026-04-07T14:50:47.661Z"
 }
