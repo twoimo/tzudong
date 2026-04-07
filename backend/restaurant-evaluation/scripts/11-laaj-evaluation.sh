@@ -470,6 +470,7 @@ for i in "${!VIDEO_IDS[@]}"; do
     # 평가 대상 확인
     HAS_TRUE_TARGET=$(echo "$EVALUATION_TARGET" | jq_wrapper 'to_entries | map(select(.value == true)) | length')
     if [ "$HAS_TRUE_TARGET" -eq 0 ]; then
+        cp "$RULE_FILE" "$OUTPUT_FILE"
         SKIPPED_NO_TARGET=$((SKIPPED_NO_TARGET + 1))
         continue
     fi
@@ -491,6 +492,7 @@ for i in "${!VIDEO_IDS[@]}"; do
     
     RESTAURANT_COUNT=$(echo "$RESTAURANTS_TO_EVALUATE" | jq_wrapper 'length')
     if [ "$RESTAURANT_COUNT" -eq 0 ]; then
+        cp "$RULE_FILE" "$OUTPUT_FILE"
         SKIPPED_NO_TARGET=$((SKIPPED_NO_TARGET + 1))
         continue
     fi
@@ -509,6 +511,7 @@ for i in "${!VIDEO_IDS[@]}"; do
     fi
     
     if [ -z "$TRANSCRIPT" ] || [ "$TRANSCRIPT" = "null" ]; then
+        cp "$RULE_FILE" "$OUTPUT_FILE"
         SKIPPED_NO_TRANSCRIPT=$((SKIPPED_NO_TRANSCRIPT + 1))
         log_warning "[$INDEX/$TOTAL] 자막 없음 - 스킵: $VIDEO_ID"
         continue

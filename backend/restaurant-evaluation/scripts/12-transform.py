@@ -230,6 +230,15 @@ def transform_json_object(
             # 평가 결과 추출
             new_eval_results = {}
             if original_eval_results:
+                # location_match_TF는 항상 추가 (Rule 평가 결과 포함)
+                loc_match_list = original_eval_results.get("location_match_TF", [])
+                loc_match_item = next(
+                    (item for item in loc_match_list if item.get("origin_name") == restaurant_name),
+                    None
+                )
+                if loc_match_item:
+                    new_eval_results["location_match_TF"] = loc_match_item
+
                 for key in original_eval_results:
                     if key == "location_match_TF":
                         continue
@@ -540,6 +549,7 @@ def main():
 
     # 입력 폴더 (evaluation 경로)
     laaj_results_dir = evaluation_path / "evaluation" / "laaj_results"
+    rule_results_dir = evaluation_path / "evaluation" / "rule_results"
     not_selection_dir = evaluation_path / "evaluation" / "notSelection"
 
     # 입력 폴더 (crawling 경로)
@@ -590,12 +600,17 @@ def main():
         "skipped_records": 0,
     }
 
-    # laaj_results 처리
-    if laaj_results_dir.exists():
-        for f in laaj_results_dir.glob("*.jsonl"):
+    # rule_results & laaj_results 병합 처리
+    if rule_results_dir.exists():
+        for f in rule_results_dir.glob("*.jsonl"):
             stats["total_files"] += 1
             video_id = f.stem
-            with open(f, "r", encoding="utf-8") as file:
+            
+            # laaj_results가 존재하면 우선적으로 사용 (parse_laaj_evaluation에서 이미 병합됨)
+            laaj_file = laaj_results_dir / f"{video_id}.jsonl"
+            target_file = laaj_file if laaj_file.exists() else f
+            
+            with open(target_file, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
