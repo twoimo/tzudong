@@ -34,9 +34,18 @@ import {
 
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
-type RestaurantSummaryRow = Pick<Tables<'restaurants'>, 'id' | 'name' | 'road_address' | 'jibun_address'>;
 type ReviewStatusRow = Pick<Tables<'reviews'>, 'restaurant_id' | 'is_verified'>;
-type RestaurantReviewCountRow = Pick<Tables<'restaurants'>, 'review_count'>;
+
+interface RestaurantSummaryRow {
+    id: string;
+    name: string | null;
+    road_address: string | null;
+    jibun_address: string | null;
+}
+
+interface RestaurantReviewCountRow {
+    review_count: number | null;
+}
 
 interface Review {
     id: string;
@@ -112,7 +121,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             const { data: restaurantsData } = await supabase
                 .from('restaurants')
-                .select('id, name, road_address, jibun_address')
+                .select('id, name:approved_name, road_address, jibun_address')
                 .in('id', restaurantIds);
 
             const typedProfilesData = (profilesData || []) as ProfileRow[];

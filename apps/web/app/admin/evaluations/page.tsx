@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
+import { EvaluationRecord, EvaluationRecordStatus, CategoryStats, LocationMatchResult } from '@/types/evaluation';
 import { extractVideoIdFromYoutubeLink } from '../../../lib/dashboard/helpers';
 import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '../../../lib/dashboard/classifiers';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
@@ -164,11 +164,6 @@ function parseStoredEvaluationPageState(serializedState: string | null): StoredE
   };
 }
 
-interface LocationMatchResult {
-  matched_name?: string;
-  name?: string;
-}
-
 interface SubmissionRow {
   id: string;
   user_id: string;
@@ -195,8 +190,8 @@ interface ProfileNicknameRow {
 
 interface RestaurantLookupRow {
   id: string;
-  unique_id: string;
-  name: string;
+  unique_id: string | null;
+  name: string | null;
   road_address: string | null;
   jibun_address: string | null;
   phone: string | null;
