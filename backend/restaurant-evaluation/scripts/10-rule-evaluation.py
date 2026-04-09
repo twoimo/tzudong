@@ -93,6 +93,27 @@ ncp_api_errors = 0
 _geocode_jibun_cache: Dict[str, Optional[str]] = {}
 _geocode_addresses_cache: Dict[str, Optional[List[Dict[str, Any]]]] = {}
 
+EVIDENCE_PROVIDER_CANDIDATE = "provider_candidate"
+EVIDENCE_SOURCE_GEO = "source_geo"
+
+PENDING_REASON_INSUFFICIENT = "insufficient_evidence"
+PENDING_REASON_CROSS_COUNTRY = "cross_country_mismatch"
+PENDING_REASON_MULTI_CANDIDATE = "multi_candidate"
+PENDING_REASON_TIMEOUT = "timeout"
+PENDING_REASON_RATE_LIMITED = "rate_limited"
+
+COUNTRY_HINTS = {
+    "kr": ("대한민국", "한국", "korea", "republic of korea", "south korea"),
+    "us": ("미국", "usa", "u.s.a", "united states", "america"),
+    "jp": ("일본", "japan"),
+    "th": ("태국", "thailand"),
+    "tw": ("대만", "taiwan"),
+    "tr": ("튀르키예", "터키", "turkey", "türkiye"),
+    "id": ("인도네시아", "indonesia"),
+    "au": ("호주", "australia"),
+    "hu": ("헝가리", "hungary"),
+}
+
 
 # ========= 유틸 함수 (기존 backup 그대로) =========
 def _norm_space(s: str) -> str:
@@ -147,6 +168,132 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         * math.sin(dlon / 2) ** 2
     )
     return 2 * R * math.asin(math.sqrt(a))
+
+
+def _float_or_none(value: Any) -> Optional[float]:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _unique_evidence_families(values: Optional[List[str]]) -> List[str]:
+    seen = set()
+    ordered: List[str] = []
+    for value in values or []:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        ordered.append(value)
+    return ordered
+
+
+def _has_independent_evidence(families: Optional[List[str]]) -> bool:
+    return len(_unique_evidence_families(families)) >= 2
+
+
+def build_second_pass_state(
+    *,
+    attempted: bool = False,
+    provider: Optional[str] = None,
+    timed_out: bool = False,
+    rate_limited: bool = False,
+    duration_ms: Optional[int] = None,
+) -> Dict[str, Any]:
+    return {
+        "attempted": attempted,
+        "provider": provider,
+        "timed_out": timed_out,
+        "rate_limited": rate_limited,
+        "duration_ms": duration_ms,
+    }
+
+
+def _detect_country_hint(text: str) -> Optional[str]:
+    lowered = (text or "").lower()
+    for code, hints in COUNTRY_HINTS.items():
+        if any(hint.lower() in lowered for hint in hints):
+            return code
+    return None
+
+
+def _is_cross_country_mismatch(origin_address: str, matched_text: str) -> bool:
+    origin_country = _detect_country_hint(origin_address)
+    matched_country = _detect_country_hint(matched_text)
+    return bool(origin_country and matched_country and origin_country != matched_country)
+
+
+def _source_coordinates(
+    rec: Dict[str, Any], geocoded_addresses: Optional[List[Dict[str, Any]]]
+) -> Tuple[Optional[float], Optional[float]]:
+    lat = _float_or_none(rec.get("lat"))
+    lng = _float_or_none(rec.get("lng"))
+    if lat is not None and lng is not None:
+        return lat, lng
+
+    if geocoded_addresses:
+        first = geocoded_addresses[0]
+        return _float_or_none(first.get("y")), _float_or_none(first.get("x"))
+
+    return None, None
+
+
+def build_location_result(
+    *,
+    origin_name: str,
+    origin_address: str,
+    eval_value: bool,
+    matched_provider: Optional[str] = None,
+    matched_name: Optional[str] = None,
+    naver_name: Optional[str] = None,
+    google_name: Optional[str] = None,
+    matched_address: Optional[Dict[str, Any]] = None,
+    evidence_summary: Optional[List[str]] = None,
+    evidence_families: Optional[List[str]] = None,
+    pending_reason: Optional[str] = None,
+    second_pass: Optional[Dict[str, Any]] = None,
+    false_message: Optional[str] = None,
+    match_status: Optional[str] = None,
+) -> Dict[str, Any]:
+    unique_families = _unique_evidence_families(evidence_families)
+    second_pass_state = second_pass or build_second_pass_state()
+    provider_name_present = bool(naver_name or google_name)
+    resolved_true = bool(
+        eval_value
+        and matched_name
+        and provider_name_present
+        and pending_reason is None
+        and _has_independent_evidence(unique_families)
+    )
+
+    resolved_status = match_status
+    if resolved_status is None:
+        if resolved_true:
+            resolved_status = "matched"
+        elif pending_reason or false_message:
+            resolved_status = "pending"
+        else:
+            resolved_status = "failed"
+
+    return {
+        "origin_name": origin_name,
+        "eval_value": resolved_true,
+        "match_status": resolved_status,
+        "matched_provider": matched_provider,
+        "matched_name": matched_name,
+        "naver_name": naver_name,
+        "google_name": google_name,
+        "origin_address": origin_address,
+        "matched_address": matched_address,
+        "naver_address": [matched_address] if matched_address else None,
+        "evidence_summary": evidence_summary or [],
+        "evidence_families": unique_families,
+        "pending_reason": pending_reason,
+        "second_pass": second_pass_state,
+        "falseMessage": None if resolved_true else false_message,
+    }
 
 
 # ========= API 호출 (기존 backup 그대로) =========
