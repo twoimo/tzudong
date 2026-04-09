@@ -59,6 +59,16 @@ def _err(
     }
 
 
+def _as_non_empty_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    output: list[str] = []
+    for item in value:
+        if isinstance(item, str) and item.strip():
+            output.append(item.strip())
+    return output
+
+
 # ═══════════════════════════════════════════════════════════
 # 1. Gemini 크롤링 출력 검증 (Step 7)
 # ═══════════════════════════════════════════════════════════
@@ -245,13 +255,33 @@ def validate_rule_results(video_id: str, data: dict) -> list[dict]:
         for idx, loc in enumerate(location_matches):
             origin_name = loc.get("origin_name", f"idx_{idx}")
             eval_value = loc.get("eval_value")
+            matched_name = loc.get("matched_name")
+            provider_name = loc.get("naver_name") or loc.get("google_name")
+            evidence_families = _as_non_empty_string_list(loc.get("evidence_families"))
+            unique_evidence_families = set(evidence_families)
+            pending_reason = loc.get("pending_reason")
+            second_pass = loc.get("second_pass")
 
-            # eval_value가 true인데 naver_name 없으면 모순
-            if eval_value is True and not loc.get("naver_name"):
+            # eval_value가 true인데 matched/provider/evidence가 부족하면 모순
+            if eval_value is True and (not matched_name or not provider_name):
                 errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
                                   "inconsistent_location",
-                                  f"location_match=True이지만 naver_name 없음",
+                                  "location_match=True이지만 matched/provider name이 없음",
                                   restaurant_name=origin_name))
+
+            if eval_value is True and len(unique_evidence_families) < 2:
+                errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                  "insufficient_evidence_families",
+                                  "location_match=True이지만 독립 evidence_families가 2개 미만",
+                                  restaurant_name=origin_name,
+                                  actual_value=evidence_families))
+
+            if len(unique_evidence_families) != len(evidence_families):
+                errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                  "duplicated_evidence_family",
+                                  "location_match evidence_families에 중복 항목이 있어 독립 증거가 이중 계산될 수 있음",
+                                  restaurant_name=origin_name,
+                                  actual_value=evidence_families))
 
             # eval_value가 false이면 falseMessage 존재 확인
             if eval_value is False and not loc.get("falseMessage"):
@@ -259,6 +289,29 @@ def validate_rule_results(video_id: str, data: dict) -> list[dict]:
                                   "missing_false_message",
                                   f"location_match=False이지만 falseMessage 없음",
                                   restaurant_name=origin_name))
+
+            if eval_value is not True and not pending_reason:
+                errors.append(_err(step, video_id, ValidationSeverity.INFO.value,
+                                  "missing_pending_reason",
+                                  "location_match가 non-True인데 pending_reason 없음",
+                                  restaurant_name=origin_name))
+
+            if pending_reason in {"timeout", "rate_limited"}:
+                if not isinstance(second_pass, dict):
+                    errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                      "missing_second_pass_state",
+                                      "timeout/rate_limited 상태인데 second_pass 메타데이터가 없음",
+                                      restaurant_name=origin_name))
+                elif pending_reason == "timeout" and second_pass.get("timed_out") is not True:
+                    errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                      "inconsistent_second_pass_state",
+                                      "pending_reason=timeout인데 second_pass.timed_out가 true가 아님",
+                                      restaurant_name=origin_name))
+                elif pending_reason == "rate_limited" and second_pass.get("rate_limited") is not True:
+                    errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                      "inconsistent_second_pass_state",
+                                      "pending_reason=rate_limited인데 second_pass.rate_limited가 true가 아님",
+                                      restaurant_name=origin_name))
 
     # category_validity_TF 검증
     cat_validity = eval_results.get("category_validity_TF", [])
