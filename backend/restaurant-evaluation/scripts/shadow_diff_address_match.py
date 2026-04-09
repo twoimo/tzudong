@@ -241,6 +241,11 @@ def load_jsonl_records(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def load_location_rows(path: Path) -> list[dict[str, Any]]:
+    """Backward-compatible alias used by regression tests."""
+    return load_jsonl_records(path)
+
+
 def comparison_key(record: dict[str, Any]) -> str:
     anchor = record.get("comparison_anchor") or "unknown-anchor"
     origin_name = record.get("origin_name") or "unknown-origin"
@@ -418,8 +423,9 @@ def detect_duplicate_risks(candidate_records: list[dict[str, Any]]) -> list[dict
 
 def compute_second_pass_counters(
     candidate_records: list[dict[str, Any]],
-    baseline_index: dict[str, dict[str, Any]],
+    baseline_index: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, int]:
+    baseline_index = baseline_index or {}
     counts = Counter(
         {
             "second_pass_attempted": 0,
@@ -427,6 +433,12 @@ def compute_second_pass_counters(
             "second_pass_timeout": 0,
             "second_pass_rate_limited": 0,
             "second_pass_left_pending": 0,
+            # Backward-compatible aliases for earlier tests/callers.
+            "attempted": 0,
+            "promoted_true": 0,
+            "timeout": 0,
+            "rate_limited": 0,
+            "left_pending": 0,
         }
     )
 
@@ -436,16 +448,21 @@ def compute_second_pass_counters(
             continue
 
         counts["second_pass_attempted"] += 1
+        counts["attempted"] += 1
         baseline = baseline_index.get(comparison_key(record))
 
         if second_pass.get("timed_out"):
             counts["second_pass_timeout"] += 1
+            counts["timeout"] += 1
         if second_pass.get("rate_limited"):
             counts["second_pass_rate_limited"] += 1
+            counts["rate_limited"] += 1
         if is_true(record) and not is_true(baseline):
             counts["second_pass_promoted_true"] += 1
+            counts["promoted_true"] += 1
         if not is_true(record):
             counts["second_pass_left_pending"] += 1
+            counts["left_pending"] += 1
 
     return dict(counts)
 
