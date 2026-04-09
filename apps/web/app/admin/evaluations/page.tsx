@@ -447,7 +447,6 @@ function AdminEvaluationPage() {
 
       setIsSearching(true);
       try {
-        // @ts-expect-error - Supabase RPC 타입 문제
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
           max_results: 100,
@@ -1089,7 +1088,6 @@ function AdminEvaluationPage() {
         // status는 유지하고 에러 메시지만 저장
         await supabase
           .from('restaurants')
-          // @ts-expect-error - Supabase 자동 생성 타입 문제
           .update({
             db_error_message: duplicateCheck.reason,
             db_error_details: errorDetails,
@@ -1161,7 +1159,6 @@ function AdminEvaluationPage() {
     // status를 'approved'로 업데이트 및 approved_name 저장
     const { data: updatedData, error } = await supabase
       .from('restaurants')
-      // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
         status: 'approved',
         approved_name: approvedName,
@@ -1210,7 +1207,6 @@ function AdminEvaluationPage() {
       // Soft Delete: status를 'deleted'로 변경
       const { error } = await supabase
         .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
         .update({
           status: 'deleted',
           updated_at: new Date().toISOString(),
@@ -1265,7 +1261,6 @@ function AdminEvaluationPage() {
       // status를 'pending'으로 업데이트
       const { error } = await supabase
         .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
         .update({
           status: 'pending',
           updated_at: new Date().toISOString(),
