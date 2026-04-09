@@ -22,7 +22,7 @@ export interface Restaurant extends BaseRestaurant {
     category?: string[]; // categories의 별칭
 
     // 검색 관련 (주간 인기 검색용)
-    weekly_search_count?: number; // 주간 검색 횟수
+    weekly_search_count: number | null; // 주간 검색 횟수
 
     // 마커 그룹화 시 병합된 데이터 (배열)
     mergedYoutubeLinks?: string[]; // 병합된 모든 유튜브 링크
@@ -116,4 +116,3 @@ export const GLOBAL_REGIONS = [
 ] as const;
 
 export type Region = typeof REGIONS[number] | typeof GLOBAL_REGIONS[number];
-
