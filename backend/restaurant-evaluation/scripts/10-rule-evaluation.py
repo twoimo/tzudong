@@ -608,6 +608,13 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     name = _norm_space(str(rec.get("origin_name", "")))
     origin_address_raw = _norm_space(str(rec.get("address", "")))
     origin_address = remove_floor_info(origin_address_raw)
+    source_geocoded = ncp_geocode_addresses(origin_address)
+    geocoded_jibun = None
+    if source_geocoded:
+        geocoded_jibun = _norm_space(str(source_geocoded[0].get("jibunAddress", "")))
+    if not geocoded_jibun:
+        geocoded_jibun = ncp_geocode_to_jibun_address(origin_address)
+    source_lat, source_lng = _source_coordinates(rec, source_geocoded)
 
     # [PERF] Naver Search 3건 동시 호출 (직렬 → 병렬)
     region = extract_region_from_address(origin_address)
@@ -626,31 +633,18 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
         name_addr_cands = future_addr.result()
         name_region_cands = future_region.result() if future_region else []
 
-    # origin_address를 NCP 지오코딩하여 지번주소 얻기
-    geocoded_jibun = ncp_geocode_to_jibun_address(origin_address)
-    if not geocoded_jibun:
-        return {
-            "origin_name": name,
-            "naver_name": None,  # ★ 추가
-            "eval_value": False,
-            "origin_address": origin_address,
-            "naver_address": None,
-            "falseMessage": "1단계 실패: 주소 지오코딩 실패",
-        }
-
-    geocoded_addr_norm = _norm_space(geocoded_jibun)
+    geocoded_addr_norm = _norm_space(geocoded_jibun or "")
 
     # 검색 결과 합치기
     all_candidates = name_cands + name_addr_cands + name_region_cands
     if not all_candidates:
-        return {
-            "origin_name": name,
-            "naver_name": None,  # ★ 추가
-            "eval_value": False,
-            "origin_address": origin_address,
-            "naver_address": None,
-            "falseMessage": "1단계 실패: 검색 결과 없음",
-        }
+        return evaluate_with_google_fallback(
+            name,
+            origin_address,
+            source_lat,
+            source_lng,
+            "1단계 실패: 검색 결과 없음",
+        )
 
     # 주소로 중복 제거
     seen_addresses = set()
@@ -663,56 +657,85 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
 
     matched_result = None
     min_dist = float("inf")
+    match_reason = None
 
     # 1단계: 지번주소 일치
-    for cand in unique_candidates:
-        cand_addr = cand.get("address") or ""
-        if cand_addr:
+    exact_matches = []
+    if geocoded_addr_norm:
+        for cand in unique_candidates:
+            cand_addr = cand.get("address") or ""
+            if not cand_addr:
+                continue
             if cand.get("roadAddress") and cand_addr == cand.get("roadAddress"):
                 cand_jibun = ncp_geocode_to_jibun_address(cand_addr)
-                if cand_jibun:
-                    cand_addr_norm = _norm_space(cand_jibun)
-                else:
-                    cand_addr_norm = _norm_space(cand_addr)
+                cand_addr_norm = _norm_space(cand_jibun or cand_addr)
             else:
                 cand_addr_norm = _norm_space(cand_addr)
             if cand_addr_norm == geocoded_addr_norm:
-                matched_result = cand
-                break
+                exact_matches.append(cand)
+
+    if len(exact_matches) > 1:
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_MULTI_CANDIDATE,
+            false_message="1단계 실패: 동일 주소 후보가 여러 개라 자동 확정 불가",
+            evidence_summary=["Multiple Naver candidates matched the same geocoded address"],
+            match_status="pending",
+        )
+    if len(exact_matches) == 1:
+        matched_result = exact_matches[0]
+        match_reason = "exact_jibun"
 
     # 2단계: 거리 기반 매칭
     if not matched_result:
-        geocoded_addresses = ncp_geocode_addresses(origin_address)
-        if not geocoded_addresses or len(geocoded_addresses) == 0:
-            return evaluate_with_google_fallback(name, origin_address, "2단계 실패: 지오코딩 정보 없음")
-        geocoded_lat = float(geocoded_addresses[0].get("y", 0))
-        geocoded_lng = float(geocoded_addresses[0].get("x", 0))
+        if source_lat is None or source_lng is None:
+            return evaluate_with_google_fallback(
+                name,
+                origin_address,
+                source_lat,
+                source_lng,
+                "2단계 실패: 지오코딩 정보 없음",
+            )
 
-        best_cand = None
+        distance_matches: List[Tuple[Dict[str, Any], float]] = []
         for cand in unique_candidates:
             cand_jibun = cand.get("address") or ""
             if not cand_jibun:
                 continue
             cand_geocoded = ncp_geocode_addresses(cand_jibun)
             if cand_geocoded and len(cand_geocoded) > 0:
-                cand_lat = float(cand_geocoded[0].get("y", 0))
-                cand_lng = float(cand_geocoded[0].get("x", 0))
-                dist = haversine_m(geocoded_lat, geocoded_lng, cand_lat, cand_lng)
-                if dist <= 20.0 and dist < min_dist:
-                    min_dist = dist
-                    best_cand = cand
+                cand_lat = _float_or_none(cand_geocoded[0].get("y"))
+                cand_lng = _float_or_none(cand_geocoded[0].get("x"))
+                if cand_lat is None or cand_lng is None:
+                    continue
+                dist = haversine_m(source_lat, source_lng, cand_lat, cand_lng)
+                if dist <= 20.0:
+                    distance_matches.append((cand, dist))
 
-        if not best_cand:
-            return {
-                "origin_name": name,
-                "naver_name": None,  # ★ 추가
-                "eval_value": False,
-                "origin_address": origin_address,
-                "naver_address": None,
-                "falseMessage": "2단계 실패: 20m 이내 후보 없음",
-            }
+        if len(distance_matches) > 1:
+            return build_location_result(
+                origin_name=name,
+                origin_address=origin_address,
+                eval_value=False,
+                pending_reason=PENDING_REASON_MULTI_CANDIDATE,
+                false_message="2단계 실패: 20m 이내 후보가 여러 개라 자동 확정 불가",
+                evidence_summary=["Multiple Naver candidates were within 20m of the source coordinates"],
+                match_status="pending",
+            )
 
-        matched_result = best_cand
+        if not distance_matches:
+            return evaluate_with_google_fallback(
+                name,
+                origin_address,
+                source_lat,
+                source_lng,
+                "2단계 실패: 20m 이내 후보 없음",
+            )
+
+        matched_result, min_dist = distance_matches[0]
+        match_reason = "distance"
 
     # 일치하는 결과의 상세 정보 저장
     matched_addr = (
@@ -741,14 +764,28 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
             "distance": min_dist if min_dist != float("inf") else 0.0,
         }
 
-    return {
-        "origin_name": name,
-        "naver_name": matched_result.get("title"),  # ★ 추가: 네이버 검색 결과 상호명
-        "eval_value": True,
-        "origin_address": origin_address,
-        "naver_address": [naver_address],
-        "falseMessage": None,
-    }
+    evidence_summary = [
+        f"Naver candidate matched: {matched_result.get('title') or name}",
+        "Source geo aligned by exact address" if match_reason == "exact_jibun" else f"Source geo aligned within {naver_address.get('distance', 0.0):.1f}m",
+    ]
+    evidence_families = [EVIDENCE_PROVIDER_CANDIDATE, EVIDENCE_SOURCE_GEO]
+
+    return build_location_result(
+        origin_name=name,
+        origin_address=origin_address,
+        eval_value=True,
+        matched_provider="naver",
+        matched_name=matched_result.get("title"),
+        naver_name=matched_result.get("title"),  # ★ 추가: 네이버 검색 결과 상호명
+        google_name=None,
+        matched_address=naver_address,
+        evidence_summary=evidence_summary,
+        evidence_families=evidence_families,
+        pending_reason=None,
+        second_pass=build_second_pass_state(),
+        false_message=None,
+        match_status="matched",
+    )
 
 
 def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
@@ -766,29 +803,32 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
         if not evaluation_target.get(name, False):
             # address가 null인 경우 등은 평가 스킵
             location_eval_list.append(
-                {
-                    "origin_name": name,
-                    "naver_name": None,
-                    "eval_value": False,
-                    "origin_address": r.get("address"),
-                    "naver_address": None,
-                    "falseMessage": "평가 대상 아님 (address null)",
-                }
+                build_location_result(
+                    origin_name=name,
+                    origin_address=_norm_space(str(r.get("address", ""))),
+                    eval_value=False,
+                    pending_reason=PENDING_REASON_INSUFFICIENT,
+                    false_message="평가 대상 아님 (address null)",
+                    evidence_summary=["Skipped because evaluation_target is false or address is null"],
+                    match_status="pending",
+                )
             )
             continue
 
         try:
             res = evaluate_one_restaurant(r)
         except Exception as e:
-            res = {
-                "origin_name": name,
-                "naver_name": None,
-                "google_name": None,
-                "eval_value": False,
-                "origin_address": _norm_space(str(r.get("address", ""))),
-                "naver_address": None,
-                "falseMessage": f"평가 실패: {str(e)}",
-            }
+            res = build_location_result(
+                origin_name=name,
+                origin_address=_norm_space(str(r.get("address", ""))),
+                eval_value=False,
+                naver_name=None,
+                google_name=None,
+                pending_reason=PENDING_REASON_INSUFFICIENT,
+                false_message=f"평가 실패: {str(e)}",
+                evidence_summary=[f"Evaluation failed with exception: {str(e)}"],
+                match_status="failed",
+            )
         location_eval_list.append(res)
         time.sleep(0.5)  # API rate-limit 완화
 
