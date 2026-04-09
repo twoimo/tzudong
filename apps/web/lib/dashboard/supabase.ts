@@ -8,7 +8,7 @@ type KeyRole = 'anon' | 'service';
 
 interface DashboardRestaurantRow {
     id: string;
-    name: string;
+    name: string | null;
     categories: string[];
     road_address: string | null;
     jibun_address: string | null;
@@ -107,7 +107,10 @@ async function fetchRestaurantPage(
         throw new Error(`Failed to fetch restaurants: ${error.message}`);
     }
 
-    return (data as DashboardRestaurantRow[]) || [];
+    return ((data as DashboardRestaurantRow[]) || []).map((row) => ({
+        ...row,
+        name: typeof row.name === 'string' && row.name.trim().length > 0 ? row.name : null,
+    }));
 }
 
 export async function getRestaurantRows(
