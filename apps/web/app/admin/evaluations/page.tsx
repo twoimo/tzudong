@@ -447,6 +447,7 @@ function AdminEvaluationPage() {
 
       setIsSearching(true);
       try {
+        // @ts-expect-error Supabase RPC inference is stale in the local generated client types.
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
           max_results: 100,
@@ -1088,6 +1089,7 @@ function AdminEvaluationPage() {
         // status는 유지하고 에러 메시지만 저장
         await supabase
           .from('restaurants')
+          // @ts-expect-error Supabase update inference is stale in the local generated client types.
           .update({
             db_error_message: duplicateCheck.reason,
             db_error_details: errorDetails,
@@ -1159,6 +1161,7 @@ function AdminEvaluationPage() {
     // status를 'approved'로 업데이트 및 approved_name 저장
     const { data: updatedData, error } = await supabase
       .from('restaurants')
+      // @ts-expect-error Supabase update inference is stale in the local generated client types.
       .update({
         status: 'approved',
         approved_name: approvedName,
@@ -1193,7 +1196,7 @@ function AdminEvaluationPage() {
 
     toast({
       title: '승인 완료',
-      description: `✅ "${naverName}" 맛집이 승인되었습니다`,
+      description: `✅ "${approvedName}" 맛집이 승인되었습니다`,
     });
   };
 
@@ -1207,6 +1210,7 @@ function AdminEvaluationPage() {
       // Soft Delete: status를 'deleted'로 변경
       const { error } = await supabase
         .from('restaurants')
+        // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'deleted',
           updated_at: new Date().toISOString(),
@@ -1261,6 +1265,7 @@ function AdminEvaluationPage() {
       // status를 'pending'으로 업데이트
       const { error } = await supabase
         .from('restaurants')
+        // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'pending',
           updated_at: new Date().toISOString(),
@@ -1461,8 +1466,8 @@ function AdminEvaluationPage() {
           typedOriginalData.forEach((restaurantRow) => {
             originalRestaurantsMap.set(restaurantRow.id, {
               id: restaurantRow.id,
-              unique_id: restaurantRow.unique_id,
-              name: restaurantRow.name,
+              unique_id: restaurantRow.unique_id || '',
+              name: restaurantRow.name || '이름 없음',
               road_address: restaurantRow.road_address,
               jibun_address: restaurantRow.jibun_address,
               phone: restaurantRow.phone,

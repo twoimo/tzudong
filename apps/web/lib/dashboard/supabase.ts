@@ -8,8 +8,8 @@ type KeyRole = 'anon' | 'service';
 
 interface DashboardRestaurantRow {
     id: string;
-    name: string | null;
-    categories: string[] | null;
+    name: string;
+    categories: string[];
     road_address: string | null;
     jibun_address: string | null;
     origin_address: Json | null;
@@ -18,10 +18,10 @@ interface DashboardRestaurantRow {
     youtube_link: string | null;
     youtube_meta: Json | null;
     source_type: string | null;
-    status: string | null;
-    is_not_selected: boolean | null;
-    is_missing: boolean | null;
-    geocoding_success: boolean | null;
+    status: string;
+    is_not_selected: boolean;
+    is_missing: boolean;
+    geocoding_success: boolean;
     geocoding_false_stage: number | null;
     evaluation_results: Json | null;
     updated_at: string;

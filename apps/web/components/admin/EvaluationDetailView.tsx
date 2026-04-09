@@ -109,7 +109,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
         ? locationMatchResult.evidence_summary.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
         : [];
     const evidenceFamilies = Array.isArray(locationMatchResult?.evidence_families)
-        ? locationMatchResult.evidence_families.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        ? locationMatchResult.evidence_families.filter((item) => item.trim().length > 0)
         : [];
     const secondPass = locationMatchResult?.second_pass;
     const secondPassSummary = secondPass

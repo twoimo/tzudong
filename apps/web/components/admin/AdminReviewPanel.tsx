@@ -132,7 +132,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 typedRestaurantsData.map(r => [
                     r.id,
                     {
-                        name: r.name,
+                        name: r.name || '알 수 없음',
                         address: r.road_address || r.jibun_address || '',
                     },
                 ])
