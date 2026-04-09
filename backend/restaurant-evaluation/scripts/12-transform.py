@@ -524,9 +524,13 @@ def transform_map_url_crawling_object(
         loc_match_item = None
         if isinstance(restaurant_data.get("evaluation_results"), dict):
             loc_match_item = restaurant_data["evaluation_results"].get("location_match_TF")
-        trace_id_name, trace_id_name_source = resolve_trace_identity(
-            origin_name, loc_match_item
-        )
+        if loc_match_item:
+            trace_id_name, trace_id_name_source = resolve_trace_identity(
+                origin_name, loc_match_item
+            )
+        else:
+            trace_id_name = naver_name or google_name or origin_name
+            trace_id_name_source = "naver" if naver_name else ("google" if google_name else "original")
 
         output = {
             "youtube_link": youtube_link,

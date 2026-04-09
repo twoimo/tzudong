@@ -261,6 +261,7 @@ def validate_rule_results(video_id: str, data: dict) -> list[dict]:
             unique_evidence_families = set(evidence_families)
             pending_reason = loc.get("pending_reason")
             second_pass = loc.get("second_pass")
+            match_status = loc.get("match_status")
 
             # eval_value가 true인데 matched/provider/evidence가 부족하면 모순
             if eval_value is True and (not matched_name or not provider_name):
@@ -290,7 +291,7 @@ def validate_rule_results(video_id: str, data: dict) -> list[dict]:
                                   f"location_match=False이지만 falseMessage 없음",
                                   restaurant_name=origin_name))
 
-            if eval_value is not True and not pending_reason:
+            if eval_value is not True and match_status != "failed" and not pending_reason:
                 errors.append(_err(step, video_id, ValidationSeverity.INFO.value,
                                   "missing_pending_reason",
                                   "location_match가 non-True인데 pending_reason 없음",
