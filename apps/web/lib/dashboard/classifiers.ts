@@ -47,6 +47,10 @@ export function getLocationMatchFalseMessage(evaluationResults: unknown): string
     return lm.falseMessage;
   }
 
+  if (typeof lm.pending_reason === 'string' && lm.pending_reason.trim().length > 0) {
+    return `location_match pending (${lm.pending_reason})`;
+  }
+
   return 'location_match 실패(사유 없음)';
 }
 

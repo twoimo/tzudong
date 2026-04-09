@@ -1,33 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database, Tables } from '@/integrations/supabase/types';
+import type { Database, Json } from '@/integrations/supabase/types';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 1000;
 
 type KeyRole = 'anon' | 'service';
 
-type DashboardRestaurantRow = Pick<
-    Tables<'restaurants'>,
-    | 'id'
-    | 'name'
-    | 'categories'
-    | 'road_address'
-    | 'jibun_address'
-    | 'origin_address'
-    | 'lat'
-    | 'lng'
-    | 'youtube_link'
-    | 'youtube_meta'
-    | 'source_type'
-    | 'status'
-    | 'is_not_selected'
-    | 'is_missing'
-    | 'geocoding_success'
-    | 'geocoding_false_stage'
-    | 'evaluation_results'
-    | 'updated_at'
-    | 'created_at'
->;
+interface DashboardRestaurantRow {
+    id: string;
+    name: string | null;
+    categories: string[] | null;
+    road_address: string | null;
+    jibun_address: string | null;
+    origin_address: Json | null;
+    lat: number | null;
+    lng: number | null;
+    youtube_link: string | null;
+    youtube_meta: Json | null;
+    source_type: string | null;
+    status: string | null;
+    is_not_selected: boolean | null;
+    is_missing: boolean | null;
+    geocoding_success: boolean | null;
+    geocoding_false_stage: number | null;
+    evaluation_results: Json | null;
+    updated_at: string;
+    created_at: string;
+}
 
 type RestaurantCache = {
     expiresAt: number;
