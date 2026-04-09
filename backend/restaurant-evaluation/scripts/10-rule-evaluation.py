@@ -805,7 +805,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
             location_eval_list.append(
                 build_location_result(
                     origin_name=name,
-                    origin_address=_norm_space(str(r.get("address", ""))),
+                    origin_address=_norm_space(str(r.get("address") or "")),
                     eval_value=False,
                     pending_reason=PENDING_REASON_INSUFFICIENT,
                     false_message="평가 대상 아님 (address null)",
@@ -820,7 +820,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
         except Exception as e:
             res = build_location_result(
                 origin_name=name,
-                origin_address=_norm_space(str(r.get("address", ""))),
+                origin_address=_norm_space(str(r.get("address") or "")),
                 eval_value=False,
                 naver_name=None,
                 google_name=None,
