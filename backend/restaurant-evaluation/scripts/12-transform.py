@@ -16,6 +16,8 @@ laaj_results, map_url_crawling 데이터를 최종 형식으로 변환합니다.
 - source_type: "geminiCLI" 또는 "map_url_crawling"
 """
 
+from __future__ import annotations
+
 import json
 import os
 import hashlib
