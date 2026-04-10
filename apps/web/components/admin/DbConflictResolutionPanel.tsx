@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
+import { mergeRestaurantData } from '@/lib/db-conflict-checker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ADMIN_MODAL_ACTION,
@@ -16,29 +17,16 @@ import {
 
 type ConflictRestaurantDbRow = {
   updated_at?: string | null;
-  youtube_links?: string[] | null;
-  youtube_metas?: unknown[] | null;
-  tzuyang_reviews?: string[] | null;
+  youtube_link?: string | null;
+  youtube_meta?: Record<string, unknown> | null;
+  tzuyang_review?: string | null;
+  categories?: string[] | string | null;
 };
 
 type SupabaseUpdateError = {
   code?: string;
   message?: string;
 } | null;
-
-type RestaurantsUpdateBuilder = {
-  update: (values: Record<string, unknown>) => {
-    eq: (column: string, value: string) => {
-      eq: (column: string, value: string | null) => Promise<{ error: SupabaseUpdateError }>;
-    };
-  };
-};
-
-type EvaluationRecordsUpdateBuilder = {
-  update: (values: Record<string, unknown>) => {
-    eq: (column: string, value: string) => Promise<{ error: SupabaseUpdateError }>;
-  };
-};
 
 interface DbConflictResolutionPanelProps {
   record: EvaluationRecord | null;
@@ -86,44 +74,42 @@ export function DbConflictResolutionPanel({
 
       if (fetchError) throw fetchError;
       const existingRestaurantData = existingRestaurant as ConflictRestaurantDbRow | null;
+      if (!existingRestaurantData?.updated_at) {
+        throw new Error('기존 레스토랑의 최신 수정 시각을 확인할 수 없습니다.');
+      }
 
-      // 2. 카테고리 병합 (중복 제거)
-      const mergedCategories = Array.from(
-        new Set([...existing.category, newInfo.category])
-      );
+      const mergeResult = await mergeRestaurantData({
+        existingRestaurant: {
+          id: existing.id,
+          youtube_link: existingRestaurantData?.youtube_link ?? null,
+          youtube_meta: existingRestaurantData?.youtube_meta ?? null,
+          tzuyang_review: existingRestaurantData?.tzuyang_review ?? null,
+          categories: existingRestaurantData?.categories ?? [],
+          updated_at: existingRestaurantData.updated_at,
+        },
+        newYoutubeLink: record.youtube_link || '',
+        newYoutubeMeta:
+          record.youtube_meta && typeof record.youtube_meta === 'object' && !Array.isArray(record.youtube_meta)
+            ? (record.youtube_meta as Record<string, unknown>)
+            : undefined,
+        newTzuyangReview: newInfo.tzuyang_review || undefined,
+        newCategory: newInfo.category,
+      });
 
-      // 3. YouTube 링크 병합
-      const existingYoutubeLinks = existingRestaurantData?.youtube_links ?? [];
-      const mergedYoutubeLinks = Array.from(
-        new Set([...existingYoutubeLinks, record.youtube_link])
-      );
+      if (!mergeResult.success) {
+        throw new Error(mergeResult.error);
+      }
 
-      // 4. YouTube 메타 병합
-      const existingYoutubeMetas = existingRestaurantData?.youtube_metas ?? [];
-      const newMetas = record.youtube_meta ? [record.youtube_meta] : [];
-      const mergedYoutubeMetas = [...existingYoutubeMetas, ...newMetas];
-
-      // 5. 츄양 리뷰 병합
-      const existingReviews = existingRestaurantData?.tzuyang_reviews ?? [];
-      const newReviews = newInfo.tzuyang_review ? [newInfo.tzuyang_review] : [];
-      const mergedReviews = [...existingReviews, ...newReviews];
-
-      // 6. Optimistic Locking으로 업데이트
-      const restaurantsTable = supabase.from('restaurants') as unknown as RestaurantsUpdateBuilder;
-      const { error: updateError } = await restaurantsTable
+      const { error: stampError } = await supabase
+        .from('restaurants' as never)
         .update({
-          category: mergedCategories,
-          youtube_links: mergedYoutubeLinks,
-          youtube_metas: mergedYoutubeMetas,
-          tzuyang_reviews: mergedReviews,
           updated_by_admin_id: adminUserId,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', existing.id)
-        .eq('updated_at', existingRestaurantData?.updated_at ?? null); // Optimistic Locking
+        } as never)
+        .eq('id', existing.id);
 
-      if (updateError) {
-        if (updateError.code === 'PGRST116') {
+      if (stampError) {
+        if (stampError.code === 'PGRST116') {
           toast({
             variant: 'destructive',
             title: '업데이트 충돌',
@@ -131,19 +117,21 @@ export function DbConflictResolutionPanel({
           });
           return;
         }
-        throw updateError;
+        throw stampError;
       }
 
-      // 7. evaluation_record 상태 업데이트
-      const evaluationRecordsTable = supabase.from('evaluation_records') as unknown as EvaluationRecordsUpdateBuilder;
-      const { error: recordError } = await evaluationRecordsTable
+      const { error: sourceError } = await supabase
+        .from('restaurants' as never)
         .update({
-          status: 'approved',
-          processed_at: new Date().toISOString(),
-        })
+          status: 'deleted',
+          updated_by_admin_id: adminUserId,
+          updated_at: new Date().toISOString(),
+          db_error_message: null,
+          db_error_details: null,
+        } as never)
         .eq('id', record.id);
 
-      if (recordError) throw recordError;
+      if (sourceError) throw sourceError;
 
       toast({
         title: '병합 완료',
@@ -151,8 +139,11 @@ export function DbConflictResolutionPanel({
       });
 
       onSuccess(record.id, {
-        status: 'approved',
-        processed_at: new Date().toISOString(),
+        status: 'deleted',
+        updated_by_admin_id: adminUserId,
+        updated_at: new Date().toISOString(),
+        db_error_message: null,
+        db_error_details: null,
       });
       onOpenChange(false);
 
@@ -172,13 +163,15 @@ export function DbConflictResolutionPanel({
   const handleHoldNew = async () => {
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
 
-      const evaluationRecordsTable = supabase.from('evaluation_records') as unknown as EvaluationRecordsUpdateBuilder;
-      const { error } = await evaluationRecordsTable
+      const { error } = await supabase
+        .from('restaurants' as never)
         .update({
           status: 'hold',
-          processed_at: new Date().toISOString(),
-        })
+          updated_by_admin_id: adminUserId,
+          updated_at: new Date().toISOString(),
+        } as never)
         .eq('id', record.id);
 
       if (error) throw error;
@@ -190,7 +183,8 @@ export function DbConflictResolutionPanel({
 
       onSuccess(record.id, {
         status: 'hold',
-        processed_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: new Date().toISOString(),
       });
       onOpenChange(false);
 
