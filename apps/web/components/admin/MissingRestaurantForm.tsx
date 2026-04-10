@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
-import { checkDbConflict, mergeRestaurantData } from '@/lib/db-conflict-checker';
+import { checkDbConflict } from '@/lib/db-conflict-checker';
+import { mergeAdminReviewRestaurant } from '@/lib/admin-review-merge';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
@@ -76,7 +78,6 @@ interface NaverGeocodingResponse {
 }
 
 type ConflictRestaurant = NonNullable<Awaited<ReturnType<typeof checkDbConflict>>['conflictingRestaurants']>[number];
-type ExistingRestaurantForMerge = Parameters<typeof mergeRestaurantData>[0]['existingRestaurant'];
 
 interface GeocodedAddressData {
   road_address: string;
@@ -88,18 +89,21 @@ interface GeocodedAddressData {
 }
 
 interface MergeTargetRestaurantRow {
-  id: string;
-  youtube_link: string | null;
-  youtube_meta: unknown;
-  tzuyang_review: string | null;
-  categories: string[] | string | null;
   updated_at: string;
 }
 
 export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }: MissingRestaurantFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error && error.message ? error.message : fallback;
+  const requireAdminUserId = () => {
+    if (!user?.id) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    return user.id;
+  };
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -277,9 +281,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // 병합 처리 함수
   const handleMerge = async (existingRestaurant: ConflictRestaurant, trimmedName: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
+      const adminUserId = requireAdminUserId();
+
       const mergeTargetQuery = await supabase
         .from('restaurants' as never)
-        .select('id, youtube_link, youtube_meta, tzuyang_review, categories, updated_at')
+        .select('updated_at')
         .eq('id', existingRestaurant.id)
         .single();
       const mergeTargetError = mergeTargetQuery.error;
@@ -289,12 +295,6 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         throw new Error('병합 대상 레스토랑을 찾을 수 없습니다.');
       }
 
-      const normalizedYoutubeMeta =
-        mergeTargetRestaurant.youtube_meta &&
-        typeof mergeTargetRestaurant.youtube_meta === 'object' &&
-        !Array.isArray(mergeTargetRestaurant.youtube_meta)
-          ? (mergeTargetRestaurant.youtube_meta as Record<string, unknown>)
-          : null;
       const normalizedNewYoutubeMeta =
         record?.youtube_meta &&
         typeof record.youtube_meta === 'object' &&
@@ -302,35 +302,16 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           ? (record.youtube_meta as Record<string, unknown>)
           : undefined;
 
-      const mergeResult = await mergeRestaurantData({
-        existingRestaurant: {
-          id: mergeTargetRestaurant.id,
-          youtube_link: mergeTargetRestaurant.youtube_link,
-          youtube_meta: normalizedYoutubeMeta,
-          tzuyang_review: mergeTargetRestaurant.tzuyang_review,
-          categories: mergeTargetRestaurant.categories ?? [],
-          updated_at: mergeTargetRestaurant.updated_at,
-        } satisfies ExistingRestaurantForMerge,
-        newYoutubeLink: record!.youtube_link || '',
-        newYoutubeMeta: normalizedNewYoutubeMeta,
-        newTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review,
-        newCategory: trimmedCategory,
+      await mergeAdminReviewRestaurant({
+        targetRestaurantId: existingRestaurant.id,
+        sourceRestaurantId: record!.id,
+        adminUserId,
+        expectedTargetUpdatedAt: mergeTargetRestaurant.updated_at,
+        incomingYoutubeLink: record!.youtube_link || null,
+        incomingYoutubeMeta: normalizedNewYoutubeMeta ?? null,
+        incomingTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
+        incomingCategory: trimmedCategory || null,
       });
-
-      if (!mergeResult.success) {
-        throw new Error(mergeResult.error);
-      }
-
-      // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records' as never)
-        .update({
-          status: 'approved',
-          processed_at: new Date().toISOString(),
-        } as never)
-        .eq('id', record!.id);
-
-      if (updateError) throw updateError;
 
       toast({
         title: '병합 완료',
@@ -338,8 +319,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       });
 
       onSuccess(record!.id, {
-        status: 'approved',
-        processed_at: new Date().toISOString(),
+        status: 'deleted',
+        updated_by_admin_id: adminUserId,
+        updated_at: new Date().toISOString(),
+        db_error_message: null,
+        db_error_details: null,
       });
       onOpenChange(false);
       resetForm();
@@ -357,9 +341,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // 새 레스토랑 등록 함수
   const registerNewRestaurant = async (geocodingData: GeocodedAddressData, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
-      const { error: insertError } = await supabase
-        .from('restaurants')
-        .insert({
+      const adminUserId = requireAdminUserId();
+
+      const { error: updateError } = await supabase
+        .from('restaurants' as never)
+        .update({
           approved_name: trimmedName,
           road_address: geocodingData.road_address,
           jibun_address: geocodingData.jibun_address,
@@ -368,20 +354,18 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           lat: parseFloat(geocodingData.y),
           lng: parseFloat(geocodingData.x),
           phone: trimmedPhone || null,
-          category: [trimmedCategory],
-          youtube_links: [record!.youtube_link],
-          youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
-          tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record!.restaurant_info?.tzuyang_review ? [record!.restaurant_info.tzuyang_review] : []),
-        } as never);
-
-      if (insertError) throw insertError;
-
-      // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records' as never)
-        .update({
+          categories: trimmedCategory ? [trimmedCategory] : [],
+          updated_by_admin_id: adminUserId,
+          youtube_link: record!.youtube_link || null,
+          youtube_meta: record!.youtube_meta ?? null,
+          tzuyang_review: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
           status: 'approved',
-          processed_at: new Date().toISOString(),
+          geocoding_success: true,
+          geocoding_false_stage: null,
+          is_missing: false,
+          updated_at: new Date().toISOString(),
+          db_error_message: null,
+          db_error_details: null,
         } as never)
         .eq('id', record!.id);
 
@@ -394,7 +378,22 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
       onSuccess(record!.id, {
         status: 'approved',
-        processed_at: new Date().toISOString(),
+        approved_name: trimmedName,
+        phone: trimmedPhone || null,
+        categories: trimmedCategory ? [trimmedCategory] : [],
+        road_address: geocodingData.road_address,
+        jibun_address: geocodingData.jibun_address,
+        english_address: geocodingData.english_address,
+        address_elements: geocodingData.address_elements as unknown as Record<string, unknown>,
+        lat: parseFloat(geocodingData.y),
+        lng: parseFloat(geocodingData.x),
+        geocoding_success: true,
+        geocoding_false_stage: null,
+        is_missing: false,
+        updated_by_admin_id: adminUserId,
+        updated_at: new Date().toISOString(),
+        db_error_message: null,
+        db_error_details: null,
       });
       onOpenChange(false);
       resetForm();

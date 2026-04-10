@@ -12,6 +12,7 @@ export interface Database {
             restaurants: {
                 Row: {
                     id: string
+                    approved_name: string | null
                     unique_id: string
                     name: string
                     phone: string | null
@@ -22,6 +23,7 @@ export interface Database {
                     evaluation_results: Json | null
                     reasoning_basis: string | null
                     tzuyang_review: string | null
+                    trace_id: string | null
                     origin_address: Json | null
                     road_address: string | null
                     jibun_address: string | null
@@ -38,11 +40,25 @@ export interface Database {
                     visit_count: number | null
                     review_count: number | null
                     description: string | null
+                    created_by: string | null
+                    updated_by_admin_id: string | null
+                    db_error_message: string | null
+                    db_error_details: Json | null
+                    search_count: number | null
+                    weekly_search_count: number | null
+                    origin_name: string | null
+                    naver_name: string | null
+                    google_name: string | null
+                    trace_id_name_source: string | null
+                    channel_name: string | null
+                    description_map_url: string | null
+                    recollect_version: Json | null
                     created_at: string
                     updated_at: string
                 }
                 Insert: {
                     id?: string
+                    approved_name?: string | null
                     unique_id: string
                     name: string
                     phone?: string | null
@@ -53,6 +69,7 @@ export interface Database {
                     evaluation_results?: Json | null
                     reasoning_basis?: string | null
                     tzuyang_review?: string | null
+                    trace_id?: string | null
                     origin_address?: Json | null
                     road_address?: string | null
                     jibun_address?: string | null
@@ -69,11 +86,25 @@ export interface Database {
                     visit_count?: number | null
                     review_count?: number | null
                     description?: string | null
+                    created_by?: string | null
+                    updated_by_admin_id?: string | null
+                    db_error_message?: string | null
+                    db_error_details?: Json | null
+                    search_count?: number | null
+                    weekly_search_count?: number | null
+                    origin_name?: string | null
+                    naver_name?: string | null
+                    google_name?: string | null
+                    trace_id_name_source?: string | null
+                    channel_name?: string | null
+                    description_map_url?: string | null
+                    recollect_version?: Json | null
                     created_at?: string
                     updated_at?: string
                 }
                 Update: {
                     id?: string
+                    approved_name?: string | null
                     unique_id?: string
                     name?: string
                     phone?: string | null
@@ -84,6 +115,7 @@ export interface Database {
                     evaluation_results?: Json | null
                     reasoning_basis?: string | null
                     tzuyang_review?: string | null
+                    trace_id?: string | null
                     origin_address?: Json | null
                     road_address?: string | null
                     jibun_address?: string | null
@@ -100,6 +132,19 @@ export interface Database {
                     visit_count?: number | null
                     review_count?: number | null
                     description?: string | null
+                    created_by?: string | null
+                    updated_by_admin_id?: string | null
+                    db_error_message?: string | null
+                    db_error_details?: Json | null
+                    search_count?: number | null
+                    weekly_search_count?: number | null
+                    origin_name?: string | null
+                    naver_name?: string | null
+                    google_name?: string | null
+                    trace_id_name_source?: string | null
+                    channel_name?: string | null
+                    description_map_url?: string | null
+                    recollect_version?: Json | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -285,6 +330,38 @@ export interface Database {
             }
         }
         Functions: {
+            search_restaurants_by_youtube_title: {
+                Args: {
+                    search_query: string
+                    max_results?: number
+                    include_all_status?: boolean
+                    korean_only?: boolean
+                }
+                Returns: {
+                    id: string
+                    name: string | null
+                    road_address: string | null
+                    jibun_address: string | null
+                    phone: string | null
+                    categories: string[] | null
+                    youtube_link: string | null
+                    tzuyang_review: string | null
+                    lat: number | null
+                    lng: number | null
+                    status: string | null
+                    english_address: string | null
+                    youtube_title: string | null
+                    youtube_meta: Json | null
+                    origin_address: Json | null
+                    address_elements: Json | null
+                    reasoning_basis: string | null
+                    evaluation_results: Json | null
+                    complete_match_score: number | null
+                    word_match_score: number | null
+                    trigram_similarity: number | null
+                    levenshtein_distance: number | null
+                }[]
+            }
             mark_notification_read: {
                 Args: { notification_uuid: string }
                 Returns: void

@@ -24,6 +24,7 @@ import unicodedata
 import time
 import sys
 import argparse
+import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -92,6 +93,41 @@ ncp_api_errors = 0
 # [PERF] Geocoding 결과 메모리 캐시 (동일 주소 반복 API 호출 방지)
 _geocode_jibun_cache: Dict[str, Optional[str]] = {}
 _geocode_addresses_cache: Dict[str, Optional[List[Dict[str, Any]]]] = {}
+_gemini_fallback_cache: Dict[str, Dict[str, Any]] = {}
+
+EVIDENCE_PROVIDER_CANDIDATE = "provider_candidate"
+EVIDENCE_SOURCE_GEO = "source_geo"
+
+PENDING_REASON_INSUFFICIENT = "insufficient_evidence"
+PENDING_REASON_CROSS_COUNTRY = "cross_country_mismatch"
+PENDING_REASON_MULTI_CANDIDATE = "multi_candidate"
+PENDING_REASON_TIMEOUT = "timeout"
+PENDING_REASON_RATE_LIMITED = "rate_limited"
+
+COUNTRY_HINTS = {
+    "kr": ("대한민국", "한국", "korea", "republic of korea", "south korea"),
+    "us": ("미국", "usa", "u.s.a", "united states", "america"),
+    "jp": ("일본", "japan"),
+    "th": ("태국", "thailand"),
+    "tw": ("대만", "taiwan"),
+    "tr": ("튀르키예", "터키", "turkey", "türkiye"),
+    "id": ("인도네시아", "indonesia"),
+    "au": ("호주", "australia"),
+    "hu": ("헝가리", "hungary"),
+}
+
+NON_RESTAURANT_HINTS = (
+    "주차장",
+    "전기차충전소",
+    "버스정류장",
+    "편의점",
+    "세븐일레븐",
+    "GS25",
+    "CU",
+)
+
+GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
+GEMINI_TIMEOUT_SEC = int(os.getenv("GEMINI_FALLBACK_TIMEOUT_SEC", "90") or "90")
 
 
 # ========= 유틸 함수 (기존 backup 그대로) =========
@@ -147,6 +183,289 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         * math.sin(dlon / 2) ** 2
     )
     return 2 * R * math.asin(math.sqrt(a))
+
+
+def _float_or_none(value: Any) -> Optional[float]:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _unique_evidence_families(values: Optional[List[str]]) -> List[str]:
+    seen = set()
+    ordered: List[str] = []
+    for value in values or []:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        ordered.append(value)
+    return ordered
+
+
+def _ensure_string_list(value: Any) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    result: List[str] = []
+    for item in value:
+        if isinstance(item, str) and item.strip():
+            result.append(item.strip())
+    return result
+
+
+def _has_independent_evidence(families: Optional[List[str]]) -> bool:
+    return len(_unique_evidence_families(families)) >= 2
+
+
+def build_second_pass_state(
+    *,
+    attempted: bool = False,
+    provider: Optional[str] = None,
+    timed_out: bool = False,
+    rate_limited: bool = False,
+    duration_ms: Optional[int] = None,
+) -> Dict[str, Any]:
+    return {
+        "attempted": attempted,
+        "provider": provider,
+        "timed_out": timed_out,
+        "rate_limited": rate_limited,
+        "duration_ms": duration_ms,
+    }
+
+
+def _detect_country_hint(text: str) -> Optional[str]:
+    lowered = (text or "").lower()
+    for code, hints in COUNTRY_HINTS.items():
+        if any(hint.lower() in lowered for hint in hints):
+            return code
+    return None
+
+
+def _has_foreign_signal(text: str) -> bool:
+    lowered = (text or "").lower()
+    detected = _detect_country_hint(text)
+    if detected and detected != "kr":
+        return True
+    return bool(re.search(r"[A-Za-z]", lowered))
+
+
+def _looks_like_non_restaurant(text: str) -> bool:
+    normalized = _norm_space(text or "")
+    upper = normalized.upper()
+    return any(hint in normalized or hint in upper for hint in NON_RESTAURANT_HINTS)
+
+
+def _normalize_name_key(text: str) -> str:
+    return re.sub(r"[^\w가-힣]+", "", _norm_space(text)).lower()
+
+
+def _candidate_address_text(candidate: Dict[str, Any]) -> str:
+    return _norm_space(
+        " ".join(
+            part
+            for part in (
+                candidate.get("address"),
+                candidate.get("roadAddress"),
+                candidate.get("title"),
+            )
+            if isinstance(part, str) and part.strip()
+        )
+    )
+
+
+def _address_region_matches(origin_address: str, candidate: Dict[str, Any]) -> bool:
+    origin_region = extract_region_from_address(origin_address)
+    if not origin_region:
+        return False
+    candidate_text = _candidate_address_text(candidate)
+    return origin_region in candidate_text
+
+
+def _address_core_matches(origin_address: str, candidate: Dict[str, Any]) -> bool:
+    origin_core = address_core(origin_address)
+    candidate_core = address_core(_candidate_address_text(candidate))
+    if not origin_core or not candidate_core:
+        return False
+    compact_origin = origin_core.replace(" ", "")
+    compact_candidate = candidate_core.replace(" ", "")
+    if len(compact_origin) < 4 or len(compact_candidate) < 4:
+        return False
+    return compact_origin in compact_candidate or compact_candidate in compact_origin
+
+
+def _address_token_overlap(origin_address: str, matched_text: str) -> bool:
+    origin_tokens = {
+        token.lower()
+        for token in re.findall(r"[A-Za-z0-9가-힣]+", origin_address or "")
+        if len(token) >= 3
+    }
+    matched_tokens = {
+        token.lower()
+        for token in re.findall(r"[A-Za-z0-9가-힣]+", matched_text or "")
+        if len(token) >= 3
+    }
+    overlap = origin_tokens & matched_tokens
+    return len(overlap) >= 2
+
+
+def _strip_code_fence(text: str) -> str:
+    fenced = text.strip()
+    if fenced.startswith("```"):
+        fenced = re.sub(r"^```(?:json)?\s*", "", fenced)
+        fenced = re.sub(r"\s*```$", "", fenced)
+    return fenced.strip()
+
+
+def _parse_gemini_wrapper(raw_text: str) -> Optional[Dict[str, Any]]:
+    raw_text = raw_text.strip()
+    if not raw_text:
+        return None
+    try:
+        wrapper = json.loads(raw_text)
+        if isinstance(wrapper, dict) and isinstance(wrapper.get("response"), str):
+            payload_text = _strip_code_fence(wrapper["response"])
+            return json.loads(payload_text)
+        if isinstance(wrapper, dict):
+            return wrapper
+    except json.JSONDecodeError:
+        pass
+
+    match = re.search(r"\{[\s\S]*\}", raw_text)
+    if match:
+        try:
+            return json.loads(_strip_code_fence(match.group(0)))
+        except json.JSONDecodeError:
+            return None
+    return None
+
+
+def _run_gemini_fallback_query(name: str, origin_address: str) -> Dict[str, Any]:
+    cache_key = f"{name}::{origin_address}"
+    cached = _gemini_fallback_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    if not Path.home().joinpath(".gemini/oauth_creds.json").exists():
+        result = {"ok": False, "pending_reason": PENDING_REASON_INSUFFICIENT, "error": "missing_gemini_oauth"}
+        _gemini_fallback_cache[cache_key] = result
+        return result
+
+    prompt = f"""You are verifying a single restaurant match conservatively.\nReturn strict JSON only with keys: confident, matched_name, matched_address, matched_country, evidence_summary.\nTask:\n- Restaurant mention: {name}\n- Source address/context: {origin_address}\nRules:\n- Use web search if needed.\n- If you are not highly confident this is the same real restaurant, set confident=false and use null for matched_name, matched_address, matched_country.\n- If confident=true, provide the canonical restaurant name and best full address.\n- evidence_summary must be a JSON array of 1 to 3 short factual reasons.\n"""
+
+    cmd = ["gemini", "--model", GEMINI_MODEL, "--output-format", "json"]
+    env = os.environ.copy()
+    env["GEMINI_API_KEY"] = ""
+    timeout_sec = max(GEMINI_TIMEOUT_SEC, 10)
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            input=prompt,
+            text=True,
+            capture_output=True,
+            timeout=timeout_sec,
+            env=env,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        result = {"ok": False, "pending_reason": PENDING_REASON_TIMEOUT, "error": "gemini_timeout"}
+        _gemini_fallback_cache[cache_key] = result
+        return result
+
+    if proc.returncode != 0:
+        result = {"ok": False, "pending_reason": PENDING_REASON_INSUFFICIENT, "error": proc.stderr.strip() or "gemini_failed"}
+        _gemini_fallback_cache[cache_key] = result
+        return result
+
+    parsed = _parse_gemini_wrapper(proc.stdout)
+    if not isinstance(parsed, dict):
+        result = {"ok": False, "pending_reason": PENDING_REASON_INSUFFICIENT, "error": "gemini_unparseable"}
+        _gemini_fallback_cache[cache_key] = result
+        return result
+
+    result = {"ok": True, "payload": parsed}
+    _gemini_fallback_cache[cache_key] = result
+    return result
+
+
+def _is_cross_country_mismatch(origin_address: str, matched_text: str) -> bool:
+    origin_country = _detect_country_hint(origin_address)
+    matched_country = _detect_country_hint(matched_text)
+    return bool(origin_country and matched_country and origin_country != matched_country)
+
+
+def _source_coordinates(
+    rec: Dict[str, Any], geocoded_addresses: Optional[List[Dict[str, Any]]]
+) -> Tuple[Optional[float], Optional[float]]:
+    lat = _float_or_none(rec.get("lat"))
+    lng = _float_or_none(rec.get("lng"))
+    if lat is not None and lng is not None:
+        return lat, lng
+
+    if geocoded_addresses:
+        first = geocoded_addresses[0]
+        return _float_or_none(first.get("y")), _float_or_none(first.get("x"))
+
+    return None, None
+
+
+def build_location_result(
+    *,
+    origin_name: str,
+    origin_address: str,
+    eval_value: bool,
+    matched_provider: Optional[str] = None,
+    matched_name: Optional[str] = None,
+    naver_name: Optional[str] = None,
+    google_name: Optional[str] = None,
+    matched_address: Optional[Dict[str, Any]] = None,
+    evidence_summary: Optional[List[str]] = None,
+    evidence_families: Optional[List[str]] = None,
+    pending_reason: Optional[str] = None,
+    second_pass: Optional[Dict[str, Any]] = None,
+    false_message: Optional[str] = None,
+    match_status: Optional[str] = None,
+) -> Dict[str, Any]:
+    unique_families = _unique_evidence_families(evidence_families)
+    second_pass_state = second_pass or build_second_pass_state()
+    provider_name_present = bool(naver_name or google_name)
+    resolved_true = bool(
+        eval_value
+        and matched_name
+        and provider_name_present
+        and pending_reason is None
+        and _has_independent_evidence(unique_families)
+    )
+
+    resolved_status = match_status
+    if resolved_status is None:
+        if resolved_true:
+            resolved_status = "matched"
+        elif pending_reason or false_message:
+            resolved_status = "pending"
+        else:
+            resolved_status = "failed"
+
+    return {
+        "origin_name": origin_name,
+        "eval_value": resolved_true,
+        "match_status": resolved_status,
+        "matched_provider": matched_provider,
+        "matched_name": matched_name,
+        "naver_name": naver_name,
+        "google_name": google_name,
+        "origin_address": origin_address,
+        "matched_address": matched_address,
+        "naver_address": [matched_address] if matched_address else None,
+        "evidence_summary": evidence_summary or [],
+        "evidence_families": unique_families,
+        "pending_reason": pending_reason,
+        "second_pass": second_pass_state,
+        "falseMessage": None if resolved_true else false_message,
+    }
 
 
 # ========= API 호출 (기존 backup 그대로) =========
@@ -272,6 +591,8 @@ def evaluate_category_validity(
     naver_name_map = {}
     google_name_map = {}
     for loc_item in location_match_results:
+        if loc_item.get("eval_value") is not True:
+            continue
         origin_name = loc_item.get("origin_name")
         naver_name = loc_item.get("naver_name")
         google_name = loc_item.get("google_name")
@@ -295,42 +616,95 @@ def evaluate_category_validity(
     return results, evaluation_name_source
 
 
-def google_places_text_search(query: str) -> Optional[Dict[str, Any]]:
+def google_places_text_search(query: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """구글 Places Text Search API 호출"""
     if not GOOGLE_MAPS_API_KEY:
-        return None
+        return None, PENDING_REASON_INSUFFICIENT
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {
         "query": query,
         "key": GOOGLE_MAPS_API_KEY,
         "language": "ko"
     }
+    last_reason: Optional[str] = None
     for attempt in range(3):
         try:
             r = requests.get(url, params=params, timeout=8)
             r.raise_for_status()
             data = r.json()
-            if data.get("status") == "OK" and data.get("results"):
-                return data["results"][0]
+            status = data.get("status")
+            if status == "OK" and data.get("results"):
+                return data["results"][0], None
+            if status == "OVER_QUERY_LIMIT":
+                return None, PENDING_REASON_RATE_LIMITED
+            if status == "REQUEST_DENIED":
+                return None, PENDING_REASON_INSUFFICIENT
+            last_reason = PENDING_REASON_INSUFFICIENT
             if attempt < 2:
                 time.sleep(1)
-        except Exception as e:
-            print(f"[WARN] Google Maps API 실패 (시도 {attempt+1}/3): {e}")
+        except requests.Timeout as e:
+            print(f"[WARN] Google Maps API 타임아웃 (시도 {attempt+1}/3): {e}")
+            last_reason = PENDING_REASON_TIMEOUT
             if attempt < 2:
                 time.sleep(2**attempt)
-            else:
-                return None
-    return None
+        except Exception as e:
+            print(f"[WARN] Google Maps API 실패 (시도 {attempt+1}/3): {e}")
+            last_reason = PENDING_REASON_INSUFFICIENT
+            if attempt < 2:
+                time.sleep(2**attempt)
+    return None, last_reason or PENDING_REASON_INSUFFICIENT
 
-def evaluate_with_google_fallback(name: str, origin_address: str, naver_fail_msg: str) -> Dict[str, Any]:
+
+def evaluate_with_google_fallback(
+    name: str,
+    origin_address: str,
+    source_lat: Optional[float],
+    source_lng: Optional[float],
+    naver_fail_msg: str,
+) -> Dict[str, Any]:
     """네이버 지도 실패 시 구글 지도로 폴백 평가"""
     query = f"{name} {_norm_space(origin_address)}"
-    google_res = google_places_text_search(query)
-    
+    start_time = time.monotonic()
+    google_res, google_failure_reason = google_places_text_search(query)
+    duration_ms = int((time.monotonic() - start_time) * 1000)
+    second_pass = build_second_pass_state(
+        attempted=True,
+        provider="google",
+        timed_out=google_failure_reason == PENDING_REASON_TIMEOUT,
+        rate_limited=google_failure_reason == PENDING_REASON_RATE_LIMITED,
+        duration_ms=duration_ms,
+    )
+
+    if google_failure_reason == PENDING_REASON_TIMEOUT:
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_TIMEOUT,
+            second_pass=second_pass,
+            false_message=f"Naver 실패 ({naver_fail_msg}), Google second pass timeout",
+            evidence_summary=[f"Naver 실패: {naver_fail_msg}", "Google second pass timed out"],
+            match_status="pending",
+        )
+
+    if google_failure_reason == PENDING_REASON_RATE_LIMITED:
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_RATE_LIMITED,
+            second_pass=second_pass,
+            false_message=f"Naver 실패 ({naver_fail_msg}), Google second pass rate limited",
+            evidence_summary=[f"Naver 실패: {naver_fail_msg}", "Google second pass rate limited"],
+            match_status="pending",
+        )
+
     if google_res:
         google_name = google_res.get("name")
         location = google_res.get("geometry", {}).get("location", {})
         formatted_address = google_res.get("formatted_address", "")
+        google_lat = _float_or_none(location.get("lat"))
+        google_lng = _float_or_none(location.get("lng"))
         google_address = {
             "roadAddress": formatted_address,
             "jibunAddress": formatted_address,
@@ -340,25 +714,291 @@ def evaluate_with_google_fallback(name: str, origin_address: str, naver_fail_msg
             "y": str(location.get("lat", "")),
             "distance": 0.0,
         }
-        return {
-            "origin_name": name,
-            "naver_name": None,
-            "google_name": google_name,
-            "eval_value": True,
-            "origin_address": origin_address,
-            "naver_address": [google_address], # 호환성을 위해 naver_address 필드에 구글 주소 정보 저장
-            "falseMessage": None,
-        }
-    
-    return {
-        "origin_name": name,
-        "naver_name": None,
-        "google_name": None,
-        "eval_value": False,
-        "origin_address": origin_address,
-        "naver_address": None,
-        "falseMessage": f"Naver 실패 ({naver_fail_msg}), Google 검색 실패",
+        evidence_summary = [f"Naver 실패: {naver_fail_msg}", f"Google candidate: {google_name or 'unknown'}"]
+        evidence_families = [EVIDENCE_PROVIDER_CANDIDATE]
+        pending_reason = None
+
+        if _is_cross_country_mismatch(origin_address, formatted_address):
+            pending_reason = PENDING_REASON_CROSS_COUNTRY
+            evidence_summary.append("Cross-country mismatch between source address and Google candidate")
+        elif (
+            source_lat is not None
+            and source_lng is not None
+            and google_lat is not None
+            and google_lng is not None
+        ):
+            distance = haversine_m(source_lat, source_lng, google_lat, google_lng)
+            google_address["distance"] = distance
+            if distance <= 20.0:
+                evidence_families.append(EVIDENCE_SOURCE_GEO)
+                evidence_summary.append(f"Source geo aligned within {distance:.1f}m")
+            else:
+                pending_reason = PENDING_REASON_INSUFFICIENT
+                evidence_summary.append(f"Source geo mismatch ({distance:.1f}m)")
+        else:
+            pending_reason = PENDING_REASON_INSUFFICIENT
+            evidence_summary.append("Source geo unavailable for independent confirmation")
+
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=True,
+            matched_provider="google",
+            matched_name=google_name,
+            naver_name=None,
+            google_name=google_name,
+            matched_address=google_address,
+            evidence_summary=evidence_summary,
+            evidence_families=evidence_families,
+            pending_reason=pending_reason,
+            second_pass=second_pass,
+            false_message=(
+                None
+                if pending_reason is None and _has_independent_evidence(evidence_families)
+                else f"Naver 실패 ({naver_fail_msg}), Google evidence insufficient"
+            ),
+            match_status="matched" if pending_reason is None else "pending",
+        )
+
+    return build_location_result(
+        origin_name=name,
+        origin_address=origin_address,
+        eval_value=False,
+        pending_reason=PENDING_REASON_INSUFFICIENT,
+        second_pass=second_pass,
+        false_message=f"Naver 실패 ({naver_fail_msg}), Google 검색 실패",
+        evidence_summary=[f"Naver 실패: {naver_fail_msg}", "Google search returned no usable candidate"],
+        match_status="pending",
+    )
+
+
+def evaluate_with_gemini_fallback(
+    name: str,
+    origin_address: str,
+    naver_fail_msg: str,
+) -> Dict[str, Any]:
+    second_pass = build_second_pass_state(
+        attempted=True,
+        provider="gemini",
+    )
+
+    gemini_result = _run_gemini_fallback_query(name, origin_address)
+    if not gemini_result.get("ok"):
+        pending_reason = gemini_result.get("pending_reason") or PENDING_REASON_INSUFFICIENT
+        second_pass.update(
+            timed_out=pending_reason == PENDING_REASON_TIMEOUT,
+            rate_limited=pending_reason == PENDING_REASON_RATE_LIMITED,
+        )
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=pending_reason,
+            second_pass=second_pass,
+            false_message=f"Naver 실패 ({naver_fail_msg}), Gemini fallback failed",
+            evidence_summary=[f"Naver 실패: {naver_fail_msg}", f"Gemini fallback error: {gemini_result.get('error', 'unknown')}"],
+            match_status="pending",
+        )
+
+    payload = gemini_result["payload"]
+    confident = payload.get("confident") is True
+    matched_name = _norm_space(str(payload.get("matched_name") or ""))
+    matched_address_text = _norm_space(str(payload.get("matched_address") or ""))
+    matched_country = _norm_space(str(payload.get("matched_country") or ""))
+    evidence_summary = _ensure_string_list(payload.get("evidence_summary"))
+
+    if not confident or not matched_name or not matched_address_text:
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_INSUFFICIENT,
+            second_pass=second_pass,
+            false_message=f"Naver 실패 ({naver_fail_msg}), Gemini confidence insufficient",
+            evidence_summary=[f"Naver 실패: {naver_fail_msg}"] + (evidence_summary or ["Gemini fallback was not confident enough"]),
+            match_status="pending",
+        )
+
+    if _is_cross_country_mismatch(origin_address, f"{matched_address_text} {matched_country}"):
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_CROSS_COUNTRY,
+            second_pass=second_pass,
+            false_message=f"Naver 실패 ({naver_fail_msg}), Gemini candidate country mismatch",
+            evidence_summary=[f"Naver 실패: {naver_fail_msg}"] + (evidence_summary or []) + ["Gemini candidate country mismatched source address"],
+            match_status="pending",
+        )
+
+    if _looks_like_non_restaurant(matched_name):
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_INSUFFICIENT,
+            second_pass=second_pass,
+            false_message=f"Naver 실패 ({naver_fail_msg}), Gemini candidate looked like a non-restaurant facility",
+            evidence_summary=(evidence_summary or []) + ["Gemini candidate looked like a non-restaurant facility"],
+            match_status="pending",
+        )
+
+    evidence_families = ["llm_verification"]
+    candidate_for_text = {"address": matched_address_text}
+    if (
+        _address_region_matches(origin_address, candidate_for_text)
+        or _address_core_matches(origin_address, candidate_for_text)
+        or _address_token_overlap(origin_address, matched_address_text)
+    ):
+        evidence_families.append(EVIDENCE_SOURCE_GEO)
+
+    matched_address = {
+        "roadAddress": matched_address_text,
+        "jibunAddress": matched_address_text,
+        "englishAddress": matched_address_text if re.search(r"[A-Za-z]", matched_address_text) else "",
+        "addressElements": [],
+        "x": "",
+        "y": "",
+        "distance": 0.0,
     }
+
+    return build_location_result(
+        origin_name=name,
+        origin_address=origin_address,
+        eval_value=True,
+        matched_provider="gemini",
+        matched_name=matched_name,
+        naver_name=None,
+        google_name=matched_name,
+        matched_address=matched_address,
+        evidence_summary=(evidence_summary or [f"Gemini verified {matched_name}"]) + ["Source address text aligned with Gemini candidate" if len(evidence_families) >= 2 else "Gemini candidate lacked enough independent source-geo confirmation"],
+        evidence_families=evidence_families,
+        pending_reason=None if len(evidence_families) >= 2 else PENDING_REASON_INSUFFICIENT,
+        second_pass=second_pass,
+        false_message=None if len(evidence_families) >= 2 else f"Naver 실패 ({naver_fail_msg}), Gemini evidence insufficient",
+        match_status="matched" if len(evidence_families) >= 2 else "pending",
+    )
+
+
+def evaluate_with_unique_naver_title_match(
+    name: str,
+    origin_address: str,
+    unique_candidates: List[Dict[str, Any]],
+    source_lat: Optional[float],
+    source_lng: Optional[float],
+) -> Optional[Dict[str, Any]]:
+    name_key = _normalize_name_key(name)
+    if not name_key:
+        return None
+
+    exact_title_matches = [
+        cand
+        for cand in unique_candidates
+        if _normalize_name_key(str(cand.get("title", ""))) == name_key
+    ]
+
+    if not exact_title_matches:
+        return None
+
+    trustworthy_matches = [
+        cand
+        for cand in exact_title_matches
+        if _address_region_matches(origin_address, cand) or _address_core_matches(origin_address, cand)
+    ]
+
+    if len(trustworthy_matches) > 1:
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_MULTI_CANDIDATE,
+            false_message="보수적 폴백 실패: 동일 상호·지역 후보가 여러 개라 자동 확정 불가",
+            evidence_summary=["Multiple exact-title Naver candidates remained after conservative region/address filtering"],
+            match_status="pending",
+        )
+
+    if len(trustworthy_matches) != 1:
+        return None
+
+    matched_result = trustworthy_matches[0]
+    if _looks_like_non_restaurant(str(matched_result.get("title", ""))):
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_INSUFFICIENT,
+            false_message="보수적 폴백 실패: 비맛집/부대시설 후보로 보여 자동 확정 제외",
+            evidence_summary=["Exact-title candidate looked like a non-restaurant facility"],
+            match_status="pending",
+        )
+    matched_text = _candidate_address_text(matched_result)
+    if _is_cross_country_mismatch(origin_address, matched_text):
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_CROSS_COUNTRY,
+            false_message="보수적 폴백 실패: 출처 주소와 네이버 후보 국가가 다름",
+            evidence_summary=["Exact-title Naver candidate found but country/city context mismatched source address"],
+            match_status="pending",
+        )
+
+    matched_addr = matched_result.get("address") or matched_result.get("roadAddress") or ""
+    matched_geocoded = ncp_geocode_addresses(matched_addr)
+    if matched_geocoded and len(matched_geocoded) > 0:
+        addr_info = matched_geocoded[0]
+        distance = 0.0
+        cand_lat = _float_or_none(addr_info.get("y"))
+        cand_lng = _float_or_none(addr_info.get("x"))
+        if (
+            source_lat is not None
+            and source_lng is not None
+            and cand_lat is not None
+            and cand_lng is not None
+        ):
+            distance = haversine_m(source_lat, source_lng, cand_lat, cand_lng)
+        matched_address = {
+            "roadAddress": addr_info.get("roadAddress", ""),
+            "jibunAddress": addr_info.get("jibunAddress", ""),
+            "englishAddress": addr_info.get("englishAddress", ""),
+            "addressElements": addr_info.get("addressElements", []),
+            "x": addr_info.get("x", ""),
+            "y": addr_info.get("y", ""),
+            "distance": distance,
+        }
+    else:
+        matched_address = {
+            "roadAddress": matched_result.get("roadAddress", ""),
+            "jibunAddress": matched_result.get("address", ""),
+            "englishAddress": "",
+            "addressElements": [],
+            "x": matched_result.get("mapx", ""),
+            "y": matched_result.get("mapy", ""),
+            "distance": 0.0,
+        }
+
+    evidence_summary = [
+        f"Unique exact-title Naver candidate: {matched_result.get('title') or name}",
+        "Source region/address text aligned with candidate",
+    ]
+    evidence_families = [EVIDENCE_PROVIDER_CANDIDATE, EVIDENCE_SOURCE_GEO]
+
+    return build_location_result(
+        origin_name=name,
+        origin_address=origin_address,
+        eval_value=True,
+        matched_provider="naver",
+        matched_name=matched_result.get("title"),
+        naver_name=matched_result.get("title"),
+        google_name=None,
+        matched_address=matched_address,
+        evidence_summary=evidence_summary,
+        evidence_families=evidence_families,
+        pending_reason=None,
+        second_pass=build_second_pass_state(),
+        false_message=None,
+        match_status="matched",
+    )
 
 
 def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
@@ -369,6 +1009,13 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     name = _norm_space(str(rec.get("origin_name", "")))
     origin_address_raw = _norm_space(str(rec.get("address", "")))
     origin_address = remove_floor_info(origin_address_raw)
+    source_geocoded = ncp_geocode_addresses(origin_address)
+    geocoded_jibun = None
+    if source_geocoded:
+        geocoded_jibun = _norm_space(str(source_geocoded[0].get("jibunAddress", "")))
+    if not geocoded_jibun:
+        geocoded_jibun = ncp_geocode_to_jibun_address(origin_address)
+    source_lat, source_lng = _source_coordinates(rec, source_geocoded)
 
     # [PERF] Naver Search 3건 동시 호출 (직렬 → 병렬)
     region = extract_region_from_address(origin_address)
@@ -387,31 +1034,18 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
         name_addr_cands = future_addr.result()
         name_region_cands = future_region.result() if future_region else []
 
-    # origin_address를 NCP 지오코딩하여 지번주소 얻기
-    geocoded_jibun = ncp_geocode_to_jibun_address(origin_address)
-    if not geocoded_jibun:
-        return {
-            "origin_name": name,
-            "naver_name": None,  # ★ 추가
-            "eval_value": False,
-            "origin_address": origin_address,
-            "naver_address": None,
-            "falseMessage": "1단계 실패: 주소 지오코딩 실패",
-        }
-
-    geocoded_addr_norm = _norm_space(geocoded_jibun)
+    geocoded_addr_norm = _norm_space(geocoded_jibun or "")
 
     # 검색 결과 합치기
     all_candidates = name_cands + name_addr_cands + name_region_cands
     if not all_candidates:
-        return {
-            "origin_name": name,
-            "naver_name": None,  # ★ 추가
-            "eval_value": False,
-            "origin_address": origin_address,
-            "naver_address": None,
-            "falseMessage": "1단계 실패: 검색 결과 없음",
-        }
+        return evaluate_with_google_fallback(
+            name,
+            origin_address,
+            source_lat,
+            source_lng,
+            "1단계 실패: 검색 결과 없음",
+        )
 
     # 주소로 중복 제거
     seen_addresses = set()
@@ -424,56 +1058,102 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
 
     matched_result = None
     min_dist = float("inf")
+    match_reason = None
 
     # 1단계: 지번주소 일치
-    for cand in unique_candidates:
-        cand_addr = cand.get("address") or ""
-        if cand_addr:
+    exact_matches = []
+    if geocoded_addr_norm:
+        for cand in unique_candidates:
+            cand_addr = cand.get("address") or ""
+            if not cand_addr:
+                continue
             if cand.get("roadAddress") and cand_addr == cand.get("roadAddress"):
                 cand_jibun = ncp_geocode_to_jibun_address(cand_addr)
-                if cand_jibun:
-                    cand_addr_norm = _norm_space(cand_jibun)
-                else:
-                    cand_addr_norm = _norm_space(cand_addr)
+                cand_addr_norm = _norm_space(cand_jibun or cand_addr)
             else:
                 cand_addr_norm = _norm_space(cand_addr)
             if cand_addr_norm == geocoded_addr_norm:
-                matched_result = cand
-                break
+                exact_matches.append(cand)
+
+    if len(exact_matches) > 1:
+        return build_location_result(
+            origin_name=name,
+            origin_address=origin_address,
+            eval_value=False,
+            pending_reason=PENDING_REASON_MULTI_CANDIDATE,
+            false_message="1단계 실패: 동일 주소 후보가 여러 개라 자동 확정 불가",
+            evidence_summary=["Multiple Naver candidates matched the same geocoded address"],
+            match_status="pending",
+        )
+    if len(exact_matches) == 1:
+        matched_result = exact_matches[0]
+        match_reason = "exact_jibun"
 
     # 2단계: 거리 기반 매칭
     if not matched_result:
-        geocoded_addresses = ncp_geocode_addresses(origin_address)
-        if not geocoded_addresses or len(geocoded_addresses) == 0:
-            return evaluate_with_google_fallback(name, origin_address, "2단계 실패: 지오코딩 정보 없음")
-        geocoded_lat = float(geocoded_addresses[0].get("y", 0))
-        geocoded_lng = float(geocoded_addresses[0].get("x", 0))
+        if source_lat is None or source_lng is None:
+            return evaluate_with_google_fallback(
+                name,
+                origin_address,
+                source_lat,
+                source_lng,
+                "2단계 실패: 지오코딩 정보 없음",
+            )
 
-        best_cand = None
+        distance_matches: List[Tuple[Dict[str, Any], float]] = []
         for cand in unique_candidates:
             cand_jibun = cand.get("address") or ""
             if not cand_jibun:
                 continue
             cand_geocoded = ncp_geocode_addresses(cand_jibun)
             if cand_geocoded and len(cand_geocoded) > 0:
-                cand_lat = float(cand_geocoded[0].get("y", 0))
-                cand_lng = float(cand_geocoded[0].get("x", 0))
-                dist = haversine_m(geocoded_lat, geocoded_lng, cand_lat, cand_lng)
-                if dist <= 20.0 and dist < min_dist:
-                    min_dist = dist
-                    best_cand = cand
+                cand_lat = _float_or_none(cand_geocoded[0].get("y"))
+                cand_lng = _float_or_none(cand_geocoded[0].get("x"))
+                if cand_lat is None or cand_lng is None:
+                    continue
+                dist = haversine_m(source_lat, source_lng, cand_lat, cand_lng)
+                if dist <= 20.0:
+                    distance_matches.append((cand, dist))
 
-        if not best_cand:
-            return {
-                "origin_name": name,
-                "naver_name": None,  # ★ 추가
-                "eval_value": False,
-                "origin_address": origin_address,
-                "naver_address": None,
-                "falseMessage": "2단계 실패: 20m 이내 후보 없음",
-            }
+        if len(distance_matches) > 1:
+            return build_location_result(
+                origin_name=name,
+                origin_address=origin_address,
+                eval_value=False,
+                pending_reason=PENDING_REASON_MULTI_CANDIDATE,
+                false_message="2단계 실패: 20m 이내 후보가 여러 개라 자동 확정 불가",
+                evidence_summary=["Multiple Naver candidates were within 20m of the source coordinates"],
+                match_status="pending",
+            )
 
-        matched_result = best_cand
+        if not distance_matches:
+            fallback_naver = evaluate_with_unique_naver_title_match(
+                name,
+                origin_address,
+                unique_candidates,
+                source_lat,
+                source_lng,
+            )
+            if fallback_naver is not None:
+                return fallback_naver
+            if _has_foreign_signal(origin_address):
+                gemini_result = evaluate_with_gemini_fallback(
+                    name,
+                    origin_address,
+                    "2단계 실패: 20m 이내 후보 없음",
+                )
+                if gemini_result.get("eval_value") is True:
+                    return gemini_result
+            return evaluate_with_google_fallback(
+                name,
+                origin_address,
+                source_lat,
+                source_lng,
+                "2단계 실패: 20m 이내 후보 없음",
+            )
+
+        matched_result, min_dist = distance_matches[0]
+        match_reason = "distance"
 
     # 일치하는 결과의 상세 정보 저장
     matched_addr = (
@@ -502,14 +1182,28 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
             "distance": min_dist if min_dist != float("inf") else 0.0,
         }
 
-    return {
-        "origin_name": name,
-        "naver_name": matched_result.get("title"),  # ★ 추가: 네이버 검색 결과 상호명
-        "eval_value": True,
-        "origin_address": origin_address,
-        "naver_address": [naver_address],
-        "falseMessage": None,
-    }
+    evidence_summary = [
+        f"Naver candidate matched: {matched_result.get('title') or name}",
+        "Source geo aligned by exact address" if match_reason == "exact_jibun" else f"Source geo aligned within {naver_address.get('distance', 0.0):.1f}m",
+    ]
+    evidence_families = [EVIDENCE_PROVIDER_CANDIDATE, EVIDENCE_SOURCE_GEO]
+
+    return build_location_result(
+        origin_name=name,
+        origin_address=origin_address,
+        eval_value=True,
+        matched_provider="naver",
+        matched_name=matched_result.get("title"),
+        naver_name=matched_result.get("title"),  # ★ 추가: 네이버 검색 결과 상호명
+        google_name=None,
+        matched_address=naver_address,
+        evidence_summary=evidence_summary,
+        evidence_families=evidence_families,
+        pending_reason=None,
+        second_pass=build_second_pass_state(),
+        false_message=None,
+        match_status="matched",
+    )
 
 
 def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
@@ -527,29 +1221,32 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
         if not evaluation_target.get(name, False):
             # address가 null인 경우 등은 평가 스킵
             location_eval_list.append(
-                {
-                    "origin_name": name,
-                    "naver_name": None,
-                    "eval_value": False,
-                    "origin_address": r.get("address"),
-                    "naver_address": None,
-                    "falseMessage": "평가 대상 아님 (address null)",
-                }
+                build_location_result(
+                    origin_name=name,
+                    origin_address=_norm_space(str(r.get("address") or "")),
+                    eval_value=False,
+                    pending_reason=PENDING_REASON_INSUFFICIENT,
+                    false_message="평가 대상 아님 (address null)",
+                    evidence_summary=["Skipped because evaluation_target is false or address is null"],
+                    match_status="pending",
+                )
             )
             continue
 
         try:
             res = evaluate_one_restaurant(r)
         except Exception as e:
-            res = {
-                "origin_name": name,
-                "naver_name": None,
-                "google_name": None,
-                "eval_value": False,
-                "origin_address": _norm_space(str(r.get("address", ""))),
-                "naver_address": None,
-                "falseMessage": f"평가 실패: {str(e)}",
-            }
+            res = build_location_result(
+                origin_name=name,
+                origin_address=_norm_space(str(r.get("address") or "")),
+                eval_value=False,
+                naver_name=None,
+                google_name=None,
+                pending_reason=PENDING_REASON_INSUFFICIENT,
+                false_message=f"평가 실패: {str(e)}",
+                evidence_summary=[f"Evaluation failed with exception: {str(e)}"],
+                match_status="failed",
+            )
         location_eval_list.append(res)
         time.sleep(0.5)  # API rate-limit 완화
 
