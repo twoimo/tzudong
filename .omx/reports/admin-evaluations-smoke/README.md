@@ -14,27 +14,15 @@ When the harness exists, keep the plan’s canonical shape:
 ```bash
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 STATE_PATH="${STATE_PATH:-apps/web/tests/.auth/admin.json}"
-NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://<project>.supabase.co}"
-SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-<service-role-key>}"
 node apps/web/scripts/admin-evaluations-smoke.mjs \
   --base-url "$BASE_URL" \
   --storage-state "$STATE_PATH" \
   --fixture .omx/fixtures/admin-evaluations-smoke.json
 ```
 
-### Validation-only mode
-Use this to validate the fixture, selected cases, and report paths without opening a browser:
-
-```bash
-node apps/web/scripts/admin-evaluations-smoke.mjs \
-  --fixture .omx/fixtures/admin-evaluations-smoke.json \
-  --validate-only
-```
-
 ## Preflight checklist
 - [ ] Environment is staging or an explicitly disposable production-like row set.
 - [ ] Admin session is available via `INSIGHTS_CHAT_ADMIN_COOKIE` or `apps/web/tests/.auth/admin.json`.
-- [ ] `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set for DB read-backs.
 - [ ] Every source/target row id is filled into `.omx/fixtures/admin-evaluations-smoke.json`.
 - [ ] `trace_id` is captured where available.
 - [ ] Current admin user id is known before starting.
