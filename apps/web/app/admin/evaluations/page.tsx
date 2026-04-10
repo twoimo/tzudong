@@ -248,6 +248,14 @@ function AdminEvaluationPage() {
   const searchParams = useSearchParams();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
 
+  const requireAdminUserId = () => {
+    if (!user?.id) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    return user.id;
+  };
+
 
 
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
@@ -1017,6 +1025,7 @@ function AdminEvaluationPage() {
 
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
 
       // YouTube 링크 추출 (단일 값)
       const youtubeLink = record.youtube_link || '';
@@ -1113,7 +1122,7 @@ function AdminEvaluationPage() {
       }
 
       // 실제 승인 처리 실행
-      await performApproval(record);
+      await performApproval(record, adminUserId);
 
     } catch (error: unknown) {
       console.error('승인 처리 실패:', error);
@@ -1128,7 +1137,7 @@ function AdminEvaluationPage() {
   };
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
-  const performApproval = async (record: EvaluationRecord) => {
+  const performApproval = async (record: EvaluationRecord, adminUserId: string) => {
     // Approved Name 추출 로직
     // 1. DB 컬럼(naver_name, google_name)을 최우선으로 사용
     let approvedName: string | null = record.naver_name || record.google_name || null;
@@ -1159,6 +1168,7 @@ function AdminEvaluationPage() {
     });
 
     // status를 'approved'로 업데이트 및 approved_name 저장
+    const updatedAt = new Date().toISOString();
     const { data: updatedData, error } = await supabase
       .from('restaurants')
       // @ts-expect-error Supabase update inference is stale in the local generated client types.
@@ -1167,7 +1177,8 @@ function AdminEvaluationPage() {
         approved_name: approvedName,
         db_error_message: null, // 에러 메시지 초기화
         db_error_details: null, // 에러 상세 초기화
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
       })
       .eq('id', record.id)
       .select()
@@ -1191,7 +1202,8 @@ function AdminEvaluationPage() {
       approved_name: approvedName,
       db_error_message: null,
       db_error_details: null,
-      updated_at: new Date().toISOString(),
+      updated_by_admin_id: adminUserId,
+      updated_at: updatedAt,
     });
 
     toast({
@@ -1207,13 +1219,17 @@ function AdminEvaluationPage() {
     }
 
     try {
+      const adminUserId = requireAdminUserId();
+      const updatedAt = new Date().toISOString();
+
       // Soft Delete: status를 'deleted'로 변경
       const { error } = await supabase
         .from('restaurants')
         // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'deleted',
-          updated_at: new Date().toISOString(),
+          updated_by_admin_id: adminUserId,
+          updated_at: updatedAt,
         })
         .eq('id', record.id);
 
@@ -1222,7 +1238,8 @@ function AdminEvaluationPage() {
       // 상태 업데이트 (새로고침 없이)
       updateRecordInState(record.id, {
         status: 'deleted',
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
       } as Partial<EvaluationRecord>);
 
       toast({
@@ -1261,6 +1278,8 @@ function AdminEvaluationPage() {
 
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
+      const updatedAt = new Date().toISOString();
 
       // status를 'pending'으로 업데이트
       const { error } = await supabase
@@ -1268,7 +1287,8 @@ function AdminEvaluationPage() {
         // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'pending',
-          updated_at: new Date().toISOString(),
+          updated_by_admin_id: adminUserId,
+          updated_at: updatedAt,
         })
         .eq('id', record.id);
 
@@ -1277,7 +1297,8 @@ function AdminEvaluationPage() {
       // 상태 업데이트 (새로고침 없이)
       updateRecordInState(record.id, {
         status: 'pending',
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
       } as Partial<EvaluationRecord>);
 
       toast({

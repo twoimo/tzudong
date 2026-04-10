@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -53,6 +54,14 @@ export function DbConflictResolutionPanel({
   onSuccess,
 }: DbConflictResolutionPanelProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const requireAdminUserId = () => {
+    if (!user?.id) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    return user.id;
+  };
   const [loading, setLoading] = useState(false);
 
   if (!record || !record.db_conflict_info) {
@@ -66,6 +75,7 @@ export function DbConflictResolutionPanel({
   const handleUpdateExisting = async () => {
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
 
       // 1. 기존 레스토랑 데이터 가져오기
       const { data: existingRestaurant, error: fetchError } = await supabase
@@ -106,6 +116,7 @@ export function DbConflictResolutionPanel({
           youtube_links: mergedYoutubeLinks,
           youtube_metas: mergedYoutubeMetas,
           tzuyang_reviews: mergedReviews,
+          updated_by_admin_id: adminUserId,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
