@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { checkDbConflict, mergeRestaurantData } from '@/lib/db-conflict-checker';
 import { Badge } from '@/components/ui/badge';
@@ -98,8 +99,16 @@ interface MergeTargetRestaurantRow {
 
 export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }: MissingRestaurantFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error && error.message ? error.message : fallback;
+  const requireAdminUserId = () => {
+    if (!user?.id) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    return user.id;
+  };
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -277,6 +286,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // 병합 처리 함수
   const handleMerge = async (existingRestaurant: ConflictRestaurant, trimmedName: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
+      const adminUserId = requireAdminUserId();
+
       const mergeTargetQuery = await supabase
         .from('restaurants' as never)
         .select('id, youtube_link, youtube_meta, tzuyang_review, categories, updated_at')
@@ -321,6 +332,15 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         throw new Error(mergeResult.error);
       }
 
+      const { error: adminStampError } = await supabase
+        .from('restaurants' as never)
+        .update({
+          updated_by_admin_id: adminUserId,
+        } as never)
+        .eq('id', mergeTargetRestaurant.id);
+
+      if (adminStampError) throw adminStampError;
+
       // evaluation_record 상태 업데이트
       const { error: updateError } = await supabase
         .from('evaluation_records' as never)
@@ -357,6 +377,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // 새 레스토랑 등록 함수
   const registerNewRestaurant = async (geocodingData: GeocodedAddressData, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
+      const adminUserId = requireAdminUserId();
+
       const { error: insertError } = await supabase
         .from('restaurants')
         .insert({
@@ -369,6 +391,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           lng: parseFloat(geocodingData.x),
           phone: trimmedPhone || null,
           category: [trimmedCategory],
+          updated_by_admin_id: adminUserId,
           youtube_links: [record!.youtube_link],
           youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
           tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record!.restaurant_info?.tzuyang_review ? [record!.restaurant_info.tzuyang_review] : []),
