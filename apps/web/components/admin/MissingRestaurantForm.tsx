@@ -10,7 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
-import { checkDbConflict, mergeRestaurantData } from '@/lib/db-conflict-checker';
+import { checkDbConflict } from '@/lib/db-conflict-checker';
+import { mergeAdminReviewRestaurant } from '@/lib/admin-review-merge';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
@@ -77,7 +78,6 @@ interface NaverGeocodingResponse {
 }
 
 type ConflictRestaurant = NonNullable<Awaited<ReturnType<typeof checkDbConflict>>['conflictingRestaurants']>[number];
-type ExistingRestaurantForMerge = Parameters<typeof mergeRestaurantData>[0]['existingRestaurant'];
 
 interface GeocodedAddressData {
   road_address: string;
@@ -89,11 +89,6 @@ interface GeocodedAddressData {
 }
 
 interface MergeTargetRestaurantRow {
-  id: string;
-  youtube_link: string | null;
-  youtube_meta: unknown;
-  tzuyang_review: string | null;
-  categories: string[] | string | null;
   updated_at: string;
 }
 
@@ -290,7 +285,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
       const mergeTargetQuery = await supabase
         .from('restaurants' as never)
-        .select('id, youtube_link, youtube_meta, tzuyang_review, categories, updated_at')
+        .select('updated_at')
         .eq('id', existingRestaurant.id)
         .single();
       const mergeTargetError = mergeTargetQuery.error;
@@ -300,12 +295,6 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         throw new Error('병합 대상 레스토랑을 찾을 수 없습니다.');
       }
 
-      const normalizedYoutubeMeta =
-        mergeTargetRestaurant.youtube_meta &&
-        typeof mergeTargetRestaurant.youtube_meta === 'object' &&
-        !Array.isArray(mergeTargetRestaurant.youtube_meta)
-          ? (mergeTargetRestaurant.youtube_meta as Record<string, unknown>)
-          : null;
       const normalizedNewYoutubeMeta =
         record?.youtube_meta &&
         typeof record.youtube_meta === 'object' &&
@@ -313,46 +302,16 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           ? (record.youtube_meta as Record<string, unknown>)
           : undefined;
 
-      const mergeResult = await mergeRestaurantData({
-        existingRestaurant: {
-          id: mergeTargetRestaurant.id,
-          youtube_link: mergeTargetRestaurant.youtube_link,
-          youtube_meta: normalizedYoutubeMeta,
-          tzuyang_review: mergeTargetRestaurant.tzuyang_review,
-          categories: mergeTargetRestaurant.categories ?? [],
-          updated_at: mergeTargetRestaurant.updated_at,
-        } satisfies ExistingRestaurantForMerge,
-        newYoutubeLink: record!.youtube_link || '',
-        newYoutubeMeta: normalizedNewYoutubeMeta,
-        newTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review,
-        newCategory: trimmedCategory,
+      await mergeAdminReviewRestaurant({
+        targetRestaurantId: existingRestaurant.id,
+        sourceRestaurantId: record!.id,
+        adminUserId,
+        expectedTargetUpdatedAt: mergeTargetRestaurant.updated_at,
+        incomingYoutubeLink: record!.youtube_link || null,
+        incomingYoutubeMeta: normalizedNewYoutubeMeta ?? null,
+        incomingTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
+        incomingCategory: trimmedCategory || null,
       });
-
-      if (!mergeResult.success) {
-        throw new Error(mergeResult.error);
-      }
-
-      const { error: adminStampError } = await supabase
-        .from('restaurants' as never)
-        .update({
-          updated_by_admin_id: adminUserId,
-        } as never)
-        .eq('id', mergeTargetRestaurant.id);
-
-      if (adminStampError) throw adminStampError;
-
-      const { error: sourceUpdateError } = await supabase
-        .from('restaurants' as never)
-        .update({
-          status: 'deleted',
-          updated_by_admin_id: adminUserId,
-          updated_at: new Date().toISOString(),
-          db_error_message: null,
-          db_error_details: null,
-        } as never)
-        .eq('id', record!.id);
-
-      if (sourceUpdateError) throw sourceUpdateError;
 
       toast({
         title: '병합 완료',

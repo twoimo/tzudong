@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
-import { mergeRestaurantData } from '@/lib/db-conflict-checker';
+import { mergeAdminReviewRestaurant } from '@/lib/admin-review-merge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ADMIN_MODAL_ACTION,
@@ -17,16 +17,7 @@ import {
 
 type ConflictRestaurantDbRow = {
   updated_at?: string | null;
-  youtube_link?: string | null;
-  youtube_meta?: Record<string, unknown> | null;
-  tzuyang_review?: string | null;
-  categories?: string[] | string | null;
 };
-
-type SupabaseUpdateError = {
-  code?: string;
-  message?: string;
-} | null;
 
 interface DbConflictResolutionPanelProps {
   record: EvaluationRecord | null;
@@ -78,60 +69,19 @@ export function DbConflictResolutionPanel({
         throw new Error('기존 레스토랑의 최신 수정 시각을 확인할 수 없습니다.');
       }
 
-      const mergeResult = await mergeRestaurantData({
-        existingRestaurant: {
-          id: existing.id,
-          youtube_link: existingRestaurantData?.youtube_link ?? null,
-          youtube_meta: existingRestaurantData?.youtube_meta ?? null,
-          tzuyang_review: existingRestaurantData?.tzuyang_review ?? null,
-          categories: existingRestaurantData?.categories ?? [],
-          updated_at: existingRestaurantData.updated_at,
-        },
-        newYoutubeLink: record.youtube_link || '',
-        newYoutubeMeta:
+      await mergeAdminReviewRestaurant({
+        targetRestaurantId: existing.id,
+        sourceRestaurantId: record.id,
+        adminUserId,
+        expectedTargetUpdatedAt: existingRestaurantData.updated_at,
+        incomingYoutubeLink: record.youtube_link || null,
+        incomingYoutubeMeta:
           record.youtube_meta && typeof record.youtube_meta === 'object' && !Array.isArray(record.youtube_meta)
             ? (record.youtube_meta as Record<string, unknown>)
-            : undefined,
-        newTzuyangReview: newInfo.tzuyang_review || undefined,
-        newCategory: newInfo.category,
+            : null,
+        incomingTzuyangReview: newInfo.tzuyang_review || null,
+        incomingCategory: newInfo.category || null,
       });
-
-      if (!mergeResult.success) {
-        throw new Error(mergeResult.error);
-      }
-
-      const { error: stampError } = await supabase
-        .from('restaurants' as never)
-        .update({
-          updated_by_admin_id: adminUserId,
-          updated_at: new Date().toISOString(),
-        } as never)
-        .eq('id', existing.id);
-
-      if (stampError) {
-        if (stampError.code === 'PGRST116') {
-          toast({
-            variant: 'destructive',
-            title: '업데이트 충돌',
-            description: '다른 사용자가 이미 데이터를 수정했습니다. 다시 시도해주세요.',
-          });
-          return;
-        }
-        throw stampError;
-      }
-
-      const { error: sourceError } = await supabase
-        .from('restaurants' as never)
-        .update({
-          status: 'deleted',
-          updated_by_admin_id: adminUserId,
-          updated_at: new Date().toISOString(),
-          db_error_message: null,
-          db_error_details: null,
-        } as never)
-        .eq('id', record.id);
-
-      if (sourceError) throw sourceError;
 
       toast({
         title: '병합 완료',
