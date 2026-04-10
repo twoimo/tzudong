@@ -120,8 +120,6 @@ const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'pending', label: '미처리' },
   { value: 'approved', label: '승인됨' },
-  { value: 'hold', label: '보류' },
-  { value: 'db_conflict', label: 'DB 충돌' },
   { value: 'deleted', label: '삭제됨' },
   { value: 'ready_for_approval', label: '승인 대기' },
   { value: 'missing', label: 'Missing' },
