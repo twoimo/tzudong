@@ -89,13 +89,19 @@ class ValidatorsRegressionTests(unittest.TestCase):
         self.assertIn("error", severities)
         self.assertIn("warning", severities)
 
-    def test_validate_rule_results_detects_inconsistent_location_and_missing_messages(self) -> None:
+    def test_validate_rule_results_detects_location_contract_regressions(self) -> None:
         errors = validate_rule_results(
             "vid-4",
             {
                 "evaluation_results": {
                     "location_match_TF": [
-                        {"origin_name": "식당A", "eval_value": True},
+                        {
+                            "origin_name": "식당A",
+                            "eval_value": True,
+                            "matched_name": "식당A",
+                            "google_name": "식당A",
+                            "evidence_families": ["provider_candidate"],
+                        },
                         {"origin_name": "식당B", "eval_value": False},
                     ],
                     "category_validity_TF": [],
@@ -104,9 +110,41 @@ class ValidatorsRegressionTests(unittest.TestCase):
         )
 
         rules = {error["rule"] for error in errors}
-        self.assertIn("inconsistent_location", rules)
+        self.assertIn("insufficient_evidence_families", rules)
         self.assertIn("missing_false_message", rules)
+        self.assertIn("missing_pending_reason", rules)
         self.assertIn("empty_category_validity", rules)
+
+    def test_validate_rule_results_checks_second_pass_timeout_and_duplicate_evidence(self) -> None:
+        errors = validate_rule_results(
+            "vid-4b",
+            {
+                "evaluation_results": {
+                    "location_match_TF": [
+                        {
+                            "origin_name": "식당A",
+                            "eval_value": True,
+                            "matched_name": "식당A",
+                            "naver_name": "식당A",
+                            "evidence_families": ["provider_candidate", "provider_candidate"],
+                        },
+                        {
+                            "origin_name": "식당B",
+                            "eval_value": False,
+                            "pending_reason": "timeout",
+                            "falseMessage": "timeout",
+                            "second_pass": {"attempted": True, "provider": "google", "timed_out": False},
+                        },
+                    ],
+                    "category_validity_TF": [{"name": "식당A", "eval_value": True}],
+                }
+            },
+        )
+
+        rules = {error["rule"] for error in errors}
+        self.assertIn("duplicated_evidence_family", rules)
+        self.assertIn("insufficient_evidence_families", rules)
+        self.assertIn("inconsistent_second_pass_state", rules)
 
     def test_validate_laaj_results_detects_score_and_type_regressions(self) -> None:
         errors = validate_laaj_results(

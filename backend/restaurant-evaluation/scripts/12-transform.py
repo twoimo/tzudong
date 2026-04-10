@@ -16,6 +16,8 @@ laaj_results, map_url_crawling 데이터를 최종 형식으로 변환합니다.
 - source_type: "geminiCLI" 또는 "map_url_crawling"
 """
 
+from __future__ import annotations
+
 import json
 import os
 import hashlib
@@ -117,13 +119,35 @@ def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict
     return None
 
 
+def resolve_trace_identity(
+    restaurant_name: str, loc_match_item: Optional[dict]
+) -> tuple[str, str]:
+    """Only promote trace identity when a canonical provider-backed match is True."""
+    if not loc_match_item or loc_match_item.get("eval_value") is not True:
+        return restaurant_name, "original"
+
+    matched_provider = loc_match_item.get("matched_provider")
+    matched_name = (
+        loc_match_item.get("matched_name")
+        or loc_match_item.get("naver_name")
+        or loc_match_item.get("google_name")
+    )
+    if matched_provider and matched_name:
+        return matched_name, matched_provider
+
+    return restaurant_name, "original"
+
+
 def get_location_data(
     eval_results: dict, rest_name: str, is_missing_flag: bool, source_file_type: str
 ) -> dict:
     """location_match_TF에서 위치 데이터 추출 (기존 백업 로직 유지)"""
     loc_data = {
         "naver_name": None,  # ★ 추가
-        "google_name": None, # ★ 구글맵 지원 추가
+        "google_name": None,  # ★ 구글맵 지원 추가
+        "matched_provider": None,
+        "matched_name": None,
+        "eval_value": False,
         "roadAddress": None,
         "jibunAddress": None,
         "englishAddress": None,
@@ -144,8 +168,11 @@ def get_location_data(
 
     if loc_match_item:
         loc_data["naver_name"] = loc_match_item.get("naver_name")  # ★ 추가
-        loc_data["google_name"] = loc_match_item.get("google_name") # ★ 구글맵 지원 추가
-        loc_data["geocoding_success"] = loc_match_item.get("eval_value", False)
+        loc_data["google_name"] = loc_match_item.get("google_name")  # ★ 구글맵 지원 추가
+        loc_data["matched_provider"] = loc_match_item.get("matched_provider")
+        loc_data["matched_name"] = loc_match_item.get("matched_name")
+        loc_data["eval_value"] = bool(loc_match_item.get("eval_value", False))
+        loc_data["geocoding_success"] = loc_data["eval_value"]
 
         if not loc_data["geocoding_success"]:
             false_message = loc_match_item.get("falseMessage", "")
@@ -154,9 +181,16 @@ def get_location_data(
             elif "2단계 실패" in false_message:
                 loc_data["geocoding_false_stage"] = 2
 
+        matched_address = loc_match_item.get("matched_address")
         naver_address = loc_match_item.get("naver_address")
-        if naver_address and len(naver_address) > 0:
+        if isinstance(matched_address, dict):
+            naver_address_data = matched_address
+        elif naver_address and len(naver_address) > 0:
             naver_address_data = naver_address[0]
+        else:
+            naver_address_data = None
+
+        if naver_address_data:
             loc_data["roadAddress"] = naver_address_data.get("roadAddress")
             loc_data["jibunAddress"] = naver_address_data.get("jibunAddress")
             loc_data["englishAddress"] = naver_address_data.get("englishAddress")
@@ -268,11 +302,11 @@ def transform_json_object(
 
             youtuber_review = restaurant_data.get("youtuber_review")
 
-            # trace_id 생성: naver_name이 있으면 naver_name, 구글 있으면 google_name, 없으면 원본 name
             naver_name = loc_data.get("naver_name")
             google_name = loc_data.get("google_name")
-            trace_id_name = naver_name or google_name or restaurant_name
-            trace_id_name_source = "naver" if naver_name else ("google" if google_name else "original")
+            trace_id_name, trace_id_name_source = resolve_trace_identity(
+                restaurant_name, new_eval_results.get("location_match_TF")
+            )
 
             output = {
                 "youtube_link": youtube_link,
@@ -331,6 +365,7 @@ def transform_json_object(
                     "youtube_meta": youtube_meta,
                     "origin_name": restaurant_name,
                     "naver_name": None,  # Missing은 항상 null
+                    "google_name": None,
                     "trace_id_name_source": "original",
                     "category": None,
                     "reasoning_basis": None,
@@ -386,6 +421,7 @@ def transform_json_object(
                     "youtube_meta": youtube_meta,
                     "origin_name": missing_name,
                     "naver_name": None,  # Missing은 항상 null
+                    "google_name": None,
                     "trace_id_name_source": "original",
                     "category": None,
                     "reasoning_basis": None,
@@ -486,9 +522,17 @@ def transform_map_url_crawling_object(
         youtuber_review = restaurant_data.get("youtuber_review")
         naver_name = restaurant_data.get("naver_name")  # 네이버 검색 결과
 
-        # trace_id 생성: naver_name 있으면 naver_name, 구글 있으면 google_name, 없으면 origin_name
         google_name = restaurant_data.get("google_name")
-        trace_id_name = naver_name or google_name or origin_name
+        loc_match_item = None
+        if isinstance(restaurant_data.get("evaluation_results"), dict):
+            loc_match_item = restaurant_data["evaluation_results"].get("location_match_TF")
+        if loc_match_item:
+            trace_id_name, trace_id_name_source = resolve_trace_identity(
+                origin_name, loc_match_item
+            )
+        else:
+            trace_id_name = naver_name or google_name or origin_name
+            trace_id_name_source = "naver" if naver_name else ("google" if google_name else "original")
 
         output = {
             "youtube_link": youtube_link,
@@ -499,7 +543,7 @@ def transform_map_url_crawling_object(
             "origin_name": origin_name,  # 크롤링에서 받은 원본 상호명
             "naver_name": naver_name,  # 네이버 검색 결과 상호명
             "google_name": google_name,
-            "trace_id_name_source": "naver" if naver_name else ("google" if google_name else "original"),
+            "trace_id_name_source": trace_id_name_source,
             "category": restaurant_data.get("category"),
             "reasoning_basis": restaurant_data.get(
                 "reasoning_basis"
@@ -526,6 +570,34 @@ def transform_map_url_crawling_object(
         flattened_results.append(output)
 
     return flattened_results
+
+
+def merge_rule_results_into_laaj(rule_data: dict, laaj_data: dict) -> dict:
+    """Prefer fresh rule-evaluation payloads when laaj_results carries stale rule fields."""
+    merged = laaj_data.copy()
+
+    rule_eval = rule_data.get("evaluation_results")
+    laaj_eval = laaj_data.get("evaluation_results")
+
+    if isinstance(laaj_eval, dict):
+        merged_eval = laaj_eval.copy()
+    else:
+        merged_eval = {}
+
+    if isinstance(rule_eval, dict):
+        for key in ("evaluation_name_source", "category_validity_TF", "location_match_TF"):
+            if key in rule_eval:
+                merged_eval[key] = rule_eval[key]
+
+    merged["evaluation_results"] = merged_eval
+    merged["evaluation_target"] = rule_data.get(
+        "evaluation_target", laaj_data.get("evaluation_target", {})
+    )
+    merged["restaurants"] = rule_data.get("restaurants", laaj_data.get("restaurants", []))
+    merged["recollect_version"] = rule_data.get(
+        "recollect_version", laaj_data.get("recollect_version", {})
+    )
+    return merged
 
 
 def main():
@@ -609,11 +681,15 @@ def main():
             # laaj_results가 존재하면 우선적으로 사용 (parse_laaj_evaluation에서 이미 병합됨)
             laaj_file = laaj_results_dir / f"{video_id}.jsonl"
             target_file = laaj_file if laaj_file.exists() else f
-            
+
             with open(target_file, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
+                        if laaj_file.exists():
+                            with open(f, "r", encoding="utf-8") as rule_file:
+                                rule_data = json.loads(rule_file.read().strip())
+                            data = merge_rule_results_into_laaj(rule_data, data)
                         transformed = transform_json_object(
                             data, "results", channel, meta_cache, video_id
                         )

@@ -94,7 +94,15 @@ describe('dashboard aggregations', () => {
     test('buildDashboardFunnelFromRows computes funnel counts and conversion', () => {
         const now = new Date('2026-02-01T00:00:00.000Z');
 
-        const ruleMetrics = { location_match_TF: { eval_value: true } };
+        const ruleMetrics = {
+            location_match_TF: {
+                eval_value: true,
+                matched_provider: 'naver',
+                matched_name: '식당 A',
+                evidence_families: ['provider_candidate', 'source_geo'],
+                second_pass: { attempted: false },
+            },
+        };
         const laajMetrics = { category_TF: { eval_value: true }, review_faithfulness_score: { eval_value: 0.9 } };
 
         const rows: DashboardRestaurantRow[] = [
@@ -120,7 +128,15 @@ describe('dashboard aggregations', () => {
                 youtube_link: 'https://www.youtube.com/watch?v=vidV2B',
                 source_type: 'perplexity',
                 is_not_selected: false,
-                evaluation_results: { location_match_TF: { eval_value: false, falseMessage: 'addr mismatch' } },
+                evaluation_results: {
+                    location_match_TF: {
+                        eval_value: false,
+                        falseMessage: 'addr mismatch',
+                        pending_reason: 'insufficient_evidence',
+                        evidence_families: ['provider_candidate'],
+                        second_pass: { attempted: true, provider: 'google', duration_ms: 1200 },
+                    },
+                },
             }),
             // V3: rule + laaj
             makeRow({
@@ -172,7 +188,14 @@ describe('dashboard aggregations', () => {
                 youtube_link: 'https://www.youtube.com/watch?v=vidV2B',
                 source_type: 'perplexity',
                 is_not_selected: false,
-                evaluation_results: { location_match_TF: { eval_value: false, falseMessage: 'addr mismatch' } },
+                evaluation_results: {
+                    location_match_TF: {
+                        eval_value: false,
+                        falseMessage: 'addr mismatch',
+                        pending_reason: 'insufficient_evidence',
+                        evidence_families: ['provider_candidate'],
+                    },
+                },
             }),
             makeRow({
                 id: 'v3-a',
@@ -205,7 +228,12 @@ describe('dashboard aggregations', () => {
                 source_type: 'geminiCLI',
                 youtube_link: 'https://youtu.be/vidQ1A',
                 evaluation_results: {
-                    location_match_TF: { eval_value: true },
+                    location_match_TF: {
+                        eval_value: true,
+                        matched_provider: 'naver',
+                        matched_name: '품질 맛집',
+                        evidence_families: ['provider_candidate', 'source_geo'],
+                    },
                     category_validity_TF: { eval_value: false },
                     category_TF: { eval_value: true },
                     review_faithfulness_score: { eval_value: 0.8 },
@@ -216,7 +244,13 @@ describe('dashboard aggregations', () => {
                 source_type: 'perplexity',
                 youtube_link: 'https://youtu.be/vidQ2B',
                 evaluation_results: {
-                    location_match_TF: { eval_value: false, falseMessage: 'm' },
+                    location_match_TF: {
+                        eval_value: false,
+                        falseMessage: 'm',
+                        pending_reason: 'insufficient_evidence',
+                        evidence_families: ['provider_candidate'],
+                        second_pass: { attempted: true, provider: 'google', rate_limited: true },
+                    },
                 },
             }),
             makeRow({
@@ -245,4 +279,3 @@ describe('dashboard aggregations', () => {
         expect(result.reviewFaithfulness.max).toBe(0.8);
     });
 });
-
