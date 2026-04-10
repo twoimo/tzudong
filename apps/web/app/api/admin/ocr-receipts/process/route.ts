@@ -9,7 +9,6 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
@@ -19,15 +18,13 @@ import * as crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
 
 export const runtime = 'nodejs';
 
 // 환경 변수
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const routeDirname = path.dirname(fileURLToPath(import.meta.url));
 const preprocessScriptPath = path.resolve(
     routeDirname,
@@ -101,6 +98,10 @@ const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가
   "confidence": 0.0
 }`;
 
+function getSupabaseAdmin() {
+    return createSupabaseServiceRoleClient();
+}
+
 /**
  * Python 전처리 스크립트 실행
  */
@@ -143,6 +144,7 @@ async function uploadToStorage(localPath: string, storagePath: string): Promise<
         return null;
     }
 
+    const supabase = getSupabaseAdmin();
     const fileBuffer = fs.readFileSync(localPath);
     const { error } = await supabase.storage
         .from('review-photos')
@@ -208,6 +210,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     const tempDir = path.join(os.tmpdir(), `ocr-${Date.now()}`);
+    const supabase = getSupabaseAdmin();
 
     try {
         const { reviewId } = await request.json();
