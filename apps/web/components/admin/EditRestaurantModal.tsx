@@ -1284,7 +1284,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                 setShowApprovalConfirm(false);
                 setLoading(true);
                 try {
-                  await performApproval();
+                  await performApproval(requireAdminUserId());
                 } catch (error) {
                   console.error('승인 실패:', error);
                   toast({

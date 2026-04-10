@@ -2452,7 +2452,7 @@ function AdminEvaluationPage() {
                 setShowApprovalConfirm(false);
                 setLoading(true);
                 try {
-                  await performApproval(pendingApprovalRecord);
+                  await performApproval(pendingApprovalRecord, requireAdminUserId());
                 } catch (error) {
                   console.error('승인 실패:', error);
                   toast({
