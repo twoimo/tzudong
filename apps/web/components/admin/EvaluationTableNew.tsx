@@ -193,7 +193,7 @@ const canApprove = (record: EvaluationRecord): boolean => {
 interface FilterDropdownProps {
   filterKey: string;
   label: string;
-  options: { value: string; label: string }[];
+  options: readonly { value: string; label: string }[];
   tooltip: string;
   currentValue: string | undefined;
   onFilterChange: (key: string, value: string) => void;
@@ -685,7 +685,7 @@ export function EvaluationTable({
     filterKey: string,
     label: string,
     tooltip: string,
-    options: { value: string; label: string }[]
+    options: readonly { value: string; label: string }[]
   ) => (
     <FilterDropdown
       filterKey={filterKey}
