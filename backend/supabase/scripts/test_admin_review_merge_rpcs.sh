@@ -19,6 +19,7 @@ if [[ -z "${ENV_FILE}" ]]; then
 fi
 
 DOCKER_BIN=""
+DOCKER_INFO_READY=0
 for candidate in docker docker.exe; do
   if ! command -v "${candidate}" >/dev/null 2>&1; then
     continue
@@ -26,7 +27,10 @@ for candidate in docker docker.exe; do
 
   if "${candidate}" compose version >/dev/null 2>&1; then
     DOCKER_BIN="${candidate}"
-    break
+    if "${candidate}" info >/dev/null 2>&1; then
+      DOCKER_INFO_READY=1
+      break
+    fi
   fi
 done
 
@@ -35,7 +39,14 @@ if [[ -z "${DOCKER_BIN}" ]]; then
   exit 1
 fi
 
-if ! "${DOCKER_BIN}" info >/dev/null 2>&1; then
+if [[ "${DOCKER_INFO_READY}" -ne 1 ]] && ! "${DOCKER_BIN}" info >/dev/null 2>&1; then
+  if [[ "${DOCKER_BIN}" != "docker.exe" ]] && command -v docker.exe >/dev/null 2>&1 && docker.exe compose version >/dev/null 2>&1 && docker.exe info >/dev/null 2>&1; then
+    DOCKER_BIN="docker.exe"
+    DOCKER_INFO_READY=1
+  fi
+fi
+
+if [[ "${DOCKER_INFO_READY}" -ne 1 ]] && ! "${DOCKER_BIN}" info >/dev/null 2>&1; then
   echo "Docker is installed (${DOCKER_BIN}) but the Docker daemon is unavailable. Start Docker Desktop / the Docker engine before running this harness." >&2
   exit 1
 fi
@@ -276,7 +287,7 @@ SQL
 trap 'printf "%s\n" "${cleanup_sql}" | psql_exec >/dev/null' EXIT
 
 echo "[admin-review-merge-rpcs] starting local db"
-compose up -d db >/dev/null
+compose up -d --no-deps db >/dev/null
 wait_for_db
 
 echo "[admin-review-merge-rpcs] ensuring minimal schema prerequisites"
