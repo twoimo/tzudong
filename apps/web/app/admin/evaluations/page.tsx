@@ -72,6 +72,16 @@ const EVALUATION_RECORD_STATUS_SET = new Set<EvaluationRecordStatus>([
   'geocoding_failed',
   'not_selected',
 ]);
+const VISIBLE_EVAL_FILTER_STATUS_VALUES = new Set<string>([
+  '',
+  'pending',
+  'approved',
+  'deleted',
+  'ready_for_approval',
+  'missing',
+  'not_selected',
+  'geocoding_failed',
+]);
 
 type EvalFilterKey = (typeof EVALUATION_FILTER_KEYS)[number];
 type EvalFiltersState = Partial<Record<EvalFilterKey, string>>;
@@ -131,6 +141,17 @@ function sanitizeEvalFilters(value: unknown): EvalFiltersState {
   EVALUATION_FILTER_KEYS.forEach((key) => {
     const candidateValue = rawFilters[key];
     if (typeof candidateValue === 'string') {
+      if (key === 'status') {
+        if (candidateValue === 'all') {
+          sanitizedFilters[key] = '';
+          return;
+        }
+
+        if (!VISIBLE_EVAL_FILTER_STATUS_VALUES.has(candidateValue)) {
+          return;
+        }
+      }
+
       sanitizedFilters[key] = candidateValue;
     }
   });
