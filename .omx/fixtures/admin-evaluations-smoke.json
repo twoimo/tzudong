@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "task": "admin-evaluations-smoke",
+  "source_plan": ".omx/plans/ralplan-admin-supabase-overwrite-risk-closure.md",
+  "description": "Draft disposable fixture for the bounded /admin/evaluations smoke harness and manual operator runbook.",
+  "auth": {
+    "base_url_env": "BASE_URL",
+    "base_url_default": "http://localhost:8080",
+    "storage_state_env": "STATE_PATH",
+    "default_storage_state": "apps/web/tests/.auth/admin.json",
+    "admin_cookie_env": "INSIGHTS_CHAT_ADMIN_COOKIE"
+  },
+  "row_policy": {
+    "mode": "disposable_only",
+    "requirements": [
+      "Use staging or an explicitly disposable production-like row set only.",
+      "Record every source/target row id before the run.",
+      "Capture trace_id when available so read-backs stay auditable.",
+      "Do not reuse non-test admin rows for merge or delete actions."
+    ]
+  },
+  "reporting": {
+    "report_root": ".omx/reports/admin-evaluations-smoke",
+    "report_template": "README.md#report-template",
+    "required_artifacts": [
+      "before/after DB snapshots",
+      "UI action notes",
+      "operator initials or run owner",
+      "PASS/FAIL by action"
+    ]
+  },
+  "defaults": {
+    "db_readback_fields": [
+      "id",
+      "trace_id",
+      "status",
+      "approved_name",
+      "updated_by_admin_id",
+      "updated_at",
+      "road_address",
+      "jibun_address",
+      "categories",
+      "youtube_link",
+      "youtube_meta",
+      "tzuyang_review",
+      "geocoding_success",
+      "is_missing",
+      "db_error_message",
+      "db_error_details"
+    ],
+    "evidence_fields": [
+      "before_snapshot",
+      "after_snapshot",
+      "ui_result_note",
+      "report_path"
+    ]
+  },
+  "cases": [
+    {
+      "id": "quick-approve",
+      "action": "quick_approve",
+      "ui_surface": "/admin/evaluations table or slide view",
+      "source_row": {
+        "id": "TODO_APPROVE_SOURCE_ID",
+        "trace_id": "TODO_APPROVE_SOURCE_TRACE_ID",
+        "status_before": "pending",
+        "restaurant_name": "TODO_APPROVE_SOURCE_NAME"
+      },
+      "preconditions": [
+        "Row is visible in the default evaluations queue.",
+        "Row can be approved without opening the missing/conflict flow.",
+        "Operator records the admin user id used for the session."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "approved",
+          "updated_by_admin_id": "<current-admin>",
+          "db_error_message": null,
+          "db_error_details": null
+        }
+      }
+    },
+    {
+      "id": "quick-delete",
+      "action": "quick_delete",
+      "ui_surface": "/admin/evaluations table or slide view",
+      "source_row": {
+        "id": "TODO_DELETE_SOURCE_ID",
+        "trace_id": "TODO_DELETE_SOURCE_TRACE_ID",
+        "status_before": "pending",
+        "restaurant_name": "TODO_DELETE_SOURCE_NAME"
+      },
+      "preconditions": [
+        "Row is safe to soft-delete.",
+        "Operator confirms the browser delete prompt."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "deleted",
+          "updated_by_admin_id": "<current-admin>"
+        }
+      }
+    },
+    {
+      "id": "quick-restore",
+      "action": "quick_restore",
+      "ui_surface": "/admin/evaluations deleted filter",
+      "source_row": {
+        "id": "TODO_DELETE_SOURCE_ID",
+        "trace_id": "TODO_DELETE_SOURCE_TRACE_ID",
+        "status_before": "deleted",
+        "restaurant_name": "TODO_DELETE_SOURCE_NAME"
+      },
+      "depends_on_case": "quick-delete",
+      "expected_after": {
+        "source": {
+          "status": "pending",
+          "updated_by_admin_id": "<current-admin>"
+        }
+      }
+    },
+    {
+      "id": "edit-save",
+      "action": "edit_save",
+      "ui_surface": "EditRestaurantModal",
+      "source_row": {
+        "id": "TODO_EDIT_SAVE_SOURCE_ID",
+        "trace_id": "TODO_EDIT_SAVE_SOURCE_TRACE_ID",
+        "status_before": "hold",
+        "restaurant_name": "TODO_EDIT_SAVE_SOURCE_NAME"
+      },
+      "preconditions": [
+        "Modal opens on a hold row.",
+        "Operator changes at least one editable field and records the delta.",
+        "If address changes, operator either re-geocodes or explicitly skips this case."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "hold",
+          "updated_by_admin_id": "<current-admin>",
+          "approved_name": "<edited-name-or-unchanged>",
+          "categories": "<edited-categories>",
+          "road_address": "<edited-or-selected-address>",
+          "jibun_address": "<edited-or-selected-address>"
+        }
+      }
+    },
+    {
+      "id": "edit-approve",
+      "action": "edit_approve",
+      "ui_surface": "EditRestaurantModal",
+      "source_row": {
+        "id": "TODO_EDIT_APPROVE_SOURCE_ID",
+        "trace_id": "TODO_EDIT_APPROVE_SOURCE_TRACE_ID",
+        "status_before": "hold",
+        "restaurant_name": "TODO_EDIT_APPROVE_SOURCE_NAME"
+      },
+      "preconditions": [
+        "Modal has a selected geocoding result.",
+        "Duplicate warning was not raised or was handled per operator guidance."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "approved",
+          "updated_by_admin_id": "<current-admin>",
+          "approved_name": "<edited-name>",
+          "geocoding_success": true,
+          "db_error_message": null,
+          "db_error_details": null
+        }
+      }
+    },
+    {
+      "id": "missing-merge",
+      "action": "missing_merge",
+      "ui_surface": "MissingRestaurantForm.handleMerge",
+      "source_row": {
+        "id": "TODO_MISSING_SOURCE_ID",
+        "trace_id": "TODO_MISSING_SOURCE_TRACE_ID",
+        "status_before": "missing",
+        "restaurant_name": "TODO_MISSING_SOURCE_NAME"
+      },
+      "target_row": {
+        "id": "TODO_MERGE_TARGET_ID",
+        "trace_id": "TODO_MERGE_TARGET_TRACE_ID",
+        "status_before": "approved",
+        "restaurant_name": "TODO_MERGE_TARGET_NAME"
+      },
+      "preconditions": [
+        "Source row opens the missing restaurant flow.",
+        "Target row is the canonical restaurant selected for merge."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "deleted",
+          "updated_by_admin_id": "<current-admin>",
+          "db_error_message": null,
+          "db_error_details": null
+        },
+        "target": {
+          "updated_by_admin_id": "<current-admin>",
+          "youtube_link": "<preserved-or-merged>",
+          "youtube_meta": "<preserved-or-merged>",
+          "tzuyang_review": "<preserved-or-merged>",
+          "categories": "<preserved-or-merged>"
+        }
+      }
+    },
+    {
+      "id": "missing-register",
+      "action": "missing_register",
+      "ui_surface": "MissingRestaurantForm.registerNewRestaurant",
+      "source_row": {
+        "id": "TODO_REGISTER_SOURCE_ID",
+        "trace_id": "TODO_REGISTER_SOURCE_TRACE_ID",
+        "status_before": "missing",
+        "restaurant_name": "TODO_REGISTER_SOURCE_NAME"
+      },
+      "preconditions": [
+        "Operator re-geocodes the missing row before registration.",
+        "Disposable source row has no conflicting canonical target."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "approved",
+          "updated_by_admin_id": "<current-admin>",
+          "approved_name": "<registered-name>",
+          "geocoding_success": true,
+          "is_missing": false,
+          "db_error_message": null,
+          "db_error_details": null
+        }
+      }
+    },
+    {
+      "id": "db-conflict-merge",
+      "action": "db_conflict_merge",
+      "ui_surface": "DbConflictResolutionPanel.handleUpdateExisting",
+      "source_row": {
+        "id": "TODO_DB_CONFLICT_SOURCE_ID",
+        "trace_id": "TODO_DB_CONFLICT_SOURCE_TRACE_ID",
+        "status_before": "db_conflict",
+        "restaurant_name": "TODO_DB_CONFLICT_SOURCE_NAME"
+      },
+      "target_row": {
+        "id": "TODO_DB_CONFLICT_TARGET_ID",
+        "trace_id": "TODO_DB_CONFLICT_TARGET_TRACE_ID",
+        "status_before": "approved",
+        "restaurant_name": "TODO_DB_CONFLICT_TARGET_NAME"
+      },
+      "preconditions": [
+        "Conflict panel opens with both source and target rows visible.",
+        "Target row is the canonical row to keep."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "deleted",
+          "updated_by_admin_id": "<current-admin>",
+          "db_error_message": null,
+          "db_error_details": null
+        },
+        "target": {
+          "updated_by_admin_id": "<current-admin>",
+          "youtube_link": "<preserved-or-merged>",
+          "youtube_meta": "<preserved-or-merged>",
+          "tzuyang_review": "<preserved-or-merged>",
+          "categories": "<preserved-or-merged>"
+        }
+      }
+    },
+    {
+      "id": "db-conflict-hold",
+      "action": "db_conflict_hold",
+      "ui_surface": "DbConflictResolutionPanel.handleHoldNew",
+      "source_row": {
+        "id": "TODO_DB_HOLD_SOURCE_ID",
+        "trace_id": "TODO_DB_HOLD_SOURCE_TRACE_ID",
+        "status_before": "db_conflict",
+        "restaurant_name": "TODO_DB_HOLD_SOURCE_NAME"
+      },
+      "preconditions": [
+        "Conflict panel opens on a disposable db_conflict row.",
+        "Operator chooses to hold the incoming row instead of merging it."
+      ],
+      "expected_after": {
+        "source": {
+          "status": "hold",
+          "updated_by_admin_id": "<current-admin>"
+        }
+      }
+    }
+  ]
+}
