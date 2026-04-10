@@ -341,16 +341,18 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
       if (adminStampError) throw adminStampError;
 
-      // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records' as never)
+      const { error: sourceUpdateError } = await supabase
+        .from('restaurants' as never)
         .update({
-          status: 'approved',
-          processed_at: new Date().toISOString(),
+          status: 'deleted',
+          updated_by_admin_id: adminUserId,
+          updated_at: new Date().toISOString(),
+          db_error_message: null,
+          db_error_details: null,
         } as never)
         .eq('id', record!.id);
 
-      if (updateError) throw updateError;
+      if (sourceUpdateError) throw sourceUpdateError;
 
       toast({
         title: '병합 완료',
@@ -358,8 +360,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       });
 
       onSuccess(record!.id, {
-        status: 'approved',
-        processed_at: new Date().toISOString(),
+        status: 'deleted',
+        updated_by_admin_id: adminUserId,
+        updated_at: new Date().toISOString(),
+        db_error_message: null,
+        db_error_details: null,
       });
       onOpenChange(false);
       resetForm();
@@ -379,9 +384,9 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     try {
       const adminUserId = requireAdminUserId();
 
-      const { error: insertError } = await supabase
-        .from('restaurants')
-        .insert({
+      const { error: updateError } = await supabase
+        .from('restaurants' as never)
+        .update({
           approved_name: trimmedName,
           road_address: geocodingData.road_address,
           jibun_address: geocodingData.jibun_address,
@@ -390,21 +395,18 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           lat: parseFloat(geocodingData.y),
           lng: parseFloat(geocodingData.x),
           phone: trimmedPhone || null,
-          category: [trimmedCategory],
+          categories: trimmedCategory ? [trimmedCategory] : [],
           updated_by_admin_id: adminUserId,
-          youtube_links: [record!.youtube_link],
-          youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
-          tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record!.restaurant_info?.tzuyang_review ? [record!.restaurant_info.tzuyang_review] : []),
-        } as never);
-
-      if (insertError) throw insertError;
-
-      // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records' as never)
-        .update({
+          youtube_link: record!.youtube_link || null,
+          youtube_meta: record!.youtube_meta ?? null,
+          tzuyang_review: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
           status: 'approved',
-          processed_at: new Date().toISOString(),
+          geocoding_success: true,
+          geocoding_false_stage: null,
+          is_missing: false,
+          updated_at: new Date().toISOString(),
+          db_error_message: null,
+          db_error_details: null,
         } as never)
         .eq('id', record!.id);
 
@@ -417,7 +419,22 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
       onSuccess(record!.id, {
         status: 'approved',
-        processed_at: new Date().toISOString(),
+        approved_name: trimmedName,
+        phone: trimmedPhone || null,
+        categories: trimmedCategory ? [trimmedCategory] : [],
+        road_address: geocodingData.road_address,
+        jibun_address: geocodingData.jibun_address,
+        english_address: geocodingData.english_address,
+        address_elements: geocodingData.address_elements as unknown as Record<string, unknown>,
+        lat: parseFloat(geocodingData.y),
+        lng: parseFloat(geocodingData.x),
+        geocoding_success: true,
+        geocoding_false_stage: null,
+        is_missing: false,
+        updated_by_admin_id: adminUserId,
+        updated_at: new Date().toISOString(),
+        db_error_message: null,
+        db_error_details: null,
       });
       onOpenChange(false);
       resetForm();
