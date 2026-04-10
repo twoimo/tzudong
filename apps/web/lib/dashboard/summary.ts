@@ -19,9 +19,14 @@ type RestaurantsFilter = {
 };
 
 function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaurantItem {
+    const normalizedName =
+        row.name?.trim() ||
+        extractVideoIdFromYoutubeLink(row.youtube_link) ||
+        '미승인 맛집';
+
     return {
         id: row.id,
-        name: row.name,
+        name: normalizedName,
         category: toFirstCategory(row.categories),
         address: toDisplayAddress(row.road_address, row.jibun_address, row.origin_address),
         lat: row.lat,
