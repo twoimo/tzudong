@@ -572,6 +572,34 @@ def transform_map_url_crawling_object(
     return flattened_results
 
 
+def merge_rule_results_into_laaj(rule_data: dict, laaj_data: dict) -> dict:
+    """Prefer fresh rule-evaluation payloads when laaj_results carries stale rule fields."""
+    merged = laaj_data.copy()
+
+    rule_eval = rule_data.get("evaluation_results")
+    laaj_eval = laaj_data.get("evaluation_results")
+
+    if isinstance(laaj_eval, dict):
+        merged_eval = laaj_eval.copy()
+    else:
+        merged_eval = {}
+
+    if isinstance(rule_eval, dict):
+        for key in ("evaluation_name_source", "category_validity_TF", "location_match_TF"):
+            if key in rule_eval:
+                merged_eval[key] = rule_eval[key]
+
+    merged["evaluation_results"] = merged_eval
+    merged["evaluation_target"] = rule_data.get(
+        "evaluation_target", laaj_data.get("evaluation_target", {})
+    )
+    merged["restaurants"] = rule_data.get("restaurants", laaj_data.get("restaurants", []))
+    merged["recollect_version"] = rule_data.get(
+        "recollect_version", laaj_data.get("recollect_version", {})
+    )
+    return merged
+
+
 def main():
     parser = argparse.ArgumentParser(description="평가 결과 변환")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
@@ -653,11 +681,15 @@ def main():
             # laaj_results가 존재하면 우선적으로 사용 (parse_laaj_evaluation에서 이미 병합됨)
             laaj_file = laaj_results_dir / f"{video_id}.jsonl"
             target_file = laaj_file if laaj_file.exists() else f
-            
+
             with open(target_file, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
+                        if laaj_file.exists():
+                            with open(f, "r", encoding="utf-8") as rule_file:
+                                rule_data = json.loads(rule_file.read().strip())
+                            data = merge_rule_results_into_laaj(rule_data, data)
                         transformed = transform_json_object(
                             data, "results", channel, meta_cache, video_id
                         )
