@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { supabase } from '@/integrations/supabase/client';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
+import { releaseSearchSelectionOwnership as releaseSearchSelectionOwnershipSnapshot } from '@/lib/mobile-home-search-selection';
 
 import { OVERSEAS_REGIONS, OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 
@@ -49,8 +50,52 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
     });
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
+    // Mobile-home detail selection stays parent-owned so search, marker taps,
+    // swipe navigation, and close/reset flows all converge on one contract.
+    const syncRestaurantDetailSelection = useCallback((
+        restaurant: Restaurant | null,
+        options?: {
+            isPanelOpen?: boolean;
+            searchFocusRestaurant?: Restaurant | null;
+        }
+    ) => {
+        setSelectedRestaurant(restaurant);
+        setPanelRestaurant(restaurant);
+        setIsPanelOpen(options?.isPanelOpen ?? Boolean(restaurant));
+        setSearchedRestaurant(options?.searchFocusRestaurant ?? null);
+    }, []);
 
+    const openRestaurantDetailSelection = useCallback((
+        restaurant: Restaurant,
+        options?: {
+            searchFocusRestaurant?: Restaurant | null;
+        }
+    ) => {
+        syncRestaurantDetailSelection(restaurant, {
+            isPanelOpen: true,
+            searchFocusRestaurant: options?.searchFocusRestaurant ?? null,
+        });
+    }, [syncRestaurantDetailSelection]);
 
+    const clearRestaurantDetailSelection = useCallback(() => {
+        syncRestaurantDetailSelection(null, {
+            isPanelOpen: false,
+            searchFocusRestaurant: null,
+        });
+    }, [syncRestaurantDetailSelection]);
+
+    const releaseSearchSelectionOwnership = useCallback(() => {
+        const nextSnapshot = releaseSearchSelectionOwnershipSnapshot({
+            searchedRestaurant,
+            selectedRestaurant,
+            panelRestaurant,
+            isPanelOpen,
+        });
+
+        if (nextSnapshot.searchedRestaurant !== searchedRestaurant) {
+            setSearchedRestaurant(nextSnapshot.searchedRestaurant);
+        }
+    }, [isPanelOpen, panelRestaurant, searchedRestaurant, selectedRestaurant]);
     // mapMode 변경 시 초기화
     useEffect(() => {
         if (mapMode === 'domestic') {
@@ -60,11 +105,8 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
             setSelectedCountry("헝가리(부다페스트)");
             setSelectedCategories([]);
         }
-        setSearchedRestaurant(null);
-        setSelectedRestaurant(null);
-        setIsPanelOpen(false);
-        setPanelRestaurant(null);
-    }, [mapMode]);
+        clearRestaurantDetailSelection();
+    }, [clearRestaurantDetailSelection, mapMode]);
 
     // 새로고침 시 상태 초기화
     useEffect(() => {
@@ -161,6 +203,10 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         selectedCategories,
         setSelectedCategories,
         countryCounts,
+        syncRestaurantDetailSelection,
+        openRestaurantDetailSelection,
+        clearRestaurantDetailSelection,
+        releaseSearchSelectionOwnership,
     }), [
         selectedRestaurant,
         refreshTrigger,
@@ -179,6 +225,10 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         editFormData,
         filters,
         selectedCategories,
-        countryCounts
+        countryCounts,
+        syncRestaurantDetailSelection,
+        openRestaurantDetailSelection,
+        clearRestaurantDetailSelection,
+        releaseSearchSelectionOwnership,
     ]);
 }
