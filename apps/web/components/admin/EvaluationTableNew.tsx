@@ -120,8 +120,6 @@ const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'all', label: '전체' },
   { value: 'pending', label: '미처리' },
   { value: 'approved', label: '승인됨' },
-  { value: 'hold', label: '보류' },
-  { value: 'db_conflict', label: 'DB 충돌' },
   { value: 'deleted', label: '삭제됨' },
   { value: 'ready_for_approval', label: '승인 대기' },
   { value: 'missing', label: 'Missing' },
@@ -205,7 +203,7 @@ const canApprove = (record: EvaluationRecord): boolean => {
 interface FilterDropdownProps {
   filterKey: string;
   label: string;
-  options: { value: string; label: string }[];
+  options: readonly { value: string; label: string }[];
   tooltip: string;
   currentValue: string | undefined;
   onFilterChange: (key: string, value: string) => void;
@@ -697,7 +695,7 @@ export function EvaluationTable({
     filterKey: string,
     label: string,
     tooltip: string,
-    options: { value: string; label: string }[]
+    options: readonly { value: string; label: string }[]
   ) => (
     <FilterDropdown
       filterKey={filterKey}

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { getAdminInsightSystemStatus } from '@/lib/insight/chat-system-status';
 
 export const runtime = 'nodejs';
 
@@ -9,6 +8,7 @@ export async function GET() {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
+    const { getAdminInsightSystemStatus } = await import('@/lib/insight/chat-system-status');
     const data = await getAdminInsightSystemStatus();
     return NextResponse.json(data, {
       headers: {

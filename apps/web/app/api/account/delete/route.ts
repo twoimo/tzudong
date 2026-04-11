@@ -1,26 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
 
 export const runtime = 'nodejs';
-
-// Supabase Admin 클라이언트 (서비스 역할 키 사용)
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!, // 환경 변수에 서비스 역할 키 필요
-    {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-        },
-    }
-);
 
 export async function DELETE(request: NextRequest) {
     try {
         const supabase = await createServerClient();
+        const supabaseAdmin = createSupabaseServiceRoleClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
