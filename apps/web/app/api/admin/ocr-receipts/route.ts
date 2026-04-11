@@ -6,14 +6,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
 
 export const runtime = 'nodejs';
 
 // 환경 변수
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const GITHUB_OWNER = process.env.GITHUB_OWNER!;
 const GITHUB_REPO = process.env.GITHUB_REPO!;
@@ -74,7 +72,7 @@ export async function GET() {
         const auth = await requireAdmin();
         if (!auth.ok) return auth.response;
 
-        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        const supabase = createSupabaseServiceRoleClient();
 
         const { count: pending } = await supabase
             .from('reviews')
