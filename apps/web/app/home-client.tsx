@@ -110,6 +110,22 @@ export default function HomeClient() {
     // URL 쿼리 파라미터 처리
     const searchParams = useSearchParams();
     const router = useRouter();
+    const state = useHomeState(mapMode);
+    const clearConsumedRestaurantParams = useCallback(() => {
+        if (typeof window === 'undefined') return;
+
+        const currentUrl = new URL(window.location.href);
+        const hadRestaurantParam = currentUrl.searchParams.has('r') || currentUrl.searchParams.has('restaurant');
+        if (!hadRestaurantParam) return;
+
+        currentUrl.searchParams.delete('r');
+        currentUrl.searchParams.delete('restaurant');
+        currentUrl.searchParams.delete('z');
+
+        const nextSearch = currentUrl.searchParams.toString();
+        const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}${currentUrl.hash}`;
+        window.history.replaceState(window.history.state, '', nextUrl);
+    }, []);
 
     // 초기 로딩 화면 제거 (지도 로딩 완료 시그널)
     useEffect(() => {
@@ -228,8 +244,6 @@ export default function HomeClient() {
 
                         setTimeout(() => {
                             openDetailPanelRef.current(mergedRestaurant, !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined);
-                            // URL 정리
-                            router.replace('/', { scroll: false });
                         }, 300);
                     }
                 } catch (err) {
@@ -305,35 +319,13 @@ export default function HomeClient() {
                 router.replace(`/feed?review=${reviewId}`);
             }
         }
-    // 상태 관리 커스텀 훅
-    const state = useHomeState(mapMode);
-
-    const clearConsumedRestaurantParams = useCallback(() => {
-        if (typeof window === 'undefined') return;
-
-        const currentUrl = new URL(window.location.href);
-        const hadRestaurantParam = currentUrl.searchParams.has('r') || currentUrl.searchParams.has('restaurant');
-        if (!hadRestaurantParam) return;
-
-        currentUrl.searchParams.delete('r');
-        currentUrl.searchParams.delete('restaurant');
-        currentUrl.searchParams.delete('z');
-
-        const nextSearch = currentUrl.searchParams.toString();
-        const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}${currentUrl.hash}`;
-        window.history.replaceState(window.history.state, '', nextUrl);
-    }, []);
-
     }, [searchParams, router]);
 
     // [이벤트 기반] FloatingNavButtons에서 국내/해외 모드 변경 수신
     useEffect(() => {
         const handleChangeMapMode = (e: Event) => {
             const mode = (e as CustomEvent<'domestic' | 'overseas'>).detail;
-            state.setIsPanelOpen(false);
-            state.setPanelRestaurant(null);
-            state.setSelectedRestaurant(null);
-            state.setSearchedRestaurant(null);
+            state.clearRestaurantDetailSelection();
             setMapMode(mode);
         };
 
@@ -350,8 +342,7 @@ export default function HomeClient() {
     // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
     const openPanel = useCallback((panel: PanelType) => {
         // 맛집 상세 패널 닫기
-        state.setIsPanelOpen(false);
-        state.setPanelRestaurant(null);
+        state.clearRestaurantDetailSelection();
         if (panel === 'announcement' && isMobileOrTablet) {
             setActiveRightPanel(null);
             setIsAnnouncementSheetOpen(true);
@@ -368,10 +359,7 @@ export default function HomeClient() {
     // 모든 패널 닫기
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const closeAllPanels = useCallback(() => {
-        state.setIsPanelOpen(false);
-        state.setPanelRestaurant(null);
-        state.setSelectedRestaurant(null);
-        state.setSearchedRestaurant(null);
+        state.clearRestaurantDetailSelection();
         setActiveRightPanel(null);
         setIsAnnouncementSheetOpen(false);
         setIsPanelCollapsed(false);
@@ -409,12 +397,11 @@ export default function HomeClient() {
         setEditFormData: state.setEditFormData,
         setIsEditModalOpen: state.setIsEditModalOpen,
         setSelectedRegion: state.setSelectedRegion,
-        setSearchedRestaurant: state.setSearchedRestaurant,
         setSelectedCountry: state.setSelectedCountry,
-        setIsPanelOpen: state.setIsPanelOpen,
-        setPanelRestaurant: state.setPanelRestaurant,
-        setSelectedRestaurant: state.setSelectedRestaurant,
         setMoveToRestaurant: state.setMoveToRestaurant,
+        syncRestaurantDetailSelection: state.syncRestaurantDetailSelection,
+        openRestaurantDetailSelection: state.openRestaurantDetailSelection,
+        clearRestaurantDetailSelection: state.clearRestaurantDetailSelection,
     });
 
     // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
@@ -424,12 +411,7 @@ export default function HomeClient() {
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
         // 그 다음 상세 패널 열기
-        state.setPanelRestaurant(restaurant);
-        state.setSelectedRestaurant(restaurant);
-
-        // [Fix] 마커 클릭 시 검색 상태 초기화 (스티키 현상 방지)
-        // searchedRestaurant가 남아있으면 네이버 지도의 효과 등으로 인해 다시 검색된 맛집으로 되돌아갈 수 있음
-        state.setSearchedRestaurant(null);
+        state.openRestaurantDetailSelection(restaurant);
 
         // [Fix] 줌 레벨 설정 (북마크 등에서 요청 시)
         if (focusZoom) {
@@ -438,22 +420,18 @@ export default function HomeClient() {
             setMapFocusZoom(null); // 일반 선택 시에는 줌 레벨 강제하지 않음
         }
 
-        state.setIsPanelOpen(true);
-
         // [Fix] 마커 클릭 시 URL의 restaurant 파라미터 제거하여 스티키 현상 방지
-        // 단, q 파라미터(공유 URL)는 유지하여 네이버 지도처럼 URL 안정적으로 유지
-        const currentParams = new URLSearchParams(window.location.search);
-        if (currentParams.has('r') || currentParams.has('restaurant')) {
-            // r 또는 restaurant 파라미터가 있을 때만 replace 실행 (북마크에서 온 경우)
-            router.replace('/', { scroll: false });
-        }
-        // q 파라미터(공유 URL)는 유지
-    }, [state, router]);
+        clearConsumedRestaurantParams();
+    }, [clearConsumedRestaurantParams, state]);
     openDetailPanelRef.current = openDetailPanel;
 
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
-        state.setSelectedRestaurant(restaurant);
-        state.setPanelRestaurant(restaurant);
+        if (!restaurant) {
+            state.clearRestaurantDetailSelection();
+            return;
+        }
+
+        state.openRestaurantDetailSelection(restaurant);
     }, [state]);
 
     // 팝업 이벤트 리스너
@@ -645,10 +623,7 @@ export default function HomeClient() {
                 rightPanelWidth={rightPanelWidth}
                 isAdmin={isAdmin}
                 onModeChange={(mode) => {
-                    state.setIsPanelOpen(false);
-                    state.setPanelRestaurant(null);
-                    state.setSelectedRestaurant(null);
-                    state.setSearchedRestaurant(null);
+                    state.clearRestaurantDetailSelection();
                     setMapMode(mode);
                 }}
                 user={user}
