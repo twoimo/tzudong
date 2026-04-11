@@ -179,6 +179,7 @@ function MobileControlOverlayComponent({
     const contentStartBoundaryRef = useRef<'top' | null>(null);
     const contentScrollTargetRef = useRef<HTMLElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchSelectionCloseRafRef = useRef<number | null>(null);
 
     const getContentSnapPoints = useCallback(() => {
         return [MIN_SHEET_HEIGHT, HALF_SHEET_HEIGHT, MAX_SHEET_HEIGHT];
@@ -211,6 +212,24 @@ function MobileControlOverlayComponent({
     const handleClose = useCallback(() => {
         setActiveSheet('none');
     }, []);
+
+    const cancelPendingSearchSelectionClose = useCallback(() => {
+        if (searchSelectionCloseRafRef.current === null) return;
+        window.cancelAnimationFrame(searchSelectionCloseRafRef.current);
+        searchSelectionCloseRafRef.current = null;
+    }, []);
+
+    const scheduleSearchSelectionClose = useCallback(() => {
+        cancelPendingSearchSelectionClose();
+        searchSelectionCloseRafRef.current = window.requestAnimationFrame(() => {
+            searchSelectionCloseRafRef.current = null;
+            handleClose();
+        });
+    }, [cancelPendingSearchSelectionClose, handleClose]);
+
+    useEffect(() => () => {
+        cancelPendingSearchSelectionClose();
+    }, [cancelPendingSearchSelectionClose]);
 
     const toggleSheet = useCallback((sheet: ActiveSheet) => {
         setActiveSheet(prev => prev === sheet ? 'none' : sheet);
@@ -1185,15 +1204,13 @@ function MobileControlOverlayComponent({
                                 <RestaurantSearch
                                     onRestaurantSelect={(restaurant) => {
                                         onRestaurantSelect(restaurant);
-                                        handleClose();
                                     }}
                                     onRestaurantSearch={(restaurant) => {
                                         onRestaurantSearch(restaurant);
-                                        handleClose();
                                     }}
                                     onSearchExecute={() => {
                                         onSearchExecute();
-                                        handleClose();
+                                        scheduleSearchSelectionClose();
                                     }}
                                     filters={filters}
                                     selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
