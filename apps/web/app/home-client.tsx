@@ -305,10 +305,26 @@ export default function HomeClient() {
                 router.replace(`/feed?review=${reviewId}`);
             }
         }
-    }, [searchParams, router]);
-
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
+
+    const clearConsumedRestaurantParams = useCallback(() => {
+        if (typeof window === 'undefined') return;
+
+        const currentUrl = new URL(window.location.href);
+        const hadRestaurantParam = currentUrl.searchParams.has('r') || currentUrl.searchParams.has('restaurant');
+        if (!hadRestaurantParam) return;
+
+        currentUrl.searchParams.delete('r');
+        currentUrl.searchParams.delete('restaurant');
+        currentUrl.searchParams.delete('z');
+
+        const nextSearch = currentUrl.searchParams.toString();
+        const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}${currentUrl.hash}`;
+        window.history.replaceState(window.history.state, '', nextUrl);
+    }, []);
+
+    }, [searchParams, router]);
 
     // [이벤트 기반] FloatingNavButtons에서 국내/해외 모드 변경 수신
     useEffect(() => {
