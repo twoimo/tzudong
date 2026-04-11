@@ -47,6 +47,12 @@ import {
     shouldSkipMarkerUpdate,
     type MarkerRenderSignature,
 } from "@/lib/map-render-guard";
+import {
+    buildPostSearchSwipeCandidates,
+    getActiveSearchedRestaurant,
+    isSameRestaurantSelection,
+    shouldHandleSearchSelection,
+} from "@/lib/mobile-home-search-selection";
 
 interface ExtendedBounds {
     south: number;
@@ -144,6 +150,7 @@ interface NaverMapViewProps {
     isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
     mobileSheetHeightPercent?: number; // 모바일 바텀시트 높이(%) - 마커 Y축 중앙 보정
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
+    onSearchSelectionRelease?: () => void;
 }
 
 /**
@@ -423,11 +430,13 @@ const NaverMapView = memo(({
     isPanelOpen: propIsPanelOpen,
     mobileSheetHeightPercent = 0,
     onVisibleRestaurantsChange,
+    onSearchSelectionRelease,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
     const markerRenderSignatureRef = useRef<MarkerRenderSignature | null>(null);
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
+    const releasedSearchSelectionIdRef = useRef<string | null>(null);
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
@@ -480,6 +489,24 @@ const NaverMapView = memo(({
     const announcementToastInitialTimerRef = useRef<NodeJS.Timeout | null>(null);
     const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
     const [isMapInitialized, setIsMapInitialized] = useState(false);
+
+    const activeSearchedRestaurant = useMemo(() => getActiveSearchedRestaurant({
+        searchedRestaurant,
+        selectedRestaurant,
+    }), [searchedRestaurant, selectedRestaurant]);
+
+    const releaseSearchSelectionOnUserInteraction = useCallback(() => {
+        if (!activeSearchedRestaurant || !onSearchSelectionRelease) {
+            return;
+        }
+
+        if (releasedSearchSelectionIdRef.current === activeSearchedRestaurant.id) {
+            return;
+        }
+
+        releasedSearchSelectionIdRef.current = activeSearchedRestaurant.id;
+        onSearchSelectionRelease();
+    }, [activeSearchedRestaurant, onSearchSelectionRelease]);
 
     const handleDetailPanelMouseDownCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         event.stopPropagation();
@@ -1027,18 +1054,23 @@ const NaverMapView = memo(({
         const handleUserInteraction = () => {
             hasUserMovedMapRef.current = true;
         };
+        const handleSearchReleaseInteraction = () => {
+            handleUserInteraction();
+            releaseSearchSelectionOnUserInteraction();
+        };
 
         const mapElement = mapRef.current;
         if (mapElement) {
             const interactionListenerOptions: AddEventListenerOptions = { capture: true, passive: true };
             // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
-            mapElement.addEventListener('wheel', handleUserInteraction, interactionListenerOptions);
+            mapElement.addEventListener('wheel', handleSearchReleaseInteraction, interactionListenerOptions);
+            mapElement.addEventListener('dblclick', handleSearchReleaseInteraction, interactionListenerOptions);
             mapElement.addEventListener('mousedown', handleUserInteraction, interactionListenerOptions);
             mapElement.addEventListener('touchstart', handleUserInteraction, interactionListenerOptions);
         }
 
-        const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleUserInteraction);
-        const pinchListener = naver.maps.Event.addListener(map, 'pinchstart', handleUserInteraction);
+        const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleSearchReleaseInteraction);
+        const pinchListener = naver.maps.Event.addListener(map, 'pinchstart', handleSearchReleaseInteraction);
 
         return () => {
             clearTimeout(transitionTimer);
@@ -1046,7 +1078,8 @@ const NaverMapView = memo(({
             naver.maps.Event.removeListener(pinchListener);
 
             if (mapElement) {
-                mapElement.removeEventListener('wheel', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('wheel', handleSearchReleaseInteraction, { capture: true });
+                mapElement.removeEventListener('dblclick', handleSearchReleaseInteraction, { capture: true });
                 mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true });
                 mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true });
             }
@@ -1069,6 +1102,7 @@ const NaverMapView = memo(({
         isMobileOrTablet,
         mapFocusZoom,
         mobileSheetHeightPercent,
+        releaseSearchSelectionOnUserInteraction,
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
@@ -1386,30 +1420,29 @@ const NaverMapView = memo(({
 
     const restaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
     const { byId: restaurantById, idSet: displayRestaurantIds, mergedRestaurantIds, mergedRestaurantById } = restaurantLookup;
-
-    const visibleRestaurantsForSwipe = useMemo(() => {
+    const restaurantsForSwipe = useMemo(() => {
         const restaurantsForSwipe = [...displayRestaurants];
 
-        if (searchedRestaurant) {
-            const alreadyExists = displayRestaurantIds.has(searchedRestaurant.id);
+        if (activeSearchedRestaurant) {
+            const alreadyExists = displayRestaurantIds.has(activeSearchedRestaurant.id);
             if (!alreadyExists) {
-                restaurantsForSwipe.push(searchedRestaurant);
+                restaurantsForSwipe.push(activeSearchedRestaurant);
             }
         }
 
-        const uniqueRestaurants = new Map<string, Restaurant>();
-        restaurantsForSwipe.forEach((restaurant) => {
-            uniqueRestaurants.set(restaurant.id, restaurant);
-        });
-
-        return [...uniqueRestaurants.values()];
-    }, [displayRestaurants, displayRestaurantIds, searchedRestaurant]);
+        return restaurantsForSwipe;
+    }, [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds]);
 
     useEffect(() => {
-        if (onVisibleRestaurantsChange) {
-            onVisibleRestaurantsChange(visibleRestaurantsForSwipe);
+        if (!activeSearchedRestaurant) {
+            releasedSearchSelectionIdRef.current = null;
+            return;
         }
-    }, [visibleRestaurantsForSwipe, onVisibleRestaurantsChange]);
+
+        if (releasedSearchSelectionIdRef.current && releasedSearchSelectionIdRef.current !== activeSearchedRestaurant.id) {
+            releasedSearchSelectionIdRef.current = null;
+        }
+    }, [activeSearchedRestaurant]);
 
     // [Cluster] 클러스터 인덱스 생성 및 업데이트
     useEffect(() => {
@@ -1599,6 +1632,21 @@ const NaverMapView = memo(({
         setIsSeoulDistrictMode(nextIsSeoulDistrictMode);
         setIsClusterMode(nextIsClusterMode);
 
+        const visibleRestaurants = VIEWPORT_FILTER_ENABLED
+            ? restaurantsForSwipe.filter(
+                (restaurant) =>
+                    restaurant.id === selectedRestaurant?.id ||
+                    isRestaurantInViewport(restaurant, extendedBounds)
+            )
+            : restaurantsForSwipe;
+        const swipeCandidates = buildPostSearchSwipeCandidates({
+            visibleRestaurants,
+            allRestaurants: restaurantsForSwipe,
+            activeSearchedRestaurant,
+        });
+
+        onVisibleRestaurantsChange?.(swipeCandidates);
+
         const formatCoordForSignature = (value: number | null | undefined): string =>
             typeof value === "number" && Number.isFinite(value) ? value.toFixed(6) : "na";
         const toRestaurantRenderToken = (restaurant: Restaurant, prefix = "restaurant"): string =>
@@ -1607,8 +1655,8 @@ const NaverMapView = memo(({
             toRestaurantRenderToken(restaurant)
         );
 
-        if (searchedRestaurant && !displayRestaurantIds.has(searchedRestaurant.id)) {
-            renderTargetIdsForSignature.push(toRestaurantRenderToken(searchedRestaurant, "searched"));
+        if (activeSearchedRestaurant && !displayRestaurantIds.has(activeSearchedRestaurant.id)) {
+            renderTargetIdsForSignature.push(toRestaurantRenderToken(activeSearchedRestaurant, "searched"));
         }
 
         if (nextIsRegionalClusterMode) {
@@ -1665,7 +1713,7 @@ const NaverMapView = memo(({
             bounds: extendedBounds,
             displayRestaurantIds: renderTargetIdsForSignature,
             selectedRestaurantId: selectedRestaurant?.id || null,
-            searchedRestaurantId: searchedRestaurant?.id || null,
+            searchedRestaurantId: activeSearchedRestaurant?.id || null,
             isClusterMode: nextIsClusterMode,
             isRegionalClusterMode: nextIsRegionalClusterMode,
             isSeoulDistrictMode: nextIsSeoulDistrictMode,
@@ -1884,16 +1932,6 @@ const NaverMapView = memo(({
                 // 참고: 서울 자치구 모드가 활성화된 경우, 서울 내의 개별 마커를 숨겨야 할까요?
                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
 
-                const restaurantsToShow = [...displayRestaurants];
-                // ... (search logic) ...
-                if (searchedRestaurant && !displayRestaurantIds.has(searchedRestaurant.id)) {
-                    restaurantsToShow.push(searchedRestaurant);
-                }
-
-                const visibleRestaurants = VIEWPORT_FILTER_ENABLED
-                    ? restaurantsToShow.filter(r => r.id === selectedRestaurant?.id || isRestaurantInViewport(r, extendedBounds))
-                    : restaurantsToShow;
-
                 visibleRestaurants.forEach(restaurant => {
                     if (!restaurant.lat || !restaurant.lng) return;
 
@@ -1937,7 +1975,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants, displayRestaurantIds, restaurantById, mergedRestaurantById, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, searchedRestaurant, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
@@ -2436,23 +2474,35 @@ const NaverMapView = memo(({
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
-        if (!searchedRestaurant || !mapInstanceRef.current) return;
+        if (!activeSearchedRestaurant) {
+            previousSearchedRestaurantRef.current = null;
+            return;
+        }
+        if (!mapInstanceRef.current) return;
 
         // 검색된 맛집이 병합된 데이터라면 기존 restaurants에서 같은 데이터를 찾아서 교체
-        let actualSearchedRestaurant = searchedRestaurant;
-        const existingRestaurant = findMatchingRestaurantInList(searchedRestaurant, restaurants);
+        let actualSearchedRestaurant = activeSearchedRestaurant;
+        const existingRestaurant = findMatchingRestaurantInList(activeSearchedRestaurant, restaurants);
         if (existingRestaurant) {
             actualSearchedRestaurant = existingRestaurant;
             // 부모 컴포넌트의 selectedRestaurant도 업데이트
-            if (onRestaurantSelect) {
+            if (onRestaurantSelect && !isSameRestaurantSelection(existingRestaurant, selectedRestaurant)) {
                 onRestaurantSelect(existingRestaurant);
             }
+        }
+
+        if (!shouldHandleSearchSelection({
+            searchedRestaurant: actualSearchedRestaurant,
+            selectedRestaurant,
+            previousHandledRestaurant: previousSearchedRestaurantRef.current,
+        })) {
+            return;
         }
 
         // 패널 열기 (검색 시에만)
         setInternalPanelOpen(true);
         // 현재 searchedRestaurant 저장
-        previousSearchedRestaurantRef.current = searchedRestaurant;
+        previousSearchedRestaurantRef.current = actualSearchedRestaurant;
 
         // [검색 시 줌 레벨 15로 즉시 이동]
         const map = mapInstanceRef.current;
@@ -2463,7 +2513,7 @@ const NaverMapView = memo(({
             map.setZoom(targetZoom);
             map.setCenter(new window.naver.maps.LatLng(targetLat, targetLng));
         }
-    }, [searchedRestaurant, onRestaurantSelect, restaurants]);
+    }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
 
     // 로딩 에러 처리

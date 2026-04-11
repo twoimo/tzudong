@@ -17,6 +17,7 @@ import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
 import { SubmissionListView, Review } from '@/components/admin/SubmissionListView';
 import { SubmissionRecord, ApprovalData, SubmissionItem, ItemDecision } from '@/components/admin/SubmissionDetailView';
+import { sanitizePrimaryStatusFilterValue } from '@/components/admin/evaluation-status-filter-options';
 import {
   createNewRestaurantNotification,
   createSubmissionApprovedNotification,
@@ -71,16 +72,6 @@ const EVALUATION_RECORD_STATUS_SET = new Set<EvaluationRecordStatus>([
   'db_conflict',
   'geocoding_failed',
   'not_selected',
-]);
-const VISIBLE_EVAL_FILTER_STATUS_VALUES = new Set<string>([
-  '',
-  'pending',
-  'approved',
-  'deleted',
-  'ready_for_approval',
-  'missing',
-  'not_selected',
-  'geocoding_failed',
 ]);
 
 type EvalFilterKey = (typeof EVALUATION_FILTER_KEYS)[number];
@@ -142,14 +133,12 @@ function sanitizeEvalFilters(value: unknown): EvalFiltersState {
     const candidateValue = rawFilters[key];
     if (typeof candidateValue === 'string') {
       if (key === 'status') {
-        if (candidateValue === 'all') {
-          sanitizedFilters[key] = '';
-          return;
+        const sanitizedStatus = sanitizePrimaryStatusFilterValue(candidateValue);
+        if (sanitizedStatus) {
+          sanitizedFilters[key] = sanitizedStatus;
         }
 
-        if (!VISIBLE_EVAL_FILTER_STATUS_VALUES.has(candidateValue)) {
-          return;
-        }
+        return;
       }
 
       sanitizedFilters[key] = candidateValue;
@@ -157,6 +146,19 @@ function sanitizeEvalFilters(value: unknown): EvalFiltersState {
   });
 
   return sanitizedFilters;
+}
+
+function areEvalFiltersEqual(left: EvalFiltersState, right: EvalFiltersState): boolean {
+  const leftRecord = left as Record<string, string | undefined>;
+  const rightRecord = right as Record<string, string | undefined>;
+  const leftKeys = Object.keys(leftRecord).sort();
+  const rightKeys = Object.keys(rightRecord).sort();
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  return leftKeys.every((key, index) => key === rightKeys[index] && leftRecord[key] === rightRecord[key]);
 }
 
 function parseStoredEvaluationPageState(serializedState: string | null): StoredEvaluationPageState | null {
@@ -400,6 +402,15 @@ function AdminEvaluationPage() {
       console.error('Failed to parse saved state:', error);
     }
   }, []);
+
+  useEffect(() => {
+    const sanitizedFilters = sanitizeEvalFilters(evalFilters);
+    if (areEvalFiltersEqual(evalFilters, sanitizedFilters)) {
+      return;
+    }
+
+    setEvalFilters(sanitizedFilters);
+  }, [evalFilters]);
 
   // 무한 스크롤을 위한 scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -2368,9 +2379,9 @@ function AdminEvaluationPage() {
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
                     onFilterChange={(key, value) => {
-                      setEvalFilters(prev => ({
+                      setEvalFilters(prev => sanitizeEvalFilters({
                         ...prev,
-                        [key]: value === '' ? undefined : value
+                        [key]: value === '' ? undefined : value,
                       }));
                     }}
                     onResetFilters={() => setEvalFilters({})}
