@@ -49,6 +49,8 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
     });
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
+    // Mobile-home detail selection stays parent-owned so search, marker taps,
+    // swipe navigation, and close/reset flows all converge on one contract.
     const syncRestaurantDetailSelection = useCallback((
         restaurant: Restaurant | null,
         options?: {

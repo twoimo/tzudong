@@ -111,6 +111,9 @@ export default function HomeClient() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const state = useHomeState(mapMode);
+    // Deep-link restaurant params are consumed after the parent-owned
+    // selection contract opens the detail panel; using history avoids
+    // triggering a home refresh/reset loop while preserving other params.
     const clearConsumedRestaurantParams = useCallback(() => {
         if (typeof window === 'undefined') return;
 

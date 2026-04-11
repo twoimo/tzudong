@@ -47,6 +47,11 @@ import {
     shouldSkipMarkerUpdate,
     type MarkerRenderSignature,
 } from "@/lib/map-render-guard";
+import {
+    getActiveSearchedRestaurant,
+    isSameRestaurantSelection,
+    shouldHandleSearchSelection,
+} from "@/lib/mobile-home-search-selection";
 
 interface ExtendedBounds {
     south: number;
@@ -1386,14 +1391,18 @@ const NaverMapView = memo(({
 
     const restaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
     const { byId: restaurantById, idSet: displayRestaurantIds, mergedRestaurantIds, mergedRestaurantById } = restaurantLookup;
+    const activeSearchedRestaurant = useMemo(() => getActiveSearchedRestaurant({
+        searchedRestaurant,
+        selectedRestaurant,
+    }), [searchedRestaurant, selectedRestaurant]);
 
     const visibleRestaurantsForSwipe = useMemo(() => {
         const restaurantsForSwipe = [...displayRestaurants];
 
-        if (searchedRestaurant) {
-            const alreadyExists = displayRestaurantIds.has(searchedRestaurant.id);
+        if (activeSearchedRestaurant) {
+            const alreadyExists = displayRestaurantIds.has(activeSearchedRestaurant.id);
             if (!alreadyExists) {
-                restaurantsForSwipe.push(searchedRestaurant);
+                restaurantsForSwipe.push(activeSearchedRestaurant);
             }
         }
 
@@ -1403,7 +1412,7 @@ const NaverMapView = memo(({
         });
 
         return [...uniqueRestaurants.values()];
-    }, [displayRestaurants, displayRestaurantIds, searchedRestaurant]);
+    }, [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds]);
 
     useEffect(() => {
         if (onVisibleRestaurantsChange) {
@@ -1607,8 +1616,8 @@ const NaverMapView = memo(({
             toRestaurantRenderToken(restaurant)
         );
 
-        if (searchedRestaurant && !displayRestaurantIds.has(searchedRestaurant.id)) {
-            renderTargetIdsForSignature.push(toRestaurantRenderToken(searchedRestaurant, "searched"));
+        if (activeSearchedRestaurant && !displayRestaurantIds.has(activeSearchedRestaurant.id)) {
+            renderTargetIdsForSignature.push(toRestaurantRenderToken(activeSearchedRestaurant, "searched"));
         }
 
         if (nextIsRegionalClusterMode) {
@@ -1665,7 +1674,7 @@ const NaverMapView = memo(({
             bounds: extendedBounds,
             displayRestaurantIds: renderTargetIdsForSignature,
             selectedRestaurantId: selectedRestaurant?.id || null,
-            searchedRestaurantId: searchedRestaurant?.id || null,
+            searchedRestaurantId: activeSearchedRestaurant?.id || null,
             isClusterMode: nextIsClusterMode,
             isRegionalClusterMode: nextIsRegionalClusterMode,
             isSeoulDistrictMode: nextIsSeoulDistrictMode,
@@ -1886,8 +1895,8 @@ const NaverMapView = memo(({
 
                 const restaurantsToShow = [...displayRestaurants];
                 // ... (search logic) ...
-                if (searchedRestaurant && !displayRestaurantIds.has(searchedRestaurant.id)) {
-                    restaurantsToShow.push(searchedRestaurant);
+                if (activeSearchedRestaurant && !displayRestaurantIds.has(activeSearchedRestaurant.id)) {
+                    restaurantsToShow.push(activeSearchedRestaurant);
                 }
 
                 const visibleRestaurants = VIEWPORT_FILTER_ENABLED
@@ -1937,7 +1946,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants, displayRestaurantIds, restaurantById, mergedRestaurantById, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, searchedRestaurant, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, restaurantById, mergedRestaurantById, selectedRegion, selectedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
@@ -2436,23 +2445,35 @@ const NaverMapView = memo(({
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
-        if (!searchedRestaurant || !mapInstanceRef.current) return;
+        if (!activeSearchedRestaurant) {
+            previousSearchedRestaurantRef.current = null;
+            return;
+        }
+        if (!mapInstanceRef.current) return;
 
         // 검색된 맛집이 병합된 데이터라면 기존 restaurants에서 같은 데이터를 찾아서 교체
-        let actualSearchedRestaurant = searchedRestaurant;
-        const existingRestaurant = findMatchingRestaurantInList(searchedRestaurant, restaurants);
+        let actualSearchedRestaurant = activeSearchedRestaurant;
+        const existingRestaurant = findMatchingRestaurantInList(activeSearchedRestaurant, restaurants);
         if (existingRestaurant) {
             actualSearchedRestaurant = existingRestaurant;
             // 부모 컴포넌트의 selectedRestaurant도 업데이트
-            if (onRestaurantSelect) {
+            if (onRestaurantSelect && !isSameRestaurantSelection(existingRestaurant, selectedRestaurant)) {
                 onRestaurantSelect(existingRestaurant);
             }
+        }
+
+        if (!shouldHandleSearchSelection({
+            searchedRestaurant: actualSearchedRestaurant,
+            selectedRestaurant,
+            previousHandledRestaurant: previousSearchedRestaurantRef.current,
+        })) {
+            return;
         }
 
         // 패널 열기 (검색 시에만)
         setInternalPanelOpen(true);
         // 현재 searchedRestaurant 저장
-        previousSearchedRestaurantRef.current = searchedRestaurant;
+        previousSearchedRestaurantRef.current = actualSearchedRestaurant;
 
         // [검색 시 줌 레벨 15로 즉시 이동]
         const map = mapInstanceRef.current;
@@ -2463,7 +2484,7 @@ const NaverMapView = memo(({
             map.setZoom(targetZoom);
             map.setCenter(new window.naver.maps.LatLng(targetLat, targetLng));
         }
-    }, [searchedRestaurant, onRestaurantSelect, restaurants]);
+    }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
 
     // 로딩 에러 처리
