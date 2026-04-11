@@ -2,8 +2,10 @@ import { describe, expect, test } from 'bun:test';
 
 import type { Restaurant } from '../types/restaurant';
 import {
+    buildPostSearchSwipeCandidates,
     getActiveSearchedRestaurant,
     isSameRestaurantSelection,
+    releaseSearchSelectionOwnership,
     shouldHandleSearchSelection,
 } from '../lib/mobile-home-search-selection';
 
@@ -82,5 +84,48 @@ describe('mobile home search selection helpers', () => {
                 previousHandledRestaurant: null,
             })
         ).toBe(false);
+    });
+
+    test('releases search ownership while keeping the current panel selection open', () => {
+        const searchedRestaurant = makeRestaurant({ id: 'search-1' });
+        const panelRestaurant = makeRestaurant({ id: 'search-1' });
+
+        expect(
+            releaseSearchSelectionOwnership({
+                searchedRestaurant,
+                selectedRestaurant: searchedRestaurant,
+                panelRestaurant,
+                isPanelOpen: true,
+            })
+        ).toEqual({
+            searchedRestaurant: null,
+            selectedRestaurant: searchedRestaurant,
+            panelRestaurant,
+            isPanelOpen: true,
+        });
+    });
+
+    test('adds the nearest fallback restaurant when only one visible restaurant remains after search', () => {
+        const searchedRestaurant = makeRestaurant({ id: 'search-1', lat: 37.5665, lng: 126.978 });
+        const nearestRestaurant = makeRestaurant({
+            id: 'nearest-restaurant',
+            name: '가까운 식당',
+            lat: 37.5661,
+            lng: 126.9772,
+        });
+        const fartherRestaurant = makeRestaurant({
+            id: 'farther-restaurant',
+            name: '먼 식당',
+            lat: 37.56695,
+            lng: 126.97885,
+        });
+
+        expect(
+            buildPostSearchSwipeCandidates({
+                visibleRestaurants: [searchedRestaurant],
+                allRestaurants: [searchedRestaurant, fartherRestaurant, nearestRestaurant],
+                activeSearchedRestaurant: searchedRestaurant,
+            }).map((restaurant) => restaurant.id)
+        ).toEqual(['search-1', 'nearest-restaurant']);
     });
 });

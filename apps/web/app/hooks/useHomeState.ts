@@ -4,6 +4,7 @@ import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { supabase } from '@/integrations/supabase/client';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
+import { releaseSearchSelectionOwnership as releaseSearchSelectionOwnershipSnapshot } from '@/lib/mobile-home-search-selection';
 
 import { OVERSEAS_REGIONS, OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 
@@ -82,6 +83,19 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
             searchFocusRestaurant: null,
         });
     }, [syncRestaurantDetailSelection]);
+
+    const releaseSearchSelectionOwnership = useCallback(() => {
+        const nextSnapshot = releaseSearchSelectionOwnershipSnapshot({
+            searchedRestaurant,
+            selectedRestaurant,
+            panelRestaurant,
+            isPanelOpen,
+        });
+
+        if (nextSnapshot.searchedRestaurant !== searchedRestaurant) {
+            setSearchedRestaurant(nextSnapshot.searchedRestaurant);
+        }
+    }, [isPanelOpen, panelRestaurant, searchedRestaurant, selectedRestaurant]);
     // mapMode 변경 시 초기화
     useEffect(() => {
         if (mapMode === 'domestic') {
@@ -192,6 +206,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         syncRestaurantDetailSelection,
         openRestaurantDetailSelection,
         clearRestaurantDetailSelection,
+        releaseSearchSelectionOwnership,
     }), [
         selectedRestaurant,
         refreshTrigger,
@@ -214,5 +229,6 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         syncRestaurantDetailSelection,
         openRestaurantDetailSelection,
         clearRestaurantDetailSelection,
+        releaseSearchSelectionOwnership,
     ]);
 }
