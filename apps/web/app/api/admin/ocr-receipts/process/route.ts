@@ -9,7 +9,6 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
@@ -19,18 +18,16 @@ import * as crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
 
 export const runtime = 'nodejs';
 
 // 환경 변수
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const routeDirname = path.dirname(fileURLToPath(import.meta.url));
 const preprocessScriptPath = path.resolve(
-    routeDirname,
+    /* turbopackIgnore: true */ routeDirname,
     '../../../../../../../backend/geminiCLI-ocr-receipts/preprocess_receipt.py'
 );
 
@@ -101,6 +98,10 @@ const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가
   "confidence": 0.0
 }`;
 
+function getSupabaseAdmin() {
+    return createSupabaseServiceRoleClient();
+}
+
 /**
  * Python 전처리 스크립트 실행
  */
@@ -108,7 +109,7 @@ function runPythonPreprocess(inputPath: string, outputDir: string): Promise<Reco
     return new Promise((resolve, reject) => {
         const python = process.platform === 'win32' ? 'python' : 'python3';
 
-        const proc = spawn(python, [preprocessScriptPath, inputPath, outputDir]);
+        const proc = spawn(python, [/* turbopackIgnore: true */ preprocessScriptPath, inputPath, outputDir]);
         let stdout = '';
         let stderr = '';
 
@@ -139,11 +140,12 @@ function runPythonPreprocess(inputPath: string, outputDir: string): Promise<Reco
  * 로컬 파일을 Supabase Storage에 업로드
  */
 async function uploadToStorage(localPath: string, storagePath: string): Promise<string | null> {
-    if (!localPath || !fs.existsSync(localPath)) {
+    if (!localPath || !fs.existsSync(/* turbopackIgnore: true */ localPath)) {
         return null;
     }
 
-    const fileBuffer = fs.readFileSync(localPath);
+    const supabase = getSupabaseAdmin();
+    const fileBuffer = fs.readFileSync(/* turbopackIgnore: true */ localPath);
     const { error } = await supabase.storage
         .from('review-photos')
         .upload(storagePath, fileBuffer, {
@@ -195,8 +197,8 @@ function parseOCRResponse(responseText: string): Record<string, unknown> {
  */
 function cleanupTempDir(dirPath: string) {
     try {
-        if (fs.existsSync(dirPath)) {
-            fs.rmSync(dirPath, { recursive: true, force: true });
+        if (fs.existsSync(/* turbopackIgnore: true */ dirPath)) {
+            fs.rmSync(/* turbopackIgnore: true */ dirPath, { recursive: true, force: true });
         }
     } catch (e) {
         console.error(`임시 디렉토리 정리 실패: ${e}`);
@@ -208,6 +210,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     const tempDir = path.join(os.tmpdir(), `ocr-${Date.now()}`);
+    const supabase = getSupabaseAdmin();
 
     try {
         const { reviewId } = await request.json();
@@ -249,7 +252,7 @@ export async function POST(request: Request) {
             throw new Error('이미지 URL 생성 실패');
         }
 
-        fs.mkdirSync(tempDir, { recursive: true });
+        fs.mkdirSync(/* turbopackIgnore: true */ tempDir, { recursive: true });
         const tempInputPath = path.join(tempDir, 'input.jpg');
         const preprocessOutputDir = path.join(tempDir, 'stages');
 
@@ -258,7 +261,7 @@ export async function POST(request: Request) {
             throw new Error(`이미지 다운로드 실패: ${imageResponse.status}`);
         }
         const arrayBuffer = await imageResponse.arrayBuffer();
-        fs.writeFileSync(tempInputPath, Buffer.from(arrayBuffer));
+        fs.writeFileSync(/* turbopackIgnore: true */ tempInputPath, Buffer.from(arrayBuffer));
 
         // 3. Python 전처리 실행
         let preprocessResult: Record<string, string>;
@@ -289,7 +292,7 @@ export async function POST(request: Request) {
         const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
         const finalImagePath = preprocessResult.warped || tempInputPath;
-        const finalImageBuffer = fs.readFileSync(finalImagePath);
+        const finalImageBuffer = fs.readFileSync(/* turbopackIgnore: true */ finalImagePath);
         const imageBase64 = finalImageBuffer.toString('base64');
 
         const result = await model.generateContent([
@@ -393,7 +396,7 @@ export async function POST(request: Request) {
                     .update({ verification_photo: webpStoragePath })
                     .eq('id', reviewId);
 
-                const originalSize = fs.statSync(warpedPath).size;
+                const originalSize = fs.statSync(/* turbopackIgnore: true */ warpedPath).size;
                 const compressedSize = compressedBuffer.length;
                 const savings = ((1 - compressedSize / originalSize) * 100).toFixed(1);
                 compressionResult = `WebP 압축 완료 (${savings}% 절약, ${Math.round(compressedSize / 1024)}KB)`;
