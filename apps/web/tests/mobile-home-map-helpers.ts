@@ -541,6 +541,14 @@ export async function waitForVisibleMarkers(page: Page, count = 2) {
     );
 }
 
+export async function waitForMarkerCount(page: Page, count: number) {
+    await page.waitForFunction(
+        (expectedCount) => document.querySelectorAll('[data-testid="marker"]').length === Number(expectedCount),
+        count,
+        { timeout: 15000 }
+    );
+}
+
 export async function clickAnyUnselectedMarker(page: Page) {
     await page.locator('[data-testid="marker"][style*="width: 32px"]').first().click();
 }
@@ -592,4 +600,47 @@ export async function swipeDetailPanelLeft(page: Page) {
         dispatch('touchmove', createTouchList(80, 280), createTouchList(80, 280));
         dispatch('touchend', [], createTouchList(80, 280));
     });
+}
+
+export async function panMockMap(page: Page, deltaX = 120, deltaY = 0) {
+    await page.evaluate(
+        ({ nextDeltaX, nextDeltaY }) => {
+            const win = window as typeof window & { __TZUDONG_DEBUG_MAP__?: unknown };
+            const map = win.__TZUDONG_DEBUG_MAP__;
+            if (!map || !window.naver?.maps?.Event) {
+                throw new Error('Mock map is not ready');
+            }
+
+            window.naver.maps.Event.trigger(map, 'dragstart');
+            (map as { panBy: (x: number, y: number) => void }).panBy(nextDeltaX, nextDeltaY);
+        },
+        { nextDeltaX: deltaX, nextDeltaY: deltaY }
+    );
+}
+
+export async function zoomMockMap(page: Page, zoom: number) {
+    await page.evaluate((nextZoom) => {
+        const win = window as typeof window & { __TZUDONG_DEBUG_MAP__?: unknown };
+        const map = win.__TZUDONG_DEBUG_MAP__;
+        if (!map) {
+            throw new Error('Mock map is not ready');
+        }
+
+        (map as { setZoom: (value: number) => void }).setZoom(nextZoom);
+    }, zoom);
+}
+
+export async function waitForSheetHeightRatioAtMost(page: Page, maxRatio: number) {
+    await page.waitForFunction(
+        (expectedRatio) => {
+            const sheet = document.querySelector('[data-sheet-state]');
+            if (!(sheet instanceof HTMLElement)) {
+                return false;
+            }
+
+            return sheet.getBoundingClientRect().height / window.innerHeight <= Number(expectedRatio);
+        },
+        maxRatio,
+        { timeout: 5000 }
+    );
 }

@@ -36,6 +36,7 @@ interface HomeMapContainerProps {
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant: (restaurant: Restaurant) => void;
     onRestaurantSelect: (restaurant: Restaurant | null) => void;
+    onReleaseSearchSelectionOwnership?: () => void;
 
     onMapReady: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick: (restaurant: Restaurant) => void;
@@ -168,6 +169,7 @@ function HomeMapContainerComponent({
     onAdminEditRestaurant,
     onRequestEditRestaurant,
     onRestaurantSelect,
+    onReleaseSearchSelectionOwnership,
 
     onMapReady,
     onMarkerClick,
@@ -1142,6 +1144,16 @@ function HomeMapContainerComponent({
         }
     }, [getCurrentMaxHeight, isMobileOrTablet, isPanelOpen, setSheetHeightSafe]);
 
+    const handleReleaseSearchSelectionOwnership = useCallback(() => {
+        onReleaseSearchSelectionOwnership?.();
+
+        if (!isMobileOrTablet || !isPanelOpen) {
+            return;
+        }
+
+        setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
+    }, [isMobileOrTablet, isPanelOpen, onReleaseSearchSelectionOwnership, setSheetHeightSafe]);
+
     const mapPadding = useMemo(() => {
         if (!isPanelOpen) return undefined;
         // Desktop: Right panel 400px
@@ -1176,6 +1188,7 @@ function HomeMapContainerComponent({
                         isPanelOpen={isPanelOpen}
                         mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen ? sheetHeight : 0}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
+                        onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
                     />
                 </Suspense>
             ) : (

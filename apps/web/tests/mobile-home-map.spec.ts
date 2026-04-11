@@ -5,9 +5,13 @@ import {
     closeDetailPanelFromMap,
     installMobileHomeMapTestMocks,
     openMobileSearchAndSelect,
+    panMockMap,
     swipeDetailPanelLeft,
+    waitForMarkerCount,
     waitForMockMapReady,
+    waitForSheetHeightRatioAtMost,
     waitForVisibleMarkers,
+    zoomMockMap,
 } from './mobile-home-map-helpers';
 
 test.use({
@@ -96,5 +100,29 @@ test.describe('Phase 1: mobile home map regressions', () => {
 
         expect(navigationEntriesAfter).toBe(navigationEntriesBefore);
         expect(sentinel).toBe('stable');
+    });
+
+    test('MHM-04: manual post-search pan keeps the detail open but collapses the sheet to peek height', async ({ page }) => {
+        await openMobileSearchAndSelect(page, '정원분식');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+
+        await panMockMap(page, 160, 0);
+
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+        await waitForSheetHeightRatioAtMost(page, 0.3);
+    });
+
+    test('MHM-05: single-visible post-search swipe falls back to the nearest restaurant', async ({ page }) => {
+        await openMobileSearchAndSelect(page, '정원분식');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+
+        await zoomMockMap(page, 18);
+        await waitForMarkerCount(page, 1);
+        await swipeDetailPanelLeft(page);
+
+        await expect(page.getByTestId('restaurant-detail-panel')).not.toContainText('정원분식', {
+            timeout: 5000,
+        });
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('서울돈까스');
     });
 });

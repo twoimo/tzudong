@@ -649,6 +649,7 @@ export default function HomeClient() {
                 onAdminEditRestaurant={onAdminEditRestaurant}
                 onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
                 onRestaurantSelect={handleRestaurantSelectionSync}
+                onReleaseSearchSelectionOwnership={state.releaseSearchSelectionOwnership}
 
                 onMapReady={handlers.handleMapReady}
                 onMarkerClick={openDetailPanel}
