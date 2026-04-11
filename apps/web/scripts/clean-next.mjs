@@ -1,11 +1,23 @@
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { config as loadEnv } from 'dotenv';
 
 const projectRoot = process.cwd();
+const repoRoot = path.resolve(projectRoot, '..', '..');
+const repoEnvLocalPath = path.join(repoRoot, '.env.local');
 const nextDir = path.join(projectRoot, '.next');
 const stalePrefix = '.next-stale-';
 const verbose = ['1', 'true', 'yes', 'on'].includes((process.env.CLEAN_NEXT_VERBOSE ?? '').toLowerCase());
 const warnedStaleEntries = new Set();
+const rawArgs = process.argv.slice(2);
+const separatorIndex = rawArgs.indexOf('--');
+const commandArgs = separatorIndex >= 0
+    ? rawArgs.slice(separatorIndex + 1)
+    : rawArgs.filter((arg) => arg !== '--skip-clean');
+const skipClean = separatorIndex >= 0
+    ? rawArgs.slice(0, separatorIndex).includes('--skip-clean')
+    : rawArgs.includes('--skip-clean');
 
 const tryRemove = (targetPath) => {
     fs.rmSync(targetPath, {
@@ -68,28 +80,56 @@ const purgeStaleCaches = () => {
     }
 };
 
-purgeStaleCaches();
-
-try {
-    tryRemove(nextDir);
-} catch (error) {
-    const message = toMessage(error);
-    if (verbose || !isLockLikeError(error)) {
-        console.warn(`[clean-next] primary remove failed: ${message}`);
-    }
-
-    try {
-        const fallbackName = `.next-stale-${Date.now()}`;
-        const fallbackPath = path.join(projectRoot, fallbackName);
-        fs.renameSync(nextDir, fallbackPath);
-        tryRemove(fallbackPath);
-        if (verbose) {
-            console.warn(`[clean-next] renamed + removed stale cache: ${fallbackName}`);
-        }
-    } catch (fallbackError) {
-        const fallbackMessage = toMessage(fallbackError);
-        console.warn(`[clean-next] fallback cleanup skipped: ${fallbackMessage}`);
-    }
+if (fs.existsSync(repoEnvLocalPath)) {
+    loadEnv({ path: repoEnvLocalPath, override: false });
 }
 
-purgeStaleCaches();
+if (!skipClean) {
+    purgeStaleCaches();
+
+    try {
+        tryRemove(nextDir);
+    } catch (error) {
+        const message = toMessage(error);
+        if (verbose || !isLockLikeError(error)) {
+            console.warn(`[clean-next] primary remove failed: ${message}`);
+        }
+
+        try {
+            const fallbackName = `.next-stale-${Date.now()}`;
+            const fallbackPath = path.join(projectRoot, fallbackName);
+            fs.renameSync(nextDir, fallbackPath);
+            tryRemove(fallbackPath);
+            if (verbose) {
+                console.warn(`[clean-next] renamed + removed stale cache: ${fallbackName}`);
+            }
+        } catch (fallbackError) {
+            const fallbackMessage = toMessage(fallbackError);
+            console.warn(`[clean-next] fallback cleanup skipped: ${fallbackMessage}`);
+        }
+    }
+
+    purgeStaleCaches();
+}
+
+if (commandArgs.length > 0) {
+    const [command, ...args] = commandArgs;
+    const child = spawn(command, args, {
+        stdio: 'inherit',
+        env: process.env,
+    });
+
+    child.on('error', (error) => {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exit(1);
+    });
+
+    child.on('exit', (code, signal) => {
+        if (signal) {
+            process.kill(process.pid, signal);
+            return;
+        }
+
+        process.exit(code ?? 0);
+    });
+}

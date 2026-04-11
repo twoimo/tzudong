@@ -36,6 +36,7 @@ interface HomeMapContainerProps {
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant: (restaurant: Restaurant) => void;
     onRestaurantSelect: (restaurant: Restaurant | null) => void;
+    onReleaseSearchSelectionOwnership?: () => void;
 
     onMapReady: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick: (restaurant: Restaurant) => void;
@@ -78,6 +79,15 @@ const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
 const QUICK_GESTURE_SHORT_DISTANCE_PX = 25;
 const LONG_PRESS_TRANSITION_THRESHOLD_MS = 175;
 const MAP_TAP_MARKER_REOPEN_GUARD_MS = 260;
+const MAP_MARKER_INTERACTION_SELECTOR = [
+    '[data-testid="marker"]',
+    '.cluster-marker-container',
+    '.cluster-count-badge',
+    '.cluster-icon',
+    '.marker-icon',
+    '.custom-marker',
+    '.maplibregl-marker',
+].join(', ');
 const DRAG_RENDER_EPSILON_PERCENT = 0.08;
 const SNAP_TRANSITION_BASE_MS = 235;
 const SNAP_TRANSITION_FAST_MS = 175;
@@ -130,6 +140,20 @@ const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
 
 const RESTAURANT_CONTENT_SCROLL_SELECTOR = "[data-restaurant-detail-swipe-area='content']";
 
+const isMarkerInteractionPointerEvent = (event: PointerEvent) => {
+    const isMarkerElement = (element: Element) =>
+        element.matches(MAP_MARKER_INTERACTION_SELECTOR) || !!element.closest(MAP_MARKER_INTERACTION_SELECTOR);
+
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+    for (const entry of path) {
+        if (entry instanceof Element && isMarkerElement(entry)) {
+            return true;
+        }
+    }
+
+    return event.target instanceof Element ? isMarkerElement(event.target) : false;
+};
+
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
 function HomeMapContainerComponent({
     mapMode,
@@ -145,6 +169,7 @@ function HomeMapContainerComponent({
     onAdminEditRestaurant,
     onRequestEditRestaurant,
     onRestaurantSelect,
+    onReleaseSearchSelectionOwnership,
 
     onMapReady,
     onMarkerClick,
@@ -988,20 +1013,14 @@ function HomeMapContainerComponent({
             if (!target) return;
             if (sheetContainerRef.current?.contains(target)) return;
 
-            const targetElement = target instanceof Element ? target : null;
-            const isMarkerInteraction =
-                !!targetElement?.closest(
-                    [
-                        '[data-testid="marker"]',
-                        '.cluster-marker-container',
-                        '.cluster-count-badge',
-                        '.cluster-icon',
-                        '.marker-icon',
-                        '.custom-marker',
-                        '.maplibregl-marker',
-                    ].join(', ')
-                );
+            const isMarkerInteraction = isMarkerInteractionPointerEvent(event);
             if (isMarkerInteraction) {
+                markerClickSincePointerDownRef.current = true;
+                suppressMarkerClickUntilRef.current = 0;
+                if (outsideCloseTimeoutRef.current !== null) {
+                    window.clearTimeout(outsideCloseTimeoutRef.current);
+                    outsideCloseTimeoutRef.current = null;
+                }
                 return;
             }
 
@@ -1125,6 +1144,16 @@ function HomeMapContainerComponent({
         }
     }, [getCurrentMaxHeight, isMobileOrTablet, isPanelOpen, setSheetHeightSafe]);
 
+    const handleReleaseSearchSelectionOwnership = useCallback(() => {
+        onReleaseSearchSelectionOwnership?.();
+
+        if (!isMobileOrTablet || !isPanelOpen) {
+            return;
+        }
+
+        setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
+    }, [isMobileOrTablet, isPanelOpen, onReleaseSearchSelectionOwnership, setSheetHeightSafe]);
+
     const mapPadding = useMemo(() => {
         if (!isPanelOpen) return undefined;
         // Desktop: Right panel 400px
@@ -1159,6 +1188,7 @@ function HomeMapContainerComponent({
                         isPanelOpen={isPanelOpen}
                         mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen ? sheetHeight : 0}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
+                        onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
                     />
                 </Suspense>
             ) : (

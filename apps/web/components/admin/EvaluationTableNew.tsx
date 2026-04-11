@@ -28,6 +28,7 @@ import { ChevronDown, ChevronUp, Check, Trash2, AlertCircle, Edit, Menu, HelpCir
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
+import { PRIMARY_STATUS_FILTER_OPTIONS } from './evaluation-status-filter-options';
 
 interface EvaluationTableProps {
   records: EvaluationRecord[];
@@ -115,17 +116,6 @@ const STATUS_VARIANTS: Record<string, { label: string; variant: 'default' | 'sec
   db_conflict: { label: 'DB 충돌', variant: 'destructive' },
   deleted: { label: '삭제됨', variant: 'destructive' },
 };
-
-const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
-  { value: 'all', label: '전체' },
-  { value: 'pending', label: '미처리' },
-  { value: 'approved', label: '승인됨' },
-  { value: 'deleted', label: '삭제됨' },
-  { value: 'ready_for_approval', label: '승인 대기' },
-  { value: 'missing', label: 'Missing' },
-  { value: 'not_selected', label: '평가 미대상' },
-  { value: 'geocoding_failed', label: '지오코딩 실패' },
-];
 
 const MOBILE_STATUS_QUICK_FILTERS: { value: string; label: string }[] = [
   { value: '', label: '전체' },
@@ -1097,7 +1087,7 @@ export function EvaluationTable({
               "status",
               "상태",
               "레코드 상태별로 필터링",
-              STATUS_FILTER_OPTIONS
+              PRIMARY_STATUS_FILTER_OPTIONS
             )}
             {renderFilterDropdown(
               "visit_authenticity",
@@ -1694,7 +1684,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     "status",
                     "상태",
                     "레코드 상태별로 필터링",
-                    STATUS_FILTER_OPTIONS
+                    PRIMARY_STATUS_FILTER_OPTIONS
                   )
                 )}
               </TableHead>

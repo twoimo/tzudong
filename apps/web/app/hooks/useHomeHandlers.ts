@@ -17,12 +17,22 @@ interface UseHomeHandlersProps {
     }>>;
     setIsEditModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSelectedRegion: React.Dispatch<React.SetStateAction<Region | null>>;
-    setSearchedRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
     setSelectedCountry: React.Dispatch<React.SetStateAction<string | null>>;
-    setIsPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    setPanelRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
-    setSelectedRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
     setMoveToRestaurant: React.Dispatch<React.SetStateAction<((restaurant: Restaurant) => void) | null>>;
+    syncRestaurantDetailSelection: (
+        restaurant: Restaurant | null,
+        options?: {
+            isPanelOpen?: boolean;
+            searchFocusRestaurant?: Restaurant | null;
+        }
+    ) => void;
+    openRestaurantDetailSelection: (
+        restaurant: Restaurant,
+        options?: {
+            searchFocusRestaurant?: Restaurant | null;
+        }
+    ) => void;
+    clearRestaurantDetailSelection: () => void;
 }
 
 export function useHomeHandlers(props: UseHomeHandlersProps) {
@@ -35,12 +45,11 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         setEditFormData,
         setIsEditModalOpen,
         setSelectedRegion,
-        setSearchedRestaurant,
         setSelectedCountry,
-        setIsPanelOpen,
-        setPanelRestaurant,
-        setSelectedRestaurant,
         setMoveToRestaurant,
+        syncRestaurantDetailSelection,
+        openRestaurantDetailSelection,
+        clearRestaurantDetailSelection,
     } = props;
 
     const handleFilterChange = useCallback((newFilters: FilterState) => {
@@ -115,40 +124,38 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
 
     const handleRegionChange = useCallback((region: Region | null) => {
         setSelectedRegion(region);
-        setSearchedRestaurant(null);
-    }, [setSelectedRegion, setSearchedRestaurant]);
+        syncRestaurantDetailSelection(null, {
+            isPanelOpen: false,
+            searchFocusRestaurant: null,
+        });
+    }, [setSelectedRegion, syncRestaurantDetailSelection]);
 
     const handleCountryChange = useCallback((country: string) => {
         setSelectedCountry(country);
-        setIsPanelOpen(false);
-        setPanelRestaurant(null);
-        setSelectedRestaurant(null);
-        setSearchedRestaurant(null);
-    }, [setSelectedCountry, setIsPanelOpen, setPanelRestaurant, setSelectedRestaurant, setSearchedRestaurant]);
+        clearRestaurantDetailSelection();
+    }, [clearRestaurantDetailSelection, setSelectedCountry]);
 
     const handleRestaurantSelect = useCallback((restaurant: Restaurant) => {
-        setSelectedRestaurant(restaurant);
-    }, [setSelectedRestaurant]);
+        openRestaurantDetailSelection(restaurant);
+    }, [openRestaurantDetailSelection]);
 
     const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
-        setSearchedRestaurant(restaurant);
-        setSelectedRestaurant(restaurant);
-        setPanelRestaurant(restaurant);
-        setIsPanelOpen(true);
-    }, [setSearchedRestaurant, setSelectedRestaurant, setPanelRestaurant, setIsPanelOpen]);
+        openRestaurantDetailSelection(restaurant, {
+            searchFocusRestaurant: restaurant,
+        });
+    }, [openRestaurantDetailSelection]);
 
 
 
     const switchToSingleMap = useCallback((region?: Region | null) => {
         if (region !== undefined) {
             setSelectedRegion(region);
-            setSelectedRestaurant(null);
-            setSearchedRestaurant(null);
+            clearRestaurantDetailSelection();
 
             // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지도가 새 지역으로 이동할 수 있도록)
             window.dispatchEvent(new CustomEvent('resetUserMapMovement'));
         }
-    }, [setSelectedRegion, setSelectedRestaurant, setSearchedRestaurant]);
+    }, [clearRestaurantDetailSelection, setSelectedRegion]);
 
     const handleMapReady = useCallback((moveFunction: (restaurant: Restaurant) => void) => {
         setMoveToRestaurant(() => moveFunction);
@@ -157,11 +164,8 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
 
 
     const handlePanelClose = useCallback(() => {
-        setIsPanelOpen(false);
-        setPanelRestaurant(null);
-        setSelectedRestaurant(null);
-        setSearchedRestaurant(null);
-    }, [setIsPanelOpen, setPanelRestaurant, setSelectedRestaurant, setSearchedRestaurant]);
+        clearRestaurantDetailSelection();
+    }, [clearRestaurantDetailSelection]);
 
     return {
         handleFilterChange,
