@@ -1010,7 +1010,12 @@ function MobileControlOverlayComponent({
                             height={26}
                             className="rounded-md object-contain shrink-0"
                         />
-                        <span className="text-[15px] text-muted-foreground truncate">쯔동여지도 검색하기</span>
+                        <span className={cn(
+                            'text-[15px] truncate',
+                            searchQuery.trim() ? 'text-foreground' : 'text-muted-foreground'
+                        )}>
+                            {searchQuery.trim() || '쯔동여지도 검색하기'}
+                        </span>
                     </Button>
 
                     {renderBookmarkMenuButton()}
@@ -1222,6 +1227,7 @@ function MobileControlOverlayComponent({
                                     onSearchQueryChange={setSearchQuery}
                                     searchTypeValue={searchType}
                                     onSearchTypeChange={setSearchType}
+                                    clearQueryOnSelect={false}
                                     className="h-full w-full"
                                 />
                             </Suspense>

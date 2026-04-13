@@ -30,6 +30,7 @@ interface RestaurantSearchProps {
   searchTypeValue?: SearchType;
   onSearchTypeChange?: (value: SearchType) => void;
   hideSearchControls?: boolean;
+  clearQueryOnSelect?: boolean;
 }
 
 const MIN_SEARCH_QUERY_LENGTH = 2;
@@ -79,6 +80,7 @@ const RestaurantSearch = ({
   searchTypeValue,
   onSearchTypeChange,
   hideSearchControls = false,
+  clearQueryOnSelect = true,
 }: RestaurantSearchProps) => {
   const [internalSearchQuery, setInternalSearchQuery] = useState(getSearchQueryFromUrl);
   const [internalSearchType, setInternalSearchType] = useState<SearchType>('name');
@@ -277,9 +279,13 @@ const RestaurantSearch = ({
     }
     // 그리드 모드에서 검색 실행 시 콜백 호출
     onSearchExecute?.();
-    setSearchQuery("");
+    if (clearQueryOnSelect) {
+      setSearchQuery("");
+    } else {
+      setSearchQuery(restaurant.name);
+    }
     setIsFocused(false);
-  }, [addToHistory, onRestaurantSearch, onRestaurantSelect, onSearchExecute, queryClient, setSearchQuery]);
+  }, [addToHistory, clearQueryOnSelect, onRestaurantSearch, onRestaurantSelect, onSearchExecute, queryClient, setSearchQuery]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
