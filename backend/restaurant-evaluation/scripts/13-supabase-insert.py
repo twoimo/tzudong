@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -83,6 +84,8 @@ PIPELINE_REFRESH_FIELDS = (
 )
 
 LEGACY_REVIEW_LOCK_STATUSES = {"approved", "deleted"}
+OPTIONAL_SCHEMA_COMPAT_FIELDS = {"google_name"}
+MISSING_SCHEMA_COLUMN_RE = re.compile(r"Could not find the '([^']+)' column of '([^']+)' in the schema cache")
 MAX_RETRIES = 2
 RETRY_DELAY = 2
 
@@ -239,6 +242,57 @@ def fetch_review_rebind_candidates(supabase: Client, youtube_links: list[str]) -
     return build_review_rebind_candidate_map(response.data)
 
 
+def extract_missing_schema_column(exc: Exception, table_name: str = "restaurants") -> str | None:
+    match = MISSING_SCHEMA_COLUMN_RE.search(str(exc))
+    if not match:
+        return None
+
+    column_name, missing_table = match.groups()
+    if missing_table != table_name:
+        return None
+
+    return column_name
+
+
+def drop_optional_schema_field_from_rows(
+    rows: list[dict[str, Any]],
+    field_name: str,
+) -> tuple[list[dict[str, Any]], bool]:
+    stripped = False
+    sanitized_rows: list[dict[str, Any]] = []
+
+    for row in rows:
+        if field_name in row:
+            sanitized_rows.append({key: value for key, value in row.items() if key != field_name})
+            stripped = True
+        else:
+            sanitized_rows.append(dict(row))
+
+    return sanitized_rows, stripped
+
+
+def handle_optional_schema_mismatch_for_rows(
+    exc: Exception,
+    rows: list[dict[str, Any]],
+    omitted_columns: set[str],
+) -> tuple[list[dict[str, Any]], bool]:
+    missing_column = extract_missing_schema_column(exc)
+    if not missing_column or missing_column not in OPTIONAL_SCHEMA_COMPAT_FIELDS:
+        return rows, False
+    if missing_column in omitted_columns:
+        return rows, False
+
+    sanitized_rows, stripped = drop_optional_schema_field_from_rows(rows, missing_column)
+    if not stripped:
+        return rows, False
+
+    omitted_columns.add(missing_column)
+    print(
+        f"[WARN] restaurants 스키마에 optional 컬럼 '{missing_column}' 이 없어 해당 필드를 제외하고 재시도합니다."
+    )
+    return sanitized_rows, True
+
+
 def execute_upsert_rows(
     supabase: Client,
     rows: list[dict[str, Any]],
@@ -252,18 +306,28 @@ def execute_upsert_rows(
         stats["inserted"] += len(rows)
         return
 
-    for attempt in range(1, MAX_RETRIES + 2):
+    upsert_rows = [dict(row) for row in rows]
+    omitted_columns: set[str] = set()
+    attempt = 1
+
+    while attempt <= MAX_RETRIES + 1:
         try:
-            supabase.table("restaurants").upsert(rows, on_conflict="trace_id").execute()
-            stats["inserted"] += len(rows)
+            supabase.table("restaurants").upsert(upsert_rows, on_conflict="trace_id").execute()
+            stats["inserted"] += len(upsert_rows)
             return
         except Exception as exc:
+            upsert_rows, handled = handle_optional_schema_mismatch_for_rows(exc, upsert_rows, omitted_columns)
+            if handled:
+                continue
+
             if attempt <= MAX_RETRIES:
                 print(f"[WARN] 배치 Upsert 실패 (시도 {attempt}/{MAX_RETRIES + 1}): {exc}")
                 time.sleep(RETRY_DELAY)
+                attempt += 1
             else:
                 print(f"[ERROR] 배치 Upsert 최종 실패 ({MAX_RETRIES + 1}회 시도 후): {exc}")
-                stats["errors"] += len(rows)
+                stats["errors"] += len(upsert_rows)
+                return
 
 
 def execute_rebind_updates(
@@ -280,20 +344,35 @@ def execute_rebind_updates(
         return
 
     for row_id, payload in updates:
-        for attempt in range(1, MAX_RETRIES + 2):
+        update_payload = dict(payload)
+        omitted_columns: set[str] = set()
+        attempt = 1
+
+        while attempt <= MAX_RETRIES + 1:
             try:
-                supabase.table("restaurants").update(payload).eq("id", row_id).execute()
+                supabase.table("restaurants").update(update_payload).eq("id", row_id).execute()
                 stats["inserted"] += 1
                 break
             except Exception as exc:
+                sanitized_rows, handled = handle_optional_schema_mismatch_for_rows(
+                    exc,
+                    [update_payload],
+                    omitted_columns,
+                )
+                if handled:
+                    update_payload = sanitized_rows[0]
+                    continue
+
                 if attempt <= MAX_RETRIES:
                     print(
                         f"[WARN] trace_id rebind 실패 (id={row_id}, 시도 {attempt}/{MAX_RETRIES + 1}): {exc}"
                     )
                     time.sleep(RETRY_DELAY)
+                    attempt += 1
                 else:
                     print(f"[ERROR] trace_id rebind 최종 실패 (id={row_id}): {exc}")
                     stats["errors"] += 1
+                    break
 
 
 def process_and_upsert(
@@ -480,7 +559,10 @@ def main() -> None:
         process_and_upsert(supabase, batch, dry_run, stats)
 
     print(f"\n{'=' * 50}")
-    print("[OK] Supabase 삽입 완료!")
+    if stats["errors"] > 0:
+        print("[ERROR] Supabase 삽입 완료 (일부 실패)")
+    else:
+        print("[OK] Supabase 삽입 완료!")
     print(f"   총 레코드: {stats['total_records']}개")
     print(f"   성공 (Insert): {stats['inserted']}개")
     print(f"   건너뜀 (중복): {stats['skipped']}개")
@@ -494,6 +576,10 @@ def main() -> None:
     if dry_run:
         print("   [DRY RUN 모드 - 실제 삽입 안됨]")
     print(f"{'=' * 50}")
+
+    if stats["errors"] > 0:
+        print("[ERROR] 일부 레코드를 Supabase에 반영하지 못했습니다.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

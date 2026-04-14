@@ -15,6 +15,71 @@ assert spec and spec.loader
 spec.loader.exec_module(supabase_insert)
 
 
+class FakeResponse:
+    def __init__(self, data=None):
+        self.data = data or []
+
+
+class FakeTableQuery:
+    def __init__(self, parent, table_name: str):
+        self.parent = parent
+        self.table_name = table_name
+        self.action = None
+        self.rows = None
+        self.on_conflict = None
+        self.payload = None
+        self.eq_filter = None
+
+    def upsert(self, rows, on_conflict=None):
+        self.action = "upsert"
+        self.rows = deepcopy(rows)
+        self.on_conflict = on_conflict
+        return self
+
+    def update(self, payload):
+        self.action = "update"
+        self.payload = deepcopy(payload)
+        return self
+
+    def eq(self, field, value):
+        self.eq_filter = (field, value)
+        return self
+
+    def execute(self):
+        if self.action == "upsert":
+            self.parent.upsert_calls.append(
+                {"table": self.table_name, "rows": self.rows, "on_conflict": self.on_conflict}
+            )
+            if self.parent.upsert_behaviors:
+                behavior = self.parent.upsert_behaviors.pop(0)
+                if isinstance(behavior, Exception):
+                    raise behavior
+            return FakeResponse()
+
+        if self.action == "update":
+            self.parent.update_calls.append(
+                {"table": self.table_name, "payload": self.payload, "eq": self.eq_filter}
+            )
+            if self.parent.update_behaviors:
+                behavior = self.parent.update_behaviors.pop(0)
+                if isinstance(behavior, Exception):
+                    raise behavior
+            return FakeResponse()
+
+        raise AssertionError("Unsupported query action")
+
+
+class FakeSupabase:
+    def __init__(self, *, upsert_behaviors=None, update_behaviors=None):
+        self.upsert_behaviors = list(upsert_behaviors or [])
+        self.update_behaviors = list(update_behaviors or [])
+        self.upsert_calls = []
+        self.update_calls = []
+
+    def table(self, table_name: str):
+        return FakeTableQuery(self, table_name)
+
+
 class SupabaseInsertAdminLockTests(unittest.TestCase):
     def make_stats(self) -> dict[str, int]:
         return {
@@ -210,6 +275,42 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         self.assertEqual([incoming], upserts)
         self.assertEqual([], rebinds)
         self.assertEqual(1, stats["ambiguous_rebind_skips"])
+
+    def test_execute_upsert_rows_retries_without_optional_google_name_field(self):
+        stats = self.make_stats()
+        rows = [self.make_incoming(trace_id="trace-new")]
+        supabase = FakeSupabase(
+            upsert_behaviors=[
+                Exception("Could not find the 'google_name' column of 'restaurants' in the schema cache"),
+                None,
+            ]
+        )
+
+        supabase_insert.execute_upsert_rows(supabase, rows, False, stats)
+
+        self.assertEqual(1, stats["inserted"])
+        self.assertEqual(0, stats["errors"])
+        self.assertEqual(2, len(supabase.upsert_calls))
+        self.assertIn("google_name", supabase.upsert_calls[0]["rows"][0])
+        self.assertNotIn("google_name", supabase.upsert_calls[1]["rows"][0])
+
+    def test_execute_rebind_updates_retries_without_optional_google_name_field(self):
+        stats = self.make_stats()
+        payload = self.make_incoming(trace_id="trace-new")
+        supabase = FakeSupabase(
+            update_behaviors=[
+                Exception("Could not find the 'google_name' column of 'restaurants' in the schema cache"),
+                None,
+            ]
+        )
+
+        supabase_insert.execute_rebind_updates(supabase, [("row-9", payload)], False, stats)
+
+        self.assertEqual(1, stats["inserted"])
+        self.assertEqual(0, stats["errors"])
+        self.assertEqual(2, len(supabase.update_calls))
+        self.assertIn("google_name", supabase.update_calls[0]["payload"])
+        self.assertNotIn("google_name", supabase.update_calls[1]["payload"])
 
 
 if __name__ == "__main__":
