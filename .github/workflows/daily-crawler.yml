@@ -26,6 +26,11 @@ on:
         required: false
         default: ''
         type: string
+      checkout_ref:
+        description: '검증 전용 체크아웃 ref (기본: data)'
+        required: false
+        default: 'data'
+        type: string
 
 permissions:
   contents: write
@@ -74,7 +79,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: data
+          ref: ${{ github.event.inputs.checkout_ref || 'data' }}
           fetch-depth: 0
 
       - name: Install System Dependencies (ffmpeg, jq, rclone)
