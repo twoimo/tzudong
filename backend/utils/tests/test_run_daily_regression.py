@@ -60,13 +60,22 @@ class RunDailyRegressionTests(unittest.TestCase):
         )
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
-        self.assertIn("Step 13 (Supabase) 건너뜀", result.stdout)
+        self.assertIn("Step 13 (Supabase) 선택 건너뜀", result.stdout)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY 또는 VITE_SUPABASE_PUBLISHABLE_KEY", result.stdout)
+
+    def test_supabase_insert_failure_returns_non_zero_exit(self) -> None:
+        result = self._run_script(supabase_insert_exit=23, force_phase3=True)
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Step 13 (Supabase) 실패", result.stdout)
+        self.assertIn("필수 단계 실패가 감지되었습니다", result.stdout)
+        self.assertNotIn("모든 필수 단계가 완료되었습니다!", result.stdout)
 
     def _run_script(
         self,
         *,
         transcript_exit: int = 0,
+        supabase_insert_exit: int = 0,
         final_sync_stage_failure: bool = False,
         env_overrides: dict[str, str | None] | None = None,
         force_phase3: bool = False,
@@ -95,6 +104,7 @@ class RunDailyRegressionTests(unittest.TestCase):
                 "RUN_DAILY_SUMMARY_PATH": str(project_root / "tmp" / "summary.md"),
                 "RUN_DAILY_TEST_STATE_DIR": str(state_dir),
                 "RUN_DAILY_TEST_TRANSCRIPT_EXIT": str(transcript_exit),
+                "RUN_DAILY_TEST_SUPABASE_INSERT_EXIT": str(supabase_insert_exit),
                 "RUN_DAILY_TEST_FINAL_SYNC_STAGE_FAILURE": "1" if final_sync_stage_failure else "0",
                 "PYTHON_CMD": "python3",
             }
@@ -238,6 +248,10 @@ class RunDailyRegressionTests(unittest.TestCase):
             echo "변환 완료: 0개"
             ;;
           13-supabase-insert.py)
+            if [ "${RUN_DAILY_TEST_SUPABASE_INSERT_EXIT:-0}" != "0" ]; then
+              echo "simulated supabase insert failure" >&2
+              exit "${RUN_DAILY_TEST_SUPABASE_INSERT_EXIT}"
+            fi
             echo "성공 (Insert): 0"
             echo "건너뜀 (중복): 0"
             ;;
