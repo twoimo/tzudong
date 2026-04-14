@@ -52,6 +52,7 @@ export PATH="$PROJECT_ROOT/backend/bin:$PATH"
 RUN_DAILY_POLICY_MODE="${RUN_DAILY_POLICY_MODE:-end_to_end}"
 RUN_DAILY_VERIFY_OPTIONAL_SCENARIO="${RUN_DAILY_VERIFY_OPTIONAL_SCENARIO:-}"
 RUN_DAILY_VERIFY_REQUIRED_SCENARIO="${RUN_DAILY_VERIFY_REQUIRED_SCENARIO:-}"
+RUN_DAILY_TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
 NO_WORK_SHORT_CIRCUIT=false
 PHASE3_TIMEOUT_SKIP=false
 
@@ -612,13 +613,14 @@ count_pending_jsonl() {
     rm -f "$source_list" "$target_list"
 }
 
-# [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
+# [Function] 데이터 커밋 함수 (대상 브랜치에서 직접 실행)
 sync_data_to_remote() {
     local STEP_NAME="$1"
+    local SYNC_BRANCH="${TARGET_BRANCH:-$RUN_DAILY_TARGET_BRANCH}"
     local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-1200}"
     local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
     log "INFO" "------------------------------------------------------------"
-    log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
+    log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME, Branch: $SYNC_BRANCH)"
 
     # 데이터 폴더 변경 감지 (status 전체 스캔 대신 diff/ls-files 기반)
     if ! has_pending_data_changes; then
@@ -665,37 +667,37 @@ sync_data_to_remote() {
 
     # 원격 변경사항 동기화 (충돌 방지)
     log "INFO" "원격 변경사항 확인 및 Rebase..."
-    if ! run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin data 2>&1 | tee -a "$LOG_FILE"; then
+    if ! run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
         local LOCAL_HEAD REMOTE_HEAD DIVERGENCE_STATE
         log "WARN" "Rebase 실패 - rebase 중단 후 안전 동기화 전략으로 전환"
         git rebase --abort 2>/dev/null || true
 
         # 네트워크/일시 오류 가능성을 고려해 일반 push를 한 번 더 시도
         log "INFO" "Rebase 실패 후 일반 push 재시도..."
-        if run_git_with_timeout "$network_timeout" git push origin data 2>&1 | tee -a "$LOG_FILE"; then
-            log "OK" "data 브랜치 업데이트 완료 ($STEP_NAME)"
+        if run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+            log "OK" "$SYNC_BRANCH 브랜치 업데이트 완료 ($STEP_NAME)"
             return 0
         fi
 
         # push 실패 시 로컬/원격 관계를 로그로 남겨 원인 파악 용이하게 함
-        if ! run_git_with_timeout "$network_timeout" git fetch origin data 2>&1 | tee -a "$LOG_FILE"; then
+        if ! run_git_with_timeout "$network_timeout" git fetch origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
             log "WARN" "원격 상태 재조회(fetch) 실패 - divergence 판별 정확도가 낮을 수 있습니다."
         fi
 
         LOCAL_HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-        REMOTE_HEAD=$(git rev-parse --short origin/data 2>/dev/null || echo "unknown")
-        if git merge-base --is-ancestor origin/data HEAD 2>/dev/null; then
+        REMOTE_HEAD=$(git rev-parse --short "origin/$SYNC_BRANCH" 2>/dev/null || echo "unknown")
+        if git merge-base --is-ancestor "origin/$SYNC_BRANCH" HEAD 2>/dev/null; then
             DIVERGENCE_STATE="local_ahead_or_equal"
-        elif git merge-base --is-ancestor HEAD origin/data 2>/dev/null; then
+        elif git merge-base --is-ancestor HEAD "origin/$SYNC_BRANCH" 2>/dev/null; then
             DIVERGENCE_STATE="local_behind_remote"
         else
             DIVERGENCE_STATE="diverged"
         fi
-        log "WARN" "data 동기화 충돌 감지 (local=${LOCAL_HEAD}, remote=${REMOTE_HEAD}, state=${DIVERGENCE_STATE})"
+        log "WARN" "$SYNC_BRANCH 동기화 충돌 감지 (local=${LOCAL_HEAD}, remote=${REMOTE_HEAD}, state=${DIVERGENCE_STATE})"
 
         if is_truthy "$ALLOW_DATA_FORCE_PUSH"; then
             log "WARN" "ALLOW_DATA_FORCE_PUSH=$ALLOW_DATA_FORCE_PUSH 감지 - force-with-lease를 명시적으로 수행합니다."
-            if ! run_git_with_timeout "$network_timeout" git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
+            if ! run_git_with_timeout "$network_timeout" git push --force-with-lease origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
                 log "ERROR" "force-with-lease push 실패"
                 return 1
             fi
@@ -706,13 +708,13 @@ sync_data_to_remote() {
         fi
     else
         log "INFO" "Pushing to remote..."
-        if ! run_git_with_timeout "$network_timeout" git push origin data 2>&1 | tee -a "$LOG_FILE"; then
-            log "ERROR" "Failed to push to data branch"
+        if ! run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+            log "ERROR" "Failed to push to $SYNC_BRANCH branch"
             return 1
         fi
     fi
 
-    log "OK" "data 브랜치 업데이트 완료 ($STEP_NAME)"
+    log "OK" "$SYNC_BRANCH 브랜치 업데이트 완료 ($STEP_NAME)"
 }
 
 # ============================================================
@@ -723,9 +725,9 @@ log "INFO" "============================================================"
 log "INFO" "일일 데이터 수집 파이프라인 시작"
 log "INFO" "============================================================"
 
-# [Branch Check] 'data' 브랜치인지 확인
+# [Branch Check] 대상 브랜치 확인
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-TARGET_BRANCH="data"
+TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
 
 log "INFO" "현재 브랜치 확인: $CURRENT_BRANCH"
 
@@ -845,7 +847,7 @@ echo "::endgroup::"
 
 # [PERF] Sync #1: 메타데이터/정리 완료 후 저장
 if ! sync_data_to_remote "Phase 1 (Meta/Cleanup)"; then
-    record_required_failure "Sync #1 (Phase 1 Meta/Cleanup)" "data 동기화 실패"
+    record_required_failure "Sync #1 (Phase 1 Meta/Cleanup)" "$TARGET_BRANCH 동기화 실패"
 fi
 
 # ============================================================
@@ -941,7 +943,7 @@ echo "::endgroup::"
 
 # [PERF] Sync #2: 자막/프레임 완료 후 저장 (Phase 2 통합 - 기존 3회 → 1회)
 if ! sync_data_to_remote "Phase 2 (Transcript/Frames)"; then
-    record_required_failure "Sync #2 (Phase 2 Transcript/Frames)" "data 동기화 실패"
+    record_required_failure "Sync #2 (Phase 2 Transcript/Frames)" "$TARGET_BRANCH 동기화 실패"
 fi
 
 # [PERF] 타임아웃 체크 - Phase 3 진입 전 시간 확인
@@ -950,7 +952,7 @@ if [ "${SKIP_PHASE3:-false}" != "true" ] && ! check_timeout 45; then
     PHASE3_TIMEOUT_SKIP=true
     record_policy_issue "Phase 3" "timeout_incomplete" "전체 타임아웃 도달"
     if ! sync_data_to_remote "Timeout Safety Sync"; then
-        record_required_failure "Sync (Timeout Safety Sync)" "data 동기화 실패"
+        record_required_failure "Sync (Timeout Safety Sync)" "$TARGET_BRANCH 동기화 실패"
     fi
     # Summary 생성으로 점프
     SKIP_PHASE3=true
@@ -1063,7 +1065,7 @@ echo "::endgroup::"
 if [ "${STEP_10_OK}" = "true" ]; then
     # [PERF] Sync #3: Rule 평가 완료 후 저장 (LAAJ 전 백업 - 중요)
     if ! sync_data_to_remote "Phase 3a (Rule Eval)"; then
-        record_required_failure "Sync #3 (Phase 3a Rule Eval)" "data 동기화 실패"
+        record_required_failure "Sync #3 (Phase 3a Rule Eval)" "$TARGET_BRANCH 동기화 실패"
     fi
 
     # [PERF] 타임아웃 체크 - LAAJ 진입 전 시간 확인 (가장 오래 걸리는 단계)
@@ -1146,9 +1148,9 @@ log "INFO" "일일 데이터 수집 파이프라인 종료 (최종 상태 집계
 log "INFO" "============================================================"
 
 # [PERF] Final Sync (모든 Phase의 남은 변경사항 통합 커밋)
-log "INFO" "[Final] 'data' 브랜치에 최종 데이터 저장..."
+log "INFO" "[Final] '$TARGET_BRANCH' 브랜치에 최종 데이터 저장..."
 if ! sync_data_to_remote "Final Sync"; then
-    record_required_failure "Final Sync" "data 동기화 실패"
+    record_required_failure "Final Sync" "$TARGET_BRANCH 동기화 실패"
 fi
 
 # 코드 에디터 동기화 신호
@@ -1489,7 +1491,7 @@ echo "- **Log File**: \`$LOG_FILE_REL\`" >> "$SUMMARY_MD"
 if [ -n "${ARCHIVED_LOG:-}" ]; then
     echo "- **Archived Previous Log**: \`${ARCHIVED_LOG#$PROJECT_ROOT/}\`" >> "$SUMMARY_MD"
 fi
-echo "- **Data Branch**: [\`data\`](https://github.com/twoimo/tzudong/tree/data)" >> "$SUMMARY_MD"
+echo "- **Target Branch**: [\`$TARGET_BRANCH\`](https://github.com/twoimo/tzudong/tree/$TARGET_BRANCH)" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
 echo "### 🗺️ 파이프라인 전체 흐름도 (초보자용)" >> "$SUMMARY_MD"
