@@ -35,10 +35,10 @@ on:
 permissions:
   contents: write
 
-# [PERF] 동시 실행 방지 - 이전 실행 중이면 새 실행이 대기 (취소하지 않음)
-# 이중 실행으로 인한 분 낭비와 git 충돌을 방지
+# [PERF] 운영 data 런은 직렬화하고, 검증용 non-data workflow_dispatch 는 브랜치별로 분리
+# data/schedule 경로의 분 낭비와 git 충돌은 막되, 검증 브랜치는 운영 락에 막히지 않도록 함
 concurrency:
-  group: daily-crawl-pipeline
+  group: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || 'data') != 'data' && format('daily-crawl-validation-{0}', github.event.inputs.checkout_ref || github.ref_name) || 'daily-crawl-pipeline' }}
   cancel-in-progress: false
 
 jobs:
