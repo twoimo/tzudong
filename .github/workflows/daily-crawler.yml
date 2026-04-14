@@ -11,6 +11,21 @@ on:
         required: false
         default: '-1'
         type: string
+      policy_mode:
+        description: 'run_daily 정책 모드 (기본: end_to_end)'
+        required: false
+        default: 'end_to_end'
+        type: string
+      verify_optional_scenario:
+        description: '검증 전용 optional 시나리오 (예: missing_youtube, missing_supabase_migration, missing_supabase_insert)'
+        required: false
+        default: ''
+        type: string
+      verify_required_scenario:
+        description: '검증 전용 required 시나리오 (예: step08_quota)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -234,6 +249,9 @@ jobs:
           OLLAMA_HOST: http://localhost:11434
           # CI
           CI: true
+          RUN_DAILY_POLICY_MODE: ${{ github.event.inputs.policy_mode || 'end_to_end' }}
+          RUN_DAILY_VERIFY_OPTIONAL_SCENARIO: ${{ github.event.inputs.verify_optional_scenario || '' }}
+          RUN_DAILY_VERIFY_REQUIRED_SCENARIO: ${{ github.event.inputs.verify_required_scenario || '' }}
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
