@@ -257,6 +257,7 @@ jobs:
           RUN_DAILY_POLICY_MODE: ${{ github.event.inputs.policy_mode || 'end_to_end' }}
           RUN_DAILY_VERIFY_OPTIONAL_SCENARIO: ${{ github.event.inputs.verify_optional_scenario || '' }}
           RUN_DAILY_VERIFY_REQUIRED_SCENARIO: ${{ github.event.inputs.verify_required_scenario || '' }}
+          RUN_DAILY_TARGET_BRANCH: ${{ github.event.inputs.checkout_ref || 'data' }}
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
