@@ -139,6 +139,66 @@ test('downloadVideo reuses the first cache candidate that actually has a video s
     fs.rmSync(outputDir, { recursive: true, force: true });
 });
 
+test('processSingleVideo re-extracts when reused segments miss a requested format subtree', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const channel = `heatmap-partial-reuse-${Date.now()}`;
+    const channelDir = path.join(DATA_ROOT, channel);
+    const videoId = 'abc123';
+    fs.mkdirSync(path.join(channelDir, 'meta'), { recursive: true });
+    fs.writeFileSync(
+        path.join(channelDir, 'meta', `${videoId}.jsonl`),
+        `${JSON.stringify({ recollect_id: 1, duration: 120 })}\n`,
+        'utf8'
+    );
+
+    const previousSegmentDir = path.join(framesDir, videoId, '0', '1_1_2', 'jpg', '360p_1.0fps');
+    fs.mkdirSync(previousSegmentDir, { recursive: true });
+    fs.writeFileSync(path.join(previousSegmentDir, '1.00.jpg'), 'stub', 'utf8');
+
+    const { processSingleVideo } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+        GDRIVE_REMOTE_PATH: undefined,
+    });
+
+    let acquireCalls = 0;
+    const extractedExts = [];
+    await processSingleVideo(
+        videoId,
+        {
+            channel,
+            fps: 1.0,
+            buffer: 0.0,
+            quality: ['360p'],
+            ext: ['jpg', 'webp'],
+            url: 'https://www.youtube.com/watch?v=abc123',
+        },
+        {
+            loadSegments: async () => [{ startSec: 1, endSec: 2, peakSec: 1.5 }],
+            acquireVideo: async () => {
+                acquireCalls += 1;
+                return path.join(cacheDir, `${videoId}.mp4`);
+            },
+            extractFramesFn: async (_videoPath, _segments, _outputDir, _quality, _fps, _buffer, currentExt) => {
+                extractedExts.push(currentExt);
+                return { totalSegments: 1, failedSegments: 0, totalFrames: 1 };
+            },
+        }
+    );
+
+    assert.equal(acquireCalls, 1);
+    assert.deepEqual(extractedExts, ['jpg', 'webp']);
+    assert.equal(
+        fs.existsSync(path.join(framesDir, videoId, '1', '1_1_2', 'jpg', '360p_1.0fps', '1.00.jpg')),
+        true
+    );
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+    fs.rmSync(channelDir, { recursive: true, force: true });
+});
+
 test('processSingleVideo fails closed when no usable media fallback exists', async () => {
     const cacheDir = makeTempDir('heatmap-cache-');
     const framesDir = makeTempDir('heatmap-frames-');
