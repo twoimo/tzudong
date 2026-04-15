@@ -1398,27 +1398,12 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
 
             let allSegmentsExist = true;
             for (const currentExt of extensions) {
-                // 하나라도 구간이 없으면 다시 진행
-                const segmentCheck = segments.every((seg, i) => {
-                    const startTime = Math.max(0, seg.startSec - buffer);
-                    // duration 몰라도 폴더명 매칭을 위해 대략적 추론 or 단순 존재 여부 체크
-                    // 정확한 폴더명을 알기 어려우므로(duration 필요), 
-                    // 해당 recollectId 폴더 내에 configDirName을 포함한 경로가 세그먼트 수만큼 있는지 체크는 복잡.
-                    // 대신 extractFrames 내부 스킵 로직에 의존하되, 여기서는 '비디오 다운로드'를 막는게 핵심.
-                    // 간단히: outputDir 내의 폴더들을 뒤져서 configDirName을 가진 폴더가 segments.length 만큼 되는지 확인?
-                    return false; // 구현 복잡도로 인해 아래 로직으로 대체
-                });
-
-                // 더 확실한 방법: 이미 추출된 폴더 개수 확인
-                // 구조: frames/VID/RID/SEG/EXT/CONF
-                // SEG 폴더들을 순회하며 EXT/CONF가 있는지 확인
                 if (!fs.existsSync(outputDir)) {
                     allSegmentsExist = false;
                     break;
                 }
 
                 const segDirs = fs.readdirSync(outputDir);
-                // 세그먼트 폴더 개수가 히트맵 구간 수와 비슷하거나 같다고 가정
                 let completedSegs = 0;
                 for (const sd of segDirs) {
                     const targetPath = path.join(outputDir, sd, currentExt, configDirName);
@@ -1440,23 +1425,16 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
 
             videoPath = await acquireVideo(videoId, tempDir, currentQuality);
 
-            // [추가] 캐시 경로가 아니면 다운로드 수행된 것
             if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR)) {
                 downloadPerformed = true;
             }
 
             if (!videoPath) {
                 log('error', `[Fail] 비디오 파일 확보 실패 (${currentQuality}). 건너뜁니다.`);
-                logFailedUrl(channel, url); // [추가] 실패 로깅
+                logFailedUrl(channel, url);
                 videoHadFailure = true;
-                continue; // 다음 화질 처리
+                continue;
             }
-
-            // 3. 프레임 추출 (모든 확장자에 대해 반복)
-            // [수정] 위에서 이미 선언했으므로 재사용
-            // const recollectId = ... 
-            // const outputDir = ... 
-
 
             for (const currentExt of extensions) {
                 const extractionSummary = await extractFramesFn(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
