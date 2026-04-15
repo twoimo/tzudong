@@ -48,8 +48,6 @@ jobs:
     timeout-minutes: 90
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-    
     steps:
       # ============================================================
       # 환경 준비 (Setup) - 캐시 최대 활용으로 시간 절약
@@ -77,7 +75,7 @@ jobs:
           free -h
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
           fetch-depth: 0
@@ -92,7 +90,7 @@ jobs:
       # ============================================================
 
       - name: Cache Puppeteer Browser
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/puppeteer
           key: ${{ runner.os }}-puppeteer-${{ hashFiles('backend/package-lock.json') }}
@@ -101,7 +99,7 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -113,7 +111,7 @@ jobs:
           deno-version: v2.x
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -185,7 +183,7 @@ jobs:
 
       - name: Cache Ollama Models
         if: env.MAX_CONTEXT_VIDEOS != '-1'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.ollama
@@ -277,25 +275,45 @@ jobs:
       - name: Upload Results to GDrive
         if: always()
         continue-on-error: true
-        timeout-minutes: 10
+        timeout-minutes: 20
         env:
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
         run: |
-          if [ ! -d "backend/restaurant-crawling/data/frames" ]; then
+          FRAMES_DIR="backend/restaurant-crawling/data/frames"
+          if [ ! -d "$FRAMES_DIR" ]; then
             echo "No frames directory found, skipping upload."
             exit 0
           fi
 
-          # [PERF] 최근 2시간 내 생성된 파일만 카운트 (신규 프레임 여부 확인)
-          NEW_COUNT=$(find "backend/restaurant-crawling/data/frames" -name "*.jpg" -mmin -120 2>/dev/null | wc -l)
-          
-          if [ "$NEW_COUNT" -gt 0 ]; then
-            echo "Uploading $NEW_COUNT new frames to GDrive..."
-            # --fast-list: API 호출 최적화 (1000개 단위 리스팅)
-            # --max-age 2h: 최근 2시간 내 변경된 파일만 업로드 대상
-            # --transfers 4 --checkers 4 --tpslimit 4: 구글 드라이브 API 할당량 초과(403) 방지
-            rclone copy "backend/restaurant-crawling/data/frames" "$GDRIVE_FRAMES_PATH" \
-              --progress --fast-list --max-age 2h --transfers 4 --checkers 4 --tpslimit 4
-          else
-            echo "No new frames detected, skipping GDrive upload."
+          MANIFEST_FILE=$(mktemp)
+          trap 'rm -f "$MANIFEST_FILE"' EXIT
+
+          # [PERF] 최근 2시간 내 생성된 프레임 이미지 파일만 manifest로 추려 업로드 범위를 축소
+          find "$FRAMES_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) -mmin -120 -printf '%P\n' 2>/dev/null | sort > "$MANIFEST_FILE"
+          NEW_COUNT=$(wc -l < "$MANIFEST_FILE" | tr -d ' ')
+
+          if [ "$NEW_COUNT" -eq 0 ]; then
+            echo "No recent frame files detected, skipping GDrive upload."
+            exit 0
           fi
+
+          echo "Uploading $NEW_COUNT recent frame files to GDrive..."
+          UPLOAD_EXIT=0
+          (
+            cd "$FRAMES_DIR"
+            # --no-traverse: 대형 원격 트리 전체 리스팅을 피함
+            # --ignore-existing: 재실행 시 이미 올라간 프레임 재업로드를 피함
+            # timeout 18m: GitHub step hard-timeout(20m) 전에 소프트 종료
+            # --transfers 4 --checkers 4 --tpslimit 4: 구글 드라이브 API 할당량 초과(403) 방지
+            timeout 18m rclone copy . "$GDRIVE_FRAMES_PATH" \
+              --files-from "$MANIFEST_FILE" \
+              --no-traverse --ignore-existing \
+              --stats 30s --transfers 4 --checkers 4 --tpslimit 4
+          ) || UPLOAD_EXIT=$?
+
+          if [ "$UPLOAD_EXIT" -eq 124 ]; then
+            echo "GDrive upload reached soft time limit before the GitHub step timeout; stopping early without failing the workflow."
+            exit 0
+          fi
+
+          exit "$UPLOAD_EXIT"
