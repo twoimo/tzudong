@@ -11,14 +11,34 @@ on:
         required: false
         default: '-1'
         type: string
+      policy_mode:
+        description: 'run_daily 정책 모드 (기본: end_to_end)'
+        required: false
+        default: 'end_to_end'
+        type: string
+      verify_optional_scenario:
+        description: '검증 전용 optional 시나리오 (예: missing_youtube, missing_supabase_migration, missing_supabase_insert)'
+        required: false
+        default: ''
+        type: string
+      verify_required_scenario:
+        description: '검증 전용 required 시나리오 (예: step08_quota)'
+        required: false
+        default: ''
+        type: string
+      checkout_ref:
+        description: '검증 전용 체크아웃 ref (기본: data)'
+        required: false
+        default: 'data'
+        type: string
 
 permissions:
   contents: write
 
-# [PERF] 동시 실행 방지 - 이전 실행 중이면 새 실행이 대기 (취소하지 않음)
-# 이중 실행으로 인한 분 낭비와 git 충돌을 방지
+# [PERF] 운영 data 런은 직렬화하고, 검증용 non-data workflow_dispatch 는 브랜치별로 분리
+# data/schedule 경로의 분 낭비와 git 충돌은 막되, 검증 브랜치는 운영 락에 막히지 않도록 함
 concurrency:
-  group: daily-crawl-pipeline
+  group: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || 'data') != 'data' && format('daily-crawl-validation-{0}', github.event.inputs.checkout_ref || github.ref_name) || 'daily-crawl-pipeline' }}
   cancel-in-progress: false
 
 jobs:
@@ -59,7 +79,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: data
+          ref: ${{ github.event.inputs.checkout_ref || 'data' }}
           fetch-depth: 0
 
       - name: Install System Dependencies (ffmpeg, jq, rclone)
@@ -234,6 +254,10 @@ jobs:
           OLLAMA_HOST: http://localhost:11434
           # CI
           CI: true
+          RUN_DAILY_POLICY_MODE: ${{ github.event.inputs.policy_mode || 'end_to_end' }}
+          RUN_DAILY_VERIFY_OPTIONAL_SCENARIO: ${{ github.event.inputs.verify_optional_scenario || '' }}
+          RUN_DAILY_VERIFY_REQUIRED_SCENARIO: ${{ github.event.inputs.verify_required_scenario || '' }}
+          RUN_DAILY_TARGET_BRANCH: ${{ github.event.inputs.checkout_ref || 'data' }}
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
