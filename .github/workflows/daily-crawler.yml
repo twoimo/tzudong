@@ -27,18 +27,18 @@ on:
         default: ''
         type: string
       checkout_ref:
-        description: '검증 전용 체크아웃 ref (기본: data)'
+        description: '검증/수동 실행용 체크아웃 ref (미입력 시 default branch)'
         required: false
-        default: 'data'
+        default: ''
         type: string
 
 permissions:
   contents: write
 
-# [PERF] 운영 data 런은 직렬화하고, 검증용 non-data workflow_dispatch 는 브랜치별로 분리
-# data/schedule 경로의 분 낭비와 git 충돌은 막되, 검증 브랜치는 운영 락에 막히지 않도록 함
+# [PERF] 운영(default branch -> data sync) 런은 직렬화하고, 검증용 non-default workflow_dispatch 는 브랜치별로 분리
+# schedule 및 수동 default branch 재실행은 운영 락을 공유하고, 검증 브랜치는 별도 group 으로 실행
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || 'data') != 'data' && format('daily-crawl-validation-{0}', github.event.inputs.checkout_ref || github.ref_name) || 'daily-crawl-pipeline' }}
+  group: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && format('daily-crawl-validation-{0}', github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'daily-crawl-pipeline') || 'daily-crawl-pipeline' }}
   cancel-in-progress: false
 
 jobs:
@@ -79,7 +79,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.checkout_ref || 'data' }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
           fetch-depth: 0
 
       - name: Install System Dependencies (ffmpeg, jq, rclone)
@@ -257,7 +257,8 @@ jobs:
           RUN_DAILY_POLICY_MODE: ${{ github.event.inputs.policy_mode || 'end_to_end' }}
           RUN_DAILY_VERIFY_OPTIONAL_SCENARIO: ${{ github.event.inputs.verify_optional_scenario || '' }}
           RUN_DAILY_VERIFY_REQUIRED_SCENARIO: ${{ github.event.inputs.verify_required_scenario || '' }}
-          RUN_DAILY_TARGET_BRANCH: ${{ github.event.inputs.checkout_ref || 'data' }}
+          RUN_DAILY_EXECUTION_BRANCH: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
+          RUN_DAILY_TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'data') || 'data' }}
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
