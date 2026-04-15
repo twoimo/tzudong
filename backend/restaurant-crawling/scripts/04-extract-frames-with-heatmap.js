@@ -25,7 +25,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { exec } from 'child_process';
 import util from 'util';
 import https from 'https';
@@ -34,6 +34,8 @@ import ffmpegStatic from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
 const ffmpegPath = ffmpegStatic;
 const ffprobePath = ffprobeStatic.path;
+const SUPPORTED_VIDEO_CONTAINER_RE = /\.(mp4|webm|mkv)$/i;
+const YTDLP_FRAGMENT_FILE_RE = /\.f\d+\.(mp4|webm|mkv)$/i;
 
 const execPromise = util.promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -74,6 +76,73 @@ function toRelativePath(p) {
     }
 }
 
+function isSupportedVideoContainer(fileName) {
+    return SUPPORTED_VIDEO_CONTAINER_RE.test(fileName);
+}
+
+function getVideoCandidatePriority(fileName, videoId) {
+    const normalizedFileName = fileName.toLowerCase();
+    const normalizedVideoId = videoId.toLowerCase();
+
+    let score = 0;
+    if (normalizedFileName === `${normalizedVideoId}.mp4`) score += 400;
+    else if (normalizedFileName === `${normalizedVideoId}.mkv`) score += 350;
+    else if (normalizedFileName === `${normalizedVideoId}.webm`) score += 300;
+    else if (normalizedFileName.startsWith(`${normalizedVideoId}.`)) score += 200;
+    else if (normalizedFileName.includes(normalizedVideoId)) score += 100;
+
+    if (!YTDLP_FRAGMENT_FILE_RE.test(normalizedFileName)) score += 100;
+
+    if (normalizedFileName.endsWith('.mp4')) score += 30;
+    else if (normalizedFileName.endsWith('.mkv')) score += 20;
+    else if (normalizedFileName.endsWith('.webm')) score += 10;
+
+    return score;
+}
+
+function sortVideoCandidates(candidateNames, videoId) {
+    return [...candidateNames]
+        .filter(fileName => isSupportedVideoContainer(fileName))
+        .sort((left, right) => {
+            const scoreDiff = getVideoCandidatePriority(right, videoId) - getVideoCandidatePriority(left, videoId);
+            return scoreDiff !== 0 ? scoreDiff : left.localeCompare(right);
+        });
+}
+
+async function hasVideoStream(mediaPath) {
+    try {
+        const { stdout } = await execPromise(
+            `"${ffprobePath}" -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "${mediaPath}"`
+        );
+        return stdout
+            .split('\n')
+            .map(line => line.trim())
+            .some(line => line === 'video');
+    } catch (e) {
+        log('warn', `[Probe] 비디오 스트림 확인 실패: ${toRelativePath(mediaPath)} (${e.message})`);
+        return false;
+    }
+}
+
+async function pickUsableLocalVideoCandidate(
+    videoId,
+    candidateNames,
+    baseDir,
+    sourceLabel,
+    validateMediaPath = hasVideoStream
+) {
+    for (const candidateName of sortVideoCandidates(candidateNames, videoId)) {
+        const candidatePath = path.join(baseDir, candidateName);
+        const usable = await validateMediaPath(candidatePath);
+        if (usable) {
+            return candidatePath;
+        }
+        log('warn', `[${sourceLabel}] 비디오 스트림이 없어 후보 제외: ${candidateName}`);
+    }
+
+    return null;
+}
+
 // --- RClone 및 Env 헬퍼 ---
 async function setupRCloneConfig() {
     const configBase64 = process.env.RCLONE_CONFIG_BASE64;
@@ -103,14 +172,12 @@ async function findVideoInGDrive(remotePath, videoId) {
         const { stdout } = await execPromise(cmd);
         const files = stdout.trim().split('\n').filter(f => f);
         if (files.length > 0) {
-            // 가장 유력한 파일 선택 (mp4, webm, mkv 우선)
-            const bestFile = files.find(f => /\.(mp4|webm|mkv)$/i.test(f)) || files[0];
-            return bestFile;
+            return sortVideoCandidates(files, videoId);
         }
     } catch (e) {
         log('warn', `[RClone] 파일 검색 실패: ${e.message}`);
     }
-    return null;
+    return [];
 }
 
 async function fetchVideoFromGDrive(remotePath, fileName, outputDir) {
@@ -129,6 +196,44 @@ async function fetchVideoFromGDrive(remotePath, fileName, outputDir) {
     } catch (e) {
         log('error', `[RClone] 다운로드 실패: ${e.message}`);
     }
+    return null;
+}
+
+async function fetchUsableGDriveVideo(videoId, remotePath, outputDir, options = {}) {
+    const {
+        listCandidates = findVideoInGDrive,
+        fetchCandidate = fetchVideoFromGDrive,
+        validateMediaPath = hasVideoStream,
+    } = options;
+
+    const gdriveCandidates = await listCandidates(remotePath, videoId);
+    if (!gdriveCandidates || gdriveCandidates.length === 0) {
+        log('info', `[GDrive] 영상 없음 (${videoId}) -> HTTP 다운로드(yt-dlp)로 전환`);
+        return null;
+    }
+
+    for (const gdriveFileName of sortVideoCandidates(gdriveCandidates, videoId)) {
+        log('info', `[GDrive] 영상 발견: ${gdriveFileName} -> 다운로드 시도`);
+        const downloaded = await fetchCandidate(remotePath, gdriveFileName, outputDir);
+        if (!downloaded) {
+            continue;
+        }
+
+        const usableDownloaded = await validateMediaPath(downloaded);
+        if (!usableDownloaded) {
+            log('warn', `[GDrive] 비디오 스트림이 없어 HTTP 다운로드로 폴백: ${gdriveFileName}`);
+            try {
+                fs.unlinkSync(downloaded);
+            } catch (e) {
+                log('warn', `[GDrive] 무효 후보 정리 실패: ${e.message}`);
+            }
+            continue;
+        }
+
+        return downloaded;
+    }
+
+    log('info', `[GDrive] 사용 가능한 비디오 후보 없음 (${videoId}) -> HTTP 다운로드(yt-dlp)로 전환`);
     return null;
 }
 
@@ -935,7 +1040,8 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
 
 // --- 비디오 다운로드 및 프레임 추출 ---
 
-async function downloadVideo(videoId, outputDir, quality) {
+async function downloadVideo(videoId, outputDir, quality, options = {}) {
+    const { validateMediaPath = hasVideoStream } = options;
     const match = quality.match(/\d+/);
     const height = match ? parseInt(match[0]) : 1080;
 
@@ -952,11 +1058,11 @@ async function downloadVideo(videoId, outputDir, quality) {
     const outputFileTemplate = path.join(outputDir, `${videoId}.%(ext)s`);
 
     // [최적화] 캐시된 파일 확인
-    const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR);
-    const cachedFile = cacheFiles.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
-    if (cachedFile) {
-        log('info', `[Cache] 캐시된 비디오 사용: ${cachedFile}`);
-        return path.join(VIDEO_CACHE_DIR, cachedFile);
+    const cacheFiles = fs.readdirSync(VIDEO_CACHE_DIR).filter(f => f.startsWith(videoId));
+    const cachedVideoPath = await pickUsableLocalVideoCandidate(videoId, cacheFiles, VIDEO_CACHE_DIR, 'Cache', validateMediaPath);
+    if (cachedVideoPath) {
+        log('info', `[Cache] 캐시된 비디오 사용: ${path.basename(cachedVideoPath)}`);
+        return cachedVideoPath;
     }
 
     // [추가] GDrive 우선 검색 및 다운로드 로직
@@ -965,25 +1071,21 @@ async function downloadVideo(videoId, outputDir, quality) {
         // RClone Config 설정 시도 (없으면 로컬 설정 사용)
         await setupRCloneConfig();
 
-        const gdriveFileName = await findVideoInGDrive(gdriveRemotePath, videoId);
-        if (gdriveFileName) {
-            log('info', `[GDrive] 영상 발견: ${gdriveFileName} -> 다운로드 시도`);
-            const downloaded = await fetchVideoFromGDrive(gdriveRemotePath, gdriveFileName, outputDir);
-            if (downloaded) {
-                // 캐시 업데이트
-                try {
-                    const cachePath = path.join(VIDEO_CACHE_DIR, path.basename(downloaded));
-                    if (!fs.existsSync(cachePath)) {
-                        fs.copyFileSync(downloaded, cachePath);
-                        log('info', `[Cache] GDrive 원본 캐시 저장 완료: ${toRelativePath(cachePath)}`);
-                    }
-                } catch (e) {
-                    log('warn', `캐시 저장 실패: ${e.message}`);
+        const downloadedFromGDrive = await fetchUsableGDriveVideo(videoId, gdriveRemotePath, outputDir, {
+            validateMediaPath,
+        });
+        if (downloadedFromGDrive) {
+            // 캐시 업데이트
+            try {
+                const cachePath = path.join(VIDEO_CACHE_DIR, path.basename(downloadedFromGDrive));
+                if (!fs.existsSync(cachePath)) {
+                    fs.copyFileSync(downloadedFromGDrive, cachePath);
+                    log('info', `[Cache] GDrive 원본 캐시 저장 완료: ${toRelativePath(cachePath)}`);
                 }
-                return downloaded;
+            } catch (e) {
+                log('warn', `캐시 저장 실패: ${e.message}`);
             }
-        } else {
-            log('info', `[GDrive] 영상 없음 (${videoId}) -> HTTP 다운로드(yt-dlp)로 전환`);
+            return downloadedFromGDrive;
         }
     }
 
@@ -1012,15 +1114,13 @@ async function downloadVideo(videoId, outputDir, quality) {
             await execPromise(cmd);
 
             // 다운로드된 파일 찾기
-            const files = fs.readdirSync(outputDir);
-            const videoFile = files.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
+            const files = fs.readdirSync(outputDir).filter(f => f.startsWith(videoId));
+            const downloadedPath = await pickUsableLocalVideoCandidate(videoId, files, outputDir, 'Downloader', validateMediaPath);
 
-            if (videoFile) {
-                const downloadedPath = path.join(outputDir, videoFile);
-
+            if (downloadedPath) {
                 // [최적화] 다운로드 성공 시 캐시에 복사
                 try {
-                    const cachePath = path.join(VIDEO_CACHE_DIR, videoFile);
+                    const cachePath = path.join(VIDEO_CACHE_DIR, path.basename(downloadedPath));
                     fs.copyFileSync(downloadedPath, cachePath);
                     log('info', `[Cache] 비디오 캐시 저장 완료: ${toRelativePath(cachePath)}`);
                 } catch (e) {
@@ -1030,7 +1130,7 @@ async function downloadVideo(videoId, outputDir, quality) {
                 return downloadedPath;
             }
 
-            log('warn', `[Warn] 다운로드 완료 보고되었으나 파일 없음 (재시도 대기...)`);
+            log('warn', `[Warn] 다운로드 완료 보고되었으나 사용 가능한 비디오 파일 없음 (재시도 대기...)`);
 
         } catch (e) {
             log('warn', `[Warn] 다운로드 실패 (시도 ${attempt}/${maxRetries}): ${e.message}`);
@@ -1146,14 +1246,19 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
     };
 }
 
-async function processSingleVideo(videoId, params) {
+async function processSingleVideo(videoId, params, dependencies = {}) {
+    const {
+        loadSegments = fetchAndSaveHeatmap,
+        acquireVideo = downloadVideo,
+        extractFramesFn = extractFrames,
+    } = dependencies;
     let downloadPerformed = false;
     let videoHadFailure = false;
     let latestRecollectId = null;
     const { channel, fps, buffer, quality, url, ext } = params; // quality는 이제 배열입니다
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
-    const segments = await fetchAndSaveHeatmap(channel, videoId, url);
+    const segments = await loadSegments(channel, videoId, url);
     // [Mod] segments가 null이면 '변경 없음' 또는 '데이터 없음' -> 수집 중단
     if (!segments) {
         // log('info', `[Info] ${videoId}: 처리할 구간이 없거나 변경사항이 없습니다.`);
@@ -1282,10 +1387,8 @@ async function processSingleVideo(videoId, params) {
                         log('info', `[Partial] 총 ${segments.length}개 구간 중 ${reusedCount}개 재사용(Hard Link) 완료.`);
                     }
 
-                    // 만약 모든 구간이 재사용되었다면 다운로드 불필요
                     if (reusedCount === segments.length) {
-                        log('info', `[Skip] 모든 구간 재사용 완료. 비디오 다운로드 스킵.`);
-                        continue; // 다음 화질 처리 Loop (processSingleVideo 내)
+                        log('info', `[Partial] 모든 구간 재사용 완료. 요청된 포맷/설정 완전성 확인 후 다운로드 여부를 결정합니다.`);
                     } else {
                         log('info', `[Partial] ${segments.length - reusedCount}개 신규 구간 추출 필요.`);
                     }
@@ -1335,7 +1438,7 @@ async function processSingleVideo(videoId, params) {
                 continue;
             }
 
-            videoPath = await downloadVideo(videoId, tempDir, currentQuality);
+            videoPath = await acquireVideo(videoId, tempDir, currentQuality);
 
             // [추가] 캐시 경로가 아니면 다운로드 수행된 것
             if (videoPath && !videoPath.startsWith(VIDEO_CACHE_DIR)) {
@@ -1356,7 +1459,7 @@ async function processSingleVideo(videoId, params) {
 
 
             for (const currentExt of extensions) {
-                const extractionSummary = await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
+                const extractionSummary = await extractFramesFn(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
                 if (extractionSummary.failedSegments > 0) {
                     throw new Error(`[${currentExt}] 프레임 추출 실패: ${extractionSummary.failedSegments}/${extractionSummary.totalSegments} 구간 실패`);
                 }
@@ -1645,7 +1748,22 @@ async function processBatch(params) {
     }
 }
 
-main().catch(e => {
-    console.error(e);
-    process.exitCode = 1;
-});
+const isDirectExecution = process.argv[1]
+    ? import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+    : false;
+
+if (isDirectExecution) {
+    main().catch(e => {
+        console.error(e);
+        process.exitCode = 1;
+    });
+}
+
+export {
+    downloadVideo,
+    fetchUsableGDriveVideo,
+    hasVideoStream,
+    pickUsableLocalVideoCandidate,
+    processSingleVideo,
+    sortVideoCandidates,
+};
