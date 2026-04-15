@@ -1387,10 +1387,8 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
                         log('info', `[Partial] 총 ${segments.length}개 구간 중 ${reusedCount}개 재사용(Hard Link) 완료.`);
                     }
 
-                    // 만약 모든 구간이 재사용되었다면 다운로드 불필요
                     if (reusedCount === segments.length) {
-                        log('info', `[Skip] 모든 구간 재사용 완료. 비디오 다운로드 스킵.`);
-                        continue; // 다음 화질 처리 Loop (processSingleVideo 내)
+                        log('info', `[Partial] 모든 구간 재사용 완료. 요청된 포맷/설정 완전성 확인 후 다운로드 여부를 결정합니다.`);
                     } else {
                         log('info', `[Partial] ${segments.length - reusedCount}개 신규 구간 추출 필요.`);
                     }
