@@ -60,13 +60,44 @@ class RunDailyRegressionTests(unittest.TestCase):
         )
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
-        self.assertIn("Step 13 (Supabase) 건너뜀", result.stdout)
+        self.assertIn("Step 13 (Supabase) 선택 건너뜀", result.stdout)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY 또는 VITE_SUPABASE_PUBLISHABLE_KEY", result.stdout)
+
+    def test_supabase_insert_failure_returns_non_zero_exit(self) -> None:
+        result = self._run_script(supabase_insert_exit=23, force_phase3=True)
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Step 13 (Supabase) 실패", result.stdout)
+        self.assertIn("필수 단계 실패가 감지되었습니다", result.stdout)
+        self.assertNotIn("모든 필수 단계가 완료되었습니다!", result.stdout)
+
+    def test_ci_validation_target_branch_uses_checked_out_branch_for_sync(self) -> None:
+        target_branch = "verify-target"
+        result = self._run_script(
+            env_overrides={
+                "CI": "true",
+                "RUN_DAILY_TARGET_BRANCH": target_branch,
+                "RUN_DAILY_TEST_CURRENT_BRANCH": target_branch,
+                "RUN_DAILY_TEST_PENDING_DATA_CHANGES": "1",
+            }
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn(f"현재 작업 브랜치: {target_branch}", result.stdout)
+        self.assertIn(f"[Final] '{target_branch}' 브랜치에 최종 데이터 저장...", result.stdout)
+        self.assertIn(f"{target_branch} 브랜치 업데이트 완료 (Final Sync)", result.stdout)
+        self.assertNotIn("브랜치 전환 완료: data", result.stdout)
+
+        git_log = (self.root / "state" / "git_commands.log").read_text(encoding="utf-8")
+        self.assertIn(f"pull --rebase --autostash origin {target_branch}", git_log)
+        self.assertIn(f"push origin {target_branch}", git_log)
+        self.assertNotIn("origin data", git_log)
 
     def _run_script(
         self,
         *,
         transcript_exit: int = 0,
+        supabase_insert_exit: int = 0,
         final_sync_stage_failure: bool = False,
         env_overrides: dict[str, str | None] | None = None,
         force_phase3: bool = False,
@@ -78,6 +109,9 @@ class RunDailyRegressionTests(unittest.TestCase):
             (project_root / "backend" / "restaurant-crawling" / "data" / "tzuyang" / "transcript" / "pending.jsonl").write_text(
                 '{"stub": true}\n', encoding="utf-8"
             )
+
+        git_log_path = state_dir / "git_commands.log"
+        git_log_path.unlink(missing_ok=True)
 
         env = os.environ.copy()
         env.update(
@@ -94,7 +128,11 @@ class RunDailyRegressionTests(unittest.TestCase):
                 "RUN_DAILY_CURRENT_LOG_LINK": str(project_root / "tmp" / "logs" / "current.log"),
                 "RUN_DAILY_SUMMARY_PATH": str(project_root / "tmp" / "summary.md"),
                 "RUN_DAILY_TEST_STATE_DIR": str(state_dir),
+                "RUN_DAILY_TEST_CURRENT_BRANCH": "data",
+                "RUN_DAILY_TEST_GIT_LOG_PATH": str(git_log_path),
+                "RUN_DAILY_TEST_PENDING_DATA_CHANGES": "0",
                 "RUN_DAILY_TEST_TRANSCRIPT_EXIT": str(transcript_exit),
+                "RUN_DAILY_TEST_SUPABASE_INSERT_EXIT": str(supabase_insert_exit),
                 "RUN_DAILY_TEST_FINAL_SYNC_STAGE_FAILURE": "1" if final_sync_stage_failure else "0",
                 "PYTHON_CMD": "python3",
             }
@@ -238,6 +276,10 @@ class RunDailyRegressionTests(unittest.TestCase):
             echo "변환 완료: 0개"
             ;;
           13-supabase-insert.py)
+            if [ "${RUN_DAILY_TEST_SUPABASE_INSERT_EXIT:-0}" != "0" ]; then
+              echo "simulated supabase insert failure" >&2
+              exit "${RUN_DAILY_TEST_SUPABASE_INSERT_EXIT}"
+            fi
             echo "성공 (Insert): 0"
             echo "건너뜀 (중복): 0"
             ;;
@@ -290,6 +332,8 @@ class RunDailyRegressionTests(unittest.TestCase):
 
         state_dir="${RUN_DAILY_TEST_STATE_DIR:?missing RUN_DAILY_TEST_STATE_DIR}"
         sync_index_file="$state_dir/sync_index"
+        current_branch_file="$state_dir/current_branch"
+        git_log_file="${RUN_DAILY_TEST_GIT_LOG_PATH:-}"
 
         current_sync_index() {
           if [ -f "$sync_index_file" ]; then
@@ -303,8 +347,27 @@ class RunDailyRegressionTests(unittest.TestCase):
           printf '%s' "$1" > "$sync_index_file"
         }
 
+        current_branch() {
+          if [ -f "$current_branch_file" ]; then
+            cat "$current_branch_file"
+          else
+            printf '%s' "${RUN_DAILY_TEST_CURRENT_BRANCH:-data}"
+          fi
+        }
+
+        set_current_branch() {
+          printf '%s' "$1" > "$current_branch_file"
+        }
+
+        has_pending_data_changes() {
+          [ "${RUN_DAILY_TEST_PENDING_DATA_CHANGES:-0}" = "1" ]
+        }
+
         cmd="${1:-}"
         shift || true
+        if [ -n "$git_log_file" ]; then
+          printf '%s %s\n' "$cmd" "$*" >> "$git_log_file"
+        fi
 
         case "$cmd" in
           config)
@@ -319,7 +382,7 @@ class RunDailyRegressionTests(unittest.TestCase):
             ;;
           rev-parse)
             if [ "${1:-}" = "--abbrev-ref" ] && [ "${2:-}" = "HEAD" ]; then
-              echo "data"
+              current_branch
               exit 0
             fi
             if [ "${1:-}" = "--short" ]; then
@@ -334,10 +397,16 @@ class RunDailyRegressionTests(unittest.TestCase):
               if [ "${RUN_DAILY_TEST_FINAL_SYNC_STAGE_FAILURE:-0}" = "1" ] && [ "$next_index" -eq 3 ]; then
                 exit 1
               fi
+              if has_pending_data_changes; then
+                exit 1
+              fi
               exit 0
             fi
             if [ "${1:-}" = "--staged" ] && [ "${2:-}" = "--quiet" ]; then
               if [ "${RUN_DAILY_TEST_FINAL_SYNC_STAGE_FAILURE:-0}" = "1" ] && [ "$(current_sync_index)" -eq 3 ]; then
+                exit 1
+              fi
+              if has_pending_data_changes; then
                 exit 1
               fi
               exit 0
@@ -346,6 +415,14 @@ class RunDailyRegressionTests(unittest.TestCase):
           ls-files)
             if printf '%s' "$*" | grep -q -- '--others --modified'; then
               if [ "${RUN_DAILY_TEST_FINAL_SYNC_STAGE_FAILURE:-0}" = "1" ] && [ "$(current_sync_index)" -eq 3 ]; then
+                echo "backend/restaurant-crawling/data/stub.json"
+              elif has_pending_data_changes; then
+                echo "backend/restaurant-crawling/data/stub.json"
+              fi
+              exit 0
+            fi
+            if printf '%s' "$*" | grep -q -- '--others --exclude-standard'; then
+              if has_pending_data_changes; then
                 echo "backend/restaurant-crawling/data/stub.json"
               fi
               exit 0
@@ -359,7 +436,15 @@ class RunDailyRegressionTests(unittest.TestCase):
             fi
             exit 0
             ;;
-          rm|commit|pull|push|fetch|show-ref|checkout)
+          checkout)
+            if [ "${1:-}" = "-b" ]; then
+              set_current_branch "${2:-}"
+            elif [ -n "${1:-}" ]; then
+              set_current_branch "$1"
+            fi
+            exit 0
+            ;;
+          rm|commit|pull|push|fetch|show-ref)
             exit 0
             ;;
           merge-base)

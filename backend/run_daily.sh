@@ -49,6 +49,13 @@ fi
 # [Local Config] 쿼타 우회를 위한 gemini CLI 래퍼 경로 설정
 export PATH="$PROJECT_ROOT/backend/bin:$PATH"
 
+RUN_DAILY_POLICY_MODE="${RUN_DAILY_POLICY_MODE:-end_to_end}"
+RUN_DAILY_VERIFY_OPTIONAL_SCENARIO="${RUN_DAILY_VERIFY_OPTIONAL_SCENARIO:-}"
+RUN_DAILY_VERIFY_REQUIRED_SCENARIO="${RUN_DAILY_VERIFY_REQUIRED_SCENARIO:-}"
+RUN_DAILY_TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
+NO_WORK_SHORT_CIRCUIT=false
+PHASE3_TIMEOUT_SKIP=false
+
 # [Local Config] Python 런타임 탐색
 python_cmd_usable() {
     local cmd="$1"
@@ -289,7 +296,8 @@ step_end() {
 }
 
 FAILED_REQUIRED_STEPS=()
-SKIPPED_STEPS=()
+SKIPPED_OPTIONAL_STEPS=()
+SKIPPED_DOWNSTREAM_STEPS=()
 
 record_required_failure() {
     local step_name="$1"
@@ -304,7 +312,7 @@ record_required_failure() {
     log "ERROR" "$step_name 실패${reason:+: $reason}"
 }
 
-record_skipped_step() {
+record_optional_skip() {
     local step_name="$1"
     local reason="${2:-}"
     local entry="$step_name"
@@ -313,8 +321,26 @@ record_skipped_step() {
         entry="$entry - $reason"
     fi
 
-    SKIPPED_STEPS+=("$entry")
-    log "WARN" "$step_name 건너뜀${reason:+: $reason}"
+    SKIPPED_OPTIONAL_STEPS+=("$entry")
+    log "WARN" "$step_name 선택 건너뜀${reason:+: $reason}"
+}
+
+record_downstream_skip() {
+    local step_name="$1"
+    local reason="${2:-}"
+    local upstream_step="${3:-}"
+    local entry="$step_name"
+
+    if [ -n "$reason" ]; then
+        entry="$entry - $reason"
+    fi
+
+    if [ -n "$upstream_step" ]; then
+        entry="$entry (upstream: $upstream_step)"
+    fi
+
+    SKIPPED_DOWNSTREAM_STEPS+=("$entry")
+    log "WARN" "$step_name 연쇄 건너뜀${reason:+: $reason}${upstream_step:+ (upstream: $upstream_step)}"
 }
 
 record_exit_if_failed() {
@@ -352,26 +378,107 @@ is_ci_mode() {
     [ "${CI:-false}" = "true" ]
 }
 
+is_end_to_end_mode() {
+    [ "${RUN_DAILY_POLICY_MODE:-end_to_end}" = "end_to_end" ]
+}
+
+matches_optional_verification_scenario() {
+    [ -n "${RUN_DAILY_VERIFY_OPTIONAL_SCENARIO:-}" ] && [ "${RUN_DAILY_VERIFY_OPTIONAL_SCENARIO}" = "$1" ]
+}
+
+matches_required_verification_scenario() {
+    [ -n "${RUN_DAILY_VERIFY_REQUIRED_SCENARIO:-}" ] && [ "${RUN_DAILY_VERIFY_REQUIRED_SCENARIO}" = "$1" ]
+}
+
+count_pending_step08_work() {
+    if matches_required_verification_scenario "step08_quota"; then
+        echo "1"
+        return 0
+    fi
+
+    count_pending_jsonl \
+        "$PROJECT_ROOT/backend/restaurant-crawling/data/tzuyang/transcript" \
+        "$PROJECT_ROOT/backend/restaurant-crawling/data/tzuyang/crawling"
+}
+
+resolve_policy_action() {
+    local step_name="$1"
+    local issue_kind="$2"
+
+    case "${step_name}|${issue_kind}" in
+        "Step 1 (URL Collection)|missing_external_dependency"|"Step 2 (Metadata)|missing_external_dependency"|"Step 2.1 (Meta Migration)|missing_external_dependency"|"Step 13 (Supabase)|missing_external_dependency")
+            echo "optional_skip"
+            ;;
+        "Step 08 (Chunk Multimodal)|quota_exhausted")
+            if is_end_to_end_mode && [ "$(count_pending_step08_work)" -gt 0 ]; then
+                echo "required_failure"
+            else
+                echo "optional_skip"
+            fi
+            ;;
+        "Phase 3|timeout_incomplete"|"Step 11 (LAAJ Evaluation)|timeout_incomplete")
+            if is_end_to_end_mode; then
+                echo "required_failure"
+            else
+                echo "optional_skip"
+            fi
+            ;;
+        *)
+            echo "required_failure:unknown"
+            ;;
+    esac
+}
+
+record_policy_issue() {
+    local step_name="$1"
+    local issue_kind="$2"
+    local reason="$3"
+    local action
+
+    action="$(resolve_policy_action "$step_name" "$issue_kind")"
+
+    case "$action" in
+        optional_skip)
+            record_optional_skip "$step_name" "$reason"
+            ;;
+        required_failure:unknown)
+            log "WARN" "정의되지 않은 정책 키를 감지했습니다. fail-closed로 required_failure 처리합니다. (${step_name}|${issue_kind})"
+            record_required_failure "$step_name" "$reason [policy=${step_name}|${issue_kind}]"
+            ;;
+        *)
+            record_required_failure "$step_name" "$reason"
+            ;;
+    esac
+}
+
 record_external_dependency_issue() {
     local step_name="$1"
     local reason="$2"
 
-    if is_ci_mode; then
-        record_required_failure "$step_name" "$reason"
-    else
-        record_skipped_step "$step_name" "$reason"
-    fi
+    record_policy_issue "$step_name" "missing_external_dependency" "$reason"
 }
 
 has_supabase_migration_credentials() {
+    if matches_optional_verification_scenario "missing_supabase_migration"; then
+        return 1
+    fi
+
     [ -n "${SUPABASE_URL:-}" ] && has_any_env SUPABASE_SERVICE_ROLE_KEY SUPABASE_KEY
 }
 
 has_supabase_insert_credentials() {
+    if matches_optional_verification_scenario "missing_supabase_insert"; then
+        return 1
+    fi
+
     [ -n "${SUPABASE_URL:-}" ] && has_any_env SUPABASE_SERVICE_ROLE_KEY VITE_SUPABASE_PUBLISHABLE_KEY
 }
 
 has_youtube_api_key() {
+    if matches_optional_verification_scenario "missing_youtube"; then
+        return 1
+    fi
+
     [ -n "${YOUTUBE_API_KEY_BYEON:-}" ]
 }
 
@@ -409,9 +516,16 @@ missing_backend_node_packages() {
 emit_step_summary_log() {
     local item
 
-    if [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
-        log "WARN" "건너뛴 단계 요약 (${#SKIPPED_STEPS[@]}건)"
-        for item in "${SKIPPED_STEPS[@]}"; do
+    if [ "${#SKIPPED_OPTIONAL_STEPS[@]}" -gt 0 ]; then
+        log "WARN" "선택적으로 건너뛴 단계 요약 (${#SKIPPED_OPTIONAL_STEPS[@]}건)"
+        for item in "${SKIPPED_OPTIONAL_STEPS[@]}"; do
+            log "WARN" " - $item"
+        done
+    fi
+
+    if [ "${#SKIPPED_DOWNSTREAM_STEPS[@]}" -gt 0 ]; then
+        log "WARN" "연쇄적으로 건너뛴 단계 요약 (${#SKIPPED_DOWNSTREAM_STEPS[@]}건)"
+        for item in "${SKIPPED_DOWNSTREAM_STEPS[@]}"; do
             log "WARN" " - $item"
         done
     fi
@@ -499,13 +613,14 @@ count_pending_jsonl() {
     rm -f "$source_list" "$target_list"
 }
 
-# [Function] 데이터 커밋 함수 (data 브랜치에서 직접 실행)
+# [Function] 데이터 커밋 함수 (대상 브랜치에서 직접 실행)
 sync_data_to_remote() {
     local STEP_NAME="$1"
+    local SYNC_BRANCH="${TARGET_BRANCH:-$RUN_DAILY_TARGET_BRANCH}"
     local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-1200}"
     local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
     log "INFO" "------------------------------------------------------------"
-    log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME)"
+    log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME, Branch: $SYNC_BRANCH)"
 
     # 데이터 폴더 변경 감지 (status 전체 스캔 대신 diff/ls-files 기반)
     if ! has_pending_data_changes; then
@@ -552,37 +667,37 @@ sync_data_to_remote() {
 
     # 원격 변경사항 동기화 (충돌 방지)
     log "INFO" "원격 변경사항 확인 및 Rebase..."
-    if ! run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin data 2>&1 | tee -a "$LOG_FILE"; then
+    if ! run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
         local LOCAL_HEAD REMOTE_HEAD DIVERGENCE_STATE
         log "WARN" "Rebase 실패 - rebase 중단 후 안전 동기화 전략으로 전환"
         git rebase --abort 2>/dev/null || true
 
         # 네트워크/일시 오류 가능성을 고려해 일반 push를 한 번 더 시도
         log "INFO" "Rebase 실패 후 일반 push 재시도..."
-        if run_git_with_timeout "$network_timeout" git push origin data 2>&1 | tee -a "$LOG_FILE"; then
-            log "OK" "data 브랜치 업데이트 완료 ($STEP_NAME)"
+        if run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+            log "OK" "$SYNC_BRANCH 브랜치 업데이트 완료 ($STEP_NAME)"
             return 0
         fi
 
         # push 실패 시 로컬/원격 관계를 로그로 남겨 원인 파악 용이하게 함
-        if ! run_git_with_timeout "$network_timeout" git fetch origin data 2>&1 | tee -a "$LOG_FILE"; then
+        if ! run_git_with_timeout "$network_timeout" git fetch origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
             log "WARN" "원격 상태 재조회(fetch) 실패 - divergence 판별 정확도가 낮을 수 있습니다."
         fi
 
         LOCAL_HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-        REMOTE_HEAD=$(git rev-parse --short origin/data 2>/dev/null || echo "unknown")
-        if git merge-base --is-ancestor origin/data HEAD 2>/dev/null; then
+        REMOTE_HEAD=$(git rev-parse --short "origin/$SYNC_BRANCH" 2>/dev/null || echo "unknown")
+        if git merge-base --is-ancestor "origin/$SYNC_BRANCH" HEAD 2>/dev/null; then
             DIVERGENCE_STATE="local_ahead_or_equal"
-        elif git merge-base --is-ancestor HEAD origin/data 2>/dev/null; then
+        elif git merge-base --is-ancestor HEAD "origin/$SYNC_BRANCH" 2>/dev/null; then
             DIVERGENCE_STATE="local_behind_remote"
         else
             DIVERGENCE_STATE="diverged"
         fi
-        log "WARN" "data 동기화 충돌 감지 (local=${LOCAL_HEAD}, remote=${REMOTE_HEAD}, state=${DIVERGENCE_STATE})"
+        log "WARN" "$SYNC_BRANCH 동기화 충돌 감지 (local=${LOCAL_HEAD}, remote=${REMOTE_HEAD}, state=${DIVERGENCE_STATE})"
 
         if is_truthy "$ALLOW_DATA_FORCE_PUSH"; then
             log "WARN" "ALLOW_DATA_FORCE_PUSH=$ALLOW_DATA_FORCE_PUSH 감지 - force-with-lease를 명시적으로 수행합니다."
-            if ! run_git_with_timeout "$network_timeout" git push --force-with-lease origin data 2>&1 | tee -a "$LOG_FILE"; then
+            if ! run_git_with_timeout "$network_timeout" git push --force-with-lease origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
                 log "ERROR" "force-with-lease push 실패"
                 return 1
             fi
@@ -593,13 +708,13 @@ sync_data_to_remote() {
         fi
     else
         log "INFO" "Pushing to remote..."
-        if ! run_git_with_timeout "$network_timeout" git push origin data 2>&1 | tee -a "$LOG_FILE"; then
-            log "ERROR" "Failed to push to data branch"
+        if ! run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+            log "ERROR" "Failed to push to $SYNC_BRANCH branch"
             return 1
         fi
     fi
 
-    log "OK" "data 브랜치 업데이트 완료 ($STEP_NAME)"
+    log "OK" "$SYNC_BRANCH 브랜치 업데이트 완료 ($STEP_NAME)"
 }
 
 # ============================================================
@@ -610,9 +725,9 @@ log "INFO" "============================================================"
 log "INFO" "일일 데이터 수집 파이프라인 시작"
 log "INFO" "============================================================"
 
-# [Branch Check] 'data' 브랜치인지 확인
+# [Branch Check] 대상 브랜치 확인
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-TARGET_BRANCH="data"
+TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
 
 log "INFO" "현재 브랜치 확인: $CURRENT_BRANCH"
 
@@ -688,6 +803,7 @@ else
         HAS_NEW_DATA=true
     else
         SKIP_PHASE3=true
+        NO_WORK_SHORT_CIRCUIT=true
         log "INFO" "처리 대기 중인 데이터가 없습니다. (Phase 3 스킵)"
     fi
 fi
@@ -731,7 +847,7 @@ echo "::endgroup::"
 
 # [PERF] Sync #1: 메타데이터/정리 완료 후 저장
 if ! sync_data_to_remote "Phase 1 (Meta/Cleanup)"; then
-    record_required_failure "Sync #1 (Phase 1 Meta/Cleanup)" "data 동기화 실패"
+    record_required_failure "Sync #1 (Phase 1 Meta/Cleanup)" "$TARGET_BRANCH 동기화 실패"
 fi
 
 # ============================================================
@@ -788,7 +904,7 @@ else
 fi
 
 if [ $EXIT_3 -ne 0 ]; then
-    record_skipped_step "Step 3.1 (Context Generation)" "Step 3 transcript 실패"
+    record_downstream_skip "Step 3.1 (Context Generation)" "Step 3 transcript 실패" "Step 3 (Transcript)"
 elif [[ "$MAX_VIDEOS" -eq -1 ]]; then
     log "INFO" "Context Generation Skipped (Configured as -1)"
 else
@@ -827,15 +943,16 @@ echo "::endgroup::"
 
 # [PERF] Sync #2: 자막/프레임 완료 후 저장 (Phase 2 통합 - 기존 3회 → 1회)
 if ! sync_data_to_remote "Phase 2 (Transcript/Frames)"; then
-    record_required_failure "Sync #2 (Phase 2 Transcript/Frames)" "data 동기화 실패"
+    record_required_failure "Sync #2 (Phase 2 Transcript/Frames)" "$TARGET_BRANCH 동기화 실패"
 fi
 
 # [PERF] 타임아웃 체크 - Phase 3 진입 전 시간 확인
-if ! check_timeout 45; then
+if [ "${SKIP_PHASE3:-false}" != "true" ] && ! check_timeout 45; then
     log "WARN" "시간 제한으로 Phase 3 건너뜁니다. 다음 실행에서 이어집니다."
-    record_skipped_step "Phase 3" "전체 타임아웃 도달"
+    PHASE3_TIMEOUT_SKIP=true
+    record_policy_issue "Phase 3" "timeout_incomplete" "전체 타임아웃 도달"
     if ! sync_data_to_remote "Timeout Safety Sync"; then
-        record_required_failure "Sync (Timeout Safety Sync)" "data 동기화 실패"
+        record_required_failure "Sync (Timeout Safety Sync)" "$TARGET_BRANCH 동기화 실패"
     fi
     # Summary 생성으로 점프
     SKIP_PHASE3=true
@@ -874,30 +991,36 @@ STEP08_NODE_MISSING=""
 if STEP08_NODE_MISSING="$(missing_backend_node_packages @google/genai 2>/dev/null)"; then
     record_required_failure "Step 08 (Chunk Multimodal)" "필수 Node 패키지 누락(${STEP08_NODE_MISSING})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
     SKIP_EVALUATION=true
-    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 Node prerequisite 미충족"
+    record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 Node prerequisite 미충족" "Step 08 (Chunk Multimodal)"
 elif ! has_gemini_chunk_runtime; then
     record_required_failure "Step 08 (Chunk Multimodal)" "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
     SKIP_EVALUATION=true
-    record_skipped_step "Step 09~13 (Evaluation)" "Step 08 Gemini runtime prerequisite 미충족"
+    record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 Gemini runtime prerequisite 미충족" "Step 08 (Chunk Multimodal)"
 else
-    set +o pipefail
-    bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | filter_step_log | tee -a "$LOG_FILE"
-    CHUNK_EXIT_CODE=${PIPESTATUS[0]}
-    set -o pipefail
+    if matches_required_verification_scenario "step08_quota"; then
+        log "WARN" "[VERIFY] Step 08 quota 초과 시나리오를 강제합니다."
+        CHUNK_EXIT_CODE=42
+    else
+        set +o pipefail
+        bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | filter_step_log | tee -a "$LOG_FILE"
+        CHUNK_EXIT_CODE=${PIPESTATUS[0]}
+        set -o pipefail
+    fi
     if [ $CHUNK_EXIT_CODE -eq 42 ]; then
         log "WARN" "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
         SKIP_EVALUATION=true
-        record_skipped_step "Step 09~13 (Evaluation)" "Step 08 quota 초과"
+        record_policy_issue "Step 08 (Chunk Multimodal)" "quota_exhausted" "Gemini quota 초과 (exit=42)"
+        record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 quota 초과" "Step 08 (Chunk Multimodal)"
     elif [ $CHUNK_EXIT_CODE -eq 44 ]; then
         log "ERROR" "[CRITICAL] 구글 로그인 세션 만료! 웹 폴백을 더 이상 진행할 수 없습니다."
         log "INFO" "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
         record_required_failure "Step 08 (Chunk Multimodal)" "Google 로그인 세션 만료 (exit=44)"
         SKIP_EVALUATION=true
-        record_skipped_step "Step 09~13 (Evaluation)" "Step 08 로그인 prerequisite 미충족"
+        record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 로그인 prerequisite 미충족" "Step 08 (Chunk Multimodal)"
     elif [ $CHUNK_EXIT_CODE -ne 0 ]; then
         record_required_failure "Step 08 (Chunk Multimodal)" "exit=$CHUNK_EXIT_CODE"
         SKIP_EVALUATION=true
-        record_skipped_step "Step 09~13 (Evaluation)" "Step 08 실패"
+        record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 실패" "Step 08 (Chunk Multimodal)"
     fi
 fi
 step_end "Step 08 (Chunk Multimodal)"
@@ -916,7 +1039,7 @@ STEP_09_EXIT=${PIPESTATUS[0]}
 STEP_09_OK=true
 if ! record_exit_if_failed "Step 09 (Target Selection)" "$STEP_09_EXIT"; then
     STEP_09_OK=false
-    record_skipped_step "Step 10~13 (Evaluation downstream)" "Step 09 실패"
+    record_downstream_skip "Step 10~13 (Evaluation downstream)" "Step 09 실패" "Step 09 (Target Selection)"
 fi
 step_end "Step 09 (Target)"
 echo "::endgroup::"
@@ -934,7 +1057,7 @@ grep "Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while rea
 STEP_10_OK=true
 if ! record_exit_if_failed "Step 10 (Rule Evaluation)" "$STEP_10_EXIT"; then
     STEP_10_OK=false
-    record_skipped_step "Step 11~13 (Evaluation downstream)" "Step 10 실패"
+    record_downstream_skip "Step 11~13 (Evaluation downstream)" "Step 10 실패" "Step 10 (Rule Evaluation)"
 fi
 step_end "Step 10 (Rule Eval)"
 echo "::endgroup::"
@@ -942,7 +1065,7 @@ echo "::endgroup::"
 if [ "${STEP_10_OK}" = "true" ]; then
     # [PERF] Sync #3: Rule 평가 완료 후 저장 (LAAJ 전 백업 - 중요)
     if ! sync_data_to_remote "Phase 3a (Rule Eval)"; then
-        record_required_failure "Sync #3 (Phase 3a Rule Eval)" "data 동기화 실패"
+        record_required_failure "Sync #3 (Phase 3a Rule Eval)" "$TARGET_BRANCH 동기화 실패"
     fi
 
     # [PERF] 타임아웃 체크 - LAAJ 진입 전 시간 확인 (가장 오래 걸리는 단계)
@@ -950,7 +1073,8 @@ if [ "${STEP_10_OK}" = "true" ]; then
     if ! check_timeout 45; then
         log "WARN" "시간 제한으로 LAAJ 평가를 건너뜁니다. 다음 실행에서 이어집니다."
         STEP_11_OK=false
-        record_skipped_step "Step 11 (LAAJ Evaluation)" "LAAJ 진입 전 타임아웃 도달"
+        record_policy_issue "Step 11 (LAAJ Evaluation)" "timeout_incomplete" "LAAJ 진입 전 타임아웃 도달"
+        record_downstream_skip "Step 12~13 (Evaluation downstream)" "Step 11 타임아웃으로 미실행" "Step 11 (LAAJ Evaluation)"
     else
 
     # 11. LAAJ (LLM) 기반 평가
@@ -964,7 +1088,7 @@ if [ "${STEP_10_OK}" = "true" ]; then
     grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
     if ! record_exit_if_failed "Step 11 (LAAJ Evaluation)" "$STEP_11_EXIT"; then
         STEP_11_OK=false
-        record_skipped_step "Step 12~13 (Evaluation downstream)" "Step 11 실패"
+        record_downstream_skip "Step 12~13 (Evaluation downstream)" "Step 11 실패" "Step 11 (LAAJ Evaluation)"
     fi
     step_end "Step 11 (LAAJ Eval)"
     echo "::endgroup::"
@@ -983,7 +1107,7 @@ if [ "${STEP_10_OK}" = "true" ]; then
         STEP_12_OK=true
         if ! record_exit_if_failed "Step 12 (Transform Results)" "$STEP_12_EXIT"; then
             STEP_12_OK=false
-            record_skipped_step "Step 13 (Supabase)" "Step 12 실패"
+            record_downstream_skip "Step 13 (Supabase)" "Step 12 실패" "Step 12 (Transform Results)"
         fi
         step_end "Step 12 (Transform)"
         echo "::endgroup::"
@@ -1024,9 +1148,9 @@ log "INFO" "일일 데이터 수집 파이프라인 종료 (최종 상태 집계
 log "INFO" "============================================================"
 
 # [PERF] Final Sync (모든 Phase의 남은 변경사항 통합 커밋)
-log "INFO" "[Final] 'data' 브랜치에 최종 데이터 저장..."
+log "INFO" "[Final] '$TARGET_BRANCH' 브랜치에 최종 데이터 저장..."
 if ! sync_data_to_remote "Final Sync"; then
-    record_required_failure "Final Sync" "data 동기화 실패"
+    record_required_failure "Final Sync" "$TARGET_BRANCH 동기화 실패"
 fi
 
 # 코드 에디터 동기화 신호
@@ -1049,9 +1173,11 @@ if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
     FINAL_EXIT_CODE=1
     FINAL_STATUS_LABEL="ERROR"
     FINAL_STATUS_MESSAGE="필수 단계 실패가 감지되었습니다. summary/log를 확인하세요. (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
-elif [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
+elif [ "${#SKIPPED_OPTIONAL_STEPS[@]}" -gt 0 ] || [ "${#SKIPPED_DOWNSTREAM_STEPS[@]}" -gt 0 ]; then
     FINAL_STATUS_LABEL="WARN"
-    FINAL_STATUS_MESSAGE="일부 단계가 건너뛰어졌지만 필수 단계는 완료되었습니다. (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
+    FINAL_STATUS_MESSAGE="선택/연쇄 건너뜀이 있었지만 필수 단계는 완료되었습니다. (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
+elif [ "${NO_WORK_SHORT_CIRCUIT:-false}" = "true" ]; then
+    FINAL_STATUS_MESSAGE="처리할 신규/보류 작업이 없어 no-op으로 정상 종료했습니다. (총 실행 시간: ${TOTAL_MIN}m ${TOTAL_SEC}s)"
 fi
 
 log "$FINAL_STATUS_LABEL" "============================================================"
@@ -1081,23 +1207,33 @@ echo "|--------|-------|" >> "$SUMMARY_MD"
 echo "| Total Runtime | **${TOTAL_MIN}분 ${TOTAL_SEC}초** |" >> "$SUMMARY_MD"
 echo "| New Videos | ${NEW_URL_COUNT:-0} |" >> "$SUMMARY_MD"
 echo "| Mode | $([ "${HAS_NEW_DATA}" = "true" ] && echo "Full Pipeline" || echo "Smart (Delta Only)") |" >> "$SUMMARY_MD"
+echo "| Policy Mode | ${RUN_DAILY_POLICY_MODE} |" >> "$SUMMARY_MD"
+echo "| Final Status | ${FINAL_STATUS_LABEL} |" >> "$SUMMARY_MD"
 if [ -n "$ARCHIVED_LOG" ]; then
     echo "| Archived Previous Log | \`${ARCHIVED_LOG#"$PROJECT_ROOT/"}\` |" >> "$SUMMARY_MD"
 fi
-if [ "${SKIP_PHASE3:-false}" = "true" ]; then
-    echo "| Note | Phase 3 skipped (timeout) |" >> "$SUMMARY_MD"
+if [ "${NO_WORK_SHORT_CIRCUIT:-false}" = "true" ]; then
+    echo "| No-Work Short Circuit | yes |" >> "$SUMMARY_MD"
 fi
-if [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
-    echo "| Skipped Steps | ${#SKIPPED_STEPS[@]} |" >> "$SUMMARY_MD"
+if [ "${PHASE3_TIMEOUT_SKIP:-false}" = "true" ]; then
+    echo "| Note | Phase 3 skipped before entry (timeout_incomplete) |" >> "$SUMMARY_MD"
 fi
-if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
-    echo "| Failed Required Steps | ${#FAILED_REQUIRED_STEPS[@]} |" >> "$SUMMARY_MD"
-fi
+echo "| Optional Skips | ${#SKIPPED_OPTIONAL_STEPS[@]} |" >> "$SUMMARY_MD"
+echo "| Downstream Skips | ${#SKIPPED_DOWNSTREAM_STEPS[@]} |" >> "$SUMMARY_MD"
+echo "| Failed Required Steps | ${#FAILED_REQUIRED_STEPS[@]} |" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
-if [ "${#SKIPPED_STEPS[@]}" -gt 0 ]; then
-    echo "### Skipped Steps" >> "$SUMMARY_MD"
-    for item in "${SKIPPED_STEPS[@]}"; do
+if [ "${#SKIPPED_OPTIONAL_STEPS[@]}" -gt 0 ]; then
+    echo "### Optional Skips" >> "$SUMMARY_MD"
+    for item in "${SKIPPED_OPTIONAL_STEPS[@]}"; do
+        echo "- $item" >> "$SUMMARY_MD"
+    done
+    echo "" >> "$SUMMARY_MD"
+fi
+
+if [ "${#SKIPPED_DOWNSTREAM_STEPS[@]}" -gt 0 ]; then
+    echo "### Downstream Skips" >> "$SUMMARY_MD"
+    for item in "${SKIPPED_DOWNSTREAM_STEPS[@]}"; do
         echo "- $item" >> "$SUMMARY_MD"
     done
     echo "" >> "$SUMMARY_MD"
@@ -1321,22 +1457,27 @@ FAILED_DOWNLOADS=$(grep "비디오 파일 확보 실패" "$LOG_FILE" 2>/dev/null
 if [ "${#FAILED_REQUIRED_STEPS[@]}" -gt 0 ]; then
     echo "### Pipeline Attention Required" >> "$SUMMARY_MD"
     echo "> 필수 단계 실패가 감지되었습니다. 위 Failed Required Steps / 로그를 확인하세요." >> "$SUMMARY_MD"
-elif [ -n "$FAILED_DOWNLOADS" ]; then
-    echo "### Manual Action Required (Missing Videos)" >> "$SUMMARY_MD"
-    echo "> **Note**: 아래 영상들은 구글 드라이브에 없어 수집에 실패했습니다. 로컬에서 받아 드라이브에 올려주세요." >> "$SUMMARY_MD"
-    echo "" >> "$SUMMARY_MD"
-    echo "\`\`\`text" >> "$SUMMARY_MD"
-    FAILED_LIST_FILE="$PROJECT_ROOT/backend/restaurant-crawling/data/tzuyang/failed_urls.txt"
-    if [ -f "$FAILED_LIST_FILE" ]; then
-        head -n 10 "$FAILED_LIST_FILE" >> "$SUMMARY_MD"
-        COUNT=$(wc -l < "$FAILED_LIST_FILE")
-        if [ "$COUNT" -gt 10 ]; then
-            echo "... (Total $COUNT failed)" >> "$SUMMARY_MD"
+elif [ "${NO_WORK_SHORT_CIRCUIT:-false}" = "true" ]; then
+    echo "### No Work Detected" >> "$SUMMARY_MD"
+    echo "처리할 신규/보류 작업이 없어 no-op으로 정상 종료했습니다." >> "$SUMMARY_MD"
+elif [ "${#SKIPPED_OPTIONAL_STEPS[@]}" -gt 0 ] || [ "${#SKIPPED_DOWNSTREAM_STEPS[@]}" -gt 0 ] || [ -n "$FAILED_DOWNLOADS" ]; then
+    echo "### Pipeline Completed with Warnings" >> "$SUMMARY_MD"
+    echo "> 선택 건너뜀 또는 연쇄 건너뜀이 감지되었습니다. 위 Optional Skips / Downstream Skips / 로그를 확인하세요." >> "$SUMMARY_MD"
+    if [ -n "$FAILED_DOWNLOADS" ]; then
+        echo "" >> "$SUMMARY_MD"
+        echo "\`\`\`text" >> "$SUMMARY_MD"
+        FAILED_LIST_FILE="$PROJECT_ROOT/backend/restaurant-crawling/data/tzuyang/failed_urls.txt"
+        if [ -f "$FAILED_LIST_FILE" ]; then
+            head -n 10 "$FAILED_LIST_FILE" >> "$SUMMARY_MD"
+            COUNT=$(wc -l < "$FAILED_LIST_FILE")
+            if [ "$COUNT" -gt 10 ]; then
+                echo "... (Total $COUNT failed)" >> "$SUMMARY_MD"
+            fi
+        else
+            echo "No failed_urls.txt found (Check logs)" >> "$SUMMARY_MD"
         fi
-    else
-        echo "No failed_urls.txt found (Check logs)" >> "$SUMMARY_MD"
+        echo "\`\`\`" >> "$SUMMARY_MD"
     fi
-    echo "\`\`\`" >> "$SUMMARY_MD"
 else
     echo "### All Systems Go" >> "$SUMMARY_MD"
     echo "모든 영상이 정상적으로 처리되었습니다." >> "$SUMMARY_MD"
@@ -1350,7 +1491,7 @@ echo "- **Log File**: \`$LOG_FILE_REL\`" >> "$SUMMARY_MD"
 if [ -n "${ARCHIVED_LOG:-}" ]; then
     echo "- **Archived Previous Log**: \`${ARCHIVED_LOG#$PROJECT_ROOT/}\`" >> "$SUMMARY_MD"
 fi
-echo "- **Data Branch**: [\`data\`](https://github.com/twoimo/tzudong/tree/data)" >> "$SUMMARY_MD"
+echo "- **Target Branch**: [\`$TARGET_BRANCH\`](https://github.com/twoimo/tzudong/tree/$TARGET_BRANCH)" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
 echo "### 🗺️ 파이프라인 전체 흐름도 (초보자용)" >> "$SUMMARY_MD"
