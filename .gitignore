@@ -73,7 +73,8 @@ body.md
 pr_body*.md
 gha-creds-*.json
 
-# ── AI 코딩 / 에이전트 도구 (Codex/OMX/Gemini) ─────────────
+# ── AI 코딩 / 에이전트 도구 (Codex/OMX/Gemini/OMC) ─────────
+.omc/
 .omx/
 .codex/
 .agents/
