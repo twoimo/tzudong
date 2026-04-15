@@ -1,6 +1,7 @@
-import type { Page, Route } from '@playwright/test';
+import { expect, type Page, type Route } from '@playwright/test';
 
-const SUPABASE_BASE_URL = 'http://127.0.0.1:54321';
+const SUPABASE_REST_ROUTE = '**/rest/v1/**';
+const SUPABASE_AUTH_ROUTE = '**/auth/v1/**';
 
 const RESTAURANT_FIXTURES = [
     {
@@ -9,8 +10,8 @@ const RESTAURANT_FIXTURES = [
         name: '정원분식',
         lat: 37.5665,
         lng: 126.978,
-        road_address: '서울 중구 세종대로 110',
-        jibun_address: '서울 중구 태평로1가 31',
+        road_address: '서울특별시 중구 세종대로 110',
+        jibun_address: '서울특별시 중구 태평로1가 31',
         english_address: '110 Sejong-daero, Jung-gu, Seoul',
         categories: ['분식'],
         phone: '02-0000-0001',
@@ -28,8 +29,8 @@ const RESTAURANT_FIXTURES = [
         name: '명동칼국수',
         lat: 37.56695,
         lng: 126.97885,
-        road_address: '서울 중구 을지로 30',
-        jibun_address: '서울 중구 을지로1가 50',
+        road_address: '서울특별시 중구 을지로 30',
+        jibun_address: '서울특별시 중구 을지로1가 50',
         english_address: '30 Eulji-ro, Jung-gu, Seoul',
         categories: ['한식'],
         phone: '02-0000-0002',
@@ -47,8 +48,8 @@ const RESTAURANT_FIXTURES = [
         name: '서울돈까스',
         lat: 37.5661,
         lng: 126.9772,
-        road_address: '서울 중구 덕수궁길 15',
-        jibun_address: '서울 중구 서소문동 120',
+        road_address: '서울특별시 중구 덕수궁길 15',
+        jibun_address: '서울특별시 중구 서소문동 120',
         english_address: '15 Deoksugung-gil, Jung-gu, Seoul',
         categories: ['일식'],
         phone: '02-0000-0003',
@@ -386,7 +387,17 @@ function getFilterToken(value: string | null): string | null {
     if (!value) return null;
     const match = value.match(/[a-z]+\.(.*)/i);
     if (!match) return null;
-    return decodeURIComponent(match[1] || '')
+
+    const rawToken = match[1] || '';
+    const decodedToken = (() => {
+        try {
+            return decodeURIComponent(rawToken);
+        } catch {
+            return rawToken;
+        }
+    })();
+
+    return decodedToken
         .replace(/^%/, '')
         .replace(/%$/, '')
         .replace(/\*/g, '')
@@ -517,8 +528,8 @@ async function handleSupabaseAuthRoute(route: Route) {
 
 export async function installMobileHomeMapTestMocks(page: Page) {
     await page.addInitScript({ content: MOCK_NAVER_MAPS_SOURCE });
-    await page.route(`${SUPABASE_BASE_URL}/rest/v1/**`, handleSupabaseRestRoute);
-    await page.route(`${SUPABASE_BASE_URL}/auth/v1/**`, handleSupabaseAuthRoute);
+    await page.route(SUPABASE_REST_ROUTE, handleSupabaseRestRoute);
+    await page.route(SUPABASE_AUTH_ROUTE, handleSupabaseAuthRoute);
 }
 
 export async function waitForMockMapReady(page: Page) {
@@ -530,7 +541,10 @@ export async function waitForMockMapReady(page: Page) {
 export async function openMobileSearchAndSelect(page: Page, restaurantName: string) {
     await page.getByLabel('맛집 검색 열기').click();
     await page.getByLabel('맛집 검색어 입력').fill(restaurantName);
-    await page.getByRole('button', { name: new RegExp(restaurantName) }).first().click();
+
+    const searchResult = page.getByRole('button', { name: new RegExp(restaurantName) }).first();
+    await expect(searchResult).toBeVisible({ timeout: 15000 });
+    await searchResult.click();
 }
 
 export async function waitForVisibleMarkers(page: Page, count = 2) {
@@ -550,40 +564,52 @@ export async function waitForMarkerCount(page: Page, count: number) {
 }
 
 export async function clickAnyUnselectedMarker(page: Page) {
-    await page.locator('[data-testid="marker"][style*="width: 32px"]').first().click();
+    const clicked = await page.locator('[data-testid="marker"][style*="width: 32px"]').evaluateAll((elements) => {
+        const target = elements.find((element) => {
+            const rect = element.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+        });
+
+        if (!(target instanceof HTMLElement)) {
+            return false;
+        }
+
+        target.click();
+        return true;
+    });
+
+    expect(clicked).toBe(true);
 }
 
-export async function closeDetailPanelFromMap(page: Page) {
+export async function tapMapBackground(page: Page) {
     await page.getByTestId('map-container').click({
         position: { x: 12, y: 12 },
-    });
-    await page.waitForFunction(() => !document.querySelector('[data-testid="restaurant-detail-panel"]'), undefined, {
-        timeout: 5000,
     });
 }
 
 export async function swipeDetailPanelLeft(page: Page) {
-    await page.waitForFunction(() => {
-        const panel = document.querySelector('[data-testid="restaurant-detail-panel"]');
-        return Boolean(panel?.parentElement);
-    });
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-restaurant-detail-swipe-area="content"]')));
 
     await page.evaluate(() => {
-        const panel = document.querySelector('[data-testid="restaurant-detail-panel"]');
-        const target = panel?.parentElement;
+        const target = document.querySelector('[data-restaurant-detail-swipe-area="content"]');
         if (!(target instanceof HTMLElement)) {
             throw new Error('Unable to find swipe target for restaurant detail panel');
         }
 
-        const createTouchList = (clientX: number, clientY: number) => [
+        const rect = target.getBoundingClientRect();
+        const clientY = rect.top + Math.min(Math.max(rect.height * 0.35, 80), rect.height - 40);
+        const startX = rect.right - 40;
+        const endX = rect.left + 40;
+
+        const createTouchList = (clientX: number, nextClientY: number) => [
             {
                 identifier: 1,
                 clientX,
-                clientY,
+                clientY: nextClientY,
                 pageX: clientX,
-                pageY: clientY,
+                pageY: nextClientY,
                 screenX: clientX,
-                screenY: clientY,
+                screenY: nextClientY,
                 target,
             },
         ];
@@ -596,9 +622,9 @@ export async function swipeDetailPanelLeft(page: Page) {
             target.dispatchEvent(event);
         };
 
-        dispatch('touchstart', createTouchList(280, 280), createTouchList(280, 280));
-        dispatch('touchmove', createTouchList(80, 280), createTouchList(80, 280));
-        dispatch('touchend', [], createTouchList(80, 280));
+        dispatch('touchstart', createTouchList(startX, clientY), createTouchList(startX, clientY));
+        dispatch('touchmove', createTouchList(endX, clientY), createTouchList(endX, clientY));
+        dispatch('touchend', [], createTouchList(endX, clientY));
     });
 }
 
