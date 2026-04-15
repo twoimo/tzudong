@@ -76,6 +76,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         result = self._run_script(
             env_overrides={
                 "CI": "true",
+                "RUN_DAILY_EXECUTION_BRANCH": target_branch,
                 "RUN_DAILY_TARGET_BRANCH": target_branch,
                 "RUN_DAILY_TEST_CURRENT_BRANCH": target_branch,
                 "RUN_DAILY_TEST_PENDING_DATA_CHANGES": "1",
@@ -92,6 +93,40 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertIn(f"pull --rebase --autostash origin {target_branch}", git_log)
         self.assertIn(f"push origin {target_branch}", git_log)
         self.assertNotIn("origin data", git_log)
+        self.assertNotIn("worktree add", git_log)
+
+    def test_default_branch_execution_syncs_data_via_split_worktree(self) -> None:
+        result = self._run_script(
+            env_overrides={
+                "CI": "true",
+                "RUN_DAILY_EXECUTION_BRANCH": "main",
+                "RUN_DAILY_TARGET_BRANCH": "data",
+                "RUN_DAILY_TEST_CURRENT_BRANCH": "main",
+                "RUN_DAILY_TEST_PENDING_DATA_CHANGES": "1",
+            }
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("코드는 'main' 브랜치에서 실행하고 데이터는 'data' 브랜치로 동기화합니다.", result.stdout)
+        self.assertIn("현재 작업 브랜치: main", result.stdout)
+        self.assertIn("[Final] 'data' 브랜치에 최종 데이터 저장...", result.stdout)
+        self.assertNotIn("브랜치 전환 완료: data", result.stdout)
+
+        git_log = (self.root / "state" / "git_commands.log").read_text(encoding="utf-8")
+        self.assertIn("pull --rebase --autostash origin main", git_log)
+        self.assertIn("worktree add --force", git_log)
+        self.assertIn("pull --rebase --autostash origin data", git_log)
+        self.assertIn("push origin data", git_log)
+        self.assertIn("worktree remove --force", git_log)
+        self.assertNotIn("checkout data", git_log)
+
+        summary = (self.root / "project" / "tmp" / "summary.md").read_text(encoding="utf-8")
+        self.assertIn("**Execution Branch**: [`main`]", summary)
+        self.assertIn("**Data Sync Branch**: [`data`]", summary)
+
+        project_data_dir = self.root / "project" / "backend" / "restaurant-crawling" / "data"
+        self.assertTrue((project_data_dir / "credentials.json").exists())
+        self.assertTrue((project_data_dir / "cookies.txt").exists())
 
     def _run_script(
         self,
@@ -158,12 +193,11 @@ class RunDailyRegressionTests(unittest.TestCase):
         (project_root / "backend" / "config").mkdir(parents=True, exist_ok=True)
         (project_root / "backend" / "restaurant-crawling" / "scripts").mkdir(parents=True, exist_ok=True)
         (project_root / "backend" / "restaurant-evaluation" / "scripts").mkdir(parents=True, exist_ok=True)
-        (project_root / "backend" / "restaurant-crawling" / "data" / "tzuyang" / "transcript").mkdir(
-            parents=True, exist_ok=True
-        )
-        (project_root / "backend" / "restaurant-crawling" / "data" / "tzuyang" / "crawling").mkdir(
-            parents=True, exist_ok=True
-        )
+        crawling_data_root = project_root / "backend" / "restaurant-crawling" / "data"
+        (crawling_data_root / "tzuyang" / "transcript").mkdir(parents=True, exist_ok=True)
+        (crawling_data_root / "tzuyang" / "crawling").mkdir(parents=True, exist_ok=True)
+        (crawling_data_root / "credentials.json").write_text('{"type":"service_account"}\n', encoding="utf-8")
+        (crawling_data_root / "cookies.txt").write_text('SID=stub\n', encoding="utf-8")
         (
             project_root
             / "backend"
@@ -443,6 +477,49 @@ class RunDailyRegressionTests(unittest.TestCase):
               set_current_branch "$1"
             fi
             exit 0
+            ;;
+          worktree)
+            subcmd="${1:-}"
+            shift || true
+            case "$subcmd" in
+              add)
+                target_path=""
+                while [ "$#" -gt 0 ]; do
+                  case "$1" in
+                    --force)
+                      shift
+                      ;;
+                    -b)
+                      shift 2
+                      ;;
+                    *)
+                      if [ -z "$target_path" ]; then
+                        target_path="$1"
+                      fi
+                      shift
+                      ;;
+                  esac
+                done
+                mkdir -p "$target_path"
+                exit 0
+                ;;
+              remove)
+                target_path=""
+                while [ "$#" -gt 0 ]; do
+                  case "$1" in
+                    --force)
+                      shift
+                      ;;
+                    *)
+                      target_path="$1"
+                      shift
+                      ;;
+                  esac
+                done
+                rm -rf "$target_path"
+                exit 0
+                ;;
+            esac
             ;;
           rm|commit|pull|push|fetch|show-ref)
             exit 0
