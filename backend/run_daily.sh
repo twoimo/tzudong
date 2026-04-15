@@ -53,6 +53,10 @@ RUN_DAILY_POLICY_MODE="${RUN_DAILY_POLICY_MODE:-end_to_end}"
 RUN_DAILY_VERIFY_OPTIONAL_SCENARIO="${RUN_DAILY_VERIFY_OPTIONAL_SCENARIO:-}"
 RUN_DAILY_VERIFY_REQUIRED_SCENARIO="${RUN_DAILY_VERIFY_REQUIRED_SCENARIO:-}"
 RUN_DAILY_TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
+RUN_DAILY_EXECUTION_BRANCH="${RUN_DAILY_EXECUTION_BRANCH:-}"
+EXECUTION_BRANCH=""
+SPLIT_SYNC_BRANCH_MODE=false
+SYNC_WORKTREE_DIR=""
 NO_WORK_SHORT_CIRCUIT=false
 PHASE3_TIMEOUT_SKIP=false
 
@@ -238,6 +242,122 @@ run_git_with_timeout() {
     else
         "$@"
     fi
+}
+
+sanitize_branch_for_path() {
+    printf '%s' "${1:-}" | tr '/[:space:]' '--' | tr -cd '[:alnum:]._-'
+}
+
+cleanup_split_sync_worktree() {
+    if [ -n "${SYNC_WORKTREE_DIR:-}" ] && [ -e "$SYNC_WORKTREE_DIR" ]; then
+        git worktree remove --force "$SYNC_WORKTREE_DIR" >/dev/null 2>&1 || rm -rf "$SYNC_WORKTREE_DIR"
+    fi
+}
+
+ensure_split_sync_worktree() {
+    local sync_branch="$1"
+    local sanitized_branch temp_dir
+    local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
+
+    if [ -n "${SYNC_WORKTREE_DIR:-}" ] && [ -d "$SYNC_WORKTREE_DIR" ]; then
+        return 0
+    fi
+
+    sanitized_branch="$(sanitize_branch_for_path "$sync_branch")"
+    temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/run-daily-sync-${sanitized_branch}.XXXXXX")"
+    rmdir "$temp_dir"
+
+    log "INFO" "동기화 전용 worktree 준비: $sync_branch"
+    if ! run_git_with_timeout "$network_timeout" git fetch origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
+        log "ERROR" "동기화 브랜치 fetch 실패: $sync_branch"
+        return 1
+    fi
+
+    if git show-ref --verify --quiet "refs/heads/$sync_branch"; then
+        if ! git worktree add --force "$temp_dir" "$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
+            log "ERROR" "동기화 전용 worktree 생성 실패: $sync_branch"
+            return 1
+        fi
+    else
+        if ! git worktree add --force -b "$sync_branch" "$temp_dir" "origin/$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
+            log "ERROR" "원격 동기화 브랜치 worktree 생성 실패: $sync_branch"
+            return 1
+        fi
+    fi
+
+    SYNC_WORKTREE_DIR="$temp_dir"
+    if ! (
+        cd "$SYNC_WORKTREE_DIR" || exit 1
+        run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"
+    ); then
+        log "WARN" "동기화 전용 worktree 최신화 실패. rebase 상태를 정리합니다."
+        (
+            cd "$SYNC_WORKTREE_DIR" || exit 1
+            git rebase --abort 2>/dev/null || true
+        )
+        return 1
+    fi
+
+    log "INFO" "동기화 전용 worktree 준비 완료: $SYNC_WORKTREE_DIR"
+}
+
+mirror_data_root() {
+    local source_root="$1"
+    local target_root="$2"
+    local source_list target_list rel
+
+    mkdir -p "$target_root"
+    source_list="$(mktemp)"
+    target_list="$(mktemp)"
+
+    if [ -d "$source_root" ]; then
+        (
+            cd "$source_root" || exit 1
+            find . -type f \( -name "*.jsonl" -o -name "*.txt" -o -name "*.json" \) ! -name "credentials.json" ! -name "cookies.txt" | sed 's#^\./##' | sort
+        ) > "$source_list"
+    else
+        : > "$source_list"
+    fi
+
+    if [ -d "$target_root" ]; then
+        (
+            cd "$target_root" || exit 1
+            find . -type f \( -name "*.jsonl" -o -name "*.txt" -o -name "*.json" \) ! -name "credentials.json" ! -name "cookies.txt" | sed 's#^\./##' | sort
+        ) > "$target_list"
+    else
+        : > "$target_list"
+    fi
+
+    while IFS= read -r rel; do
+        [ -z "$rel" ] && continue
+        mkdir -p "$(dirname "$target_root/$rel")"
+        cp "$source_root/$rel" "$target_root/$rel"
+    done < "$source_list"
+
+    while IFS= read -r rel; do
+        [ -z "$rel" ] && continue
+        rm -f "$target_root/$rel"
+    done < <(comm -13 "$source_list" "$target_list")
+
+    rm -f "$source_list" "$target_list"
+}
+
+mirror_data_files_to_sync_worktree() {
+    mirror_data_root \
+        "$PROJECT_ROOT/backend/restaurant-crawling/data" \
+        "$SYNC_WORKTREE_DIR/backend/restaurant-crawling/data" || return 1
+    mirror_data_root \
+        "$PROJECT_ROOT/backend/restaurant-evaluation/data" \
+        "$SYNC_WORKTREE_DIR/backend/restaurant-evaluation/data"
+}
+
+seed_execution_data_from_sync_worktree() {
+    mirror_data_root \
+        "$SYNC_WORKTREE_DIR/backend/restaurant-crawling/data" \
+        "$PROJECT_ROOT/backend/restaurant-crawling/data" || return 1
+    mirror_data_root \
+        "$SYNC_WORKTREE_DIR/backend/restaurant-evaluation/data" \
+        "$PROJECT_ROOT/backend/restaurant-evaluation/data"
 }
 
 # 데이터 경로 변경 여부를 빠르게 판별 (status 스캔 정체 회피)
@@ -613,14 +733,12 @@ count_pending_jsonl() {
     rm -f "$source_list" "$target_list"
 }
 
-# [Function] 데이터 커밋 함수 (대상 브랜치에서 직접 실행)
-sync_data_to_remote() {
+# [Function] 현재 작업 트리의 데이터 변경사항을 지정한 브랜치로 커밋/푸시
+commit_and_push_current_repo_data() {
     local STEP_NAME="$1"
-    local SYNC_BRANCH="${TARGET_BRANCH:-$RUN_DAILY_TARGET_BRANCH}"
+    local SYNC_BRANCH="$2"
     local stage_timeout="${RUN_DAILY_GIT_STAGE_TIMEOUT_SEC:-1200}"
     local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
-    log "INFO" "------------------------------------------------------------"
-    log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME, Branch: $SYNC_BRANCH)"
 
     # 데이터 폴더 변경 감지 (status 전체 스캔 대신 diff/ls-files 기반)
     if ! has_pending_data_changes; then
@@ -717,6 +835,31 @@ sync_data_to_remote() {
     log "OK" "$SYNC_BRANCH 브랜치 업데이트 완료 ($STEP_NAME)"
 }
 
+# [Function] 데이터 커밋 함수 (실행 브랜치와 동기화 브랜치를 분리할 수 있음)
+sync_data_to_remote() {
+    local STEP_NAME="$1"
+    local SYNC_BRANCH="${TARGET_BRANCH:-$RUN_DAILY_TARGET_BRANCH}"
+    log "INFO" "------------------------------------------------------------"
+    log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME, Branch: $SYNC_BRANCH)"
+
+    if [ "$SPLIT_SYNC_BRANCH_MODE" = "true" ] && [ -n "${EXECUTION_BRANCH:-}" ] && [ "$SYNC_BRANCH" != "$EXECUTION_BRANCH" ]; then
+        if ! ensure_split_sync_worktree "$SYNC_BRANCH"; then
+            return 1
+        fi
+        if ! mirror_data_files_to_sync_worktree; then
+            log "ERROR" "동기화 전용 worktree로 데이터 미러링 실패"
+            return 1
+        fi
+        (
+            cd "$SYNC_WORKTREE_DIR" || exit 1
+            commit_and_push_current_repo_data "$STEP_NAME" "$SYNC_BRANCH"
+        )
+        return $?
+    fi
+
+    commit_and_push_current_repo_data "$STEP_NAME" "$SYNC_BRANCH"
+}
+
 # ============================================================
 # 파이프라인 시작
 # ============================================================
@@ -725,41 +868,60 @@ log "INFO" "============================================================"
 log "INFO" "일일 데이터 수집 파이프라인 시작"
 log "INFO" "============================================================"
 
-# [Branch Check] 대상 브랜치 확인
+# [Branch Check] 실행 브랜치/동기화 브랜치 확인
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
+DESIRED_BRANCH="${RUN_DAILY_EXECUTION_BRANCH:-$TARGET_BRANCH}"
+EXECUTION_BRANCH="$DESIRED_BRANCH"
+
+if [ -n "${RUN_DAILY_EXECUTION_BRANCH:-}" ] && [ "$DESIRED_BRANCH" != "$TARGET_BRANCH" ]; then
+    SPLIT_SYNC_BRANCH_MODE=true
+    trap cleanup_split_sync_worktree EXIT
+fi
 
 log "INFO" "현재 브랜치 확인: $CURRENT_BRANCH"
 
-if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
-    log "WARN" "현재 브랜치가 '$TARGET_BRANCH'가 아닙니다. (현재: $CURRENT_BRANCH)"
-    
+if [ "$CURRENT_BRANCH" != "$DESIRED_BRANCH" ]; then
+    log "WARN" "현재 브랜치가 '$DESIRED_BRANCH'가 아닙니다. (현재: $CURRENT_BRANCH)"
+
     if [ "${FORCE_BRANCH_SWITCH:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; then
-        log "INFO" "FORCE_BRANCH_SWITCH=1 또는 CI 환경 감지됨. '$TARGET_BRANCH'로 전환을 시도합니다."
+        log "INFO" "FORCE_BRANCH_SWITCH=1 또는 CI 환경 감지됨. '$DESIRED_BRANCH'로 전환을 시도합니다."
         git fetch origin
-        
-        if git show-ref --verify --quiet refs/heads/$TARGET_BRANCH; then
-            git checkout $TARGET_BRANCH || { log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."; exit 1; }
+
+        if git show-ref --verify --quiet refs/heads/$DESIRED_BRANCH; then
+            git checkout $DESIRED_BRANCH || { log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."; exit 1; }
         else
-            git checkout -b $TARGET_BRANCH origin/$TARGET_BRANCH || { log "ERROR" "원격 브랜치 체크아웃 실패."; exit 1; }
+            git checkout -b $DESIRED_BRANCH origin/$DESIRED_BRANCH || { log "ERROR" "원격 브랜치 체크아웃 실패."; exit 1; }
         fi
-        
-        log "OK" "브랜치 전환 완료: $TARGET_BRANCH"
+
+        log "OK" "브랜치 전환 완료: $DESIRED_BRANCH"
     else
         log "ERROR" "안전 모드: FORCE_BRANCH_SWITCH=1 환경변수 없이 자동으로 브랜치를 전환하지 않습니다."
-        log "ERROR" "작업 중인 파일이 유실될 수 있으므로 직접 'git checkout $TARGET_BRANCH' 후 다시 실행해주세요."
+        log "ERROR" "작업 중인 파일이 유실될 수 있으므로 직접 'git checkout $DESIRED_BRANCH' 후 다시 실행해주세요."
         exit 1
     fi
 fi
 
-# 충돌 방지를 위해 최신 변경사항 Pull
-log "INFO" "'$TARGET_BRANCH' 브랜치 최신화 (Pull)..."
-if ! run_git_with_timeout "${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}" git pull --rebase --autostash origin "$TARGET_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+# 충돌 방지를 위해 최신 코드/데이터 변경사항 Pull
+log "INFO" "'$DESIRED_BRANCH' 브랜치 최신화 (Pull)..."
+if ! run_git_with_timeout "${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}" git pull --rebase --autostash origin "$DESIRED_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
     log "WARN" "Pull 실패. 충돌 상태 복구(abort) 후 진행합니다."
     git rebase --abort 2>/dev/null || true
 fi
 
-log "INFO" "현재 작업 브랜치: $(git rev-parse --abbrev-ref HEAD)"
+EXECUTION_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$SPLIT_SYNC_BRANCH_MODE" = "true" ]; then
+    if ! ensure_split_sync_worktree "$TARGET_BRANCH"; then
+        log "ERROR" "실행용 코드와 데이터 동기화 브랜치 분리 준비 실패"
+        exit 1
+    fi
+    if ! seed_execution_data_from_sync_worktree; then
+        log "ERROR" "실행 워크스페이스에 최신 데이터 브랜치를 반영하지 못했습니다."
+        exit 1
+    fi
+    log "INFO" "코드는 '$EXECUTION_BRANCH' 브랜치에서 실행하고 데이터는 '$TARGET_BRANCH' 브랜치로 동기화합니다."
+fi
+log "INFO" "현재 작업 브랜치: $EXECUTION_BRANCH"
 
 # ============================================================
 # [Phase 1] 데이터 수집 및 전처리 (Collection & Preprocessing)
@@ -1491,7 +1653,8 @@ echo "- **Log File**: \`$LOG_FILE_REL\`" >> "$SUMMARY_MD"
 if [ -n "${ARCHIVED_LOG:-}" ]; then
     echo "- **Archived Previous Log**: \`${ARCHIVED_LOG#$PROJECT_ROOT/}\`" >> "$SUMMARY_MD"
 fi
-echo "- **Target Branch**: [\`$TARGET_BRANCH\`](https://github.com/twoimo/tzudong/tree/$TARGET_BRANCH)" >> "$SUMMARY_MD"
+echo "- **Execution Branch**: [\`$EXECUTION_BRANCH\`](https://github.com/twoimo/tzudong/tree/$EXECUTION_BRANCH)" >> "$SUMMARY_MD"
+echo "- **Data Sync Branch**: [\`$TARGET_BRANCH\`](https://github.com/twoimo/tzudong/tree/$TARGET_BRANCH)" >> "$SUMMARY_MD"
 echo "" >> "$SUMMARY_MD"
 
 echo "### 🗺️ 파이프라인 전체 흐름도 (초보자용)" >> "$SUMMARY_MD"
