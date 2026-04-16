@@ -11,24 +11,43 @@ on:
         required: false
         default: '-1'
         type: string
+      policy_mode:
+        description: 'run_daily 정책 모드 (기본: end_to_end)'
+        required: false
+        default: 'end_to_end'
+        type: string
+      verify_optional_scenario:
+        description: '검증 전용 optional 시나리오 (예: missing_youtube, missing_supabase_migration, missing_supabase_insert)'
+        required: false
+        default: ''
+        type: string
+      verify_required_scenario:
+        description: '검증 전용 required 시나리오 (예: step08_quota)'
+        required: false
+        default: ''
+        type: string
+      checkout_ref:
+        description: '검증/수동 실행용 체크아웃 ref (미입력 시 default branch)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
 
-# [PERF] 동시 실행 방지 - 이전 실행 중이면 새 실행이 대기 (취소하지 않음)
-# 이중 실행으로 인한 분 낭비와 git 충돌을 방지
+# [PERF] 운영(default branch -> data sync) 런은 직렬화하고, 검증용 non-default workflow_dispatch 는 브랜치별로 분리
+# schedule 및 수동 default branch 재실행은 운영 락을 공유하고, 검증 브랜치는 별도 group 으로 실행
 concurrency:
-  group: daily-crawl-pipeline
+  group: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && format('daily-crawl-validation-{0}', github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'daily-crawl-pipeline') || 'daily-crawl-pipeline' }}
   cancel-in-progress: false
 
 jobs:
   daily-crawl:
     runs-on: ubuntu-latest
-    # [PERF] 안전 타임아웃: 최대 60분 (월 3000분 한도 보호)
-    timeout-minutes: 60
+    # [PERF] 안전 타임아웃: 최대 90분 (월 3000분 한도 보호)
+    timeout-minutes: 90
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
-    
     steps:
       # ============================================================
       # 환경 준비 (Setup) - 캐시 최대 활용으로 시간 절약
@@ -56,22 +75,76 @@ jobs:
           free -h
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          ref: data
-          fetch-depth: 1
+          ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
+          fetch-depth: 0
 
       - name: Install System Dependencies (ffmpeg, jq, rclone)
+        timeout-minutes: 12
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg jq rclone
+          set -euo pipefail
+
+          missing_packages=()
+          command -v ffmpeg >/dev/null 2>&1 || missing_packages+=(ffmpeg)
+          command -v jq >/dev/null 2>&1 || missing_packages+=(jq)
+          command -v rclone >/dev/null 2>&1 || missing_packages+=(rclone)
+
+          if [ ${#missing_packages[@]} -eq 0 ]; then
+            echo "[OK] System dependencies already available"
+            ffmpeg -version | head -1 || true
+            jq --version || true
+            rclone version | head -1 || true
+            exit 0
+          fi
+
+          APT_OPTIONS=(
+            -o Acquire::Retries=3
+            -o Acquire::http::Timeout=30
+            -o Acquire::https::Timeout=30
+            -o DPkg::Lock::Timeout=60
+            -o Dpkg::Use-Pty=0
+          )
+
+          retry_with_timeout() {
+            local description="$1"
+            local time_limit="$2"
+            shift 2
+
+            local attempt
+            for attempt in 1 2; do
+              echo "[INFO] ${description} (attempt ${attempt}/2)"
+              if timeout "$time_limit" "$@"; then
+                return 0
+              fi
+
+              if [ "$attempt" -eq 2 ]; then
+                echo "[ERROR] ${description} failed after ${attempt} attempts"
+                return 1
+              fi
+
+              echo "[WARN] ${description} failed; retrying once..."
+            done
+          }
+
+          retry_with_timeout "apt-get update" 2m sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTIONS[@]}" update -qq
+          retry_with_timeout "apt-get install ${missing_packages[*]}" 4m sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTIONS[@]}" install -y -qq --no-install-recommends "${missing_packages[@]}"
+
+          command -v ffmpeg >/dev/null 2>&1
+          command -v jq >/dev/null 2>&1
+          command -v rclone >/dev/null 2>&1
+
+          echo "[OK] Installed missing packages: ${missing_packages[*]}"
+          ffmpeg -version | head -1 || true
+          jq --version || true
+          rclone version | head -1 || true
 
       # ============================================================
       # 의존성 설치 (Dependencies) - 캐시 활용 극대화
       # ============================================================
 
       - name: Cache Puppeteer Browser
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/puppeteer
           key: ${{ runner.os }}-puppeteer-${{ hashFiles('backend/package-lock.json') }}
@@ -80,7 +153,7 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
@@ -92,7 +165,7 @@ jobs:
           deno-version: v2.x
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -106,11 +179,12 @@ jobs:
           # Python: pip upgrade + requirements + yt-dlp 최신버전 (백그라운드)
           (python -m pip install --upgrade pip -q && \
            pip install -r backend/restaurant-crawling/scripts/requirements.txt -q && \
-           pip install -U "yt-dlp[default]" -q) &
+           pip install -U "yt-dlp[default]" -q && \
+           python -m camoufox fetch) &
           PY_PID=$!
           
           # Node.js 의존성 (병렬)
-          (cd backend && npm ci --prefer-offline) &
+          (cd backend && npm ci --prefer-offline && npm install -g @google/gemini-cli) &
           NPM_PID=$!
           
           # 모든 설치 완료 대기
@@ -125,6 +199,10 @@ jobs:
         run: |
           mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.config/rclone
           
+          # Add wrapper to PATH
+          echo "${{ github.workspace }}/backend/bin" >> $GITHUB_PATH
+          chmod +x ${{ github.workspace }}/backend/bin/gemini
+          
           # Google Credentials
           echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 -d > backend/restaurant-crawling/data/credentials.json
           
@@ -133,8 +211,18 @@ jobs:
             echo "${{ secrets.YOUTUBE_COOKIES_TXT }}" > backend/restaurant-crawling/data/cookies.txt
           fi
           
-          # Gemini Credentials (OAuth 인증 제거 및 API Key 티어 사용)
+          # Gemini Credentials (자동 계정 우회 지원)
           # Note: API Key is injected manually as GEMINI_API_KEY_BYEON
+          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
+            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
+            echo '{"security": {"auth": {"selectedType": "oauth-personal"}}}' > ~/.gemini/settings.json
+            echo '{"projects": {}}' > ~/.gemini/projects.json
+          fi
+          
+          # 백업 계정 (쿼타 우회용)
+          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}" ]; then
+            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}" | base64 -d > ~/.gemini/oauth_creds_backup.json
+          fi
           
           # RClone Config
           if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
@@ -149,7 +237,7 @@ jobs:
 
       - name: Cache Ollama Models
         if: env.MAX_CONTEXT_VIDEOS != '-1'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.ollama
@@ -196,7 +284,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run Daily Pipeline
-        timeout-minutes: 50
+        timeout-minutes: 80
         env:
           # API Keys
           YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
@@ -218,6 +306,11 @@ jobs:
           OLLAMA_HOST: http://localhost:11434
           # CI
           CI: true
+          RUN_DAILY_POLICY_MODE: ${{ github.event.inputs.policy_mode || 'end_to_end' }}
+          RUN_DAILY_VERIFY_OPTIONAL_SCENARIO: ${{ github.event.inputs.verify_optional_scenario || '' }}
+          RUN_DAILY_VERIFY_REQUIRED_SCENARIO: ${{ github.event.inputs.verify_required_scenario || '' }}
+          RUN_DAILY_EXECUTION_BRANCH: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
+          RUN_DAILY_TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'data') || 'data' }}
         run: |
           chmod +x backend/run_daily.sh
           bash backend/run_daily.sh
@@ -235,24 +328,46 @@ jobs:
           
       - name: Upload Results to GDrive
         if: always()
+        continue-on-error: true
+        timeout-minutes: 20
         env:
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
         run: |
-          if [ ! -d "backend/restaurant-crawling/data/frames" ]; then
+          FRAMES_DIR="backend/restaurant-crawling/data/frames"
+          if [ ! -d "$FRAMES_DIR" ]; then
             echo "No frames directory found, skipping upload."
             exit 0
           fi
 
-          # [PERF] 최근 2시간 내 생성된 파일만 카운트 (신규 프레임 여부 확인)
-          NEW_COUNT=$(find "backend/restaurant-crawling/data/frames" -name "*.jpg" -mmin -120 2>/dev/null | wc -l)
-          
-          if [ "$NEW_COUNT" -gt 0 ]; then
-            echo "Uploading $NEW_COUNT new frames to GDrive..."
-            # --no-traverse: 리모트 전체 리스팅 스킵 (15,000+ 파일 checking 방지)
-            # --max-age 2h: 최근 2시간 내 변경된 파일만 업로드 대상
-            # --transfers 8 --checkers 16: 병렬 전송/체크로 속도 향상
-            rclone copy "backend/restaurant-crawling/data/frames" "$GDRIVE_FRAMES_PATH" \
-              --progress --no-traverse --max-age 2h --transfers 8 --checkers 16
-          else
-            echo "No new frames detected, skipping GDrive upload."
+          MANIFEST_FILE=$(mktemp)
+          trap 'rm -f "$MANIFEST_FILE"' EXIT
+
+          # [PERF] 최근 2시간 내 생성된 프레임 이미지 파일만 manifest로 추려 업로드 범위를 축소
+          find "$FRAMES_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) -mmin -120 -printf '%P\n' 2>/dev/null | sort > "$MANIFEST_FILE"
+          NEW_COUNT=$(wc -l < "$MANIFEST_FILE" | tr -d ' ')
+
+          if [ "$NEW_COUNT" -eq 0 ]; then
+            echo "No recent frame files detected, skipping GDrive upload."
+            exit 0
           fi
+
+          echo "Uploading $NEW_COUNT recent frame files to GDrive..."
+          UPLOAD_EXIT=0
+          (
+            cd "$FRAMES_DIR"
+            # --no-traverse: 대형 원격 트리 전체 리스팅을 피함
+            # --ignore-existing: 재실행 시 이미 올라간 프레임 재업로드를 피함
+            # timeout 18m: GitHub step hard-timeout(20m) 전에 소프트 종료
+            # --transfers 4 --checkers 4 --tpslimit 4: 구글 드라이브 API 할당량 초과(403) 방지
+            timeout 18m rclone copy . "$GDRIVE_FRAMES_PATH" \
+              --files-from "$MANIFEST_FILE" \
+              --no-traverse --ignore-existing \
+              --stats 30s --transfers 4 --checkers 4 --tpslimit 4
+          ) || UPLOAD_EXIT=$?
+
+          if [ "$UPLOAD_EXIT" -eq 124 ]; then
+            echo "GDrive upload reached soft time limit before the GitHub step timeout; stopping early without failing the workflow."
+            exit 0
+          fi
+
+          exit "$UPLOAD_EXIT"

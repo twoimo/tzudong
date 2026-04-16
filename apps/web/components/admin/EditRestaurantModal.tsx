@@ -77,6 +77,13 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: EditRestaurantModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const requireAdminUserId = () => {
+    if (!user?.id) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    return user.id;
+  };
   const [loading, setLoading] = useState(false);
   const [geocodingNaver, setGeocodingNaver] = useState(false);
   const [geocodingGoogle, setGeocodingGoogle] = useState(false);
@@ -414,6 +421,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
 
       // 기존 레스토랑 업데이트 (승인 처리)
       if (!record.restaurant_info) {
@@ -513,7 +521,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       }
 
       // 실제 승인 처리 실행
-      await performApproval();
+      await performApproval(adminUserId);
 
     } catch (error) {
       console.error('승인 실패:', error);
@@ -529,7 +537,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   };
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
-  const performApproval = async () => {
+  const performApproval = async (adminUserId: string) => {
     if (!record) return;
 
     const trimmedName = formData.name.trim();
@@ -541,6 +549,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
 
 
+    const updatedAt = new Date().toISOString();
     const updateData = {
 
       road_address: selectedResult.road_address,
@@ -558,8 +567,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       geocoding_false_stage: null, // 지오코딩 성공 시 NULL (체크 제약 준수)
       db_error_message: null, // 에러 메시지 초기화
       db_error_details: null, // 에러 상세 초기화
-      updated_by_admin_id: user?.id || null, // 현재 로그인한 관리자 ID
-      updated_at: new Date().toISOString(),
+      updated_by_admin_id: adminUserId,
+      updated_at: updatedAt,
       approved_name: trimmedName, // 관리자 승인 이름 저장
     };
 
@@ -607,7 +616,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       geocoding_false_stage: null,
       db_error_message: null,
       db_error_details: null,
-      updated_at: new Date().toISOString(),
+      updated_by_admin_id: adminUserId,
+      updated_at: updatedAt,
       restaurant_info: record.restaurant_info ? {
         ...record.restaurant_info,
         name: trimmedName,
@@ -635,6 +645,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
+      const updatedAt = new Date().toISOString();
 
       const trimmedName = formData.name.trim();
       const trimmedPhone = formData.phone.trim();
@@ -654,8 +666,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const updateData: Record<string, unknown> = {
         approved_name: trimmedName,
         phone: trimmedPhone || null,
-        updated_by_admin_id: user?.id || null,
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
       };
 
       // 카테고리 업데이트 (비어있어도 업데이트하여 삭제 가능하도록 함)
@@ -701,7 +713,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const updates: Partial<EvaluationRecord> = {
         name: trimmedName,
         phone: trimmedPhone || null,
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
         restaurant_name: trimmedName, // 별칭도 업데이트
         categories: selectedCategories, // 카테고리 업데이트 추가
         // 🔥 주소 필드 항상 포함 (제보 수정 시 필요)
@@ -887,7 +900,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
           {/* 레스토랑 이름 */}
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-3 gap-2 text-sm">
               <div className="p-2 bg-muted rounded-md border text-xs" title={record?.origin_name || ''}>
                 <span className="block text-muted-foreground mb-0.5">Origin Name</span>
                 <span className="font-medium text-foreground truncate block">{record?.origin_name || '-'}</span>
@@ -895,6 +908,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-800 text-xs" title={record?.naver_name || ''}>
                 <span className="block text-blue-600 dark:text-blue-400 mb-0.5">Naver Name</span>
                 <span className="font-medium text-foreground truncate block">{record?.naver_name || '-'}</span>
+              </div>
+              <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-md border border-orange-100 dark:border-orange-800 text-xs" title={record?.google_name || ''}>
+                <span className="block text-orange-600 dark:text-orange-400 mb-0.5">Google Name</span>
+                <span className="font-medium text-foreground truncate block">{record?.google_name || '-'}</span>
               </div>
             </div>
             <Label htmlFor="edit-name">레스토랑 이름</Label>
@@ -1267,7 +1284,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                 setShowApprovalConfirm(false);
                 setLoading(true);
                 try {
-                  await performApproval();
+                  await performApproval(requireAdminUserId());
                 } catch (error) {
                   console.error('승인 실패:', error);
                   toast({

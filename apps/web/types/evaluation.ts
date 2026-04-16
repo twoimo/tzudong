@@ -21,6 +21,56 @@ export interface RestaurantInfo {
   naver_address_info: NaverAddressInfo | null;
 }
 
+export type LocationMatchEvidenceFamily =
+  | 'provider_candidate'
+  | 'source_geo'
+  | 'cross_provider'
+  | 'browser_verification'
+  | 'llm_verification';
+
+export type LocationMatchPendingReason =
+  | 'insufficient_evidence'
+  | 'cross_country_mismatch'
+  | 'ambiguous_chain'
+  | 'multi_candidate'
+  | 'timeout'
+  | 'rate_limited';
+
+export interface LocationMatchAddress {
+  roadAddress?: string | null;
+  jibunAddress?: string | null;
+  englishAddress?: string | null;
+  x?: string | null;
+  y?: string | null;
+}
+
+export interface LocationMatchSecondPass {
+  attempted?: boolean;
+  provider?: string | null;
+  timed_out?: boolean;
+  rate_limited?: boolean;
+  duration_ms?: number | null;
+}
+
+export interface LocationMatchResult {
+  name?: string;
+  eval_value?: boolean;
+  origin_name?: string | null;
+  match_status?: 'matched' | 'pending' | 'failed';
+  matched_provider?: 'naver' | 'google' | 'playwright' | 'gemini' | null;
+  matched_name?: string | null;
+  naver_name?: string | null;
+  google_name?: string | null;
+  origin_address?: string;
+  matched_address?: LocationMatchAddress | null;
+  naver_address?: Array<Record<string, unknown>> | null;
+  evidence_summary?: string[];
+  evidence_families?: LocationMatchEvidenceFamily[];
+  pending_reason?: LocationMatchPendingReason | null;
+  second_pass?: LocationMatchSecondPass | null;
+  falseMessage?: string | null;
+}
+
 export interface EvaluationResult {
   visit_authenticity: {
     name: string;
@@ -52,13 +102,7 @@ export interface EvaluationResult {
     name: string;
     eval_value: boolean;
   } | null;
-  location_match_TF: {
-    name: string;
-    eval_value: boolean;
-    origin_address: string;
-    naver_address: Array<Record<string, unknown>> | null;
-    falseMessage?: string;
-  } | null;
+  location_match_TF: LocationMatchResult | null;
 }
 
 export interface DbConflictInfo {
@@ -141,6 +185,12 @@ export interface EvaluationRecord {
   approved_name?: string | null; // 관리자 승인 시 저장된 맛집 이름
   origin_name?: string | null; // AI가 추출한 맛집 이름
   naver_name?: string | null; // 네이버 지도 검색 결과 맛집 이름
+  google_name?: string | null; // 구글 지도 검색 결과 맛집 이름
+  trace_id?: string | null;
+  trace_id_name_source?: string | null;
+  channel_name?: string | null;
+  description_map_url?: string | null;
+  recollect_version?: Record<string, unknown> | null;
   db_error_message?: string | null;
   db_error_details?: {
     error_type: 'duplicate';

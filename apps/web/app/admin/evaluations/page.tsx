@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
+import { EvaluationRecord, EvaluationRecordStatus, CategoryStats, LocationMatchResult } from '@/types/evaluation';
 import { extractVideoIdFromYoutubeLink } from '../../../lib/dashboard/helpers';
 import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '../../../lib/dashboard/classifiers';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
@@ -17,6 +17,7 @@ import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
 import { SubmissionListView, Review } from '@/components/admin/SubmissionListView';
 import { SubmissionRecord, ApprovalData, SubmissionItem, ItemDecision } from '@/components/admin/SubmissionDetailView';
+import { sanitizePrimaryStatusFilterValue } from '@/components/admin/evaluation-status-filter-options';
 import {
   createNewRestaurantNotification,
   createSubmissionApprovedNotification,
@@ -131,11 +132,33 @@ function sanitizeEvalFilters(value: unknown): EvalFiltersState {
   EVALUATION_FILTER_KEYS.forEach((key) => {
     const candidateValue = rawFilters[key];
     if (typeof candidateValue === 'string') {
+      if (key === 'status') {
+        const sanitizedStatus = sanitizePrimaryStatusFilterValue(candidateValue);
+        if (sanitizedStatus) {
+          sanitizedFilters[key] = sanitizedStatus;
+        }
+
+        return;
+      }
+
       sanitizedFilters[key] = candidateValue;
     }
   });
 
   return sanitizedFilters;
+}
+
+function areEvalFiltersEqual(left: EvalFiltersState, right: EvalFiltersState): boolean {
+  const leftRecord = left as Record<string, string | undefined>;
+  const rightRecord = right as Record<string, string | undefined>;
+  const leftKeys = Object.keys(leftRecord).sort();
+  const rightKeys = Object.keys(rightRecord).sort();
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  return leftKeys.every((key, index) => key === rightKeys[index] && leftRecord[key] === rightRecord[key]);
 }
 
 function parseStoredEvaluationPageState(serializedState: string | null): StoredEvaluationPageState | null {
@@ -164,11 +187,6 @@ function parseStoredEvaluationPageState(serializedState: string | null): StoredE
   };
 }
 
-interface LocationMatchResult {
-  matched_name?: string;
-  name?: string;
-}
-
 interface SubmissionRow {
   id: string;
   user_id: string;
@@ -195,8 +213,8 @@ interface ProfileNicknameRow {
 
 interface RestaurantLookupRow {
   id: string;
-  unique_id: string;
-  name: string;
+  unique_id: string | null;
+  name: string | null;
   road_address: string | null;
   jibun_address: string | null;
   phone: string | null;
@@ -252,6 +270,14 @@ function AdminEvaluationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+
+  const requireAdminUserId = () => {
+    if (!user?.id) {
+      throw new Error('로그인이 필요합니다');
+    }
+
+    return user.id;
+  };
 
 
 
@@ -377,6 +403,15 @@ function AdminEvaluationPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const sanitizedFilters = sanitizeEvalFilters(evalFilters);
+    if (areEvalFiltersEqual(evalFilters, sanitizedFilters)) {
+      return;
+    }
+
+    setEvalFilters(sanitizedFilters);
+  }, [evalFilters]);
+
   // 무한 스크롤을 위한 scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -452,7 +487,7 @@ function AdminEvaluationPage() {
 
       setIsSearching(true);
       try {
-        // @ts-expect-error - Supabase RPC 타입 문제
+        // @ts-expect-error Supabase RPC inference is stale in the local generated client types.
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
           max_results: 100,
@@ -781,7 +816,8 @@ function AdminEvaluationPage() {
           .from('restaurants')
           .select('*')
           .range(from, from + PAGE_LIMIT - 1)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: true });
 
         if (pageError) {
           console.error('Supabase error:', pageError);
@@ -859,6 +895,7 @@ function AdminEvaluationPage() {
           restaurant_name: (r.origin_name as string) || (r.name as string) || '이름 없음',
           origin_name: r.origin_name,
           naver_name: r.naver_name,
+          google_name: r.google_name,
           approved_name: r.approved_name,
 
           youtube_link: r.youtube_link as string || '',
@@ -1020,6 +1057,7 @@ function AdminEvaluationPage() {
 
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
 
       // YouTube 링크 추출 (단일 값)
       const youtubeLink = record.youtube_link || '';
@@ -1092,7 +1130,7 @@ function AdminEvaluationPage() {
         // status는 유지하고 에러 메시지만 저장
         await supabase
           .from('restaurants')
-          // @ts-expect-error - Supabase 자동 생성 타입 문제
+          // @ts-expect-error Supabase update inference is stale in the local generated client types.
           .update({
             db_error_message: duplicateCheck.reason,
             db_error_details: errorDetails,
@@ -1116,7 +1154,7 @@ function AdminEvaluationPage() {
       }
 
       // 실제 승인 처리 실행
-      await performApproval(record);
+      await performApproval(record, adminUserId);
 
     } catch (error: unknown) {
       console.error('승인 처리 실패:', error);
@@ -1131,44 +1169,48 @@ function AdminEvaluationPage() {
   };
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
-  const performApproval = async (record: EvaluationRecord) => {
-    // Naver Name 추출 로직
-    // 1. DB 컬럼(naver_name)을 최우선으로 사용
-    let naverName: string | null = record.naver_name || null;
+  const performApproval = async (record: EvaluationRecord, adminUserId: string) => {
+    // Approved Name 추출 로직
+    // 1. DB 컬럼(naver_name, google_name)을 최우선으로 사용
+    let approvedName: string | null = record.naver_name || record.google_name || null;
 
-    // 2. naver_name이 없는 경우 evaluation_results에서 추출 시도 (Fallback)
-    if (!naverName) {
+    // 2. 컬럼이 없는 경우 evaluation_results에서 추출 시도 (Fallback)
+    if (!approvedName) {
       const locationMatch = record.evaluation_results?.location_match_TF as LocationMatchResult | undefined;
       if (locationMatch) {
         if (locationMatch.matched_name) {
-          naverName = locationMatch.matched_name;
+          approvedName = locationMatch.matched_name;
+        } else if (locationMatch.google_name) {
+          approvedName = locationMatch.google_name;
         } else if (locationMatch.name && !['Location Match', '주소 정합성', 'location_match_TF'].includes(locationMatch.name)) {
-          naverName = locationMatch.name;
+          approvedName = locationMatch.name;
         }
       }
     }
 
     // 3. 그래도 없으면 기존 이름 사용 (매우 드문 케이스)
-    if (!naverName) {
-      naverName = record.restaurant_name || record.name || '이름 없음';
+    if (!approvedName) {
+      approvedName = record.restaurant_name || record.name || '이름 없음';
     }
 
     debugLog('🚀 승인 요청 시작:', {
       id: record.id,
-      naverName,
+      approvedName,
       original_status: record.status
     });
 
     // status를 'approved'로 업데이트 및 approved_name 저장
+    const updatedAt = new Date().toISOString();
     const { data: updatedData, error } = await supabase
       .from('restaurants')
-      // @ts-expect-error - Supabase 자동 생성 타입 문제
+      // @ts-expect-error Supabase update inference is stale in the local generated client types.
       .update({
         status: 'approved',
-        approved_name: naverName,
+        approved_name: approvedName,
         db_error_message: null, // 에러 메시지 초기화
         db_error_details: null, // 에러 상세 초기화
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
       })
       .eq('id', record.id)
       .select()
@@ -1189,15 +1231,16 @@ function AdminEvaluationPage() {
     // 상태 업데이트 (새로고침 없이 UI 반영)
     updateRecordInState(record.id, {
       status: 'approved',
-      approved_name: naverName,
+      approved_name: approvedName,
       db_error_message: null,
       db_error_details: null,
-      updated_at: new Date().toISOString(),
+      updated_by_admin_id: adminUserId,
+      updated_at: updatedAt,
     });
 
     toast({
       title: '승인 완료',
-      description: `✅ "${naverName}" 맛집이 승인되었습니다`,
+      description: `✅ "${approvedName}" 맛집이 승인되었습니다`,
     });
   };
 
@@ -1208,13 +1251,17 @@ function AdminEvaluationPage() {
     }
 
     try {
+      const adminUserId = requireAdminUserId();
+      const updatedAt = new Date().toISOString();
+
       // Soft Delete: status를 'deleted'로 변경
       const { error } = await supabase
         .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
+        // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'deleted',
-          updated_at: new Date().toISOString(),
+          updated_by_admin_id: adminUserId,
+          updated_at: updatedAt,
         })
         .eq('id', record.id);
 
@@ -1223,7 +1270,8 @@ function AdminEvaluationPage() {
       // 상태 업데이트 (새로고침 없이)
       updateRecordInState(record.id, {
         status: 'deleted',
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
       } as Partial<EvaluationRecord>);
 
       toast({
@@ -1262,14 +1310,17 @@ function AdminEvaluationPage() {
 
     try {
       setLoading(true);
+      const adminUserId = requireAdminUserId();
+      const updatedAt = new Date().toISOString();
 
       // status를 'pending'으로 업데이트
       const { error } = await supabase
         .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
+        // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'pending',
-          updated_at: new Date().toISOString(),
+          updated_by_admin_id: adminUserId,
+          updated_at: updatedAt,
         })
         .eq('id', record.id);
 
@@ -1278,7 +1329,8 @@ function AdminEvaluationPage() {
       // 상태 업데이트 (새로고침 없이)
       updateRecordInState(record.id, {
         status: 'pending',
-        updated_at: new Date().toISOString(),
+        updated_by_admin_id: adminUserId,
+        updated_at: updatedAt,
       } as Partial<EvaluationRecord>);
 
       toast({
@@ -1467,8 +1519,8 @@ function AdminEvaluationPage() {
           typedOriginalData.forEach((restaurantRow) => {
             originalRestaurantsMap.set(restaurantRow.id, {
               id: restaurantRow.id,
-              unique_id: restaurantRow.unique_id,
-              name: restaurantRow.name,
+              unique_id: restaurantRow.unique_id || '',
+              name: restaurantRow.name || '이름 없음',
               road_address: restaurantRow.road_address,
               jibun_address: restaurantRow.jibun_address,
               phone: restaurantRow.phone,
@@ -2327,9 +2379,9 @@ function AdminEvaluationPage() {
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
                     onFilterChange={(key, value) => {
-                      setEvalFilters(prev => ({
+                      setEvalFilters(prev => sanitizeEvalFilters({
                         ...prev,
-                        [key]: value === '' ? undefined : value
+                        [key]: value === '' ? undefined : value,
                       }));
                     }}
                     onResetFilters={() => setEvalFilters({})}
@@ -2432,7 +2484,7 @@ function AdminEvaluationPage() {
                 setShowApprovalConfirm(false);
                 setLoading(true);
                 try {
-                  await performApproval(pendingApprovalRecord);
+                  await performApproval(pendingApprovalRecord, requireAdminUserId());
                 } catch (error) {
                   console.error('승인 실패:', error);
                   toast({

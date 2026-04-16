@@ -160,7 +160,7 @@ jq_wrapper() { "$JQ_EXE" "$@" | tr -d '\r'; }
 TEMP_BASE="$(cd "$SCRIPT_DIR/.." && pwd)/temp"
 mkdir -p "$TEMP_BASE"
 # 이전 실행에서 남은 에러 플래그 초기화
-rm -f "$TEMP_BASE/quota_exceeded.flag" "$TEMP_BASE/force_web_fallback.flag"
+rm -f "$TEMP_BASE/quota_exceeded.flag" "$TEMP_BASE/force_web_fallback.flag" "$TEMP_BASE/web_fallback_auth_required.flag"
 
 # ================================
 # 로그 함수 (모두 stderr 출력 — stdout은 함수 반환값 전용)
@@ -260,13 +260,58 @@ run_chunk_web_fallback() {
         log_error "  [CRITICAL] 구글 Soft Ban 감지됨! 파이프라인 중지 플래그를 생성합니다."
         touch "$TEMP_BASE/quota_exceeded.flag"
     elif [ $py_exit -eq 44 ]; then
-        log_error "  [CRITICAL] 구글 계정 로그인 풀림/쿠키 만료 감지됨! 파이프라인 중지 플래그를 생성합니다."
-        touch "$TEMP_BASE/quota_exceeded.flag"
+        log_warning "  웹 폴백 로그인 세션이 없어 API 냉각 재시도로 되돌립니다."
+        touch "$TEMP_BASE/web_fallback_auth_required.flag"
+        rm -f "$TEMP_BASE/force_web_fallback.flag"
     else
         log_error "  ${chunk_label} 웹 폴백 처리 실패 (exit: $py_exit). 해당 청크는 건너뜁니다."
     fi
 
     return $py_exit
+}
+
+run_chunk_api_with_cooldown() {
+    local win_gemini="$1" node_win_prompt="$2" node_win_response="$3" node_win_segment="$4" response_file="$5" stderr_file="$6" chunk_label="$7"
+    local max_attempts="${API_QUOTA_API_RETRIES:-3}"
+    local cooldown_sec="${API_QUOTA_COOLDOWN_SEC:-120}"
+    local exit_code=1
+    local api_attempt
+
+    if ! [[ "$max_attempts" =~ ^[0-9]+$ ]] || [ "$max_attempts" -lt 1 ]; then
+        max_attempts=3
+    fi
+
+    if ! [[ "$cooldown_sec" =~ ^[0-9]+$ ]] || [ "$cooldown_sec" -lt 1 ]; then
+        cooldown_sec=120
+    fi
+
+    : > "$stderr_file"
+
+    for ((api_attempt = 1; api_attempt <= max_attempts; api_attempt++)); do
+        set +e
+        run_with_timeout 900 "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>>"$stderr_file"
+        exit_code=$?
+        set -e
+
+        if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
+            return 0
+        fi
+
+        if [ $exit_code -ne 42 ] && [ $exit_code -ne 43 ]; then
+            return $exit_code
+        fi
+
+        if [ $api_attempt -lt $max_attempts ]; then
+            if [ $exit_code -eq 42 ]; then
+                log_warning "  [QUOTA_ERROR] ${chunk_label} API 할당량 이슈. ${cooldown_sec}초 후 API 재시도 (${api_attempt}/${max_attempts})"
+            else
+                log_warning "  [API_UNAVAILABLE] ${chunk_label} Gemini 서버 과부하/일시 오류. ${cooldown_sec}초 후 API 재시도 (${api_attempt}/${max_attempts})"
+            fi
+            sleep "$cooldown_sec"
+        fi
+    done
+
+    return $exit_code
 }
 
 is_debug_mode() {
@@ -640,6 +685,12 @@ PROMPT_EOF
             continue
         fi
 
+        if [ ! -f "$prompt_file" ]; then
+            log_warning "프롬프트 파일 생성 실패: prompt_chunk_${i}.txt - 건너뜀"
+            chunk_failed=$((chunk_failed + 1))
+            continue
+        fi
+
         log_info "  청크 $((i + 1))/${total_chunks}: ${start_mm}~${end_mm}"
 
         # 반복 변하는 경로만 루프 내에서 정규화
@@ -657,16 +708,17 @@ PROMPT_EOF
                 log_info "  청크 $((i + 1)) (Web Fallback 강제 모드)"
                 run_chunk_web_fallback "$prompt_file" "$segment_file" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
             else
-                set +e
-                run_with_timeout 900 "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>"$temp_dir/stderr_${i}.log"
+                run_chunk_api_with_cooldown "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
                 local exit_code=$?
-                set -e
     
                 if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
                     log_success "  청크 $((i + 1)) 성공"
-                elif [ $exit_code -eq 42 ]; then
-                    log_warning "  [QUOTA_ERROR] API 할당량 초과. 남은 청크 및 파이프라인에 웹 자동화 폴백을 강제(FORCE)로 적용합니다."
-                    touch "$TEMP_BASE/force_web_fallback.flag"
+                elif [ $exit_code -eq 42 ] || [ $exit_code -eq 43 ]; then
+                    if [ $exit_code -eq 42 ]; then
+                        log_warning "  [QUOTA_ERROR] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
+                    else
+                        log_warning "  [API_UNAVAILABLE] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
+                    fi
                     run_chunk_web_fallback "$prompt_file" "$segment_file" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
                 else
                     log_error "  청크 $((i + 1)) 실패 (exit: $exit_code)"
@@ -679,16 +731,17 @@ PROMPT_EOF
                         export CURRENT_MODEL
                         sleep 5
     
-                        set +e
-                        run_with_timeout 900 "$NODE_EXE" "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" 2>>"$temp_dir/stderr_${i}.log"
+                        run_chunk_api_with_cooldown "$win_gemini" "$node_win_prompt" "$node_win_response" "$node_win_segment" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
                         local fb_exit=$?
-                        set -e
     
                         if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
                             log_success "  청크 $((i + 1)) 폴백 성공"
-                        elif [ $fb_exit -eq 42 ]; then
-                            log_warning "  [QUOTA_ERROR] API 할당량 초과. 남은 청크 및 파이프라인에 웹 자동화 폴백을 강제(FORCE)로 적용합니다."
-                            touch "$TEMP_BASE/force_web_fallback.flag"
+                        elif [ $fb_exit -eq 42 ] || [ $fb_exit -eq 43 ]; then
+                            if [ $fb_exit -eq 42 ]; then
+                                log_warning "  [QUOTA_ERROR] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
+                            else
+                                log_warning "  [API_UNAVAILABLE] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
+                            fi
                             run_chunk_web_fallback "$prompt_file" "$segment_file" "$response_file" "$temp_dir/stderr_${i}.log" "청크 $((i + 1))"
                         fi
                     fi
@@ -703,8 +756,13 @@ PROMPT_EOF
         
         # 쿼타 초과 플래그 감지
         if [ -f "$TEMP_BASE/quota_exceeded.flag" ]; then
-            log_error "할당량 초과(Quota Error)가 감지되어 해당 채널/영상의 남은 청크 처리 시 웹 폴백을 강제 적용합니다."
-            export FORCE_WEB_FALLBACK=1
+            if [ -f "$TEMP_BASE/web_fallback_auth_required.flag" ]; then
+                log_error "할당량 초과(Quota Error) 감지. 하지만 웹 폴백 로그인이 만료되었으므로 파이프라인 진행이 불가능합니다."
+                exit 42
+            else
+                log_error "할당량 초과(Quota Error)가 감지되어 해당 채널/영상의 남은 청크 처리 시 웹 폴백을 강제 적용합니다."
+                export FORCE_WEB_FALLBACK=1
+            fi
         fi
     done
     
@@ -877,7 +935,7 @@ process_channel() {
                 local restaurants_len
                 restaurants_len=$(get_restaurants_len_from_jsonl "$crawling_file")
 
-                if [[ "$restaurants_len" =~ ^[0-9]+$ ]] && [ "$restaurants_len" -gt 0 ]; then
+                if [[ "$restaurants_len" =~ ^[0-9]+$ ]] && [ "$restaurants_len" -ge 0 ]; then
                     skipped_count=$((skipped_count + 1))
                     skip_already_processed=$((skip_already_processed + 1))
                     log_info "[$index/$total] SKIP: already_processed(crawling) ($video_id, restaurants=$restaurants_len)"

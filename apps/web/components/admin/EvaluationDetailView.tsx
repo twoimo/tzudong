@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import Image from 'next/image';
-import { EvaluationRecord } from '@/types/evaluation';
+import { EvaluationRecord, LocationMatchResult } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -30,11 +30,6 @@ interface EvaluationDetailViewProps {
     record: EvaluationRecord;
     className?: string;
     autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
-}
-
-interface LocationMatchEvalResult {
-    matched_name?: string;
-    name?: string;
 }
 
 export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
@@ -109,7 +104,23 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
         );
     }
 
-    const locationMatchResult = record.evaluation_results?.location_match_TF as LocationMatchEvalResult | undefined;
+    const locationMatchResult = record.evaluation_results?.location_match_TF as LocationMatchResult | undefined;
+    const evidenceSummary = Array.isArray(locationMatchResult?.evidence_summary)
+        ? locationMatchResult.evidence_summary.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        : [];
+    const evidenceFamilies = Array.isArray(locationMatchResult?.evidence_families)
+        ? locationMatchResult.evidence_families.filter((item) => item.trim().length > 0)
+        : [];
+    const secondPass = locationMatchResult?.second_pass;
+    const secondPassSummary = secondPass
+        ? [
+            secondPass.attempted ? 'attempted' : 'not-attempted',
+            secondPass.provider || null,
+            secondPass.timed_out ? 'timed_out' : null,
+            secondPass.rate_limited ? 'rate_limited' : null,
+            typeof secondPass.duration_ms === 'number' ? `${secondPass.duration_ms}ms` : null,
+        ].filter((item): item is string => Boolean(item))
+        : [];
 
     const RightContent = () => (
         <div className="p-4 space-y-4 text-sm">
@@ -147,6 +158,59 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 </span>
                                 <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
                             </div>
+                            <div className="flex items-start gap-2">
+                                <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Google Name:</span>
+                                <span className="font-bold text-orange-600 break-all">
+                                    {record.google_name || locationMatchResult?.google_name || '-'}
+                                </span>
+                                <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
+                            </div>
+                            {(locationMatchResult?.matched_provider ||
+                                locationMatchResult?.matched_name ||
+                                evidenceSummary.length > 0 ||
+                                evidenceFamilies.length > 0 ||
+                                locationMatchResult?.pending_reason ||
+                                secondPassSummary.length > 0) && (
+                                <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2 space-y-1.5">
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Matched:</span>
+                                        <span className="font-semibold text-gray-800 break-all">
+                                            {locationMatchResult?.matched_provider || '-'}
+                                            {locationMatchResult?.matched_name ? ` · ${locationMatchResult.matched_name}` : ''}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Evidence:</span>
+                                        <span className="text-gray-700 break-all">
+                                            {evidenceFamilies.length > 0 ? evidenceFamilies.join(', ') : '-'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Pending:</span>
+                                        <span className="text-gray-700 break-all">
+                                            {locationMatchResult?.pending_reason || '-'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">2nd Pass:</span>
+                                        <span className="text-gray-700 break-all">
+                                            {secondPassSummary.length > 0 ? secondPassSummary.join(', ') : '-'}
+                                        </span>
+                                    </div>
+                                    {evidenceSummary.length > 0 && (
+                                        <div className="space-y-1">
+                                            <span className="font-medium text-gray-500">Evidence Summary:</span>
+                                            <ul className="list-disc pl-5 text-gray-700 space-y-0.5">
+                                                {evidenceSummary.map((summary, index) => (
+                                                    <li key={`${record.id}-evidence-${index}`} className="break-all">
+                                                        {summary}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 

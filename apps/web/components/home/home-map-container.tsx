@@ -36,6 +36,7 @@ interface HomeMapContainerProps {
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant: (restaurant: Restaurant) => void;
     onRestaurantSelect: (restaurant: Restaurant | null) => void;
+    onReleaseSearchSelectionOwnership?: () => void;
 
     onMapReady: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick: (restaurant: Restaurant) => void;
@@ -77,7 +78,6 @@ const QUICK_GESTURE_DURATION_MS = 85;
 const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
 const QUICK_GESTURE_SHORT_DISTANCE_PX = 25;
 const LONG_PRESS_TRANSITION_THRESHOLD_MS = 175;
-const MAP_TAP_MARKER_REOPEN_GUARD_MS = 260;
 const DRAG_RENDER_EPSILON_PERCENT = 0.08;
 const SNAP_TRANSITION_BASE_MS = 235;
 const SNAP_TRANSITION_FAST_MS = 175;
@@ -145,6 +145,7 @@ function HomeMapContainerComponent({
     onAdminEditRestaurant,
     onRequestEditRestaurant,
     onRestaurantSelect,
+    onReleaseSearchSelectionOwnership,
 
     onMapReady,
     onMarkerClick,
@@ -192,9 +193,6 @@ function HomeMapContainerComponent({
     const contentScrollResetNeededRef = useRef(false);
     const pendingSwipeableRestaurantsRef = useRef<Restaurant[]>([]);
     const swipeableRestaurantsRafRef = useRef(0);
-    const markerClickSincePointerDownRef = useRef(false);
-    const suppressMarkerClickUntilRef = useRef(0);
-    const outsideCloseTimeoutRef = useRef<number | null>(null);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
@@ -938,11 +936,6 @@ function HomeMapContainerComponent({
     }, [activeSwipeableRestaurants, getRestaurantListByMode, onRestaurantSelect, panelRestaurant, selectedRestaurant]);
 
     const handleMapMarkerClick = useCallback((restaurant: Restaurant) => {
-        if (performance.now() < suppressMarkerClickUntilRef.current) {
-            return;
-        }
-
-        markerClickSincePointerDownRef.current = true;
         onMarkerClick(restaurant);
     }, [onMarkerClick]);
 
@@ -978,57 +971,6 @@ function HomeMapContainerComponent({
         panelRestaurant,
         selectedRestaurant,
     ]);
-
-    useEffect(() => {
-        if (!isMobileOrTablet || !isPanelOpen) return;
-
-        const handleOutsidePointerDown = (event: PointerEvent) => {
-            markerClickSincePointerDownRef.current = false;
-            const target = event.target as Node | null;
-            if (!target) return;
-            if (sheetContainerRef.current?.contains(target)) return;
-
-            const targetElement = target instanceof Element ? target : null;
-            const isMarkerInteraction =
-                !!targetElement?.closest(
-                    [
-                        '[data-testid="marker"]',
-                        '.cluster-marker-container',
-                        '.cluster-count-badge',
-                        '.cluster-icon',
-                        '.marker-icon',
-                        '.custom-marker',
-                        '.maplibregl-marker',
-                    ].join(', ')
-                );
-            if (isMarkerInteraction) {
-                return;
-            }
-
-            const mapContainer = document.querySelector('[data-testid="map-container"]');
-            if (mapContainer instanceof Element && mapContainer.contains(target)) {
-                if (outsideCloseTimeoutRef.current !== null) {
-                    window.clearTimeout(outsideCloseTimeoutRef.current);
-                }
-
-                outsideCloseTimeoutRef.current = window.setTimeout(() => {
-                    outsideCloseTimeoutRef.current = null;
-                    if (markerClickSincePointerDownRef.current) return;
-                    suppressMarkerClickUntilRef.current = performance.now() + MAP_TAP_MARKER_REOPEN_GUARD_MS;
-                    onPanelClose();
-                }, 0);
-            }
-        };
-
-        document.addEventListener('pointerdown', handleOutsidePointerDown, true);
-        return () => {
-            document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
-            if (outsideCloseTimeoutRef.current !== null) {
-                window.clearTimeout(outsideCloseTimeoutRef.current);
-                outsideCloseTimeoutRef.current = null;
-            }
-        };
-    }, [isMobileOrTablet, isPanelOpen, onPanelClose]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
@@ -1125,6 +1067,16 @@ function HomeMapContainerComponent({
         }
     }, [getCurrentMaxHeight, isMobileOrTablet, isPanelOpen, setSheetHeightSafe]);
 
+    const handleReleaseSearchSelectionOwnership = useCallback(() => {
+        onReleaseSearchSelectionOwnership?.();
+
+        if (!isMobileOrTablet || !isPanelOpen) {
+            return;
+        }
+
+        setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
+    }, [isMobileOrTablet, isPanelOpen, onReleaseSearchSelectionOwnership, setSheetHeightSafe]);
+
     const mapPadding = useMemo(() => {
         if (!isPanelOpen) return undefined;
         // Desktop: Right panel 400px
@@ -1159,6 +1111,7 @@ function HomeMapContainerComponent({
                         isPanelOpen={isPanelOpen}
                         mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen ? sheetHeight : 0}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
+                        onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
                     />
                 </Suspense>
             ) : (
