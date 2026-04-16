@@ -81,9 +81,63 @@ jobs:
           fetch-depth: 0
 
       - name: Install System Dependencies (ffmpeg, jq, rclone)
+        timeout-minutes: 12
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg jq rclone
+          set -euo pipefail
+
+          missing_packages=()
+          command -v ffmpeg >/dev/null 2>&1 || missing_packages+=(ffmpeg)
+          command -v jq >/dev/null 2>&1 || missing_packages+=(jq)
+          command -v rclone >/dev/null 2>&1 || missing_packages+=(rclone)
+
+          if [ ${#missing_packages[@]} -eq 0 ]; then
+            echo "[OK] System dependencies already available"
+            ffmpeg -version | head -1 || true
+            jq --version || true
+            rclone version | head -1 || true
+            exit 0
+          fi
+
+          APT_OPTIONS=(
+            -o Acquire::Retries=3
+            -o Acquire::http::Timeout=30
+            -o Acquire::https::Timeout=30
+            -o DPkg::Lock::Timeout=60
+            -o Dpkg::Use-Pty=0
+          )
+
+          retry_with_timeout() {
+            local description="$1"
+            local time_limit="$2"
+            shift 2
+
+            local attempt
+            for attempt in 1 2; do
+              echo "[INFO] ${description} (attempt ${attempt}/2)"
+              if timeout "$time_limit" "$@"; then
+                return 0
+              fi
+
+              if [ "$attempt" -eq 2 ]; then
+                echo "[ERROR] ${description} failed after ${attempt} attempts"
+                return 1
+              fi
+
+              echo "[WARN] ${description} failed; retrying once..."
+            done
+          }
+
+          retry_with_timeout "apt-get update" 2m sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTIONS[@]}" update -qq
+          retry_with_timeout "apt-get install ${missing_packages[*]}" 4m sudo env DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTIONS[@]}" install -y -qq --no-install-recommends "${missing_packages[@]}"
+
+          command -v ffmpeg >/dev/null 2>&1
+          command -v jq >/dev/null 2>&1
+          command -v rclone >/dev/null 2>&1
+
+          echo "[OK] Installed missing packages: ${missing_packages[*]}"
+          ffmpeg -version | head -1 || true
+          jq --version || true
+          rclone version | head -1 || true
 
       # ============================================================
       # 의존성 설치 (Dependencies) - 캐시 활용 극대화
