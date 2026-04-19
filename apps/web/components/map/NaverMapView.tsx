@@ -113,6 +113,8 @@ import {
 import { buildNaverMapToastTrigger } from "@/lib/naver-map-toast-helpers";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
+import { calculateNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
+import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -540,27 +542,17 @@ const NaverMapView = memo(({
         try {
             const currentZoom = map.getZoom();
             const projection = map.getProjection();
-            const centerLatLng = new window.naver.maps.LatLng(lat, lng);
-
-            // 1. 현재 줌 레벨에서의 오프셋에 해당하는 좌표 Delta 계산
-            const centerPoint = projection.fromCoordToOffset(centerLatLng);
-            const offsetPoint = new window.naver.maps.Point(
-                centerPoint.x + offsetX,
-                centerPoint.y + offsetY // Y축 오프셋 추가
-            );
-            const offsetCenterLatLng = projection.fromOffsetToCoord(offsetPoint);
-
-            const dLat = offsetCenterLatLng.lat() - centerLatLng.lat();
-            const dLng = offsetCenterLatLng.lng() - centerLatLng.lng();
-
-            // 2. 줌 레벨 차이에 따른 스케일 팩터 적용
-            // 줌이 커지면(확대), 동일한 픽셀 오프셋은 더 작은 좌표 차이를 의미함
-            const scale = Math.pow(2, currentZoom - targetZoom);
-
-            const finalLat = centerLatLng.lat() + dLat * scale;
-            const finalLng = centerLatLng.lng() + dLng * scale;
-
-            return new window.naver.maps.LatLng(finalLat, finalLng);
+            return calculateNaverAdjustedCenter({
+                centerLat: lat,
+                centerLng: lng,
+                currentZoom,
+                targetZoom,
+                offsetX,
+                offsetY,
+                projection,
+                createLatLng: (nextLat, nextLng) => new window.naver.maps.LatLng(nextLat, nextLng),
+                createPoint: (x, y) => new window.naver.maps.Point(x, y),
+            });
         } catch (e) {
             console.error("좌표 계산 실패:", e);
             return new window.naver.maps.LatLng(lat, lng);
@@ -591,12 +583,13 @@ const NaverMapView = memo(({
         ) || 60;
 
         const vh = window.visualViewport?.height ?? window.innerHeight;
-        const clampedSheetHeightPercent = Math.max(0, Math.min(100, mobileSheetHeightPercent));
-        const sheetHeightPx = (clampedSheetHeightPercent / 100) * vh;
 
-        // 마커를 남은 가시 영역의 중앙으로 올리려면,
-        // 지도 중심은 바텀시트/하단네비 총 높이의 절반만큼 '아래(+)로' 이동해야 함
-        return (sheetHeightPx / 2) + (navHeight / 2) + MOBILE_MARKER_CENTER_FINE_TUNE_PX;
+        return calculateNaverMobileVerticalOffset({
+            fineTunePx: MOBILE_MARKER_CENTER_FINE_TUNE_PX,
+            navHeight,
+            sheetHeightPercent: mobileSheetHeightPercent,
+            viewportHeight: vh,
+        });
     }, [isMobileOrTablet, mobileSheetHeightPercent]);
 
     // [Helper] 패널 오프셋을 고려한 morph (클러스터 클릭 시 사용)
