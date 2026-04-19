@@ -30,6 +30,29 @@ export function buildNaverMapReviewCloseHandler(setIsReviewModalOpen: (isOpen: b
     return () => setIsReviewModalOpen(false);
 }
 
+export function buildNaverMarkerRestaurantSelectionHandler({
+    hasUserMovedMapRef,
+    onMarkerClick,
+    onRestaurantSelect,
+    setInternalPanelOpen,
+}: {
+    hasUserMovedMapRef: { current: boolean };
+    onMarkerClick?: (restaurant: Restaurant) => void;
+    onRestaurantSelect?: (restaurant: Restaurant) => void;
+    setInternalPanelOpen: (isOpen: boolean) => void;
+}) {
+    return (restaurant: Restaurant) => {
+        hasUserMovedMapRef.current = false;
+        if (onMarkerClick) {
+            onMarkerClick(restaurant);
+            return;
+        }
+
+        onRestaurantSelect?.(restaurant);
+        setInternalPanelOpen(true);
+    };
+}
+
 export function getNaverMapReviewRestaurant(restaurant: Restaurant | null) {
     return restaurant ? { id: restaurant.id, name: restaurant.name } : null;
 }

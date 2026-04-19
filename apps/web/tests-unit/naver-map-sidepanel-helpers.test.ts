@@ -5,6 +5,7 @@ import {
     buildNaverMapDetailPanelMouseDownCaptureHandler,
     buildNaverMapInternalPanelCloseHandler,
     buildNaverMapInternalPanelToggleHandler,
+    buildNaverMarkerRestaurantSelectionHandler,
     buildNaverMapRestaurantAction,
     buildNaverMapReviewCloseHandler,
     buildNaverMapReviewOpenHandler,
@@ -82,5 +83,34 @@ describe('naver map sidepanel helpers', () => {
 
         expect(stopped).toBe(true);
         expect(calls).toEqual(['detail', 'detail']);
+    });
+
+    test('builds marker restaurant selection handler for internal and external modes', () => {
+        const restaurant = { id: 'r1', name: '식당' } as any;
+        const internalCalls: string[] = [];
+        const externalCalls: string[] = [];
+        const movedRef = { current: true };
+
+        const internalHandler = buildNaverMarkerRestaurantSelectionHandler({
+            hasUserMovedMapRef: movedRef,
+            onRestaurantSelect: (value) => internalCalls.push(value.id),
+            setInternalPanelOpen: (value) => internalCalls.push(`panel:${value}`),
+        });
+        internalHandler(restaurant);
+
+        expect(movedRef.current).toBe(false);
+        expect(internalCalls).toEqual(['r1', 'panel:true']);
+
+        movedRef.current = true;
+        const externalHandler = buildNaverMarkerRestaurantSelectionHandler({
+            hasUserMovedMapRef: movedRef,
+            onMarkerClick: (value) => externalCalls.push(value.id),
+            onRestaurantSelect: (value) => externalCalls.push(`select:${value.id}`),
+            setInternalPanelOpen: (value) => externalCalls.push(`panel:${value}`),
+        });
+        externalHandler(restaurant);
+
+        expect(movedRef.current).toBe(false);
+        expect(externalCalls).toEqual(['r1']);
     });
 });
