@@ -108,6 +108,7 @@ import {
     getNaverMapReviewRestaurant,
 } from "@/lib/naver-map-sidepanel-helpers";
 import { buildNaverMapToastTrigger } from "@/lib/naver-map-toast-helpers";
+import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -473,9 +474,15 @@ const NaverMapView = memo(({
     // 오른쪽 패널이 열려있을 때, 오버레이들을 "남은 지도 영역"의 중앙에 배치하기 위함
 
     // [중요] 오프셋 계산 로직 개선 (2024-Fix)
-    const isInternalMode = !onMarkerClick;
-    const isShrinkingLayout = isInternalMode && internalPanelOpen && !isGridMode;
-    const isExternalPanelOpen = externalPanelOpen === false;
+    const {
+        isExternalPanelOpen,
+        isShrinkingLayout,
+    } = getNaverPanelStateFlags({
+        externalPanelOpen,
+        internalPanelOpen,
+        isGridMode,
+        onMarkerClick,
+    });
 
     // 유효 패널 너비 (오프셋 계산용)
     const {
