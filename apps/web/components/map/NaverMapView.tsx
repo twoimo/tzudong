@@ -107,9 +107,12 @@ import {
     buildNaverMapReviewOpenHandler,
     buildNaverMapReviewSuccessHandler,
     getNaverMapReviewRestaurant,
+    shouldCloseNaverInternalPanelForExternalState,
+    shouldCloseNaverInternalPanelOnEscape,
 } from "@/lib/naver-map-sidepanel-helpers";
 import { buildNaverMapToastTrigger } from "@/lib/naver-map-toast-helpers";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
+import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -502,7 +505,7 @@ const NaverMapView = memo(({
 
     // 외부에서 패널 닫기 요청 시 닫기 (externalPanelOpen이 false면 닫기)
     useEffect(() => {
-        if (externalPanelOpen === false) {
+        if (shouldCloseNaverInternalPanelForExternalState(externalPanelOpen)) {
             setInternalPanelOpen(false);
         }
     }, [externalPanelOpen]);
@@ -510,7 +513,11 @@ const NaverMapView = memo(({
     // ESC 키로 패널 닫기 (접근성 향상)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && internalPanelOpen && !isGridMode) {
+            if (shouldCloseNaverInternalPanelOnEscape({
+                key: e.key,
+                internalPanelOpen,
+                isGridMode,
+            })) {
                 setInternalPanelOpen(false);
             }
         };
@@ -563,20 +570,16 @@ const NaverMapView = memo(({
     // [Helper] 실시간 뷰포트 오프셋 계산 (ResizeObserver 기반)
     // 패널의 실제 너비를 state로 관리하여 정확한 오프셋 반환
     const getViewportOffset = useCallback((): number => {
-        // 모바일/태블릿은 항상 0 (바텀시트가 오버레이)
-        if (isMobileOrTablet) return 0;
-
-        // 내부 모드에서 패널이 shrink 모드면 0
-        const isIntMode = !onMarkerClick;
-        const isShrink = isIntMode && internalPanelOpen && !isGridMode;
-        if (isShrink) return 0;
-
-        // 패널이 닫혀있으면 0
-        if (isPanelCollapsed) return 0;
-        if (!(propIsPanelOpen ?? false) && externalPanelOpen !== false) return 0;
-
-        // [OPTIMIZATION] ResizeObserver로 관리되는 state 반환 (DOM 측정 없음)
-        return panelWidth;
+        return getNaverViewportOffset({
+            externalPanelOpen,
+            internalPanelOpen,
+            isGridMode,
+            isMobileOrTablet,
+            isPanelCollapsed,
+            onMarkerClick,
+            panelWidth,
+            propIsPanelOpen,
+        });
     }, [isMobileOrTablet, onMarkerClick, internalPanelOpen, isGridMode, isPanelCollapsed, propIsPanelOpen, externalPanelOpen, panelWidth]);
 
     const getMobileVerticalOffset = useCallback(() => {
