@@ -57,8 +57,14 @@ STORYBOARD_BGE_ENABLED=false
 ### 3. 실행
 
 ```bash
-# 개발 서버 실행
+# 개발 서버 실행 (기본: Next 16 기본 Turbopack + 캐시 재사용)
 bun run dev
+
+# 캐시를 비우고 개발 서버 재시작
+bun run dev:clean
+
+# Turbopack 이슈가 있을 때만 webpack 폴백 사용
+bun run dev:webpack
 
 # 프로덕션 빌드 및 실행
 bun run build

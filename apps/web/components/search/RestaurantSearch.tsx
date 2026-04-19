@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, X, Video, Clock, TrendingUp, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FilterState } from "@/components/filters/FilterPanel";
+import type { FilterState } from "@/components/filters/filter-state";
 import { useSearchHistory } from "@/hooks/use-search-history";
 import { incrementSearchCount } from "@/lib/search-count";
 

@@ -1,12 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { mergeRestaurants } from '@/hooks/use-restaurants';
-import { supabase } from '@/integrations/supabase/client';
-import { Restaurant, Region } from '@/types/restaurant';
-import { FilterState } from '@/components/filters/FilterPanel';
+import type { Restaurant, Region } from '@/types/restaurant';
+import type { FilterState } from '@/components/filters/filter-state';
 import { releaseSearchSelectionOwnership as releaseSearchSelectionOwnershipSnapshot } from '@/lib/mobile-home-search-selection';
-
-import { OVERSEAS_REGIONS, OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 
 export function useHomeState(mapMode: 'domestic' | 'overseas') {
     // 맛집 선택 및 모달
@@ -115,56 +110,6 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
             sessionStorage.removeItem('selectedRegion');
         }
     }, []);
-
-    // 글로벌 맛집 데이터
-    const { data: globalRestaurants = [] } = useQuery({
-        queryKey: ['global-restaurants-count'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('restaurants')
-                .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
-                .eq('status', 'approved');
-
-            if (error) {
-                console.error('글로벌 맛집 데이터 조회 실패:', error);
-                return [];
-            }
-            return mergeRestaurants(data || []);
-        },
-        enabled: mapMode === 'overseas',
-    });
-
-
-    // 국가별 맛집 수 계산 (이제는 도시/지역별 계산)
-    const countryCounts = useMemo(() => {
-        const counts: Record<string, number> = {};
-        OVERSEAS_REGION_LIST.forEach(region => { counts[region] = 0; });
-
-        globalRestaurants.forEach((restaurant) => {
-            const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
-            const lowerAddress = address.toLowerCase();
-
-            OVERSEAS_REGION_LIST.forEach((regionKey) => {
-                const config = OVERSEAS_REGIONS[regionKey];
-                // 해당 지역의 키워드 중 하나라도 포함되면 카운트
-                // 대소문자 구분 없이 검색
-                const isMatch = config.keywords.some(keyword =>
-                    lowerAddress.includes(keyword.toLowerCase())
-                );
-
-                // 또는 국가 이름 자체가 포함되어 있으면 (포괄적 검색) - but handled by specific keywords now
-                // 만약 국가 이름만 있고 도시 이름이 없는 경우를 대비해 국가 이름도 키워드에 포함할지 고려
-                // 현재는 정밀한 도시 매칭을 위해 키워드 기반으로만 카운트
-
-                if (isMatch) {
-                    counts[regionKey] = (counts[regionKey] || 0) + 1;
-                }
-            });
-        });
-
-        return counts;
-    }, [globalRestaurants]);
-
     return useMemo(() => ({
         // States
         selectedRestaurant,
@@ -202,7 +147,6 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         setFilters,
         selectedCategories,
         setSelectedCategories,
-        countryCounts,
         syncRestaurantDetailSelection,
         openRestaurantDetailSelection,
         clearRestaurantDetailSelection,
@@ -225,7 +169,6 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         editFormData,
         filters,
         selectedCategories,
-        countryCounts,
         syncRestaurantDetailSelection,
         openRestaurantDetailSelection,
         clearRestaurantDetailSelection,

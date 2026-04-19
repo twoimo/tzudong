@@ -101,6 +101,79 @@ def unique_non_empty(values: Iterable[Any]) -> list[Any]:
     return ordered
 
 
+def extract_youtube_video_id(raw_url: Any) -> str:
+    if not isinstance(raw_url, str):
+        return ""
+
+    value = raw_url.strip()
+    if not value:
+        return ""
+
+    patterns = (
+        r"[?&]v=([A-Za-z0-9_-]{6,})",
+        r"youtu\.be/([A-Za-z0-9_-]{6,})",
+        r"youtube\.com/shorts/([A-Za-z0-9_-]{6,})",
+        r"youtube\.com/embed/([A-Za-z0-9_-]{6,})",
+    )
+
+    for pattern in patterns:
+        match = re.search(pattern, value)
+        if match and match.group(1):
+            return match.group(1)
+
+    return ""
+
+
+def canonicalize_youtube_link(raw_url: Any) -> str | None:
+    video_id = extract_youtube_video_id(raw_url)
+    if not video_id:
+        return raw_url if isinstance(raw_url, str) and raw_url.strip() else None
+    return f"https://www.youtube.com/watch?v={video_id}"
+
+
+def normalize_identity_name(raw_name: Any) -> str:
+    if not isinstance(raw_name, str):
+        return ""
+    return re.sub(r"\s+", " ", raw_name).strip().lower()
+
+
+def iter_identity_names(row: dict[str, Any]) -> list[str]:
+    return unique_non_empty(
+        normalize_identity_name(row.get(field_name))
+        for field_name in ("approved_name", "origin_name", "naver_name", "google_name")
+    )
+
+
+def identity_candidate_sort_key(row: dict[str, Any]) -> tuple[int, int, int, str, str, str]:
+    status = row.get("status")
+    status_priority = 0
+    if status == "approved":
+        status_priority = 3
+    elif status == "hold":
+        status_priority = 2
+    elif status == "pending":
+        status_priority = 1
+
+    completeness_score = sum(
+        1
+        for field_name in ("jibun_address", "road_address", "evaluation_results", "youtube_meta", "naver_name", "reasoning_basis")
+        if row.get(field_name) not in (None, "", {}, [])
+    )
+
+    updated_at = str(row.get("updated_at") or "")
+    created_at = str(row.get("created_at") or "")
+    row_id = str(row.get("id") or "")
+
+    return (
+        1 if is_review_locked(row) else 0,
+        status_priority,
+        completeness_score,
+        updated_at,
+        created_at,
+        row_id,
+    )
+
+
 def has_admin_lock_marker(row: dict[str, Any]) -> bool:
     marker = row.get("updated_by_admin_id")
     return marker not in (None, "")
@@ -158,15 +231,19 @@ def merge_restaurant_record(
 def build_review_rebind_candidate_map(existing_rows: list[dict[str, Any]]) -> dict[tuple[str, str], list[dict[str, Any]]]:
     candidate_map: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in existing_rows:
-        if not is_review_locked(row):
+        if row.get("status") == "deleted":
             continue
 
-        youtube_link = row.get("youtube_link")
-        origin_name = row.get("origin_name")
-        if not youtube_link or not origin_name:
+        video_id = extract_youtube_video_id(row.get("youtube_link"))
+        identity_names = iter_identity_names(row)
+        if not video_id or not identity_names:
             continue
 
-        candidate_map.setdefault((youtube_link, origin_name), []).append(row)
+        for identity_name in identity_names:
+            candidate_map.setdefault((video_id, identity_name), []).append(row)
+
+    for candidates in candidate_map.values():
+        candidates.sort(key=identity_candidate_sort_key, reverse=True)
 
     return candidate_map
 
@@ -198,22 +275,24 @@ def classify_batch_operations(
             continue
 
         youtube_link = item.get("youtube_link")
-        origin_name = item.get("origin_name")
-        candidates = review_candidate_map.get((youtube_link, origin_name), []) if youtube_link and origin_name else []
+        video_id = extract_youtube_video_id(youtube_link)
+        identity_names = iter_identity_names(item)
+        candidates_by_id: dict[str, dict[str, Any]] = {}
+        if video_id and identity_names:
+            for identity_name in identity_names:
+                for candidate in review_candidate_map.get((video_id, identity_name), []):
+                    candidate_id = candidate.get("id")
+                    if candidate_id:
+                        candidates_by_id[str(candidate_id)] = candidate
 
-        if len(candidates) == 1 and candidates[0].get("id"):
-            reviewed_row = candidates[0]
-            rebind_updates.append((reviewed_row["id"], merge_restaurant_record(reviewed_row, item, rebind_trace_id=True)))
+        candidates = sorted(candidates_by_id.values(), key=identity_candidate_sort_key, reverse=True)
+
+        if candidates and candidates[0].get("id"):
+            rebind_target = candidates[0]
+            rebind_updates.append((rebind_target["id"], merge_restaurant_record(rebind_target, item, rebind_trace_id=True)))
             stats["trace_rebinds"] += 1
-            note_review_lock(reviewed_row, stats, exact_match=False)
+            note_review_lock(rebind_target, stats, exact_match=False)
             continue
-
-        if len(candidates) > 1:
-            stats["ambiguous_rebind_skips"] += 1
-            print(
-                "[WARN] reviewed row rebind skipped: "
-                f"trace_id={trace_id} youtube_link={youtube_link} origin_name={origin_name} candidates={len(candidates)}"
-            )
 
         upsert_rows.append(item)
 
@@ -431,9 +510,11 @@ def build_record(data: dict[str, Any], channel: str) -> dict[str, Any]:
     if youtube_meta and youtube_meta.get("publishedAt"):
         record_created_at = youtube_meta.get("publishedAt")
 
+    canonical_youtube_link = canonicalize_youtube_link(data.get("youtube_link"))
+
     return {
         "trace_id": data.get("trace_id"),
-        "youtube_link": data.get("youtube_link"),
+        "youtube_link": canonical_youtube_link,
         "channel_name": data.get("channel_name") or channel,
         "status": data.get("status", "pending"),
         "origin_name": data.get("origin_name"),

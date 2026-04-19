@@ -7,14 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { X } from "lucide-react";
-
-export interface FilterState {
-    categories: string[];
-    minRating: number;
-    minReviews: number;
-    minUserVisits: number;
-    minJjyangVisits: number;
-}
+import type { FilterState } from "@/components/filters/filter-state";
 
 interface FilterPanelProps {
     filters: FilterState;
