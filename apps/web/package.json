@@ -3,9 +3,9 @@
   "version": "1.1.1",
   "private": true,
   "scripts": {
-    "dev": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
-    "dev:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
-    "dev:playwright": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
+    "dev": "node scripts/clean-next.mjs --skip-clean -- node node_modules/next/dist/bin/next dev --port 8080",
+    "dev:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --port 8080",
+    "dev:playwright": "node scripts/clean-next.mjs --skip-clean -- node node_modules/next/dist/bin/next dev --port 8080",
     "build": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build",
     "start": "node scripts/clean-next.mjs --skip-clean -- node .next/standalone/apps/web/server.js",
     "start:playwright": "PORT=8080 HOSTNAME=127.0.0.1 node scripts/clean-next.mjs --skip-clean -- node .next/standalone/apps/web/server.js",
@@ -16,7 +16,9 @@
     "test:unit": "bun test tests-unit",
     "test:responsive": "node scripts/run-responsive-tests.mjs",
     "qa:insights-chat": "bun run scripts/insight-chat-qa.mjs",
-    "qa:insights-chat:db": "bun run scripts/insight-chat-db-ops.mjs"
+    "qa:insights-chat:db": "bun run scripts/insight-chat-db-ops.mjs",
+    "dev:webpack": "node scripts/clean-next.mjs --skip-clean -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
+    "dev:webpack:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

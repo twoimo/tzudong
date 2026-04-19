@@ -248,21 +248,64 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         self.assertEqual(1, stats["trace_rebinds"])
         self.assertEqual(0, stats["ambiguous_rebind_skips"])
 
-    def test_ambiguous_reviewed_rebind_fails_closed(self):
-        incoming = self.make_incoming(trace_id="trace-new")
-        base_row = {
-            "trace_id": "trace-old",
-            "youtube_link": "https://youtube.com/watch?v=abc123",
-            "origin_name": "새 이름",
+    def test_reviewed_candidate_rebinds_via_approved_name_alias_when_origin_name_changed(self):
+        reviewed_row = {
+            "id": "row-approved",
+            "trace_id": "trace-approved",
+            "youtube_link": "https://www.youtube.com/watch?v=abc123",
+            "origin_name": "해피고기집",
+            "approved_name": "행복한고기집",
             "status": "approved",
             "updated_by_admin_id": "admin-1",
+            "categories": ["고기"],
         }
-        candidate_map = supabase_insert.build_review_rebind_candidate_map(
-            [
-                deepcopy({**base_row, "id": "row-5"}),
-                deepcopy({**base_row, "id": "row-6"}),
-            ]
+        incoming = self.make_incoming(
+            trace_id="trace-new",
+            youtube_link="https://youtu.be/abc123?feature=share",
+            origin_name="행복한고기집",
+            naver_name="행복한고기집",
         )
+        stats = self.make_stats()
+        candidate_map = supabase_insert.build_review_rebind_candidate_map([reviewed_row])
+
+        upserts, rebinds = supabase_insert.classify_batch_operations(
+            [incoming],
+            {},
+            candidate_map,
+            stats,
+        )
+
+        self.assertEqual([], upserts)
+        self.assertEqual(1, len(rebinds))
+        row_id, payload = rebinds[0]
+        self.assertEqual("row-approved", row_id)
+        self.assertEqual("trace-new", payload["trace_id"])
+        self.assertEqual("행복한고기집", payload["approved_name"])
+        self.assertEqual(1, stats["trace_rebinds"])
+
+    def test_duplicate_candidates_prefer_admin_locked_row_over_plain_pending_row(self):
+        incoming = self.make_incoming(trace_id="trace-new")
+        candidate_map = supabase_insert.build_review_rebind_candidate_map([
+            {
+                "id": "row-5",
+                "trace_id": "trace-pending-1",
+                "youtube_link": "https://youtube.com/watch?v=abc123",
+                "origin_name": "새 이름",
+                "status": "pending",
+                "updated_by_admin_id": None,
+                "evaluation_results": None,
+            },
+            {
+                "id": "row-6",
+                "trace_id": "trace-pending-2",
+                "youtube_link": "https://youtube.com/watch?v=abc123",
+                "origin_name": "새 이름",
+                "approved_name": "새 이름",
+                "status": "pending",
+                "updated_by_admin_id": "admin-1",
+                "evaluation_results": {"score": 1},
+            },
+        ])
         stats = self.make_stats()
 
         upserts, rebinds = supabase_insert.classify_batch_operations(
@@ -272,9 +315,25 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
             stats,
         )
 
-        self.assertEqual([incoming], upserts)
-        self.assertEqual([], rebinds)
-        self.assertEqual(1, stats["ambiguous_rebind_skips"])
+        self.assertEqual([], upserts)
+        self.assertEqual(1, len(rebinds))
+        row_id, payload = rebinds[0]
+        self.assertEqual("row-6", row_id)
+        self.assertEqual("trace-new", payload["trace_id"])
+        self.assertEqual(1, stats["trace_rebinds"])
+
+    def test_build_record_canonicalizes_youtube_link(self):
+        record = supabase_insert.build_record(
+            {
+                "trace_id": "trace-1",
+                "youtube_link": "https://youtu.be/abc123?feature=share",
+                "origin_name": "테스트 식당",
+                "status": "pending",
+            },
+            "tzuyang",
+        )
+
+        self.assertEqual("https://www.youtube.com/watch?v=abc123", record["youtube_link"])
 
     def test_execute_upsert_rows_retries_without_optional_google_name_field(self):
         stats = self.make_stats()
