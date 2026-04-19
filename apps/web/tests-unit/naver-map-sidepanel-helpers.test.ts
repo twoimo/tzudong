@@ -11,6 +11,8 @@ import {
     buildNaverMapReviewOpenHandler,
     buildNaverMapReviewSuccessHandler,
     getNaverMapReviewRestaurant,
+    shouldCloseNaverInternalPanelForExternalState,
+    shouldCloseNaverInternalPanelOnEscape,
 } from '../lib/naver-map-sidepanel-helpers';
 
 describe('naver map sidepanel helpers', () => {
@@ -112,5 +114,34 @@ describe('naver map sidepanel helpers', () => {
 
         expect(movedRef.current).toBe(false);
         expect(externalCalls).toEqual(['r1']);
+    });
+
+    test('decides when external state should close internal panel', () => {
+        expect(shouldCloseNaverInternalPanelForExternalState(false)).toBe(true);
+        expect(shouldCloseNaverInternalPanelForExternalState(true)).toBe(false);
+        expect(shouldCloseNaverInternalPanelForExternalState(undefined)).toBe(false);
+    });
+
+    test('closes internal panel only for escape in non-grid open state', () => {
+        expect(shouldCloseNaverInternalPanelOnEscape({
+            key: 'Escape',
+            internalPanelOpen: true,
+            isGridMode: false,
+        })).toBe(true);
+        expect(shouldCloseNaverInternalPanelOnEscape({
+            key: 'Enter',
+            internalPanelOpen: true,
+            isGridMode: false,
+        })).toBe(false);
+        expect(shouldCloseNaverInternalPanelOnEscape({
+            key: 'Escape',
+            internalPanelOpen: false,
+            isGridMode: false,
+        })).toBe(false);
+        expect(shouldCloseNaverInternalPanelOnEscape({
+            key: 'Escape',
+            internalPanelOpen: true,
+            isGridMode: true,
+        })).toBe(false);
     });
 });

@@ -30,6 +30,22 @@ export function buildNaverMapReviewCloseHandler(setIsReviewModalOpen: (isOpen: b
     return () => setIsReviewModalOpen(false);
 }
 
+export function shouldCloseNaverInternalPanelForExternalState(externalPanelOpen?: boolean) {
+    return externalPanelOpen === false;
+}
+
+export function shouldCloseNaverInternalPanelOnEscape({
+    internalPanelOpen,
+    isGridMode,
+    key,
+}: {
+    internalPanelOpen: boolean;
+    isGridMode: boolean;
+    key: string;
+}) {
+    return key === 'Escape' && internalPanelOpen && !isGridMode;
+}
+
 export function buildNaverMarkerRestaurantSelectionHandler({
     hasUserMovedMapRef,
     onMarkerClick,
