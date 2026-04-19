@@ -101,6 +101,7 @@ import {
     buildNaverMapDetailPanelMouseDownCaptureHandler,
     buildNaverMapInternalPanelCloseHandler,
     buildNaverMapInternalPanelToggleHandler,
+    buildNaverMarkerRestaurantSelectionHandler,
     buildNaverMapRestaurantAction,
     buildNaverMapReviewCloseHandler,
     buildNaverMapReviewOpenHandler,
@@ -420,16 +421,15 @@ const NaverMapView = memo(({
 
     // ... (중략) ...
 
-    const handleMarkerRestaurantSelection = useCallback((restaurant: Restaurant) => {
-        hasUserMovedMapRef.current = false;
-        if (onMarkerClick) {
-            onMarkerClick(restaurant);
-            return;
-        }
-
-        onRestaurantSelect?.(restaurant);
-        setInternalPanelOpen(true);
-    }, [onMarkerClick, onRestaurantSelect]);
+    const handleMarkerRestaurantSelection = useMemo(
+        () => buildNaverMarkerRestaurantSelectionHandler({
+            hasUserMovedMapRef,
+            onMarkerClick,
+            onRestaurantSelect,
+            setInternalPanelOpen,
+        }),
+        [onMarkerClick, onRestaurantSelect]
+    );
 
 
     // [커스텀 토스트] 지도 상단 중앙 알림 상태
