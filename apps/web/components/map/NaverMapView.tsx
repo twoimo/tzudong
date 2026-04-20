@@ -118,6 +118,7 @@ import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
 import { calculateNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
 import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
+import { buildResetUserMapMovementHandler } from "@/lib/naver-map-user-movement-helpers";
 import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
 import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
 import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
@@ -341,9 +342,7 @@ const NaverMapView = memo(({
 
     // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지역 재선택 시에도 지도 이동 가능하도록)
     useEffect(() => {
-        const handleResetUserMapMovement = () => {
-            hasUserMovedMapRef.current = false;
-        };
+        const handleResetUserMapMovement = buildResetUserMapMovementHandler(hasUserMovedMapRef);
 
         window.addEventListener('resetUserMapMovement', handleResetUserMapMovement);
         return () => {
