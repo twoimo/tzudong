@@ -78,8 +78,7 @@ import {
     buildNaverMapOptions,
     getDeviceAdjustedZoom as getAdjustedZoomForDevice,
     parseNaverMapUrlState,
-    resolveNaverInitialView,
-    resolveNaverRegionConfig,
+    resolveNaverInitialMapView,
     scheduleNaverInitialIdleTrigger,
 } from "@/lib/naver-map-init-helpers";
 import {
@@ -1806,16 +1805,10 @@ const NaverMapView = memo(({
         try {
             const { naver } = window;
 
-            const { hasValidUrlState, urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
-            const { regionConfig, isNational } = resolveNaverRegionConfig(selectedRegion);
-            const defaultZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
-            const { initialCenter, initialZoom } = resolveNaverInitialView({
-                defaultZoom,
-                hasValidUrlState,
-                regionCenter: regionConfig.center,
-                urlLat,
-                urlLng,
-                urlZoom,
+            const { hasValidUrlState, initialCenter, initialZoom } = resolveNaverInitialMapView({
+                getDeviceAdjustedZoom,
+                search: window.location.search,
+                selectedRegion,
             });
 
             const map = new naver.maps.Map(mapRef.current, buildNaverMapOptions({

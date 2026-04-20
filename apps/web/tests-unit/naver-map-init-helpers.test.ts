@@ -4,6 +4,7 @@ import {
     buildNaverMapOptions,
     getDeviceAdjustedZoom,
     parseNaverMapUrlState,
+    resolveNaverInitialMapView,
     resolveNaverInitialView,
     resolveNaverRegionConfig,
     scheduleNaverInitialIdleTrigger,
@@ -56,6 +57,19 @@ describe('naver map init helpers', () => {
             initialCenter: [37.5, 127],
             initialZoom: 9,
         });
+    });
+
+    test('resolves initial map view from search and region', () => {
+        const result = resolveNaverInitialMapView({
+            getDeviceAdjustedZoom: (zoom) => zoom - 1,
+            search: '?z=12&lat=37.1&lng=127.2',
+            selectedRegion: '서울특별시' as any,
+        });
+
+        expect(result.hasValidUrlState).toBe(true);
+        expect(result.initialCenter).toEqual([37.1, 127.2]);
+        expect(result.initialZoom).toBe(12);
+        expect(result.defaultZoom).toBeTypeOf('number');
     });
 
     test('builds stable naver map options', () => {
