@@ -67,6 +67,38 @@ export function resolveNaverInitialView({
     };
 }
 
+export function resolveNaverInitialMapView({
+    getDeviceAdjustedZoom,
+    search,
+    selectedRegion,
+}: {
+    getDeviceAdjustedZoom: (baseZoom: number, isNational?: boolean) => number;
+    search: string;
+    selectedRegion: Region | null | undefined;
+}) {
+    const { hasValidUrlState, urlLat, urlLng, urlZoom } = parseNaverMapUrlState(search);
+    const { regionConfig, isNational } = resolveNaverRegionConfig(selectedRegion);
+    const defaultZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
+
+    return {
+        ...resolveNaverInitialView({
+            defaultZoom,
+            hasValidUrlState,
+            regionCenter: regionConfig.center,
+            urlLat,
+            urlLng,
+            urlZoom,
+        }),
+        defaultZoom,
+        hasValidUrlState,
+        isNational,
+        regionConfig,
+        urlLat,
+        urlLng,
+        urlZoom,
+    };
+}
+
 export function buildNaverMapOptions({
     center,
     positionTopLeft,
