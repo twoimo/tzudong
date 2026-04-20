@@ -130,6 +130,7 @@ import {
     buildNaverCurrentStateSnapshot,
     getNaverCurrentPanelOffset,
 } from "@/lib/naver-map-current-state-helpers";
+import { resolveNaverResizeCenter } from "@/lib/naver-map-resize-center-helpers";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -940,13 +941,15 @@ const NaverMapView = memo(({
 
             // [Helper 사용] 현재 줌 레벨 유지
             const currentZoom = map.getZoom();
-            const newCenterLatLng = getAdjustedCenter(
-                targetLat ?? map.getCenter().lat(),
-                targetLng ?? map.getCenter().lng(),
+            const newCenterLatLng = resolveNaverResizeCenter({
+                currentCenter: map.getCenter(),
                 currentZoom,
-                targetOffsetX ?? 0,
-                targetOffsetY ?? 0,
-            );
+                getAdjustedCenter,
+                targetLat,
+                targetLng,
+                targetOffsetX,
+                targetOffsetY,
+            });
 
             // 애니메이션 없이 즉시 이동 (부드러움 유지)
             map.setCenter(newCenterLatLng);
