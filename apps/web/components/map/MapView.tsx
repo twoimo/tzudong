@@ -52,6 +52,7 @@ import {
 import {
   buildGoogleMapOptions,
   getRestaurantLatLng,
+  panGoogleMapToPosition,
 } from "@/lib/map-view-google-helpers";
 
 interface MapPointLike {
@@ -183,11 +184,12 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
 
     try {
-      // 패널이 열리면서 지도 크기가 변했을 수 있으므로 리사이즈 트리거
-      google.maps.event.trigger(googleMapRef.current, "resize");
-
-      googleMapRef.current.panTo(position);
-      googleMapRef.current.setZoom(14); // 줌 레벨 14로 조정
+      panGoogleMapToPosition({
+        map: googleMapRef.current,
+        position,
+        triggerResize: () => google.maps.event.trigger(googleMapRef.current, "resize"),
+        zoom: 14,
+      });
     } catch (error) {
       console.error('MapView: Error moving to restaurant position:', error);
     }
@@ -237,12 +239,12 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     try {
       if (!googleMapRef.current) return;
 
-      // 지도 리사이즈 인식
-      google.maps.event.trigger(googleMapRef.current, "resize");
-
-      // 정확히 중앙에 배치 (오프셋 없음)
-      googleMapRef.current.panTo(position);
-      googleMapRef.current.setZoom(14);
+      panGoogleMapToPosition({
+        map: googleMapRef.current,
+        position,
+        triggerResize: () => google.maps.event.trigger(googleMapRef.current!, "resize"),
+        zoom: 14,
+      });
 
       // 검색된 맛집 선택 상태로 설정
       if (onRestaurantSelect) {
