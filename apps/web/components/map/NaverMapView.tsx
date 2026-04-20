@@ -115,6 +115,21 @@ import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
 import { calculateNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
 import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
+import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
+import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
+import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
+import { shouldSkipNaverResizeRecenter } from "@/lib/naver-map-resize-guards";
+import { resolveNaverResizeTarget } from "@/lib/naver-map-resize-target-helpers";
+import { resolveNaverSelectionChange } from "@/lib/naver-map-selection-helpers";
+import {
+    buildNaverMapInteractionHandlers,
+    NAVER_INTERACTION_LISTENER_OPTIONS,
+} from "@/lib/naver-map-interaction-helpers";
+import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers";
+import {
+    buildNaverCurrentStateSnapshot,
+    getNaverCurrentPanelOffset,
+} from "@/lib/naver-map-current-state-helpers";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -635,13 +650,11 @@ const NaverMapView = memo(({
         // prevSelectedRestaurantIdRef는 marker click 등 다른 곳에서도 쓰일 수 있으니 주의.
         // 여기서는 이 Effect 전용으로 판단 로직을 수행.
 
-        let isSelectionChanged = false;
-
-        // A. 레스토랑 선택 변경 확인
-        if (currentSelectedId !== prevSelectedRestaurantIdRef.current) {
-            isSelectionChanged = true;
-            prevSelectedRestaurantIdRef.current = currentSelectedId;
-        }
+        const { isSelectionChanged, nextSelectedId } = resolveNaverSelectionChange({
+            currentSelectedId,
+            previousSelectedId: prevSelectedRestaurantIdRef.current,
+        });
+        prevSelectedRestaurantIdRef.current = nextSelectedId;
 
         // B. 지역 선택 변경 확인 (Ref가 없어서 Effect 내 로컬 변수로는 안됨, 
         // 하지만 selectedRegion 값이 바뀌면 Effect가 실행되므로, 이전에 저장해둔 Ref가 필요함)
@@ -678,42 +691,25 @@ const NaverMapView = memo(({
         // 일단 selectedRestaurant 위주로 처리.
 
         // 2. 목표 좌표 및 오프셋 결정
-        let targetLat: number;
-        let targetLng: number;
-        // [UX 개선] 기본 줌 레벨 설정 로직 변경
-        let targetZoom: number;
-
         const currentMapZoom = map.getZoom();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlLat = parseFloat(urlParams.get('lat') || '');
-        const urlLng = parseFloat(urlParams.get('lng') || '');
-        const urlZoom = parseFloat(urlParams.get('z') || '');
+        const { urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
 
-        if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
-            targetLat = selectedRestaurant.lat;
-            targetLng = selectedRestaurant.lng;
+        const target = resolveNaverMapTarget({
+            currentMapZoom,
+            getDeviceAdjustedZoom,
+            mapFocusZoom,
+            selectedRegion,
+            selectedRestaurant,
+            urlLat,
+            urlLng,
+            urlZoom: urlZoom ?? Number.NaN,
+        });
 
-            // [New] 줌 레벨 강제 (북마크 등에서 넘어온 경우)
-            if (mapFocusZoom) {
-                targetZoom = mapFocusZoom;
-            } else {
-                targetZoom = currentMapZoom; // 기본적으로는 현재 줌 유지
-            }
-        } else {
-            if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
-                // URL에 좌표가 있으면 현재 상태 유지 (이동하지 않음)
-                return;
-            }
-
-            const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
-            const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
-            targetLat = regionConfig.center[0];
-            targetLng = regionConfig.center[1];
-            // 디바이스별 줌 레벨 조정 (모바일/태블릿은 -2, 전국은 기본값 유지)
-            const isNational = regionKey === "전국";
-            targetZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
+        if (target.skip) {
+            return;
         }
+        const { targetLat, targetLng, targetZoom } = target;
 
         // [최적화] 실시간 뷰포트 오프셋 계산
         // DOM 요소의 실제 너비를 측정하여 정확한 중앙 배치
@@ -726,15 +722,11 @@ const NaverMapView = memo(({
         // targetOffsetX = effectiveOffset / 2 (양수 = 오른쪽 이동)
         // 모바일/태블릿에서는 항상 0
 
-        const targetOffsetX = effectiveOffset / 2;
-
-        // [모바일/태블릿] Y축 오프셋 계산 (하단 네비게이션 대응)
-        // 하단 네비게이션이 지도 영역을 가리므로, 마커가 "보이는 영역"의 중앙에 위치하도록
-        // 지도 중심을 위로 이동시켜야 합니다. (양수 = 위로 이동)
-        let targetOffsetY = 0;
-        if (isMobileOrTablet) {
-            targetOffsetY = getMobileVerticalOffset();
-        }
+        const { targetOffsetX, targetOffsetY } = resolveNaverTargetOffsets({
+            effectiveOffset,
+            isMobileOrTablet,
+            mobileVerticalOffset: getMobileVerticalOffset(),
+        });
 
         // **핵심 로직 변경**
         const currentZoom = map.getZoom();
@@ -787,15 +779,12 @@ const NaverMapView = memo(({
             // currentStateRef.current.effectivePanelOffset 은 "렌더링 직전" 값이 아니라 "지난번 Effect 실행 시" 값임.
             // 따라서 이걸 "이전 값"으로 쓸 수 있음.
 
-            const prevOffset = currentStateRef.current.effectivePanelOffset;
-            const deltaOffset = effectiveOffset - prevOffset;
+            const { deltaX, shouldPan } = resolveNaverLayoutShiftDelta({
+                effectiveOffset,
+                previousOffset: currentStateRef.current.effectivePanelOffset,
+            });
 
-            if (deltaOffset !== 0) {
-                // 델타 오프셋의 절반만큼 이동해야 "보이는 중심"이 유지됨?
-                // targetOffsetX = effectiveOffset / 2 이므로.
-                // deltaX = deltaOffset / 2.
-
-                const deltaX = deltaOffset / 2;
+            if (shouldPan) {
 
                 // 현재 중심(currentMapCenter)을 기준으로 deltaX 만큼 이동한 좌표를 구함
                 // getAdjustedCenter(lat, lng, zoom, offsetX) 함수는 
@@ -813,31 +802,12 @@ const NaverMapView = memo(({
         // [Case 2] 사용자가 이동하지 않았거나, 새로운 선택이 일어난 경우
         // -> 기존 로직대로 타겟 위치로 이동 및 오프셋 적용
 
-        const latDiff = Math.abs(targetLat - map.getCenter().lat());
-        const lngDiff = Math.abs(targetLng - map.getCenter().lng());
-        const distanceKm = Math.sqrt(Math.pow(latDiff * 111, 2) + Math.pow(lngDiff * 88, 2));
-        const zoomDiff = Math.abs(currentZoom - targetZoom);
-
-        const shouldInstantLoad = zoomDiff >= ZOOM_DIFF_THRESHOLD || distanceKm >= DISTANCE_KM_THRESHOLD;
-
         // 리사이즈 먼저 트리거
         naver.maps.Event.trigger(map, 'resize');
 
-        const moveMap = () => {
-            // [Helper 사용] 조정된 중심 좌표 계산 (X축, Y축 오프셋 모두 적용)
-            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX, targetOffsetY);
-
-            if (shouldInstantLoad) {
-                map.setZoom(targetZoom);
-                map.setCenter(newCenterLatLng);
-            } else {
-                // 애니메이션 제거: 즉시 이동 (마커 가운데 정렬 유지)
-                map.setZoom(targetZoom);
-                map.setCenter(newCenterLatLng);
-            }
-        };
-
-        moveMap();
+        const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX, targetOffsetY);
+        map.setZoom(targetZoom);
+        map.setCenter(newCenterLatLng);
 
         // [FIX] 트랜지션 완료 후 resize만 트리거 (moveMap 중복 호출 제거 - ResizeObserver가 처리함)
         const transitionTimer = setTimeout(() => {
@@ -846,22 +816,18 @@ const NaverMapView = memo(({
 
         // 사용자 상호작용 감지 리스너 추가
         // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
-        const handleUserInteraction = () => {
-            hasUserMovedMapRef.current = true;
-        };
-        const handleSearchReleaseInteraction = () => {
-            handleUserInteraction();
-            releaseSearchSelectionOnUserInteraction();
-        };
+        const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
+            hasUserMovedMapRef,
+            releaseSearchSelectionOnUserInteraction,
+        });
 
         const mapElement = mapRef.current;
         if (mapElement) {
-            const interactionListenerOptions: AddEventListenerOptions = { capture: true, passive: true };
             // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
-            mapElement.addEventListener('wheel', handleSearchReleaseInteraction, interactionListenerOptions);
-            mapElement.addEventListener('dblclick', handleSearchReleaseInteraction, interactionListenerOptions);
-            mapElement.addEventListener('mousedown', handleUserInteraction, interactionListenerOptions);
-            mapElement.addEventListener('touchstart', handleUserInteraction, interactionListenerOptions);
+            mapElement.addEventListener('wheel', handleSearchReleaseInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
+            mapElement.addEventListener('dblclick', handleSearchReleaseInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
+            mapElement.addEventListener('mousedown', handleUserInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
+            mapElement.addEventListener('touchstart', handleUserInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
         }
 
         const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleSearchReleaseInteraction);
@@ -901,22 +867,22 @@ const NaverMapView = memo(({
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
-    const currentStateRef = useRef({
+    const currentStateRef = useRef(buildNaverCurrentStateSnapshot({
         isSidebarOpen,
         externalPanelOpen,
         isPanelCollapsed,
         isGridMode,
-        effectivePanelOffset: 0 // 초기값
-    });
+        effectivePanelOffset: 0,
+    }));
 
     useEffect(() => {
-        currentStateRef.current = {
+        currentStateRef.current = buildNaverCurrentStateSnapshot({
             isSidebarOpen,
             externalPanelOpen,
             isPanelCollapsed,
             isGridMode,
-            effectivePanelOffset // 계산된 오프셋 저장
-        };
+            effectivePanelOffset,
+        });
     }, [isSidebarOpen, externalPanelOpen, isPanelCollapsed, isGridMode, effectivePanelOffset]);
 
     // [개선] ResizeObserver를 사용하여 컨테이너 크기 변경 감지 및 부드러운 중심 유지
@@ -927,42 +893,35 @@ const NaverMapView = memo(({
         const { naver } = window;
 
         const handleResize = () => {
-            if (currentStateRef.current.isGridMode) {
-                naver.maps.Event.trigger(map, 'resize');
-                return;
-            }
-
             // 1. 지도 리사이즈 트리거
             naver.maps.Event.trigger(map, 'resize');
 
-            // 사용자가 지도를 직접 움직였다면 중심 재조정 하지 않음
-            if (hasUserMovedMapRef.current) {
+            if (shouldSkipNaverResizeRecenter({
+                hasUserMoved: hasUserMovedMapRef.current,
+                isGridMode: currentStateRef.current.isGridMode,
+                skipTarget: false,
+            })) {
                 return;
             }
 
             // 2. 목표 좌표 결정
-            let targetLat: number;
-            let targetLng: number;
+            const { urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
+            const resizeTarget = resolveNaverResizeTarget({
+                selectedRegion,
+                selectedRestaurant,
+                urlLat,
+                urlLng,
+                urlZoom: urlZoom ?? Number.NaN,
+            });
 
-            if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
-                targetLat = selectedRestaurant.lat;
-                targetLng = selectedRestaurant.lng;
-            } else {
-                // [Fix] URL 파라미터가 있으면 현재 상태 유지 (공유 URL 시나리오)
-                const urlParams = new URLSearchParams(window.location.search);
-                const urlLat = parseFloat(urlParams.get('lat') || '');
-                const urlLng = parseFloat(urlParams.get('lng') || '');
-                const urlZoom = parseFloat(urlParams.get('z') || '');
-
-                if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
-                    return; // URL 좌표 있으면 이동하지 않음
-                }
-
-                const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
-                const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
-                targetLat = regionConfig.center[0];
-                targetLng = regionConfig.center[1];
+            if (shouldSkipNaverResizeRecenter({
+                hasUserMoved: false,
+                isGridMode: false,
+                skipTarget: resizeTarget.skip,
+            })) {
+                return;
             }
+            const { targetLat, targetLng } = resizeTarget;
 
             // 3. 현재 상태 기반 오프셋 계산 (실시간)
             // 주의: sidebarWidth는 CSS 애니메이션 중에는 정확하지 않을 수 있음 (컴포넌트 state 기준이므로)
@@ -973,36 +932,21 @@ const NaverMapView = memo(({
 
             // 패널 상태
             // 여기서는 Ref에 'effectivePanelOffset'을 저장해서 가져오는 방식으로 변경.
-            const { effectivePanelOffset } = currentStateRef.current;
-            const rightPanelWidth = effectivePanelOffset;
-
-            // 우리가 원하는 마커의 위치:
-            // 지도 왼쪽 끝에서 (mapWidth - rightPanelWidth) / 2 지점
-            // 즉, "지도 전체 너비에서 우측 패널 뺀 나머지 영역"의 중앙.
-
-            // 네이버 지도 중심(Center)은 mapWidth / 2 지점임.
-            // 따라서 오프셋 = (mapWidth / 2) - ((mapWidth - rightPanelWidth) / 2)
-            //             = (mapWidth - (mapWidth - rightPanelWidth)) / 2
-            //             = rightPanelWidth / 2
-
-            // 결론: 사이드바 너비는 이미 지도 컨테이너 크기에 반영되어 있으므로 계산식에서 빠져야 함!
-            // 이전 로직의 targetOffsetX = (rightPanelWidth - sidebarWidth) / 2 는 
-            // 뷰포트 전체(window) 기준이 아니라면 틀렸을 수도 있음. 
-            // NaverMapView는 flex-1이므로, 부모(MainLayout)에서 마진(margin-left)으로 사이드바 공간을 뺌.
-            // 즉 mapRef.current의 width는 이미 (Window - Sidebar)임.
-            // 따라서 지도 컨테이너 내부에서의 중심 오프셋은 **rightPanelWidth / 2** 만 있으면 됨.
-
-            const targetOffsetX = rightPanelWidth / 2;
-
-            // [모바일/태블릿] Y축 오프셋 계산 (ResizeObserver에서도 동일하게 적용)
-            let targetOffsetY = 0;
-            if (isMobileOrTablet) {
-                targetOffsetY = getMobileVerticalOffset();
-            }
+            const { targetOffsetX, targetOffsetY } = resolveNaverResizeOffsets({
+                effectivePanelOffset: getNaverCurrentPanelOffset(currentStateRef.current),
+                isMobileOrTablet,
+                mobileVerticalOffset: getMobileVerticalOffset(),
+            });
 
             // [Helper 사용] 현재 줌 레벨 유지
             const currentZoom = map.getZoom();
-            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, currentZoom, targetOffsetX, targetOffsetY);
+            const newCenterLatLng = getAdjustedCenter(
+                targetLat ?? map.getCenter().lat(),
+                targetLng ?? map.getCenter().lng(),
+                currentZoom,
+                targetOffsetX ?? 0,
+                targetOffsetY ?? 0,
+            );
 
             // 애니메이션 없이 즉시 이동 (부드러움 유지)
             map.setCenter(newCenterLatLng);
