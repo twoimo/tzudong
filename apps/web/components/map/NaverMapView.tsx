@@ -118,19 +118,18 @@ import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
 import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
 import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
 import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
-import { shouldSkipNaverResizeRecenter } from "@/lib/naver-map-resize-guards";
-import { resolveNaverResizeTarget } from "@/lib/naver-map-resize-target-helpers";
 import { resolveNaverSelectionChange } from "@/lib/naver-map-selection-helpers";
 import {
     buildNaverMapInteractionHandlers,
     NAVER_INTERACTION_LISTENER_OPTIONS,
 } from "@/lib/naver-map-interaction-helpers";
 import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers";
+import { buildNaverWindowResizeHandler } from "@/lib/naver-map-window-resize-helpers";
 import {
     buildNaverCurrentStateSnapshot,
     getNaverCurrentPanelOffset,
 } from "@/lib/naver-map-current-state-helpers";
-import { resolveNaverResizeCenter } from "@/lib/naver-map-resize-center-helpers";
+import { resolveNaverResizePlan } from "@/lib/naver-map-resize-plan-helpers";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -897,17 +896,16 @@ const NaverMapView = memo(({
             // 1. 지도 리사이즈 트리거
             naver.maps.Event.trigger(map, 'resize');
 
-            if (shouldSkipNaverResizeRecenter({
+            const { urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
+            const resizePlan = resolveNaverResizePlan({
+                currentCenter: map.getCenter(),
+                currentZoom: map.getZoom(),
+                effectivePanelOffset: getNaverCurrentPanelOffset(currentStateRef.current),
+                getAdjustedCenter,
                 hasUserMoved: hasUserMovedMapRef.current,
                 isGridMode: currentStateRef.current.isGridMode,
-                skipTarget: false,
-            })) {
-                return;
-            }
-
-            // 2. 목표 좌표 결정
-            const { urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
-            const resizeTarget = resolveNaverResizeTarget({
+                isMobileOrTablet,
+                mobileVerticalOffset: getMobileVerticalOffset(),
                 selectedRegion,
                 selectedRestaurant,
                 urlLat,
@@ -915,44 +913,12 @@ const NaverMapView = memo(({
                 urlZoom: urlZoom ?? Number.NaN,
             });
 
-            if (shouldSkipNaverResizeRecenter({
-                hasUserMoved: false,
-                isGridMode: false,
-                skipTarget: resizeTarget.skip,
-            })) {
+            if (resizePlan.skip) {
                 return;
             }
-            const { targetLat, targetLng } = resizeTarget;
-
-            // 3. 현재 상태 기반 오프셋 계산 (실시간)
-            // 주의: sidebarWidth는 CSS 애니메이션 중에는 정확하지 않을 수 있음 (컴포넌트 state 기준이므로)
-            // 하지만 우리가 원하는 것은 "최종 상태"가 아니라 "현재 보이는 컨테이너의 중심"에 맞추는 것.
-            // 네이버 지도의 'resize' 이벤트는 컨테이너 크기에 맞춰 지도 뷰포트를 업데이트함.
-            // 문제는, 단순히 resize만 하면 중심(LatLng)은 유지되지만, 
-            // 우리가 원하는 '오프셋이 적용된 중심'은 컨테이너 크기가 변함에 따라 계속 변해야 함.
-
-            // 패널 상태
-            // 여기서는 Ref에 'effectivePanelOffset'을 저장해서 가져오는 방식으로 변경.
-            const { targetOffsetX, targetOffsetY } = resolveNaverResizeOffsets({
-                effectivePanelOffset: getNaverCurrentPanelOffset(currentStateRef.current),
-                isMobileOrTablet,
-                mobileVerticalOffset: getMobileVerticalOffset(),
-            });
-
-            // [Helper 사용] 현재 줌 레벨 유지
-            const currentZoom = map.getZoom();
-            const newCenterLatLng = resolveNaverResizeCenter({
-                currentCenter: map.getCenter(),
-                currentZoom,
-                getAdjustedCenter,
-                targetLat,
-                targetLng,
-                targetOffsetX,
-                targetOffsetY,
-            });
 
             // 애니메이션 없이 즉시 이동 (부드러움 유지)
-            map.setCenter(newCenterLatLng);
+            map.setCenter(resizePlan.newCenterLatLng);
         };
 
         // [FIX] 디바운스 추가: CSS 트랜지션(300ms) 완료 후에만 중심 재조정
@@ -988,25 +954,17 @@ const NaverMapView = memo(({
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
-        let resizeTimer: NodeJS.Timeout;
-
-        const handleWindowResize = () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                const map = mapInstanceRef.current;
-                if (map) {
-                    naver.maps.Event.trigger(map, 'resize');
-                    // 리사이즈 후 중심 재조정 로직이 필요하다면 통합 useEffect가 prop이나 state 변경에 반응할 것임
-                    // 하지만 state 변경 없이 창 크기만 변했을 때는 여기서 처리가 필요할 수도 있음.
-                    // 현재는 'resize' 트리거만으로도 네이버 지도가 어느정도 중심을 유지함.
-                }
-            }, 100); // 100ms 디바운스
-        };
+        const { cancel, handleWindowResize } = buildNaverWindowResizeHandler({
+            getMap: () => mapInstanceRef.current,
+            triggerResize: (map) => {
+                naver.maps.Event.trigger(map, 'resize');
+            },
+        });
 
         window.addEventListener('resize', handleWindowResize, { passive: true });
         return () => {
             window.removeEventListener('resize', handleWindowResize);
-            clearTimeout(resizeTimer);
+            cancel();
         };
     }, []);
 
