@@ -75,9 +75,12 @@ import {
     isRestaurantInViewport,
 } from "@/lib/naver-map-view-helpers";
 import {
+    buildNaverMapOptions,
     getDeviceAdjustedZoom as getAdjustedZoomForDevice,
     parseNaverMapUrlState,
+    resolveNaverInitialView,
     resolveNaverRegionConfig,
+    scheduleNaverInitialIdleTrigger,
 } from "@/lib/naver-map-init-helpers";
 import {
     buildRenderTargetIdsForSignature,
@@ -119,6 +122,7 @@ import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers
 import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
 import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
 import { resolveNaverSelectionChange } from "@/lib/naver-map-selection-helpers";
+import { buildNaverPanelWidthObserver } from "@/lib/naver-map-panel-width-helpers";
 import {
     buildNaverMapInteractionHandlers,
     NAVER_INTERACTION_LISTENER_OPTIONS,
@@ -354,25 +358,11 @@ const NaverMapView = memo(({
             return;
         }
 
-        // RAF ID를 저장하여 cleanup 시 취소
-        let rafId: number | null = null;
-
-        // ResizeObserver 생성
-        const observer = new ResizeObserver((entries) => {
-            // 이전 RAF 취소
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-            }
-
-            // RAF로 배치 처리 (리플로우 최소화)
-            rafId = requestAnimationFrame(() => {
-                for (const entry of entries) {
-                    const newWidth = entry.contentRect.width;
-                    setPanelWidth(newWidth);
-                }
-                rafId = null;
-            });
+        const { cancelPending, observerCallback } = buildNaverPanelWidthObserver({
+            setPanelWidth,
         });
+        let rafId: number | null = null;
+        const observer = new ResizeObserver(observerCallback);
 
         // Observer 연결
         observer.observe(panelElement);
@@ -387,6 +377,7 @@ const NaverMapView = memo(({
         // 정리
         return () => {
             observer.disconnect();
+            cancelPending();
             if (rafId !== null) {
                 cancelAnimationFrame(rafId);
             }
@@ -1829,37 +1820,21 @@ const NaverMapView = memo(({
             const { hasValidUrlState, urlLat, urlLng, urlZoom } = parseNaverMapUrlState(window.location.search);
             const { regionConfig, isNational } = resolveNaverRegionConfig(selectedRegion);
             const defaultZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
-
-            const initialZoom = hasValidUrlState ? urlZoom! : defaultZoom;
-
-            const initialCenter = hasValidUrlState
-                ? new naver.maps.LatLng(urlLat, urlLng)
-                : new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
-
-            const map = new naver.maps.Map(mapRef.current, {
-                center: initialCenter,
-                zoom: initialZoom,
-                minZoom: 6,
-                maxZoom: 18,
-                zoomControl: false,
-                zoomControlOptions: {
-                    position: naver.maps.Position.TOP_RIGHT,
-                },
-                mapTypeControl: false,
-                mapTypeControlOptions: {
-                    position: naver.maps.Position.TOP_LEFT,
-                },
-                scaleControl: false,
-                // 성능 최적화 및 UX 개선 옵션
-                background: '#f5f5f5', // [UX] 흰색보다 약간 회색으로 변경 (눈에 덜 띔)
-                tileSpare: 3, // [PERF] 타일 미리 로딩 감소 (메모리/네트워크 절약)
-                tileTransition: true, // [UX] 타일 깜빡임 방지를 위해 페이드 효과 활성화
-                // [Fix] 줌/팬 동작 명시적 활성화
-                scrollWheel: false, // [Modified] 커스텀 스크롤 핸들러 사용 (0.5 단위 제어)
-                pinchZoom: true,
-                draggable: true,
-                keyboardShortcuts: true,
+            const { initialCenter, initialZoom } = resolveNaverInitialView({
+                defaultZoom,
+                hasValidUrlState,
+                regionCenter: regionConfig.center,
+                urlLat,
+                urlLng,
+                urlZoom,
             });
+
+            const map = new naver.maps.Map(mapRef.current, buildNaverMapOptions({
+                center: new naver.maps.LatLng(initialCenter[0], initialCenter[1]),
+                positionTopLeft: naver.maps.Position.TOP_LEFT,
+                positionTopRight: naver.maps.Position.TOP_RIGHT,
+                zoom: initialZoom,
+            }));
 
             mapInstanceRef.current = map;
             setIsMapInitialized(true);
@@ -1873,11 +1848,12 @@ const NaverMapView = memo(({
             }
 
             // [Fix] 지도 초기화 후 idle 이벤트 강제 트리거 - 클러스터 초기화 보장
-            setTimeout(() => {
-                if (map) {
-                    naver.maps.Event.trigger(map, 'idle');
-                }
-            }, 100);
+            scheduleNaverInitialIdleTrigger({
+                map,
+                triggerIdle: (targetMap) => {
+                    naver.maps.Event.trigger(targetMap, 'idle');
+                },
+            });
 
             // [URL 라우팅] 지도 이동 시 URL 동기화 비활성화
             // 사용자가 직접 공유 버튼을 클릭할 때만 URL이 생성되도록 변경
