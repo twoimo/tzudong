@@ -31,3 +31,22 @@ export function buildGoogleMapOptions({
         fullscreenControl: false,
     } as const;
 }
+
+export function panGoogleMapToPosition({
+    map,
+    position,
+    triggerResize,
+    zoom,
+}: {
+    map: {
+        panTo: (position: { lat: number; lng: number }) => void;
+        setZoom: (zoom: number) => void;
+    };
+    position: { lat: number; lng: number };
+    triggerResize: () => void;
+    zoom: number;
+}) {
+    triggerResize();
+    map.panTo(position);
+    map.setZoom(zoom);
+}

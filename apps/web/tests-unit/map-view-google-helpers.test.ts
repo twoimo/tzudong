@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 
-import { buildGoogleMapOptions, getRestaurantLatLng } from '../lib/map-view-google-helpers';
+import {
+    buildGoogleMapOptions,
+    getRestaurantLatLng,
+    panGoogleMapToPosition,
+} from '../lib/map-view-google-helpers';
 
 describe('map view google helpers', () => {
     test('returns numeric restaurant coordinates', () => {
@@ -26,5 +30,21 @@ describe('map view google helpers', () => {
             streetViewControl: false,
             fullscreenControl: false,
         });
+    });
+
+    test('pans google map to position after triggering resize', () => {
+        const calls: string[] = [];
+
+        panGoogleMapToPosition({
+            map: {
+                panTo: ({ lat, lng }) => calls.push(`pan:${lat},${lng}`),
+                setZoom: (zoom) => calls.push(`zoom:${zoom}`),
+            },
+            position: { lat: 37.5, lng: 127.0 },
+            triggerResize: () => calls.push('resize'),
+            zoom: 14,
+        });
+
+        expect(calls).toEqual(['resize', 'pan:37.5,127', 'zoom:14']);
     });
 });
