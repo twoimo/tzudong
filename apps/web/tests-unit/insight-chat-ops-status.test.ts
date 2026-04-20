@@ -129,11 +129,12 @@ describe('admin insight chat ops status summary', () => {
 
       expect(response.meta?.source).toBe('local');
       expect(response.content).toContain('## 운영 상태 요약');
-      expect(response.content).toContain('### 운영 명령 스니펫');
-      expect(response.content).toContain('run_daily 실행 권한 미설정');
-      expect(response.content).toContain('NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://<project>.supabase.co}"');
-      expect(response.content).toContain('RUN_DAILY_SCRIPT_PATH="${RUN_DAILY_SCRIPT_PATH:-/path/to/backend/run_daily.sh}"');
-      expect(response.content).toContain('STORYBOARD_AGENT_API_URL="${STORYBOARD_AGENT_API_URL:-https://your-storyboard-host/api}"');
+    expect(response.content).toContain('### 운영 명령 스니펫');
+    expect(response.content).toContain('run_daily 실행 권한 미설정');
+    expect(response.content).toContain('NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://<project>.supabase.co}"');
+    expect(response.content).toContain('RUN_DAILY_SCRIPT_PATH="${RUN_DAILY_SCRIPT_PATH:-/path/to/backend/run_daily.sh}"');
+    expect(response.content).toContain('[ -x "$RUN_DAILY_SCRIPT_PATH" ] || chmod +x "$RUN_DAILY_SCRIPT_PATH"');
+    expect(response.content).toContain('STORYBOARD_AGENT_API_URL="${STORYBOARD_AGENT_API_URL:-https://your-storyboard-host/api}"');
       expect((response.content.match(/```bash/g) || []).length).toBeLessThanOrEqual(3);
       expect(response.content).not.toContain('frame-caption');
     } finally {
