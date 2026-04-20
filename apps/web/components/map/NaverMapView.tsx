@@ -127,6 +127,8 @@ import {
     buildNaverMapInteractionHandlers,
     NAVER_INTERACTION_LISTENER_OPTIONS,
 } from "@/lib/naver-map-interaction-helpers";
+import { buildNaverResizeObserverHandler } from "@/lib/naver-map-resize-observer-helpers";
+import { focusNaverMapOnRestaurant } from "@/lib/naver-map-focus-helpers";
 import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers";
 import { buildNaverWindowResizeHandler } from "@/lib/naver-map-window-resize-helpers";
 import {
@@ -912,31 +914,19 @@ const NaverMapView = memo(({
             map.setCenter(resizePlan.newCenterLatLng);
         };
 
-        // [FIX] 디바운스 추가: CSS 트랜지션(300ms) 완료 후에만 중심 재조정
-        let resizeDebounceTimer: NodeJS.Timeout | null = null;
-
-        const resizeObserver = new ResizeObserver(() => {
-            // 기존 타이머가 있으면 취소
-            if (resizeDebounceTimer) {
-                clearTimeout(resizeDebounceTimer);
-            }
-
-            // 즉시 resize 이벤트 트리거 (지도 타일 로딩을 위해)
-            naver.maps.Event.trigger(map, 'resize');
-
-            // 중심 재조정은 트랜지션 완료 후에만 수행 (320ms 후)
-            resizeDebounceTimer = setTimeout(() => {
-                requestAnimationFrame(handleResize);
-            }, 320);
+        const { cancel, observerCallback } = buildNaverResizeObserverHandler({
+            runAfterTransition: handleResize,
+            triggerResize: () => {
+                naver.maps.Event.trigger(map, 'resize');
+            },
         });
+        const resizeObserver = new ResizeObserver(observerCallback);
 
         resizeObserver.observe(mapRef.current);
 
         return () => {
             resizeObserver.disconnect();
-            if (resizeDebounceTimer) {
-                clearTimeout(resizeDebounceTimer);
-            }
+            cancel();
         };
     }, [getMobileVerticalOffset, isMapInitialized, isMobileOrTablet, selectedRestaurant, selectedRegion]);
 
@@ -2094,14 +2084,13 @@ const NaverMapView = memo(({
         previousSearchedRestaurantRef.current = actualSearchedRestaurant;
 
         // [검색 시 줌 레벨 15로 즉시 이동]
-        const map = mapInstanceRef.current;
-        const targetLat = actualSearchedRestaurant.lat;
-        const targetLng = actualSearchedRestaurant.lng;
-        if (map && targetLat && targetLng && window.naver) {
-            const targetZoom = 15;
-            map.setZoom(targetZoom);
-            map.setCenter(new window.naver.maps.LatLng(targetLat, targetLng));
-        }
+        focusNaverMapOnRestaurant({
+            createLatLng: (lat, lng) => new window.naver.maps.LatLng(lat, lng),
+            lat: actualSearchedRestaurant.lat,
+            lng: actualSearchedRestaurant.lng,
+            map: mapInstanceRef.current,
+            zoom: 15,
+        });
     }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
 
