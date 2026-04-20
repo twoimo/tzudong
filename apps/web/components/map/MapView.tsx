@@ -13,11 +13,14 @@ import {
   MapViewMissingApiKeyState,
 } from "@/components/map/map-view-status-panels";
 import {
-  getAdjustedSelectedRestaurantLng,
   getMapViewCountryConfig,
   getMapViewMarkerIcon,
   mergeSearchedRestaurant,
 } from "@/lib/map-view-helpers";
+import {
+  resolveMapViewSelectedPanTarget,
+  shouldCenterSelectedRestaurant,
+} from "@/lib/map-view-movement-helpers";
 import {
   applyMapViewMarkerSelectedState,
   buildMapViewMarkerHtml,
@@ -256,7 +259,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
     // 이미 이 맛집으로 이동했다면 건너뛰기 (사용자가 지도를 움직일 수 있게 함)
     // 단, selectedRestaurant 객체가 아예 바뀌었더라도 ID가 같다면 이동하지 않음
-    if (lastCenteredRestaurantId.current === selectedRestaurant.id) {
+    if (!shouldCenterSelectedRestaurant({
+      lastCenteredRestaurantId: lastCenteredRestaurantId.current,
+      selectedRestaurantId: selectedRestaurant.id,
+    })) {
       return;
     }
 
@@ -275,7 +281,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       const mapWidth = mapRef.current?.offsetWidth || 0;
       const sidebarWidth = 0; // GlobalMapPage에는 사이드바 없음
 
-      const adjustedLng = getAdjustedSelectedRestaurantLng({
+      const adjustedLng = resolveMapViewSelectedPanTarget({
         boundsNorthEastLng: bounds.getNorthEast().lng(),
         boundsSouthWestLng: bounds.getSouthWest().lng(),
         lng: position.lng,
