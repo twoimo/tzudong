@@ -45,3 +45,77 @@ export function resolveNaverRegionConfig(selectedRegion: Region | null | undefin
         regionKey,
     };
 }
+
+export function resolveNaverInitialView({
+    defaultZoom,
+    hasValidUrlState,
+    regionCenter,
+    urlLat,
+    urlLng,
+    urlZoom,
+}: {
+    defaultZoom: number;
+    hasValidUrlState: boolean;
+    regionCenter: readonly [number, number];
+    urlLat: number;
+    urlLng: number;
+    urlZoom?: number;
+}) {
+    return {
+        initialCenter: hasValidUrlState ? [urlLat, urlLng] as const : regionCenter,
+        initialZoom: hasValidUrlState ? urlZoom! : defaultZoom,
+    };
+}
+
+export function buildNaverMapOptions({
+    center,
+    positionTopLeft,
+    positionTopRight,
+    zoom,
+}: {
+    center: unknown;
+    positionTopLeft: unknown;
+    positionTopRight: unknown;
+    zoom: number;
+}) {
+    return {
+        center,
+        zoom,
+        minZoom: 6,
+        maxZoom: 18,
+        zoomControl: false,
+        zoomControlOptions: {
+            position: positionTopRight,
+        },
+        mapTypeControl: false,
+        mapTypeControlOptions: {
+            position: positionTopLeft,
+        },
+        scaleControl: false,
+        background: '#f5f5f5',
+        tileSpare: 3,
+        tileTransition: true,
+        scrollWheel: false,
+        pinchZoom: true,
+        draggable: true,
+        keyboardShortcuts: true,
+    };
+}
+
+export function scheduleNaverInitialIdleTrigger<TMap>({
+    delayMs = 100,
+    map,
+    setTimeoutFn = setTimeout,
+    triggerIdle,
+}: {
+    delayMs?: number;
+    map: TMap | null;
+    setTimeoutFn?: typeof setTimeout;
+    triggerIdle: (map: TMap) => void;
+}) {
+    return setTimeoutFn(() => {
+        if (map) {
+            triggerIdle(map);
+        }
+    }, delayMs);
+}

@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+    buildNaverMapOptions,
     getDeviceAdjustedZoom,
     parseNaverMapUrlState,
+    resolveNaverInitialView,
     resolveNaverRegionConfig,
+    scheduleNaverInitialIdleTrigger,
 } from '../lib/naver-map-init-helpers';
 
 describe('naver map init helpers', () => {
@@ -27,5 +30,86 @@ describe('naver map init helpers', () => {
     test('resolves region config and national flag', () => {
         expect(resolveNaverRegionConfig(null).isNational).toBe(true);
         expect(resolveNaverRegionConfig('서울특별시' as any).isNational).toBe(false);
+    });
+
+    test('resolves initial view from url state or region defaults', () => {
+        expect(resolveNaverInitialView({
+            defaultZoom: 9,
+            hasValidUrlState: true,
+            regionCenter: [37.5, 127],
+            urlLat: 35.1,
+            urlLng: 128.2,
+            urlZoom: 12,
+        })).toEqual({
+            initialCenter: [35.1, 128.2],
+            initialZoom: 12,
+        });
+
+        expect(resolveNaverInitialView({
+            defaultZoom: 9,
+            hasValidUrlState: false,
+            regionCenter: [37.5, 127],
+            urlLat: 35.1,
+            urlLng: 128.2,
+            urlZoom: 12,
+        })).toEqual({
+            initialCenter: [37.5, 127],
+            initialZoom: 9,
+        });
+    });
+
+    test('builds stable naver map options', () => {
+        expect(buildNaverMapOptions({
+            center: { lat: 37.5, lng: 127 },
+            positionTopLeft: 'TL',
+            positionTopRight: 'TR',
+            zoom: 11,
+        })).toEqual({
+            center: { lat: 37.5, lng: 127 },
+            zoom: 11,
+            minZoom: 6,
+            maxZoom: 18,
+            zoomControl: false,
+            zoomControlOptions: { position: 'TR' },
+            mapTypeControl: false,
+            mapTypeControlOptions: { position: 'TL' },
+            scaleControl: false,
+            background: '#f5f5f5',
+            tileSpare: 3,
+            tileTransition: true,
+            scrollWheel: false,
+            pinchZoom: true,
+            draggable: true,
+            keyboardShortcuts: true,
+        });
+    });
+
+    test('schedules initial idle trigger only when map exists', () => {
+        const calls: string[] = [];
+        const timers: Array<() => void> = [];
+
+        scheduleNaverInitialIdleTrigger({
+            map: { id: 'map' } as any,
+            setTimeoutFn: ((fn: () => void) => {
+                timers.push(fn);
+                return timers.length as unknown as ReturnType<typeof setTimeout>;
+            }) as typeof setTimeout,
+            triggerIdle: (map) => calls.push((map as { id: string }).id),
+        });
+
+        timers[0]();
+        expect(calls).toEqual(['map']);
+
+        scheduleNaverInitialIdleTrigger({
+            map: null,
+            setTimeoutFn: ((fn: () => void) => {
+                timers.push(fn);
+                return timers.length as unknown as ReturnType<typeof setTimeout>;
+            }) as typeof setTimeout,
+            triggerIdle: () => calls.push('noop'),
+        });
+
+        timers[1]();
+        expect(calls).toEqual(['map']);
     });
 });

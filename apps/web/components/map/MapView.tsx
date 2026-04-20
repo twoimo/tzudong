@@ -42,6 +42,7 @@ import {
   resolveMapViewPanelOpenState,
   resolveMapViewPanelWidth,
 } from "@/lib/map-view-panel-helpers";
+import { buildMapViewPanelWidthObserver } from "@/lib/map-view-panel-width-helpers";
 import {
   buildMapViewDetailPanelFocusCaptureHandler,
   buildMapViewDetailPanelMouseDownCaptureHandler,
@@ -204,11 +205,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     // props로 panelWidth가 전달되면 ResizeObserver 불필요
     if (propPanelWidth !== undefined || !detailPanelRef.current) return;
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setPanelWidth(entry.contentRect.width);
-      }
+    const { observerCallback } = buildMapViewPanelWidthObserver({
+      setPanelWidth,
     });
+    const resizeObserver = new ResizeObserver(observerCallback);
 
     resizeObserver.observe(detailPanelRef.current);
 
