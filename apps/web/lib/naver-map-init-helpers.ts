@@ -134,6 +134,41 @@ export function buildNaverMapOptions({
     };
 }
 
+type NaverMapInstanceHealthCheck = {
+    getCenter?: () => unknown;
+};
+
+type NaverMapElementHealthCheck = {
+    children: { length: number };
+    getBoundingClientRect: () => { height: number; width: number };
+    querySelector: (selector: string) => unknown;
+};
+
+export function isNaverMapInstanceReusable({
+    mapElement,
+    mapInstance,
+}: {
+    mapElement: NaverMapElementHealthCheck | null | undefined;
+    mapInstance: NaverMapInstanceHealthCheck | null | undefined;
+}) {
+    if (!mapInstance || !mapElement) return false;
+
+    try {
+        const center = mapInstance.getCenter?.();
+        if (!center) return false;
+
+        const hasMapContent =
+            mapElement.querySelector('[class*="naver"]') !== null ||
+            mapElement.children.length > 0;
+        if (!hasMapContent) return false;
+
+        const rect = mapElement.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+    } catch {
+        return false;
+    }
+}
+
 export function scheduleNaverInitialIdleTrigger<TMap>({
     delayMs = 100,
     map,
