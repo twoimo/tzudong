@@ -8,6 +8,7 @@ import {
     resolveNaverInitialMapView,
     resolveNaverInitialView,
     resolveNaverRegionConfig,
+    resolveNaverStaleMapCleanupPlan,
     scheduleNaverInitialIdleTrigger,
 } from '../lib/naver-map-init-helpers';
 
@@ -133,6 +134,26 @@ describe('naver map init helpers', () => {
             },
             mapInstance: { getCenter: () => ({ lat: 37.5, lng: 127 }) },
         })).toBe(false);
+    });
+
+    test('resolves stale map cleanup state only when an instance exists', () => {
+        expect(resolveNaverStaleMapCleanupPlan({
+            mapInstance: { id: 'stale-map' },
+        })).toEqual({
+            nextIsMapInitialized: false,
+            nextMapInstance: null,
+            nextMarkerRenderSignature: null,
+            shouldCleanup: true,
+        });
+
+        expect(resolveNaverStaleMapCleanupPlan({
+            mapInstance: null,
+        })).toEqual({
+            nextIsMapInitialized: false,
+            nextMapInstance: null,
+            nextMarkerRenderSignature: null,
+            shouldCleanup: false,
+        });
     });
 
     test('schedules initial idle trigger only when map exists', () => {
