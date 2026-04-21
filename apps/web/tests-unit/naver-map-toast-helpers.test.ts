@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
-import { buildNaverMapToastTrigger } from '../lib/naver-map-toast-helpers';
+import {
+    buildNaverMapToastTrigger,
+    resolveNaverAnnouncementToastPlan,
+} from '../lib/naver-map-toast-helpers';
 
 describe('naver map toast helpers', () => {
     test('shows toast immediately and schedules hide update', () => {
@@ -28,5 +31,35 @@ describe('naver map toast helpers', () => {
         } finally {
             globalThis.setTimeout = originalSetTimeout;
         }
+    });
+
+    test('resolves rotating announcement toast display plan', () => {
+        const announcements = [
+            { id: 'a1', title: '첫 공지' },
+            { id: 'a2', title: '둘째 공지' },
+        ];
+
+        expect(resolveNaverAnnouncementToastPlan({
+            announcements,
+            currentIndex: 3,
+        })).toEqual({
+            announcement: announcements[1],
+            hideDelayMs: 4200,
+            nextIndex: 0,
+            shouldShow: true,
+        });
+    });
+
+    test('does not show announcement toast when there are no announcements', () => {
+        expect(resolveNaverAnnouncementToastPlan({
+            announcements: [],
+            currentIndex: 3,
+            hideDelayMs: 1000,
+        })).toEqual({
+            announcement: null,
+            hideDelayMs: 1000,
+            nextIndex: 0,
+            shouldShow: false,
+        });
     });
 });
