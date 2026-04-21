@@ -136,6 +136,19 @@ import {
     getNaverCurrentPanelOffset,
 } from "@/lib/naver-map-current-state-helpers";
 import { resolveNaverResizePlan } from "@/lib/naver-map-resize-plan-helpers";
+import {
+    buildNaverWheelAnchorAdjustmentPlan,
+    buildNaverWheelInput,
+    buildNaverWheelProjectionAdapter,
+    buildNaverWheelViewportPlan,
+    clearNaverPendingAnchorAdjustListener,
+    flushQueuedNaverWheelInput,
+    resolveNaverWheelCleanupState,
+    resolveNaverWheelZoomPlan,
+    resolveNaverWheelInputDispatch,
+    resolveNaverWheelPostAdjustPlan,
+    type NaverWheelInput,
+} from "@/lib/naver-map-wheel-helpers";
 
 interface NaverLatLngLike {
     lat: () => number;
@@ -1861,50 +1874,42 @@ const NaverMapView = memo(({
         let pendingAnchorAdjustListener: unknown = null;
         let isAnchorAdjusting = false;
 
-        type QueuedWheelInput = {
-            clientX: number;
-            clientY: number;
-            deltaY: number;
-        };
-
-        let queuedWheelInput: QueuedWheelInput | null = null;
+        let queuedWheelInput: NaverWheelInput | null = null;
 
         function runQueuedWheelInput() {
-            if (isAnchorAdjusting || !queuedWheelInput) return;
+            const flushPlan = flushQueuedNaverWheelInput({
+                isAnchorAdjusting,
+                queuedWheelInput,
+            });
+            queuedWheelInput = flushPlan.nextQueuedWheelInput;
 
-            const nextInput = queuedWheelInput;
-            queuedWheelInput = null;
-            handleWheelInput(nextInput);
+            if (!flushPlan.shouldHandleNextInput || !flushPlan.nextInput) return;
+
+            handleWheelInput(flushPlan.nextInput);
         }
 
-        function handleWheelInput(input: QueuedWheelInput) {
-            const normalizedDirection = Math.sign(input.deltaY);
-            if (normalizedDirection === 0) {
-                return;
-            }
-
+        function handleWheelInput(input: NaverWheelInput) {
             const now = Date.now();
             const timeDiff = now - lastWheelTime;
             lastWheelTime = now;
 
             const currentMapZoom = map.getZoom();
+            const wheelPlan = resolveNaverWheelZoomPlan({
+                currentMapZoom,
+                deltaY: input.deltaY,
+                maxZoom: MAX_ZOOM,
+                minZoom: MIN_ZOOM,
+                previousTargetZoom: targetZoomLevel,
+                timeDiffMs: timeDiff,
+            });
 
-            // 1. 기준 줌 설정 (연속성 보장)
-            let baseZoom;
-            // 400ms 이내이고, 오차가 크지 않으면 이전 목표값 유지
-            if (timeDiff < 400 && Math.abs(targetZoomLevel - currentMapZoom) < 1.5) {
-                baseZoom = targetZoomLevel;
-            } else {
-                baseZoom = currentMapZoom;
+            if (wheelPlan.normalizedDirection === 0) {
+                return;
             }
-
-            // 2. 새로운 목표 계산 (정수 1단위)
-            // deltaY > 0 : 줌 아웃(값 감소), deltaY < 0 : 줌 인(값 증가)
-            const zoomChange = normalizedDirection > 0 ? -1 : 1;
-            const nextZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(baseZoom) + zoomChange));
+            const { nextZoom, shouldApply } = wheelPlan;
 
             // 3. 적용 (변경이 있을 때만)
-            if (nextZoom !== targetZoomLevel) {
+            if (shouldApply) {
                 targetZoomLevel = nextZoom;
 
                 try {
@@ -1917,77 +1922,68 @@ const NaverMapView = memo(({
                     }
 
                     const rect = mapElement.getBoundingClientRect();
-                    const mousePoint = new naver.maps.Point(
-                        input.clientX - rect.left,
-                        input.clientY - rect.top
-                    );
-                    const viewportCenterPoint = new naver.maps.Point(rect.width / 2, rect.height / 2);
+                    const wheelViewportPlan = buildNaverWheelViewportPlan({
+                        centerOffset: projection.fromCoordToOffset(map.getCenter()),
+                        clientX: input.clientX,
+                        clientY: input.clientY,
+                        rectHeight: rect.height,
+                        rectLeft: rect.left,
+                        rectTop: rect.top,
+                        rectWidth: rect.width,
+                    });
 
                     // 컨테이너 바깥 휠 이벤트는 기본 중심 줌 처리
-                    if (
-                        mousePoint.x < 0 ||
-                        mousePoint.y < 0 ||
-                        mousePoint.x > rect.width ||
-                        mousePoint.y > rect.height
-                    ) {
+                    if (!wheelViewportPlan.isInsideViewport) {
                         map.setZoom(nextZoom, true);
                         return;
                     }
 
                     // 네이버 Projection offset은 "뷰포트 픽셀"이 아니라 "투영 좌표계 offset"이므로
                     // 마우스 뷰포트 좌표를 현재 center offset 기준으로 변환해 사용
-                    const centerOffsetBeforeZoom = projection.fromCoordToOffset(map.getCenter());
-                    const mouseOffsetBeforeZoom = new naver.maps.Point(
-                        centerOffsetBeforeZoom.x + (mousePoint.x - viewportCenterPoint.x),
-                        centerOffsetBeforeZoom.y + (mousePoint.y - viewportCenterPoint.y)
+                    const beforeCoord = projection.fromOffsetToCoord(
+                        new naver.maps.Point(wheelViewportPlan.mouseOffset.x, wheelViewportPlan.mouseOffset.y)
                     );
-
-                    // 줌 전: 마우스 포인터 아래의 좌표
-                    const beforeCoord = projection.fromOffsetToCoord(mouseOffsetBeforeZoom);
 
                     // 보정 중일 때는 후속 휠 입력을 큐에 보관하고 idle 이후 순차 처리
                     isAnchorAdjusting = true;
 
                     // 줌 반영 후( idle ) 투영이 갱신된 시점에 중심 보정
                     pendingAnchorAdjustListener = naver.maps.Event.addListener(map, 'idle', () => {
-                        if (pendingAnchorAdjustListener) {
-                            naver.maps.Event.removeListener(pendingAnchorAdjustListener);
-                            pendingAnchorAdjustListener = null;
-                        }
+                        pendingAnchorAdjustListener = clearNaverPendingAnchorAdjustListener({
+                            pendingAnchorAdjustListener,
+                            removeListener: (listener) => naver.maps.Event.removeListener(listener),
+                        }).nextPendingAnchorAdjustListener;
 
                         try {
                             const updatedProjection = map.getProjection();
                             if (!updatedProjection) return;
 
                             const currentCenter = map.getCenter();
-                            const centerOffsetAfterZoom = updatedProjection.fromCoordToOffset(currentCenter);
-                            const mouseOffsetAfterZoom = {
-                                x: centerOffsetAfterZoom.x + (mousePoint.x - viewportCenterPoint.x),
-                                y: centerOffsetAfterZoom.y + (mousePoint.y - viewportCenterPoint.y),
-                            };
-                            const adjustedCenter = calculateHoverAnchoredCenter({
-                                projection: {
-                                    fromCoordToOffset: (coord) =>
-                                        updatedProjection.fromCoordToOffset(
-                                            new naver.maps.LatLng(coord.lat, coord.lng)
-                                        ),
-                                    fromOffsetToCoord: (offset) => {
-                                        const coord = updatedProjection.fromOffsetToCoord(
-                                            new naver.maps.Point(offset.x, offset.y)
-                                        );
-                                        return { lat: coord.lat(), lng: coord.lng() };
-                                    },
-                                },
+                            const anchorAdjustmentPlan = buildNaverWheelAnchorAdjustmentPlan({
                                 anchorCoordBeforeZoom: { lat: beforeCoord.lat(), lng: beforeCoord.lng() },
+                                centerOffsetAfterZoom: updatedProjection.fromCoordToOffset(currentCenter),
                                 currentCenter: { lat: currentCenter.lat(), lng: currentCenter.lng() },
-                                mouseOffset: mouseOffsetAfterZoom,
+                                mousePoint: wheelViewportPlan.mousePoint,
+                                viewportCenterPoint: wheelViewportPlan.viewportCenterPoint,
+                            });
+                            const adjustedCenter = calculateHoverAnchoredCenter({
+                                projection: buildNaverWheelProjectionAdapter({
+                                    createLatLng: (lat, lng) => new naver.maps.LatLng(lat, lng),
+                                    createPoint: (x, y) => new naver.maps.Point(x, y),
+                                    projection: updatedProjection,
+                                }),
+                                ...anchorAdjustmentPlan,
                             });
 
                             map.setCenter(new naver.maps.LatLng(adjustedCenter.lat, adjustedCenter.lng));
                         } finally {
-                            isAnchorAdjusting = false;
-                            targetZoomLevel = map.getZoom();
-                            if (queuedWheelInput) {
+                            const postAdjustPlan = resolveNaverWheelPostAdjustPlan({
+                                currentZoom: map.getZoom(),
+                                hasQueuedWheelInput: queuedWheelInput !== null,
+                            });
+                            isAnchorAdjusting = postAdjustPlan.nextIsAnchorAdjusting;
+                            targetZoomLevel = postAdjustPlan.nextTargetZoomLevel;
+                            if (postAdjustPlan.shouldScheduleQueuedInput) {
                                 window.requestAnimationFrame(runQueuedWheelInput);
                             }
                         }
@@ -1998,8 +1994,13 @@ const NaverMapView = memo(({
                 } catch (error) {
                     console.error("휠 줌 포인터 고정 처리 실패:", error);
                     map.setZoom(nextZoom, true);
-                    isAnchorAdjusting = false;
-                    if (queuedWheelInput) {
+                    const postAdjustPlan = resolveNaverWheelPostAdjustPlan({
+                        currentZoom: map.getZoom(),
+                        hasQueuedWheelInput: queuedWheelInput !== null,
+                    });
+                    isAnchorAdjusting = postAdjustPlan.nextIsAnchorAdjusting;
+                    targetZoomLevel = postAdjustPlan.nextTargetZoomLevel;
+                    if (postAdjustPlan.shouldScheduleQueuedInput) {
                         window.requestAnimationFrame(runQueuedWheelInput);
                     }
                 }
@@ -2009,14 +2010,17 @@ const NaverMapView = memo(({
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
 
-            const input: QueuedWheelInput = {
+            const input = buildNaverWheelInput({
                 clientX: e.clientX,
                 clientY: e.clientY,
                 deltaY: e.deltaY,
-            };
-
-            if (isAnchorAdjusting) {
-                queuedWheelInput = input;
+            });
+            const dispatchPlan = resolveNaverWheelInputDispatch({
+                input,
+                isAnchorAdjusting,
+            });
+            queuedWheelInput = dispatchPlan.nextQueuedWheelInput;
+            if (!dispatchPlan.shouldHandleImmediately) {
                 return;
             }
 
@@ -2028,11 +2032,14 @@ const NaverMapView = memo(({
 
         return () => {
             if (pendingAnchorAdjustListener && window.naver?.maps?.Event) {
-                window.naver.maps.Event.removeListener(pendingAnchorAdjustListener);
-                pendingAnchorAdjustListener = null;
+                pendingAnchorAdjustListener = clearNaverPendingAnchorAdjustListener({
+                    pendingAnchorAdjustListener,
+                    removeListener: (listener) => window.naver!.maps.Event.removeListener(listener),
+                }).nextPendingAnchorAdjustListener;
             }
-            isAnchorAdjusting = false;
-            queuedWheelInput = null;
+            const cleanupState = resolveNaverWheelCleanupState();
+            isAnchorAdjusting = cleanupState.nextIsAnchorAdjusting;
+            queuedWheelInput = cleanupState.nextQueuedWheelInput;
             mapElement.removeEventListener('wheel', handleWheel);
         };
     }, [isMapInitialized]);
