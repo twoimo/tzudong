@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { Restaurant } from '../types/restaurant';
 import {
     buildPostSearchSwipeCandidates,
+    buildRestaurantsForSwipe,
     getActiveSearchedRestaurant,
     isSameRestaurantSelection,
     releaseSearchSelectionOwnership,
@@ -103,6 +104,27 @@ describe('mobile home search selection helpers', () => {
             panelRestaurant,
             isPanelOpen: true,
         });
+    });
+
+    test('adds active searched restaurant to swipe candidates when it is outside display ids', () => {
+        const visibleRestaurant = makeRestaurant({ id: 'visible-1' });
+        const searchedRestaurant = makeRestaurant({ id: 'search-1' });
+
+        expect(buildRestaurantsForSwipe({
+            activeSearchedRestaurant: searchedRestaurant,
+            displayRestaurantIds: new Set([visibleRestaurant.id]),
+            displayRestaurants: [visibleRestaurant],
+        }).map((restaurant) => restaurant.id)).toEqual(['visible-1', 'search-1']);
+    });
+
+    test('does not duplicate active searched restaurant already present in display ids', () => {
+        const searchedRestaurant = makeRestaurant({ id: 'search-1' });
+
+        expect(buildRestaurantsForSwipe({
+            activeSearchedRestaurant: searchedRestaurant,
+            displayRestaurantIds: new Set([searchedRestaurant.id]),
+            displayRestaurants: [searchedRestaurant],
+        }).map((restaurant) => restaurant.id)).toEqual(['search-1']);
     });
 
     test('adds the nearest fallback restaurant when only one visible restaurant remains after search', () => {

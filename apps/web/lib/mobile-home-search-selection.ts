@@ -129,6 +129,22 @@ type BuildPostSearchSwipeCandidatesInput = {
     activeSearchedRestaurant: Restaurant | null;
 };
 
+export const buildRestaurantsForSwipe = ({
+    activeSearchedRestaurant,
+    displayRestaurantIds,
+    displayRestaurants,
+}: {
+    activeSearchedRestaurant: Restaurant | null;
+    displayRestaurantIds: Set<string>;
+    displayRestaurants: Restaurant[];
+}): Restaurant[] => {
+    if (!activeSearchedRestaurant || displayRestaurantIds.has(activeSearchedRestaurant.id)) {
+        return displayRestaurants;
+    }
+
+    return [...displayRestaurants, activeSearchedRestaurant];
+};
+
 export const buildPostSearchSwipeCandidates = ({
     visibleRestaurants,
     allRestaurants,
