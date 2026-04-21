@@ -66,6 +66,8 @@ import {
     buildPostSearchSwipeCandidates,
     buildRestaurantsForSwipe,
     getActiveSearchedRestaurant,
+    resolveReleasedSearchSelectionResetPlan,
+    resolveSearchSelectionReleasePlan,
 } from "@/lib/mobile-home-search-selection";
 import { buildNaverRestaurantsQueryOptions } from "@/lib/map-query-helpers";
 import {
@@ -346,16 +348,17 @@ const NaverMapView = memo(({
     }), [searchedRestaurant, selectedRestaurant]);
 
     const releaseSearchSelectionOnUserInteraction = useCallback(() => {
-        if (!activeSearchedRestaurant || !onSearchSelectionRelease) {
-            return;
-        }
+        const releasePlan = resolveSearchSelectionReleasePlan({
+            activeSearchedRestaurant,
+            hasReleaseHandler: Boolean(onSearchSelectionRelease),
+            releasedSearchSelectionId: releasedSearchSelectionIdRef.current,
+        });
 
-        if (releasedSearchSelectionIdRef.current === activeSearchedRestaurant.id) {
-            return;
-        }
+        releasedSearchSelectionIdRef.current = releasePlan.nextReleasedSearchSelectionId;
 
-        releasedSearchSelectionIdRef.current = activeSearchedRestaurant.id;
-        onSearchSelectionRelease();
+        if (releasePlan.shouldRelease) {
+            onSearchSelectionRelease?.();
+        }
     }, [activeSearchedRestaurant, onSearchSelectionRelease]);
 
     const handleDetailPanelMouseDownCapture = useMemo(
@@ -1208,14 +1211,12 @@ const NaverMapView = memo(({
     }), [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds]);
 
     useEffect(() => {
-        if (!activeSearchedRestaurant) {
-            releasedSearchSelectionIdRef.current = null;
-            return;
-        }
+        const resetPlan = resolveReleasedSearchSelectionResetPlan({
+            activeSearchedRestaurant,
+            releasedSearchSelectionId: releasedSearchSelectionIdRef.current,
+        });
 
-        if (releasedSearchSelectionIdRef.current && releasedSearchSelectionIdRef.current !== activeSearchedRestaurant.id) {
-            releasedSearchSelectionIdRef.current = null;
-        }
+        releasedSearchSelectionIdRef.current = resetPlan.nextReleasedSearchSelectionId;
     }, [activeSearchedRestaurant]);
 
     // [Cluster] 클러스터 인덱스 생성 및 업데이트
