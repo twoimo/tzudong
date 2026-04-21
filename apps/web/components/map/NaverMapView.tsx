@@ -158,7 +158,11 @@ import {
     getNaverCurrentPanelOffset,
     resolveNaverRestaurantCountUpdatePlan,
 } from "@/lib/naver-map-current-state-helpers";
-import { countUniqueNaverPresenceUsers } from "@/lib/naver-map-presence-helpers";
+import {
+    countUniqueNaverPresenceUsers,
+    resolveNaverInitialOnlineToastPlan,
+    resolveNaverOnlineToastDisplayPlan,
+} from "@/lib/naver-map-presence-helpers";
 import { resolveNaverResizePlan } from "@/lib/naver-map-resize-plan-helpers";
 import {
     buildNaverWheelAnchorAdjustmentPlan,
@@ -1058,9 +1062,14 @@ const NaverMapView = memo(({
 
         // 토스트 표시 함수
         const showOnlineToast = () => {
-            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-            setShowOnlineUsers(true);
-            hideTimerRef.current = setTimeout(() => setShowOnlineUsers(false), 4000);
+            const toastDisplayPlan = resolveNaverOnlineToastDisplayPlan({
+                hasExistingHideTimer: hideTimerRef.current !== null,
+            });
+            if (toastDisplayPlan.shouldClearExistingHideTimer && hideTimerRef.current) {
+                clearTimeout(hideTimerRef.current);
+            }
+            setShowOnlineUsers(toastDisplayPlan.shouldShowOnlineUsers);
+            hideTimerRef.current = setTimeout(() => setShowOnlineUsers(false), toastDisplayPlan.hideDelayMs);
         };
 
         // Supabase Presence 채널 구독
@@ -1071,10 +1080,16 @@ const NaverMapView = memo(({
                 onlineUsersCountRef.current = count;
 
                 // 첫 번째 sync 후 5초 뒤에 토스트 표시
-                if (!hasShownInitialToastRef.current) {
-                    hasShownInitialToastRef.current = true;
-                    if (initialTimerRef.current) clearTimeout(initialTimerRef.current);
-                    initialTimerRef.current = setTimeout(showOnlineToast, 5000);
+                const initialToastPlan = resolveNaverInitialOnlineToastPlan({
+                    hasExistingInitialTimer: initialTimerRef.current !== null,
+                    hasShownInitialToast: hasShownInitialToastRef.current,
+                });
+                if (initialToastPlan.shouldScheduleInitialToast) {
+                    hasShownInitialToastRef.current = initialToastPlan.nextHasShownInitialToast;
+                    if (initialToastPlan.shouldClearExistingInitialTimer && initialTimerRef.current) {
+                        clearTimeout(initialTimerRef.current);
+                    }
+                    initialTimerRef.current = setTimeout(showOnlineToast, initialToastPlan.initialDelayMs);
                 }
             })
             .subscribe(async (status) => {
