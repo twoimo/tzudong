@@ -148,6 +148,7 @@ import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers
 import { buildNaverWindowResizeHandler } from "@/lib/naver-map-window-resize-helpers";
 import {
     buildNaverCurrentStateSnapshot,
+    buildNaverInitialCurrentStateSnapshot,
     getNaverCurrentPanelOffset,
 } from "@/lib/naver-map-current-state-helpers";
 import { resolveNaverResizePlan } from "@/lib/naver-map-resize-plan-helpers";
@@ -903,12 +904,11 @@ const NaverMapView = memo(({
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
-    const currentStateRef = useRef(buildNaverCurrentStateSnapshot({
+    const currentStateRef = useRef(buildNaverInitialCurrentStateSnapshot({
         isSidebarOpen,
         externalPanelOpen,
         isPanelCollapsed,
         isGridMode,
-        effectivePanelOffset: 0,
     }));
 
     useEffect(() => {

@@ -20,6 +20,26 @@ export function buildNaverCurrentStateSnapshot({
     };
 }
 
+export function buildNaverInitialCurrentStateSnapshot({
+    externalPanelOpen,
+    isGridMode,
+    isPanelCollapsed,
+    isSidebarOpen,
+}: {
+    externalPanelOpen?: boolean;
+    isGridMode: boolean;
+    isPanelCollapsed: boolean;
+    isSidebarOpen: boolean;
+}) {
+    return buildNaverCurrentStateSnapshot({
+        effectivePanelOffset: 0,
+        externalPanelOpen,
+        isGridMode,
+        isPanelCollapsed,
+        isSidebarOpen,
+    });
+}
+
 export function getNaverCurrentPanelOffset(currentState: { effectivePanelOffset: number }) {
     return currentState.effectivePanelOffset;
 }
