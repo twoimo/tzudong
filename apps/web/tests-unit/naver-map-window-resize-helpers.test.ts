@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
-import { buildNaverWindowResizeHandler } from '../lib/naver-map-window-resize-helpers';
+import {
+    buildNaverWindowResizeCleanup,
+    buildNaverWindowResizeHandler,
+} from '../lib/naver-map-window-resize-helpers';
 
 describe('naver map window resize helpers', () => {
     test('debounces resize and triggers only the latest scheduled resize', () => {
@@ -50,5 +53,22 @@ describe('naver map window resize helpers', () => {
         helper.cancel();
 
         expect(cleared).toEqual([7]);
+    });
+
+    test('cleanup removes listener before cancelling pending resize', () => {
+        const calls: string[] = [];
+        const handler = () => calls.push('handler');
+        const cleanup = buildNaverWindowResizeCleanup({
+            cancel: () => calls.push('cancel'),
+            handleWindowResize: handler,
+            removeWindowResizeListener: (receivedHandler) => {
+                expect(receivedHandler).toBe(handler);
+                calls.push('remove');
+            },
+        });
+
+        cleanup();
+
+        expect(calls).toEqual(['remove', 'cancel']);
     });
 });

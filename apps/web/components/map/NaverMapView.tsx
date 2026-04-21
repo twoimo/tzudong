@@ -148,7 +148,10 @@ import {
 } from "@/lib/naver-map-resize-observer-helpers";
 import { focusNaverMapOnRestaurant } from "@/lib/naver-map-focus-helpers";
 import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers";
-import { buildNaverWindowResizeHandler } from "@/lib/naver-map-window-resize-helpers";
+import {
+    buildNaverWindowResizeCleanup,
+    buildNaverWindowResizeHandler,
+} from "@/lib/naver-map-window-resize-helpers";
 import {
     buildNaverCurrentStateSnapshot,
     buildNaverInitialCurrentStateSnapshot,
@@ -989,10 +992,11 @@ const NaverMapView = memo(({
         });
 
         window.addEventListener('resize', handleWindowResize, { passive: true });
-        return () => {
-            window.removeEventListener('resize', handleWindowResize);
-            cancel();
-        };
+        return buildNaverWindowResizeCleanup({
+            cancel,
+            handleWindowResize,
+            removeWindowResizeListener: (handler) => window.removeEventListener('resize', handler),
+        });
     }, []);
 
     // useRestaurants 옵션 메모이제이션

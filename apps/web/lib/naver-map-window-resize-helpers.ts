@@ -39,3 +39,18 @@ export function buildNaverWindowResizeHandler<TMap>({
         handleWindowResize,
     };
 }
+
+export function buildNaverWindowResizeCleanup({
+    cancel,
+    handleWindowResize,
+    removeWindowResizeListener,
+}: {
+    cancel: () => void;
+    handleWindowResize: () => void;
+    removeWindowResizeListener: (handler: () => void) => void;
+}) {
+    return () => {
+        removeWindowResizeListener(handleWindowResize);
+        cancel();
+    };
+}
