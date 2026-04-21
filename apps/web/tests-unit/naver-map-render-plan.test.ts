@@ -5,6 +5,7 @@ import {
     buildRenderTargetIdsForSignature,
     deriveClusterRenderPlan,
     getVisibleRestaurantsForRender,
+    shouldReportNaverMarkerRenderPerformance,
 } from '../lib/naver-map-render-plan';
 
 const makeRestaurant = (overrides: Partial<Restaurant> = {}): Restaurant => ({
@@ -67,5 +68,22 @@ describe('naver map render plan helpers', () => {
         expect(ids[0]).toContain('restaurant-visible');
         expect(ids[1]).toContain('searched-searched');
         expect(ids[2]).toContain('regional-서울:2:37.500000:127.000000');
+    });
+
+    test('reports marker render performance only for large development marker sets', () => {
+        expect(shouldReportNaverMarkerRenderPerformance({
+            activeMarkerCount: 51,
+            isDevelopment: true,
+        })).toBe(true);
+
+        expect(shouldReportNaverMarkerRenderPerformance({
+            activeMarkerCount: 50,
+            isDevelopment: true,
+        })).toBe(false);
+
+        expect(shouldReportNaverMarkerRenderPerformance({
+            activeMarkerCount: 100,
+            isDevelopment: false,
+        })).toBe(false);
     });
 });

@@ -137,3 +137,13 @@ export function buildRenderTargetIdsForSignature({
 
     return renderTargetIdsForSignature;
 }
+
+export function shouldReportNaverMarkerRenderPerformance({
+    activeMarkerCount,
+    isDevelopment,
+}: {
+    activeMarkerCount: number;
+    isDevelopment: boolean;
+}) {
+    return isDevelopment && activeMarkerCount > 50;
+}
