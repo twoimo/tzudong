@@ -43,3 +43,21 @@ export function buildNaverInitialCurrentStateSnapshot({
 export function getNaverCurrentPanelOffset(currentState: { effectivePanelOffset: number }) {
     return currentState.effectivePanelOffset;
 }
+
+export function resolveNaverRestaurantCountUpdatePlan({
+    hideDelayMs = 3000,
+    isLoadingRestaurants,
+    restaurantsLength,
+}: {
+    hideDelayMs?: number;
+    isLoadingRestaurants: boolean;
+    restaurantsLength: number;
+}) {
+    const shouldShowRestaurantCount = restaurantsLength > 0 && !isLoadingRestaurants;
+
+    return {
+        hideDelayMs,
+        shouldShowRestaurantCount,
+        shouldStorePreviousRestaurants: shouldShowRestaurantCount,
+    } as const;
+}

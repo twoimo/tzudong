@@ -156,6 +156,7 @@ import {
     buildNaverCurrentStateSnapshot,
     buildNaverInitialCurrentStateSnapshot,
     getNaverCurrentPanelOffset,
+    resolveNaverRestaurantCountUpdatePlan,
 } from "@/lib/naver-map-current-state-helpers";
 import { resolveNaverResizePlan } from "@/lib/naver-map-resize-plan-helpers";
 import {
@@ -1018,14 +1019,21 @@ const NaverMapView = memo(({
 
     // restaurants가 변경될 때 이전 데이터를 저장하고, 개수 표시를 3초간 활성화
     useEffect(() => {
-        if (restaurants.length > 0 && !isLoadingRestaurants) {
-            setPreviousRestaurants(restaurants);
+        const countUpdatePlan = resolveNaverRestaurantCountUpdatePlan({
+            isLoadingRestaurants,
+            restaurantsLength: restaurants.length,
+        });
 
-            // 맛집 개수가 있을 때만 배지 표시 및 타이머 설정
+        if (countUpdatePlan.shouldStorePreviousRestaurants) {
+            setPreviousRestaurants(restaurants);
+        }
+
+        // 맛집 개수가 있을 때만 배지 표시 및 타이머 설정
+        if (countUpdatePlan.shouldShowRestaurantCount) {
             setShowRestaurantCount(true);
             const timer = setTimeout(() => {
                 setShowRestaurantCount(false);
-            }, 3000);
+            }, countUpdatePlan.hideDelayMs);
             return () => clearTimeout(timer);
         }
     }, [restaurants, isLoadingRestaurants]);

@@ -4,6 +4,7 @@ import {
     buildNaverCurrentStateSnapshot,
     buildNaverInitialCurrentStateSnapshot,
     getNaverCurrentPanelOffset,
+    resolveNaverRestaurantCountUpdatePlan,
 } from '../lib/naver-map-current-state-helpers';
 
 describe('naver map current state helpers', () => {
@@ -39,6 +40,32 @@ describe('naver map current state helpers', () => {
             isGridMode: false,
             isPanelCollapsed: true,
             isSidebarOpen: false,
+        });
+    });
+
+    test('resolves restaurant count badge update only for loaded non-empty data', () => {
+        expect(resolveNaverRestaurantCountUpdatePlan({
+            isLoadingRestaurants: false,
+            restaurantsLength: 3,
+        })).toEqual({
+            hideDelayMs: 3000,
+            shouldShowRestaurantCount: true,
+            shouldStorePreviousRestaurants: true,
+        });
+
+        expect(resolveNaverRestaurantCountUpdatePlan({
+            isLoadingRestaurants: true,
+            restaurantsLength: 3,
+        }).shouldShowRestaurantCount).toBe(false);
+
+        expect(resolveNaverRestaurantCountUpdatePlan({
+            hideDelayMs: 1000,
+            isLoadingRestaurants: false,
+            restaurantsLength: 0,
+        })).toEqual({
+            hideDelayMs: 1000,
+            shouldShowRestaurantCount: false,
+            shouldStorePreviousRestaurants: false,
         });
     });
 });
