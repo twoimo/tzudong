@@ -64,8 +64,6 @@ import {
 import {
     buildPostSearchSwipeCandidates,
     getActiveSearchedRestaurant,
-    isSameRestaurantSelection,
-    shouldHandleSearchSelection,
 } from "@/lib/mobile-home-search-selection";
 import { buildNaverRestaurantsQueryOptions } from "@/lib/map-query-helpers";
 import {
@@ -121,7 +119,10 @@ import { buildResetUserMapMovementHandler } from "@/lib/naver-map-user-movement-
 import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
 import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
 import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
-import { resolveNaverSelectionChange } from "@/lib/naver-map-selection-helpers";
+import {
+    resolveNaverSearchSelectionPlan,
+    resolveNaverSelectionChange,
+} from "@/lib/naver-map-selection-helpers";
 import { buildNaverPanelWidthObserver } from "@/lib/naver-map-panel-width-helpers";
 import {
     buildNaverMapInteractionHandlers,
@@ -2052,43 +2053,36 @@ const NaverMapView = memo(({
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
-        if (!activeSearchedRestaurant) {
-            previousSearchedRestaurantRef.current = null;
-            return;
-        }
         if (!mapInstanceRef.current) return;
 
-        // 검색된 맛집이 병합된 데이터라면 기존 restaurants에서 같은 데이터를 찾아서 교체
-        let actualSearchedRestaurant = activeSearchedRestaurant;
-        const existingRestaurant = findMatchingRestaurantInList(activeSearchedRestaurant, restaurants);
-        if (existingRestaurant) {
-            actualSearchedRestaurant = existingRestaurant;
-            // 부모 컴포넌트의 selectedRestaurant도 업데이트
-            if (onRestaurantSelect && !isSameRestaurantSelection(existingRestaurant, selectedRestaurant)) {
-                onRestaurantSelect(existingRestaurant);
-            }
+        const searchSelectionPlan = resolveNaverSearchSelectionPlan({
+            activeSearchedRestaurant,
+            previousHandledRestaurant: previousSearchedRestaurantRef.current,
+            restaurants,
+            selectedRestaurant,
+        });
+
+        if (searchSelectionPlan.shouldNotifyParentSelection && onRestaurantSelect && searchSelectionPlan.actualSearchedRestaurant) {
+            onRestaurantSelect(searchSelectionPlan.actualSearchedRestaurant);
         }
 
-        if (!shouldHandleSearchSelection({
-            searchedRestaurant: actualSearchedRestaurant,
-            selectedRestaurant,
-            previousHandledRestaurant: previousSearchedRestaurantRef.current,
-        })) {
+        if (!searchSelectionPlan.shouldHandle || !searchSelectionPlan.focusTarget) {
+            previousSearchedRestaurantRef.current = searchSelectionPlan.nextPreviousSearchedRestaurant;
             return;
         }
 
         // 패널 열기 (검색 시에만)
         setInternalPanelOpen(true);
         // 현재 searchedRestaurant 저장
-        previousSearchedRestaurantRef.current = actualSearchedRestaurant;
+        previousSearchedRestaurantRef.current = searchSelectionPlan.nextPreviousSearchedRestaurant;
 
         // [검색 시 줌 레벨 15로 즉시 이동]
         focusNaverMapOnRestaurant({
             createLatLng: (lat, lng) => new window.naver.maps.LatLng(lat, lng),
-            lat: actualSearchedRestaurant.lat,
-            lng: actualSearchedRestaurant.lng,
+            lat: searchSelectionPlan.focusTarget.lat,
+            lng: searchSelectionPlan.focusTarget.lng,
             map: mapInstanceRef.current,
-            zoom: 15,
+            zoom: searchSelectionPlan.focusTarget.zoom,
         });
     }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
