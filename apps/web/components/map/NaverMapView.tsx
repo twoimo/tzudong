@@ -63,6 +63,7 @@ import {
 } from "@/lib/map-restaurant-lookup";
 import {
     buildPostSearchSwipeCandidates,
+    buildRestaurantsForSwipe,
     getActiveSearchedRestaurant,
 } from "@/lib/mobile-home-search-selection";
 import { buildNaverRestaurantsQueryOptions } from "@/lib/map-query-helpers";
@@ -1117,18 +1118,11 @@ const NaverMapView = memo(({
 
     const restaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
     const { byId: restaurantById, idSet: displayRestaurantIds, mergedRestaurantIds, mergedRestaurantById } = restaurantLookup;
-    const restaurantsForSwipe = useMemo(() => {
-        const restaurantsForSwipe = [...displayRestaurants];
-
-        if (activeSearchedRestaurant) {
-            const alreadyExists = displayRestaurantIds.has(activeSearchedRestaurant.id);
-            if (!alreadyExists) {
-                restaurantsForSwipe.push(activeSearchedRestaurant);
-            }
-        }
-
-        return restaurantsForSwipe;
-    }, [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds]);
+    const restaurantsForSwipe = useMemo(() => buildRestaurantsForSwipe({
+        activeSearchedRestaurant,
+        displayRestaurantIds,
+        displayRestaurants,
+    }), [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds]);
 
     useEffect(() => {
         if (!activeSearchedRestaurant) {
