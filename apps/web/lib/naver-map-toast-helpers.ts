@@ -44,3 +44,48 @@ export function resolveNaverAnnouncementToastPlan<TAnnouncement extends { id: st
         shouldShow: Boolean(announcement),
     } as const;
 }
+
+export function resolveNaverAnnouncementToastInactivePlan({
+    hasHideTimer,
+    hasInitialTimer,
+}: {
+    hasHideTimer: boolean;
+    hasInitialTimer: boolean;
+}) {
+    return {
+        nextTitle: '',
+        shouldClearHideTimer: hasHideTimer,
+        shouldClearInitialTimer: hasInitialTimer,
+        shouldShowAnnouncementToast: false,
+    } as const;
+}
+
+export function resolveNaverAnnouncementToastSchedulePlan({
+    hasExistingInitialTimer,
+    initialDelayMs = 9000,
+    intervalMs,
+}: {
+    hasExistingInitialTimer: boolean;
+    initialDelayMs?: number;
+    intervalMs: number;
+}) {
+    return {
+        initialDelayMs,
+        intervalMs,
+        shouldClearExistingInitialTimer: hasExistingInitialTimer,
+    } as const;
+}
+
+export function resolveNaverAnnouncementToastCleanupPlan({
+    hasHideTimer,
+    hasInitialTimer,
+}: {
+    hasHideTimer: boolean;
+    hasInitialTimer: boolean;
+}) {
+    return {
+        shouldClearHideTimer: hasHideTimer,
+        shouldClearInitialTimer: hasInitialTimer,
+        shouldClearInterval: true,
+    } as const;
+}

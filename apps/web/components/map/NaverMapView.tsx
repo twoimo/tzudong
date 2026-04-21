@@ -118,7 +118,10 @@ import {
 } from "@/lib/naver-map-sidepanel-helpers";
 import {
     buildNaverMapToastTrigger,
+    resolveNaverAnnouncementToastCleanupPlan,
+    resolveNaverAnnouncementToastInactivePlan,
     resolveNaverAnnouncementToastPlan,
+    resolveNaverAnnouncementToastSchedulePlan,
 } from "@/lib/naver-map-toast-helpers";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
@@ -1118,10 +1121,18 @@ const NaverMapView = memo(({
     // 공지사항 배너 내용 주기 노출
     useEffect(() => {
         if (!isLoaded || bannerAnnouncements.length === 0) {
-            setShowAnnouncementToast(false);
-            setAnnouncementToastTitle('');
-            if (announcementToastInitialTimerRef.current) clearTimeout(announcementToastInitialTimerRef.current);
-            if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
+            const inactivePlan = resolveNaverAnnouncementToastInactivePlan({
+                hasHideTimer: announcementToastHideTimerRef.current !== null,
+                hasInitialTimer: announcementToastInitialTimerRef.current !== null,
+            });
+            setShowAnnouncementToast(inactivePlan.shouldShowAnnouncementToast);
+            setAnnouncementToastTitle(inactivePlan.nextTitle);
+            if (inactivePlan.shouldClearInitialTimer && announcementToastInitialTimerRef.current) {
+                clearTimeout(announcementToastInitialTimerRef.current);
+            }
+            if (inactivePlan.shouldClearHideTimer && announcementToastHideTimerRef.current) {
+                clearTimeout(announcementToastHideTimerRef.current);
+            }
             return;
         }
 
@@ -1144,15 +1155,31 @@ const NaverMapView = memo(({
             }, announcementPlan.hideDelayMs);
         };
 
-        if (announcementToastInitialTimerRef.current) clearTimeout(announcementToastInitialTimerRef.current);
-        announcementToastInitialTimerRef.current = setTimeout(showAnnouncementBadge, 9000);
+        const schedulePlan = resolveNaverAnnouncementToastSchedulePlan({
+            hasExistingInitialTimer: announcementToastInitialTimerRef.current !== null,
+            intervalMs: ANNOUNCEMENT_TOAST_INTERVAL_MS,
+        });
+        if (schedulePlan.shouldClearExistingInitialTimer && announcementToastInitialTimerRef.current) {
+            clearTimeout(announcementToastInitialTimerRef.current);
+        }
+        announcementToastInitialTimerRef.current = setTimeout(showAnnouncementBadge, schedulePlan.initialDelayMs);
 
-        const interval = setInterval(showAnnouncementBadge, ANNOUNCEMENT_TOAST_INTERVAL_MS);
+        const interval = setInterval(showAnnouncementBadge, schedulePlan.intervalMs);
 
         return () => {
-            clearInterval(interval);
-            if (announcementToastInitialTimerRef.current) clearTimeout(announcementToastInitialTimerRef.current);
-            if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
+            const cleanupPlan = resolveNaverAnnouncementToastCleanupPlan({
+                hasHideTimer: announcementToastHideTimerRef.current !== null,
+                hasInitialTimer: announcementToastInitialTimerRef.current !== null,
+            });
+            if (cleanupPlan.shouldClearInterval) {
+                clearInterval(interval);
+            }
+            if (cleanupPlan.shouldClearInitialTimer && announcementToastInitialTimerRef.current) {
+                clearTimeout(announcementToastInitialTimerRef.current);
+            }
+            if (cleanupPlan.shouldClearHideTimer && announcementToastHideTimerRef.current) {
+                clearTimeout(announcementToastHideTimerRef.current);
+            }
         };
     }, [bannerAnnouncements, isLoaded]);
 
