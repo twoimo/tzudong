@@ -14,3 +14,28 @@ export function calculateNaverMobileVerticalOffset({
 
     return (sheetHeightPx / 2) + (navHeight / 2) + fineTunePx;
 }
+
+export function resolveNaverMobileVerticalOffset({
+    fineTunePx,
+    isMobileOrTablet,
+    navHeight,
+    sheetHeightPercent,
+    viewportHeight,
+}: {
+    fineTunePx: number;
+    isMobileOrTablet: boolean;
+    navHeight: number;
+    sheetHeightPercent: number;
+    viewportHeight: number;
+}) {
+    if (!isMobileOrTablet) {
+        return 0;
+    }
+
+    return calculateNaverMobileVerticalOffset({
+        fineTunePx,
+        navHeight,
+        sheetHeightPercent,
+        viewportHeight,
+    });
+}

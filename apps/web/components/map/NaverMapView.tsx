@@ -131,7 +131,7 @@ import {
 } from "@/lib/naver-map-toast-helpers";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
-import { calculateNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
+import { resolveNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
 import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
 import { buildResetUserMapMovementHandler } from "@/lib/naver-map-user-movement-helpers";
 import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
@@ -635,20 +635,28 @@ const NaverMapView = memo(({
     }, [isMobileOrTablet, onMarkerClick, internalPanelOpen, isGridMode, isPanelCollapsed, propIsPanelOpen, externalPanelOpen, panelWidth]);
 
     const getMobileVerticalOffset = useCallback(() => {
-        if (!isMobileOrTablet) return 0;
+        if (!isMobileOrTablet) {
+            return resolveNaverMobileVerticalOffset({
+                fineTunePx: MOBILE_MARKER_CENTER_FINE_TUNE_PX,
+                isMobileOrTablet,
+                navHeight: 0,
+                sheetHeightPercent: mobileSheetHeightPercent,
+                viewportHeight: 0,
+            });
+        }
 
         const navHeight = parseFloat(
             getComputedStyle(document.documentElement)
                 .getPropertyValue('--mobile-bottom-nav-effective-height')
         ) || 60;
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
 
-        const vh = window.visualViewport?.height ?? window.innerHeight;
-
-        return calculateNaverMobileVerticalOffset({
+        return resolveNaverMobileVerticalOffset({
             fineTunePx: MOBILE_MARKER_CENTER_FINE_TUNE_PX,
+            isMobileOrTablet,
             navHeight,
             sheetHeightPercent: mobileSheetHeightPercent,
-            viewportHeight: vh,
+            viewportHeight,
         });
     }, [isMobileOrTablet, mobileSheetHeightPercent]);
 
