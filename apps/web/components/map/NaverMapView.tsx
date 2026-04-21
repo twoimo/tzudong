@@ -101,6 +101,9 @@ import {
     getRegionalClusterTargetZoom,
     getSeoulDistrictTargetZoom,
     getSuperclusterTargetZoom,
+    quantizeNaverClusterZoom,
+    resolveNaverClusterBoundsBbox,
+    resolveNaverClusterUpdateBbox,
     shouldHideInSeoulDistrictMode,
 } from "@/lib/naver-map-cluster-helpers";
 import { getNaverOverlayPositioning } from "@/lib/naver-map-overlay-position-helpers";
@@ -1257,23 +1260,8 @@ const NaverMapView = memo(({
         // 초기 클러스터 계산
         const map = mapInstanceRef.current;
         // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
-        const zoom = Math.floor(map.getZoom() / 2) * 2;
-
-        // bounds 가져오기
-        let bbox: [number, number, number, number];
-        const mapBounds = map.getBounds();
-
-        if (mapBounds && typeof mapBounds.getWest === 'function') {
-            bbox = [
-                mapBounds.getWest(),
-                mapBounds.getSouth(),
-                mapBounds.getEast(),
-                mapBounds.getNorth(),
-            ];
-        } else {
-            // bounds가 아직 초기화되지 않은 경우 - 전체 한국 영역 사용
-            bbox = [124, 33, 132, 43]; // 한국 전체 영역 (서-남-동-북)
-        }
+        const zoom = quantizeNaverClusterZoom(map.getZoom());
+        const bbox = resolveNaverClusterBoundsBbox(map.getBounds());
 
         const newClusters = getClusters(index, bbox, zoom);
         setClusters(newClusters);
@@ -1305,53 +1293,21 @@ const NaverMapView = memo(({
 
             const map = mapInstanceRef.current;
             // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
-            const zoom = Math.floor(map.getZoom() / 2) * 2;
+            const zoom = quantizeNaverClusterZoom(map.getZoom());
+            const bboxPlan = resolveNaverClusterUpdateBbox({
+                bounds: map.getBounds(),
+                center: map.getCenter(),
+                zoom,
+            });
 
-
-
-            let bbox: [number, number, number, number];
-
-            // 먼저 getBounds() 시도
-            const updateBounds = map.getBounds();
-
-            if (updateBounds && typeof updateBounds.getWest === 'function') {
-                // getBounds() 성공
-                bbox = [
-                    updateBounds.getWest(),
-                    updateBounds.getSouth(),
-                    updateBounds.getEast(),
-                    updateBounds.getNorth(),
-                ];
-            } else {
-                // getBounds() 실패 - center와 zoom으로 계산
-                const center = map.getCenter();
-                if (!center) {
-                    console.error('[지도 이동/줌] center도 가져올 수 없음');
-                    return;
-                }
-
-                // zoom 레벨에 따른 대략적인 거리 계산 (미터)
-                const metersPerPixelAtZoom = 156543.03392 * Math.cos(center.lat() * Math.PI / 180) / Math.pow(2, zoom);
-                const mapWidthPixels = 1000; // 대략적인 지도 너비
-                const mapHeightPixels = 800;  // 대략적인 지도 높이
-
-                const metersWidth = metersPerPixelAtZoom * mapWidthPixels;
-                const metersHeight = metersPerPixelAtZoom * mapHeightPixels;
-
-                // 위도 1도 ≈ 111km, 경도 1도 ≈ 111km * cos(lat)
-                const latDelta = (metersHeight / 2) / 111000;
-                const lngDelta = (metersWidth / 2) / (111000 * Math.cos(center.lat() * Math.PI / 180));
-
-                bbox = [
-                    center.lng() - lngDelta, // west
-                    center.lat() - latDelta, // south
-                    center.lng() + lngDelta, // east
-                    center.lat() + latDelta, // north
-                ];
-
+            if (bboxPlan.shouldWarnMissingCenter) {
+                console.error('[지도 이동/줌] center도 가져올 수 없음');
+            }
+            if (bboxPlan.shouldSkip || !bboxPlan.bbox) {
+                return;
             }
 
-            const newClusters = getClusters(clusterIndexRef.current, bbox, zoom);
+            const newClusters = getClusters(clusterIndexRef.current, bboxPlan.bbox, zoom);
             setClusters(newClusters);
         };
 
