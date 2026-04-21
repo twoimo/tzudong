@@ -84,6 +84,7 @@ import {
     buildRenderTargetIdsForSignature,
     deriveClusterRenderPlan,
     getVisibleRestaurantsForRender,
+    shouldReportNaverMarkerRenderPerformance,
 } from "@/lib/naver-map-render-plan";
 import { debounce, LruCache } from "@/lib/map-runtime-helpers";
 import {
@@ -1427,7 +1428,10 @@ const NaverMapView = memo(({
             // 사용하지 않는 마커 반환
             markerPool.releaseExcept(activeIds);
             perfMonitor.endMeasure('RenderMarkers');
-            if (process.env.NODE_ENV === 'development' && activeIds.size > 50) {
+            if (shouldReportNaverMarkerRenderPerformance({
+                activeMarkerCount: activeIds.size,
+                isDevelopment: process.env.NODE_ENV === 'development',
+            })) {
                 perfMonitor.report();
             }
 
@@ -1582,7 +1586,10 @@ const NaverMapView = memo(({
 
             // [PERFORMANCE] 렌더링 종료 시간 측정 및 로그 (개발 모드)
             perfMonitor.endMeasure('RenderMarkers');
-            if (process.env.NODE_ENV === 'development' && activeIds.size > 50) {
+            if (shouldReportNaverMarkerRenderPerformance({
+                activeMarkerCount: activeIds.size,
+                isDevelopment: process.env.NODE_ENV === 'development',
+            })) {
                 perfMonitor.report();
             }
         }
