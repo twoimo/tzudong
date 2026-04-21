@@ -116,7 +116,10 @@ import {
     shouldCloseNaverInternalPanelForExternalState,
     shouldCloseNaverInternalPanelOnEscape,
 } from "@/lib/naver-map-sidepanel-helpers";
-import { buildNaverMapToastTrigger } from "@/lib/naver-map-toast-helpers";
+import {
+    buildNaverMapToastTrigger,
+    resolveNaverAnnouncementToastPlan,
+} from "@/lib/naver-map-toast-helpers";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
 import { calculateNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
@@ -1123,20 +1126,22 @@ const NaverMapView = memo(({
         }
 
         const showAnnouncementBadge = () => {
-            const index = announcementToastIndexRef.current % bannerAnnouncements.length;
-            const announcement = bannerAnnouncements[index];
-            if (!announcement) return;
+            const announcementPlan = resolveNaverAnnouncementToastPlan({
+                announcements: bannerAnnouncements,
+                currentIndex: announcementToastIndexRef.current,
+            });
+            if (!announcementPlan.shouldShow || !announcementPlan.announcement) return;
 
-            setAnnouncementToastTitle(announcement.title);
-            setAnnouncementToastId(announcement.id);
+            setAnnouncementToastTitle(announcementPlan.announcement.title);
+            setAnnouncementToastId(announcementPlan.announcement.id);
             setShowAnnouncementToast(true);
 
-            announcementToastIndexRef.current = (announcementToastIndexRef.current + 1) % bannerAnnouncements.length;
+            announcementToastIndexRef.current = announcementPlan.nextIndex;
 
             if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
             announcementToastHideTimerRef.current = setTimeout(() => {
                 setShowAnnouncementToast(false);
-            }, 4200);
+            }, announcementPlan.hideDelayMs);
         };
 
         if (announcementToastInitialTimerRef.current) clearTimeout(announcementToastInitialTimerRef.current);
