@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
     buildNaverMapToastTrigger,
+    resolveNaverAnnouncementToastClickPlan,
     resolveNaverAnnouncementToastCleanupPlan,
     resolveNaverAnnouncementToastInactivePlan,
     resolveNaverAnnouncementToastPlan,
@@ -97,6 +98,37 @@ describe('naver map toast helpers', () => {
             shouldClearHideTimer: false,
             shouldClearInitialTimer: true,
             shouldClearInterval: true,
+        });
+    });
+
+    test('resolves announcement click target for active toast id', () => {
+        const announcements = [
+            { id: 'a1', title: '첫 공지' },
+            { id: 'a2', title: '둘째 공지' },
+        ];
+
+        expect(resolveNaverAnnouncementToastClickPlan({
+            announcementToastId: 'a2',
+            announcements,
+        })).toEqual({
+            targetAnnouncement: announcements[1],
+            shouldDispatch: true,
+        });
+
+        expect(resolveNaverAnnouncementToastClickPlan({
+            announcementToastId: 'missing',
+            announcements,
+        })).toEqual({
+            targetAnnouncement: null,
+            shouldDispatch: false,
+        });
+
+        expect(resolveNaverAnnouncementToastClickPlan({
+            announcementToastId: null,
+            announcements,
+        })).toEqual({
+            targetAnnouncement: null,
+            shouldDispatch: false,
         });
     });
 });

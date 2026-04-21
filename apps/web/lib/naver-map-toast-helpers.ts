@@ -89,3 +89,25 @@ export function resolveNaverAnnouncementToastCleanupPlan({
         shouldClearInterval: true,
     } as const;
 }
+
+export function resolveNaverAnnouncementToastClickPlan<TAnnouncement extends { id: string }>({
+    announcementToastId,
+    announcements,
+}: {
+    announcementToastId: string | null;
+    announcements: TAnnouncement[];
+}) {
+    if (!announcementToastId) {
+        return {
+            targetAnnouncement: null,
+            shouldDispatch: false,
+        } as const;
+    }
+
+    const targetAnnouncement = announcements.find((announcement) => announcement.id === announcementToastId) ?? null;
+
+    return {
+        targetAnnouncement,
+        shouldDispatch: Boolean(targetAnnouncement),
+    } as const;
+}
