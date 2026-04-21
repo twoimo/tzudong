@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
     buildNaverMapOptions,
     getDeviceAdjustedZoom,
+    isNaverMapInstanceReusable,
     parseNaverMapUrlState,
     resolveNaverInitialMapView,
     resolveNaverInitialView,
@@ -96,6 +97,42 @@ describe('naver map init helpers', () => {
             draggable: true,
             keyboardShortcuts: true,
         });
+    });
+
+    test('reuses existing map instance only when center, content, and size are valid', () => {
+        const healthyElement = {
+            children: { length: 0 },
+            getBoundingClientRect: () => ({ width: 320, height: 240 }),
+            querySelector: () => ({ className: 'naver-map-pane' }),
+        };
+
+        expect(isNaverMapInstanceReusable({
+            mapElement: healthyElement,
+            mapInstance: { getCenter: () => ({ lat: 37.5, lng: 127 }) },
+        })).toBe(true);
+
+        expect(isNaverMapInstanceReusable({
+            mapElement: healthyElement,
+            mapInstance: { getCenter: () => null },
+        })).toBe(false);
+
+        expect(isNaverMapInstanceReusable({
+            mapElement: {
+                children: { length: 0 },
+                getBoundingClientRect: () => ({ width: 320, height: 240 }),
+                querySelector: () => null,
+            },
+            mapInstance: { getCenter: () => ({ lat: 37.5, lng: 127 }) },
+        })).toBe(false);
+
+        expect(isNaverMapInstanceReusable({
+            mapElement: {
+                children: { length: 1 },
+                getBoundingClientRect: () => ({ width: 0, height: 240 }),
+                querySelector: () => null,
+            },
+            mapInstance: { getCenter: () => ({ lat: 37.5, lng: 127 }) },
+        })).toBe(false);
     });
 
     test('schedules initial idle trigger only when map exists', () => {

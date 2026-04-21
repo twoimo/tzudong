@@ -77,6 +77,7 @@ import {
 import {
     buildNaverMapOptions,
     getDeviceAdjustedZoom as getAdjustedZoomForDevice,
+    isNaverMapInstanceReusable,
     parseNaverMapUrlState,
     resolveNaverInitialMapView,
     scheduleNaverInitialIdleTrigger,
@@ -1755,38 +1756,11 @@ const NaverMapView = memo(({
     useEffect(() => {
         if (!isLoaded || !mapRef.current) return;
 
-        // [Fix] 기존 지도 인스턴스가 유효한지 검증 (soft navigation 시 zombie 인스턴스 방지)
-        const isMapInstanceValid = () => {
-            if (!mapInstanceRef.current) return false;
-
-            try {
-                // 1. 지도 API 메서드가 정상 동작하는지 확인
-                const center = mapInstanceRef.current.getCenter?.();
-                if (!center) return false;
-
-                // 2. 지도 컨테이너가 현재 mapRef와 연결되어 있는지 확인
-                // 네이버 지도는 컨테이너 내부에 naver-map-* 클래스의 요소들을 생성함
-                const mapElement = mapRef.current;
-                if (!mapElement) return false;
-
-                // 지도 컨테이너 내부에 실제 지도가 렌더링되었는지 확인
-                const hasMapContent = mapElement.querySelector('[class*="naver"]') !== null ||
-                    mapElement.children.length > 0;
-
-                if (!hasMapContent) return false;
-
-                // 3. 컨테이너의 크기가 유효한지 확인
-                const rect = mapElement.getBoundingClientRect();
-                if (rect.width === 0 || rect.height === 0) return false;
-
-                return true;
-            } catch {
-                return false;
-            }
-        };
-
         // 기존 인스턴스가 유효하면 재초기화 불필요
-        if (isMapInstanceValid()) return;
+        if (isNaverMapInstanceReusable({
+            mapElement: mapRef.current,
+            mapInstance: mapInstanceRef.current,
+        })) return;
 
         // 유효하지 않은 기존 인스턴스 정리
         if (mapInstanceRef.current) {
