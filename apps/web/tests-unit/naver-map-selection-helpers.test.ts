@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { Restaurant } from '../types/restaurant';
 import {
     resolveNaverSearchSelectionPlan,
+    resolveNaverSelectedRestaurantCanonicalSyncPlan,
     resolveNaverSelectedMarkerStyleUpdatePlan,
     resolveNaverSelectionChange,
 } from '../lib/naver-map-selection-helpers';
@@ -75,6 +76,37 @@ describe('naver map selection helpers', () => {
                 { isSelected: false, restaurantId: 'previous' },
                 { isSelected: true, restaurantId: 'current' },
             ],
+        });
+    });
+
+    test('requests parent sync when selected restaurant maps to a canonical display restaurant', () => {
+        const selectedRestaurant = restaurant({
+            id: 'selected-merged',
+            mergedRestaurants: [restaurant({ id: 'canonical' })],
+        });
+        const canonicalRestaurant = restaurant({
+            id: 'canonical',
+            name: '정식당',
+        });
+
+        expect(resolveNaverSelectedRestaurantCanonicalSyncPlan({
+            displayRestaurants: [canonicalRestaurant],
+            selectedRestaurant,
+        })).toEqual({
+            canonicalRestaurant,
+            shouldSyncParentSelection: true,
+        });
+    });
+
+    test('does not request parent sync when selected restaurant is already canonical', () => {
+        const selectedRestaurant = restaurant({ id: 'selected' });
+
+        expect(resolveNaverSelectedRestaurantCanonicalSyncPlan({
+            displayRestaurants: [selectedRestaurant],
+            selectedRestaurant,
+        })).toEqual({
+            canonicalRestaurant: selectedRestaurant,
+            shouldSyncParentSelection: false,
         });
     });
 

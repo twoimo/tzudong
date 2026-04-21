@@ -127,6 +127,7 @@ import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
 import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
 import {
     resolveNaverSearchSelectionPlan,
+    resolveNaverSelectedRestaurantCanonicalSyncPlan,
     resolveNaverSelectedMarkerStyleUpdatePlan,
     resolveNaverSelectionChange,
 } from "@/lib/naver-map-selection-helpers";
@@ -1741,14 +1742,13 @@ const NaverMapView = memo(({
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
     useEffect(() => {
-        if (selectedRestaurant && displayRestaurants.length > 0) {
-            const existingRestaurant = findMatchingRestaurantInList(selectedRestaurant, displayRestaurants);
+        const syncPlan = resolveNaverSelectedRestaurantCanonicalSyncPlan({
+            displayRestaurants,
+            selectedRestaurant,
+        });
 
-            if (existingRestaurant && existingRestaurant.id !== selectedRestaurant.id) {
-                if (onRestaurantSelect) {
-                    onRestaurantSelect(existingRestaurant);
-                }
-            }
+        if (syncPlan.shouldSyncParentSelection && syncPlan.canonicalRestaurant && onRestaurantSelect) {
+            onRestaurantSelect(syncPlan.canonicalRestaurant);
         }
     }, [selectedRestaurant, onRestaurantSelect, displayRestaurants]);
 
