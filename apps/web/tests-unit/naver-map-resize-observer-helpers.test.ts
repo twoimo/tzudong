@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
-import { buildNaverResizeObserverHandler } from '../lib/naver-map-resize-observer-helpers';
+import {
+    buildNaverResizeObserverCleanup,
+    buildNaverResizeObserverHandler,
+} from '../lib/naver-map-resize-observer-helpers';
 
 describe('naver map resize observer helpers', () => {
     test('triggers immediate resize and debounced post-transition work', () => {
@@ -51,5 +54,17 @@ describe('naver map resize observer helpers', () => {
         helper.cancel();
 
         expect(cleared).toEqual([7]);
+    });
+
+    test('cleanup disconnects observer before cancelling debounce', () => {
+        const calls: string[] = [];
+        const cleanup = buildNaverResizeObserverCleanup({
+            cancel: () => calls.push('cancel'),
+            disconnect: () => calls.push('disconnect'),
+        });
+
+        cleanup();
+
+        expect(calls).toEqual(['disconnect', 'cancel']);
     });
 });

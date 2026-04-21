@@ -46,3 +46,16 @@ export function buildNaverResizeObserverHandler<TMap>({
         observerCallback,
     };
 }
+
+export function buildNaverResizeObserverCleanup({
+    cancel,
+    disconnect,
+}: {
+    cancel: () => void;
+    disconnect: () => void;
+}) {
+    return () => {
+        disconnect();
+        cancel();
+    };
+}

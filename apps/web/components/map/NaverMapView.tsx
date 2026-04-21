@@ -142,7 +142,10 @@ import {
     NAVER_INTERACTION_LISTENER_OPTIONS,
     NAVER_INTERACTION_REMOVE_OPTIONS,
 } from "@/lib/naver-map-interaction-helpers";
-import { buildNaverResizeObserverHandler } from "@/lib/naver-map-resize-observer-helpers";
+import {
+    buildNaverResizeObserverCleanup,
+    buildNaverResizeObserverHandler,
+} from "@/lib/naver-map-resize-observer-helpers";
 import { focusNaverMapOnRestaurant } from "@/lib/naver-map-focus-helpers";
 import { resolveNaverResizeOffsets } from "@/lib/naver-map-resize-offset-helpers";
 import { buildNaverWindowResizeHandler } from "@/lib/naver-map-window-resize-helpers";
@@ -967,10 +970,10 @@ const NaverMapView = memo(({
 
         resizeObserver.observe(mapRef.current);
 
-        return () => {
-            resizeObserver.disconnect();
-            cancel();
-        };
+        return buildNaverResizeObserverCleanup({
+            cancel,
+            disconnect: () => resizeObserver.disconnect(),
+        });
     }, [getMobileVerticalOffset, isMapInitialized, isMobileOrTablet, selectedRestaurant, selectedRegion]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
