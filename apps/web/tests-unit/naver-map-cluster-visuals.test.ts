@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+    buildNaverClusterAnimationIconPlan,
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
     buildNaverClusterMarkerRenderPlan,
@@ -56,5 +57,26 @@ describe('naver map cluster visuals', () => {
         expect(plan.anchor).toEqual({ x: 24, y: 24 });
         expect(plan.content).toContain('5');
         expect(plan.content).toContain('/images/maker-images/snack_bar.png');
+    });
+
+    test('builds animation icon plan from key and injected index resolver', () => {
+        const plan = buildNaverClusterAnimationIconPlan({
+            categories: ['한식'],
+            count: 6,
+            getCurrentIndex: (hash, categoryCount) => {
+                expect(hash).toBe(getClusterVisualKey('seoul'));
+                expect(categoryCount).toBe(1);
+                return 0;
+            },
+            position: { lat: 37.55, lng: 126.98 },
+            uniqueKey: 'seoul',
+        });
+
+        expect(plan.hash).toBe(getClusterVisualKey('seoul'));
+        expect(plan.currentIndex).toBe(0);
+        expect(plan.position).toEqual({ lat: 37.55, lng: 126.98 });
+        expect(plan.anchor).toEqual({ x: 24, y: 24 });
+        expect(plan.content).toContain('6');
+        expect(plan.content).toContain('/images/maker-images/korean.png');
     });
 });

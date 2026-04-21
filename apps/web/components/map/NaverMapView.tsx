@@ -44,9 +44,9 @@ import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import {
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
+    buildNaverClusterAnimationIconPlan,
     buildNaverClusterMarkerRenderPlan,
     getClusterVisualKey,
-    getNaverClusterMarkerVisual,
 } from "@/lib/naver-map-cluster-visuals";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
@@ -1609,20 +1609,18 @@ const NaverMapView = memo(({
                     const marker = markerPool.get(markerId);
 
                     if (marker) {
-                        const categories = cluster.categories;
-                        const regionHash = getClusterVisualKey(cluster.region);
-                        const currentIndex = clusterAnimationManager.getCurrentIndex(regionHash, categories.length);
-                        const visual = getNaverClusterMarkerVisual({
-                            categories,
+                        const iconPlan = buildNaverClusterAnimationIconPlan({
+                            categories: cluster.categories,
                             count: cluster.count,
-                            currentIndex,
-                            lat: cluster.center.lat,
-                            lng: cluster.center.lng,
+                            getCurrentIndex: (hash, categoryCount) =>
+                                clusterAnimationManager.getCurrentIndex(hash, categoryCount),
+                            position: cluster.center,
+                            uniqueKey: cluster.region,
                         });
 
                         marker.setIcon({
-                            content: visual.content,
-                            anchor: new window.naver.maps.Point(visual.anchor.x, visual.anchor.y),
+                            content: iconPlan.content,
+                            anchor: new window.naver.maps.Point(iconPlan.anchor.x, iconPlan.anchor.y),
                         });
                     }
                 });
@@ -1635,19 +1633,17 @@ const NaverMapView = memo(({
                     const marker = markerPool.get(markerId);
 
                     if (marker) {
-                        const categories = cluster.categories;
-                        const regionHash = getClusterVisualKey(cluster.region);
-                        const currentIndex = clusterAnimationManager.getCurrentIndex(regionHash, categories.length);
-                        const visual = getNaverClusterMarkerVisual({
-                            categories,
+                        const iconPlan = buildNaverClusterAnimationIconPlan({
+                            categories: cluster.categories,
                             count: cluster.count,
-                            currentIndex,
-                            lat: cluster.center.lat,
-                            lng: cluster.center.lng,
+                            getCurrentIndex: (hash, categoryCount) =>
+                                clusterAnimationManager.getCurrentIndex(hash, categoryCount),
+                            position: cluster.center,
+                            uniqueKey: cluster.region,
                         });
                         marker.setIcon({
-                            content: visual.content,
-                            anchor: new window.naver.maps.Point(visual.anchor.x, visual.anchor.y),
+                            content: iconPlan.content,
+                            anchor: new window.naver.maps.Point(iconPlan.anchor.x, iconPlan.anchor.y),
                         });
                     }
                 });
@@ -1670,19 +1666,19 @@ const NaverMapView = memo(({
                                 // ignore
                             }
 
-                            const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
                             const [lng, lat] = feature.geometry.coordinates;
-                            const visual = getNaverClusterMarkerVisual({
+                            const iconPlan = buildNaverClusterAnimationIconPlan({
                                 categories,
                                 count: feature.properties.point_count || 0,
-                                currentIndex,
-                                lat,
-                                lng,
+                                getCurrentIndex: (hash, categoryCount) =>
+                                    clusterAnimationManager.getCurrentIndex(hash, categoryCount),
+                                position: { lat, lng },
+                                uniqueKey: clusterId,
                             });
 
                             marker.setIcon({
-                                content: visual.content,
-                                anchor: new window.naver.maps.Point(visual.anchor.x, visual.anchor.y),
+                                content: iconPlan.content,
+                                anchor: new window.naver.maps.Point(iconPlan.anchor.x, iconPlan.anchor.y),
                             });
                         }
                     }
