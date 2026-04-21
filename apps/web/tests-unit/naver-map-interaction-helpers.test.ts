@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 
 import {
     buildNaverMapInteractionHandlers,
+    buildNaverMapInteractionListenerPlan,
     NAVER_INTERACTION_LISTENER_OPTIONS,
+    NAVER_INTERACTION_REMOVE_OPTIONS,
 } from '../lib/naver-map-interaction-helpers';
 
 describe('naver map interaction helpers', () => {
@@ -10,6 +12,21 @@ describe('naver map interaction helpers', () => {
         expect(NAVER_INTERACTION_LISTENER_OPTIONS).toEqual({
             capture: true,
             passive: true,
+        });
+        expect(NAVER_INTERACTION_REMOVE_OPTIONS).toEqual({
+            capture: true,
+        });
+    });
+
+    test('builds stable DOM and map interaction listener plan', () => {
+        expect(buildNaverMapInteractionListenerPlan()).toEqual({
+            domListeners: [
+                { eventName: 'wheel', handlerKey: 'searchRelease' },
+                { eventName: 'dblclick', handlerKey: 'searchRelease' },
+                { eventName: 'mousedown', handlerKey: 'userInteraction' },
+                { eventName: 'touchstart', handlerKey: 'userInteraction' },
+            ],
+            mapEventNames: ['dragstart', 'pinchstart'],
         });
     });
 
