@@ -89,3 +89,32 @@ export function buildNaverClusterMarkerRenderPlan({
         position,
     } as const;
 }
+
+export function buildNaverClusterAnimationIconPlan({
+    categories,
+    count,
+    getCurrentIndex,
+    position,
+    uniqueKey,
+}: {
+    categories: string[];
+    count: number;
+    getCurrentIndex: (hash: number, categoryCount: number) => number;
+    position: { lat: number; lng: number };
+    uniqueKey: string | number;
+}) {
+    const hash = getClusterVisualKey(uniqueKey);
+    const currentIndex = getCurrentIndex(hash, categories.length);
+    const renderPlan = buildNaverClusterMarkerRenderPlan({
+        categories,
+        count,
+        currentIndex,
+        position,
+    });
+
+    return {
+        ...renderPlan,
+        currentIndex,
+        hash,
+    } as const;
+}
