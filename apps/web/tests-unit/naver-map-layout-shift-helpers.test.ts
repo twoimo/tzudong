@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+    resolveNaverCenteringTransitionResizePlan,
     resolveNaverLayoutShiftDelta,
     shouldPreserveNaverVisualCenterOnLayoutShift,
 } from '../lib/naver-map-layout-shift-helpers';
@@ -43,5 +44,19 @@ describe('naver map layout shift helpers', () => {
             hasUserMovedMap: false,
             isSelectionChanged: false,
         })).toBe(false);
+    });
+
+    test('uses stable resize timing around centering transitions', () => {
+        expect(resolveNaverCenteringTransitionResizePlan()).toEqual({
+            initialResizeEvent: 'resize',
+            followupResizeDelayMs: 320,
+            followupResizeEvent: 'resize',
+        });
+
+        expect(resolveNaverCenteringTransitionResizePlan({ delayMs: 150 })).toEqual({
+            initialResizeEvent: 'resize',
+            followupResizeDelayMs: 150,
+            followupResizeEvent: 'resize',
+        });
     });
 });

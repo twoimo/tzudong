@@ -23,3 +23,15 @@ export function shouldPreserveNaverVisualCenterOnLayoutShift({
 }) {
     return hasUserMovedMap && !isSelectionChanged;
 }
+
+export function resolveNaverCenteringTransitionResizePlan({
+    delayMs = 320,
+}: {
+    delayMs?: number;
+} = {}) {
+    return {
+        initialResizeEvent: 'resize',
+        followupResizeDelayMs: delayMs,
+        followupResizeEvent: 'resize',
+    } as const;
+}

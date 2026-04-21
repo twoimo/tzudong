@@ -125,6 +125,7 @@ import { buildResetUserMapMovementHandler } from "@/lib/naver-map-user-movement-
 import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
 import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
 import {
+    resolveNaverCenteringTransitionResizePlan,
     resolveNaverLayoutShiftDelta,
     shouldPreserveNaverVisualCenterOnLayoutShift,
 } from "@/lib/naver-map-layout-shift-helpers";
@@ -822,7 +823,8 @@ const NaverMapView = memo(({
         // -> 기존 로직대로 타겟 위치로 이동 및 오프셋 적용
 
         // 리사이즈 먼저 트리거
-        naver.maps.Event.trigger(map, 'resize');
+        const transitionResizePlan = resolveNaverCenteringTransitionResizePlan();
+        naver.maps.Event.trigger(map, transitionResizePlan.initialResizeEvent);
 
         const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX, targetOffsetY);
         map.setZoom(targetZoom);
@@ -830,8 +832,8 @@ const NaverMapView = memo(({
 
         // [FIX] 트랜지션 완료 후 resize만 트리거 (moveMap 중복 호출 제거 - ResizeObserver가 처리함)
         const transitionTimer = setTimeout(() => {
-            naver.maps.Event.trigger(map, 'resize');
-        }, 320);
+            naver.maps.Event.trigger(map, transitionResizePlan.followupResizeEvent);
+        }, transitionResizePlan.followupResizeDelayMs);
 
         // 사용자 상호작용 감지 리스너 추가
         // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
