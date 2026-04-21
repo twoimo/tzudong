@@ -80,6 +80,7 @@ import {
     isNaverMapInstanceReusable,
     parseNaverMapUrlState,
     resolveNaverInitialMapView,
+    resolveNaverStaleMapCleanupPlan,
     scheduleNaverInitialIdleTrigger,
 } from "@/lib/naver-map-init-helpers";
 import {
@@ -1763,12 +1764,15 @@ const NaverMapView = memo(({
         })) return;
 
         // 유효하지 않은 기존 인스턴스 정리
-        if (mapInstanceRef.current) {
+        const staleMapCleanupPlan = resolveNaverStaleMapCleanupPlan({
+            mapInstance: mapInstanceRef.current,
+        });
+        if (staleMapCleanupPlan.shouldCleanup) {
             markerPool.clear();
             clusterAnimationManager.clear();
-            mapInstanceRef.current = null;
-            markerRenderSignatureRef.current = null;
-            setIsMapInitialized(false);
+            mapInstanceRef.current = staleMapCleanupPlan.nextMapInstance;
+            markerRenderSignatureRef.current = staleMapCleanupPlan.nextMarkerRenderSignature;
+            setIsMapInitialized(staleMapCleanupPlan.nextIsMapInitialized);
         }
 
         try {

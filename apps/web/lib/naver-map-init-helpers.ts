@@ -169,6 +169,19 @@ export function isNaverMapInstanceReusable({
     }
 }
 
+export function resolveNaverStaleMapCleanupPlan<TMapInstance>({
+    mapInstance,
+}: {
+    mapInstance: TMapInstance | null | undefined;
+}) {
+    return {
+        nextIsMapInitialized: false,
+        nextMapInstance: null,
+        nextMarkerRenderSignature: null,
+        shouldCleanup: Boolean(mapInstance),
+    } as const;
+}
+
 export function scheduleNaverInitialIdleTrigger<TMap>({
     delayMs = 100,
     map,
