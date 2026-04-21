@@ -158,6 +158,7 @@ import {
     getNaverCurrentPanelOffset,
     resolveNaverRestaurantCountUpdatePlan,
 } from "@/lib/naver-map-current-state-helpers";
+import { countUniqueNaverPresenceUsers } from "@/lib/naver-map-presence-helpers";
 import { resolveNaverResizePlan } from "@/lib/naver-map-resize-plan-helpers";
 import {
     buildNaverWheelAnchorAdjustmentPlan,
@@ -1065,20 +1066,7 @@ const NaverMapView = memo(({
         // Supabase Presence 채널 구독
         const channel = supabase.channel('map-online-users')
             .on('presence', { event: 'sync' }, () => {
-                const state = channel.presenceState();
-                const uniqueUserIds = new Set<string>();
-                Object.entries(state).forEach(([presenceKey, presences]) => {
-                    if (!Array.isArray(presences)) return;
-                    presences.forEach((presence) => {
-                        if (!presence || typeof presence !== 'object') {
-                            uniqueUserIds.add(presenceKey);
-                            return;
-                        }
-                        const typedPresence = presence as { user_id?: string; presence_ref?: string };
-                        uniqueUserIds.add(typedPresence.user_id || typedPresence.presence_ref || presenceKey);
-                    });
-                });
-                const count = uniqueUserIds.size;
+                const count = countUniqueNaverPresenceUsers(channel.presenceState());
                 setOnlineUsersCount(count);
                 onlineUsersCountRef.current = count;
 
