@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test';
 
 import {
     buildNaverMapToastTrigger,
+    resolveNaverAnnouncementToastCleanupPlan,
+    resolveNaverAnnouncementToastInactivePlan,
     resolveNaverAnnouncementToastPlan,
+    resolveNaverAnnouncementToastSchedulePlan,
 } from '../lib/naver-map-toast-helpers';
 
 describe('naver map toast helpers', () => {
@@ -60,6 +63,40 @@ describe('naver map toast helpers', () => {
             hideDelayMs: 1000,
             nextIndex: 0,
             shouldShow: false,
+        });
+    });
+
+    test('resolves inactive announcement toast state and timer cleanup flags', () => {
+        expect(resolveNaverAnnouncementToastInactivePlan({
+            hasHideTimer: true,
+            hasInitialTimer: false,
+        })).toEqual({
+            nextTitle: '',
+            shouldClearHideTimer: true,
+            shouldClearInitialTimer: false,
+            shouldShowAnnouncementToast: false,
+        });
+    });
+
+    test('resolves announcement toast initial and interval schedule policy', () => {
+        expect(resolveNaverAnnouncementToastSchedulePlan({
+            hasExistingInitialTimer: true,
+            intervalMs: 60000,
+        })).toEqual({
+            initialDelayMs: 9000,
+            intervalMs: 60000,
+            shouldClearExistingInitialTimer: true,
+        });
+    });
+
+    test('resolves announcement cleanup flags for interval and timers', () => {
+        expect(resolveNaverAnnouncementToastCleanupPlan({
+            hasHideTimer: false,
+            hasInitialTimer: true,
+        })).toEqual({
+            shouldClearHideTimer: false,
+            shouldClearInitialTimer: true,
+            shouldClearInterval: true,
         });
     });
 });
