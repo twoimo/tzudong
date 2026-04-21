@@ -63,3 +63,29 @@ export function getNaverClusterMarkerVisual({
         anchor: { x: 24, y: 24 },
     };
 }
+
+export function buildNaverClusterMarkerRenderPlan({
+    categories,
+    count,
+    currentIndex,
+    position,
+}: {
+    categories: string[];
+    count: number;
+    currentIndex: number;
+    position: { lat: number; lng: number };
+}) {
+    const visual = getNaverClusterMarkerVisual({
+        categories,
+        count,
+        currentIndex,
+        lat: position.lat,
+        lng: position.lng,
+    });
+
+    return {
+        anchor: visual.anchor,
+        content: visual.content,
+        position,
+    } as const;
+}

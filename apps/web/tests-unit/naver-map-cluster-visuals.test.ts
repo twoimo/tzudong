@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
+    buildNaverClusterMarkerRenderPlan,
     getClusterVisualKey,
     getNaverClusterMarkerVisual,
 } from '../lib/naver-map-cluster-visuals';
@@ -41,5 +42,19 @@ describe('naver map cluster visuals', () => {
         });
         expect(visual.anchor).toEqual({ x: 24, y: 24 });
         expect(visual.content).toContain('/images/maker-images/korean.png');
+    });
+
+    test('builds cluster marker render plan from position and current animation index', () => {
+        const plan = buildNaverClusterMarkerRenderPlan({
+            categories: ['분식'],
+            count: 5,
+            currentIndex: 0,
+            position: { lat: 37.6, lng: 127.1 },
+        });
+
+        expect(plan.position).toEqual({ lat: 37.6, lng: 127.1 });
+        expect(plan.anchor).toEqual({ x: 24, y: 24 });
+        expect(plan.content).toContain('5');
+        expect(plan.content).toContain('/images/maker-images/snack_bar.png');
     });
 });
