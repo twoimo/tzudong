@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test';
 import {
     countUniqueNaverPresenceUsers,
     getNaverPresenceIdentity,
+    resolveNaverInitialOnlineToastPlan,
+    resolveNaverOnlineToastDisplayPlan,
 } from '../lib/naver-map-presence-helpers';
 
 describe('naver map presence helpers', () => {
@@ -33,5 +35,45 @@ describe('naver map presence helpers', () => {
             keyB: [null, { user_id: 'user-2' }],
             keyC: 'not-array',
         })).toBe(4);
+    });
+
+    test('resolves online toast display plan and hide timer replacement', () => {
+        expect(resolveNaverOnlineToastDisplayPlan({
+            hasExistingHideTimer: true,
+        })).toEqual({
+            hideDelayMs: 4000,
+            shouldClearExistingHideTimer: true,
+            shouldShowOnlineUsers: true,
+        });
+
+        expect(resolveNaverOnlineToastDisplayPlan({
+            hasExistingHideTimer: false,
+            hideDelayMs: 1000,
+        })).toEqual({
+            hideDelayMs: 1000,
+            shouldClearExistingHideTimer: false,
+            shouldShowOnlineUsers: true,
+        });
+    });
+
+    test('schedules initial online toast only once', () => {
+        expect(resolveNaverInitialOnlineToastPlan({
+            hasExistingInitialTimer: true,
+            hasShownInitialToast: false,
+        })).toEqual({
+            initialDelayMs: 5000,
+            nextHasShownInitialToast: true,
+            shouldClearExistingInitialTimer: true,
+            shouldScheduleInitialToast: true,
+        });
+
+        expect(resolveNaverInitialOnlineToastPlan({
+            hasShownInitialToast: true,
+        })).toEqual({
+            initialDelayMs: 5000,
+            nextHasShownInitialToast: true,
+            shouldClearExistingInitialTimer: false,
+            shouldScheduleInitialToast: false,
+        });
     });
 });

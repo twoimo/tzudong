@@ -33,3 +33,35 @@ export function countUniqueNaverPresenceUsers(state: NaverPresenceState) {
 
     return uniqueUserIds.size;
 }
+
+
+export function resolveNaverOnlineToastDisplayPlan({
+    hasExistingHideTimer,
+    hideDelayMs = 4000,
+}: {
+    hasExistingHideTimer: boolean;
+    hideDelayMs?: number;
+}) {
+    return {
+        hideDelayMs,
+        shouldClearExistingHideTimer: hasExistingHideTimer,
+        shouldShowOnlineUsers: true,
+    } as const;
+}
+
+export function resolveNaverInitialOnlineToastPlan({
+    hasShownInitialToast,
+    initialDelayMs = 5000,
+    hasExistingInitialTimer = false,
+}: {
+    hasShownInitialToast: boolean;
+    initialDelayMs?: number;
+    hasExistingInitialTimer?: boolean;
+}) {
+    return {
+        initialDelayMs,
+        nextHasShownInitialToast: true,
+        shouldClearExistingInitialTimer: !hasShownInitialToast && hasExistingInitialTimer,
+        shouldScheduleInitialToast: !hasShownInitialToast,
+    } as const;
+}
