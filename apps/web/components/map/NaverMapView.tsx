@@ -138,7 +138,9 @@ import {
 import { buildNaverPanelWidthObserver } from "@/lib/naver-map-panel-width-helpers";
 import {
     buildNaverMapInteractionHandlers,
+    buildNaverMapInteractionListenerPlan,
     NAVER_INTERACTION_LISTENER_OPTIONS,
+    NAVER_INTERACTION_REMOVE_OPTIONS,
 } from "@/lib/naver-map-interaction-helpers";
 import { buildNaverResizeObserverHandler } from "@/lib/naver-map-resize-observer-helpers";
 import { focusNaverMapOnRestaurant } from "@/lib/naver-map-focus-helpers";
@@ -841,29 +843,42 @@ const NaverMapView = memo(({
             hasUserMovedMapRef,
             releaseSearchSelectionOnUserInteraction,
         });
+        const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
+        const interactionHandlers = {
+            searchRelease: handleSearchReleaseInteraction,
+            userInteraction: handleUserInteraction,
+        };
 
         const mapElement = mapRef.current;
         if (mapElement) {
             // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
-            mapElement.addEventListener('wheel', handleSearchReleaseInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
-            mapElement.addEventListener('dblclick', handleSearchReleaseInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
-            mapElement.addEventListener('mousedown', handleUserInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
-            mapElement.addEventListener('touchstart', handleUserInteraction, NAVER_INTERACTION_LISTENER_OPTIONS);
+            interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
+                mapElement.addEventListener(
+                    eventName,
+                    interactionHandlers[handlerKey],
+                    NAVER_INTERACTION_LISTENER_OPTIONS,
+                );
+            });
         }
 
-        const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleSearchReleaseInteraction);
-        const pinchListener = naver.maps.Event.addListener(map, 'pinchstart', handleSearchReleaseInteraction);
+        const mapEventListeners = interactionListenerPlan.mapEventNames.map((eventName) =>
+            naver.maps.Event.addListener(map, eventName, handleSearchReleaseInteraction)
+        );
 
         return () => {
             clearTimeout(transitionTimer);
-            naver.maps.Event.removeListener(dragListener);
-            naver.maps.Event.removeListener(pinchListener);
+            mapEventListeners.forEach((listener) => {
+                naver.maps.Event.removeListener(listener);
+            });
 
             if (mapElement) {
-                mapElement.removeEventListener('wheel', handleSearchReleaseInteraction, { capture: true });
-                mapElement.removeEventListener('dblclick', handleSearchReleaseInteraction, { capture: true });
-                mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true });
-                mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true });
+                interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
+                    mapElement.removeEventListener(
+                        eventName,
+                        interactionHandlers[handlerKey],
+                        NAVER_INTERACTION_REMOVE_OPTIONS,
+                    );
+                });
             }
         };
 
