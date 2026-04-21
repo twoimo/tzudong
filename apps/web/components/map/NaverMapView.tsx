@@ -124,6 +124,7 @@ import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
 import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
 import {
     resolveNaverSearchSelectionPlan,
+    resolveNaverSelectedMarkerStyleUpdatePlan,
     resolveNaverSelectionChange,
 } from "@/lib/naver-map-selection-helpers";
 import { buildNaverPanelWidthObserver } from "@/lib/naver-map-panel-width-helpers";
@@ -1697,25 +1698,27 @@ const NaverMapView = memo(({
         const currentSelected = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
         const currentSelectedId = currentSelected?.id || null;
         const prevSelectedId = prevSelectedMarkerIdRef.current;
+        const styleUpdatePlan = resolveNaverSelectedMarkerStyleUpdatePlan({
+            currentSelectedId,
+            previousSelectedId: prevSelectedId,
+        });
 
         // 동일한 마커 재선택 시 스킵
-        if (currentSelectedId === prevSelectedId) {
+        if (styleUpdatePlan.shouldSkip) {
             return;
         }
 
         // [CRITICAL OPTIMIZATION] 전체 순회(O(N)) 대신 2개 마커만 업데이트(O(1))
         const { naver } = window;
 
-        // 1. 이전 선택 마커 비활성화
-        if (prevSelectedId && prevSelectedId !== currentSelectedId) {
-            const prevMarker = markerPool.get(prevSelectedId);
-            if (prevMarker) {
-                // 카테고리 계산
-                const restaurant = restaurantById.get(prevSelectedId) ?? mergedRestaurantById.get(prevSelectedId);
+        styleUpdatePlan.updates.forEach(({ isSelected, restaurantId }) => {
+            const marker = markerPool.get(restaurantId);
+            if (marker) {
+                const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
                 if (restaurant) {
-                    const visual = getNaverIndividualMarkerVisual(restaurant, false);
+                    const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
 
-                    markerPool.update(prevSelectedId, {
+                    markerPool.update(restaurantId, {
                         icon: {
                             content: visual.content,
                             anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y)
@@ -1724,30 +1727,11 @@ const NaverMapView = memo(({
                     });
                 }
             }
-        }
-
-        // 2. 현재 선택 마커 활성화
-        if (currentSelectedId) {
-            const currentMarker = markerPool.get(currentSelectedId);
-            if (currentMarker) {
-                const restaurant = restaurantById.get(currentSelectedId) ?? mergedRestaurantById.get(currentSelectedId);
-                if (restaurant) {
-                    const visual = getNaverIndividualMarkerVisual(restaurant, true);
-
-                    markerPool.update(currentSelectedId, {
-                        icon: {
-                            content: visual.content,
-                            anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y)
-                        },
-                        zIndex: visual.zIndex
-                    });
-                }
-            }
-        }
+        });
 
         // ref 업데이트
-        prevSelectedMarkerIdRef.current = currentSelectedId;
-        prevSelectedRestaurantIdRef.current = currentSelectedId;
+        prevSelectedMarkerIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
+        prevSelectedRestaurantIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
 
     }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById]);
 
