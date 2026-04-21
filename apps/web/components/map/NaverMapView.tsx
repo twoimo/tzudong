@@ -44,6 +44,7 @@ import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import {
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
+    buildNaverClusterMarkerRenderPlan,
     getClusterVisualKey,
     getNaverClusterMarkerVisual,
 } from "@/lib/naver-map-cluster-visuals";
@@ -1382,18 +1383,17 @@ const NaverMapView = memo(({
 
             clusterAnimationManager.register(hash);
             const currentIndex = clusterAnimationManager.getCurrentIndex(hash, categories.length);
-            const visual = getNaverClusterMarkerVisual({
+            const renderPlan = buildNaverClusterMarkerRenderPlan({
                 categories,
                 count,
                 currentIndex,
-                lat: position.lat,
-                lng: position.lng,
+                position,
             });
 
             markerPool.acquire(
                 markerId,
-                new naver.maps.LatLng(position.lat, position.lng),
-                { content: visual.content, anchor: new naver.maps.Point(visual.anchor.x, visual.anchor.y) },
+                new naver.maps.LatLng(renderPlan.position.lat, renderPlan.position.lng),
+                { content: renderPlan.content, anchor: new naver.maps.Point(renderPlan.anchor.x, renderPlan.anchor.y) },
                 map,
                 onClick
             );
