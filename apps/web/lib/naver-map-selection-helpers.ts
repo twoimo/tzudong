@@ -59,6 +59,31 @@ export function resolveNaverSelectedMarkerStyleUpdatePlan({
     } as const;
 }
 
+export function resolveNaverSelectedRestaurantCanonicalSyncPlan({
+    displayRestaurants,
+    selectedRestaurant,
+}: {
+    displayRestaurants: Restaurant[];
+    selectedRestaurant: Restaurant | null;
+}) {
+    if (!selectedRestaurant || displayRestaurants.length === 0) {
+        return {
+            canonicalRestaurant: null,
+            shouldSyncParentSelection: false,
+        } as const;
+    }
+
+    const canonicalRestaurant = findMatchingRestaurantInList(selectedRestaurant, displayRestaurants);
+
+    return {
+        canonicalRestaurant,
+        shouldSyncParentSelection: Boolean(
+            canonicalRestaurant &&
+            canonicalRestaurant.id !== selectedRestaurant.id
+        ),
+    } as const;
+}
+
 export function resolveNaverSearchSelectionPlan({
     activeSearchedRestaurant,
     previousHandledRestaurant,
