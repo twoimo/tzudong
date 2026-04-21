@@ -21,6 +21,44 @@ export function resolveNaverSelectionChange({
     };
 }
 
+export function resolveNaverSelectedMarkerStyleUpdatePlan({
+    currentSelectedId,
+    previousSelectedId,
+}: {
+    currentSelectedId: string | null;
+    previousSelectedId: string | null;
+}) {
+    if (currentSelectedId === previousSelectedId) {
+        return {
+            nextPreviousSelectedId: previousSelectedId,
+            shouldSkip: true,
+            updates: [],
+        } as const;
+    }
+
+    const updates: Array<{ isSelected: boolean; restaurantId: string }> = [];
+
+    if (previousSelectedId) {
+        updates.push({
+            isSelected: false,
+            restaurantId: previousSelectedId,
+        });
+    }
+
+    if (currentSelectedId) {
+        updates.push({
+            isSelected: true,
+            restaurantId: currentSelectedId,
+        });
+    }
+
+    return {
+        nextPreviousSelectedId: currentSelectedId,
+        shouldSkip: false,
+        updates,
+    } as const;
+}
+
 export function resolveNaverSearchSelectionPlan({
     activeSearchedRestaurant,
     previousHandledRestaurant,

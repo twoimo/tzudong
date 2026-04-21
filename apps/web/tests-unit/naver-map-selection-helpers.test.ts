@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { Restaurant } from '../types/restaurant';
 import {
     resolveNaverSearchSelectionPlan,
+    resolveNaverSelectedMarkerStyleUpdatePlan,
     resolveNaverSelectionChange,
 } from '../lib/naver-map-selection-helpers';
 
@@ -36,6 +37,44 @@ describe('naver map selection helpers', () => {
         })).toEqual({
             isSelectionChanged: false,
             nextSelectedId: 'r1',
+        });
+    });
+
+    test('skips selected-marker style update when marker id is unchanged', () => {
+        expect(resolveNaverSelectedMarkerStyleUpdatePlan({
+            currentSelectedId: 'r1',
+            previousSelectedId: 'r1',
+        })).toEqual({
+            nextPreviousSelectedId: 'r1',
+            shouldSkip: true,
+            updates: [],
+        });
+    });
+
+    test('updates only previous marker when selection is cleared', () => {
+        expect(resolveNaverSelectedMarkerStyleUpdatePlan({
+            currentSelectedId: null,
+            previousSelectedId: 'previous',
+        })).toEqual({
+            nextPreviousSelectedId: null,
+            shouldSkip: false,
+            updates: [
+                { isSelected: false, restaurantId: 'previous' },
+            ],
+        });
+    });
+
+    test('updates previous and current marker when selection changes', () => {
+        expect(resolveNaverSelectedMarkerStyleUpdatePlan({
+            currentSelectedId: 'current',
+            previousSelectedId: 'previous',
+        })).toEqual({
+            nextPreviousSelectedId: 'current',
+            shouldSkip: false,
+            updates: [
+                { isSelected: false, restaurantId: 'previous' },
+                { isSelected: true, restaurantId: 'current' },
+            ],
         });
     });
 
