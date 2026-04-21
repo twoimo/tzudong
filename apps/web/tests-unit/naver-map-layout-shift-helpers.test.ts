@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
-import { resolveNaverLayoutShiftDelta } from '../lib/naver-map-layout-shift-helpers';
+import {
+    resolveNaverLayoutShiftDelta,
+    shouldPreserveNaverVisualCenterOnLayoutShift,
+} from '../lib/naver-map-layout-shift-helpers';
 
 describe('naver map layout shift helpers', () => {
     test('derives half-width pan delta from offset change', () => {
@@ -23,5 +26,22 @@ describe('naver map layout shift helpers', () => {
             deltaX: 0,
             shouldPan: false,
         });
+    });
+
+    test('preserves visual center only for user-moved layout-only changes', () => {
+        expect(shouldPreserveNaverVisualCenterOnLayoutShift({
+            hasUserMovedMap: true,
+            isSelectionChanged: false,
+        })).toBe(true);
+
+        expect(shouldPreserveNaverVisualCenterOnLayoutShift({
+            hasUserMovedMap: true,
+            isSelectionChanged: true,
+        })).toBe(false);
+
+        expect(shouldPreserveNaverVisualCenterOnLayoutShift({
+            hasUserMovedMap: false,
+            isSelectionChanged: false,
+        })).toBe(false);
     });
 });

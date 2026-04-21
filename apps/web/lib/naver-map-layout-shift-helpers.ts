@@ -13,3 +13,13 @@ export function resolveNaverLayoutShiftDelta({
         shouldPan: deltaOffset !== 0,
     };
 }
+
+export function shouldPreserveNaverVisualCenterOnLayoutShift({
+    hasUserMovedMap,
+    isSelectionChanged,
+}: {
+    hasUserMovedMap: boolean;
+    isSelectionChanged: boolean;
+}) {
+    return hasUserMovedMap && !isSelectionChanged;
+}

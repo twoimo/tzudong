@@ -124,7 +124,10 @@ import { calculateNaverAdjustedCenter } from "@/lib/naver-map-center-helpers";
 import { buildResetUserMapMovementHandler } from "@/lib/naver-map-user-movement-helpers";
 import { resolveNaverTargetOffsets } from "@/lib/naver-map-target-offset-helpers";
 import { resolveNaverMapTarget } from "@/lib/naver-map-target-helpers";
-import { resolveNaverLayoutShiftDelta } from "@/lib/naver-map-layout-shift-helpers";
+import {
+    resolveNaverLayoutShiftDelta,
+    shouldPreserveNaverVisualCenterOnLayoutShift,
+} from "@/lib/naver-map-layout-shift-helpers";
 import {
     resolveNaverSearchSelectionPlan,
     resolveNaverSelectedRestaurantCanonicalSyncPlan,
@@ -749,7 +752,10 @@ const NaverMapView = memo(({
         // 하지만 "패널이 열리고 닫힘"에 따라 "보이는 영역"이 달라지므로,
         // "현재의 Visual Center"가 "새로운 Layout의 Visual Center"가 되도록 지도 Center를 조정해야 함.
         // 즉, "지리적 위치"를 고정하고 오프셋만 반영.
-        if (hasUserMovedMapRef.current && !isSelectionChanged) {
+        if (shouldPreserveNaverVisualCenterOnLayoutShift({
+            hasUserMovedMap: hasUserMovedMapRef.current,
+            isSelectionChanged,
+        })) {
             // 현재 지도의 중심 (이건 Panel 오프셋이 반영된 상태일 수도 있고 아닐 수도 있음)
             // 여기서 중요한 건 "사용자가 보고 있던 그 위치(Lat, Lng)"를 유지하는 것.
             // 사용자가 보고 있던 위치(Visual Center)는 어디인가?
