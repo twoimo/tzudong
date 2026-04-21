@@ -182,6 +182,19 @@ export function resolveNaverStaleMapCleanupPlan<TMapInstance>({
     } as const;
 }
 
+export function resolveNaverPostInitPlan({
+    hasValidUrlState,
+    nodeEnv,
+}: {
+    hasValidUrlState: boolean;
+    nodeEnv: string | undefined;
+}) {
+    return {
+        shouldExposeDebugMap: nodeEnv !== 'production',
+        shouldMarkInitialLoadFromUrl: hasValidUrlState,
+    } as const;
+}
+
 export function scheduleNaverInitialIdleTrigger<TMap>({
     delayMs = 100,
     map,

@@ -80,6 +80,7 @@ import {
     isNaverMapInstanceReusable,
     parseNaverMapUrlState,
     resolveNaverInitialMapView,
+    resolveNaverPostInitPlan,
     resolveNaverStaleMapCleanupPlan,
     scheduleNaverInitialIdleTrigger,
 } from "@/lib/naver-map-init-helpers";
@@ -1793,12 +1794,16 @@ const NaverMapView = memo(({
 
             mapInstanceRef.current = map;
             setIsMapInitialized(true);
-            if (process.env.NODE_ENV !== 'production') {
+            const postInitPlan = resolveNaverPostInitPlan({
+                hasValidUrlState,
+                nodeEnv: process.env.NODE_ENV,
+            });
+            if (postInitPlan.shouldExposeDebugMap) {
                 (window as typeof window & { __TZUDONG_DEBUG_MAP__?: unknown }).__TZUDONG_DEBUG_MAP__ = map;
             }
 
             // [Fix] URL 파라미터로 초기화된 경우 플래그 설정 (centering effect에서 줌 오버라이드 방지)
-            if (hasValidUrlState) {
+            if (postInitPlan.shouldMarkInitialLoadFromUrl) {
                 isInitialLoadFromUrlRef.current = true;
             }
 
