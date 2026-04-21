@@ -7,6 +7,7 @@ import {
     parseNaverMapUrlState,
     resolveNaverInitialMapView,
     resolveNaverInitialView,
+    resolveNaverPostInitPlan,
     resolveNaverRegionConfig,
     resolveNaverStaleMapCleanupPlan,
     scheduleNaverInitialIdleTrigger,
@@ -153,6 +154,24 @@ describe('naver map init helpers', () => {
             nextMapInstance: null,
             nextMarkerRenderSignature: null,
             shouldCleanup: false,
+        });
+    });
+
+    test('resolves post-init debug exposure and URL initial-load flags', () => {
+        expect(resolveNaverPostInitPlan({
+            hasValidUrlState: true,
+            nodeEnv: 'development',
+        })).toEqual({
+            shouldExposeDebugMap: true,
+            shouldMarkInitialLoadFromUrl: true,
+        });
+
+        expect(resolveNaverPostInitPlan({
+            hasValidUrlState: false,
+            nodeEnv: 'production',
+        })).toEqual({
+            shouldExposeDebugMap: false,
+            shouldMarkInitialLoadFromUrl: false,
         });
     });
 
