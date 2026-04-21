@@ -118,6 +118,7 @@ import {
 } from "@/lib/naver-map-sidepanel-helpers";
 import {
     buildNaverMapToastTrigger,
+    resolveNaverAnnouncementToastClickPlan,
     resolveNaverAnnouncementToastCleanupPlan,
     resolveNaverAnnouncementToastInactivePlan,
     resolveNaverAnnouncementToastPlan,
@@ -1184,11 +1185,13 @@ const NaverMapView = memo(({
     }, [bannerAnnouncements, isLoaded]);
 
     const handleAnnouncementToastClick = useCallback(() => {
-        if (!announcementToastId) return;
-        const targetAnnouncement = bannerAnnouncements.find((announcement) => announcement.id === announcementToastId);
-        if (!targetAnnouncement) return;
+        const clickPlan = resolveNaverAnnouncementToastClickPlan({
+            announcementToastId,
+            announcements: bannerAnnouncements,
+        });
+        if (!clickPlan.shouldDispatch || !clickPlan.targetAnnouncement) return;
 
-        window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: targetAnnouncement }));
+        window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: clickPlan.targetAnnouncement }));
     }, [announcementToastId, bannerAnnouncements]);
 
     // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
