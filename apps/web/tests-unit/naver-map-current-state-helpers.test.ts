@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
     buildNaverCurrentStateSnapshot,
+    buildNaverInitialCurrentStateSnapshot,
     getNaverCurrentPanelOffset,
 } from '../lib/naver-map-current-state-helpers';
 
@@ -24,5 +25,20 @@ describe('naver map current state helpers', () => {
 
     test('returns current panel offset from snapshot', () => {
         expect(getNaverCurrentPanelOffset({ effectivePanelOffset: 320 })).toBe(320);
+    });
+
+    test('builds initial current state snapshot with zero panel offset', () => {
+        expect(buildNaverInitialCurrentStateSnapshot({
+            externalPanelOpen: true,
+            isGridMode: false,
+            isPanelCollapsed: true,
+            isSidebarOpen: false,
+        })).toEqual({
+            effectivePanelOffset: 0,
+            externalPanelOpen: true,
+            isGridMode: false,
+            isPanelCollapsed: true,
+            isSidebarOpen: false,
+        });
     });
 });
