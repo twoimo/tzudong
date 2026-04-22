@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import Header from '@/components/layout/Header';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import NavigationPrefetcher from '@/components/layout/NavigationPrefetcher';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +16,11 @@ import { APP_HEADER_HEIGHT_VAR, MOBILE_SHEET_HEADER_OFFSET_VAR, MOBILE_SHEET_HEA
 
 // [PERF] 모달과 비핵심 컴포넌트를 동적 임포트로 코드 스플리팅
 // 이 컴포넌트들은 사용자 인터랙션 후에만 필요하므로 초기 번들에서 제외
+const Header = dynamic(() => import('@/components/layout/Header'), {
+    ssr: false,
+    loading: () => <div className="h-12 border-b border-border bg-background md:h-14" aria-hidden="true" />,
+});
+
 const AuthModal = dynamic(() => import('@/components/auth/AuthModal'), { ssr: false });
 const ProfileModal = dynamic(
     () => import('@/components/profile/ProfileModal').then(mod => ({ default: mod.ProfileModal })),
