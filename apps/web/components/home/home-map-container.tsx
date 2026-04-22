@@ -3,7 +3,6 @@
 import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
-import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
@@ -21,6 +20,11 @@ import {
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
 const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
+const RestaurantDetailPanel = lazy(() =>
+    import("@/components/restaurant/RestaurantDetailPanel").then((mod) => ({
+        default: mod.RestaurantDetailPanel,
+    }))
+);
 
 interface HomeMapContainerProps {
     mapMode: 'domestic' | 'overseas';
@@ -1165,16 +1169,18 @@ function HomeMapContainerComponent({
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                     </svg>
                                 </button>
-                                <RestaurantDetailPanel
-                                    restaurant={panelRestaurant}
-                                    onClose={onPanelClose}
-                                    onWriteReview={onReviewModalOpen}
-                                    onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
-                                    onRequestEditRestaurant={handleRequestEditRestaurant}
-                                    onOpenDirectionSheet={handleOpenDirectionSheet}
-                                    onToggleCollapse={onTogglePanelCollapse}
-                                    isPanelOpen={isPanelOpen}
-                                />
+                                <Suspense fallback={null}>
+                                    <RestaurantDetailPanel
+                                        restaurant={panelRestaurant}
+                                        onClose={onPanelClose}
+                                        onWriteReview={onReviewModalOpen}
+                                        onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
+                                        onRequestEditRestaurant={handleRequestEditRestaurant}
+                                        onOpenDirectionSheet={handleOpenDirectionSheet}
+                                        onToggleCollapse={onTogglePanelCollapse}
+                                        isPanelOpen={isPanelOpen}
+                                    />
+                                </Suspense>
                             </div>
                         </>
                     )}
@@ -1241,19 +1247,21 @@ function HomeMapContainerComponent({
                                     onTouchEnd={handleContentTouchEnd}
                                     onTouchCancel={handleContentTouchEnd}
                                 >
-                                    <RestaurantDetailPanel
-                                        restaurant={panelRestaurant}
-                                        onClose={onPanelClose}
-                                        onWriteReview={onReviewModalOpen}
-                                        onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
-                                        onRequestEditRestaurant={handleRequestEditRestaurant}
-                                        onOpenDirectionSheet={handleOpenDirectionSheet}
-                                        onSwipeLeft={() => handleSwipeToRestaurant(1)}
-                                        onSwipeRight={() => handleSwipeToRestaurant(-1)}
-                                        onToggleCollapse={onTogglePanelCollapse}
-                                        isPanelOpen={isPanelOpen}
-                                        isMobile={true}
-                                    />
+                                    <Suspense fallback={null}>
+                                        <RestaurantDetailPanel
+                                            restaurant={panelRestaurant}
+                                            onClose={onPanelClose}
+                                            onWriteReview={onReviewModalOpen}
+                                            onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
+                                            onRequestEditRestaurant={handleRequestEditRestaurant}
+                                            onOpenDirectionSheet={handleOpenDirectionSheet}
+                                            onSwipeLeft={() => handleSwipeToRestaurant(1)}
+                                            onSwipeRight={() => handleSwipeToRestaurant(-1)}
+                                            onToggleCollapse={onTogglePanelCollapse}
+                                            isPanelOpen={isPanelOpen}
+                                            isMobile={true}
+                                        />
+                                    </Suspense>
                                 </div>
                             </div>
                         </div>

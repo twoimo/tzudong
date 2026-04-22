@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import Header from '@/components/layout/Header';
 import FloatingNavButtons, { OverlayPanelType } from '@/components/layout/FloatingNavButtons';
 import OverlayPagePanel from '@/components/layout/OverlayPagePanel';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +11,11 @@ import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
 
 // 지연 로딩
+const Header = dynamic(() => import('@/components/layout/Header'), {
+    ssr: false,
+    loading: () => <div className="h-12 border-b border-border bg-background md:h-14" aria-hidden="true" />,
+});
+
 const AuthModal = dynamic(() => import('@/components/auth/AuthModal'), {
     ssr: false,
 });

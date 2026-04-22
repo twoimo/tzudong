@@ -1,8 +1,17 @@
-import type { MouseEvent, RefObject } from 'react';
+import { lazy, Suspense, type MouseEvent, type RefObject } from 'react';
 
-import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
-import { ReviewModal } from '@/components/reviews/ReviewModal';
 import type { Restaurant } from '@/types/restaurant';
+
+const RestaurantDetailPanel = lazy(() =>
+    import('@/components/restaurant/RestaurantDetailPanel').then((mod) => ({
+        default: mod.RestaurantDetailPanel,
+    }))
+);
+const ReviewModal = lazy(() =>
+    import('@/components/reviews/ReviewModal').then((mod) => ({
+        default: mod.ReviewModal,
+    }))
+);
 
 export function NaverMapDetailPanelShell({
     activePanel,
@@ -37,15 +46,17 @@ export function NaverMapDetailPanelShell({
             onFocusCapture={onFocusCapture}
         >
             <div ref={detailPanelRef} className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
-                <RestaurantDetailPanel
-                    restaurant={restaurant}
-                    onClose={onClose}
-                    onWriteReview={onWriteReview}
-                    onEditRestaurant={onEditRestaurant}
-                    onRequestEditRestaurant={onRequestEditRestaurant}
-                    onToggleCollapse={onToggleCollapse}
-                    isPanelOpen={internalPanelOpen}
-                />
+                <Suspense fallback={null}>
+                    <RestaurantDetailPanel
+                        restaurant={restaurant}
+                        onClose={onClose}
+                        onWriteReview={onWriteReview}
+                        onEditRestaurant={onEditRestaurant}
+                        onRequestEditRestaurant={onRequestEditRestaurant}
+                        onToggleCollapse={onToggleCollapse}
+                        isPanelOpen={internalPanelOpen}
+                    />
+                </Suspense>
             </div>
         </div>
     );
@@ -62,12 +73,16 @@ export function NaverMapReviewModal({
     onSuccess: () => void;
     restaurant: { id: string; name: string } | null;
 }) {
+    if (!isOpen) return null;
+
     return (
-        <ReviewModal
-            isOpen={isOpen}
-            onClose={onClose}
-            restaurant={restaurant}
-            onSuccess={onSuccess}
-        />
+        <Suspense fallback={null}>
+            <ReviewModal
+                isOpen={isOpen}
+                onClose={onClose}
+                restaurant={restaurant}
+                onSuccess={onSuccess}
+            />
+        </Suspense>
     );
 }

@@ -88,6 +88,7 @@ OPTIONAL_SCHEMA_COMPAT_FIELDS = {"google_name"}
 MISSING_SCHEMA_COLUMN_RE = re.compile(r"Could not find the '([^']+)' column of '([^']+)' in the schema cache")
 MAX_RETRIES = 2
 RETRY_DELAY = 2
+YOUTUBE_LOOKUP_CHUNK_SIZE = 50
 
 
 def unique_non_empty(values: Iterable[Any]) -> list[Any]:
@@ -99,6 +100,11 @@ def unique_non_empty(values: Iterable[Any]) -> list[Any]:
         seen.add(value)
         ordered.append(value)
     return ordered
+
+
+def chunked(values: list[Any], size: int) -> Iterable[list[Any]]:
+    for start in range(0, len(values), size):
+        yield values[start : start + size]
 
 
 def extract_youtube_video_id(raw_url: Any) -> str:
@@ -131,47 +137,47 @@ def canonicalize_youtube_link(raw_url: Any) -> str | None:
     return f"https://www.youtube.com/watch?v={video_id}"
 
 
+def youtube_link_lookup_aliases(raw_url: Any) -> list[str]:
+    """Return exact-link variants that may already exist in restaurants.
+
+    The database identity index compares extracted video ids, but PostgREST
+    lookups here are ordinary column filters. Querying only the incoming
+    canonical URL can miss older rows stored as youtu.be/shorts/embed variants,
+    causing the subsequent trace_id upsert to trip the DB-side video/name
+    unique index.
+    """
+
+    aliases: list[Any] = [raw_url]
+    video_id = extract_youtube_video_id(raw_url)
+    if video_id:
+        aliases.extend(
+            (
+                f"https://www.youtube.com/watch?v={video_id}",
+                f"https://youtube.com/watch?v={video_id}",
+                f"https://youtu.be/{video_id}",
+                f"https://www.youtu.be/{video_id}",
+                f"https://www.youtube.com/shorts/{video_id}",
+                f"https://youtube.com/shorts/{video_id}",
+                f"https://www.youtube.com/embed/{video_id}",
+                f"https://youtube.com/embed/{video_id}",
+            )
+        )
+
+    return unique_non_empty(value.strip() for value in aliases if isinstance(value, str))
+
+
 def normalize_identity_name(raw_name: Any) -> str:
     if not isinstance(raw_name, str):
         return ""
     return re.sub(r"\s+", " ", raw_name).strip().lower()
 
 
-def iter_identity_names(row: dict[str, Any]) -> list[str]:
-    return unique_non_empty(
-        normalize_identity_name(row.get(field_name))
-        for field_name in ("approved_name", "origin_name", "naver_name", "google_name")
-    )
-
-
-def identity_candidate_sort_key(row: dict[str, Any]) -> tuple[int, int, int, str, str, str]:
-    status = row.get("status")
-    status_priority = 0
-    if status == "approved":
-        status_priority = 3
-    elif status == "hold":
-        status_priority = 2
-    elif status == "pending":
-        status_priority = 1
-
-    completeness_score = sum(
-        1
-        for field_name in ("jibun_address", "road_address", "evaluation_results", "youtube_meta", "naver_name", "reasoning_basis")
-        if row.get(field_name) not in (None, "", {}, [])
-    )
-
-    updated_at = str(row.get("updated_at") or "")
-    created_at = str(row.get("created_at") or "")
-    row_id = str(row.get("id") or "")
-
-    return (
-        1 if is_review_locked(row) else 0,
-        status_priority,
-        completeness_score,
-        updated_at,
-        created_at,
-        row_id,
-    )
+def resolve_identity_name(row: dict[str, Any]) -> str:
+    for field_name in ("approved_name", "origin_name", "naver_name", "google_name"):
+        identity_name = normalize_identity_name(row.get(field_name))
+        if identity_name:
+            return identity_name
+    return ""
 
 
 def has_admin_lock_marker(row: dict[str, Any]) -> bool:
@@ -235,15 +241,11 @@ def build_review_rebind_candidate_map(existing_rows: list[dict[str, Any]]) -> di
             continue
 
         video_id = extract_youtube_video_id(row.get("youtube_link"))
-        identity_names = iter_identity_names(row)
-        if not video_id or not identity_names:
+        identity_name = resolve_identity_name(row)
+        if not video_id or not identity_name:
             continue
 
-        for identity_name in identity_names:
-            candidate_map.setdefault((video_id, identity_name), []).append(row)
-
-    for candidates in candidate_map.values():
-        candidates.sort(key=identity_candidate_sort_key, reverse=True)
+        candidate_map.setdefault((video_id, identity_name), []).append(row)
 
     return candidate_map
 
@@ -276,22 +278,23 @@ def classify_batch_operations(
 
         youtube_link = item.get("youtube_link")
         video_id = extract_youtube_video_id(youtube_link)
-        identity_names = iter_identity_names(item)
-        candidates_by_id: dict[str, dict[str, Any]] = {}
-        if video_id and identity_names:
-            for identity_name in identity_names:
-                for candidate in review_candidate_map.get((video_id, identity_name), []):
-                    candidate_id = candidate.get("id")
-                    if candidate_id:
-                        candidates_by_id[str(candidate_id)] = candidate
+        identity_name = resolve_identity_name(item)
+        candidates = review_candidate_map.get((video_id, identity_name), []) if video_id and identity_name else []
 
-        candidates = sorted(candidates_by_id.values(), key=identity_candidate_sort_key, reverse=True)
-
-        if candidates and candidates[0].get("id"):
+        if len(candidates) == 1 and candidates[0].get("id"):
             rebind_target = candidates[0]
             rebind_updates.append((rebind_target["id"], merge_restaurant_record(rebind_target, item, rebind_trace_id=True)))
             stats["trace_rebinds"] += 1
             note_review_lock(rebind_target, stats, exact_match=False)
+            continue
+
+        if len(candidates) > 1:
+            stats["ambiguous_rebind_skips"] += 1
+            stats["skipped"] += 1
+            print(
+                "[WARN] identity rebind skipped: "
+                f"trace_id={trace_id} video_id={video_id} identity_name={identity_name} candidates={len(candidates)}"
+            )
             continue
 
         upsert_rows.append(item)
@@ -314,11 +317,23 @@ def fetch_review_rebind_candidates(supabase: Client, youtube_links: list[str]) -
     if not youtube_links:
         return {}
 
-    response = supabase.table("restaurants").select("*").in_("youtube_link", youtube_links).execute()
-    if not response.data:
+    lookup_links = unique_non_empty(
+        alias for youtube_link in youtube_links for alias in youtube_link_lookup_aliases(youtube_link)
+    )
+    if not lookup_links:
         return {}
 
-    return build_review_rebind_candidate_map(response.data)
+    rows_by_key: dict[Any, dict[str, Any]] = {}
+    for lookup_chunk in chunked(lookup_links, YOUTUBE_LOOKUP_CHUNK_SIZE):
+        response = supabase.table("restaurants").select("*").in_("youtube_link", lookup_chunk).execute()
+        for row in response.data or []:
+            row_key = row.get("id") or row.get("trace_id") or json.dumps(row, sort_keys=True, ensure_ascii=False)
+            rows_by_key[row_key] = row
+
+    if not rows_by_key:
+        return {}
+
+    return build_review_rebind_candidate_map(list(rows_by_key.values()))
 
 
 def extract_missing_schema_column(exc: Exception, table_name: str = "restaurants") -> str | None:
