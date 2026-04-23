@@ -113,6 +113,7 @@ fi
 LOG_DIR="${RUN_DAILY_LOG_DIR:-$PROJECT_ROOT/backend/log/cron}"
 LOG_ARCHIVE_DIR="${RUN_DAILY_ARCHIVE_DIR:-$LOG_DIR/archive}"
 CURRENT_LOG_LINK="${RUN_DAILY_CURRENT_LOG_LINK:-$LOG_DIR/current.log}"
+RUN_DAILY_MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-$LOG_DIR/current-summary.json}"
 mkdir -p "$LOG_DIR" "$LOG_ARCHIVE_DIR"
 
 # [TimeZone] 기본 로그 기준 시간대를 KST로 고정 (이미 TZ가 있으면 존중)
@@ -713,6 +714,14 @@ count_pending_jsonl() {
     local source_dir="$1"
     local target_dir="$2"
     local source_list target_list
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+
+    if [ -f "$helper_path" ]; then
+        "$PYTHON_CMD" "$helper_path" count-pending-jsonl \
+            --source-dir "$source_dir" \
+            --target-dir "$target_dir"
+        return $?
+    fi
 
     if [ ! -d "$source_dir" ]; then
         echo 0
@@ -1681,4 +1690,33 @@ cat <<'EOF' >> "$SUMMARY_MD"
 +----------------------------------------------------------------------------------------------------------+
 EOF
 echo "\`\`\`" >> "$SUMMARY_MD"
+if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
+    MANIFEST_ARGS=(
+        "$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+        write-summary-manifest
+        --output "$RUN_DAILY_MANIFEST_PATH"
+        --date "$DATE"
+        --final-status "$FINAL_STATUS_LABEL"
+        --final-exit-code "$FINAL_EXIT_CODE"
+        --latest-log-path "$LOG_FILE"
+        --summary-path "$SUMMARY_MD"
+        --no-work-short-circuit "${NO_WORK_SHORT_CIRCUIT:-false}"
+        --policy-mode "${RUN_DAILY_POLICY_MODE:-end_to_end}"
+    )
+    for item in "${FAILED_REQUIRED_STEPS[@]}"; do
+        MANIFEST_ARGS+=(--failed-required-step "$item")
+    done
+    for item in "${SKIPPED_OPTIONAL_STEPS[@]}"; do
+        MANIFEST_ARGS+=(--optional-skip "$item")
+    done
+    for item in "${SKIPPED_DOWNSTREAM_STEPS[@]}"; do
+        MANIFEST_ARGS+=(--downstream-skip "$item")
+    done
+
+    if "$PYTHON_CMD" "${MANIFEST_ARGS[@]}"; then
+        log "INFO" "run_daily summary manifest written: $RUN_DAILY_MANIFEST_PATH"
+    else
+        log "WARN" "run_daily summary manifest write failed (warn-only): $RUN_DAILY_MANIFEST_PATH"
+    fi
+fi
 exit "$FINAL_EXIT_CODE"

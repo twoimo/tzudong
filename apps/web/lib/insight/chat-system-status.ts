@@ -1,7 +1,9 @@
 import type {
+  AdminInsightGithubActionsStatus,
   AdminInsightSystemIntegrationStatus,
   AdminInsightSystemFrameCaptionStatus,
   AdminInsightSystemRunDailyStatus,
+  AdminInsightSupabaseCounterStatus,
   AdminInsightSystemStatusChecklistItem,
   AdminInsightSystemStatusKeyFlags,
   AdminInsightSystemStatusResponse,
@@ -9,6 +11,7 @@ import type {
 
 const DEFAULT_TIMEOUT_MS = 2500;
 const DEFAULT_CACHE_TTL_MS = 30_000;
+const DEFAULT_GITHUB_WORKFLOW = 'daily-crawler.yml';
 
 type CachedStatusEntry = {
   expiresAt: number;
@@ -27,6 +30,11 @@ function toBooleanFlag(value: string | undefined, defaultValue: boolean): boolea
   if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on') return true;
   if (normalized === '0' || normalized === 'false' || normalized === 'no' || normalized === 'off') return false;
   return defaultValue;
+}
+
+function sanitizeTextForDisplay(raw: string | undefined, maxLength = 160): string | undefined {
+  if (!hasNonEmptyValue(raw)) return undefined;
+  return raw!.replace(/[\r\n\t]+/g, ' ').trim().slice(0, maxLength);
 }
 
 function pickFirstEnvValue(env: NodeJS.ProcessEnv, keys: string[]): string | undefined {
@@ -256,6 +264,194 @@ function makeIntegrationStatus(
   };
 }
 
+function makeDisabledGithubActionsStatus(asOf: string, enabled: boolean, detail?: string): AdminInsightGithubActionsStatus {
+  return {
+    enabled,
+    configured: false,
+    reachable: false,
+    ...(detail ? { detail } : {}),
+    checkedAt: asOf,
+  };
+}
+
+async function resolveGithubActionsStatus(
+  env: NodeJS.ProcessEnv,
+  asOf: string,
+  timeoutMs: number,
+): Promise<AdminInsightGithubActionsStatus> {
+  const enabled = toBooleanFlag(env.INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED, false);
+  if (!enabled) return makeDisabledGithubActionsStatus(asOf, false, 'disabled');
+
+  const repository = pickFirstEnvValue(env, ['INSIGHT_GITHUB_REPOSITORY', 'GITHUB_REPOSITORY']);
+  const token = pickFirstEnvValue(env, ['INSIGHT_GITHUB_TOKEN', 'GITHUB_TOKEN']);
+  const workflow = pickFirstEnvValue(env, ['INSIGHT_GITHUB_WORKFLOW']) || DEFAULT_GITHUB_WORKFLOW;
+  const branch = pickFirstEnvValue(env, ['INSIGHT_GITHUB_BRANCH']);
+
+  if (!repository || !token) {
+    return {
+      enabled: true,
+      configured: false,
+      reachable: false,
+      workflow,
+      ...(branch ? { branch } : {}),
+      detail: !repository ? 'repository_missing' : 'token_missing',
+      checkedAt: asOf,
+    };
+  }
+
+  const timeout = withTimeoutSignal(timeoutMs);
+  const params = new URLSearchParams({ per_page: '1' });
+  if (branch) params.set('branch', branch);
+  const endpoint = `https://api.github.com/repos/${encodeURIComponent(repository).replace('%2F', '/')}/actions/workflows/${encodeURIComponent(workflow)}/runs?${params.toString()}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      signal: timeout.signal,
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return {
+        enabled: true,
+        configured: true,
+        reachable: false,
+        workflow,
+        ...(branch ? { branch } : {}),
+        detail: `HTTP ${response.status}`,
+        checkedAt: asOf,
+      };
+    }
+
+    const payload = await response.json() as { workflow_runs?: Array<Record<string, unknown>> };
+    const latest = Array.isArray(payload.workflow_runs) ? payload.workflow_runs[0] : undefined;
+    const latestRunUrl = typeof latest?.html_url === 'string' ? sanitizeEndpointForDisplay(latest.html_url) : undefined;
+    return {
+      enabled: true,
+      configured: true,
+      reachable: true,
+      workflow,
+      ...(branch ? { branch } : {}),
+      ...(typeof latest?.id === 'number' ? { latestRunId: latest.id } : {}),
+      ...(typeof latest?.status === 'string' ? { latestRunStatus: sanitizeTextForDisplay(latest.status) } : {}),
+      ...(typeof latest?.conclusion === 'string' || latest?.conclusion === null ? { latestRunConclusion: latest.conclusion as string | null } : {}),
+      ...(latestRunUrl ? { latestRunUrl } : {}),
+      ...(typeof latest?.created_at === 'string' ? { latestRunCreatedAt: latest.created_at } : {}),
+      ...(typeof latest?.updated_at === 'string' ? { latestRunUpdatedAt: latest.updated_at } : {}),
+      checkedAt: asOf,
+    };
+  } catch (error) {
+    return {
+      enabled: true,
+      configured: true,
+      reachable: false,
+      workflow,
+      ...(branch ? { branch } : {}),
+      detail: error instanceof Error ? sanitizeTextForDisplay(error.message) : 'unknown_error',
+      checkedAt: asOf,
+    };
+  } finally {
+    timeout.clear();
+  }
+}
+
+function makeDisabledSupabaseCounterStatus(asOf: string, enabled: boolean, detail?: string): AdminInsightSupabaseCounterStatus {
+  return {
+    enabled,
+    configured: false,
+    reachable: false,
+    ...(detail ? { detail } : {}),
+    checkedAt: asOf,
+  };
+}
+
+function parseContentRangeCount(raw: string | null): number | undefined {
+  if (!raw) return undefined;
+  const match = raw.match(/\/(\d+)$/);
+  if (!match?.[1]) return undefined;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+async function fetchSupabaseCount(
+  endpoint: string,
+  serviceRoleKey: string,
+  timeoutMs: number,
+): Promise<number | undefined> {
+  const timeout = withTimeoutSignal(timeoutMs);
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        Prefer: 'count=exact',
+        Range: '0-0',
+      },
+      signal: timeout.signal,
+      cache: 'no-store',
+    });
+    if (!response.ok) return undefined;
+    return parseContentRangeCount(response.headers.get('content-range'));
+  } finally {
+    timeout.clear();
+  }
+}
+
+async function resolveSupabaseCounterStatus(
+  env: NodeJS.ProcessEnv,
+  asOf: string,
+  timeoutMs: number,
+): Promise<AdminInsightSupabaseCounterStatus> {
+  const enabled = toBooleanFlag(env.INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED, false);
+  if (!enabled) return makeDisabledSupabaseCounterStatus(asOf, false, 'disabled');
+
+  const supabaseUrl = pickFirstEnvValue(env, ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL']);
+  const serviceRoleKey = pickFirstEnvValue(env, ['SUPABASE_SERVICE_ROLE_KEY']);
+  if (!supabaseUrl || !serviceRoleKey) {
+    return {
+      enabled: true,
+      configured: false,
+      reachable: false,
+      detail: !supabaseUrl ? 'url_missing' : 'service_role_key_missing',
+      checkedAt: asOf,
+    };
+  }
+
+  try {
+    const base = supabaseUrl.replace(/\/+$/, '');
+    const restaurantsEndpoint = `${base}/rest/v1/restaurants?select=id&limit=1`;
+    const evaluatedEndpoint = `${base}/rest/v1/restaurants?select=id&evaluation_results=not.is.null&limit=1`;
+    const [restaurantsTotal, evaluatedRestaurants] = await Promise.all([
+      fetchSupabaseCount(restaurantsEndpoint, serviceRoleKey, timeoutMs),
+      fetchSupabaseCount(evaluatedEndpoint, serviceRoleKey, timeoutMs),
+    ]);
+
+    return {
+      enabled: true,
+      configured: true,
+      reachable: restaurantsTotal !== undefined || evaluatedRestaurants !== undefined,
+      ...(restaurantsTotal !== undefined ? { restaurantsTotal } : {}),
+      ...(evaluatedRestaurants !== undefined ? { evaluatedRestaurants } : {}),
+      ...(restaurantsTotal === undefined && evaluatedRestaurants === undefined ? { detail: 'count_unavailable' } : {}),
+      checkedAt: asOf,
+    };
+  } catch (error) {
+    return {
+      enabled: true,
+      configured: true,
+      reachable: false,
+      detail: error instanceof Error ? sanitizeTextForDisplay(error.message) : 'unknown_error',
+      checkedAt: asOf,
+    };
+  }
+}
+
 export function buildAdminInsightOpsChecklist(
   status: Pick<AdminInsightSystemStatusResponse, 'keys' | 'storyboardAgent' | 'bgeEmbedding' | 'frameCaption'>,
   runDaily?: AdminInsightSystemRunDailyStatus,
@@ -265,6 +461,7 @@ export function buildAdminInsightOpsChecklist(
   const hasRunDailyScriptIssue = !hasRunDailyScript;
   const hasRunDailyExecutableIssue = Boolean(runDaily?.scriptPath) && !(runDaily?.executable ?? false);
   const hasRunDailyStaleIssue = Boolean(runDaily && runDaily.stale);
+  const hasRunDailyFailureIssue = Boolean(runDaily?.failedRequiredSteps && runDaily.failedRequiredSteps.length > 0);
 
   if (!status.keys.supabaseUrl || !status.keys.supabaseServiceRoleKey) {
     checklist.push({
@@ -315,6 +512,20 @@ export function buildAdminInsightOpsChecklist(
       category: 'environment',
       action:
         'run_daily 최신 로그가 감지되지 않았거나 오래되어 보조 확인이 필요합니다. crontab 등록, 실행 로그 경로, 실행시간 스케줄을 점검해 주세요.',
+      command: buildRunDailyStaleWarningSnippet(),
+      commandSnippet: buildRunDailyStaleWarningSnippet(),
+      source: 'run_daily',
+    });
+  }
+
+  if (hasRunDailyFailureIssue) {
+    checklist.push({
+      id: 'run-daily-required-failed',
+      title: 'run_daily 필수 단계 실패',
+      severity: 'critical',
+      category: 'environment',
+      action:
+        `최근 run_daily 실행에서 필수 단계 실패가 감지되었습니다: ${runDaily?.failedRequiredSteps?.slice(0, 3).join(' / ')}`,
       command: buildRunDailyStaleWarningSnippet(),
       commandSnippet: buildRunDailyStaleWarningSnippet(),
       source: 'run_daily',
@@ -542,6 +753,15 @@ export async function getAdminInsightSystemStatus(
 
   const runDailyScriptPath = runtime.resolveRunDailyScriptPath(env);
   const runDailyLogInfo = runtime.resolveRunDailyLogInfo(env, runDailyScriptPath);
+  const runDailyManifestInfo = runtime.resolveRunDailyManifestStatus(env, runDailyScriptPath);
+  const runDailyLogTailInfo = runDailyManifestInfo.finalStatus
+    ? { failedRequiredSteps: [], optionalSkips: [], downstreamSkips: [] }
+    : runtime.parseRunDailyLogTailStatus(runDailyLogInfo.logPath);
+  const runDailyFailureInfo = runDailyManifestInfo.finalStatus ? runDailyManifestInfo : runDailyLogTailInfo;
+  const [githubActions, supabaseCounters] = await Promise.all([
+    resolveGithubActionsStatus(env, asOf, timeoutMs),
+    resolveSupabaseCounterStatus(env, asOf, timeoutMs),
+  ]);
 
   const response: AdminInsightSystemStatusResponse = {
     asOf,
@@ -554,9 +774,19 @@ export async function getAdminInsightSystemStatus(
       executable: runtime.isRunDailyScriptExecutable(runDailyScriptPath),
       ...(runDailyLogInfo.logPath ? { latestLogPath: sanitizeRunDailyPath(runDailyLogInfo.logPath) } : {}),
       ...(runDailyLogInfo.logUpdatedAt ? { latestLogUpdatedAt: runDailyLogInfo.logUpdatedAt } : {}),
+      ...(runDailyManifestInfo.manifestPath ? { latestManifestPath: sanitizeRunDailyPath(runDailyManifestInfo.manifestPath) } : {}),
+      ...(runDailyFailureInfo.finalStatus ? { finalStatus: runDailyFailureInfo.finalStatus } : {}),
+      ...(runDailyManifestInfo.finalExitCode !== undefined ? { finalExitCode: runDailyManifestInfo.finalExitCode } : {}),
+      failedRequiredSteps: runDailyFailureInfo.failedRequiredSteps,
+      optionalSkips: runDailyFailureInfo.optionalSkips,
+      downstreamSkips: runDailyFailureInfo.downstreamSkips,
+      ...(runDailyManifestInfo.noWorkShortCircuit !== undefined ? { noWorkShortCircuit: runDailyManifestInfo.noWorkShortCircuit } : {}),
+      ...(runDailyManifestInfo.policyMode ? { policyMode: runDailyManifestInfo.policyMode } : {}),
       stale: runDailyLogInfo.stale,
       checkedAt: asOf,
     },
+    githubActions,
+    supabaseCounters,
     checklist: [],
   };
   response.checklist = buildAdminInsightOpsChecklist(response, response.runDaily);
