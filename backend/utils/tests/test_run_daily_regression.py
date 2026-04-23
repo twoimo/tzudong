@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 RUN_DAILY_SOURCE = BACKEND_ROOT / "run_daily.sh"
+RUN_DAILY_HELPER_SOURCE = BACKEND_ROOT / "utils" / "run_daily_helpers.py"
 
 
 class RunDailyRegressionTests(unittest.TestCase):
@@ -28,6 +29,11 @@ class RunDailyRegressionTests(unittest.TestCase):
         result = self._run_script()
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
+        manifest = self._read_manifest()
+        self.assertEqual("OK", manifest["finalStatus"])
+        self.assertEqual(0, manifest["finalExitCode"])
+        self.assertEqual([], manifest["failedRequiredSteps"])
+        self.assertEqual("end_to_end", manifest["policyMode"])
 
     def test_transcript_failure_returns_non_zero_exit(self) -> None:
         result = self._run_script(transcript_exit=17)
@@ -70,6 +76,11 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertIn("Step 13 (Supabase) 실패", result.stdout)
         self.assertIn("필수 단계 실패가 감지되었습니다", result.stdout)
         self.assertNotIn("모든 필수 단계가 완료되었습니다!", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertEqual(1, manifest["finalExitCode"])
+        self.assertTrue(any("Step 13 (Supabase)" in item for item in manifest["failedRequiredSteps"]))
 
     def test_ci_validation_target_branch_uses_checked_out_branch_for_sync(self) -> None:
         target_branch = "verify-target"
@@ -275,6 +286,7 @@ class RunDailyRegressionTests(unittest.TestCase):
                 "RUN_DAILY_ARCHIVE_DIR": str(project_root / "tmp" / "logs" / "archive"),
                 "RUN_DAILY_CURRENT_LOG_LINK": str(project_root / "tmp" / "logs" / "current.log"),
                 "RUN_DAILY_SUMMARY_PATH": str(project_root / "tmp" / "summary.md"),
+                "RUN_DAILY_MANIFEST_PATH": str(project_root / "tmp" / "current-summary.json"),
                 "RUN_DAILY_TEST_STATE_DIR": str(state_dir),
                 "RUN_DAILY_TEST_CURRENT_BRANCH": "data",
                 "RUN_DAILY_TEST_GIT_LOG_PATH": str(git_log_path),
@@ -301,6 +313,13 @@ class RunDailyRegressionTests(unittest.TestCase):
             env=env,
             check=False,
         )
+
+    def _read_manifest(self) -> dict:
+        manifest_path = self.root / "project" / "tmp" / "current-summary.json"
+        self.assertTrue(manifest_path.exists(), f"manifest missing: {manifest_path}")
+        import json
+
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
 
     def _run_mirror_data_root_with_restored_permissions(
         self,
@@ -333,6 +352,7 @@ class RunDailyRegressionTests(unittest.TestCase):
 
     def _build_fixture(self, project_root: Path, state_dir: Path) -> None:
         (project_root / "backend" / "config").mkdir(parents=True, exist_ok=True)
+        (project_root / "backend" / "utils").mkdir(parents=True, exist_ok=True)
         (project_root / "backend" / "restaurant-crawling" / "scripts").mkdir(parents=True, exist_ok=True)
         (project_root / "backend" / "restaurant-evaluation" / "scripts").mkdir(parents=True, exist_ok=True)
         crawling_data_root = project_root / "backend" / "restaurant-crawling" / "data"
@@ -366,6 +386,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         state_dir.mkdir(parents=True, exist_ok=True)
 
         shutil.copy2(RUN_DAILY_SOURCE, project_root / "backend" / "run_daily.sh")
+        shutil.copy2(RUN_DAILY_HELPER_SOURCE, project_root / "backend" / "utils" / "run_daily_helpers.py")
 
         self._write_executable(
             project_root / "backend" / "config" / "runtime_paths.sh",
@@ -425,6 +446,10 @@ class RunDailyRegressionTests(unittest.TestCase):
         fi
 
         script_name="$(basename "${1:-}")"
+        if [ "$script_name" = "run_daily_helpers.py" ]; then
+          exec /usr/bin/python3 "$@"
+        fi
+
         case "$script_name" in
           01-collect-urls.py)
             echo "URL 수집 중..."

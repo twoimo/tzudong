@@ -1,9 +1,11 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readdirSync, readSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const FRAME_CAPTION_DATA_RELATIVE_PATH = 'backend/restaurant-crawling/data/tzuyang/frame-caption';
 const RUN_DAILY_STALE_HOURS = 36;
 const RUN_DAILY_LOG_FILENAME_PREFIX = 'daily_';
+const RUN_DAILY_MANIFEST_FILENAME = 'current-summary.json';
+const RUN_DAILY_LOG_TAIL_BYTES = 32 * 1024;
 
 function hasNonEmptyValue(value: string | undefined): boolean {
   return typeof value === 'string' && value.trim().length > 0;
@@ -136,6 +138,154 @@ export function resolveRunDailyLogInfo(
     };
   } catch {
     return { stale: true };
+  }
+}
+
+export type RunDailyManifestStatus = {
+  manifestPath?: string;
+  finalStatus?: 'OK' | 'WARN' | 'ERROR' | 'UNKNOWN';
+  finalExitCode?: number;
+  failedRequiredSteps: string[];
+  optionalSkips: string[];
+  downstreamSkips: string[];
+  noWorkShortCircuit?: boolean;
+  policyMode?: string;
+  detail?: string;
+};
+
+function toStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+function normalizeFinalStatus(value: unknown): 'OK' | 'WARN' | 'ERROR' | 'UNKNOWN' | undefined {
+  return value === 'OK' || value === 'WARN' || value === 'ERROR' || value === 'UNKNOWN'
+    ? value
+    : undefined;
+}
+
+function resolveRunDailyManifestCandidate(env: NodeJS.ProcessEnv, scriptPath: string | undefined): string | undefined {
+  const explicitPath = pickFirstEnvValue(env, ['RUN_DAILY_MANIFEST_PATH', 'RUN_DAILY_SUMMARY_MANIFEST_PATH']);
+  if (explicitPath) {
+    try {
+      return path.isAbsolute(explicitPath) ? explicitPath : resolveFromRuntimeCwd(explicitPath);
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (!scriptPath) return undefined;
+  return path.resolve(/* turbopackIgnore: true */ path.dirname(scriptPath), 'log', 'cron', RUN_DAILY_MANIFEST_FILENAME);
+}
+
+export function resolveRunDailyManifestStatus(
+  env: NodeJS.ProcessEnv,
+  scriptPath: string | undefined,
+): RunDailyManifestStatus {
+  const manifestPath = resolveRunDailyManifestCandidate(env, scriptPath);
+  if (!manifestPath || !existsSync(/* turbopackIgnore: true */ manifestPath)) {
+    return {
+      failedRequiredSteps: [],
+      optionalSkips: [],
+      downstreamSkips: [],
+    };
+  }
+
+  try {
+    const raw = readBoundedFileTail(manifestPath, 64 * 1024);
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      manifestPath,
+      finalStatus: normalizeFinalStatus(parsed.finalStatus),
+      finalExitCode: typeof parsed.finalExitCode === 'number' ? parsed.finalExitCode : undefined,
+      failedRequiredSteps: toStringList(parsed.failedRequiredSteps),
+      optionalSkips: toStringList(parsed.optionalSkips),
+      downstreamSkips: toStringList(parsed.downstreamSkips),
+      noWorkShortCircuit: typeof parsed.noWorkShortCircuit === 'boolean' ? parsed.noWorkShortCircuit : undefined,
+      policyMode: typeof parsed.policyMode === 'string' ? parsed.policyMode : undefined,
+    };
+  } catch (error) {
+    return {
+      manifestPath,
+      failedRequiredSteps: [],
+      optionalSkips: [],
+      downstreamSkips: [],
+      detail: error instanceof Error ? error.message : 'manifest_parse_failed',
+    };
+  }
+}
+
+export function readBoundedFileTail(filePath: string, maxBytes = RUN_DAILY_LOG_TAIL_BYTES): string {
+  const stats = statSync(/* turbopackIgnore: true */ filePath);
+  const length = Math.max(0, Math.min(stats.size, Math.max(1024, maxBytes)));
+  const offset = Math.max(0, stats.size - length);
+  const buffer = Buffer.alloc(length);
+  const fd = openSync(/* turbopackIgnore: true */ filePath, 'r');
+  try {
+    readSync(fd, buffer, 0, length, offset);
+  } finally {
+    closeSync(fd);
+  }
+  return buffer.toString('utf8');
+}
+
+function parseKoreanSummarySection(text: string, headingPattern: RegExp): string[] {
+  const lines = text.split(/\r?\n/);
+  const output: string[] = [];
+  let collecting = false;
+
+  for (const line of lines) {
+    if (headingPattern.test(line)) {
+      collecting = true;
+      continue;
+    }
+
+    if (collecting && /^\[[0-9:]+\]/.test(line) && !line.includes(' - ')) {
+      break;
+    }
+
+    if (collecting) {
+      const match = line.match(/\s-\s(.+)$/);
+      if (match?.[1]) output.push(match[1].trim());
+    }
+  }
+
+  return output;
+}
+
+export function parseRunDailyLogTailStatus(logPath: string | undefined): RunDailyManifestStatus {
+  if (!logPath || !existsSync(/* turbopackIgnore: true */ logPath)) {
+    return {
+      failedRequiredSteps: [],
+      optionalSkips: [],
+      downstreamSkips: [],
+    };
+  }
+
+  try {
+    const tail = readBoundedFileTail(logPath);
+    const failedRequiredSteps = parseKoreanSummarySection(tail, /실패한 필수 단계 요약/);
+    const optionalSkips = parseKoreanSummarySection(tail, /선택적으로 건너뛴 단계 요약/);
+    const downstreamSkips = parseKoreanSummarySection(tail, /연쇄적으로 건너뛴 단계 요약/);
+    const finalStatus = failedRequiredSteps.length > 0
+      ? 'ERROR'
+      : optionalSkips.length > 0 || downstreamSkips.length > 0
+        ? 'WARN'
+        : undefined;
+
+    return {
+      finalStatus,
+      failedRequiredSteps,
+      optionalSkips,
+      downstreamSkips,
+    };
+  } catch (error) {
+    return {
+      failedRequiredSteps: [],
+      optionalSkips: [],
+      downstreamSkips: [],
+      detail: error instanceof Error ? error.message : 'log_parse_failed',
+    };
   }
 }
 
