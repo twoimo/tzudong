@@ -262,6 +262,21 @@ describe('insight system status checklist normalization', () => {
         expect(staleSummary).not.toBeNull();
         expect(staleSummary?.statusText).toBe('실행 권한 필요');
         expect(staleSummary?.statusTone).toBe('warning');
+
+        const failedStatus: AdminInsightSystemStatusResponse = {
+            ...status,
+            runDaily: {
+                ...status.runDaily,
+                finalStatus: 'ERROR',
+                failedRequiredSteps: ['Step 13 (Supabase) - exit=23'],
+            },
+        };
+
+        const failedSummary = summarizeRunDailyReadiness(failedStatus);
+        expect(failedSummary).not.toBeNull();
+        expect(failedSummary?.statusText).toBe('필수 단계 실패');
+        expect(failedSummary?.statusTone).toBe('critical');
+        expect(failedSummary?.detail).toContain('Step 13 (Supabase)');
     });
 
     test('summarizes run_daily readiness from checklist-only signal', () => {

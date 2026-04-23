@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, MobileSheetStepIndicator, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useDeviceType } from "@/hooks/useDeviceType";
 
 // 음식 사진용 압축 옵션 (스토리지 최적화)
@@ -129,6 +129,13 @@ interface RestaurantNameRow {
 }
 
 type VerificationInputMode = "ai" | "manual";
+type ReviewFormStep = 1 | 2 | 3;
+
+const REVIEW_FORM_STEPS: Array<{ id: ReviewFormStep; label: string }> = [
+    { id: 1, label: "인증" },
+    { id: 2, label: "방문 정보" },
+    { id: 3, label: "리뷰" },
+];
 
 export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false }: ReviewModalProps) {
     const { user } = useAuth();
@@ -146,12 +153,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     // OCR 분석 상태
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [verificationInputMode, setVerificationInputMode] = useState<VerificationInputMode>("ai");
+    const [currentStep, setCurrentStep] = useState<ReviewFormStep>(1);
 
     // 맛집 검색 상태
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<{ id: string; name: string }[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<{ id: string; name: string } | null>(restaurant);
+    const reviewTargetRestaurant = selectedRestaurant || restaurant;
 
     // 드래그 앤 드롭을 위한 ref들
     const verificationDropRef = useRef<HTMLDivElement>(null);
@@ -662,14 +671,50 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         setVerificationPhoto(null);
         setFoodPhotos([]);
         setVerificationInputMode("ai");
+        setCurrentStep(1);
         onClose();
     }, [onClose]);
 
     // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
     const isFormValid = useMemo(() => {
-        const targetRestaurant = selectedRestaurant || restaurant;
-        return visitedDate && visitedTime && targetRestaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
-    }, [visitedDate, visitedTime, selectedRestaurant, restaurant, categories.length, content, verificationPhoto, foodPhotos.length]);
+        return visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
+    }, [visitedDate, visitedTime, reviewTargetRestaurant?.id, categories.length, content, verificationPhoto, foodPhotos.length]);
+
+    const isStepValid = useMemo<Record<ReviewFormStep, boolean>>(() => ({
+        1: Boolean(verificationPhoto) && !isAnalyzing,
+        2: Boolean(visitedDate && visitedTime && reviewTargetRestaurant?.id && categories.length > 0),
+        3: Boolean(content.trim().length >= 20 && foodPhotos.length > 0),
+    }), [categories.length, content, foodPhotos.length, isAnalyzing, reviewTargetRestaurant?.id, verificationPhoto, visitedDate, visitedTime]);
+
+    const getStepValidationMessage = useCallback((step: ReviewFormStep) => {
+        if (step === 1) {
+            if (isAnalyzing) return "AI 분석이 끝난 뒤 다음 단계로 이동할 수 있어요.";
+            return "영수증 인증 사진을 먼저 첨부해주세요.";
+        }
+
+        if (step === 2) {
+            return "방문 맛집, 방문 날짜/시간, 카테고리를 모두 입력해주세요.";
+        }
+
+        return "음식 사진 1장 이상과 리뷰 내용 20자 이상을 입력해주세요.";
+    }, [isAnalyzing]);
+
+    const handleNextStep = useCallback(() => {
+        if (!isStepValid[currentStep]) {
+            toast({
+                title: "아직 다음 단계로 이동할 수 없어요",
+                description: getStepValidationMessage(currentStep),
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setCurrentStep((step) => Math.min(step + 1, 3) as ReviewFormStep);
+    }, [currentStep, getStepValidationMessage, isStepValid]);
+
+    const handlePreviousStep = useCallback(() => {
+        setCurrentStep((step) => Math.max(step - 1, 1) as ReviewFormStep);
+    }, []);
 
     // 임시 저장된 데이터 불러오기 (IndexedDB)
     const loadDraft = useCallback(async () => {
@@ -1378,23 +1423,26 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         </MobileSheetHeader>
 
                         <div className={mobileSheetStyles.content}>
-                            <div className="space-y-4">
-                                {/* 중요 공지 - 컴팩트 버전 */}
-                                <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
-                                    <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
-                                        <p className="font-semibold flex items-center gap-1">
-                                            📸 영수증 인증 가이드
-                                        </p>
-                                        <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
-                                            <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                            <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
-                                            <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
-                                        </ul>
-                                    </div>
-                                </Card>
+                            <MobileSheetStepIndicator steps={REVIEW_FORM_STEPS} currentStep={currentStep} className="grid-cols-3" />
 
-                                {/* 인증 사진 (최상단 배치) */}
-                                <div className="space-y-2">
+                            <div className="space-y-4">
+                                {currentStep === 1 && (
+                                    <>
+                                        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
+                                            <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
+                                                <p className="font-semibold flex items-center gap-1">
+                                                    📸 영수증 인증 가이드
+                                                </p>
+                                                <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
+                                                    <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
+                                                    <li><b>AI 자동 분석</b> 또는 <b>사진만 첨부</b> 후 직접 입력이 가능합니다</li>
+                                                    <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
+                                                </ul>
+                                            </div>
+                                        </Card>
+
+                                        {/* 인증 사진 (최상단 배치) */}
+                                        <div className="space-y-2">
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between gap-2 flex-wrap">
                                             <Label className="flex items-center gap-2">
@@ -1551,10 +1599,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             </div>
                                         )}
                                     </Card>
-                                </div>
+                                        </div>
+                                    </>
+                                )}
 
-                                {/* 방문 맛집 정보 */}
-                                <div className={`space-y-2 transition-all duration-500 ${(!selectedRestaurant && searchQuery && !isSearching)
+                                {currentStep === 2 && (
+                                    <>
+                                        {/* 방문 맛집 정보 */}
+                                        <div className={`space-y-2 transition-all duration-500 ${(!selectedRestaurant && searchQuery && !isSearching)
                                     ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                     : ""
                                     }`}>
@@ -1627,10 +1679,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             )}
                                         </div>
                                     )}
-                                </div>
+                                        </div>
 
-                                {/* 방문 날짜 및 시간 */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* 방문 날짜 및 시간 */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="visitDate" className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4" />
@@ -1661,10 +1713,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             enterKeyHint="next"
                                         />
                                     </div>
-                                </div>
+                                        </div>
 
-                                {/* 카테고리 */}
-                                <div className="space-y-2">
+                                        {/* 카테고리 */}
+                                        <div className="space-y-2">
                                     <Label>
                                         카테고리 <span className="text-red-500">*</span>
                                     </Label>
@@ -1740,11 +1792,15 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             ))}
                                         </div>
                                     )}
-                                </div>
+                                        </div>
+                                    </>
+                                )}
 
 
-                                {/* 음식 사진 */}
-                                <div className="space-y-2">
+                                {currentStep === 3 && (
+                                    <>
+                                        {/* 음식 사진 */}
+                                        <div className="space-y-2">
                                     <Label className="flex items-center gap-2">
                                         음식 사진 (다양한 각도) <span className="text-red-500">*</span>
                                     </Label>
@@ -1851,10 +1907,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
                                         <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
                                     </div>
-                                </div>
+                                        </div>
 
-                                {/* 리뷰 내용 */}
-                                <div className="space-y-3">
+                                        {/* 리뷰 내용 */}
+                                        <div className="space-y-3">
                                     <Label htmlFor="content">
                                         리뷰 내용 <span className="text-red-500">*</span>
                                     </Label>
@@ -1885,7 +1941,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     <p className="text-xs text-muted-foreground text-right">
                                         {content.length} / 최소 20자
                                     </p>
-                                </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -1902,37 +1960,66 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         {/* 푸터 */}
                         <div className={`${mobileSheetStyles.footer} space-y-3`}>
                             <div className="flex items-center justify-center text-xs text-muted-foreground">
-                                {isFormValid ? (
+                                {currentStep === 3 && isFormValid ? (
                                     <span className="flex items-center gap-1 text-green-600">
                                         <CheckCircle2 className="h-3 w-3" />
                                         모든 필수 항목이 입력되었습니다
                                     </span>
+                                ) : isStepValid[currentStep] ? (
+                                    <span className="flex items-center gap-1 text-green-600">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        다음 단계로 이동할 수 있어요
+                                    </span>
                                 ) : (
                                     <span className="flex items-center gap-1 text-amber-600">
                                         <AlertCircle className="h-3 w-3" />
-                                        필수 항목을 모두 입력해주세요
+                                        {getStepValidationMessage(currentStep)}
                                     </span>
                                 )}
                             </div>
 
                             <div className="flex gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleClose}
-                                    disabled={isSubmitting}
-                                    className="flex-1"
-                                >
-                                    취소
-                                </Button>
-                                <Button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={!isFormValid || isSubmitting}
-                                    className={`${mobileSheetStyles.primaryAction} flex-1`}
-                                >
-                                    {isSubmitting ? "등록 중..." : "리뷰 등록"}
-                                </Button>
+                                {currentStep === 1 ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleClose}
+                                        disabled={isSubmitting}
+                                        className="flex-1"
+                                    >
+                                        취소
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handlePreviousStep}
+                                        disabled={isSubmitting}
+                                        className="flex-1"
+                                    >
+                                        이전
+                                    </Button>
+                                )}
+
+                                {currentStep < 3 ? (
+                                    <Button
+                                        type="button"
+                                        onClick={handleNextStep}
+                                        disabled={!isStepValid[currentStep] || isSubmitting}
+                                        className={`${mobileSheetStyles.primaryAction} flex-1`}
+                                    >
+                                        다음
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={!isFormValid || isSubmitting}
+                                        className={`${mobileSheetStyles.primaryAction} flex-1`}
+                                    >
+                                        {isSubmitting ? "등록 중..." : "리뷰 등록"}
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
