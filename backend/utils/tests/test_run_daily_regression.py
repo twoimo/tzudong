@@ -8,6 +8,7 @@ import textwrap
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Callable, Optional
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +34,9 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertEqual("OK", manifest["finalStatus"])
         self.assertEqual(0, manifest["finalExitCode"])
         self.assertEqual([], manifest["failedRequiredSteps"])
+        self.assertEqual([], manifest["optionalSkips"])
+        self.assertEqual([], manifest["downstreamSkips"])
+        self.assertTrue(manifest["noWorkShortCircuit"])
         self.assertEqual("end_to_end", manifest["policyMode"])
 
     def test_transcript_failure_returns_non_zero_exit(self) -> None:
@@ -55,6 +59,13 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertIn("Gemini API 키", result.stdout)
         self.assertNotIn("모든 필수 단계가 완료되었습니다!", result.stdout)
 
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertEqual(1, manifest["finalExitCode"])
+        self.assertTrue(any("Step 08 (Chunk Multimodal)" in item for item in manifest["failedRequiredSteps"]))
+        self.assertEqual([], manifest["optionalSkips"])
+        self.assertTrue(any("Step 09~13 (Evaluation)" in item for item in manifest["downstreamSkips"]))
+
     def test_supabase_key_only_skips_insert_stage_in_local_mode(self) -> None:
         result = self._run_script(
             env_overrides={
@@ -69,6 +80,13 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertIn("Step 13 (Supabase) 선택 건너뜀", result.stdout)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY 또는 VITE_SUPABASE_PUBLISHABLE_KEY", result.stdout)
 
+        manifest = self._read_manifest()
+        self.assertEqual("WARN", manifest["finalStatus"])
+        self.assertEqual(0, manifest["finalExitCode"])
+        self.assertTrue(any("Step 13 (Supabase)" in item for item in manifest["optionalSkips"]))
+        self.assertEqual([], manifest["failedRequiredSteps"])
+        self.assertEqual([], manifest["downstreamSkips"])
+
     def test_supabase_insert_failure_returns_non_zero_exit(self) -> None:
         result = self._run_script(supabase_insert_exit=23, force_phase3=True)
 
@@ -81,6 +99,22 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertEqual("ERROR", manifest["finalStatus"])
         self.assertEqual(1, manifest["finalExitCode"])
         self.assertTrue(any("Step 13 (Supabase)" in item for item in manifest["failedRequiredSteps"]))
+
+    def test_manifest_write_failure_is_warn_only_and_preserves_success_exit(self) -> None:
+        blocked_manifest_dir = self.root / "project" / "tmp" / "blocked-manifest"
+
+        def fixture_mutator(_project_root: Path, _state_dir: Path) -> None:
+            blocked_manifest_dir.parent.mkdir(parents=True, exist_ok=True)
+            blocked_manifest_dir.write_text("not a directory\n", encoding="utf-8")
+
+        result = self._run_script(
+            env_overrides={"RUN_DAILY_MANIFEST_PATH": str(blocked_manifest_dir / "current-summary.json")},
+            fixture_mutator=fixture_mutator,
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("run_daily summary manifest write failed (warn-only)", result.stdout)
+        self.assertFalse((blocked_manifest_dir / "current-summary.json").exists())
 
     def test_ci_validation_target_branch_uses_checked_out_branch_for_sync(self) -> None:
         target_branch = "verify-target"
@@ -260,10 +294,13 @@ class RunDailyRegressionTests(unittest.TestCase):
         final_sync_stage_failure: bool = False,
         env_overrides: dict[str, str | None] | None = None,
         force_phase3: bool = False,
+        fixture_mutator: Optional[Callable[[Path, Path], None]] = None,
     ) -> subprocess.CompletedProcess[str]:
         project_root = self.root / "project"
         state_dir = self.root / "state"
         self._build_fixture(project_root, state_dir)
+        if fixture_mutator is not None:
+            fixture_mutator(project_root, state_dir)
         if force_phase3:
             (project_root / "backend" / "restaurant-crawling" / "data" / "tzuyang" / "transcript" / "pending.jsonl").write_text(
                 '{"stub": true}\n', encoding="utf-8"
