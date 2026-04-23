@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { debugLog } from '@/lib/debug-log';
+import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 
 export interface ConflictCheckResult {
   hasConflict: boolean;
@@ -98,11 +99,10 @@ function calculateSimilarity(str1: string, str2: string): number {
  * 맛집 중복 체크 (Levenshtein Distance 기반)
  * 
  * 검사 로직:
- * 1. status가 'approved'인 레스토랑 중에서만 검사
- * 2. 정규화된 지번주소가 일치하는 레스토랑 필터링
+ * 1. 삭제되지 않은 레스토랑 중 동일 YouTube 영상 + 유사한 이름이 있으면 즉시 중복 판정
+ * 2. 아니면 정규화된 지번주소가 일치하는 레스토랑 필터링
  *    - 정규화: 공백 제거, 층/호수 제거 (지하n층, 지상n층, n층, n호)
  * 3. 이름 유사도 85% 이상이면 중복으로 판정
- * 4. YouTube 링크는 중복 판단에 사용하지 않음 (상위에서 별도 처리)
  */
 export async function checkRestaurantDuplicate(
   name: string,
@@ -123,11 +123,13 @@ export async function checkRestaurantDuplicate(
       youtubeLink,
     });
 
-    // 모든 승인된 맛집들 조회 후 정규화된 주소로 필터링
+    const inputVideoId = extractVideoIdFromYoutubeLink(youtubeLink);
+
+    // 삭제되지 않은 맛집들 조회 후 중복 여부 확인
     let query = supabase
       .from('restaurants')
       .select('id, name:approved_name, jibun_address, road_address, status, youtube_link')
-      .eq('status', 'approved'); // ✅ approved 상태만 검사
+      .neq('status', 'deleted');
 
     // 수정 시 자기 자신 제외
     if (restaurantId) {
@@ -153,12 +155,48 @@ export async function checkRestaurantDuplicate(
 
     const typedRestaurants = (allRestaurants || []) as RestaurantRecord[];
 
+    if (inputVideoId) {
+      const sameVideoRestaurant = typedRestaurants.find((restaurant) => {
+        if (!restaurant.name) return false;
+
+        const restaurantVideoId = extractVideoIdFromYoutubeLink(restaurant.youtube_link);
+        if (!restaurantVideoId || restaurantVideoId !== inputVideoId) return false;
+
+        return calculateSimilarity(name, restaurant.name) >= NAME_SIMILARITY_THRESHOLD;
+      });
+
+      if (sameVideoRestaurant) {
+        const similarity = calculateSimilarity(name, sameVideoRestaurant.name);
+
+        debugLog('⚠️ 동일 YouTube 링크 기반 중복 감지!', {
+          current: name,
+          existing: sameVideoRestaurant.name,
+          youtubeLink,
+          matchedYoutubeLink: sameVideoRestaurant.youtube_link,
+          similarity: Math.round(similarity * 100) + '%',
+        });
+
+        return {
+          isDuplicate: true,
+          matchedRestaurant: {
+            id: sameVideoRestaurant.id,
+            name: sameVideoRestaurant.name,
+            jibun_address: sameVideoRestaurant.jibun_address || '',
+            road_address: sameVideoRestaurant.road_address || null,
+            youtube_link: sameVideoRestaurant.youtube_link || null,
+          },
+          similarityScore: similarity,
+          reason: `같은 YouTube 영상에 유사한 이름의 맛집이 이미 존재합니다 (유사도: ${Math.round(similarity * 100)}%)`,
+        };
+      }
+    }
+
     // 정규화된 주소가 일치하는 레스토랑만 필터링
     const existingRestaurants = typedRestaurants.filter(r =>
       r.jibun_address && normalizeAddress(r.jibun_address) === normalizedInputAddress
     );
 
-    debugLog('📊 정규화된 주소 일치 approved 레스토랑:', existingRestaurants.length, '개');
+    debugLog('📊 정규화된 주소 일치 active 레스토랑:', existingRestaurants.length, '개');
 
     if (existingRestaurants.length === 0) {
       debugLog('✅ 중복 없음 (정규화된 주소 일치하는 approved 레스토랑 없음)');

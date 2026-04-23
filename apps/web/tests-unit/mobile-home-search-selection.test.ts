@@ -3,9 +3,12 @@ import { describe, expect, test } from 'bun:test';
 import type { Restaurant } from '../types/restaurant';
 import {
     buildPostSearchSwipeCandidates,
+    buildRestaurantsForSwipe,
     getActiveSearchedRestaurant,
     isSameRestaurantSelection,
     releaseSearchSelectionOwnership,
+    resolveReleasedSearchSelectionResetPlan,
+    resolveSearchSelectionReleasePlan,
     shouldHandleSearchSelection,
 } from '../lib/mobile-home-search-selection';
 
@@ -103,6 +106,75 @@ describe('mobile home search selection helpers', () => {
             panelRestaurant,
             isPanelOpen: true,
         });
+    });
+
+    test('plans search selection release only once for an active searched restaurant', () => {
+        const activeSearchedRestaurant = makeRestaurant({ id: 'search-1' });
+
+        expect(resolveSearchSelectionReleasePlan({
+            activeSearchedRestaurant,
+            hasReleaseHandler: true,
+            releasedSearchSelectionId: null,
+        })).toEqual({
+            nextReleasedSearchSelectionId: 'search-1',
+            shouldRelease: true,
+        });
+
+        expect(resolveSearchSelectionReleasePlan({
+            activeSearchedRestaurant,
+            hasReleaseHandler: true,
+            releasedSearchSelectionId: 'search-1',
+        })).toEqual({
+            nextReleasedSearchSelectionId: 'search-1',
+            shouldRelease: false,
+        });
+
+        expect(resolveSearchSelectionReleasePlan({
+            activeSearchedRestaurant,
+            hasReleaseHandler: false,
+            releasedSearchSelectionId: null,
+        })).toEqual({
+            nextReleasedSearchSelectionId: null,
+            shouldRelease: false,
+        });
+    });
+
+    test('resets released search selection id when active search changes or clears', () => {
+        expect(resolveReleasedSearchSelectionResetPlan({
+            activeSearchedRestaurant: null,
+            releasedSearchSelectionId: 'search-1',
+        })).toEqual({ nextReleasedSearchSelectionId: null });
+
+        expect(resolveReleasedSearchSelectionResetPlan({
+            activeSearchedRestaurant: makeRestaurant({ id: 'search-2' }),
+            releasedSearchSelectionId: 'search-1',
+        })).toEqual({ nextReleasedSearchSelectionId: null });
+
+        expect(resolveReleasedSearchSelectionResetPlan({
+            activeSearchedRestaurant: makeRestaurant({ id: 'search-1' }),
+            releasedSearchSelectionId: 'search-1',
+        })).toEqual({ nextReleasedSearchSelectionId: 'search-1' });
+    });
+
+    test('adds active searched restaurant to swipe candidates when it is outside display ids', () => {
+        const visibleRestaurant = makeRestaurant({ id: 'visible-1' });
+        const searchedRestaurant = makeRestaurant({ id: 'search-1' });
+
+        expect(buildRestaurantsForSwipe({
+            activeSearchedRestaurant: searchedRestaurant,
+            displayRestaurantIds: new Set([visibleRestaurant.id]),
+            displayRestaurants: [visibleRestaurant],
+        }).map((restaurant) => restaurant.id)).toEqual(['visible-1', 'search-1']);
+    });
+
+    test('does not duplicate active searched restaurant already present in display ids', () => {
+        const searchedRestaurant = makeRestaurant({ id: 'search-1' });
+
+        expect(buildRestaurantsForSwipe({
+            activeSearchedRestaurant: searchedRestaurant,
+            displayRestaurantIds: new Set([searchedRestaurant.id]),
+            displayRestaurants: [searchedRestaurant],
+        }).map((restaurant) => restaurant.id)).toEqual(['search-1']);
     });
 
     test('adds the nearest fallback restaurant when only one visible restaurant remains after search', () => {

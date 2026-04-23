@@ -4,19 +4,41 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import Header from '@/components/layout/Header';
 import FloatingNavButtons, { OverlayPanelType } from '@/components/layout/FloatingNavButtons';
 import OverlayPagePanel from '@/components/layout/OverlayPagePanel';
-import AuthModal from '@/components/auth/AuthModal';
-import { ProfileModal } from '@/components/profile/ProfileModal';
-import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
-import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
-import CombinedPopup from '@/components/layout/CombinedPopup';
 import { useAuth } from '@/contexts/AuthContext';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
 
 // 지연 로딩
+const Header = dynamic(() => import('@/components/layout/Header'), {
+    ssr: false,
+    loading: () => <div className="h-12 border-b border-border bg-background md:h-14" aria-hidden="true" />,
+});
+
+const AuthModal = dynamic(() => import('@/components/auth/AuthModal'), {
+    ssr: false,
+});
+
+const ProfileModal = dynamic(
+    () => import('@/components/profile/ProfileModal').then((mod) => ({ default: mod.ProfileModal })),
+    { ssr: false }
+);
+
+const NicknameSetupModal = dynamic(
+    () => import('@/components/profile/NicknameSetupModal').then((mod) => ({ default: mod.NicknameSetupModal })),
+    { ssr: false }
+);
+
+const AdminRestaurantModal = dynamic(
+    () => import('@/components/admin/AdminRestaurantModal').then((mod) => ({ default: mod.AdminRestaurantModal })),
+    { ssr: false }
+);
+
+const CombinedPopup = dynamic(() => import('@/components/layout/CombinedPopup'), {
+    ssr: false,
+});
+
 const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPrefetcher'), {
     ssr: false,
 });

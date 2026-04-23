@@ -88,6 +88,53 @@ export const releaseSearchSelectionOwnership = (
     };
 };
 
+export const resolveSearchSelectionReleasePlan = ({
+    activeSearchedRestaurant,
+    hasReleaseHandler,
+    releasedSearchSelectionId,
+}: {
+    activeSearchedRestaurant: Pick<Restaurant, 'id'> | null;
+    hasReleaseHandler: boolean;
+    releasedSearchSelectionId: string | null;
+}) => {
+    if (!activeSearchedRestaurant || !hasReleaseHandler) {
+        return {
+            nextReleasedSearchSelectionId: releasedSearchSelectionId,
+            shouldRelease: false,
+        } as const;
+    }
+
+    if (releasedSearchSelectionId === activeSearchedRestaurant.id) {
+        return {
+            nextReleasedSearchSelectionId: releasedSearchSelectionId,
+            shouldRelease: false,
+        } as const;
+    }
+
+    return {
+        nextReleasedSearchSelectionId: activeSearchedRestaurant.id,
+        shouldRelease: true,
+    } as const;
+};
+
+export const resolveReleasedSearchSelectionResetPlan = ({
+    activeSearchedRestaurant,
+    releasedSearchSelectionId,
+}: {
+    activeSearchedRestaurant: Pick<Restaurant, 'id'> | null;
+    releasedSearchSelectionId: string | null;
+}) => {
+    if (!activeSearchedRestaurant) {
+        return { nextReleasedSearchSelectionId: null } as const;
+    }
+
+    if (releasedSearchSelectionId && releasedSearchSelectionId !== activeSearchedRestaurant.id) {
+        return { nextReleasedSearchSelectionId: null } as const;
+    }
+
+    return { nextReleasedSearchSelectionId: releasedSearchSelectionId } as const;
+};
+
 const dedupeRestaurants = (restaurants: Restaurant[]): Restaurant[] => {
     const uniqueRestaurants: Restaurant[] = [];
 
@@ -127,6 +174,22 @@ type BuildPostSearchSwipeCandidatesInput = {
     visibleRestaurants: Restaurant[];
     allRestaurants: Restaurant[];
     activeSearchedRestaurant: Restaurant | null;
+};
+
+export const buildRestaurantsForSwipe = ({
+    activeSearchedRestaurant,
+    displayRestaurantIds,
+    displayRestaurants,
+}: {
+    activeSearchedRestaurant: Restaurant | null;
+    displayRestaurantIds: Set<string>;
+    displayRestaurants: Restaurant[];
+}): Restaurant[] => {
+    if (!activeSearchedRestaurant || displayRestaurantIds.has(activeSearchedRestaurant.id)) {
+        return displayRestaurants;
+    }
+
+    return [...displayRestaurants, activeSearchedRestaurant];
 };
 
 export const buildPostSearchSwipeCandidates = ({

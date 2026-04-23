@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 import {
     ADMIN_MODAL_ACTION,
@@ -33,24 +34,9 @@ import {
     ADMIN_MODAL_SCROLL_BODY,
 } from "@/components/admin/admin-modal-styles";
 
-// YouTube Video ID 추출 함수
-const extractVideoId = (url: string): string | null => {
-    const patterns = [
-        /youtube\.com\/watch\?v=([^&]+)/,  // Standard watch URL
-        /youtu\.be\/([^?]+)/,              // Shortened URL
-        /youtube\.com\/embed\/([^?]+)/,    // Embed URL
-    ];
-
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
-    }
-    return null;
-};
-
 // YouTube 메타데이터 가져오기 함수
 const fetchYouTubeMeta = async (youtubeLink: string) => {
-    const videoId = extractVideoId(youtubeLink);
+    const videoId = extractVideoIdFromYoutubeLink(youtubeLink);
     if (!videoId) {
         console.error('Invalid YouTube URL:', youtubeLink);
         return null;
@@ -119,7 +105,7 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
 // unique_id 생성 함수 (Python 버전과 동일하게 SHA-256 사용)
 // youtube_link + name + tzuyang_review 순서로 해시
 const generateUniqueId = async (youtubeLink: string, name: string, tzuyangReview: string): Promise<string> => {
-    const keyString = (youtubeLink || "") + (name || "") + (tzuyangReview || "");
+    const keyString = (canonicalizeYoutubeLink(youtubeLink) || "") + (name || "") + (tzuyangReview || "");
 
     // SHA-256 해시 생성 (Web Crypto API 사용)
     const encoder = new TextEncoder();
@@ -129,6 +115,15 @@ const generateUniqueId = async (youtubeLink: string, name: string, tzuyangReview
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     return hashHex;
+};
+
+const isRestaurantIdentityDuplicateError = (error: unknown): boolean => {
+    if (!error || typeof error !== "object") return false;
+
+    const candidate = error as { code?: string; message?: string; details?: string };
+    const combinedMessage = `${candidate.message || ""} ${candidate.details || ""}`;
+
+    return candidate.code === "23505" && combinedMessage.includes("idx_restaurants_active_video_identity");
 };
 
 interface AdminRestaurantModalProps {
@@ -567,7 +562,7 @@ export function AdminRestaurantModal({
                 let hasError = false; // 에러 플래그
 
                 for (const newReview of newReviews) {
-                    const youtubeLink = newReview.youtube_link.trim();
+                    const youtubeLink = canonicalizeYoutubeLink(newReview.youtube_link.trim()) || newReview.youtube_link.trim();
                     const tzuyangReview = newReview.tzuyang_review.trim();
 
                     // unique_id 생성 (youtube_link + name + 쯔양리뷰) - Python과 동일
@@ -587,9 +582,10 @@ export function AdminRestaurantModal({
 
                     if (duplicateCheck.isDuplicate) {
                         // 중복 발견 - 유튜브 링크 비교
-                        const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
+                        const matchedYoutubeVideoId = extractVideoIdFromYoutubeLink(duplicateCheck.matchedRestaurant?.youtube_link);
+                        const currentYoutubeVideoId = extractVideoIdFromYoutubeLink(youtubeLink);
 
-                        if (youtubeLink === matchedYoutubeLink) {
+                        if (currentYoutubeVideoId && matchedYoutubeVideoId === currentYoutubeVideoId) {
                             // 같은 유튜브 링크 - 중복 에러
                             toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 이미 동일한 유튜브 링크가 존재합니다.`);
                             hasError = true;
@@ -625,6 +621,11 @@ export function AdminRestaurantModal({
 
                     if (insertError) {
                         console.error('신규 레코드 추가 실패:', insertError);
+                        if (isRestaurantIdentityDuplicateError(insertError)) {
+                            toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 동일 영상 레코드가 이미 존재합니다.`);
+                            hasError = true;
+                            break;
+                        }
                         toast.error(`신규 유튜브 링크 추가 실패: ${insertError.message}`);
                         hasError = true;
                         break;
@@ -667,6 +668,27 @@ export function AdminRestaurantModal({
                 }
             } else {
                 // 새 맛집 등록
+                const primaryYoutubeLink = canonicalizeYoutubeLink(formData.youtube_reviews[0]?.youtube_link?.trim() || null);
+                const primaryReviewText = formData.youtube_reviews[0]?.tzuyang_review?.trim() || "";
+
+                if (primaryYoutubeLink && formData.jibun_address.trim()) {
+                    const duplicateCheck = await checkRestaurantDuplicate(
+                        formData.name.trim(),
+                        formData.jibun_address.trim(),
+                        undefined,
+                        primaryYoutubeLink
+                    );
+
+                    const matchedYoutubeVideoId = extractVideoIdFromYoutubeLink(duplicateCheck.matchedRestaurant?.youtube_link);
+                    const currentYoutubeVideoId = extractVideoIdFromYoutubeLink(primaryYoutubeLink);
+
+                    if (duplicateCheck.isDuplicate && currentYoutubeVideoId && matchedYoutubeVideoId === currentYoutubeVideoId) {
+                        toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 이미 동일한 유튜브 링크가 존재합니다.`);
+                        setIsSubmitting(false);
+                        return;
+                    }
+                }
+
                 const restaurantData = {
                     approved_name: formData.name.trim(), // approved_name 동기화
                     road_address: formData.road_address.trim(),
@@ -675,14 +697,27 @@ export function AdminRestaurantModal({
                     address_elements: formData.address_elements || null,
                     phone: formData.phone.trim() || null,
                     categories: formData.categories,
-                    youtube_link: formData.youtube_reviews[0]?.youtube_link?.trim() || null,
-                    tzuyang_review: formData.youtube_reviews[0]?.tzuyang_review?.trim() || null,
+                    youtube_link: primaryYoutubeLink,
+                    tzuyang_review: primaryReviewText || null,
                     lat,
                     lng,
+                    trace_id: primaryYoutubeLink
+                        ? await generateUniqueId(primaryYoutubeLink, formData.name.trim(), primaryReviewText)
+                        : null,
+                    status: 'approved',
+                    geocoding_success: true,
+                    is_missing: false,
+                    is_not_selected: false,
+                    source_type: 'admin',
                 };
 
                 const { error } = await supabase.from("restaurants" as never).insert(restaurantData as never);
-                if (error) throw error;
+                if (error) {
+                    if (isRestaurantIdentityDuplicateError(error)) {
+                        throw new Error(`"${formData.name.trim()}" 음식점에 동일 영상 레코드가 이미 존재합니다.`);
+                    }
+                    throw error;
+                }
 
                 toast.success("맛집이 등록되었습니다");
                 onSuccess();

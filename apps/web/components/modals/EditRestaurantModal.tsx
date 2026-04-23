@@ -15,6 +15,9 @@ import { Restaurant } from "@/types/restaurant";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/editRequestDraftDB";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 interface EditRestaurantModalProps {
     isOpen: boolean;
@@ -30,6 +33,7 @@ interface EditRestaurantModalProps {
 }
 
 export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData }: EditRestaurantModalProps) {
+    const { isMobileOrTablet } = useDeviceType();
     const [editFormData, setEditFormData] = useState(initialFormData);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -217,6 +221,221 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             loadDraft();
         }
     }, [isOpen, restaurant?.id, loadDraft]);
+
+    if (isMobileOrTablet) {
+        return (
+            <BottomSheet
+                isOpen={isOpen}
+                onClose={onClose}
+                {...MOBILE_FULL_FORM_SHEET}
+                layoutSource="edit-restaurant-modal"
+                className="z-[110]"
+                ariaLabelledBy="edit-restaurant-sheet-title"
+                ariaDescribedBy="edit-restaurant-sheet-description"
+            >
+                {isOpen && (
+                    <div className={mobileSheetStyles.frame}>
+                    <MobileSheetHeader
+                        title="맛집 수정 요청"
+                        description="해당 맛집의 유튜브 영상별 정보를 수정해주세요"
+                        titleId="edit-restaurant-sheet-title"
+                        descriptionId="edit-restaurant-sheet-description"
+                        action={(
+                            <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 요청 닫기" onClick={onClose}>
+                                <X className="h-5 w-5" />
+                            </Button>
+                        )}
+                    >
+                        {lastSavedAt && (
+                            <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                                {isSaving ? (
+                                    <>
+                                        <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
+                                        <span>저장 중</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                                        <span className="text-green-600">
+                                            저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </MobileSheetHeader>
+
+                    {restaurant && (
+                        <form onSubmit={handleSubmit} className={mobileSheetStyles.content}>
+                            {/* 공통 정보 입력 */}
+                            <div className={`${mobileSheetStyles.mutedSection} space-y-4`}>
+                                <h3 className="font-semibold text-lg">공통 정보</h3>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">
+                                        맛집 이름 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        value={editFormData.name}
+                                        onChange={(e) => handleEditFormChange('name', e.target.value)}
+                                        placeholder="맛집 이름을 입력해주세요"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="address">
+                                        주소 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="address"
+                                        value={editFormData.address}
+                                        onChange={(e) => handleEditFormChange('address', e.target.value)}
+                                        placeholder="주소를 입력해주세요"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="phone">전화번호</Label>
+                                    <Input
+                                        id="phone"
+                                        value={editFormData.phone}
+                                        onChange={(e) => handleEditFormChange('phone', e.target.value)}
+                                        placeholder="전화번호를 입력해주세요"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="category">
+                                        카테고리 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen} modal={true}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={isCategoryPopoverOpen}
+                                                className="w-full justify-between"
+                                                type="button"
+                                            >
+                                                {editFormData.category.length > 0
+                                                    ? `${editFormData.category.length}개 선택됨`
+                                                    : "카테고리를 선택해주세요"
+                                                }
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            className="w-full p-0 z-[200]"
+                                            align="start"
+                                            onInteractOutside={(e) => {
+                                                // Dialog 내부 클릭 시 Popover가 닫히지 않도록 방지
+                                                e.preventDefault();
+                                            }}
+                                        >
+                                            <Command>
+                                                <CommandInput placeholder="카테고리 검색..." />
+                                                <CommandList>
+                                                    <CommandEmpty>카테고리를 찾을 수 없습니다.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {[
+                                                            "한식", "중식", "일식", "양식", "분식", "치킨·피자",
+                                                            "고기", "족발·보쌈", "돈까스·회", "아시안",
+                                                            "패스트푸드", "카페·디저트", "기타"
+                                                        ].map((category) => {
+                                                            const isSelected = editFormData.category.includes(category);
+                                                            return (
+                                                                <CommandItem
+                                                                    key={category}
+                                                                    onSelect={() => {
+                                                                        const newCategories = isSelected
+                                                                            ? editFormData.category.filter(c => c !== category)
+                                                                            : [...editFormData.category, category];
+                                                                        handleEditFormChange('category', newCategories);
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                                                                    />
+                                                                    {category}
+                                                                </CommandItem>
+                                                            );
+                                                        })}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    {editFormData.category.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {editFormData.category.map((category) => (
+                                                <Badge key={category} variant="secondary" className="text-xs">
+                                                    {category}
+                                                    <button
+                                                        type="button"
+                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                                        onClick={() => {
+                                                            const newCategories = editFormData.category.filter(c => c !== category);
+                                                            handleEditFormChange('category', newCategories);
+                                                        }}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 유튜브 영상별 정보 */}
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-lg">유튜브 영상별 정보</h3>
+
+                                {editFormData.youtube_reviews.map((review, index) => (
+                                    <Card key={index} className="p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Badge variant="outline">영상 {index + 1}</Badge>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>유튜브 링크</Label>
+                                            <Input
+                                                value={review.youtube_link}
+                                                onChange={(e) => handleYoutubeReviewChange(index, 'youtube_link', e.target.value)}
+                                                placeholder="https://www.youtube.com/watch?v=..."
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>쯔양의 리뷰</Label>
+                                            <Textarea
+                                                value={review.tzuyang_review}
+                                                onChange={(e) => handleYoutubeReviewChange(index, 'tzuyang_review', e.target.value)}
+                                                placeholder="쯔양의 리뷰 내용을 입력해주세요"
+                                                rows={3}
+                                            />
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            <div className={`-mx-4 ${mobileSheetStyles.footer} flex gap-2`}>
+                                <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isSubmitting}>
+                                    취소
+                                </Button>
+                                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90" disabled={isSubmitting}>
+                                    {isSubmitting ? '제출 중...' : '수정 요청 제출'}
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+                    </div>
+                )}
+            </BottomSheet>
+        );
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>

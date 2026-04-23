@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { Restaurant, Region } from '@/types/restaurant';
-import { FilterState } from '@/components/filters/FilterPanel';
+import type { Restaurant, Region } from '@/types/restaurant';
+import type { FilterState } from '@/components/filters/filter-state';
 
 interface UseHomeHandlersProps {
     setFilters: React.Dispatch<React.SetStateAction<FilterState>>;

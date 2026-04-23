@@ -18,6 +18,17 @@ export function extractVideoIdFromYoutubeLink(link: string | null | undefined): 
     return null;
 }
 
+export function canonicalizeYoutubeLink(link: string | null | undefined): string | null {
+    const videoId = extractVideoIdFromYoutubeLink(link);
+    if (!videoId) {
+        if (typeof link !== 'string') return null;
+        const trimmed = link.trim();
+        return trimmed.length > 0 ? trimmed : null;
+    }
+
+    return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
 export function toDisplayAddress(
     roadAddress: string | null,
     jibunAddress: string | null,

@@ -23,6 +23,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { saveDraft as saveEditDraft, getDraft as getEditDraft, deleteDraft as deleteEditDraft } from "@/lib/reviewDraftDB";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { useDeviceType } from "@/hooks/useDeviceType";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -100,6 +103,7 @@ type Category = typeof CATEGORIES[number];
 
 export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEditModalProps) {
     const { user } = useAuth();
+    const { isMobileOrTablet } = useDeviceType();
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [newFoodPhotos, setNewFoodPhotos] = useState<File[]>([]);
@@ -456,6 +460,341 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Check if this is a rejected review
     const isRejected = review?.adminNote?.includes("거부");
+
+    if (isMobileOrTablet) {
+        return (
+            <BottomSheet
+                isOpen={isOpen}
+                onClose={handleClose}
+                {...MOBILE_FULL_FORM_SHEET}
+                layoutSource="review-edit-modal"
+                className="z-[110]"
+                ariaLabelledBy="review-edit-sheet-title"
+                ariaDescribedBy="review-edit-sheet-description"
+            >
+                {isOpen && review && (
+                    <div className={mobileSheetStyles.frame}>
+                        <div className={`${mobileSheetStyles.header} relative shrink-0`}>
+                            {/* 자동 저장 상태 표시 */}
+                            <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                                {lastSavedAt && (
+                                    <>
+                                        <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                                        <span className="text-green-600">
+                                            저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                    <h2 id="review-edit-sheet-title" className={mobileSheetStyles.title}>
+                                        {isRejected ? "리뷰 수정 후 재제출" : "리뷰 수정"}
+                                    </h2>
+                                    <p id="review-edit-sheet-description" className="mt-1 text-sm text-muted-foreground">
+                                        <span className="font-medium text-foreground">{review.restaurantName}</span>
+                                    </p>
+                                </div>
+                                <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 수정 닫기">
+                                    <XIcon className="h-5 w-5" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className={mobileSheetStyles.content}>
+                            <div className="space-y-5">
+                                {/* Rejection reason display */}
+                                {isRejected && review.adminNote && (
+                                    <Alert className="bg-red-50 border-red-200">
+                                        <AlertCircle className="h-4 w-4 text-red-600" />
+                                        <AlertDescription className="text-red-800">
+                                            <div className="font-semibold mb-1">이전 거부 사유</div>
+                                            <p className="text-sm">
+                                                {review.adminNote.startsWith("거부: ")
+                                                    ? review.adminNote.substring(4)
+                                                    : review.adminNote}
+                                            </p>
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {/* Edit notice */}
+                                <Alert className="bg-amber-50 border-amber-200">
+                                    <Info className="h-4 w-4 text-amber-600" />
+                                    <AlertDescription className="text-amber-800 text-sm flex flex-col gap-0.5">
+                                        <span>수정 시 관리자 재검토가 필요합니다.</span>
+                                        <span>승인 전까지 리뷰가 비공개 처리됩니다.</span>
+                                    </AlertDescription>
+                                </Alert>
+
+
+                                {/* Category selection */}
+                                <div className="space-y-2">
+                                    <Label>
+                                        카테고리 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="w-full justify-between"
+                                            >
+                                                <span className="truncate">
+                                                    {categories.length > 0
+                                                        ? `${categories.length}개 선택됨`
+                                                        : "카테고리 선택"
+                                                    }
+                                                </span>
+                                                <ChevronDown className="h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-64" align="start">
+                                            <div className="space-y-2">
+                                                <h4 className="font-semibold text-sm">카테고리 선택</h4>
+                                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                    {CATEGORIES.map((cat) => (
+                                                        <div key={cat} className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id={`edit-category-${cat}`}
+                                                                checked={categories.includes(cat)}
+                                                                onCheckedChange={(checked) => {
+                                                                    if (checked) {
+                                                                        setCategories([...categories, cat]);
+                                                                    } else {
+                                                                        setCategories(categories.filter(c => c !== cat));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <Label
+                                                                htmlFor={`edit-category-${cat}`}
+                                                                className="text-sm cursor-pointer flex-1"
+                                                            >
+                                                                {cat}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {categories.length > 0 && (
+                                                    <div className="pt-2 border-t">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setCategories([])}
+                                                            className="w-full"
+                                                        >
+                                                            선택 해제
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                    {categories.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {categories.map((category) => (
+                                                <Badge key={category} variant="secondary" className="text-xs">
+                                                    {category}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCategories(categories.filter(c => c !== category))}
+                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                                    >
+                                                        <XIcon className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Review content */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="editContent">
+                                        리뷰 내용 <span className="text-red-500">*</span>
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                            ({content.trim().length}/20자 이상)
+                                        </span>
+                                    </Label>
+                                    <Textarea
+                                        id="editContent"
+                                        placeholder="맛, 분위기, 서비스 등 상세한 후기를 작성해주세요"
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        className="min-h-[120px] resize-none"
+                                    />
+                                </div>
+
+                                {/* Food photos */}
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-2">
+                                        음식 사진 <span className="text-red-500">*</span>
+                                        <span className="text-xs text-muted-foreground">
+                                            (현재 {existingFoodPhotos.length + newFoodPhotos.length}장)
+                                        </span>
+                                    </Label>
+
+                                    {/* Existing photos */}
+                                    {existingFoodPhotos.length > 0 && (
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground">기존 사진</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {existingFoodPhotos.map((photoPath, idx) => (
+                                                    <div key={photoPath} className="relative group">
+                                                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
+                                                            <Image
+                                                                src={supabase.storage.from('review-photos').getPublicUrl(photoPath).data.publicUrl}
+                                                                alt={`기존 음식 사진 ${idx + 1}`}
+                                                                fill
+                                                                unoptimized
+                                                                sizes="80px"
+                                                                className="object-cover"
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeExistingFoodPhoto(photoPath)}
+                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <XIcon className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* New photos */}
+                                    {newFoodPhotos.length > 0 && (
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-muted-foreground">새로 추가된 사진</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {newFoodPhotos.map((photo, idx) => (
+                                                    <div key={idx} className="relative group">
+                                                        <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-green-300">
+                                                            <Image
+                                                                src={newFoodPhotoUrls[idx]}
+                                                                alt={`새 음식 사진 ${idx + 1}`}
+                                                                fill
+                                                                unoptimized
+                                                                sizes="80px"
+                                                                className="object-cover"
+                                                            />
+                                                        </div>
+                                                        <div className="absolute -top-1 -left-1 bg-green-500 text-white rounded-full p-0.5">
+                                                            <Plus className="h-2 w-2" />
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeNewFoodPhoto(idx)}
+                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <XIcon className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Add more photos drop zone */}
+                                    <Card
+                                        ref={foodPhotosDropRef}
+                                        className={`p-4 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-border hover:border-primary/50'
+                                            }`}
+                                        onDragOver={handleDragOver}
+                                        onDragEnter={handleFoodPhotosDragEnter}
+                                        onDragLeave={handleFoodPhotosDragLeave}
+                                        onDrop={handleFoodPhotosDrop}
+                                        onClick={openFoodPhotosFileDialog}
+                                    >
+                                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                                            <Plus className="h-4 w-4" />
+                                            사진 추가하기
+                                        </div>
+                                        <input
+                                            ref={foodPhotosFileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFoodPhotosChange}
+                                            multiple
+                                            className="hidden"
+                                        />
+                                    </Card>
+                                </div>
+
+                                {/* Notice about verification photo */}
+                                <Alert className="bg-muted/50 border-muted">
+                                    <Info className="h-4 w-4" />
+                                    <AlertDescription className="text-xs text-muted-foreground">
+                                        영수증 인증 사진과 방문 날짜는 수정할 수 없습니다.
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
+                        </div>
+
+                        <div className={`${mobileSheetStyles.footer} shrink-0`}>
+                            <div className="flex gap-2">
+                                {/* Delete button with confirmation */}
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            disabled={isSubmitting || isDeleting}
+                                            title="리뷰 삭제"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>리뷰를 삭제하시겠습니까?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                이 작업은 취소할 수 없습니다. 리뷰와 함께 업로드된 모든 사진이 영구적으로 삭제됩니다.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>취소</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                onClick={handleDeleteReview}
+                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                                {isDeleting ? "삭제 중..." : "삭제"}
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleClose}
+                                    className="flex-1"
+                                    disabled={isSubmitting || isDeleting}
+                                >
+                                    취소
+                                </Button>
+                                <Button
+                                    onClick={handleSubmit}
+                                    className={`${mobileSheetStyles.primaryAction} flex-1`}
+                                    disabled={!isFormValid || isSubmitting || isDeleting}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                                            수정 중...
+                                        </>
+                                    ) : (
+                                        isRejected ? "수정 후 재제출" : "수정 완료"
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </BottomSheet>
+        );
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>

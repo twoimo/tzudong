@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -712,6 +713,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       // 업데이트된 정보를 부모 컴포넌트에 전달
       const updates: Partial<EvaluationRecord> = {
         name: trimmedName,
+        approved_name: trimmedName,
         phone: trimmedPhone || null,
         updated_by_admin_id: adminUserId,
         updated_at: updatedAt,
@@ -846,7 +848,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       setAddressChanged(false); // 주소 변경 여부 초기화
 
       setFormData({
-        name: record.naver_name || record.origin_name || record.restaurant_info.name || '',
+        name: getAdminEvaluationDisplayName(record),
         address: address,
         phone: record.restaurant_info.phone || '',
         tzuyang_review: record.restaurant_info.tzuyang_review || '',
