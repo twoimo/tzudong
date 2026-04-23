@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useDeviceType } from "@/hooks/useDeviceType";
 
 // 음식 사진용 압축 옵션 (스토리지 최적화)
@@ -1346,10 +1346,20 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             >
                 {isOpen && (
                     <div className={`relative ${mobileSheetStyles.frame}`}>
-                        <div className={`${mobileSheetStyles.header} space-y-3`}>
-                            {/* 자동 저장 상태 표시 - 좌측 상단 */}
+                        <MobileSheetHeader
+                            title="쯔동여지도 리뷰 작성"
+                            description="맛집 방문 후기를 공유해주세요"
+                            titleId="review-sheet-title"
+                            descriptionId="review-sheet-description"
+                            icon={<ImageIcon className="h-5 w-5" />}
+                            action={(
+                                <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 작성 닫기">
+                                    <XIcon className="h-5 w-5" />
+                                </Button>
+                            )}
+                        >
                             {lastSavedAt && (
-                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
                                     {isSaving ? (
                                         <>
                                             <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -1365,25 +1375,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     )}
                                 </div>
                             )}
+                        </MobileSheetHeader>
 
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 text-center">
-                                    <h2 id="review-sheet-title" className={`${mobileSheetStyles.title} flex items-center justify-center gap-3`}>
-                                        쯔동여지도 리뷰 작성
-                                    </h2>
-                                    <p id="review-sheet-description" className="text-center text-sm text-muted-foreground">
-                                        맛집 방문 후기를 공유해주세요
-                                    </p>
-                                </div>
-                                <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 작성 닫기">
-                                    <XIcon className="h-5 w-5" />
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className={`${mobileSheetStyles.content} space-y-6`}>
-                            <div className="space-y-6">
-                                {/* 중요 공지 - 컴팩트 버전 */}
+                        <div className={mobileSheetStyles.content}>
+                            <div className="space-y-4">
                                 {/* 중요 공지 - 컴팩트 버전 */}
                                 <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
                                     <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
@@ -1905,37 +1900,36 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         )}
 
                         {/* 푸터 */}
-                        <div className={`${mobileSheetStyles.footer} flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center sm:gap-0`}>
-                            <div className="flex items-center justify-center sm:justify-start gap-4">
-                                {/* 폼 유효성 상태 */}
-                                <div className="text-xs text-muted-foreground">
-                                    {isFormValid ? (
-                                        <span className="text-green-600 flex items-center gap-1">
-                                            <CheckCircle2 className="h-3 w-3" />
-                                            모든 필수 항목이 입력되었습니다
-                                        </span>
-                                    ) : (
-                                        <span className="text-amber-600 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            필수 항목을 모두 입력해주세요
-                                        </span>
-                                    )}
-                                </div>
+                        <div className={`${mobileSheetStyles.footer} space-y-3`}>
+                            <div className="flex items-center justify-center text-xs text-muted-foreground">
+                                {isFormValid ? (
+                                    <span className="flex items-center gap-1 text-green-600">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        모든 필수 항목이 입력되었습니다
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1 text-amber-600">
+                                        <AlertCircle className="h-3 w-3" />
+                                        필수 항목을 모두 입력해주세요
+                                    </span>
+                                )}
                             </div>
 
                             <div className="flex gap-2">
                                 <Button
+                                    type="button"
                                     variant="outline"
                                     onClick={handleClose}
                                     disabled={isSubmitting}
-                                    className="flex-1 sm:flex-none"
+                                    className="flex-1"
                                 >
                                     취소
                                 </Button>
                                 <Button
+                                    type="button"
                                     onClick={handleSubmit}
                                     disabled={!isFormValid || isSubmitting}
-                                    className={`${mobileSheetStyles.primaryAction} flex-1 sm:flex-none`}
+                                    className={`${mobileSheetStyles.primaryAction} flex-1`}
                                 >
                                     {isSubmitting ? "등록 중..." : "리뷰 등록"}
                                 </Button>
