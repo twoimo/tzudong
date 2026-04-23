@@ -128,6 +128,40 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue((project_data_dir / "credentials.json").exists())
         self.assertTrue((project_data_dir / "cookies.txt").exists())
 
+    def test_mirror_data_root_skips_identical_files_and_updates_changed_files(self) -> None:
+        source = self.root / "source"
+        target = self.root / "target"
+        source.mkdir()
+        target.mkdir()
+        (source / "same.jsonl").write_text('{"same": true}\n', encoding="utf-8")
+        (target / "same.jsonl").write_text('{"same": true}\n', encoding="utf-8")
+        (source / "changed.jsonl").write_text('{"version": 2}\n', encoding="utf-8")
+        (target / "changed.jsonl").write_text('{"version": 1}\n', encoding="utf-8")
+        (target / "stale.jsonl").write_text('{"stale": true}\n', encoding="utf-8")
+
+        same_before = (target / "same.jsonl").stat().st_mtime_ns
+
+        mirror_script = textwrap.dedent(
+            f"""
+            set -euo pipefail
+            source <(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' {RUN_DAILY_SOURCE} | sed '$d')
+            mirror_data_root {source} {target}
+            """
+        )
+
+        result = subprocess.run(
+            ["/bin/bash", "-lc", mirror_script],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual('{"same": true}\n', (target / "same.jsonl").read_text(encoding="utf-8"))
+        self.assertEqual(same_before, (target / "same.jsonl").stat().st_mtime_ns)
+        self.assertEqual('{"version": 2}\n', (target / "changed.jsonl").read_text(encoding="utf-8"))
+        self.assertFalse((target / "stale.jsonl").exists())
+
     def _run_script(
         self,
         *,
