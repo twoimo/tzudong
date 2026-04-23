@@ -1,9 +1,8 @@
 'use client';
 
 import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
-import { Restaurant, Region } from '@/types/restaurant';
-import { FilterState } from '@/components/filters/FilterPanel';
-import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
+import type { Restaurant, Region } from '@/types/restaurant';
+import type { FilterState } from '@/components/filters/filter-state';
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
@@ -21,6 +20,11 @@ import {
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
 const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
+const RestaurantDetailPanel = lazy(() =>
+    import("@/components/restaurant/RestaurantDetailPanel").then((mod) => ({
+        default: mod.RestaurantDetailPanel,
+    }))
+);
 
 interface HomeMapContainerProps {
     mapMode: 'domestic' | 'overseas';
@@ -1140,7 +1144,6 @@ function HomeMapContainerComponent({
                     {/* 데스크탑 오버레이 패널 */}
                     {isDesktop && (
                         <>
-
                             {/* 상세 패널 */}
                             <div
                                 className={cn(
@@ -1166,20 +1169,21 @@ function HomeMapContainerComponent({
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                     </svg>
                                 </button>
-                                <RestaurantDetailPanel
-                                    restaurant={panelRestaurant}
-                                    onClose={onPanelClose}
-                                    onWriteReview={onReviewModalOpen}
-                                    onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
-                                    onRequestEditRestaurant={handleRequestEditRestaurant}
-                                    onOpenDirectionSheet={handleOpenDirectionSheet}
-                                    onToggleCollapse={onTogglePanelCollapse}
-                                    isPanelOpen={isPanelOpen}
-                                />
+                                <Suspense fallback={null}>
+                                    <RestaurantDetailPanel
+                                        restaurant={panelRestaurant}
+                                        onClose={onPanelClose}
+                                        onWriteReview={onReviewModalOpen}
+                                        onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
+                                        onRequestEditRestaurant={handleRequestEditRestaurant}
+                                        onOpenDirectionSheet={handleOpenDirectionSheet}
+                                        onToggleCollapse={onTogglePanelCollapse}
+                                        isPanelOpen={isPanelOpen}
+                                    />
+                                </Suspense>
                             </div>
                         </>
                     )}
-
 
                     {/* 모바일/태블릿 바텀시트 */}
                     {isMobileOrTablet && isPanelOpen && (
@@ -1191,26 +1195,19 @@ function HomeMapContainerComponent({
                                     'bg-background shadow-xl',
                                     isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                                     'overflow-hidden flex flex-col',
-                                    // 드래그 중에는 트랜지션 제거, 종료 시 부드러운 스프링 효과
                                     isDragging ? '' : 'transition-[height,border-radius]',
-                                    // iOS safe area 지원
                                     'pb-[env(safe-area-inset-bottom)]'
                                 )}
                                 data-sheet-state={isSheetAtFullHeight ? 'full' : 'partial'}
                                 style={{
-                                    // [FIX] Safari/삼성 인터넷 100vh 버그 수정
-                                    // bottom: 0 고정 + height(px)로 직접 계산
-                                    // viewportHeightRef 사용 (visualViewport API 기반)
                                     [`${SHEET_HEIGHT_CSS_VAR}`]: `${viewportHeightRef.current * sheetHeight / 100}px`,
                                     height: `var(${SHEET_HEIGHT_CSS_VAR})`,
                                     maxHeight: '100%',
                                     willChange: isDragging ? 'height' : undefined,
                                     transitionDuration: isDragging ? '0ms' : `${sheetSnapTransition.duration}ms`,
-                                    // 커스텀 이징 함수
                                     transitionTimingFunction: isDragging ? undefined : sheetSnapTransition.easing,
                                 } as unknown as Record<string, string | number | undefined>}
                             >
-                                {/* 핸들 바 - 드래그 가능, 항상 상단 고정, touch-action: none으로 Pull-to-Refresh 방지 */}
                                 {!isSheetAtFullHeight && (
                                     <>
                                         <div
@@ -1250,19 +1247,21 @@ function HomeMapContainerComponent({
                                     onTouchEnd={handleContentTouchEnd}
                                     onTouchCancel={handleContentTouchEnd}
                                 >
-                                    <RestaurantDetailPanel
-                                        restaurant={panelRestaurant}
-                                        onClose={onPanelClose}
-                                        onWriteReview={onReviewModalOpen}
-                                        onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
-                                        onRequestEditRestaurant={handleRequestEditRestaurant}
-                                        onOpenDirectionSheet={handleOpenDirectionSheet}
-                                        onSwipeLeft={() => handleSwipeToRestaurant(1)}
-                                        onSwipeRight={() => handleSwipeToRestaurant(-1)}
-                                        onToggleCollapse={onTogglePanelCollapse}
-                                        isPanelOpen={isPanelOpen}
-                                        isMobile={true}
-                                    />
+                                    <Suspense fallback={null}>
+                                        <RestaurantDetailPanel
+                                            restaurant={panelRestaurant}
+                                            onClose={onPanelClose}
+                                            onWriteReview={onReviewModalOpen}
+                                            onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
+                                            onRequestEditRestaurant={handleRequestEditRestaurant}
+                                            onOpenDirectionSheet={handleOpenDirectionSheet}
+                                            onSwipeLeft={() => handleSwipeToRestaurant(1)}
+                                            onSwipeRight={() => handleSwipeToRestaurant(-1)}
+                                            onToggleCollapse={onTogglePanelCollapse}
+                                            isPanelOpen={isPanelOpen}
+                                            isMobile={true}
+                                        />
+                                    </Suspense>
                                 </div>
                             </div>
                         </div>

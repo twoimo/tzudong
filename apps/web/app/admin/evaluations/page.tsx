@@ -31,6 +31,7 @@ import { GlobalLoader } from "@/components/ui/global-loader";
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { debugLog } from '@/lib/debug-log';
+import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -867,10 +868,18 @@ function AdminEvaluationPage() {
       const records = data.map((r: Record<string, unknown>) => {
         // evaluation_results 변환
         const evaluationResults = r.evaluation_results as Record<string, unknown> | null;
+        const displayName = getAdminEvaluationDisplayName({
+          approved_name: r.approved_name as string | null,
+          restaurant_name: r.restaurant_name as string | null,
+          name: r.name as string | null,
+          origin_name: r.origin_name as string | null,
+          naver_name: r.naver_name as string | null,
+          evaluation_results: evaluationResults,
+        });
 
         // restaurant_info 생성 (항상 생성)
         const restaurantInfo = {
-          name: (r.origin_name as string) || (r.name as string) || (r.approved_name as string) || '이름 없음',
+          name: displayName,
           phone: r.phone as string | null,
           category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
           origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
@@ -890,9 +899,9 @@ function AdminEvaluationPage() {
 
         return {
           ...r,
-          // 호환성을 위한 별칭 추가 - name 컬럼이 없으므로 origin_name 사용
-          name: (r.origin_name as string) || (r.name as string) || '이름 없음',
-          restaurant_name: (r.origin_name as string) || (r.name as string) || '이름 없음',
+          // 호환성을 위한 별칭 추가 - 관리자 승인명/Rule-based Naver Name 우선 반영
+          name: displayName,
+          restaurant_name: displayName,
           origin_name: r.origin_name,
           naver_name: r.naver_name,
           google_name: r.google_name,
@@ -1231,11 +1240,21 @@ function AdminEvaluationPage() {
     // 상태 업데이트 (새로고침 없이 UI 반영)
     updateRecordInState(record.id, {
       status: 'approved',
+      name: approvedName,
       approved_name: approvedName,
+      restaurant_name: approvedName,
       db_error_message: null,
       db_error_details: null,
       updated_by_admin_id: adminUserId,
       updated_at: updatedAt,
+      ...(record.restaurant_info
+        ? {
+            restaurant_info: {
+              ...record.restaurant_info,
+              name: approvedName,
+            },
+          }
+        : {}),
     });
 
     toast({

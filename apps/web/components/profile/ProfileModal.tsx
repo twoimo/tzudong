@@ -13,8 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, User, Mail, Lock, Trash2 } from "lucide-react";
+import { Eye, EyeOff, User, Mail, Lock, Trash2, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 interface ProfileModalProps {
     isOpen: boolean;
@@ -29,6 +32,7 @@ interface Profile {
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { user } = useAuth();
+    const { isMobileOrTablet } = useDeviceType();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -209,6 +213,252 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     };
 
     if (!user) return null;
+
+    if (isMobileOrTablet) {
+        return (
+            <BottomSheet
+                isOpen={isOpen}
+                onClose={onClose}
+                {...MOBILE_FULL_FORM_SHEET}
+                layoutSource="profile-modal"
+                className="z-[110]"
+                ariaLabelledBy="profile-sheet-title"
+                ariaDescribedBy="profile-sheet-description"
+            >
+                <div className={mobileSheetStyles.frame}>
+                <MobileSheetHeader
+                    title="프로필 설정"
+                    description="계정 정보를 확인하고 수정할 수 있습니다."
+                    titleId="profile-sheet-title"
+                    descriptionId="profile-sheet-description"
+                    icon={<User className="h-5 w-5" />}
+                    action={(
+                        <Button type="button" variant="ghost" size="icon" aria-label="프로필 설정 닫기" onClick={onClose}>
+                            <X className="h-5 w-5" />
+                        </Button>
+                    )}
+                />
+
+                <div className={mobileSheetStyles.content}>
+                    {/* Basic Information */}
+                    <Card className="rounded-xl border-border/70 bg-card/80 shadow-sm">
+                        <CardHeader className="p-4 pb-2">
+                            <CardTitle className="text-lg">기본 정보</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 p-4 pt-2">
+                            {/* Email (Read-only) */}
+                            <div className="space-y-2">
+                                <Label htmlFor="email" className="flex items-center gap-2">
+                                    <Mail className="h-4 w-4" />
+                                    이메일
+                                </Label>
+                                <Input
+                                    id="email"
+                                    value={user.email}
+                                    disabled
+                                    className="bg-muted"
+                                />
+                            </div>
+
+                            {/* Nickname */}
+                            <div className="space-y-2">
+                                <Label htmlFor="nickname" className="flex items-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    닉네임
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        id="nickname"
+                                        value={newNickname}
+                                        onChange={(e) => setNewNickname(e.target.value)}
+                                        placeholder="닉네임을 입력하세요"
+                                        autoComplete="username"
+                                        enterKeyHint="done"
+                                    />
+                                    <Button
+                                        onClick={handleNicknameChange}
+                                        disabled={loading || !newNickname.trim() || newNickname === profile?.nickname}
+                                        size="sm"
+                                    >
+                                        변경하기
+                                    </Button>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    ℹ️ 닉네임은 언제든지 변경할 수 있습니다.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Password Change */}
+                    <Card className="rounded-xl border-border/70 bg-card/80 shadow-sm">
+                        <CardHeader className="p-4 pb-2">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Lock className="h-5 w-5" />
+                                비밀번호 변경
+                            </CardTitle>
+                            <CardDescription>
+                                계정 보안을 위해 정기적으로 비밀번호를 변경해주세요.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 p-4 pt-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="current-password">현재 비밀번호</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="current-password"
+                                        type={showCurrentPassword ? "text" : "password"}
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        placeholder="현재 비밀번호를 입력하세요"
+                                        autoComplete="current-password"
+                                        enterKeyHint="next"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                    >
+                                        {showCurrentPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="new-password">새 비밀번호</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="new-password"
+                                        type={showNewPassword ? "text" : "password"}
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        placeholder="새 비밀번호를 입력하세요"
+                                        autoComplete="new-password"
+                                        enterKeyHint="next"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                    >
+                                        {showNewPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="confirm-password"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="새 비밀번호를 다시 입력하세요"
+                                        autoComplete="new-password"
+                                        enterKeyHint="done"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    >
+                                        {showConfirmPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <Button
+                                onClick={handlePasswordChange}
+                                disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+                                className="w-full"
+                            >
+                                {loading ? "변경 중..." : "비밀번호 변경"}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Account Deletion */}
+                    <Card className="rounded-xl border-destructive/50 bg-card/80 shadow-sm">
+                        <CardHeader className="p-4 pb-2">
+                            <CardTitle className="text-lg flex items-center gap-2 text-destructive">
+                                <Trash2 className="h-5 w-5" />
+                                계정 삭제
+                            </CardTitle>
+                            <CardDescription>
+                                계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-2">
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" className="w-full">
+                                        계정 삭제
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>정말로 계정을 삭제하시겠습니까?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            계정을 탈퇴하면:
+                                            <br />• 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
+                                            <br />• 프로필이 익명화됩니다
+                                            <br />• 랭킹에서 제외됩니다
+                                            <br />• 자동으로 로그아웃됩니다
+                                            <br />
+                                            <br />계속하시려면 아래에 계정 이메일을 입력해주세요.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <div className="py-4">
+                                        <Input
+                                            value={deleteConfirmationEmail}
+                                            onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
+                                            placeholder={user.email}
+                                            className="text-center"
+                                        />
+                                        {deleteConfirmationEmail && deleteConfirmationEmail !== user.email && (
+                                            <p className="text-sm text-destructive mt-2 text-center">
+                                                이메일이 일치하지 않습니다
+                                            </p>
+                                        )}
+                                    </div>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>취소</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={handleAccountDelete}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            disabled={loading || deleteConfirmationEmail !== user.email}
+                                        >
+                                            {loading ? "삭제 중..." : "영구 삭제"}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </CardContent>
+                    </Card>
+                </div>
+                </div>
+            </BottomSheet>
+        );
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => {
