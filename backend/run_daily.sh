@@ -305,39 +305,82 @@ ensure_split_sync_worktree() {
 mirror_data_root() {
     local source_root="$1"
     local target_root="$2"
-    local source_list target_list rel
+    local source_list target_list rel source_file target_file
 
-    mkdir -p "$target_root"
-    source_list="$(mktemp)"
-    target_list="$(mktemp)"
+    if ! mkdir -p "$target_root"; then
+        echo "[ERROR] 데이터 미러링 대상 디렉터리 생성 실패: $target_root" >&2
+        return 1
+    fi
+
+    source_list="$(mktemp)" || return 1
+    target_list="$(mktemp)" || {
+        rm -f "$source_list"
+        return 1
+    }
 
     if [ -d "$source_root" ]; then
-        (
+        if ! (
             cd "$source_root" || exit 1
             find . -type f \( -name "*.jsonl" -o -name "*.txt" -o -name "*.json" \) ! -name "credentials.json" ! -name "cookies.txt" | sed 's#^\./##' | sort
-        ) > "$source_list"
+        ) > "$source_list"; then
+            echo "[ERROR] 데이터 미러링 소스 목록 생성 실패: $source_root" >&2
+            rm -f "$source_list" "$target_list"
+            return 1
+        fi
     else
-        : > "$source_list"
+        : > "$source_list" || {
+            rm -f "$source_list" "$target_list"
+            return 1
+        }
     fi
 
     if [ -d "$target_root" ]; then
-        (
+        if ! (
             cd "$target_root" || exit 1
             find . -type f \( -name "*.jsonl" -o -name "*.txt" -o -name "*.json" \) ! -name "credentials.json" ! -name "cookies.txt" | sed 's#^\./##' | sort
-        ) > "$target_list"
+        ) > "$target_list"; then
+            echo "[ERROR] 데이터 미러링 대상 목록 생성 실패: $target_root" >&2
+            rm -f "$source_list" "$target_list"
+            return 1
+        fi
     else
-        : > "$target_list"
+        : > "$target_list" || {
+            rm -f "$source_list" "$target_list"
+            return 1
+        }
     fi
 
     while IFS= read -r rel; do
         [ -z "$rel" ] && continue
-        mkdir -p "$(dirname "$target_root/$rel")"
-        cp "$source_root/$rel" "$target_root/$rel"
+        source_file="$source_root/$rel"
+        target_file="$target_root/$rel"
+        if ! mkdir -p "$(dirname "$target_file")"; then
+            echo "[ERROR] 데이터 미러링 하위 디렉터리 생성 실패: $(dirname "$target_file")" >&2
+            rm -f "$source_list" "$target_list"
+            return 1
+        fi
+
+        # [PERF] split-sync no-op runs can scan thousands of JSONL files.
+        # Avoid rewriting identical files so repeated sync checkpoints do not
+        # spend time and disk I/O copying the full data tree.
+        if [ -f "$target_file" ] && cmp -s "$source_file" "$target_file"; then
+            continue
+        fi
+
+        if ! cp "$source_file" "$target_file"; then
+            echo "[ERROR] 데이터 미러링 파일 복사 실패: $source_file -> $target_file" >&2
+            rm -f "$source_list" "$target_list"
+            return 1
+        fi
     done < "$source_list"
 
     while IFS= read -r rel; do
         [ -z "$rel" ] && continue
-        rm -f "$target_root/$rel"
+        if ! rm -f "$target_root/$rel"; then
+            echo "[ERROR] 데이터 미러링 stale 파일 제거 실패: $target_root/$rel" >&2
+            rm -f "$source_list" "$target_list"
+            return 1
+        fi
     done < <(comm -13 "$source_list" "$target_list")
 
     rm -f "$source_list" "$target_list"
