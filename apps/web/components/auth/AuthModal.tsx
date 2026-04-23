@@ -15,7 +15,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/lib/no-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { MOBILE_COMPACT_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 // 쯔양 테마 랜덤 닉네임 생성
 const generateRandomNickname = (): string => {
@@ -251,6 +254,7 @@ const PrivacyPolicyContent = memo(() => (
 PrivacyPolicyContent.displayName = "PrivacyPolicyContent";
 
 const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
+  const { isMobileOrTablet } = useDeviceType();
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -419,6 +423,254 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
   return (
     <>
+      {isMobileOrTablet && (
+        <BottomSheet
+          isOpen={isOpen}
+          onClose={onClose}
+          {...MOBILE_COMPACT_FORM_SHEET}
+          maxHeight={100}
+          layoutSource="auth-modal"
+          className="z-[110]"
+          ariaLabelledBy="auth-sheet-title"
+          ariaDescribedBy="auth-sheet-description"
+        >
+          <div className={mobileSheetStyles.frame}>
+          <MobileSheetHeader
+            title="쯔동여지도"
+            description="쯔양의 맛집을 리뷰하고 공유하세요"
+            titleId="auth-sheet-title"
+            descriptionId="auth-sheet-description"
+            icon={<span className="text-xl">🔥</span>}
+            action={(
+              <Button type="button" variant="ghost" size="icon" aria-label="로그인 바텀시트 닫기" onClick={onClose}>
+                <X className="h-5 w-5" />
+              </Button>
+            )}
+          />
+
+          <Tabs defaultValue="login" className="w-full flex-1 px-4 py-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">로그인</TabsTrigger>
+              <TabsTrigger value="signup">회원가입</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email" className="text-sm">이메일</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    enterKeyHint="next"
+                    className="h-10 sm:h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password" className="text-sm">비밀번호</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    enterKeyHint="done"
+                    className="h-10 sm:h-11"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "로그인 중..." : "로그인"}
+                </Button>
+                <button
+                  type="button"
+                  className="w-full text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  비밀번호를 잊으셨나요?
+                </button>
+              </form>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    또는
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-10 sm:h-11"
+                onClick={handleGoogleWithPrivacyCheck}
+                disabled={isGoogleLoading}
+              >
+                <GoogleIcon />
+                {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                처음 이용하시는 경우 회원가입이 진행됩니다
+              </p>
+            </TabsContent>
+
+            <TabsContent value="signup">
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <Label htmlFor="signup-username" className="text-sm">닉네임</Label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="signup-username"
+                      placeholder="닉네임을 입력하세요"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      autoComplete="username"
+                      enterKeyHint="next"
+                      className="h-10 sm:h-11 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={refreshNickname}
+                      className="h-10 sm:h-11 w-10 sm:w-11 shrink-0"
+                      title="다른 랜덤 닉네임"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email" className="text-sm">이메일</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    enterKeyHint="next"
+                    className="h-10 sm:h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <Label htmlFor="signup-password" className="text-sm">비밀번호</Label>
+                  </div>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    enterKeyHint="next"
+                    className="h-10 sm:h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password" className="text-sm">비밀번호 확인</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    enterKeyHint="done"
+                    className="h-10 sm:h-11"
+                  />
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="privacy-agree"
+                    checked={privacyAgreed}
+                    onCheckedChange={(checked) => setPrivacyAgreed(checked === true)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="privacy-agree"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      <button
+                        type="button"
+                        className="text-primary underline hover:text-primary/80"
+                        onClick={() => setIsPrivacyModalOpen(true)}
+                      >
+                        개인정보 처리방침
+                      </button>
+                      에 동의합니다 (필수)
+                    </label>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
+                  disabled={isLoading || !privacyAgreed}
+                >
+                  {isLoading ? "가입 중..." : "회원가입"}
+                </Button>
+              </form>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    또는
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-10 sm:h-11"
+                onClick={() => {
+                  if (!privacyAgreed) {
+                    toast.error("개인정보 처리방침에 동의해주세요");
+                    return;
+                  }
+                  handleGoogleLogin();
+                }}
+                disabled={isGoogleLoading || !privacyAgreed}
+              >
+                <GoogleIcon />
+                {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
+              </Button>
+            </TabsContent>
+          </Tabs>
+
+          <div className={`${mobileSheetStyles.footer} text-center text-xs text-muted-foreground`}>
+            <button
+              type="button"
+              className="text-primary underline hover:text-primary/80"
+              onClick={() => setIsPrivacyModalOpen(true)}
+            >
+              개인정보 처리방침
+            </button>
+            을 확인해주세요
+          </div>
+          </div>
+        </BottomSheet>
+      )}
+
+      {!isMobileOrTablet && (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <DialogHeader className="space-y-2">
@@ -655,6 +907,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* 개인정보 처리방침 모달 */}
       <Dialog open={isPrivacyModalOpen} onOpenChange={setIsPrivacyModalOpen}>

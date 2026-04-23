@@ -40,7 +40,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Region, REGIONS, Restaurant } from '@/types/restaurant';
 import type { Notification } from '@/types/notification';
-import { FilterState } from '@/components/filters/FilterPanel';
+import type { FilterState } from '@/components/filters/filter-state';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';

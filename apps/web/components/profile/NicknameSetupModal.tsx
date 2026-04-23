@@ -14,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User } from "lucide-react";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { MOBILE_COMPACT_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 interface NicknameSetupModalProps {
     isOpen: boolean;
@@ -22,6 +25,7 @@ interface NicknameSetupModalProps {
 
 export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalProps) {
     const { user } = useAuth();
+    const { isMobileOrTablet } = useDeviceType();
     const queryClient = useQueryClient();
     const [nickname, setNickname] = useState("");
     const [loading, setLoading] = useState(false);
@@ -109,6 +113,58 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
     };
 
     if (!user) return null;
+
+    if (isMobileOrTablet) {
+        return (
+            <BottomSheet
+                isOpen={isOpen}
+                onClose={() => {}}
+                {...MOBILE_COMPACT_FORM_SHEET}
+                layoutSource="nickname-setup-modal"
+                className="z-[110]"
+                ariaLabelledBy="nickname-sheet-title"
+                ariaDescribedBy="nickname-sheet-description"
+            >
+                <div className={mobileSheetStyles.frame}>
+                <MobileSheetHeader
+                    compact
+                    title="다시 오신 것을 환영합니다!"
+                    description="계정이 복구되었습니다. 새로운 닉네임을 설정해주세요."
+                    titleId="nickname-sheet-title"
+                    descriptionId="nickname-sheet-description"
+                    icon={<User className="h-5 w-5" />}
+                />
+
+                <form onSubmit={handleSubmit} className={`${mobileSheetStyles.compactContent} pb-[max(1rem,env(safe-area-inset-bottom))]`}>
+                    <div className="space-y-2">
+                        <Label htmlFor="nickname">닉네임</Label>
+                        <Input
+                            id="nickname"
+                            value={nickname}
+                            onChange={(e) => setNickname(e.target.value)}
+                            placeholder="2-20자 사이로 입력하세요"
+                            autoFocus
+                            maxLength={20}
+                            autoComplete="username"
+                            enterKeyHint="done"
+                        />
+                        <p className="text-sm text-muted-foreground">
+                            프로필 설정에서 닉네임을 변경할 수 있습니다.
+                        </p>
+                    </div>
+
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={loading || !nickname.trim() || nickname.length < 2}
+                    >
+                        {loading ? "설정 중..." : "닉네임 설정하기"}
+                    </Button>
+                </form>
+                </div>
+            </BottomSheet>
+        );
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={() => { }}>

@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, memo } from 'react';
 import { Region, Restaurant } from '@/types/restaurant';
-import { FilterState } from '@/components/filters/FilterPanel';
+import type { FilterState } from '@/components/filters/filter-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
@@ -13,6 +13,7 @@ import RestaurantSearch from "@/components/search/RestaurantSearch";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import MobileControlOverlay from "@/components/home/MobileControlOverlay";
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
+import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
 
 interface HomeControlPanelProps {
     mapMode: 'domestic' | 'overseas';
@@ -20,7 +21,6 @@ interface HomeControlPanelProps {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
-    countryCounts: Record<string, number>;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -46,7 +46,6 @@ const HomeControlPanelComponent = ({
     selectedCountry,
     selectedCategories,
     filters,
-    countryCounts,
     onRegionChange,
     onCountryChange,
     onCategoryChange,
@@ -63,6 +62,7 @@ const HomeControlPanelComponent = ({
     onTopShellUserIconClick,
 }: HomeControlPanelProps) => {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
+    const countryCounts = useOverseasCountryCounts(mapMode);
     const [leftPosition, setLeftPosition] = useState<string>('50%');
     const panelRef = useRef<HTMLDivElement>(null);
 

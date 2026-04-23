@@ -27,6 +27,11 @@ interface BottomSheetProps {
     showBackdrop?: boolean;
     closeOnOutsidePointerDown?: boolean;
     hideHandleWhenFull?: boolean;
+    modal?: boolean;
+    ariaLabel?: string;
+    ariaLabelledBy?: string;
+    ariaDescribedBy?: string;
+    focusTrapAllowSelectors?: string[];
 }
 
 const isVerticallyScrollable = (element: HTMLElement) => {
@@ -82,6 +87,82 @@ const HANDLE_VERTICAL_DRAG_THRESHOLD = 6;
 const CONTENT_VERTICAL_DRAG_THRESHOLD = 10;
 const FULL_HEIGHT_VERTICAL_DRAG_THRESHOLD = 22;
 const FULL_HEIGHT_VERTICAL_INTENT_RATIO = 1.8;
+const FOCUSABLE_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'textarea:not([disabled])',
+    'select:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+export const DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS = [
+    '[data-radix-portal]',
+    '[data-radix-popper-content-wrapper]',
+];
+
+type FocusTrapContainerLike = {
+    contains: (target: Node) => boolean;
+};
+
+type FocusTrapQueryRoot = {
+    querySelectorAll: <T extends FocusTrapContainerLike = FocusTrapContainerLike>(selector: string) => Iterable<T>;
+};
+
+type InertableHTMLElement = HTMLElement & { inert: boolean };
+
+type HiddenModalSiblingState = {
+    element: InertableHTMLElement;
+    ariaHidden: string | null;
+    inert: boolean;
+};
+
+const getFocusableElements = (container: HTMLElement | null) => {
+    if (!container) return [];
+
+    return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+        .filter((element) => {
+            if (element.getAttribute('aria-hidden') === 'true') return false;
+            return element.offsetParent !== null || element === document.activeElement;
+        });
+};
+
+export const getFocusTrapContainers = (
+    primaryContainer: FocusTrapContainerLike | null,
+    allowSelectors: string[],
+    queryRoot: FocusTrapQueryRoot | undefined = typeof document !== 'undefined'
+        ? document as unknown as FocusTrapQueryRoot
+        : undefined
+) => {
+    const containers: FocusTrapContainerLike[] = [];
+    const seen = new Set<FocusTrapContainerLike>();
+
+    const pushIfValid = (element: FocusTrapContainerLike | null) => {
+        if (!element || seen.has(element)) return;
+        seen.add(element);
+        containers.push(element);
+    };
+
+    pushIfValid(primaryContainer);
+
+    if (!queryRoot) return containers;
+
+    allowSelectors
+        .flatMap((selector) => Array.from(queryRoot.querySelectorAll<FocusTrapContainerLike>(selector)))
+        .forEach((element) => pushIfValid(element));
+
+    return containers;
+};
+
+export const isInsideAllowedFocusRegion = (
+    target: Node | null,
+    primaryContainer: FocusTrapContainerLike | null,
+    allowSelectors: string[],
+    queryRoot?: FocusTrapQueryRoot
+) => {
+    if (!target) return false;
+
+    return getFocusTrapContainers(primaryContainer, allowSelectors, queryRoot).some((container) => container.contains(target));
+};
 
 /**
  * 드래그 가능한 바텀시트 컴포넌트
@@ -109,8 +190,14 @@ function BottomSheetComponent({
     showBackdrop = true,
     closeOnOutsidePointerDown = false,
     hideHandleWhenFull = false,
+    modal,
+    ariaLabel = '바텀시트',
+    ariaLabelledBy,
+    ariaDescribedBy,
+    focusTrapAllowSelectors = DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS,
 }: BottomSheetProps) {
     const isMobileOrTablet = useIsMobile();
+    const isModal = modal ?? showBackdrop;
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(defaultHeight);
     const [isDragging, setIsDragging] = useState(false);
@@ -138,6 +225,8 @@ function BottomSheetComponent({
     const sheetRef = useRef<HTMLDivElement>(null);
     const handleRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+    const hiddenModalSiblingStatesRef = useRef<HiddenModalSiblingState[]>([]);
     const contentTouchStartYRef = useRef(0);
     const contentTouchStartXRef = useRef(0);
     const isContentDraggingSheetRef = useRef(false);
@@ -713,6 +802,47 @@ function BottomSheetComponent({
         unlockContentScrollDuringDrag,
     ]);
 
+    const handleDialogKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (!isModal) return;
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            onClose();
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusableElements = getFocusTrapContainers(sheetRef.current, focusTrapAllowSelectors)
+            .flatMap((container) => getFocusableElements(container as HTMLElement));
+        if (focusableElements.length === 0) {
+            event.preventDefault();
+            sheetRef.current?.focus({ preventScroll: true });
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+
+        if (activeElement === sheetRef.current) {
+            event.preventDefault();
+            (event.shiftKey ? lastElement : firstElement).focus({ preventScroll: true });
+            return;
+        }
+
+        if (event.shiftKey && activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus({ preventScroll: true });
+            return;
+        }
+
+        if (!event.shiftKey && activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus({ preventScroll: true });
+        }
+    }, [focusTrapAllowSelectors, isModal, onClose]);
+
     const handleSheetTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         const touch = e.touches[0];
         if (!touch) return;
@@ -805,6 +935,89 @@ function BottomSheetComponent({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
 
+    useEffect(() => {
+        if (!isOpen || !isModal) return;
+
+        previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+
+        const focusTimer = window.setTimeout(() => {
+            sheetRef.current?.focus({ preventScroll: true });
+        }, 0);
+
+        const keepFocusInsideSheet = (event: FocusEvent) => {
+            const target = event.target;
+            if (!(target instanceof Node)) return;
+            if (isInsideAllowedFocusRegion(target, sheetRef.current, focusTrapAllowSelectors)) return;
+
+            const focusableElements = getFocusTrapContainers(sheetRef.current, focusTrapAllowSelectors)
+                .flatMap((container) => getFocusableElements(container as HTMLElement));
+            (focusableElements[0] ?? sheetRef.current)?.focus({ preventScroll: true });
+        };
+
+        document.addEventListener('focusin', keepFocusInsideSheet);
+
+        return () => {
+            window.clearTimeout(focusTimer);
+            document.removeEventListener('focusin', keepFocusInsideSheet);
+
+            if (previouslyFocusedElementRef.current?.isConnected) {
+                previouslyFocusedElementRef.current.focus({ preventScroll: true });
+            }
+            previouslyFocusedElementRef.current = null;
+        };
+    }, [focusTrapAllowSelectors, isModal, isOpen]);
+
+
+    useEffect(() => {
+        if (!isOpen || !isModal) return;
+
+        const sheet = sheetRef.current;
+        if (!sheet) return;
+
+        const seen = new Set<HTMLElement>();
+        const hiddenStates: HiddenModalSiblingState[] = [];
+        let current: HTMLElement | null = sheet;
+
+        while (current && current !== document.body) {
+            const parent: HTMLElement | null = current.parentElement;
+            if (!parent) break;
+
+            Array.from(parent.children).forEach((sibling) => {
+                if (!(sibling instanceof HTMLElement)) return;
+                if (sibling === current || sibling.contains(sheet) || seen.has(sibling)) return;
+                if (sibling.tagName === 'SCRIPT' || sibling.tagName === 'STYLE' || sibling.tagName === 'LINK') return;
+
+                const inertSibling = sibling as InertableHTMLElement;
+                seen.add(sibling);
+                hiddenStates.push({
+                    element: inertSibling,
+                    ariaHidden: sibling.getAttribute('aria-hidden'),
+                    inert: Boolean(inertSibling.inert),
+                });
+                sibling.setAttribute('aria-hidden', 'true');
+                inertSibling.inert = true;
+            });
+
+            current = parent;
+        }
+
+        hiddenModalSiblingStatesRef.current = hiddenStates;
+
+        return () => {
+            hiddenModalSiblingStatesRef.current.forEach(({ element, ariaHidden, inert }) => {
+                if (ariaHidden === null) {
+                    element.removeAttribute('aria-hidden');
+                } else {
+                    element.setAttribute('aria-hidden', ariaHidden);
+                }
+                element.inert = inert;
+            });
+            hiddenModalSiblingStatesRef.current = [];
+        };
+    }, [isModal, isOpen]);
+
     // Pull-to-Refresh 방지
     useEffect(() => {
         if (!isOpen) return;
@@ -894,7 +1107,7 @@ function BottomSheetComponent({
                 <div
                     className="fixed inset-0 z-[94] bg-black/30 transition-opacity duration-200"
                     role="button"
-                    tabIndex={0}
+                    tabIndex={-1}
                     aria-label="바텀시트 닫기"
                     onClick={(event) => {
                         if (event.target === event.currentTarget) {
@@ -924,7 +1137,14 @@ function BottomSheetComponent({
                     className
                 )}
                 data-sheet-state={isAtFullHeight ? 'full' : 'partial'}
+                role={isModal ? 'dialog' : undefined}
+                aria-modal={isModal ? true : undefined}
+                aria-label={isModal && !ariaLabelledBy ? ariaLabel : undefined}
+                aria-labelledby={isModal ? ariaLabelledBy : undefined}
+                aria-describedby={isModal ? ariaDescribedBy : undefined}
+                tabIndex={isModal ? -1 : undefined}
                 style={{ ...heightStyle, touchAction: 'auto' }}
+                onKeyDownCapture={handleDialogKeyDown}
                 onTouchStartCapture={handleSheetTouchStart}
                 onTouchMoveCapture={handleSheetTouchMove}
                 onTouchEndCapture={handleSheetTouchEnd}

@@ -1,20 +1,42 @@
 'use client';
 
 import { memo, useEffect, useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { cn } from '@/lib/utils';
 import type { OverlayPanelType } from './FloatingNavButtons';
-import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { useQueryClient } from '@tanstack/react-query';
 
-// 페이지 콘텐츠 직접 로딩 (Suspense 제거하여 로딩 메시지 중복 방지)
-import FeedContent from '@/components/overlay-pages/FeedOverlay';
-import StampContent from '@/components/overlay-pages/StampOverlay';
-import LeaderboardContent from '@/components/overlay-pages/LeaderboardOverlay';
 
 import { Restaurant } from '@/types/restaurant';
-import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
-import { UserProfilePanel } from '@/components/profile/UserProfilePanel';
-import { EditRestaurantModal } from '@/components/modals/EditRestaurantModal';
+
+const FeedContent = dynamic(() => import('@/components/overlay-pages/FeedOverlay'), {
+    ssr: false,
+    loading: () => null,
+});
+const StampContent = dynamic(() => import('@/components/overlay-pages/StampOverlay'), {
+    ssr: false,
+    loading: () => null,
+});
+const LeaderboardContent = dynamic(() => import('@/components/overlay-pages/LeaderboardOverlay'), {
+    ssr: false,
+    loading: () => null,
+});
+const ReviewModal = dynamic(() =>
+    import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
+    { ssr: false, loading: () => null },
+);
+const RestaurantDetailPanel = dynamic(() =>
+    import('@/components/restaurant/RestaurantDetailPanel').then((mod) => ({ default: mod.RestaurantDetailPanel })),
+    { ssr: false, loading: () => null },
+);
+const UserProfilePanel = dynamic(() =>
+    import('@/components/profile/UserProfilePanel').then((mod) => ({ default: mod.UserProfilePanel })),
+    { ssr: false, loading: () => null },
+);
+const EditRestaurantModal = dynamic(() =>
+    import('@/components/modals/EditRestaurantModal').then((mod) => ({ default: mod.EditRestaurantModal })),
+    { ssr: false, loading: () => null },
+);
 
 // 패널별 최대 너비 설정
 const PANEL_WIDTHS: Record<Exclude<OverlayPanelType, null>, string> = {
