@@ -2008,9 +2008,15 @@ export function summarizeRunDailyReadiness(
         };
     }
 
-    const scriptReady = Boolean(runDaily.scriptPath && runDaily.executable && !runDaily.stale);
+    const failedRequiredSteps = Array.isArray(runDaily.failedRequiredSteps)
+        ? runDaily.failedRequiredSteps.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        : [];
+    const hasRequiredFailure = runDaily.finalStatus === 'ERROR' || failedRequiredSteps.length > 0;
+    const scriptReady = Boolean(runDaily.scriptPath && runDaily.executable && !runDaily.stale && !hasRequiredFailure);
     const statusTone: AdminInsightSystemReadinessCard['statusTone'] = !runDaily.scriptPath
         ? 'critical'
+        : hasRequiredFailure
+            ? 'critical'
         : !runDaily.executable || runDaily.stale
             ? 'warning'
             : 'good';
@@ -2018,10 +2024,14 @@ export function summarizeRunDailyReadiness(
         ? '정상'
         : !runDaily.scriptPath
             ? '미설정'
+            : hasRequiredFailure
+                ? '필수 단계 실패'
             : !runDaily.executable
                 ? '실행 권한 필요'
                 : '로그 점검 필요';
-    const detail = runDaily.stale && runDaily.latestLogPath
+    const detail = hasRequiredFailure
+        ? `필수 단계 실패: ${failedRequiredSteps.slice(0, 2).join(' / ') || runDaily.finalStatus}`
+        : runDaily.stale && runDaily.latestLogPath
         ? `최신 로그 점검 필요: ${runDaily.latestLogPath}`
         : !runDaily.scriptPath
             ? 'run_daily 스크립트가 감지되지 않았습니다.'

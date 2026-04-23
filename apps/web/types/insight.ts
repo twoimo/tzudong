@@ -246,7 +246,41 @@ export type AdminInsightSystemRunDailyStatus = {
   executable: boolean;
   latestLogPath?: string;
   latestLogUpdatedAt?: string;
+  latestManifestPath?: string;
+  finalStatus?: 'OK' | 'WARN' | 'ERROR' | 'UNKNOWN';
+  finalExitCode?: number;
+  failedRequiredSteps?: string[];
+  optionalSkips?: string[];
+  downstreamSkips?: string[];
+  noWorkShortCircuit?: boolean;
+  policyMode?: string;
   stale: boolean;
+  checkedAt: string;
+};
+
+export type AdminInsightGithubActionsStatus = {
+  enabled: boolean;
+  configured: boolean;
+  reachable: boolean;
+  workflow?: string;
+  branch?: string;
+  latestRunId?: number;
+  latestRunStatus?: string;
+  latestRunConclusion?: string | null;
+  latestRunUrl?: string;
+  latestRunCreatedAt?: string;
+  latestRunUpdatedAt?: string;
+  detail?: string;
+  checkedAt: string;
+};
+
+export type AdminInsightSupabaseCounterStatus = {
+  enabled: boolean;
+  configured: boolean;
+  reachable: boolean;
+  restaurantsTotal?: number;
+  evaluatedRestaurants?: number;
+  detail?: string;
   checkedAt: string;
 };
 
@@ -257,6 +291,8 @@ export type AdminInsightSystemStatusResponse = {
   bgeEmbedding: AdminInsightSystemIntegrationStatus;
   frameCaption: AdminInsightSystemFrameCaptionStatus;
   runDaily?: AdminInsightSystemRunDailyStatus;
+  githubActions?: AdminInsightGithubActionsStatus;
+  supabaseCounters?: AdminInsightSupabaseCounterStatus;
   checklist: AdminInsightSystemStatusChecklistItem[];
 };
 

@@ -796,4 +796,126 @@ describe('admin insight system status API route', () => {
             tempFrameCaptionDir.cleanup();
         }
     });
+
+    test('prefers run_daily manifest failure state and keeps remote probes disabled by default', async () => {
+        const runDailyScriptPath = detectRunDailyScriptPath();
+        const tempDir = withTempDir('tzudong-run-daily-manifest-');
+        const manifestPath = path.join(tempDir.dir, 'current-summary.json');
+        await Bun.write(manifestPath, JSON.stringify({
+            generatedAt: '2026-04-23T15:00:00Z',
+            date: '2026-04-23',
+            finalStatus: 'ERROR',
+            finalExitCode: 1,
+            failedRequiredSteps: ['Step 13 (Supabase) - exit=23'],
+            optionalSkips: ['Step 1 (URL Collection) - missing key'],
+            downstreamSkips: [],
+            latestLogPath: '/tmp/backend/log/cron/daily_2026-04-23.log',
+            summaryPath: '/tmp/summary.md',
+            noWorkShortCircuit: false,
+            policyMode: 'end_to_end',
+        }));
+
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: runDailyScriptPath ?? '',
+            RUN_DAILY_MANIFEST_PATH: manifestPath,
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: undefined,
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: undefined,
+        });
+
+        const originalFetch = global.fetch;
+        const seen: string[] = [];
+        global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            seen.push(`${init?.method ?? 'GET'} ${String(input)}`);
+            return new Response('unexpected', { status: 500 });
+        };
+
+        try {
+            const { getAdminInsightSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminInsightSystemStatusResponse = await getAdminInsightSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.runDaily?.latestManifestPath).toBe(manifestPath);
+            expect(payload.runDaily?.finalStatus).toBe('ERROR');
+            expect(payload.runDaily?.finalExitCode).toBe(1);
+            expect(payload.runDaily?.failedRequiredSteps).toContain('Step 13 (Supabase) - exit=23');
+            expect(payload.checklist.some((item) => item.id === 'run-daily-required-failed')).toBe(true);
+            expect(payload.githubActions?.enabled).toBe(false);
+            expect(payload.githubActions?.detail).toBe('disabled');
+            expect(payload.supabaseCounters?.enabled).toBe(false);
+            expect(payload.supabaseCounters?.detail).toBe('disabled');
+            expect(seen).toEqual([]);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+            tempDir.cleanup();
+        }
+    });
+
+    test('uses opt-in read-only GitHub and Supabase status probes without leaking tokens', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '1',
+            INSIGHT_GITHUB_REPOSITORY: 'twoimo/tzudong',
+            INSIGHT_GITHUB_TOKEN: 'github-secret-token',
+            INSIGHT_GITHUB_WORKFLOW: 'daily-crawler.yml',
+            INSIGHT_GITHUB_BRANCH: 'main',
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '1',
+            NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+            SUPABASE_SERVICE_ROLE_KEY: 'supabase-secret-token',
+        });
+
+        const originalFetch = global.fetch;
+        const seen: string[] = [];
+        global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            const endpoint = String(input);
+            seen.push(`${init?.method ?? 'GET'} ${endpoint}`);
+            if (endpoint.includes('api.github.com')) {
+                return new Response(JSON.stringify({
+                    workflow_runs: [{
+                        id: 24834262595,
+                        status: 'completed',
+                        conclusion: 'success',
+                        html_url: 'https://github.com/twoimo/tzudong/actions/runs/24834262595?token=hidden',
+                        created_at: '2026-04-23T10:00:00Z',
+                        updated_at: '2026-04-23T10:05:00Z',
+                    }],
+                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (endpoint.includes('/rest/v1/restaurants')) {
+                const total = endpoint.includes('evaluation_results=not.is.null') ? 7 : 42;
+                return new Response('[]', { status: 206, headers: { 'content-range': `0-0/${total}` } });
+            }
+            return new Response('not found', { status: 404 });
+        };
+
+        try {
+            const { getAdminInsightSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminInsightSystemStatusResponse = await getAdminInsightSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.githubActions?.enabled).toBe(true);
+            expect(payload.githubActions?.configured).toBe(true);
+            expect(payload.githubActions?.reachable).toBe(true);
+            expect(payload.githubActions?.latestRunId).toBe(24834262595);
+            expect(payload.githubActions?.latestRunConclusion).toBe('success');
+            expect(payload.githubActions?.latestRunUrl).toBe('https://github.com/twoimo/tzudong/actions/runs/24834262595');
+            expect(payload.supabaseCounters?.enabled).toBe(true);
+            expect(payload.supabaseCounters?.configured).toBe(true);
+            expect(payload.supabaseCounters?.reachable).toBe(true);
+            expect(payload.supabaseCounters?.restaurantsTotal).toBe(42);
+            expect(payload.supabaseCounters?.evaluatedRestaurants).toBe(7);
+            expect(seen.every((entry) => entry.startsWith('GET '))).toBe(true);
+            expect(seen.join('\n')).not.toContain('dispatches');
+            expect(JSON.stringify(payload)).not.toContain('github-secret-token');
+            expect(JSON.stringify(payload)).not.toContain('supabase-secret-token');
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
 });
