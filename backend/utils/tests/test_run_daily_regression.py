@@ -141,26 +141,105 @@ class RunDailyRegressionTests(unittest.TestCase):
 
         same_before = (target / "same.jsonl").stat().st_mtime_ns
 
-        mirror_script = textwrap.dedent(
-            f"""
-            set -euo pipefail
-            source <(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' {RUN_DAILY_SOURCE} | sed '$d')
-            mirror_data_root {source} {target}
-            """
-        )
-
-        result = subprocess.run(
-            ["/bin/bash", "-lc", mirror_script],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        result = self._run_mirror_data_root(source, target)
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         self.assertEqual('{"same": true}\n', (target / "same.jsonl").read_text(encoding="utf-8"))
         self.assertEqual(same_before, (target / "same.jsonl").stat().st_mtime_ns)
         self.assertEqual('{"version": 2}\n', (target / "changed.jsonl").read_text(encoding="utf-8"))
         self.assertFalse((target / "stale.jsonl").exists())
+
+    def test_mirror_data_root_returns_non_zero_when_directory_creation_fails(self) -> None:
+        source = self.root / "source"
+        target = self.root / "target"
+        (source / "nested").mkdir(parents=True)
+        target.mkdir()
+        (source / "nested" / "item.jsonl").write_text('{"ok": true}\n', encoding="utf-8")
+        (target / "nested").write_text("not a directory\n", encoding="utf-8")
+
+        result = self._run_mirror_data_root(source, target)
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("데이터 미러링 하위 디렉터리 생성 실패", result.stderr)
+
+    def test_mirror_data_root_returns_non_zero_when_target_root_creation_fails(self) -> None:
+        source = self.root / "source"
+        blocked_parent = self.root / "blocked"
+        target = blocked_parent / "target"
+        source.mkdir()
+        blocked_parent.write_text("not a directory\n", encoding="utf-8")
+
+        result = self._run_mirror_data_root(source, target)
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("데이터 미러링 대상 디렉터리 생성 실패", result.stderr)
+
+    def test_mirror_data_root_returns_non_zero_when_source_list_fails(self) -> None:
+        source = self.root / "source"
+        target = self.root / "target"
+        source.mkdir()
+        target.mkdir()
+        source.chmod(0)
+
+        result = self._run_mirror_data_root_with_restored_permissions(
+            source,
+            target,
+            restored_paths=[source],
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("데이터 미러링 소스 목록 생성 실패", result.stderr)
+
+    def test_mirror_data_root_returns_non_zero_when_target_list_fails(self) -> None:
+        source = self.root / "source"
+        target = self.root / "target"
+        source.mkdir()
+        target.mkdir()
+        target.chmod(0)
+
+        result = self._run_mirror_data_root_with_restored_permissions(
+            source,
+            target,
+            restored_paths=[target],
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("데이터 미러링 대상 목록 생성 실패", result.stderr)
+
+    def test_mirror_data_root_returns_non_zero_when_copy_fails(self) -> None:
+        source = self.root / "source"
+        target = self.root / "target"
+        source.mkdir()
+        target.mkdir()
+        (source / "item.jsonl").write_text('{"ok": true}\n', encoding="utf-8")
+        target.chmod(0o555)
+
+        result = self._run_mirror_data_root_with_restored_permissions(
+            source,
+            target,
+            restored_paths=[target],
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("데이터 미러링 파일 복사 실패", result.stderr)
+
+    def test_mirror_data_root_returns_non_zero_when_stale_remove_fails(self) -> None:
+        source = self.root / "source"
+        target = self.root / "target"
+        source.mkdir()
+        stale_dir = target / "nested"
+        stale_dir.mkdir(parents=True)
+        (stale_dir / "stale.jsonl").write_text('{"stale": true}\n', encoding="utf-8")
+        stale_dir.chmod(0o555)
+
+        result = self._run_mirror_data_root_with_restored_permissions(
+            source,
+            target,
+            restored_paths=[stale_dir],
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("데이터 미러링 stale 파일 제거 실패", result.stderr)
 
     def _run_script(
         self,
@@ -220,6 +299,35 @@ class RunDailyRegressionTests(unittest.TestCase):
             capture_output=True,
             text=True,
             env=env,
+            check=False,
+        )
+
+    def _run_mirror_data_root_with_restored_permissions(
+        self,
+        source: Path,
+        target: Path,
+        *,
+        restored_paths: list[Path],
+    ) -> subprocess.CompletedProcess[str]:
+        try:
+            return self._run_mirror_data_root(source, target)
+        finally:
+            for path in restored_paths:
+                path.chmod(0o755)
+
+    def _run_mirror_data_root(self, source: Path, target: Path) -> subprocess.CompletedProcess[str]:
+        mirror_script = textwrap.dedent(
+            f"""
+            set -euo pipefail
+            source <(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' {RUN_DAILY_SOURCE} | sed '$d')
+            mirror_data_root {source} {target}
+            """
+        )
+
+        return subprocess.run(
+            ["/bin/bash", "-lc", mirror_script],
+            capture_output=True,
+            text=True,
             check=False,
         )
 
