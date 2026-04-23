@@ -568,8 +568,12 @@ function redactSecretAssignments(snippet: string): string {
   );
 }
 
+function isRunDailyChecklistItem(item: NonNullable<AdminInsightSystemStatusResponse['checklist']>[number]): boolean {
+  return item.id.startsWith('run-daily-');
+}
+
 function resolveOpsSnippetTitle(item: NonNullable<AdminInsightSystemStatusResponse['checklist']>[number]): string {
-  if (item.source === 'run_daily' && item.severity !== 'medium') {
+  if (isRunDailyChecklistItem(item) && item.severity !== 'medium') {
     return 'run_daily 실행 권한 미설정';
   }
   return item.title;
@@ -585,16 +589,40 @@ function selectOpsStatusActionableItems(
     return 1;
   };
 
-  return [...status.checklist]
-    .filter((item) => (item.severity === 'critical' || item.severity === 'high'))
-    .filter((item) => item.source !== 'frame-caption-storage')
-    .filter((item) => Boolean(item.commandSnippet?.trim() || item.command?.trim()))
-    .sort((a, b) => {
+  const sortActionable = (
+    items: NonNullable<AdminInsightSystemStatusResponse['checklist']>,
+  ): NonNullable<AdminInsightSystemStatusResponse['checklist']> => (
+    [...items].sort((a, b) => {
       const bySeverity = severityWeight(b.severity) - severityWeight(a.severity);
       if (bySeverity !== 0) return bySeverity;
       return a.id.localeCompare(b.id);
     })
-    .slice(0, 3);
+  );
+
+  const snippetItems = status.checklist
+    .filter((item) => item.source !== 'frame-caption-storage')
+    .filter((item) => Boolean(item.commandSnippet?.trim() || item.command?.trim()));
+
+  const selected = sortActionable(
+    snippetItems.filter((item) => (item.severity === 'critical' || item.severity === 'high')),
+  ).slice(0, 3);
+
+  const hasRunDailySpecificSnippet = selected.some(isRunDailyChecklistItem);
+  if (hasRunDailySpecificSnippet) return selected;
+
+  const runDailyFallback = sortActionable(snippetItems.filter(isRunDailyChecklistItem))[0];
+  if (!runDailyFallback) return selected;
+
+  const replacementIndex = selected.findLastIndex((item) => !isRunDailyChecklistItem(item));
+  if (replacementIndex === -1) return selected.slice(0, 3);
+
+  if (selected.length < 3) {
+    return [...selected, runDailyFallback].slice(0, 3);
+  }
+
+  const nextSelected = [...selected];
+  nextSelected[replacementIndex] = runDailyFallback;
+  return nextSelected.slice(0, 3);
 }
 
 function buildOpsStatusSnippetSection(status: AdminInsightSystemStatusResponse | null): string[] {

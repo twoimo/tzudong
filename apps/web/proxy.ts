@@ -1,5 +1,30 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+
+const PUBLIC_API_PREFIXES = [
+    '/api/health',
+    '/api/naver-',
+    '/api/youtube-meta',
+    '/api/shorten',
+]
+
+const PUBLIC_PAGE_PATHS = new Set([
+    '/',
+])
+
+function shouldSkipSession(request: NextRequest) {
+    const { pathname } = request.nextUrl
+    const method = request.method.toUpperCase()
+
+    if (PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+        return true
+    }
+
+    if ((method === 'GET' || method === 'HEAD') && PUBLIC_PAGE_PATHS.has(pathname)) {
+        return true
+    }
+
+    return false
+}
 
 /**
  * [PERF] 최적화된 프록시
@@ -7,23 +32,16 @@ import { updateSession } from '@/lib/supabase/middleware'
  * - 인증이 필요 없는 공개 라우트도 빠르게 통과
  */
 export async function proxy(request: NextRequest) {
-    const { pathname } = request.nextUrl
-
-    // [PERF] API 라우트 중 인증이 불필요한 공개 API는 세션 갱신 스킵
-    // 이렇게 하면 공개 API 응답 시간이 ~50ms 개선됨
-    if (
-        pathname.startsWith('/api/naver-') ||
-        pathname.startsWith('/api/youtube-meta') ||
-        pathname.startsWith('/api/shorten')
-    ) {
+    if (shouldSkipSession(request)) {
         return NextResponse.next()
     }
 
+    const { updateSession } = await import('@/lib/supabase/middleware')
     return await updateSession(request)
 }
 
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|fonts/|images/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|otf|ttf|woff|woff2)$).*)',
+        '/((?!$|api/health|api/naver-|api/youtube-meta|api/shorten|_next/static|_next/image|favicon.ico|fonts/|images/|scripts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|otf|ttf|woff|woff2)$).*)',
     ],
 }

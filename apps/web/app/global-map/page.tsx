@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense, lazy } from "react";
 import MapView from "@/components/map/MapView";
-import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
+import { FilterPanel } from "@/components/filters/FilterPanel";
+import type { FilterState } from "@/components/filters/filter-state";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
