@@ -304,7 +304,7 @@ ensure_split_sync_worktree() {
 mirror_data_root() {
     local source_root="$1"
     local target_root="$2"
-    local source_list target_list rel
+    local source_list target_list rel source_file target_file
 
     mkdir -p "$target_root"
     source_list="$(mktemp)"
@@ -330,8 +330,18 @@ mirror_data_root() {
 
     while IFS= read -r rel; do
         [ -z "$rel" ] && continue
-        mkdir -p "$(dirname "$target_root/$rel")"
-        cp "$source_root/$rel" "$target_root/$rel"
+        source_file="$source_root/$rel"
+        target_file="$target_root/$rel"
+        mkdir -p "$(dirname "$target_file")"
+
+        # [PERF] split-sync no-op runs can scan thousands of JSONL files.
+        # Avoid rewriting identical files so repeated sync checkpoints do not
+        # spend time and disk I/O copying the full data tree.
+        if [ -f "$target_file" ] && cmp -s "$source_file" "$target_file"; then
+            continue
+        fi
+
+        cp "$source_file" "$target_file"
     done < "$source_list"
 
     while IFS= read -r rel; do
