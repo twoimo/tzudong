@@ -54,6 +54,17 @@ type MobileSheetHeaderProps = {
     children?: ReactNode;
 };
 
+type MobileSheetStep = {
+    id: number;
+    label: string;
+};
+
+type MobileSheetStepIndicatorProps = {
+    steps: MobileSheetStep[];
+    currentStep: number;
+    className?: string;
+};
+
 export function MobileSheetHeader({
     title,
     description,
@@ -87,5 +98,41 @@ export function MobileSheetHeader({
                 {action ? <div className="-mr-2 shrink-0">{action}</div> : null}
             </div>
         </div>
+    );
+}
+
+export function MobileSheetStepIndicator({ steps, currentStep, className }: MobileSheetStepIndicatorProps) {
+    return (
+        <ol className={cn('grid gap-2', className)} aria-label="진행 단계">
+            {steps.map((step) => {
+                const isCurrent = step.id === currentStep;
+                const isComplete = step.id < currentStep;
+
+                return (
+                    <li
+                        key={step.id}
+                        className={cn(
+                            'flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors',
+                            isCurrent && 'border-primary/40 bg-primary/10 text-primary',
+                            isComplete && 'border-green-200 bg-green-50 text-green-700 dark:border-green-950 dark:bg-green-950/30 dark:text-green-200',
+                            !isCurrent && !isComplete && 'border-border/70 bg-muted/40 text-muted-foreground'
+                        )}
+                        aria-current={isCurrent ? 'step' : undefined}
+                    >
+                        <span
+                            className={cn(
+                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
+                                isCurrent && 'bg-primary text-primary-foreground',
+                                isComplete && 'bg-green-600 text-white',
+                                !isCurrent && !isComplete && 'bg-background text-muted-foreground'
+                            )}
+                        >
+                            {isComplete ? '✓' : step.id}
+                        </span>
+                        <span>{step.label}</span>
+                    </li>
+                );
+            })}
+        </ol>
     );
 }

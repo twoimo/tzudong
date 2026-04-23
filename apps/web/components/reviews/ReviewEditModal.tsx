@@ -24,7 +24,7 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { saveDraft as saveEditDraft, getDraft as getEditDraft, deleteDraft as deleteEditDraft } from "@/lib/reviewDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import {
     AlertDialog,
@@ -474,8 +474,18 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             >
                 {isOpen && review && (
                     <div className={mobileSheetStyles.frame}>
-                        <div className={`${mobileSheetStyles.header} relative shrink-0`}>
-                            {/* 자동 저장 상태 표시 */}
+                        <MobileSheetHeader
+                            title={isRejected ? "리뷰 수정 후 재제출" : "리뷰 수정"}
+                            description={review.restaurantName}
+                            titleId="review-edit-sheet-title"
+                            descriptionId="review-edit-sheet-description"
+                            icon={<Info className="h-5 w-5" />}
+                            action={(
+                                <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 수정 닫기">
+                                    <XIcon className="h-5 w-5" />
+                                </Button>
+                            )}
+                        >
                             <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
                                 {lastSavedAt && (
                                     <>
@@ -486,20 +496,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     </>
                                 )}
                             </div>
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                    <h2 id="review-edit-sheet-title" className={mobileSheetStyles.title}>
-                                        {isRejected ? "리뷰 수정 후 재제출" : "리뷰 수정"}
-                                    </h2>
-                                    <p id="review-edit-sheet-description" className="mt-1 text-sm text-muted-foreground">
-                                        <span className="font-medium text-foreground">{review.restaurantName}</span>
-                                    </p>
-                                </div>
-                                <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 수정 닫기">
-                                    <XIcon className="h-5 w-5" />
-                                </Button>
-                            </div>
-                        </div>
+                        </MobileSheetHeader>
 
                         <div className={mobileSheetStyles.content}>
                             <div className="space-y-5">
