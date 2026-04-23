@@ -27,6 +27,15 @@ function runWhenIdle(callback: () => void): () => void {
 }
 
 function canPrefetchRoutes() {
+    // In development, router.prefetch eagerly asks Next to compile every
+    // navigation target after the first page becomes idle. That creates the
+    // exact compile burst seen in dev logs (`/feed`, `/stamp`, `/mypage/*`)
+    // without improving production behavior. Keep prefetch enabled for
+    // production where it improves navigation latency.
+    if (process.env.NODE_ENV === 'development') {
+        return false;
+    }
+
     if (typeof window === 'undefined' || !navigator.onLine) {
         return false;
     }
