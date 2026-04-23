@@ -107,6 +107,36 @@ bun run qa:insights-chat -- --live
 - `apps/web/scripts/insight-chat-db-ops.mjs`
 - `apps/web/tests-unit/insight-chat-api-routes.test.ts`
 
+## 📱 모바일 바텀시트 패턴
+
+모바일 전용 폼/모달은 `components/ui/mobile-sheet-frame.tsx`의 공통 프리셋과 헤더를 우선 재사용합니다.
+
+- `MOBILE_FULL_FORM_SHEET`
+  - 리뷰 작성, 제보 작성, 프로필 수정처럼 **길고 단계가 있는 폼**용
+  - full-height 고정, peek 비활성화, 하단 네비게이션 숨김
+- `MOBILE_COMPACT_FORM_SHEET`
+  - 인증/닉네임처럼 **짧은 입력 플로우**용
+  - peek 허용, 상대적으로 낮은 기본 높이
+- `MobileSheetHeader`
+  - sticky 헤더 + 제목/설명 + 우측 action 슬롯 공통화
+  - autosave/status 배지는 `children`, 닫기 버튼은 `action` 슬롯에 배치
+- `MobileSheetStepIndicator`
+  - 선형(step-by-step) 모바일 폼의 현재 단계 표시
+  - 현재 단계는 `aria-current="step"`으로 노출
+
+적용 예시:
+- `components/reviews/ReviewModal.tsx`
+- `components/reviews/ReviewEditModal.tsx`
+- `components/auth/AuthModal.tsx`
+- `components/modals/EditRestaurantModal.tsx`
+- `components/profile/ProfileModal.tsx`
+
+관련 회귀 테스트:
+
+```bash
+bun test tests-unit/mobile-sheet-frame.test.ts
+```
+
 ## 📁 폴더 구조
 
 ```
