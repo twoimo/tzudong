@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { AUTH_NAV_ROUTES } from '@/components/layout/navigation-routes';
 import { updateMobileBottomNavHeight } from '@/lib/mobile-sheet-layout';
+import { requestAuthUi } from '@/lib/auth-ui-events';
 
 interface NavItem {
     icon: typeof Home;
@@ -71,11 +72,16 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
 
     // [OPTIMIZATION] startTransition으로 UI 블로킹 방지
     const handleNavClick = useCallback((path: string) => {
+        if (path === '/mypage/profile' && !user?.id) {
+            requestAuthUi({ source: 'mobile-bottom-nav-my', route: pathname ?? undefined, reason: 'mypage' });
+            return;
+        }
+
         prefetchRoute(path);
         startTransition(() => {
             router.push(path);
         });
-    }, [prefetchRoute, router, startTransition]);
+    }, [pathname, prefetchRoute, router, startTransition, user?.id]);
 
     // [OPTIMIZATION] 현재 경로에 따른 활성 상태 계산을 useMemo로 캐싱
     const activeStates = useMemo(() => {

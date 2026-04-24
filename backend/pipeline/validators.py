@@ -7,9 +7,7 @@
 
 from __future__ import annotations
 
-import json
 import re
-from pathlib import Path
 from typing import Any
 
 from .state import ValidationSeverity
@@ -496,9 +494,21 @@ def cross_validate(video_id: str, rule_data: dict, laaj_data: dict) -> list[dict
 # ═══════════════════════════════════════════════════════════
 
 TRANSFORM_REQUIRED_FIELDS = {
-    "trace_id", "youtube_link", "channel_name", "name",
+    "trace_id", "youtube_link", "channel_name", "origin_name",
     "source_type", "lat", "lng",
 }
+
+
+def _allows_empty_transform_geocoding(record: dict) -> bool:
+    return bool(record.get("is_missing")) or bool(record.get("is_notSelected"))
+
+
+def _allows_empty_transform_evaluation_results(record: dict) -> bool:
+    return (
+        bool(record.get("is_missing"))
+        or bool(record.get("is_notSelected"))
+        or record.get("source_type") == "map_url_crawling"
+    )
 
 
 def validate_transform_output(video_id: str, records: list[dict]) -> list[dict]:
@@ -518,11 +528,14 @@ def validate_transform_output(video_id: str, records: list[dict]) -> list[dict]:
 
     for idx, record in enumerate(records):
         prefix = f"record[{idx}]"
-        name = record.get("name", f"idx_{idx}")
+        name = record.get("origin_name") or record.get("name") or f"idx_{idx}"
 
         # 필수 필드 확인
         for field in TRANSFORM_REQUIRED_FIELDS:
-            if field not in record or record[field] is None:
+            field_missing = field not in record
+            field_empty = record.get(field) is None
+            empty_allowed = field in {"lat", "lng"} and _allows_empty_transform_geocoding(record)
+            if field_missing or (field_empty and not empty_allowed):
                 errors.append(_err(step, video_id, ValidationSeverity.ERROR.value,
                                   "required_field", f"필수 필드 누락: {field}",
                                   restaurant_name=name, field_path=f"{prefix}.{field}"))
@@ -552,7 +565,7 @@ def validate_transform_output(video_id: str, records: list[dict]) -> list[dict]:
 
         # evaluation_results 구조
         eval_res = record.get("evaluation_results", {})
-        if not eval_res:
+        if not eval_res and not _allows_empty_transform_evaluation_results(record):
             errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
                               "missing_eval_results", "evaluation_results 비어있음",
                               restaurant_name=name))

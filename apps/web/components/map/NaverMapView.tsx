@@ -261,6 +261,7 @@ interface NaverMapViewProps {
     mobileSheetHeightPercent?: number; // 모바일 바텀시트 높이(%) - 마커 Y축 중앙 보정
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
     onSearchSelectionRelease?: () => void;
+    onMapBlankClick?: () => void;
 }
 
 /**
@@ -290,6 +291,7 @@ const NaverMapView = memo(({
     mobileSheetHeightPercent = 0,
     onVisibleRestaurantsChange,
     onSearchSelectionRelease,
+    onMapBlankClick,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
@@ -363,6 +365,19 @@ const NaverMapView = memo(({
             onSearchSelectionRelease?.();
         }
     }, [activeSearchedRestaurant, onSearchSelectionRelease]);
+
+    useEffect(() => {
+        if (!isMapInitialized || !mapInstanceRef.current || !onMapBlankClick) return;
+
+        const { naver } = window;
+        const listener = naver.maps.Event.addListener(mapInstanceRef.current, 'click', () => {
+            onMapBlankClick();
+        });
+
+        return () => {
+            naver.maps.Event.removeListener(listener);
+        };
+    }, [isMapInitialized, onMapBlankClick]);
 
     const handleDetailPanelMouseDownCapture = useMemo(
         () => buildNaverMapDetailPanelMouseDownCaptureHandler(onPanelClick),

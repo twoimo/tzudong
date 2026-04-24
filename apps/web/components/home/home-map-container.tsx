@@ -16,6 +16,8 @@ import {
     getAdjacentRestaurantByStep,
     handleDesktopArrowNavigationEvent,
 } from '@/lib/home-map-keyboard-navigation';
+import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
+import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -52,6 +54,8 @@ interface HomeMapContainerProps {
     externalPanelOpen?: boolean; // 외부 패널이 열려있지 않을 때 NaverMap 내부 패널 닫기
     isPanelCollapsed?: boolean; // 패널 접기 상태
     onSwipeableRestaurantsChange?: (restaurants: Restaurant[]) => void;
+    isMapFullscreen?: boolean;
+    onMapFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 // ========== [PERFORMANCE] 상수 호이스팅 - 컴포넌트 외부로 이동하여 리렌더링 시 재선언 방지 ==========
@@ -161,6 +165,8 @@ function HomeMapContainerComponent({
     externalPanelOpen,
     isPanelCollapsed,
     onSwipeableRestaurantsChange,
+    isMapFullscreen = false,
+    onMapFullscreenChange,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
@@ -197,6 +203,7 @@ function HomeMapContainerComponent({
     const contentScrollResetNeededRef = useRef(false);
     const pendingSwipeableRestaurantsRef = useRef<Restaurant[]>([]);
     const swipeableRestaurantsRafRef = useRef(0);
+    const lastMarkerClickAtRef = useRef(0);
 
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
@@ -290,6 +297,15 @@ function HomeMapContainerComponent({
     }, []);
 
     const syncMobileLayout = useCallback((heightPercent: number) => {
+        if (isMobileOrTablet && isMapFullscreen) {
+            setMobileSheetLayoutState({
+                source: HOME_MAP_MOBILE_LAYOUT_SOURCE,
+                hideBottomNav: true,
+                headerHideProgress: 1,
+            });
+            return;
+        }
+
         if (!isMobileOrTablet || !isPanelOpen) {
             resetMobileSheetLayoutState(HOME_MAP_MOBILE_LAYOUT_SOURCE);
             return;
@@ -308,7 +324,7 @@ function HomeMapContainerComponent({
             hideBottomNav,
             headerHideProgress,
         });
-    }, [getCurrentMaxHeight, isMobileOrTablet, isPanelOpen]);
+    }, [getCurrentMaxHeight, isMapFullscreen, isMobileOrTablet, isPanelOpen]);
 
     const writeSheetHeightStyle = useCallback((heightPercent: number) => {
         const sheetContainer = sheetContainerRef.current;
@@ -478,12 +494,17 @@ function HomeMapContainerComponent({
         if (!isMobileOrTablet) return;
 
         if (!isPanelOpen) {
+            onMapFullscreenChange?.(false);
             resetSheetInteractionState();
             wasPanelOpenRef.current = false;
             lastPanelRestaurantIdRef.current = null;
             contentScrollResetNeededRef.current = false;
             resetMobileSheetLayoutState(HOME_MAP_MOBILE_LAYOUT_SOURCE);
             return;
+        }
+
+        if (isMapFullscreen) {
+            syncMobileLayout(sheetHeightRef.current);
         }
 
         if (!panelRestaurant) {
@@ -512,8 +533,11 @@ function HomeMapContainerComponent({
         panelRestaurant,
         panelRestaurant?.id,
         getCurrentMaxHeight,
+        isMapFullscreen,
+        onMapFullscreenChange,
         resetSheetInteractionState,
-        setSheetHeightSafe
+        setSheetHeightSafe,
+        syncMobileLayout
     ]);
 
     useEffect(() => {
@@ -521,6 +545,12 @@ function HomeMapContainerComponent({
             resetMobileSheetLayoutState(HOME_MAP_MOBILE_LAYOUT_SOURCE);
         };
     }, []);
+
+    useEffect(() => {
+        if (!isMobileOrTablet || !isPanelOpen) return;
+
+        syncMobileLayout(sheetHeightRef.current);
+    }, [isMapFullscreen, isMobileOrTablet, isPanelOpen, syncMobileLayout]);
 
     useEffect(() => {
         if (!isPanelOpen) {
@@ -648,6 +678,16 @@ function HomeMapContainerComponent({
             dragDistancePx > 0 &&
             dragDistancePx >= HALF_TO_PEEK_DISTANCE_PX;
 
+        if (shouldDismissSheetFromPeek({
+            startedAtPeek,
+            dragDistancePx,
+            gestureVelocity,
+            minVelocityPxPerMs: SWIPE_VELOCITY_CLOSE_THRESHOLD,
+        })) {
+            onPanelClose();
+            return;
+        }
+
         if (isSwipeDown) {
             if (startedAtPeek) {
                 setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
@@ -693,6 +733,7 @@ function HomeMapContainerComponent({
         applySnapTransition,
         getCurrentMaxHeight,
         getNearestSnapHeight,
+        onPanelClose,
         percentToPx,
         pxToPercent,
         setSheetHeightSafe,
@@ -940,8 +981,45 @@ function HomeMapContainerComponent({
     }, [activeSwipeableRestaurants, getRestaurantListByMode, onRestaurantSelect, panelRestaurant, selectedRestaurant]);
 
     const handleMapMarkerClick = useCallback((restaurant: Restaurant) => {
+        lastMarkerClickAtRef.current = Date.now();
+        onMapFullscreenChange?.(false);
         onMarkerClick(restaurant);
-    }, [onMarkerClick]);
+    }, [onMapFullscreenChange, onMarkerClick]);
+
+    const handleMapBlankClick = useCallback(() => {
+        if (Date.now() - lastMarkerClickAtRef.current < 350) return;
+
+        const action = resolveMobileMapBlankTapAction({
+            isMobileOrTablet,
+            isPanelOpen,
+            hasPanelRestaurant: Boolean(panelRestaurant),
+            isMapFullscreen,
+            sheetHeight: sheetHeightRef.current,
+            peekHeight: PEEK_SHEET_HEIGHT,
+        });
+
+        if (action === 'collapse-to-peek') {
+            setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
+            return;
+        }
+
+        if (action === 'enter-map-fullscreen') {
+            onMapFullscreenChange?.(true);
+            return;
+        }
+
+        if (action === 'restore-from-map-fullscreen') {
+            onMapFullscreenChange?.(false);
+            setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
+        }
+    }, [
+        isMapFullscreen,
+        isMobileOrTablet,
+        isPanelOpen,
+        onMapFullscreenChange,
+        panelRestaurant,
+        setSheetHeightSafe,
+    ]);
 
     useEffect(() => {
         if (onSwipeableRestaurantsChange) {
@@ -1073,16 +1151,17 @@ function HomeMapContainerComponent({
 
     const handleReleaseSearchSelectionOwnership = useCallback(() => {
         onReleaseSearchSelectionOwnership?.();
+        onMapFullscreenChange?.(false);
 
         if (!isMobileOrTablet || !isPanelOpen) {
             return;
         }
 
         setSheetHeightSafe(PEEK_SHEET_HEIGHT, true);
-    }, [isMobileOrTablet, isPanelOpen, onReleaseSearchSelectionOwnership, setSheetHeightSafe]);
+    }, [isMobileOrTablet, isPanelOpen, onMapFullscreenChange, onReleaseSearchSelectionOwnership, setSheetHeightSafe]);
 
     const mapPadding = useMemo(() => {
-        if (!isPanelOpen) return undefined;
+        if (!isPanelOpen || isMapFullscreen) return undefined;
         // Desktop: Right panel 400px
         if (isDesktop) return { top: 0, bottom: 0, left: 0, right: 400 };
         // Mobile: 바텀시트 높이만큼 bottom padding을 동적으로 적용하여
@@ -1090,7 +1169,7 @@ function HomeMapContainerComponent({
         const clampedSheetHeight = Math.max(0, Math.min(100, sheetHeight));
         const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
         return { top: 0, bottom: vh * (clampedSheetHeight / 100), left: 0, right: 0 };
-    }, [isPanelOpen, isDesktop, sheetHeight]);
+    }, [isMapFullscreen, isPanelOpen, isDesktop, sheetHeight]);
     const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
 
     return (
@@ -1113,9 +1192,10 @@ function HomeMapContainerComponent({
                         externalPanelOpen={externalPanelOpen}
                         isPanelCollapsed={isPanelCollapsed}
                         isPanelOpen={isPanelOpen}
-                        mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen ? sheetHeight : 0}
+                        mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen && !isMapFullscreen ? sheetHeight : 0}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                         onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
+                        onMapBlankClick={handleMapBlankClick}
                     />
                 </Suspense>
             ) : (
@@ -1134,6 +1214,7 @@ function HomeMapContainerComponent({
                         onMarkerClick={handleMapMarkerClick}
                         mapPadding={mapPadding}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
+                        onMapBlankClick={handleMapBlankClick}
                     />
                 </Suspense>
             )}
@@ -1186,7 +1267,7 @@ function HomeMapContainerComponent({
                     )}
 
                     {/* 모바일/태블릿 바텀시트 */}
-                    {isMobileOrTablet && isPanelOpen && (
+                    {isMobileOrTablet && isPanelOpen && !isMapFullscreen && (
                         <div className="fixed inset-0 z-[80] pointer-events-none">
                             <div
                                 ref={sheetContainerRef}

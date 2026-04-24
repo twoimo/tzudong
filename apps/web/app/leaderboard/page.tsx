@@ -7,7 +7,6 @@ import { Trophy, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { LeaderboardSkeleton } from "@/components/ui/skeleton-loaders";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Popover,
     PopoverContent,
@@ -16,6 +15,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { BREAKPOINTS } from "@/hooks/useDeviceType";
+import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
 export default function LeaderboardPage() {
     const router = useRouter();
@@ -23,10 +23,16 @@ export default function LeaderboardPage() {
     const LEADERBOARD_PAGE_SIZE = 15;
     const [period, setPeriod] = useState<'all' | 'monthly'>('all');
     const { data: leaderboardData = [], isLoading } = useLeaderboard(period);
+    const scrollRef = useRef<HTMLDivElement>(null);
     const userItemRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [displayLimit, setDisplayLimit] = useState(LEADERBOARD_PAGE_SIZE);
     const [isMounted, setIsMounted] = useState(false);
+    const leaderboardBottomNavAutoHide = useMobileBottomNavAutoHide({
+        scrollRef,
+        source: 'leaderboard-page-scroll',
+        disabled: !isMounted,
+    });
 
     useEffect(() => {
         setIsMounted(true);
@@ -93,7 +99,13 @@ export default function LeaderboardPage() {
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden relative">
-            <ScrollArea className="h-full">
+            <div
+                ref={scrollRef}
+                className="h-full overflow-y-auto"
+                onScroll={leaderboardBottomNavAutoHide.onScroll}
+                onTouchStart={leaderboardBottomNavAutoHide.onTouchStart}
+                onTouchMove={leaderboardBottomNavAutoHide.onTouchMove}
+            >
                 {/* Header */}
                 <div className="border-b border-border bg-background p-4 sm:p-6">
                     <div className="flex items-center justify-between gap-2">
@@ -171,7 +183,7 @@ export default function LeaderboardPage() {
                         )}
                     </div>
                 </div>
-            </ScrollArea>
+            </div>
         </div>
     );
 }
