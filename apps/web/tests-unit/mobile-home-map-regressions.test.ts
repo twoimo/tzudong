@@ -2,8 +2,10 @@ import { describe, expect, test } from 'bun:test';
 
 import type { Restaurant } from '../types/restaurant';
 import { getAdjacentRestaurantByStep } from '../lib/home-map-keyboard-navigation';
+import { shouldDismissSheetFromPeek } from '../lib/mobile-sheet-dismiss-gesture';
 import { buildPostSearchSwipeCandidates, releaseSearchSelectionOwnership } from '../lib/mobile-home-search-selection';
 import { buildMarkerRenderSignature, shouldSkipMarkerUpdate } from '../lib/map-render-guard';
+import { resolveMobileMapBlankTapAction } from '../lib/mobile-map-fullscreen-toggle';
 
 const makeRestaurant = (id: string, name: string): Restaurant =>
     ({
@@ -142,5 +144,80 @@ describe('mobile home map regression guards', () => {
             panelRestaurant: searchedRestaurant,
             isPanelOpen: true,
         });
+    });
+
+    test('peek-state downward sheet gesture dismisses only after intentional distance or speed', () => {
+        expect(shouldDismissSheetFromPeek({
+            startedAtPeek: true,
+            dragDistancePx: 64,
+            gestureVelocity: 0.12,
+        })).toBe(true);
+
+        expect(shouldDismissSheetFromPeek({
+            startedAtPeek: true,
+            dragDistancePx: 18,
+            gestureVelocity: 0.3,
+            minVelocityPxPerMs: 0.26,
+        })).toBe(true);
+
+        expect(shouldDismissSheetFromPeek({
+            startedAtPeek: true,
+            dragDistancePx: 18,
+            gestureVelocity: 0.12,
+            minVelocityPxPerMs: 0.26,
+        })).toBe(false);
+
+        expect(shouldDismissSheetFromPeek({
+            startedAtPeek: false,
+            dragDistancePx: 80,
+            gestureVelocity: 0.4,
+        })).toBe(false);
+    });
+
+    test('blank map taps collapse the sheet, enter fullscreen map, then restore the peek sheet', () => {
+        const baseState = {
+            isMobileOrTablet: true,
+            isPanelOpen: true,
+            hasPanelRestaurant: true,
+            peekHeight: 25,
+        };
+
+        expect(resolveMobileMapBlankTapAction({
+            ...baseState,
+            isMapFullscreen: false,
+            sheetHeight: 50,
+        })).toBe('collapse-to-peek');
+
+        expect(resolveMobileMapBlankTapAction({
+            ...baseState,
+            isMapFullscreen: false,
+            sheetHeight: 25,
+        })).toBe('enter-map-fullscreen');
+
+        expect(resolveMobileMapBlankTapAction({
+            ...baseState,
+            isMapFullscreen: true,
+            sheetHeight: 25,
+        })).toBe('restore-from-map-fullscreen');
+    });
+
+    test('blank map fullscreen toggle is inactive outside a mobile restaurant panel', () => {
+        expect(resolveMobileMapBlankTapAction({
+            isMobileOrTablet: false,
+            isPanelOpen: true,
+            hasPanelRestaurant: true,
+            isMapFullscreen: false,
+            sheetHeight: 50,
+            peekHeight: 25,
+        })).toBe('none');
+
+        expect(resolveMobileMapBlankTapAction({
+            isMobileOrTablet: true,
+            isPanelOpen: false,
+            hasPanelRestaurant: true,
+            isMapFullscreen: false,
+            sheetHeight: 50,
+            peekHeight: 25,
+        })).toBe('none');
     });
 });

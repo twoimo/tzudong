@@ -6,6 +6,7 @@ import { Bookmark } from "lucide-react";
 import { useBookmarkIds, useToggleBookmark, useBookmarkCount } from "@/hooks/use-bookmarks";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { requestAuthUi } from "@/lib/auth-ui-events";
 
 interface BookmarkButtonProps {
     restaurantId: string;
@@ -42,6 +43,8 @@ const BookmarkButtonComponent = ({
         if (!user) {
             if (onRequireAuth) {
                 onRequireAuth();
+            } else {
+                requestAuthUi({ source: 'bookmark-button', reason: 'bookmark' });
             }
             return;
         }

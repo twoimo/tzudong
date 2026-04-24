@@ -18,7 +18,7 @@ export default function MyPageError({
     }, [error]);
 
     return (
-        <div className="h-[calc(100vh-64px)] bg-background flex items-center justify-center">
+        <div className="h-full min-h-0 bg-background flex items-center justify-center">
             <div className="text-center max-w-md p-6">
                 <div className="text-4xl mb-4">⚠️</div>
                 <h2 className="text-lg font-bold mb-2">마이페이지를 불러올 수 없습니다</h2>

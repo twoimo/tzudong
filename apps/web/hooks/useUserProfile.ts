@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
+import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
 
 // ============================================================================
 // Type Definitions
@@ -93,6 +94,48 @@ export function getUserTier(qualityScore: number): TierInfo {
 /** Map에 카운트 증가 헬퍼 */
 function incrementMapCount(map: Map<string, number>, key: string): void {
     map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+function getRestaurantDisplayName(restaurant: Restaurant | null | undefined): string {
+    return restaurant?.name || restaurant?.approved_name || '알 수 없음';
+}
+
+async function fetchApprovedCanonicalRestaurantCandidates(reviewedRestaurants: Restaurant[]): Promise<Restaurant[]> {
+    const approvedNames = [
+        ...new Set(
+            reviewedRestaurants
+                .map((restaurant) => (restaurant.approved_name || restaurant.name || '').trim())
+                .filter(Boolean)
+        ),
+    ];
+
+    if (approvedNames.length === 0) return [];
+
+    const { data } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('status', 'approved')
+        .in('approved_name', approvedNames);
+
+    return (data ?? []) as Restaurant[];
+}
+
+function resolveCanonicalReviewedRestaurant({
+    reviewedRestaurant,
+    reviewedRestaurantId,
+    approvedRestaurants,
+}: {
+    reviewedRestaurant: Restaurant | null | undefined;
+    reviewedRestaurantId: string;
+    approvedRestaurants: Restaurant[];
+}): Restaurant | null {
+    if (reviewedRestaurant?.status === 'approved') return reviewedRestaurant;
+
+    return (findCanonicalVisitedRestaurant({
+        reviewedRestaurant: reviewedRestaurant ?? null,
+        reviewedRestaurantId,
+        approvedRestaurants,
+    }) as Restaurant | null) ?? reviewedRestaurant ?? null;
 }
 
 // ============================================================================
@@ -248,6 +291,9 @@ export function useUserReviews(userId: string, viewerId?: string) {
                     return [r.id, r as Restaurant];
                 })
             );
+            const approvedRestaurants = await fetchApprovedCanonicalRestaurantCandidates(
+                typedRestaurants as Restaurant[]
+            );
 
             // 4. 좋아요 정보 조회 (뷰어 기준 + 전체 개수)
             // 개수는 별도 카운트 쿼리가 필요할 수 있으나, 여기서는 기존 로직대로 likes 테이블 조회
@@ -275,13 +321,18 @@ export function useUserReviews(userId: string, viewerId?: string) {
                     type: 'image'
                 })) || [];
 
-                const restaurant = restaurantMap.get(r.restaurant_id);
+                const reviewedRestaurant = restaurantMap.get(r.restaurant_id);
+                const restaurant = resolveCanonicalReviewedRestaurant({
+                    reviewedRestaurant,
+                    reviewedRestaurantId: r.restaurant_id,
+                    approvedRestaurants,
+                });
 
                 return {
                     id: r.id,
-                    restaurantId: r.restaurant_id,
-                    restaurantName: restaurant?.name ?? '알 수 없음',
-                    restaurant: restaurant,
+                    restaurantId: restaurant?.id ?? r.restaurant_id,
+                    restaurantName: getRestaurantDisplayName(restaurant),
+                    restaurant: restaurant ?? undefined,
                     rating: 5,
                     content: r.content,
                     isVerified: r.is_verified,
@@ -397,9 +448,32 @@ export function useUserStamps(userId: string) {
                 })
             );
 
+            const reviewedRestaurantNames = [
+                ...new Set(
+                    typedRestaurants
+                        .map((restaurant) => (restaurant.approved_name || '').trim())
+                        .filter(Boolean)
+                ),
+            ];
+            const { data: approvedRestaurantRows } = reviewedRestaurantNames.length > 0
+                ? await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('status', 'approved')
+                    .in('approved_name', reviewedRestaurantNames)
+                : { data: [] };
+            const approvedRestaurants = (approvedRestaurantRows ?? []) as Restaurant[];
+
             // 4. 데이터 병합
             return typedReviews.map((r) => {
-                const restaurant = restaurantMap.get(r.restaurant_id);
+                const reviewedRestaurant = restaurantMap.get(r.restaurant_id);
+                const restaurant = reviewedRestaurant?.status === 'approved'
+                    ? reviewedRestaurant
+                    : findCanonicalVisitedRestaurant({
+                        reviewedRestaurant: reviewedRestaurant ?? null,
+                        reviewedRestaurantId: r.restaurant_id,
+                        approvedRestaurants,
+                    }) ?? reviewedRestaurant;
                 // 맛집 정보가 없으면 스킵되어야 하지만, 일단 타입 안전을 위해 빈 객체 또는 처리 필요
                 if (!restaurant) return null;
 

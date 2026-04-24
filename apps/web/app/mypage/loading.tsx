@@ -3,8 +3,8 @@
  */
 export default function MyPageLoading() {
     return (
-        <div className="h-[calc(100vh-64px)] bg-background">
-            <div className="container mx-auto h-full max-w-6xl flex">
+        <div className="h-full min-h-0 bg-background">
+            <div className="container mx-auto h-full min-h-0 max-w-6xl flex">
                 {/* 사이드바 스켈레톤 */}
                 <div className="hidden md:block w-56 shrink-0 border-r border-border p-4">
                     <div className="space-y-3">

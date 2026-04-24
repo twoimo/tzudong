@@ -15,6 +15,7 @@ import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
+import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 
 const STAMP_PAGE_SIZE = 16;
 const STAMP_GUIDE_DEMO_RESTAURANT = {
@@ -26,6 +27,10 @@ const STAMP_GUIDE_DEMO_RESTAURANT = {
     review_count: 17,
 } as unknown as Restaurant;
 const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 도장이 찍혀요.";
+
+type UserReviewWithRestaurant = UserReview & {
+    restaurant?: Restaurant | null;
+};
 
 interface StampOverlayProps {
     onClose?: () => void;
@@ -60,12 +65,40 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                 .eq('user_id', user.id)
                 .eq('is_verified', true);
             if (error) throw error;
-            return data as UserReview[];
+
+            const reviews = (data ?? []) as UserReview[];
+            const restaurantIds = [...new Set(reviews.map((review) => review.restaurant_id).filter(Boolean))];
+            if (restaurantIds.length === 0) return reviews;
+
+            const { data: restaurantRows, error: restaurantsError } = await supabase
+                .from('restaurants')
+                .select('id, name:approved_name, approved_name, road_address, jibun_address, status')
+                .in('id', restaurantIds);
+            if (restaurantsError) throw restaurantsError;
+
+            const restaurantMap = new Map(
+                ((restaurantRows ?? []) as Restaurant[]).map((restaurant) => [restaurant.id, restaurant])
+            );
+
+            return reviews.map((review) => ({
+                ...review,
+                restaurant: restaurantMap.get(review.restaurant_id) ?? null,
+            })) as UserReviewWithRestaurant[];
         },
         enabled: !!user?.id,
     });
 
     const userVisitedIds = useMemo(() => new Set(userReviewData.map(r => r.restaurant_id)), [userReviewData]);
+    const reviewedRestaurantCandidates = useMemo(() => {
+        return userReviewData
+            .map((review) => (review as UserReviewWithRestaurant).restaurant)
+            .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
+    }, [userReviewData]);
+    const isVisited = useCallback((restaurant: Restaurant) => hasRelatedVerifiedUserReview({
+        restaurant,
+        reviewedRestaurantIds: userVisitedIds,
+        reviewedRestaurants: reviewedRestaurantCandidates,
+    }), [reviewedRestaurantCandidates, userVisitedIds]);
     const isUserStampsReady = !user?.id || isUserStampsFetched;
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
 
@@ -129,17 +162,17 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
         }
 
         if (filters.showUnvisitedOnly && user) {
-            result = result.filter(r => !userVisitedIds.has(r.id));
+            result = result.filter(r => !isVisited(r));
         }
 
         result = [...result].sort((a, b) => {
-            const aVisited = userVisitedIds.has(a.id) ? 1 : 0;
-            const bVisited = userVisitedIds.has(b.id) ? 1 : 0;
+            const aVisited = isVisited(a) ? 1 : 0;
+            const bVisited = isVisited(b) ? 1 : 0;
             return bVisited - aVisited;
         });
 
         return result;
-    }, [allMergedRestaurants, filters, user, userVisitedIds]);
+    }, [allMergedRestaurants, filters, isVisited, user]);
 
     const overlayGuideCount = showStampGuide ? 1 : 0;
     const displayedRestaurants = useMemo(
@@ -347,13 +380,13 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {displayedCards.map((restaurant) => {
                                 const isGuideCard = restaurant.id === STAMP_GUIDE_DEMO_RESTAURANT.id;
-                                const isVisited = isGuideCard ? true : userVisitedIds.has(restaurant.id);
+                                const isVisitedCard = isGuideCard ? true : isVisited(restaurant);
                                 const currentIndex = cardThumbnailIndexes[restaurant.id] || 0;
                                 return (
                                     <StampCard
                                         key={restaurant.id}
                                         restaurant={restaurant}
-                                        isVisited={isVisited}
+                                        isVisited={isVisitedCard}
                                         isUserStampsReady={isUserStampsReady}
                                         currentThumbnailIndex={currentIndex}
                                         onThumbnailChange={handleThumbnailChange}
