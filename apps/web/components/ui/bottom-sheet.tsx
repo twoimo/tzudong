@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useDeviceType';
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from '@/lib/mobile-sheet-layout';
+import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
+import { calculateVisualViewportBottomOffset } from '@/lib/visual-viewport-keyboard';
 
 interface BottomSheetProps {
     isOpen: boolean;
@@ -32,6 +34,7 @@ interface BottomSheetProps {
     ariaLabelledBy?: string;
     ariaDescribedBy?: string;
     focusTrapAllowSelectors?: string[];
+    keyboardBehavior?: 'lift' | 'stable';
 }
 
 const isVerticallyScrollable = (element: HTMLElement) => {
@@ -195,6 +198,7 @@ function BottomSheetComponent({
     ariaLabelledBy,
     ariaDescribedBy,
     focusTrapAllowSelectors = DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS,
+    keyboardBehavior = 'lift',
 }: BottomSheetProps) {
     const isMobileOrTablet = useIsMobile();
     const isModal = modal ?? showBackdrop;
@@ -205,6 +209,13 @@ function BottomSheetComponent({
         duration: SNAP_TRANSITION_BASE_MS,
         easing: SNAP_EASING_BASE,
     });
+    const [viewportFrame, setViewportFrame] = useState(() => {
+        const viewportHeight = typeof window !== 'undefined'
+            ? (window.visualViewport?.height ?? window.innerHeight)
+            : 800;
+        return { height: viewportHeight, bottomOffset: 0 };
+    });
+    const [isViewportResizing, setIsViewportResizing] = useState(false);
 
     // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
     const viewportHeightRef = useRef(
@@ -254,6 +265,36 @@ function BottomSheetComponent({
 
     const percentToPx = useCallback((percent: number) => {
         return (percent / 100) * viewportHeightRef.current;
+    }, []);
+
+    const syncViewportMetrics = useCallback(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) {
+            const fallbackHeight = window.innerHeight;
+            viewportHeightRef.current = fallbackHeight;
+            setViewportFrame((previousFrame) => (
+                Math.abs(previousFrame.height - fallbackHeight) < 1 && previousFrame.bottomOffset === 0
+                    ? previousFrame
+                    : { height: fallbackHeight, bottomOffset: 0 }
+            ));
+            return fallbackHeight;
+        }
+
+        const nextHeight = viewport.height;
+        const nextBottomOffset = calculateVisualViewportBottomOffset({
+            layoutViewportHeight: window.innerHeight,
+            visualViewportHeight: nextHeight,
+            visualViewportOffsetTop: viewport.offsetTop,
+        });
+        viewportHeightRef.current = nextHeight;
+        setViewportFrame((previousFrame) => {
+            const isHeightSame = Math.abs(previousFrame.height - nextHeight) < 1;
+            const isOffsetSame = Math.abs(previousFrame.bottomOffset - nextBottomOffset) < 1;
+            return isHeightSame && isOffsetSame
+                ? previousFrame
+                : { height: nextHeight, bottomOffset: nextBottomOffset };
+        });
+        return nextHeight;
     }, []);
 
     const getContentSnapPoints = useCallback(() => {
@@ -416,17 +457,27 @@ function BottomSheetComponent({
         if (!viewport) return;
 
         let throttleTimer: number | null = null;
+        let resizeSettleTimer: number | null = null;
 
         const handleResize = () => {
+            setIsViewportResizing(true);
+            if (resizeSettleTimer !== null) {
+                window.clearTimeout(resizeSettleTimer);
+            }
+            resizeSettleTimer = window.setTimeout(() => {
+                setIsViewportResizing(false);
+                resizeSettleTimer = null;
+            }, 140);
+
             if (throttleTimer !== null) return;
 
             throttleTimer = requestAnimationFrame(() => {
-                viewportHeightRef.current = viewport.height;
+                const nextViewportHeight = syncViewportMetrics();
                 // 드래그 중이 아닐 때만 상태 업데이트 (리렌더링 최소화)
                 if (!isDraggingRef.current) {
                     // 최대 높이를 넘지 않도록 조정
                     setSheetHeight(prev => {
-                        const nextHeight = Math.max(minHeight, Math.min(prev, getCurrentMaxHeight(viewport.height)));
+                        const nextHeight = Math.max(minHeight, Math.min(prev, getCurrentMaxHeight(nextViewportHeight)));
                         syncMobileLayout(nextHeight);
                         return nextHeight;
                     });
@@ -436,18 +487,23 @@ function BottomSheetComponent({
         };
 
         viewport.addEventListener('resize', handleResize, { passive: true });
+        viewport.addEventListener('scroll', handleResize, { passive: true });
         // 초기값 설정
-        viewportHeightRef.current = viewport.height;
+        syncViewportMetrics();
 
         return () => {
             viewport.removeEventListener('resize', handleResize);
+            viewport.removeEventListener('scroll', handleResize);
             if (throttleTimer !== null) cancelAnimationFrame(throttleTimer);
+            if (resizeSettleTimer !== null) window.clearTimeout(resizeSettleTimer);
+            setIsViewportResizing(false);
         };
-    }, [isOpen, getCurrentMaxHeight, minHeight, syncMobileLayout]);
+    }, [isOpen, getCurrentMaxHeight, minHeight, syncMobileLayout, syncViewportMetrics]);
 
     // 패널이 열릴 때 초기화
     useEffect(() => {
         if (isOpen) {
+            syncViewportMetrics();
             // 헤더 오프셋이 있는 경우 최대 높이 계산하여 초기화
             if (headerOffset > 0 && typeof window !== 'undefined' && window.visualViewport) {
                 const vh = window.visualViewport.height;
@@ -463,8 +519,11 @@ function BottomSheetComponent({
             }
             return;
         }
+        setViewportFrame((previousFrame) => (
+            previousFrame.bottomOffset === 0 ? previousFrame : { ...previousFrame, bottomOffset: 0 }
+        ));
         resetMobileSheetLayoutState(layoutSource);
-    }, [defaultHeight, headerOffset, isOpen, layoutSource, syncMobileLayout]);
+    }, [defaultHeight, headerOffset, isOpen, layoutSource, syncMobileLayout, syncViewportMetrics]);
 
     useEffect(() => {
         sheetHeightRef.current = sheetHeight;
@@ -583,6 +642,16 @@ function BottomSheetComponent({
             startedAtHalf &&
             dragDistancePx > 0 &&
             dragDistancePx >= HALF_TO_PEEK_DISTANCE_PX;
+
+        if (enablePeek && shouldDismissSheetFromPeek({
+            startedAtPeek,
+            dragDistancePx,
+            gestureVelocity,
+            minVelocityPxPerMs: SWIPE_VELOCITY_CLOSE_THRESHOLD,
+        })) {
+            onClose();
+            return;
+        }
 
         if (isSwipeDown) {
             if (startedAtPeek) {
@@ -1088,17 +1157,29 @@ function BottomSheetComponent({
 
     const currentMaxHeight = Math.max(minHeight, getCurrentMaxHeight());
     const isAtFullHeight = sheetHeight >= currentMaxHeight - SHEET_HALF_OPEN_TOLERANCE;
+    const useStableKeyboardLayout = keyboardBehavior === 'stable' && isAtFullHeight;
+    const contentKeyboardPadding = useStableKeyboardLayout ? viewportFrame.bottomOffset : 0;
 
     // 동적 높이 스타일
-    const heightStyle = {
-        // [FIX] Safari/삼성 인터넷 100vh 버그 수정 - HomeMapContainer 방식 적용
-        // bottom: 0 고정 + height(px)로 직접 계산하여 가상 키보드 등 대응
-        height: `${viewportHeightRef.current * sheetHeight / 100}px`,
-        // 헤더 오프셋이 있는 경우 최대 높이 제한 (CSS로도 이중 안전장치)
-        maxHeight: headerOffset > 0 ? `calc(100% - ${headerOffset}px)` : `${maxHeight}%`,
-        transitionDuration: isDragging ? '0ms' : `${sheetSnapTransition.duration}ms`,
-        transitionTimingFunction: isDragging ? undefined : sheetSnapTransition.easing,
-    };
+    const heightStyle = useStableKeyboardLayout
+        ? {
+            top: 0,
+            bottom: 0,
+            height: 'auto',
+            maxHeight: undefined,
+            transitionDuration: isDragging || isViewportResizing ? '0ms' : `${sheetSnapTransition.duration}ms`,
+            transitionTimingFunction: isDragging || isViewportResizing ? undefined : sheetSnapTransition.easing,
+        }
+        : {
+            // [FIX] Safari/삼성 인터넷 100vh 버그 수정 - HomeMapContainer 방식 적용
+            // bottom: 0 고정 + height(px)로 직접 계산하여 가상 키보드 등 대응
+            height: `${viewportFrame.height * sheetHeight / 100}px`,
+            bottom: viewportFrame.bottomOffset > 0 ? `${viewportFrame.bottomOffset}px` : undefined,
+            // 헤더 오프셋이 있는 경우 최대 높이 제한 (CSS로도 이중 안전장치)
+            maxHeight: headerOffset > 0 ? `calc(100% - ${headerOffset}px)` : `${maxHeight}%`,
+            transitionDuration: isDragging || isViewportResizing ? '0ms' : `${sheetSnapTransition.duration}ms`,
+            transitionTimingFunction: isDragging || isViewportResizing ? undefined : sheetSnapTransition.easing,
+        };
 
     return (
         <>
@@ -1133,7 +1214,7 @@ function BottomSheetComponent({
                     isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                     'flex flex-col',
                     // 드래그 중에는 트랜지션 제거
-                    isDragging ? '' : 'transition-[height,border-radius]',
+                    isDragging || isViewportResizing ? '' : 'transition-[height,border-radius]',
                     className
                 )}
                 data-sheet-state={isAtFullHeight ? 'full' : 'partial'}
@@ -1189,7 +1270,7 @@ function BottomSheetComponent({
                             ),
                         overflowY: isDragging ? 'hidden' : undefined,
                         WebkitOverflowScrolling: 'touch',
-                        paddingBottom: `calc(env(safe-area-inset-bottom) + ${bottomNavOffset}px)`
+                        paddingBottom: `calc(env(safe-area-inset-bottom) + ${bottomNavOffset + contentKeyboardPadding}px)`
                     }}
                 >
                     {children}

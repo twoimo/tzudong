@@ -747,7 +747,7 @@ function MobileControlOverlayComponent({
                                         if (pathname === '/') {
                                             window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', {
                                                 detail: {
-                                                    id: bookmark.restaurant_id,
+                                                    id: bookmark.restaurant.id,
                                                     mode: isOverseas ? 'overseas' : 'domestic'
                                                 }
                                             }));
@@ -755,7 +755,7 @@ function MobileControlOverlayComponent({
                                         }
 
                                         const modeParam = isOverseas ? '&mode=overseas' : '';
-                                        router.push(`/?r=${bookmark.restaurant_id}${modeParam}&z=13`);
+                                        router.push(`/?r=${bookmark.restaurant.id}${modeParam}&z=13`);
                                     }}
                                 >
                                     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
@@ -1059,7 +1059,7 @@ function MobileControlOverlayComponent({
             </div>
 
             {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
-            <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
+            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex flex-col gap-2">
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
                     <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,28vw,105px)]">
@@ -1112,14 +1112,10 @@ function MobileControlOverlayComponent({
             </div>
 
             {/* 우측 하단: 제보, 검색 버튼 */}
-            <div className="fixed bottom-20 right-4 z-40 flex flex-col gap-2">
+            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-40 flex flex-col gap-2">
                 {/* 제보 버튼 */}
                 <Button
                     onClick={() => {
-                        if (!user) {
-                            toast.error('맛집 제보는 로그인 후 이용 가능합니다');
-                            return;
-                        }
                         onSubmissionClick?.();
                     }}
                     className={cn(

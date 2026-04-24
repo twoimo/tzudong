@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { MutableRefObject } from 'react';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
+import { requestAuthUi } from '@/lib/auth-ui-events';
 import type { useHomeState } from './hooks/useHomeState';
 
 type HomeState = ReturnType<typeof useHomeState>;
@@ -24,6 +25,7 @@ type AnnouncementRow = {
 type HomeClientEffectsProps = {
     activeRightPanel: PanelType;
     isAdmin: boolean;
+    isLoggedIn: boolean;
     isMobileOrTablet: boolean;
     mapMode: 'domestic' | 'overseas';
     openDetailPanelRef: MutableRefObject<(restaurant: Restaurant, focusZoom?: number) => void>;
@@ -38,6 +40,7 @@ type HomeClientEffectsProps = {
 export default function HomeClientEffects({
     activeRightPanel,
     isAdmin,
+    isLoggedIn,
     isMobileOrTablet,
     mapMode,
     openDetailPanelRef,
@@ -235,6 +238,11 @@ export default function HomeClientEffects({
 
     useEffect(() => {
         const handleMyPageOpen = () => {
+            if (!isLoggedIn) {
+                requestAuthUi({ source: 'home-open-mypage-event', route: '/', reason: 'mypage' });
+                return;
+            }
+
             router.push('/mypage');
         };
 
@@ -327,6 +335,7 @@ export default function HomeClientEffects({
     }, [
         activeRightPanel,
         isAdmin,
+        isLoggedIn,
         openDetailPanelRef,
         openPanelRef,
         router,

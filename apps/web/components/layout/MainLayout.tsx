@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
 import { APP_HEADER_HEIGHT_VAR, MOBILE_SHEET_HEADER_OFFSET_VAR, MOBILE_SHEET_HEADER_PROGRESS_VAR } from '@/lib/mobile-sheet-layout';
+import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
 
 // [PERF] 모달과 비핵심 컴포넌트를 동적 임포트로 코드 스플리팅
 // 이 컴포넌트들은 사용자 인터랙션 후에만 필요하므로 초기 번들에서 제외
@@ -143,10 +144,12 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             handleMobileProfileRequest();
         };
 
+        window.addEventListener(AUTH_UI_REQUEST_EVENT, handleMobileAuthRequest);
         window.addEventListener('home:mobile-auth-request', openAuthListener);
         window.addEventListener('home:mobile-profile-request', openProfileListener);
 
         return () => {
+            window.removeEventListener(AUTH_UI_REQUEST_EVENT, handleMobileAuthRequest);
             window.removeEventListener('home:mobile-auth-request', openAuthListener);
             window.removeEventListener('home:mobile-profile-request', openProfileListener);
             setMobileHomeHeaderVars(false);
@@ -230,13 +233,13 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 "min-[1600px]:hidden",
                 // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
                 isDesktop && "hidden",
-                'transition-[transform,opacity] duration-300'
+                'transition-transform duration-300'
             )}>
                 <MobileBottomNav
-                    className="transition-[transform,opacity] duration-300"
+                    className="transition-transform duration-300"
                     style={{
-                        transform: 'translateY(calc(var(--mobile-sheet-hide-bottom-nav, 0) * 110%))',
-                        opacity: 'calc(1 - var(--mobile-sheet-hide-bottom-nav, 0))',
+                        transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
+                        willChange: 'transform',
                     }}
                 />
             </div>
