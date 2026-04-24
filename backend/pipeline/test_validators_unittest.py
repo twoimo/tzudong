@@ -206,7 +206,7 @@ class ValidatorsRegressionTests(unittest.TestCase):
                     "trace_id": "trace-1",
                     "youtube_link": "https://youtube.com/watch?v=abc",
                     "channel_name": "채널",
-                    "name": "식당A",
+                    "origin_name": "식당A",
                     # source_type intentionally missing
                     "lat": 37.5,
                     "lng": 127.0,
@@ -216,7 +216,7 @@ class ValidatorsRegressionTests(unittest.TestCase):
                     "trace_id": "trace-1",
                     "youtube_link": "https://youtube.com/watch?v=def",
                     "channel_name": "채널",
-                    "name": "식당B",
+                    "origin_name": "식당B",
                     "source_type": "manual",
                     "lat": 10,
                     "lng": 200,

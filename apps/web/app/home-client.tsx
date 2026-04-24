@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "@/lib/no-toast";
+import { requestAuthUi } from "@/lib/auth-ui-events";
 import { Restaurant } from "@/types/restaurant";
 
 // [OPTIMIZATION] 동적 임포트
@@ -55,6 +56,7 @@ export default function HomeClient() {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
     const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
+    const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
     const openDetailPanelRef = useRef<(restaurant: Restaurant, focusZoom?: number) => void>(() => {});
 
@@ -84,6 +86,7 @@ export default function HomeClient() {
     // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
     // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
     const openPanel = useCallback((panel: PanelType) => {
+        setIsMapFullscreen(false);
         // 맛집 상세 패널 닫기
         state.clearRestaurantDetailSelection();
         if (panel === 'announcement' && isMobileOrTablet) {
@@ -104,6 +107,7 @@ export default function HomeClient() {
     // 모든 패널 닫기
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const closeAllPanels = useCallback(() => {
+        setIsMapFullscreen(false);
         state.clearRestaurantDetailSelection();
         setActiveRightPanel(null);
         setIsAnnouncementSheetOpen(false);
@@ -152,6 +156,7 @@ export default function HomeClient() {
     // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const openDetailPanel = useCallback((restaurant: Restaurant, focusZoom?: number) => {
+        setIsMapFullscreen(false);
         // 먼저 다른 패널들 닫기
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
@@ -174,10 +179,12 @@ export default function HomeClient() {
 
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
         if (!restaurant) {
+            setIsMapFullscreen(false);
             state.clearRestaurantDetailSelection();
             return;
         }
 
+        setIsMapFullscreen(false);
         state.openRestaurantDetailSelection(restaurant);
     }, [state]);
 
@@ -199,7 +206,8 @@ export default function HomeClient() {
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const handleSubmissionButtonClick = useCallback(() => {
         if (!user) {
-            toast.error('맛집 제보는 로그인 후 이용 가능합니다');
+            toast.info('로그인하면 맛집 제보를 바로 이어서 할 수 있어요');
+            requestAuthUi({ source: 'home-submission-button', route: '/', reason: 'submit-restaurant' });
             return;
         }
         setIsSubmissionModalOpen(true);
@@ -209,13 +217,7 @@ export default function HomeClient() {
         if (typeof window === 'undefined') return;
 
         if (!user) {
-            window.dispatchEvent(new CustomEvent('home:mobile-auth-request', {
-                detail: {
-                    source: 'mobile-top-shell',
-                    route: '/',
-                    ts: Date.now(),
-                },
-            }));
+            requestAuthUi({ source: 'mobile-top-shell', route: '/', reason: 'open-profile' });
             return;
         }
 
@@ -234,6 +236,7 @@ export default function HomeClient() {
             <HomeClientEffects
                 activeRightPanel={activeRightPanel}
                 isAdmin={isAdmin}
+                isLoggedIn={!!user}
                 isMobileOrTablet={isMobileOrTablet}
                 mapMode={mapMode}
                 openDetailPanelRef={openDetailPanelRef}
@@ -245,31 +248,34 @@ export default function HomeClient() {
                 togglePanelCollapse={togglePanelCollapse}
             />
 
-            <HomeControlPanel
-                mapMode={mapMode}
-                selectedRegion={state.selectedRegion}
-                selectedCountry={state.selectedCountry}
-                selectedCategories={state.filters.categories}
-                filters={state.filters}
-                onRegionChange={handlers.handleRegionChange}
-                onCountryChange={handlers.handleCountryChange}
-                onCategoryChange={handlers.handleCategoryChange}
-                onRestaurantSelect={handlers.handleRestaurantSelect}
-                onRestaurantSearch={handlers.handleRestaurantSearch}
-                onSearchExecute={handlers.switchToSingleMap}
-                activePanel={activePanel}
-                onPanelClick={setActivePanel}
-                leftSidebarWidth={leftSidebarWidth}
-                rightPanelWidth={rightPanelWidth}
-                isAdmin={isAdmin}
-                onModeChange={(mode) => {
-                    state.clearRestaurantDetailSelection();
-                    setMapMode(mode);
-                }}
-                user={user}
-                onSubmissionClick={handleSubmissionButtonClick}
-                onTopShellUserIconClick={handleTopShellUserIconClick}
-            />
+            {!(isMobileOrTablet && isMapFullscreen) && (
+                <HomeControlPanel
+                    mapMode={mapMode}
+                    selectedRegion={state.selectedRegion}
+                    selectedCountry={state.selectedCountry}
+                    selectedCategories={state.filters.categories}
+                    filters={state.filters}
+                    onRegionChange={handlers.handleRegionChange}
+                    onCountryChange={handlers.handleCountryChange}
+                    onCategoryChange={handlers.handleCategoryChange}
+                    onRestaurantSelect={handlers.handleRestaurantSelect}
+                    onRestaurantSearch={handlers.handleRestaurantSearch}
+                    onSearchExecute={handlers.switchToSingleMap}
+                    activePanel={activePanel}
+                    onPanelClick={setActivePanel}
+                    leftSidebarWidth={leftSidebarWidth}
+                    rightPanelWidth={rightPanelWidth}
+                    isAdmin={isAdmin}
+                    onModeChange={(mode) => {
+                        setIsMapFullscreen(false);
+                        state.clearRestaurantDetailSelection();
+                        setMapMode(mode);
+                    }}
+                    user={user}
+                    onSubmissionClick={handleSubmissionButtonClick}
+                    onTopShellUserIconClick={handleTopShellUserIconClick}
+                />
+            )}
 
             <HomeMapContainer
                 key={mapMountKey}
@@ -297,6 +303,8 @@ export default function HomeClient() {
                 onPanelClick={setActivePanel}
                 externalPanelOpen={activeRightPanel === null}
                 isPanelCollapsed={isPanelCollapsed}
+                isMapFullscreen={isMapFullscreen}
+                onMapFullscreenChange={setIsMapFullscreen}
             />
 
             <HomeClientSidePanels

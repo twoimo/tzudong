@@ -4,6 +4,7 @@ import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
 
 type DBRestaurant = Tables<"restaurants">;
 
@@ -18,6 +19,14 @@ type RestaurantWithOptionalName = DBRestaurant & {
 type ReviewCountRow = {
     restaurant_id: string | null;
 };
+
+type ReviewCountCandidateRestaurant = Pick<
+    Restaurant,
+    'id' | 'name' | 'approved_name' | 'road_address' | 'jibun_address' | 'status'
+>;
+
+const REVIEW_COUNT_RELATED_RESTAURANT_SELECT = 'id, name:approved_name, approved_name, road_address, jibun_address, status';
+const SUPABASE_IN_CHUNK_SIZE = 80;
 
 interface UseRestaurantsOptions {
     bounds?: {
@@ -206,6 +215,62 @@ function buildRestaurantQueryKey(
     number | null
 ] {
     return ["restaurants", normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews];
+}
+
+
+function getUniqueRestaurantNames(restaurants: RestaurantWithOptionalName[]): string[] {
+    return [...new Set(restaurants
+        .map((restaurant) => getRestaurantName(restaurant).trim())
+        .filter(Boolean))];
+}
+
+async function fetchRelatedRestaurantCandidates(names: string[]): Promise<ReviewCountCandidateRestaurant[]> {
+    if (names.length === 0) return [];
+
+    const candidateRows: ReviewCountCandidateRestaurant[] = [];
+    for (let index = 0; index < names.length; index += SUPABASE_IN_CHUNK_SIZE) {
+        const nameChunk = names.slice(index, index + SUPABASE_IN_CHUNK_SIZE);
+        const { data, error } = await supabase
+            .from('restaurants')
+            .select(REVIEW_COUNT_RELATED_RESTAURANT_SELECT)
+            .in('approved_name', nameChunk);
+
+        if (error) throw error;
+        candidateRows.push(...((data ?? []) as ReviewCountCandidateRestaurant[]));
+    }
+
+    return candidateRows;
+}
+
+async function fetchVerifiedReviewRows(restaurantIds: string[]): Promise<ReviewCountRow[]> {
+    if (restaurantIds.length === 0) return [];
+
+    const reviewRows: ReviewCountRow[] = [];
+    for (let index = 0; index < restaurantIds.length; index += SUPABASE_IN_CHUNK_SIZE) {
+        const idChunk = restaurantIds.slice(index, index + SUPABASE_IN_CHUNK_SIZE);
+        const { data, error } = await supabase
+            .from('reviews')
+            .select('restaurant_id')
+            .in('restaurant_id', idChunk)
+            .eq('is_verified', true);
+
+        if (error) throw error;
+        reviewRows.push(...((data ?? []) as ReviewCountRow[]));
+    }
+
+    return reviewRows;
+}
+
+export async function buildRelatedVerifiedReviewCounts(restaurants: RestaurantWithOptionalName[]): Promise<Map<string, number>> {
+    const relatedCandidates = await fetchRelatedRestaurantCandidates(getUniqueRestaurantNames(restaurants));
+    const relatedRestaurantIds = [...new Set(relatedCandidates.map((restaurant) => restaurant.id).filter(Boolean))];
+    const reviewRows = await fetchVerifiedReviewRows(relatedRestaurantIds);
+
+    return buildRelatedVerifiedReviewCountMap(
+        restaurants as Restaurant[],
+        relatedCandidates,
+        reviewRows
+    );
 }
 
 export function getMergePerfCounters() {
@@ -498,38 +563,15 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 throw error;
             }
 
-            // 승인된 리뷰 수 조회
+            // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산합니다.
             const rawRestaurants = (data || []) as RestaurantWithOptionalName[];
-            const restaurantIds = rawRestaurants.map(r => r.id);
-            const verifiedCountMap = new Map<string, number>();
-
-            if (restaurantIds.length > 0) {
-                const { data: reviewCounts } = await supabase
-                    .from('reviews')
-                    .select('restaurant_id')
-                    .in('restaurant_id', restaurantIds)
-                    .eq('is_verified', true);
-
-                (reviewCounts as ReviewCountRow[] | null)?.forEach((r) => {
-                    if (!r.restaurant_id) return;
-                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
-                });
-            }
-
-            // 병합 로직 적용
             const restaurants = mergeRestaurants(rawRestaurants);
+            const verifiedCountMap = await buildRelatedVerifiedReviewCounts(restaurants as RestaurantWithOptionalName[]);
 
-            // 승인된 리뷰 수 추가 (병합된 모든 레스토랑 ID의 리뷰 합산)
-            return restaurants.map(r => {
-                // 병합된 레스토랑들의 모든 ID에 대한 verified_review_count 합산
-                const mergedIds = r.mergedRestaurants?.map((mr) => mr.id) || [r.id];
-                const totalVerifiedCount = mergedIds.reduce((sum: number, id: string) =>
-                    sum + (verifiedCountMap.get(id) || 0), 0);
-                return {
-                    ...r,
-                    verified_review_count: totalVerifiedCount
-                };
-            }) as Restaurant[];
+            return restaurants.map(r => ({
+                ...r,
+                verified_review_count: verifiedCountMap.get(r.id) || 0,
+            })) as Restaurant[];
         },
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함

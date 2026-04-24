@@ -1085,6 +1085,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 placeholder="맛집 이름을 검색하세요..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                                inputMode="search"
+                                                enterKeyHint="search"
+                                                autoComplete="off"
+                                                autoCapitalize="off"
+                                                autoCorrect="off"
                                                 className="pl-9"
                                             />
                                         </div>
@@ -1641,6 +1646,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     placeholder="맛집 이름을 검색하세요..."
                                                     value={searchQuery}
                                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                                    inputMode="search"
+                                                    enterKeyHint="search"
+                                                    autoComplete="off"
+                                                    autoCapitalize="off"
+                                                    autoCorrect="off"
                                                     className="pl-9"
                                                 />
                                             </div>
@@ -2278,6 +2288,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     placeholder="맛집 이름을 검색하세요..."
                                                     value={searchQuery}
                                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                                    inputMode="search"
+                                                    enterKeyHint="search"
+                                                    autoComplete="off"
+                                                    autoCapitalize="off"
+                                                    autoCorrect="off"
                                                     className="pl-9"
                                                 />
                                             </div>

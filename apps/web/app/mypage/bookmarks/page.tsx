@@ -181,7 +181,7 @@ export default function BookmarksPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => toggleBookmark(bookmark.restaurant_id, true)}
+                                                    onClick={() => toggleBookmark(bookmark.restaurant.id, true)}
                                                     disabled={isToggling}
                                                     className="text-muted-foreground hover:text-destructive"
                                                 >

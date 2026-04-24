@@ -32,7 +32,8 @@ import { cn } from "@/lib/utils";
 import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
-import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
+import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
+import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
 import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -40,15 +41,23 @@ import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPane
 import { REGIONS, extractRegion, parseCategory, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
+import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
+import {
+    collectDirectRestaurantReviewIds,
+    getRestaurantReviewLookupName,
+    selectRelatedRestaurantReviewIds,
+} from "@/lib/restaurant-review-lookup";
+import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRestaurantSortDirection } from "@/lib/stamp-restaurant-order";
 import type { Json, Tables } from "@/integrations/supabase/types";
 
-type SortColumn = "name" | "category" | "fanVisits";
-type SortDirection = "asc" | "desc" | null;
+type SortColumn = StampRestaurantSortColumn;
+type SortDirection = StampRestaurantSortDirection;
 type ViewMode = "grid" | "list";
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
 type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
 type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
+type UserReviewWithRestaurant = UserReview & { restaurant?: RestaurantWithVerifiedCount | null };
 type CreateUserNotificationArgs = {
     p_user_id: string;
     p_type: string;
@@ -238,7 +247,25 @@ export default function StampPage() {
                 .eq('user_id', user.id)
                 .eq('is_verified', true);
             if (error) throw error;
-            return data as UserReview[];
+
+            const reviews = (data ?? []) as UserReview[];
+            const restaurantIds = [...new Set(reviews.map((review) => review.restaurant_id).filter(Boolean))];
+            if (restaurantIds.length === 0) return reviews;
+
+            const { data: restaurantRows, error: restaurantsError } = await supabase
+                .from('restaurants')
+                .select('id, name:approved_name, approved_name, road_address, jibun_address, status')
+                .in('id', restaurantIds);
+            if (restaurantsError) throw restaurantsError;
+
+            const restaurantMap = new Map(
+                ((restaurantRows ?? []) as RestaurantWithVerifiedCount[]).map((restaurant) => [restaurant.id, restaurant])
+            );
+
+            return reviews.map((review) => ({
+                ...review,
+                restaurant: restaurantMap.get(review.restaurant_id) ?? null,
+            })) as UserReviewWithRestaurant[];
         },
         enabled: !!user?.id,
     });
@@ -252,13 +279,23 @@ export default function StampPage() {
         return new Set(userReviewData.map(review => review.restaurant_id));
     }, [user?.id, userReviewData]);
 
+    const reviewedRestaurantCandidates = useMemo(() => {
+        return userReviewData
+            .map((review) => (review as UserReviewWithRestaurant).restaurant)
+            .filter((restaurant): restaurant is RestaurantWithVerifiedCount => Boolean(restaurant));
+    }, [userReviewData]);
+
     // 사용자 방문 데이터 준비 완료 상태 (비로그인 또는 로딩 완료)
     const isUserStampsReady = !user?.id || isUserStampsFetched;
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
 
-    const isVisited = useCallback((restaurantId: string) => {
-        return userReviews.has(restaurantId);
-    }, [userReviews]);
+    const isVisited = useCallback((restaurant: Restaurant) => {
+        return hasRelatedVerifiedUserReview({
+            restaurant,
+            reviewedRestaurantIds: userReviews,
+            reviewedRestaurants: reviewedRestaurantCandidates,
+        });
+    }, [reviewedRestaurantCandidates, userReviews]);
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
@@ -284,21 +321,9 @@ export default function StampPage() {
                 if (!restaurants || restaurants.length === 0) return [];
                 const typedRestaurants = restaurants as RestaurantWithVerifiedCount[];
 
-                // 승인된 리뷰 수 조회
-                const restaurantIds = typedRestaurants.map((restaurant) => restaurant.id);
-                const { data: reviewCounts } = await supabase
-                    .from('reviews')
-                    .select('restaurant_id')
-                    .in('restaurant_id', restaurantIds)
-                    .eq('is_verified', true);
+                // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산
+                const verifiedCountMap = await buildRelatedVerifiedReviewCounts(typedRestaurants);
 
-                // 승인된 리뷰 수 카운트
-                const verifiedCountMap = new Map<string, number>();
-                (reviewCounts as Pick<ReviewRow, 'restaurant_id'>[] | null)?.forEach((reviewCountRow) => {
-                    verifiedCountMap.set(reviewCountRow.restaurant_id, (verifiedCountMap.get(reviewCountRow.restaurant_id) || 0) + 1);
-                });
-
-                // 맛집에 승인된 리뷰 수 추가
                 return typedRestaurants.map((restaurant) => ({
                     ...restaurant,
                     verified_review_count: verifiedCountMap.get(restaurant.id) || 0
@@ -331,21 +356,8 @@ export default function StampPage() {
                 if (!restaurants || restaurants.length === 0) return { restaurants: [], nextCursor: null };
                 const typedRestaurants = restaurants as RestaurantWithVerifiedCount[];
 
-                // 승인된 리뷰 수 조회
-                const restaurantIds = typedRestaurants.map((restaurant) => restaurant.id);
-                const { data: reviewCounts } = await supabase
-                    .from('reviews')
-                    .select('restaurant_id')
-                    .in('restaurant_id', restaurantIds)
-                    .eq('is_verified', true);
-
-                // 승인된 리뷰 수 카운트
-                const verifiedCountMap = new Map<string, number>();
-                (reviewCounts as Pick<ReviewRow, 'restaurant_id'>[] | null)?.forEach((reviewCountRow) => {
-                    verifiedCountMap.set(reviewCountRow.restaurant_id, (verifiedCountMap.get(reviewCountRow.restaurant_id) || 0) + 1);
-                });
-
-                // 맛집에 승인된 리뷰 수 추가
+                // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산
+                const verifiedCountMap = await buildRelatedVerifiedReviewCounts(typedRestaurants);
                 const restaurantsWithCount = typedRestaurants.map((restaurant) => ({
                     ...restaurant,
                     verified_review_count: verifiedCountMap.get(restaurant.id) || 0
@@ -407,7 +419,7 @@ export default function StampPage() {
 
         // 방문 여부 필터
         if (filters.showUnvisitedOnly) {
-            result = result.filter(r => !isVisited(r.id));
+            result = result.filter(r => !isVisited(r));
         }
 
         // 리뷰 수 필터
@@ -415,38 +427,12 @@ export default function StampPage() {
             result = result.filter(r => (r.review_count || 0) >= (filters.fanVisitsMin ?? 0));
         }
 
-        // 정렬
-        if (sortColumn && sortDirection) {
-            result.sort((a, b) => {
-                let aValue: string | number = "";
-                let bValue: string | number = "";
-
-                switch (sortColumn) {
-                    case "name":
-                        aValue = a.name || "";
-                        bValue = b.name || "";
-                        break;
-                    case "category":
-                        aValue = parseCategory(a.category || a.categories) || "";
-                        bValue = parseCategory(b.category || b.categories) || "";
-                        break;
-                    case "fanVisits":
-                        aValue = a.review_count || 0;
-                        bValue = b.review_count || 0;
-                        break;
-                }
-
-                if (typeof aValue === "string" && typeof bValue === "string") {
-                    return sortDirection === "asc"
-                        ? aValue.localeCompare(bValue)
-                        : bValue.localeCompare(aValue);
-                } else {
-                    return sortDirection === "asc"
-                        ? Number(aValue) - Number(bValue)
-                        : Number(bValue) - Number(aValue);
-                }
-            });
-        }
+        // 정렬: 도장이 찍힌 맛집을 먼저 보여준 뒤 선택한 정렬을 적용합니다.
+        result.sort((a, b) => compareStampRestaurants(a, b, {
+            isVisited,
+            sortColumn,
+            sortDirection,
+        }));
 
         return result;
     }, [allMergedRestaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
@@ -475,6 +461,12 @@ export default function StampPage() {
     const hasMoreToDisplay = displayLimit < filteredAndSortedRestaurants.length;
 
     // --- 무한 스크롤 옵저버 (Infinite Scroll Observer) ---
+    const mainScrollRef = useRef<HTMLDivElement>(null);
+    const stampBottomNavAutoHide = useMobileBottomNavAutoHide({
+        scrollRef: mainScrollRef,
+        source: 'stamp-page-scroll',
+        disabled: !isMobileOrTablet,
+    });
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
 
@@ -512,10 +504,29 @@ export default function StampPage() {
             const REVIEW_PAGE_SIZE = 15;
 
             try {
+                let relatedRestaurantReviewIds = collectDirectRestaurantReviewIds(selectedRestaurant);
+                const reviewLookupName = getRestaurantReviewLookupName(selectedRestaurant);
+
+                if (reviewLookupName) {
+                    const { data: relatedRestaurantRows } = await supabase
+                        .from('restaurants')
+                        .select('id, name:approved_name, approved_name, road_address, jibun_address')
+                        .eq('approved_name', reviewLookupName);
+
+                    relatedRestaurantReviewIds = selectRelatedRestaurantReviewIds(
+                        selectedRestaurant,
+                        (relatedRestaurantRows ?? []) as Restaurant[]
+                    );
+                }
+
+                if (relatedRestaurantReviewIds.length === 0) {
+                    return { reviews: [], nextCursor: null };
+                }
+
                 const { data: reviewsData, error } = await supabase
                     .from('reviews')
                     .select('*')
-                    .eq('restaurant_id', selectedRestaurant.id)
+                    .in('restaurant_id', relatedRestaurantReviewIds)
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false })
@@ -834,7 +845,13 @@ export default function StampPage() {
                 {/* 왼쪽 패널 - 메인 콘텐츠 */}
                 <Panel id="main-list-panel" order={1} defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="overflow-hidden">
                     {/* 스크롤 컨테이너 */}
-                    <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                    <div
+                        ref={mainScrollRef}
+                        className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+                        onScroll={stampBottomNavAutoHide.onScroll}
+                        onTouchStart={stampBottomNavAutoHide.onTouchStart}
+                        onTouchMove={stampBottomNavAutoHide.onTouchMove}
+                    >
                         {/* Header */}
                         <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
                             <div className="flex items-center justify-between">
@@ -1052,7 +1069,7 @@ export default function StampPage() {
                             </div>
                         </div>
 
-                        <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-height,60px)+1.5rem)] md:pb-6 bg-background">
+                        <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
                             {(isRestaurantsLoading && !searchQuery) ? (
                                 <StampGridSkeleton count={16} showHeader={false} />
                             ) : shouldWaitForStampState ? (
@@ -1087,7 +1104,7 @@ export default function StampPage() {
                                             <StampCard
                                                 key={restaurant.id}
                                                 restaurant={restaurant}
-                                                isVisited={isVisited(restaurant.id)}
+                                                isVisited={isVisited(restaurant)}
                                                 isUserStampsReady={isUserStampsReady}
                                                 isSelected={selectedRestaurant?.id === restaurant.id}
                                                 currentThumbnailIndex={currentIndex}

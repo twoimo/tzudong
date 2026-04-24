@@ -30,6 +30,8 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { GlobalLoader } from "@/components/ui/global-loader";
+import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
+import type { Restaurant } from "@/types/restaurant";
 
 // 리뷰 데이터 타입 정의
 interface MyReview {
@@ -67,6 +69,14 @@ interface ReviewData {
 interface RestaurantData {
   id: string;
   name: string;
+  approved_name?: string | null;
+  road_address?: string | null;
+  jibun_address?: string | null;
+  status?: string | null;
+}
+
+function getRestaurantDisplayName(restaurant: RestaurantData | null | undefined): string {
+  return restaurant?.name || restaurant?.approved_name || "알 수 없음";
 }
 
 // 날짜 포맷 함수 (컴포넌트 외부로 이동)
@@ -152,32 +162,59 @@ export default function ReviewsPage() {
         const restaurantIds = [...new Set(reviewsData.map((r) => r.restaurant_id))];
         const { data: restaurantsData } = await supabase
           .from("restaurants")
-          .select("id, name:approved_name") // [수정] approved_name을 name으로 사용
+          .select("id, name:approved_name, approved_name, road_address, jibun_address, status") // [수정] approved_name을 name으로 사용
           .in("id", restaurantIds)
           .returns<RestaurantData[]>();
 
-        const restaurantsMap = new Map<string, string>(
-          (restaurantsData || []).map((r) => [r.id, r.name])
+        const restaurantsMap = new Map<string, RestaurantData>(
+          (restaurantsData || []).map((restaurant) => [restaurant.id, restaurant])
         );
+        const reviewedRestaurantNames = [
+          ...new Set(
+            (restaurantsData || [])
+              .map((restaurant) => (restaurant.approved_name || restaurant.name || "").trim())
+              .filter(Boolean)
+          ),
+        ];
+        const { data: approvedRestaurantRows } = reviewedRestaurantNames.length > 0
+          ? await supabase
+            .from("restaurants")
+            .select("id, name:approved_name, approved_name, road_address, jibun_address, status")
+            .eq("status", "approved")
+            .in("approved_name", reviewedRestaurantNames)
+            .returns<RestaurantData[]>()
+          : { data: [] };
+        const approvedRestaurants = approvedRestaurantRows || [];
 
         // 3. 리뷰 데이터 매핑
-        const reviews: MyReview[] = reviewsData.map((review) => ({
-          id: review.id,
-          restaurantId: review.restaurant_id,
-          restaurantName: restaurantsMap.get(review.restaurant_id) || "알 수 없음",
-          title: review.title,
-          content: review.content,
-          visitedAt: review.visited_at,
-          createdAt: review.created_at,
-          isVerified: review.is_verified || false,
-          adminNote: review.admin_note,
-          isPinned: review.is_pinned || false,
-          isEditedByAdmin: review.is_edited_by_admin || false,
-          foodPhotos: review.food_photos || [],
-          categories: (Array.isArray(review.categories) && review.categories.length > 0)
-            ? review.categories
-            : (review.category ? [review.category] : []),
-        }));
+        const reviews: MyReview[] = reviewsData.map((review) => {
+          const reviewedRestaurant = restaurantsMap.get(review.restaurant_id) ?? null;
+          const canonicalRestaurant = reviewedRestaurant?.status === "approved"
+            ? reviewedRestaurant
+            : (findCanonicalVisitedRestaurant({
+              reviewedRestaurant: reviewedRestaurant as Restaurant | null,
+              reviewedRestaurantId: review.restaurant_id,
+              approvedRestaurants: approvedRestaurants as Restaurant[],
+            }) as RestaurantData | null) ?? reviewedRestaurant;
+
+          return {
+            id: review.id,
+            restaurantId: canonicalRestaurant?.id ?? review.restaurant_id,
+            restaurantName: getRestaurantDisplayName(canonicalRestaurant),
+            title: review.title,
+            content: review.content,
+            visitedAt: review.visited_at,
+            createdAt: review.created_at,
+            isVerified: review.is_verified || false,
+            adminNote: review.admin_note,
+            isPinned: review.is_pinned || false,
+            isEditedByAdmin: review.is_edited_by_admin || false,
+            foodPhotos: review.food_photos || [],
+            categories: (Array.isArray(review.categories) && review.categories.length > 0)
+              ? review.categories
+              : (review.category ? [review.category] : []),
+          };
+        });
 
         const nextCursor = reviewsData.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null;
         return { reviews, nextCursor };

@@ -257,7 +257,7 @@ cleanup_split_sync_worktree() {
 
 ensure_split_sync_worktree() {
     local sync_branch="$1"
-    local sanitized_branch temp_dir
+    local sanitized_branch temp_dir remote_branch_exists
     local network_timeout="${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}"
 
     if [ -n "${SYNC_WORKTREE_DIR:-}" ] && [ -d "$SYNC_WORKTREE_DIR" ]; then
@@ -269,9 +269,15 @@ ensure_split_sync_worktree() {
     rmdir "$temp_dir"
 
     log "INFO" "동기화 전용 worktree 준비: $sync_branch"
-    if ! run_git_with_timeout "$network_timeout" git fetch origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
-        log "ERROR" "동기화 브랜치 fetch 실패: $sync_branch"
-        return 1
+    if run_git_with_timeout "$network_timeout" git ls-remote --exit-code --heads origin "$sync_branch" >/dev/null 2>&1; then
+        remote_branch_exists=true
+        if ! run_git_with_timeout "$network_timeout" git fetch origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
+            log "ERROR" "동기화 브랜치 fetch 실패: $sync_branch"
+            return 1
+        fi
+    else
+        remote_branch_exists=false
+        log "WARN" "원격 동기화 브랜치가 없어 현재 실행 브랜치에서 초기화합니다: $sync_branch"
     fi
 
     if git show-ref --verify --quiet "refs/heads/$sync_branch"; then
@@ -279,24 +285,40 @@ ensure_split_sync_worktree() {
             log "ERROR" "동기화 전용 worktree 생성 실패: $sync_branch"
             return 1
         fi
-    else
+    elif [ "$remote_branch_exists" = "true" ]; then
         if ! git worktree add --force -b "$sync_branch" "$temp_dir" "origin/$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
             log "ERROR" "원격 동기화 브랜치 worktree 생성 실패: $sync_branch"
+            return 1
+        fi
+    else
+        if ! git worktree add --force -b "$sync_branch" "$temp_dir" HEAD 2>&1 | tee -a "$LOG_FILE"; then
+            log "ERROR" "동기화 브랜치 초기 worktree 생성 실패: $sync_branch"
             return 1
         fi
     fi
 
     SYNC_WORKTREE_DIR="$temp_dir"
-    if ! (
-        cd "$SYNC_WORKTREE_DIR" || exit 1
-        run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"
-    ); then
-        log "WARN" "동기화 전용 worktree 최신화 실패. rebase 상태를 정리합니다."
-        (
+    if [ "$remote_branch_exists" = "true" ]; then
+        if ! (
             cd "$SYNC_WORKTREE_DIR" || exit 1
-            git rebase --abort 2>/dev/null || true
-        )
-        return 1
+            run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"
+        ); then
+            log "WARN" "동기화 전용 worktree 최신화 실패. rebase 상태를 정리합니다."
+            (
+                cd "$SYNC_WORKTREE_DIR" || exit 1
+                git rebase --abort 2>/dev/null || true
+            )
+            return 1
+        fi
+    else
+        if ! (
+            cd "$SYNC_WORKTREE_DIR" || exit 1
+            run_git_with_timeout "$network_timeout" git push -u origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"
+        ); then
+            log "ERROR" "동기화 브랜치 초기 push 실패: $sync_branch"
+            return 1
+        fi
+        log "OK" "동기화 브랜치 초기 push 완료: $sync_branch"
     fi
 
     log "INFO" "동기화 전용 worktree 준비 완료: $SYNC_WORKTREE_DIR"
