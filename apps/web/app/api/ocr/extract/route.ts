@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import sharp from 'sharp';
 import { debugLog } from '@/lib/debug-log';
+import { callNvidiaNimReceiptOcr, NIM_OCR_DEFAULT_MODEL, NvidiaNimOcrError } from '@/lib/ocr/nvidia-nim';
 
 // --- 설정 ---
-const GEMINI_API_KEY = process.env.GEMINI_OCR_YEON;
+const NVIDIA_NIM_API_KEY = process.env.NVIDIA_NIM_API_KEY;
 
 // --- 이미지 최적화 (비용 절감) ---
 async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savings: string }> {
@@ -110,6 +111,26 @@ type OcrLogMetadata = {
     error?: string;
 };
 
+function createOcrLogsSupabaseClient(accessToken: string | null) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (accessToken && supabaseUrl && supabaseAnonKey) {
+        return createSupabaseJsClient(supabaseUrl, supabaseAnonKey, {
+            global: {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            },
+            auth: { persistSession: false },
+        });
+    }
+
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceRoleKey) return null;
+
+    return createSupabaseJsClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false },
+    });
+}
+
 function getErrorMessage(error: unknown): string {
     if (error instanceof Error) {
         return error.message;
@@ -120,12 +141,14 @@ function getErrorMessage(error: unknown): string {
 
 export async function POST(req: Request) {
     let buffer: Buffer | null = null;
+    let accessToken: string | null = null;
+    let authenticatedUserId: string | null = null;
 
     try {
         // API 키 확인
-        if (!GEMINI_API_KEY) {
+        if (!NVIDIA_NIM_API_KEY) {
             return NextResponse.json(
-                { error: 'GEMINI_OCR_YEON 환경변수가 설정되지 않았습니다.' },
+                { error: 'NVIDIA_NIM_API_KEY 환경변수가 설정되지 않았습니다.' },
                 { status: 500 }
             );
         }
@@ -152,6 +175,11 @@ export async function POST(req: Request) {
         } = await supabase.auth.getUser();
         let user = initialUser;
 
+        if (!authError && user) {
+            const { data: { session } } = await supabase.auth.getSession();
+            accessToken = session?.access_token ?? null;
+        }
+
         if (authError || !user) {
             const authHeader = req.headers.get('Authorization');
             if (authHeader?.startsWith('Bearer ')) {
@@ -161,19 +189,23 @@ export async function POST(req: Request) {
                     return NextResponse.json({ error: '로그인이 필요한 서비스입니다 (Token Invalid)' }, { status: 401 });
                 }
                 user = headerUser;
+                accessToken = token;
             } else {
                 return NextResponse.json({ error: '로그인이 필요한 서비스입니다' }, { status: 401 });
             }
         }
+        authenticatedUserId = user.id;
 
         // [비용 절감] 2. 이미지 해시 계산 (캐싱용)
         const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
         const imageHash = hashBuffer.toString('hex');
 
         // [비용 절감] 3. 캐시 확인 - 동일 이미지 재사용
-        const ocrLogsTable = supabase.from('ocr_logs' as never);
+        const ocrSupabase = createOcrLogsSupabaseClient(accessToken) ?? supabase;
+        const ocrLogsTable = ocrSupabase.from('ocr_logs' as never);
         const { data: cachedResultRaw } = await ocrLogsTable
             .select('metadata')
+            .eq('user_id', user.id)
             .eq('image_hash', imageHash)
             .eq('success', true)
             .order('created_at', { ascending: false })
@@ -213,34 +245,28 @@ export async function POST(req: Request) {
         const { optimized, savings } = await optimizeImage(buffer);
         const base64Image = optimized.toString('base64');
 
-        // Gemini API 호출
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const generativeModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-        const result = await generativeModel.generateContent([
-            OCR_PROMPT,
-            { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-        ]);
-        const response = await result.response;
-        const text = response.text();
-        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
-
-        if (!jsonMatch) {
-            throw new Error('OCR 파싱 실패: JSON 형식을 찾을 수 없습니다.');
-        }
-
-        const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        // NVIDIA NIM VLM OCR 호출
+        const nimResult = await callNvidiaNimReceiptOcr({
+            apiKey: NVIDIA_NIM_API_KEY,
+            imageBase64: base64Image,
+            mimeType: 'image/jpeg',
+            prompt: OCR_PROMPT,
+        });
+        const data = nimResult.data;
 
         // 성공 로그 (캐싱용 결과 포함)
         const { error: logError } = await ocrLogsTable.insert({
             user_id: user.id,
             image_hash: imageHash,
-            model_used: 'gemini-2.0-flash',
+            model_used: nimResult.model,
             success: true,
             metadata: {
                 file_size: file.size,
                 compressed_size: optimized.length,
-                savings: savings,
+                savings,
                 store_found: !!data.store_name,
+                provider: 'nvidia-nim',
+                model_attempts: nimResult.attempts,
                 ocr_result: data  // 캐싱용 결과 저장
             }
         } as never);
@@ -251,19 +277,24 @@ export async function POST(req: Request) {
     } catch (error: unknown) {
         const errorMessage = getErrorMessage(error);
         console.error('OCR 처리 오류:', errorMessage);
+        if (error instanceof NvidiaNimOcrError) {
+            console.error('NVIDIA NIM OCR attempts:', error.attempts);
+        }
 
         // 실패 로그 기록
         try {
             const supabase = await createClient();
             const { data: { user } } = await supabase.auth.getUser();
-            if (user && buffer) {
+            const userId = authenticatedUserId ?? user?.id;
+            if (userId && buffer) {
                 const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
                 const imageHash = hashBuffer.toString('hex');
-                const ocrLogsTable = supabase.from('ocr_logs' as never);
+                const ocrSupabase = createOcrLogsSupabaseClient(accessToken) ?? supabase;
+                const ocrLogsTable = ocrSupabase.from('ocr_logs' as never);
                 await ocrLogsTable.insert({
-                    user_id: user.id,
+                    user_id: userId,
                     image_hash: imageHash,
-                    model_used: 'fail',
+                    model_used: `${NIM_OCR_DEFAULT_MODEL}:fail`,
                     success: false,
                     metadata: { error: errorMessage }
                 } as never);
@@ -274,7 +305,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             error: 'OCR 처리 중 오류가 발생했습니다.',
-            details: errorMessage
+            details: process.env.NODE_ENV === 'production' ? undefined : 'AI 분석에 실패했습니다. 잠시 후 다시 시도하거나 직접 입력해주세요.'
         }, { status: 500 });
     }
 }
