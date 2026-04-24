@@ -37,6 +37,11 @@ import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useReviewLikesRealtime } from "@/hooks/use-review-likes-realtime";
 import { openExternalUrl } from "@/lib/open-external-url";
+import {
+    collectDirectRestaurantReviewIds,
+    getRestaurantReviewLookupName,
+    selectRelatedRestaurantReviewIds,
+} from "@/lib/restaurant-review-lookup";
 
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
@@ -97,6 +102,7 @@ interface Review {
 
 export function RestaurantDetailPanel({
     restaurant,
+    onClose,
     onWriteReview,
     onEditRestaurant,
     onRequestEditRestaurant,
@@ -200,9 +206,19 @@ export function RestaurantDetailPanel({
                 const REVIEW_PAGE_SIZE = 15;
 
                 // 0. 모든 관련 레코드 ID 수집
-                const allIds = [restaurant.id];
-                if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
-                    allIds.push(...restaurant.mergedRestaurants.map((mergedRestaurant) => mergedRestaurant.id));
+                // 지도에는 approved 레코드만 올라오지만, 과거 리뷰가 같은 이름/주소의
+                // deleted 중복 레코드에 남아 있을 수 있다. 리뷰 조회에서는 그 레코드까지
+                // 포함해야 사용자가 작성한 기존 리뷰가 바텀시트에서 사라지지 않는다.
+                let allIds = collectDirectRestaurantReviewIds(restaurant);
+                const reviewLookupName = getRestaurantReviewLookupName(restaurant);
+
+                if (reviewLookupName) {
+                    const { data: relatedRestaurants } = await supabase
+                        .from('restaurants')
+                        .select('id, name:approved_name, approved_name, road_address, jibun_address')
+                        .eq('approved_name', reviewLookupName);
+
+                    allIds = selectRelatedRestaurantReviewIds(restaurant, (relatedRestaurants || []) as Restaurant[]);
                 }
 
                 // 1. 해당 맛집의 승인된 리뷰 조회 (Paging)
@@ -305,7 +321,8 @@ export function RestaurantDetailPanel({
     const recentReviews = safeReviewsData.slice(0, 3);
 
     // [총 리뷰 수]
-    const totalReviewCount = (restaurant as RestaurantWithVerifiedCount | null)?.verified_review_count ?? safeReviewsData.length;
+    const persistedVerifiedReviewCount = (restaurant as RestaurantWithVerifiedCount | null)?.verified_review_count;
+    const totalReviewCount = Math.max(persistedVerifiedReviewCount ?? 0, safeReviewsData.length);
 
     // [무한 스크롤 감시] 리뷰 목록 추가 로드
     const loadMoreReviewsRef = useRef<HTMLDivElement>(null);
@@ -894,6 +911,18 @@ export function RestaurantDetailPanel({
                                     <Settings className="h-4 w-4" />
                                 </Button>
                             )}
+                            {isMobile && (
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={onClose}
+                                    title="상세 바텀시트 닫기"
+                                    aria-label="상세 바텀시트 닫기"
+                                    className="border-red-800 text-red-800 hover:border-red-900 hover:bg-red-50 hover:text-red-900 dark:border-red-500 dark:text-red-400 dark:hover:border-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -1416,4 +1445,3 @@ export function RestaurantDetailPanel({
         </>
     );
 }
-

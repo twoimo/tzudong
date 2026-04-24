@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { debugLog as logDebug } from '@/lib/debug-log';
@@ -11,6 +11,7 @@ import { debugLog as logDebug } from '@/lib/debug-log';
  */
 export function useReviewLikesRealtime() {
     const queryClient = useQueryClient();
+    const channelNameRef = useRef(`review-likes-realtime-${Math.random().toString(36).slice(2)}`);
 
     const invalidateLikesQueries = useCallback(() => {
         // 리뷰 관련 모든 쿼리 무효화
@@ -23,7 +24,7 @@ export function useReviewLikesRealtime() {
     useEffect(() => {
         // Supabase Realtime 채널 구독
         const channel = supabase
-            .channel('review-likes-realtime')
+            .channel(channelNameRef.current)
             .on(
                 'postgres_changes',
                 {

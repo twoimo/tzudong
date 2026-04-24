@@ -665,13 +665,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                           if (pathname === '/') {
                             window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', {
                               detail: {
-                                id: bookmark.restaurant_id,
+                                id: bookmark.restaurant.id,
                                 mode: isOverseas ? 'overseas' : 'domestic'
                               }
                             }));
                           } else {
                             const modeParam = isOverseas ? '&mode=overseas' : '';
-                            router.push(`/?r=${bookmark.restaurant_id}${modeParam}&z=13`);
+                            router.push(`/?r=${bookmark.restaurant.id}${modeParam}&z=13`);
                           }
                         }}
                       >

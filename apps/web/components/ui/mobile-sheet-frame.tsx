@@ -4,7 +4,7 @@ import type { BottomSheet } from '@/components/ui/bottom-sheet';
 
 type BottomSheetPreset = Pick<
     ComponentProps<typeof BottomSheet>,
-    'defaultHeight' | 'minHeight' | 'maxHeight' | 'showHandle' | 'enablePeek' | 'hideBottomNavWhenOpen'
+    'defaultHeight' | 'minHeight' | 'maxHeight' | 'showHandle' | 'enablePeek' | 'hideBottomNavWhenOpen' | 'keyboardBehavior'
 >;
 
 export const MOBILE_FULL_FORM_SHEET: BottomSheetPreset = {
@@ -14,6 +14,7 @@ export const MOBILE_FULL_FORM_SHEET: BottomSheetPreset = {
     showHandle: false,
     enablePeek: false,
     hideBottomNavWhenOpen: true,
+    keyboardBehavior: 'stable',
 };
 
 export const MOBILE_COMPACT_FORM_SHEET: BottomSheetPreset = {

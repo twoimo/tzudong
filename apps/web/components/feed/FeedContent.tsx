@@ -16,11 +16,16 @@ import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
+import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
+import { findCanonicalVisitedRestaurant } from '@/lib/restaurant-visit-matching';
 
-type FeedRestaurantRecord = Record<string, unknown> & {
+export type FeedRestaurantRecord = Record<string, unknown> & {
     id: string;
     name?: string | null;
     approved_name?: string | null;
+    road_address?: string | null;
+    jibun_address?: string | null;
+    status?: string | null;
 };
 
 interface FeedReviewRow {
@@ -48,6 +53,20 @@ interface FeedReviewLikeRow {
 
 interface FeedProfileNicknameRow {
     nickname: string | null;
+}
+
+function getFeedRestaurantDisplayName(restaurant: FeedRestaurantRecord | null | undefined): string {
+    return String(restaurant?.name || restaurant?.approved_name || '알 수 없음');
+}
+
+function normalizeFeedRestaurantRecord(restaurantRow: FeedRestaurantRecord): FeedRestaurantRecord {
+    const mappedRestaurant: FeedRestaurantRecord = { ...restaurantRow };
+
+    if (mappedRestaurant.approved_name) {
+        mappedRestaurant.name = mappedRestaurant.approved_name;
+    }
+
+    return mappedRestaurant;
 }
 
 // ========== Types ==========
@@ -106,6 +125,7 @@ export default function FeedContent({
     const { user } = useAuth();
     const router = useRouter();
     const queryClient = useQueryClient();
+    const feedScrollRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loopAppendLockRef = useRef(false);
     const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
@@ -131,6 +151,13 @@ export default function FeedContent({
     const queryKey = isOverlay ? 'review-feed-overlay' : 'review-feed';
     const reviewIdPrefix = isOverlay ? 'overlay-review' : 'review';
 
+
+    const feedBottomNavAutoHide = useMobileBottomNavAutoHide({
+        scrollRef: feedScrollRef,
+        source: 'review-feed-scroll',
+        disabled: isOverlay,
+    });
+
     // [REALTIME] 좋아요 실시간 반영
     useReviewLikesRealtime();
 
@@ -144,6 +171,7 @@ export default function FeedContent({
         }, 300);
         return () => clearTimeout(handler);
     }, [searchQuery]);
+
 
     // [리뷰 공유] URL 파라미터로 스크롤 (마운트 시)
     useEffect(() => {
@@ -247,13 +275,36 @@ export default function FeedContent({
 
             const restaurantsData = (restaurantsDataRaw ?? []) as FeedRestaurantRecord[];
             const restaurantsMap = new Map<string, FeedRestaurantRecord>((restaurantsData || []).map((restaurantRow) => {
-                const mappedRestaurant: FeedRestaurantRecord = { ...restaurantRow };
-                // approved_name을 name으로 사용 (호환성)
-                if (mappedRestaurant.approved_name) {
-                    mappedRestaurant.name = mappedRestaurant.approved_name;
-                }
-                return [restaurantRow.id, mappedRestaurant];
+                return [restaurantRow.id, normalizeFeedRestaurantRecord(restaurantRow)];
             }));
+
+            const reviewedRestaurantNames = [
+                ...new Set(
+                    [...restaurantsMap.values()]
+                        .map((restaurant) => String(restaurant.approved_name || restaurant.name || '').trim())
+                        .filter(Boolean)
+                ),
+            ];
+            const { data: approvedRestaurantRowsRaw } = reviewedRestaurantNames.length > 0
+                ? await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('status', 'approved')
+                    .in('approved_name', reviewedRestaurantNames)
+                : { data: [] };
+            const approvedRestaurants = ((approvedRestaurantRowsRaw ?? []) as FeedRestaurantRecord[])
+                .map(normalizeFeedRestaurantRecord);
+
+            const resolveFeedRestaurant = (reviewRow: FeedReviewRow) => {
+                const reviewedRestaurant = restaurantsMap.get(reviewRow.restaurant_id) ?? null;
+                if (reviewedRestaurant?.status === 'approved') return reviewedRestaurant;
+
+                return findCanonicalVisitedRestaurant({
+                    reviewedRestaurant: reviewedRestaurant as never,
+                    reviewedRestaurantId: reviewRow.restaurant_id,
+                    approvedRestaurants: approvedRestaurants as never,
+                }) as FeedRestaurantRecord | null ?? reviewedRestaurant;
+            };
 
             const reviewIds = typedReviewsData.map((reviewRow) => reviewRow.id);
             let userLikesMap = new Map<string, boolean>();
@@ -273,12 +324,13 @@ export default function FeedContent({
 
             const reviews: FeedReview[] = typedReviewsData.map((reviewRow) => {
                 const profileInfo = (profilesMap.get(reviewRow.user_id) || { nickname: '탈퇴한 사용자', avatarUrl: undefined }) as { nickname: string; avatarUrl?: string };
+                const restaurant = resolveFeedRestaurant(reviewRow);
                 return {
                     id: reviewRow.id,
                     userId: reviewRow.user_id,
-                    restaurantId: reviewRow.restaurant_id,
-                    restaurantName: String(restaurantsMap.get(reviewRow.restaurant_id)?.name || '알 수 없음'),
-                    restaurant: restaurantsMap.get(reviewRow.restaurant_id) || null,
+                    restaurantId: restaurant?.id ?? reviewRow.restaurant_id,
+                    restaurantName: getFeedRestaurantDisplayName(restaurant),
+                    restaurant,
                     userName: profileInfo.nickname || '탈퇴한 사용자',
                     userAvatarUrl: profileInfo.avatarUrl,
                     visitedAt: reviewRow.visited_at,
@@ -385,6 +437,11 @@ export default function FeedContent({
     // 좋아요 토글
     const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean, currentCount: number, reviewUserId: string) => {
         if (!user) {
+            if (onOpenAuth) {
+                onOpenAuth();
+                return;
+            }
+
             toast({
                 title: '로그인 필요',
                 description: '좋아요를 누르려면 로그인이 필요합니다.',
@@ -442,12 +499,12 @@ export default function FeedContent({
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }
             }));
         }
-    }, [user, queryClient, queryKey]);
+    }, [user, onOpenAuth, queryClient, queryKey]);
 
     // 맛집으로 이동
     const goToRestaurant = useCallback((restaurantId: string, restaurant?: FeedRestaurantRecord | null) => {
-        // [오버레이] onOpenRestaurantDetail이 있으면 사이드 패널로 열기
-        if (isOverlay && onOpenRestaurantDetail && restaurant) {
+        // 리뷰 페이지/오버레이 안에서 맛집 상세를 열 수 있으면 현재 화면을 유지한다.
+        if (onOpenRestaurantDetail && restaurant) {
             onOpenRestaurantDetail(restaurant);
             return;
         }
@@ -459,10 +516,17 @@ export default function FeedContent({
     }, [router, isOverlay, onClose, onOpenRestaurantDetail]);
 
     return (
-        <div className={cn(
-            "flex flex-col h-full",
-            !isOverlay && "bg-muted/30 overflow-y-auto"
-        )} data-testid="feed-content-container">
+        <div
+            ref={feedScrollRef}
+            className={cn(
+                "flex flex-col h-full",
+                !isOverlay && "bg-muted/30 overflow-y-auto"
+            )}
+            data-testid="feed-content-container"
+            onScroll={feedBottomNavAutoHide.onScroll}
+            onTouchStart={feedBottomNavAutoHide.onTouchStart}
+            onTouchMove={feedBottomNavAutoHide.onTouchMove}
+        >
             <div className={cn(
                 "w-full mx-auto bg-background flex flex-col relative",
                 isOverlay ? "h-full" : "min-h-full md:border-x md:border-border md:shadow-sm max-w-2xl"
@@ -534,7 +598,7 @@ export default function FeedContent({
                 {/* 피드 목록 */}
                 {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
                 <div className={cn(
-                    "flex-1 pb-[calc(var(--mobile-bottom-nav-height,60px)+2rem)] md:pb-8",
+                    "flex-1 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+2rem)] md:pb-8",
                     isOverlay && "overflow-y-auto"
                 )}>
                     {isLoading ? (
@@ -605,7 +669,7 @@ export default function FeedContent({
                                 "h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90",
                                 isOverlay
                                     ? "absolute right-8 bottom-8 z-[100]"
-                                    : "fixed right-4 bottom-20 md:right-8 md:bottom-8 z-50"
+                                    : "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] md:right-8 md:bottom-8 z-50"
                             )}
                             size="icon"
                         >

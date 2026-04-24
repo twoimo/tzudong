@@ -41,6 +41,7 @@ interface OverseasMapProps {
     onMarkerClick?: (restaurant: Restaurant) => void;
     mapPadding?: { top: number; bottom: number; left: number; right: number };
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
+    onMapBlankClick?: () => void;
 }
 
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
@@ -58,11 +59,13 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     onMapReady,
     mapPadding = DEFAULT_OVERSEAS_PADDING,
     onVisibleRestaurantsChange,
+    onMapBlankClick,
 }) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
     const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
     const mapPaddingRef = useRef(mapPadding);
+    const onMapBlankClickRef = useRef(onMapBlankClick);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
 
 
@@ -70,6 +73,10 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     useEffect(() => {
         mapPaddingRef.current = mapPadding;
     }, [mapPadding]);
+
+    useEffect(() => {
+        onMapBlankClickRef.current = onMapBlankClick;
+    }, [onMapBlankClick]);
 
     // Filtered restaurants with optimization
     const restaurantsOptions = useMemo(() => buildOverseasRestaurantsQueryOptions({
@@ -122,6 +129,10 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 const msg = e.error?.message || '';
                 if (msg.includes('Expected value') || msg.includes('null')) return;
                 console.error("Map Error:", e.error || e);
+            });
+
+            mapInstance.on('click', () => {
+                onMapBlankClickRef.current?.();
             });
 
             map.current = mapInstance;

@@ -8,6 +8,7 @@ import {
     MobileSheetHeader,
     MobileSheetStepIndicator,
 } from '../components/ui/mobile-sheet-frame';
+import { calculateVisualViewportBottomOffset } from '../lib/visual-viewport-keyboard';
 
 describe('mobile sheet frame presets', () => {
     test('full form preset keeps long mobile forms locked to full height', () => {
@@ -18,6 +19,7 @@ describe('mobile sheet frame presets', () => {
             showHandle: false,
             enablePeek: false,
             hideBottomNavWhenOpen: true,
+            keyboardBehavior: 'stable',
         });
     });
 
@@ -30,6 +32,24 @@ describe('mobile sheet frame presets', () => {
             enablePeek: true,
             hideBottomNavWhenOpen: true,
         });
+    });
+});
+
+describe('visual viewport keyboard offset', () => {
+    test('keeps sheets above an on-screen keyboard', () => {
+        expect(calculateVisualViewportBottomOffset({
+            layoutViewportHeight: 3120,
+            visualViewportHeight: 1780,
+            visualViewportOffsetTop: 0,
+        })).toBe(1340);
+    });
+
+    test('never returns a negative bottom offset', () => {
+        expect(calculateVisualViewportBottomOffset({
+            layoutViewportHeight: 1780,
+            visualViewportHeight: 1780,
+            visualViewportOffsetTop: 20,
+        })).toBe(0);
     });
 });
 

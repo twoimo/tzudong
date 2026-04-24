@@ -526,7 +526,10 @@ export default function RestaurantSubmissionModal({
                         ? "https://youtube.com/watch?v=... (필수)"
                         : "관련 영상 링크 (선택)"
                     }
+                    inputMode="url"
                     autoComplete="url"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     enterKeyHint="next"
                 />
             </div>
