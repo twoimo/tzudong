@@ -3,10 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { Tables } from "@/integrations/supabase/types";
+import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
+import type { Restaurant } from "@/types/restaurant";
 
 interface UserReview {
     restaurant_id: string;
     is_verified: boolean;
+    restaurant?: Restaurant | null;
 }
 
 /**
@@ -29,7 +32,26 @@ export function useUnvisitedRestaurants() {
                 .eq('is_verified', true);
 
             if (error) throw error;
-            return data as UserReview[];
+
+            const reviews = (data ?? []) as UserReview[];
+            const restaurantIds = [...new Set(reviews.map((review) => review.restaurant_id).filter(Boolean))];
+            if (restaurantIds.length === 0) return reviews;
+
+            const { data: restaurants, error: restaurantsError } = await supabase
+                .from('restaurants')
+                .select('id, name:approved_name, approved_name, road_address, jibun_address, status')
+                .in('id', restaurantIds);
+
+            if (restaurantsError) throw restaurantsError;
+
+            const restaurantMap = new Map(
+                ((restaurants ?? []) as Restaurant[]).map((restaurant) => [restaurant.id, restaurant])
+            );
+
+            return reviews.map((review) => ({
+                ...review,
+                restaurant: restaurantMap.get(review.restaurant_id) ?? null,
+            })) as UserReview[];
         },
         enabled: !!user?.id,
         staleTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
@@ -58,18 +80,28 @@ export function useUnvisitedRestaurants() {
     const visitedRestaurantIds = new Set(
         userReviewData.map(review => review.restaurant_id)
     );
+    const reviewedRestaurantCandidates = userReviewData
+        .map((review) => review.restaurant)
+        .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
 
     // 데이터 병합 로직 (공통 유틸리티 사용)
     const mergedRestaurants = mergeRestaurants(restaurantsData || []);
 
+    const isVisited = (restaurant: Restaurant) => hasRelatedVerifiedUserReview({
+        restaurant,
+        reviewedRestaurantIds: visitedRestaurantIds,
+        reviewedRestaurants: reviewedRestaurantCandidates,
+    });
+
     // 방문하지 않은 맛집만 필터링
     const unvisitedRestaurants = mergedRestaurants.filter(restaurant => {
-        return !visitedRestaurantIds.has(restaurant.id);
+        return !isVisited(restaurant);
     });
+    const visitedCount = mergedRestaurants.filter(isVisited).length;
 
     return {
         unvisitedRestaurants,
-        visitedCount: visitedRestaurantIds.size,
+        visitedCount,
         totalCount: restaurantsData?.length || 0,
         isLoading,
         isLoggedIn: !!user,

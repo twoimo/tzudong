@@ -9,6 +9,7 @@ import OverlayPagePanel from '@/components/layout/OverlayPagePanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
+import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
 
 // 지연 로딩
 const Header = dynamic(() => import('@/components/layout/Header'), {
@@ -112,6 +113,12 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
     // 인증 모달 핸들러
     const handleOpenAuth = useCallback(() => setIsAuthModalOpen(true), []);
     const handleProfileClick = useCallback(() => setIsProfileModalOpen(true), []);
+
+
+    useEffect(() => {
+        window.addEventListener(AUTH_UI_REQUEST_EVENT, handleOpenAuth);
+        return () => window.removeEventListener(AUTH_UI_REQUEST_EVENT, handleOpenAuth);
+    }, [handleOpenAuth]);
 
     // 공지사항 클릭 핸들러
     const handleAnnouncementClick = useCallback((announcement: Announcement) => {

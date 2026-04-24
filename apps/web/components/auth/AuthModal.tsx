@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { MOBILE_COMPACT_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useDeviceType } from "@/hooks/useDeviceType";
 
 // 쯔양 테마 랜덤 닉네임 생성
@@ -427,8 +427,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
         <BottomSheet
           isOpen={isOpen}
           onClose={onClose}
-          {...MOBILE_COMPACT_FORM_SHEET}
-          maxHeight={100}
+          {...MOBILE_FULL_FORM_SHEET}
           layoutSource="auth-modal"
           className="z-[110]"
           ariaLabelledBy="auth-sheet-title"
@@ -464,7 +463,10 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                     placeholder="your@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    inputMode="email"
                     autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     enterKeyHint="next"
                     className="h-10 sm:h-11"
                   />
@@ -560,7 +562,10 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                     placeholder="your@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    inputMode="email"
                     autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     enterKeyHint="next"
                     className="h-10 sm:h-11"
                   />

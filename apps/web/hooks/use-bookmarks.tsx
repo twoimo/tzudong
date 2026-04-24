@@ -2,6 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCallback, useMemo } from "react";
+import type { Restaurant } from "@/types/restaurant";
+import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
+import {
+    getRestaurantReviewLookupName,
+    selectRelatedRestaurantReviewIds,
+} from "@/lib/restaurant-review-lookup";
 
 interface Bookmark {
     id: string;
@@ -45,10 +51,78 @@ interface RestaurantRow {
     review_count: number | null;
     lat: number | null;
     lng: number | null;
+    status?: string | null;
 }
 
 interface BookmarkIdRow {
     restaurant_id: string;
+}
+
+function toRestaurant(row: RestaurantRow): Restaurant {
+    return {
+        ...row,
+        name: row.approved_name,
+    } as Restaurant;
+}
+
+async function fetchApprovedCandidatesByRestaurantNames(restaurants: Restaurant[]): Promise<Restaurant[]> {
+    const approvedNames = [
+        ...new Set(
+            restaurants
+                .map((restaurant) => (restaurant.approved_name || restaurant.name || '').trim())
+                .filter(Boolean)
+        ),
+    ];
+
+    if (approvedNames.length === 0) return [];
+
+    const { data } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('status', 'approved')
+        .in('approved_name', approvedNames);
+
+    return ((data ?? []) as Restaurant[]).map((restaurant) => ({
+        ...restaurant,
+        name: restaurant.approved_name || restaurant.name,
+    }));
+}
+
+function resolveCanonicalBookmarkedRestaurant(
+    bookmarkedRestaurant: Restaurant,
+    approvedRestaurants: Restaurant[]
+): Restaurant {
+    if (bookmarkedRestaurant.status === 'approved') return bookmarkedRestaurant;
+
+    return (findCanonicalVisitedRestaurant({
+        reviewedRestaurant: bookmarkedRestaurant,
+        reviewedRestaurantId: bookmarkedRestaurant.id,
+        approvedRestaurants,
+    }) as Restaurant | null) ?? bookmarkedRestaurant;
+}
+
+async function fetchRelatedBookmarkRestaurantIds(restaurantId: string): Promise<string[]> {
+    const { data: restaurantRow } = await supabase
+        .from('restaurants')
+        .select('id, name:approved_name, approved_name, road_address, jibun_address')
+        .eq('id', restaurantId)
+        .maybeSingle();
+
+    const restaurant = restaurantRow as Restaurant | null;
+    if (!restaurant) return [restaurantId];
+
+    const lookupName = getRestaurantReviewLookupName(restaurant);
+    if (!lookupName) return [restaurantId];
+
+    const { data: relatedRestaurantRows } = await supabase
+        .from('restaurants')
+        .select('id, name:approved_name, approved_name, road_address, jibun_address')
+        .eq('approved_name', lookupName);
+
+    return selectRelatedRestaurantReviewIds(
+        restaurant,
+        (relatedRestaurantRows ?? []) as Restaurant[]
+    );
 }
 
 export function useBookmarks() {
@@ -77,14 +151,18 @@ export function useBookmarks() {
 
             const { data: restaurantsData, error: restaurantsError } = await supabase
                 .from('restaurants')
-                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count, lat, lng')
-                .in('id', restaurantIds)
-                .eq('status', 'approved');
+                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count, lat, lng, status')
+                .in('id', restaurantIds);
 
             if (restaurantsError) throw restaurantsError;
 
             // 3. 데이터 병합
-            const restaurantsMap = new Map((restaurantsData as unknown as RestaurantRow[]).map((r) => [r.id, r]));
+            const bookmarkedRestaurants = ((restaurantsData ?? []) as unknown as RestaurantRow[]).map(toRestaurant);
+            const approvedRestaurants = await fetchApprovedCandidatesByRestaurantNames(bookmarkedRestaurants);
+            const restaurantsMap = new Map(bookmarkedRestaurants.map((restaurant) => [
+                restaurant.id,
+                resolveCanonicalBookmarkedRestaurant(restaurant, approvedRestaurants),
+            ]));
 
             return (bookmarksData as BookmarkRow[])
                 .map((bookmark) => {
@@ -100,7 +178,7 @@ export function useBookmarks() {
                         ...bookmark,
                         restaurant: {
                             id: restaurant.id,
-                            name: restaurant.approved_name,
+                            name: restaurant.approved_name || restaurant.name || '알 수 없음',
                             category: categories,
                             road_address: restaurant.road_address,
                             jibun_address: restaurant.jibun_address,
@@ -134,7 +212,21 @@ export function useBookmarkIds() {
 
             if (error) throw error;
 
-            return ((data ?? []) as BookmarkIdRow[]).map((item) => item.restaurant_id);
+            const bookmarkedRestaurantIds = ((data ?? []) as BookmarkIdRow[]).map((item) => item.restaurant_id);
+            if (bookmarkedRestaurantIds.length === 0) return bookmarkedRestaurantIds;
+
+            const { data: restaurantsData } = await supabase
+                .from('restaurants')
+                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count, lat, lng, status')
+                .in('id', bookmarkedRestaurantIds);
+
+            const bookmarkedRestaurants = ((restaurantsData ?? []) as unknown as RestaurantRow[]).map(toRestaurant);
+            const approvedRestaurants = await fetchApprovedCandidatesByRestaurantNames(bookmarkedRestaurants);
+            const canonicalIds = bookmarkedRestaurants
+                .map((restaurant) => resolveCanonicalBookmarkedRestaurant(restaurant, approvedRestaurants).id)
+                .filter(Boolean);
+
+            return [...new Set([...bookmarkedRestaurantIds, ...canonicalIds])];
         },
         enabled: !!user?.id,
         staleTime: BOOKMARK_STALE_TIME,
@@ -199,12 +291,13 @@ export function useToggleBookmark() {
     const removeBookmark = useMutation({
         mutationFn: async (restaurantId: string) => {
             if (!user?.id) throw new Error('로그인이 필요합니다');
+            const relatedRestaurantIds = await fetchRelatedBookmarkRestaurantIds(restaurantId);
 
             const { error } = await supabase
                 .from('user_bookmarks')
                 .delete()
                 .eq('user_id', user.id)
-                .eq('restaurant_id', restaurantId);
+                .in('restaurant_id', relatedRestaurantIds);
 
             if (error) throw error;
         },
@@ -263,10 +356,11 @@ export function useBookmarkCount(restaurantId: string) {
     return useQuery({
         queryKey: ['bookmark-count', restaurantId],
         queryFn: async () => {
+            const relatedRestaurantIds = await fetchRelatedBookmarkRestaurantIds(restaurantId);
             const { count, error } = await supabase
                 .from('user_bookmarks')
                 .select('*', { count: 'exact', head: true })
-                .eq('restaurant_id', restaurantId);
+                .in('restaurant_id', relatedRestaurantIds);
 
             if (error) throw error;
             return count || 0;

@@ -173,6 +173,30 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue((project_data_dir / "credentials.json").exists())
         self.assertTrue((project_data_dir / "cookies.txt").exists())
 
+    def test_default_branch_execution_initializes_missing_data_sync_branch(self) -> None:
+        result = self._run_script(
+            env_overrides={
+                "CI": "true",
+                "RUN_DAILY_EXECUTION_BRANCH": "main",
+                "RUN_DAILY_TARGET_BRANCH": "data",
+                "RUN_DAILY_TEST_CURRENT_BRANCH": "main",
+                "RUN_DAILY_TEST_REMOTE_BRANCH_MISSING": "data",
+                "RUN_DAILY_TEST_PENDING_DATA_CHANGES": "0",
+            }
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("원격 동기화 브랜치가 없어 현재 실행 브랜치에서 초기화합니다: data", result.stdout)
+        self.assertIn("동기화 브랜치 초기 push 완료: data", result.stdout)
+        self.assertIn("코드는 'main' 브랜치에서 실행하고 데이터는 'data' 브랜치로 동기화합니다.", result.stdout)
+
+        git_log = (self.root / "state" / "git_commands.log").read_text(encoding="utf-8")
+        self.assertIn("ls-remote --exit-code --heads origin data", git_log)
+        self.assertIn("worktree add --force", git_log)
+        self.assertIn("push -u origin data", git_log)
+        self.assertNotIn("fetch origin data", git_log)
+        self.assertNotIn("pull --rebase --autostash origin data", git_log)
+
     def test_mirror_data_root_skips_identical_files_and_updates_changed_files(self) -> None:
         source = self.root / "source"
         target = self.root / "target"
@@ -601,6 +625,10 @@ class RunDailyRegressionTests(unittest.TestCase):
           [ "${RUN_DAILY_TEST_PENDING_DATA_CHANGES:-0}" = "1" ]
         }
 
+        is_missing_remote_branch() {
+          [ -n "${RUN_DAILY_TEST_REMOTE_BRANCH_MISSING:-}" ] && [ "${RUN_DAILY_TEST_REMOTE_BRANCH_MISSING}" = "$1" ]
+        }
+
         cmd="${1:-}"
         shift || true
         if [ -n "$git_log_file" ]; then
@@ -724,6 +752,13 @@ class RunDailyRegressionTests(unittest.TestCase):
                 exit 0
                 ;;
             esac
+            ;;
+          ls-remote)
+            branch="${4:-}"
+            if is_missing_remote_branch "$branch"; then
+              exit 2
+            fi
+            exit 0
             ;;
           rm|commit|pull|push|fetch|show-ref)
             exit 0
