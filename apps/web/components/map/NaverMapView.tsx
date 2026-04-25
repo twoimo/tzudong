@@ -18,6 +18,11 @@ import {
 } from "@/components/map/naver-map-sidepanels";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import {
+    buildDeviceLocationMarkerHtml,
+    shouldFocusDeviceLocation,
+    type DeviceMapLocation,
+} from "@/lib/device-location-map";
 import type Supercluster from 'supercluster';
 import {
     createClusterIndex,
@@ -262,6 +267,7 @@ interface NaverMapViewProps {
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
     onSearchSelectionRelease?: () => void;
     onMapBlankClick?: () => void;
+    deviceLocation?: DeviceMapLocation | null;
 }
 
 /**
@@ -292,6 +298,7 @@ const NaverMapView = memo(({
     onVisibleRestaurantsChange,
     onSearchSelectionRelease,
     onMapBlankClick,
+    deviceLocation = null,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
@@ -301,6 +308,17 @@ const NaverMapView = memo(({
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
+    const deviceLocationMarkerRef = useRef<{
+        setMap: (map: unknown | null) => void;
+        setPosition: (position: unknown) => void;
+        setIcon: (icon: unknown) => void;
+    } | null>(null);
+    const deviceLocationAccuracyCircleRef = useRef<{
+        setMap: (map: unknown | null) => void;
+        setCenter: (center: unknown) => void;
+        setRadius: (radius: number) => void;
+    } | null>(null);
+    const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
     const isInitialLoadFromUrlRef = useRef<boolean>(false); // URL 파라미터로 초기화되었는지 추적 (공유 URL 지원)
 
     // [Cluster] Supercluster 인덱스 및 클러스터 상태
@@ -369,15 +387,88 @@ const NaverMapView = memo(({
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !onMapBlankClick) return;
 
-        const { naver } = window;
-        const listener = naver.maps.Event.addListener(mapInstanceRef.current, 'click', () => {
+        const maps = window.naver?.maps;
+        if (!maps?.Event) return;
+
+        const listener = maps.Event.addListener(mapInstanceRef.current, 'click', () => {
             onMapBlankClick();
         });
 
         return () => {
-            naver.maps.Event.removeListener(listener);
+            maps.Event.removeListener(listener);
         };
     }, [isMapInitialized, onMapBlankClick]);
+
+    useEffect(() => {
+        if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
+
+        const { naver } = window;
+        if (!naver.maps.LatLng || !naver.maps.Point || !naver.maps.Marker) return;
+        const map = mapInstanceRef.current;
+
+        if (!deviceLocation) {
+            deviceLocationMarkerRef.current?.setMap(null);
+            deviceLocationMarkerRef.current = null;
+            deviceLocationAccuracyCircleRef.current?.setMap(null);
+            deviceLocationAccuracyCircleRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        const position = new naver.maps.LatLng(deviceLocation.lat, deviceLocation.lng);
+        const icon = {
+            content: buildDeviceLocationMarkerHtml(deviceLocation),
+            anchor: new naver.maps.Point(28, 28),
+        };
+
+        if (!deviceLocationMarkerRef.current) {
+            deviceLocationMarkerRef.current = new naver.maps.Marker({
+                position,
+                map,
+                icon,
+                zIndex: 10000,
+            });
+        } else {
+            deviceLocationMarkerRef.current.setPosition(position);
+            deviceLocationMarkerRef.current.setIcon(icon);
+            deviceLocationMarkerRef.current.setMap(map);
+        }
+
+        if (typeof deviceLocation.accuracy === 'number' && Number.isFinite(deviceLocation.accuracy)) {
+            const radius = Math.max(12, Math.min(deviceLocation.accuracy, 500));
+            if (!deviceLocationAccuracyCircleRef.current) {
+                deviceLocationAccuracyCircleRef.current = new naver.maps.Circle({
+                    map,
+                    center: position,
+                    radius,
+                    strokeColor: '#2563eb',
+                    strokeOpacity: 0.22,
+                    strokeWeight: 1,
+                    fillColor: '#2563eb',
+                    fillOpacity: 0.10,
+                    zIndex: 9998,
+                });
+            } else {
+                deviceLocationAccuracyCircleRef.current.setCenter(position);
+                deviceLocationAccuracyCircleRef.current.setRadius(radius);
+                deviceLocationAccuracyCircleRef.current.setMap(map);
+            }
+        } else {
+            deviceLocationAccuracyCircleRef.current?.setMap(null);
+            deviceLocationAccuracyCircleRef.current = null;
+        }
+
+        if (shouldFocusDeviceLocation(lastFocusedDeviceLocationRequestRef.current, deviceLocation)) {
+            lastFocusedDeviceLocationRequestRef.current = deviceLocation.focusRequestId;
+            const nextZoom = Math.max(map.getZoom(), 15);
+            map.morph(position, nextZoom, { duration: 450, easing: 'easeOutCubic' });
+        }
+    }, [deviceLocation, isMapInitialized]);
+
+    useEffect(() => () => {
+        deviceLocationMarkerRef.current?.setMap(null);
+        deviceLocationAccuracyCircleRef.current?.setMap(null);
+    }, []);
 
     const handleDetailPanelMouseDownCapture = useMemo(
         () => buildNaverMapDetailPanelMouseDownCaptureHandler(onPanelClick),
@@ -1284,7 +1375,13 @@ const NaverMapView = memo(({
         const map = mapInstanceRef.current;
         // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
         const zoom = quantizeNaverClusterZoom(map.getZoom());
-        const bbox = resolveNaverClusterBoundsBbox(map.getBounds());
+        let bounds = null;
+        try {
+            bounds = map.getBounds();
+        } catch {
+            bounds = null;
+        }
+        const bbox = resolveNaverClusterBoundsBbox(bounds);
 
         const newClusters = getClusters(index, bbox, zoom);
         setClusters(newClusters);
@@ -1309,7 +1406,8 @@ const NaverMapView = memo(({
         // [Fix] 지도가 초기화되지 않았으면 대기
         if (!isMapInitialized || !mapInstanceRef.current || !ENABLE_CLUSTERING || !clusterIndexRef.current) return;
 
-        const { naver } = window;
+        const maps = window.naver?.maps;
+        if (!maps?.Event) return;
 
         const updateClusters = () => {
             if (!clusterIndexRef.current || !mapInstanceRef.current) return;
@@ -1317,9 +1415,21 @@ const NaverMapView = memo(({
             const map = mapInstanceRef.current;
             // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
             const zoom = quantizeNaverClusterZoom(map.getZoom());
+            let bounds = null;
+            let center = null;
+            try {
+                bounds = map.getBounds();
+            } catch {
+                bounds = null;
+            }
+            try {
+                center = map.getCenter();
+            } catch {
+                center = null;
+            }
             const bboxPlan = resolveNaverClusterUpdateBbox({
-                bounds: map.getBounds(),
-                center: map.getCenter(),
+                bounds,
+                center,
                 zoom,
             });
 
@@ -1337,10 +1447,10 @@ const NaverMapView = memo(({
         const map = mapInstanceRef.current;
         // idle 이벤트: 모든 지도 애니메이션 완료 후 실행 (성능 티어별 디바운스)
         const debouncedUpdateClusters = debounce(updateClusters, mapOptimization.idleDebounceMs);
-        const idleListener = naver.maps.Event.addListener(map, 'idle', debouncedUpdateClusters);
+        const idleListener = maps.Event.addListener(map, 'idle', debouncedUpdateClusters);
 
         return () => {
-            naver.maps.Event.removeListener(idleListener);
+            maps.Event.removeListener(idleListener);
         };
     }, [displayRestaurants, isMapInitialized, mapOptimization.idleDebounceMs]);
 
@@ -1349,8 +1459,9 @@ const NaverMapView = memo(({
     // [Render] 줌 레벨에 따라 클러스터 또는 개별 마커 렌더링
     useEffect(() => {
         // [Init] 지도가 초기화되지 않았으면 대기
-        if (!isMapInitialized || !mapInstanceRef.current || !window.naver) return;
+        if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
         const { naver } = window;
+        if (!naver.maps.LatLng || !naver.maps.Point) return;
         const map = mapInstanceRef.current;
         const currentZoom = Math.floor(map.getZoom());
 

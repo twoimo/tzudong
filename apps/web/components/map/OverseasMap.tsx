@@ -7,6 +7,11 @@ import type { Restaurant } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useRestaurants } from '@/hooks/use-restaurants';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
+import {
+    buildDeviceLocationMarkerHtml,
+    shouldFocusDeviceLocation,
+    type DeviceMapLocation,
+} from '@/lib/device-location-map';
 import { buildOverseasRestaurantsQueryOptions } from '@/lib/map-query-helpers';
 import {
     DEFAULT_OVERSEAS_PADDING,
@@ -42,6 +47,7 @@ interface OverseasMapProps {
     mapPadding?: { top: number; bottom: number; left: number; right: number };
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
     onMapBlankClick?: () => void;
+    deviceLocation?: DeviceMapLocation | null;
 }
 
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
@@ -60,10 +66,13 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     mapPadding = DEFAULT_OVERSEAS_PADDING,
     onVisibleRestaurantsChange,
     onMapBlankClick,
+    deviceLocation = null,
 }) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
     const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+    const deviceLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
+    const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
     const mapPaddingRef = useRef(mapPadding);
     const onMapBlankClickRef = useRef(onMapBlankClick);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -96,6 +105,49 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
         onVisibleRestaurantsChange(uniqueRestaurantsById(restaurantsToShow));
     }, [restaurantsToShow, onVisibleRestaurantsChange]);
+
+    useEffect(() => {
+        if (!map.current || !isMapLoaded) return;
+
+        if (!deviceLocation) {
+            deviceLocationMarkerRef.current?.remove();
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        if (!deviceLocationMarkerRef.current) {
+            const markerElement = document.createElement('div');
+            markerElement.style.width = '56px';
+            markerElement.style.height = '56px';
+            markerElement.style.pointerEvents = 'none';
+            markerElement.style.zIndex = '10000';
+            markerElement.innerHTML = buildDeviceLocationMarkerHtml(deviceLocation);
+            deviceLocationMarkerRef.current = new maplibregl.Marker({
+                element: markerElement,
+                anchor: 'center',
+            })
+                .setLngLat([deviceLocation.lng, deviceLocation.lat])
+                .addTo(map.current);
+        } else {
+            const markerElement = deviceLocationMarkerRef.current.getElement();
+            markerElement.innerHTML = buildDeviceLocationMarkerHtml(deviceLocation);
+            deviceLocationMarkerRef.current.setLngLat([deviceLocation.lng, deviceLocation.lat]).addTo(map.current);
+        }
+
+        if (shouldFocusDeviceLocation(lastFocusedDeviceLocationRequestRef.current, deviceLocation)) {
+            lastFocusedDeviceLocationRequestRef.current = deviceLocation.focusRequestId;
+            map.current.easeTo({
+                center: [deviceLocation.lng, deviceLocation.lat],
+                zoom: Math.max(map.current.getZoom(), 14),
+                duration: 550,
+            });
+        }
+    }, [deviceLocation, isMapLoaded]);
+
+    useEffect(() => () => {
+        deviceLocationMarkerRef.current?.remove();
+    }, []);
 
     // MAP INITIALIZATION
     useEffect(() => {
