@@ -6,6 +6,7 @@ import type { FilterState } from '@/components/filters/filter-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
+import type { DeviceMapLocation } from '@/lib/device-location-map';
 
 // [OPTIMIZATION] 사용자 요청으로 동시 로딩을 위해 lazy 제거 (번들 크기는 조금 커지지만 UX 개선)
 import RegionSelector from "@/components/region/RegionSelector";
@@ -36,6 +37,10 @@ interface HomeControlPanelProps {
     user?: User | null;
     onSubmissionClick?: () => void;
     onTopShellUserIconClick?: () => void;
+    onDeviceLocationClick?: () => void;
+    deviceLocation?: DeviceMapLocation | null;
+    isDeviceLocationPending?: boolean;
+    isDeviceHeadingMode?: boolean;
 }
 
 // [CSR] 지역/국가 선택, 카테고리 필터, 검색 통합 패널 - 모든 사용자 입력 처리
@@ -60,6 +65,10 @@ const HomeControlPanelComponent = ({
     user,
     onSubmissionClick,
     onTopShellUserIconClick,
+    onDeviceLocationClick,
+    deviceLocation,
+    isDeviceLocationPending = false,
+    isDeviceHeadingMode = false,
 }: HomeControlPanelProps) => {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
     const countryCounts = useOverseasCountryCounts(mapMode);
@@ -114,6 +123,10 @@ const HomeControlPanelComponent = ({
                 user={user}
                 onSubmissionClick={onSubmissionClick}
                 onTopShellUserIconClick={onTopShellUserIconClick}
+                onDeviceLocationClick={onDeviceLocationClick}
+                deviceLocation={deviceLocation}
+                isDeviceLocationPending={isDeviceLocationPending}
+                isDeviceHeadingMode={isDeviceHeadingMode}
             />
         );
     }

@@ -43,11 +43,24 @@ export const getExtendedBounds = (
     padding: number = VIEWPORT_PADDING,
 ): ExtendedBounds | null => {
     if (!map) return null;
-    const bounds = map.getBounds();
+
+    let bounds: NaverBoundsLike | null = null;
+    try {
+        bounds = map.getBounds();
+    } catch {
+        return null;
+    }
+
     if (!bounds || typeof bounds.getSW !== 'function') return null;
 
-    const sw = bounds.getSW();
-    const ne = bounds.getNE();
+    let sw: NaverLatLngLike;
+    let ne: NaverLatLngLike;
+    try {
+        sw = bounds.getSW();
+        ne = bounds.getNE();
+    } catch {
+        return null;
+    }
     const latDiff = ne.lat() - sw.lat();
     const lngDiff = ne.lng() - sw.lng();
 
