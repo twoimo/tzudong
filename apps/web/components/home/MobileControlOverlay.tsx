@@ -21,7 +21,9 @@ import {
     DollarSign,
     LogOut,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    LocateFixed,
+    Navigation
 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -49,6 +51,7 @@ import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useBookmarks } from '@/hooks/use-bookmarks';
+import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -117,6 +120,10 @@ interface MobileControlOverlayProps {
     user?: User | null;
     onSubmissionClick?: () => void;
     onTopShellUserIconClick?: () => void;
+    onDeviceLocationClick?: () => void;
+    deviceLocation?: DeviceMapLocation | null;
+    isDeviceLocationPending?: boolean;
+    isDeviceHeadingMode?: boolean;
 }
 
 type ActiveSheet = 'none' | 'region' | 'category' | 'search';
@@ -143,6 +150,10 @@ function MobileControlOverlayComponent({
     user,
     onSubmissionClick,
     onTopShellUserIconClick,
+    onDeviceLocationClick,
+    deviceLocation,
+    isDeviceLocationPending = false,
+    isDeviceHeadingMode = false,
 }: MobileControlOverlayProps) {
     const pathname = usePathname();
     const router = useRouter();
@@ -160,6 +171,11 @@ function MobileControlOverlayComponent({
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
     const [adminBadgeCounts, setAdminBadgeCounts] = useState({ submissions: 0, reviews: 0 });
+    const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
+        hasLocation: Boolean(deviceLocation),
+        isHeadingMode: isDeviceHeadingMode,
+        isPending: isDeviceLocationPending,
+    });
 
     // [OPTIMIZATION] ref로 실시간 드래그 상태 추적 (리렌더링 없이)
     const sheetRef = useRef<HTMLDivElement>(null);
@@ -1111,8 +1127,36 @@ function MobileControlOverlayComponent({
 
             </div>
 
-            {/* 우측 하단: 제보, 검색 버튼 */}
+            {/* 우측 하단: 현재 위치, 제보 버튼 */}
             <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-40 flex flex-col gap-2">
+                {/* 기기 위치 버튼: 첫 탭은 현재 위치, 두 번째 탭부터 방향 표시 */}
+                <Button
+                    type="button"
+                    onClick={onDeviceLocationClick}
+                    disabled={isDeviceLocationPending}
+                    aria-label={deviceLocationButtonLabel}
+                    className={cn(
+                        'h-12 w-12 rounded-full shadow-lg',
+                        'transition-all duration-300 ease-in-out',
+                        'hover:scale-110 active:scale-95',
+                        'flex items-center justify-center',
+                        'border-2',
+                        isDeviceHeadingMode
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
+                            : deviceLocation
+                                ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                                : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
+                        isDeviceLocationPending && 'animate-pulse opacity-80'
+                    )}
+                    title={deviceLocationButtonLabel}
+                >
+                    {isDeviceHeadingMode ? (
+                        <Navigation className="h-5 w-5" />
+                    ) : (
+                        <LocateFixed className="h-5 w-5" />
+                    )}
+                </Button>
+
                 {/* 제보 버튼 */}
                 <Button
                     onClick={() => {
