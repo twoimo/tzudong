@@ -8,6 +8,11 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "@/lib/no-toast";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import { Restaurant } from "@/types/restaurant";
+import {
+    resolveDeviceOrientationHeading,
+    resolveGeolocationHeading,
+    type DeviceMapLocation,
+} from "@/lib/device-location-map";
 
 // [OPTIMIZATION] 동적 임포트
 const HomeControlPanel = dynamic(
@@ -57,6 +62,12 @@ export default function HomeClient() {
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
     const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+    const [deviceLocation, setDeviceLocation] = useState<DeviceMapLocation | null>(null);
+    const [isDeviceLocationPending, setIsDeviceLocationPending] = useState(false);
+    const [isDeviceHeadingMode, setIsDeviceHeadingMode] = useState(false);
+    const deviceLocationFocusRequestIdRef = useRef(0);
+    const deviceLocationWatchIdRef = useRef<number | null>(null);
+    const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
     const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
     const openDetailPanelRef = useRef<(restaurant: Restaurant, focusZoom?: number) => void>(() => {});
 
@@ -213,6 +224,152 @@ export default function HomeClient() {
         setIsSubmissionModalOpen(true);
     }, [user]);
 
+    const applyDevicePosition = useCallback((
+        position: GeolocationPosition,
+        mode: 'position' | 'heading',
+        options: { shouldFocus: boolean }
+    ) => {
+        const nextHeading = resolveGeolocationHeading(position.coords.heading);
+        const nextFocusRequestId = options.shouldFocus
+            ? deviceLocationFocusRequestIdRef.current + 1
+            : deviceLocationFocusRequestIdRef.current;
+
+        if (options.shouldFocus) {
+            deviceLocationFocusRequestIdRef.current = nextFocusRequestId;
+        }
+
+        setDeviceLocation((previous) => ({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+            heading: nextHeading ?? previous?.heading ?? null,
+            mode,
+            focusRequestId: nextFocusRequestId,
+            updatedAt: Date.now(),
+        }));
+    }, []);
+
+    const stopDeviceHeadingWatchers = useCallback(() => {
+        if (deviceLocationWatchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+            navigator.geolocation.clearWatch(deviceLocationWatchIdRef.current);
+            deviceLocationWatchIdRef.current = null;
+        }
+
+        deviceOrientationCleanupRef.current?.();
+        deviceOrientationCleanupRef.current = null;
+    }, []);
+
+    const startDeviceOrientationTracking = useCallback(async () => {
+        if (typeof window === 'undefined') return false;
+
+        const OrientationEvent = window.DeviceOrientationEvent as (typeof DeviceOrientationEvent & {
+            requestPermission?: () => Promise<PermissionState>;
+        }) | undefined;
+
+        if (!OrientationEvent) {
+            toast.info('이 브라우저는 방향 센서를 지원하지 않아 현재 위치만 표시해요');
+            return false;
+        }
+
+        try {
+            if (typeof OrientationEvent.requestPermission === 'function') {
+                const permission = await OrientationEvent.requestPermission();
+                if (permission !== 'granted') {
+                    toast.info('방향 권한이 허용되지 않아 현재 위치만 표시해요');
+                    return false;
+                }
+            }
+        } catch {
+            toast.info('방향 권한을 확인하지 못해 현재 위치만 표시해요');
+            return false;
+        }
+
+        if (deviceOrientationCleanupRef.current) return true;
+
+        const handleOrientation = (event: DeviceOrientationEvent & { webkitCompassHeading?: number | null }) => {
+            const heading = resolveDeviceOrientationHeading(event);
+            if (heading === null) return;
+
+            setDeviceLocation((previous) => previous
+                ? { ...previous, heading, mode: 'heading', updatedAt: Date.now() }
+                : previous
+            );
+        };
+
+        window.addEventListener('deviceorientationabsolute', handleOrientation);
+        window.addEventListener('deviceorientation', handleOrientation);
+        deviceOrientationCleanupRef.current = () => {
+            window.removeEventListener('deviceorientationabsolute', handleOrientation);
+            window.removeEventListener('deviceorientation', handleOrientation);
+        };
+
+        return true;
+    }, []);
+
+    const startDeviceLocationWatch = useCallback((mode: 'position' | 'heading') => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation || deviceLocationWatchIdRef.current !== null) return;
+
+        deviceLocationWatchIdRef.current = navigator.geolocation.watchPosition(
+            (position) => applyDevicePosition(position, mode, { shouldFocus: false }),
+            () => {
+                // watchPosition은 보조 갱신용이므로 실패해도 첫 위치 표시를 유지한다.
+            },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+        );
+    }, [applyDevicePosition]);
+
+    const handleDeviceLocationClick = useCallback(async () => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            toast.error('현재 브라우저에서 기기 위치를 사용할 수 없어요');
+            return;
+        }
+
+        const nextMode: 'position' | 'heading' = deviceLocation ? 'heading' : 'position';
+        setIsDeviceLocationPending(true);
+
+        try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    maximumAge: 3000,
+                    timeout: 12000,
+                });
+            });
+
+            if (nextMode === 'heading') {
+                setIsDeviceHeadingMode(true);
+                await startDeviceOrientationTracking();
+                startDeviceLocationWatch('heading');
+                toast.success('현재 위치와 방향 표시를 켰어요');
+            } else {
+                stopDeviceHeadingWatchers();
+                setIsDeviceHeadingMode(false);
+                toast.success('현재 위치를 지도에 표시했어요');
+            }
+
+            applyDevicePosition(position, nextMode, { shouldFocus: true });
+        } catch (error) {
+            const code = typeof error === 'object' && error !== null && 'code' in error
+                ? Number((error as { code?: unknown }).code)
+                : null;
+            const permissionDeniedCode = typeof GeolocationPositionError !== 'undefined'
+                ? GeolocationPositionError.PERMISSION_DENIED
+                : 1;
+
+            if (code === permissionDeniedCode) {
+                toast.error('위치 권한이 차단되어 있어요. 브라우저 설정에서 위치 권한을 허용해주세요');
+            } else {
+                toast.error('현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요');
+            }
+        } finally {
+            setIsDeviceLocationPending(false);
+        }
+    }, [applyDevicePosition, deviceLocation, startDeviceLocationWatch, startDeviceOrientationTracking, stopDeviceHeadingWatchers]);
+
+    useEffect(() => () => {
+        stopDeviceHeadingWatchers();
+    }, [stopDeviceHeadingWatchers]);
+
     const handleTopShellUserIconClick = useCallback(() => {
         if (typeof window === 'undefined') return;
 
@@ -274,6 +431,10 @@ export default function HomeClient() {
                     user={user}
                     onSubmissionClick={handleSubmissionButtonClick}
                     onTopShellUserIconClick={handleTopShellUserIconClick}
+                    onDeviceLocationClick={handleDeviceLocationClick}
+                    deviceLocation={deviceLocation}
+                    isDeviceLocationPending={isDeviceLocationPending}
+                    isDeviceHeadingMode={isDeviceHeadingMode}
                 />
             )}
 
@@ -305,6 +466,7 @@ export default function HomeClient() {
                 isPanelCollapsed={isPanelCollapsed}
                 isMapFullscreen={isMapFullscreen}
                 onMapFullscreenChange={setIsMapFullscreen}
+                deviceLocation={deviceLocation}
             />
 
             <HomeClientSidePanels
