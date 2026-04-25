@@ -9,6 +9,8 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import type { Restaurant } from '@/types/restaurant';
+import { EditRestaurantModal } from '@/components/modals/EditRestaurantModal';
+import { buildEditRestaurantInitialFormData } from '@/lib/edit-restaurant-request-form';
 
 function FeedPageContent() {
     const router = useRouter();
@@ -17,6 +19,8 @@ function FeedPageContent() {
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRestaurantSheetOpen, setIsRestaurantSheetOpen] = useState(false);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [restaurantSheetHeightRequestKey, setRestaurantSheetHeightRequestKey] = useState(0);
+    const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -40,6 +44,7 @@ function FeedPageContent() {
     if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     const handleOpenRestaurantDetail = (restaurant: FeedRestaurantRecord) => {
+        setRestaurantSheetHeightRequestKey(0);
         setSelectedRestaurant(restaurant as unknown as Restaurant);
         setIsRestaurantSheetOpen(true);
     };
@@ -47,6 +52,15 @@ function FeedPageContent() {
     const handleCloseRestaurantDetail = () => {
         setIsRestaurantSheetOpen(false);
         setSelectedRestaurant(null);
+        setRestaurantSheetHeightRequestKey(0);
+    };
+
+    const handleOpenDirectionSheet = () => {
+        setRestaurantSheetHeightRequestKey((key) => key + 1);
+    };
+
+    const handleRequestEditRestaurant = (restaurant: Restaurant) => {
+        setRestaurantToEdit(restaurant);
     };
 
     return (
@@ -76,17 +90,32 @@ function FeedPageContent() {
                     progressiveHeaderHide={true}
                     layoutSource="feed-restaurant-detail-sheet"
                     disableContentScroll={true}
+                    heightRequest={
+                        restaurantSheetHeightRequestKey > 0
+                            ? { key: restaurantSheetHeightRequestKey, height: 50 }
+                            : undefined
+                    }
                     className="p-0"
                 >
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
                         onClose={handleCloseRestaurantDetail}
                         onWriteReview={() => setIsReviewModalOpen(true)}
+                        onOpenDirectionSheet={handleOpenDirectionSheet}
+                        onRequestEditRestaurant={handleRequestEditRestaurant}
                         isPanelOpen={isRestaurantSheetOpen}
                         isMobile={true}
                         className="h-full shadow-none border-0 overflow-hidden"
                     />
                 </BottomSheet>
+            )}
+            {restaurantToEdit && (
+                <EditRestaurantModal
+                    isOpen={true}
+                    onClose={() => setRestaurantToEdit(null)}
+                    restaurant={restaurantToEdit}
+                    initialFormData={buildEditRestaurantInitialFormData(restaurantToEdit)}
+                />
             )}
             <ReviewModal
                 isOpen={isReviewModalOpen}
