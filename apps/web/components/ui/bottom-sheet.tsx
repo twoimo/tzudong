@@ -35,6 +35,10 @@ interface BottomSheetProps {
     ariaDescribedBy?: string;
     focusTrapAllowSelectors?: string[];
     keyboardBehavior?: 'lift' | 'stable';
+    heightRequest?: {
+        key: number;
+        height: number;
+    };
 }
 
 const isVerticallyScrollable = (element: HTMLElement) => {
@@ -102,6 +106,41 @@ export const DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS = [
     '[data-radix-portal]',
     '[data-radix-popper-content-wrapper]',
 ];
+
+export const BOTTOM_SHEET_BACKDROP_ATTRIBUTE = 'data-bottom-sheet-backdrop';
+
+type ModalSiblingCandidate = {
+    tagName: string;
+    contains: (target: Node) => boolean;
+    hasAttribute: (name: string) => boolean;
+};
+
+export const shouldHideModalSibling = (
+    sibling: ModalSiblingCandidate,
+    current: unknown,
+    sheet: Node,
+) => {
+    if (sibling === current) return false;
+    if (sibling.contains(sheet)) return false;
+    if (sibling.hasAttribute(BOTTOM_SHEET_BACKDROP_ATTRIBUTE)) return false;
+    if (sibling.tagName === 'SCRIPT' || sibling.tagName === 'STYLE' || sibling.tagName === 'LINK') return false;
+    return true;
+};
+
+export const resolveBottomSheetHeightRequest = ({
+    currentHeight,
+    requestedHeight,
+    minHeight,
+    maxHeight,
+}: {
+    currentHeight: number;
+    requestedHeight: number;
+    minHeight: number;
+    maxHeight: number;
+}) => {
+    const targetHeight = Math.max(currentHeight, requestedHeight);
+    return Math.max(minHeight, Math.min(maxHeight, targetHeight));
+};
 
 type FocusTrapContainerLike = {
     contains: (target: Node) => boolean;
@@ -199,6 +238,7 @@ function BottomSheetComponent({
     ariaDescribedBy,
     focusTrapAllowSelectors = DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS,
     keyboardBehavior = 'lift',
+    heightRequest,
 }: BottomSheetProps) {
     const isMobileOrTablet = useIsMobile();
     const isModal = modal ?? showBackdrop;
@@ -382,6 +422,21 @@ function BottomSheetComponent({
 
         setSheetHeight(nextHeightSafe);
     }, [getCurrentMaxHeight, minHeight, syncMobileLayout]);
+
+    const heightRequestKey = heightRequest?.key;
+    const heightRequestHeight = heightRequest?.height;
+
+    useEffect(() => {
+        if (!isOpen || heightRequestKey === undefined || heightRequestHeight === undefined) return;
+
+        const requestedHeight = resolveBottomSheetHeightRequest({
+            currentHeight: sheetHeightRef.current,
+            requestedHeight: heightRequestHeight,
+            minHeight,
+            maxHeight: getCurrentMaxHeight(),
+        });
+        setSheetHeightSafe(requestedHeight, true);
+    }, [getCurrentMaxHeight, heightRequestHeight, heightRequestKey, isOpen, minHeight, setSheetHeightSafe]);
 
     const unlockContentScrollDuringDrag = useCallback(() => {
         const lockedTarget = lockedContentScrollTargetRef.current;
@@ -1044,6 +1099,7 @@ function BottomSheetComponent({
 
         const sheet = sheetRef.current;
         if (!sheet) return;
+        const activeSheet = sheet;
 
         const seen = new Set<HTMLElement>();
         const hiddenStates: HiddenModalSiblingState[] = [];
@@ -1055,8 +1111,8 @@ function BottomSheetComponent({
 
             Array.from(parent.children).forEach((sibling) => {
                 if (!(sibling instanceof HTMLElement)) return;
-                if (sibling === current || sibling.contains(sheet) || seen.has(sibling)) return;
-                if (sibling.tagName === 'SCRIPT' || sibling.tagName === 'STYLE' || sibling.tagName === 'LINK') return;
+                if (seen.has(sibling)) return;
+                if (!shouldHideModalSibling(sibling, current, activeSheet)) return;
 
                 const inertSibling = sibling as InertableHTMLElement;
                 seen.add(sibling);
@@ -1187,6 +1243,7 @@ function BottomSheetComponent({
             {showBackdrop && (
                 <div
                     className="fixed inset-0 z-[94] bg-black/30 transition-opacity duration-200"
+                    data-bottom-sheet-backdrop={layoutSource}
                     role="button"
                     tabIndex={-1}
                     aria-label="바텀시트 닫기"

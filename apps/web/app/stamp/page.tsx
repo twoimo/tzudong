@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
+import { EditRestaurantModal } from "@/components/modals/EditRestaurantModal";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
@@ -48,6 +49,7 @@ import {
     selectRelatedRestaurantReviewIds,
 } from "@/lib/restaurant-review-lookup";
 import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRestaurantSortDirection } from "@/lib/stamp-restaurant-order";
+import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
 import type { Json, Tables } from "@/integrations/supabase/types";
 
 type SortColumn = StampRestaurantSortColumn;
@@ -208,6 +210,8 @@ export default function StampPage() {
     // 우측 패널 상태
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRightPanelVisible, setIsRightPanelVisible] = useState(false);
+    const [restaurantSheetHeightRequestKey, setRestaurantSheetHeightRequestKey] = useState(0);
+    const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
 
     // 리뷰 모달 상태
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -627,6 +631,7 @@ export default function StampPage() {
     const handleRestaurantClick = useCallback(async (restaurant: Restaurant) => {
         if (isMobileOrTablet) {
             // [MOBILE] Open Bottom Sheet instead of navigating
+            setRestaurantSheetHeightRequestKey(0);
             setSelectedRestaurant(restaurant);
             setIsRightPanelVisible(true);
 
@@ -637,6 +642,7 @@ export default function StampPage() {
             // Need to verify. But first step is preventing router push.
         } else {
             // [DESKTOP] Open Right Panel
+            setRestaurantSheetHeightRequestKey(0);
             setSelectedRestaurant(restaurant);
 
             // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
@@ -666,6 +672,7 @@ export default function StampPage() {
         if (!nextRestaurant) return;
 
         setSelectedRestaurant(nextRestaurant);
+        setRestaurantSheetHeightRequestKey(0);
         setSelectedReview(null);
         setCurrentPhotoIndex(0);
         setIsRightPanelVisible(true);
@@ -682,6 +689,15 @@ export default function StampPage() {
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
         setSelectedRestaurant(null);
+        setRestaurantSheetHeightRequestKey(0);
+    }, []);
+
+    const handleOpenDirectionSheet = useCallback(() => {
+        setRestaurantSheetHeightRequestKey((key) => key + 1);
+    }, []);
+
+    const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
+        setRestaurantToEdit(restaurant);
     }, []);
 
     const handleSort = useCallback((column: SortColumn) => {
@@ -1233,12 +1249,19 @@ export default function StampPage() {
                     progressiveHeaderHide={true}
                     layoutSource="stamp-bottom-sheet"
                     disableContentScroll={true} // 내부 패널 스크롤 사용
+                    heightRequest={
+                        restaurantSheetHeightRequestKey > 0
+                            ? { key: restaurantSheetHeightRequestKey, height: 50 }
+                            : undefined
+                    }
                     className="p-0"
                 >
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
                         onClose={handleCloseRightPanel}
                         onWriteReview={handleWriteReview}
+                        onOpenDirectionSheet={handleOpenDirectionSheet}
+                        onRequestEditRestaurant={handleRequestEditRestaurant}
                         isPanelOpen={isRightPanelVisible}
                         isMobile={true}
                         onSwipeLeft={handleBottomSheetSwipeLeft}
@@ -1259,6 +1282,15 @@ export default function StampPage() {
                     completeStampGuide();
                 }}
             />
+
+            {restaurantToEdit && (
+                <EditRestaurantModal
+                    isOpen={true}
+                    onClose={() => setRestaurantToEdit(null)}
+                    restaurant={restaurantToEdit}
+                    initialFormData={buildEditRestaurantInitialFormData(restaurantToEdit)}
+                />
+            )}
 
             {/* 리뷰 수정 모달 (Review Edit Modal) */}
             <ReviewEditModal

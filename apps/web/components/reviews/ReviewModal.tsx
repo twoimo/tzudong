@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, MobileSheetStepIndicator, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { MobileSheetHeader, MobileSheetStepIndicator, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from "@/lib/mobile-sheet-layout";
 
 // 음식 사진용 압축 옵션 (스토리지 최적화)
 const FOOD_PHOTO_OPTIONS = {
@@ -167,18 +167,27 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const foodPhotosDropRef = useRef<HTMLDivElement>(null);
     const verificationFileInputRef = useRef<HTMLInputElement>(null);
     const foodPhotosFileInputRef = useRef<HTMLInputElement>(null);
+    const verificationPhotoUrlRef = useRef<string | null>(null);
+    const mobileFrameRef = useRef<HTMLDivElement>(null);
+    const mobileScrollRef = useRef<HTMLDivElement>(null);
 
     // 드래그 상태
     const [isVerificationDragging, setIsVerificationDragging] = useState(false);
     const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
+    const [verificationPhotoUrl, setVerificationPhotoUrl] = useState<string | null>(null);
 
-    // 이미지 미리보기 URL 메모리 관리 (URL.createObjectURL 정리)
-    const verificationPhotoUrl = useMemo(() => {
-        if (verificationPhoto) {
-            return URL.createObjectURL(verificationPhoto);
+    // 인증 사진 미리보기 URL은 렌더 중 생성하지 않고 이벤트에서 동기 갱신해
+    // 모바일 파일 선택기 복귀 직후 바텀시트가 재계산되며 깜빡이는 일을 줄인다.
+    const replaceVerificationPhoto = useCallback((file: File | null) => {
+        if (verificationPhotoUrlRef.current) {
+            URL.revokeObjectURL(verificationPhotoUrlRef.current);
         }
-        return null;
-    }, [verificationPhoto]);
+
+        const nextUrl = file ? URL.createObjectURL(file) : null;
+        verificationPhotoUrlRef.current = nextUrl;
+        setVerificationPhotoUrl(nextUrl);
+        setVerificationPhoto(file);
+    }, []);
 
     const foodPhotoUrls = useMemo(() => {
         return foodPhotos.map(photo => URL.createObjectURL(photo));
@@ -187,11 +196,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     // URL 정리 (메모리 누수 방지)
     useEffect(() => {
         return () => {
-            if (verificationPhotoUrl) {
-                URL.revokeObjectURL(verificationPhotoUrl);
+            if (verificationPhotoUrlRef.current) {
+                URL.revokeObjectURL(verificationPhotoUrlRef.current);
+                verificationPhotoUrlRef.current = null;
             }
         };
-    }, [verificationPhotoUrl]);
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -201,9 +211,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
     // 메모이제이션된 이벤트 핸들러들
     const handleVerificationPhotoSelected = (file: File) => {
-        setVerificationPhoto(file);
+        replaceVerificationPhoto(file);
+        verificationFileInputRef.current?.blur();
         if (verificationInputMode === "ai") {
-            analyzeReceipt(file);
+            // 미리보기 DOM이 먼저 안정화된 뒤 OCR 오버레이/자동 입력 상태가 붙도록 한다.
+            requestAnimationFrame(() => analyzeReceipt(file));
         }
     };
 
@@ -212,6 +224,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         if (file) {
             handleVerificationPhotoSelected(file);
         }
+        e.target.value = '';
     };
 
     const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -668,12 +681,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         setVisitedTime("");
         setCategories([]);
         setContent("");
-        setVerificationPhoto(null);
+        replaceVerificationPhoto(null);
         setFoodPhotos([]);
         setVerificationInputMode("ai");
         setCurrentStep(1);
         onClose();
-    }, [onClose]);
+    }, [onClose, replaceVerificationPhoto]);
 
     // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
     const isFormValid = useMemo(() => {
@@ -731,7 +744,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                 // 사진 복원
                 if (draft.verificationPhoto) {
-                    setVerificationPhoto(draft.verificationPhoto);
+                    replaceVerificationPhoto(draft.verificationPhoto);
                 }
                 if (draft.foodPhotos && draft.foodPhotos.length > 0) {
                     setFoodPhotos(draft.foodPhotos);
@@ -742,7 +755,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         } catch (error) {
             console.error('임시 저장 데이터 로드 실패:', error);
         }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, replaceVerificationPhoto]);
 
     // 자동 저장 (IndexedDB)
     const autoSave = useCallback(async () => {
@@ -830,6 +843,24 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             loadDraft();
         }
     }, [isOpen, user?.id, restaurant?.id, loadDraft]);
+
+    useEffect(() => {
+        if (!isOpen || !isMobileOrTablet) return;
+
+        mobileScrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    }, [currentStep, isMobileOrTablet, isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || !isMobileOrTablet) return;
+
+        setMobileSheetLayoutState({
+            hideBottomNav: true,
+            headerHideProgress: 0,
+            source: 'review-modal',
+        });
+
+        return () => resetMobileSheetLayoutState('review-modal');
+    }, [isMobileOrTablet, isOpen]);
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
@@ -981,7 +1012,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 className="w-full gap-2"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setVerificationPhoto(null);
+                                                    replaceVerificationPhoto(null);
                                                 }}
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -1384,18 +1415,22 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     }
 
     if (isMobileOrTablet) {
+        if (!isOpen) return null;
+
         return (
-            <BottomSheet
-                isOpen={isOpen}
-                onClose={handleClose}
-                {...MOBILE_FULL_FORM_SHEET}
-                layoutSource="review-modal"
-                className="z-[110]"
-                ariaLabelledBy="review-sheet-title"
-                ariaDescribedBy="review-sheet-description"
+            <div
+                className="fixed inset-0 z-[110] bg-background"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="review-sheet-title"
+                aria-describedby="review-sheet-description"
             >
-                {isOpen && (
-                    <div className={`relative ${mobileSheetStyles.frame}`}>
+                <div
+                    ref={mobileScrollRef}
+                    className="h-full overflow-y-auto overscroll-contain bg-background"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                    <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
                         <MobileSheetHeader
                             title="쯔동여지도 리뷰 작성"
                             description="맛집 방문 후기를 공유해주세요"
@@ -1408,9 +1443,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 </Button>
                             )}
                         >
-                            {lastSavedAt && (
-                                <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-                                    {isSaving ? (
+                            <div className="mb-1 flex min-h-4 items-center gap-1 text-[10px] text-muted-foreground" aria-live="polite">
+                                {lastSavedAt ? (
+                                    isSaving ? (
                                         <>
                                             <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
                                             <span>저장 중</span>
@@ -1422,9 +1457,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </>
-                                    )}
-                                </div>
-                            )}
+                                    )
+                                ) : (
+                                    <span className="invisible">저장 상태</span>
+                                )}
+                            </div>
                         </MobileSheetHeader>
 
                         <div className={mobileSheetStyles.content}>
@@ -1541,7 +1578,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         className="w-full gap-2"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setVerificationPhoto(null);
+                                                            replaceVerificationPhoto(null);
                                                         }}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -2033,8 +2070,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             </div>
                         </div>
                     </div>
-                )}
-            </BottomSheet>
+                </div>
+            </div>
         );
     }
 
@@ -2187,7 +2224,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         className="w-full gap-2"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setVerificationPhoto(null);
+                                                            replaceVerificationPhoto(null);
                                                         }}
                                                     >
                                                         <Trash2 className="h-4 w-4" />

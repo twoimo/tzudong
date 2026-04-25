@@ -18,6 +18,7 @@ import {
 } from '@/lib/home-map-keyboard-navigation';
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
+import type { DeviceMapLocation } from '@/lib/device-location-map';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -56,6 +57,7 @@ interface HomeMapContainerProps {
     onSwipeableRestaurantsChange?: (restaurants: Restaurant[]) => void;
     isMapFullscreen?: boolean;
     onMapFullscreenChange?: (isFullscreen: boolean) => void;
+    deviceLocation?: DeviceMapLocation | null;
 }
 
 // ========== [PERFORMANCE] 상수 호이스팅 - 컴포넌트 외부로 이동하여 리렌더링 시 재선언 방지 ==========
@@ -167,6 +169,7 @@ function HomeMapContainerComponent({
     onSwipeableRestaurantsChange,
     isMapFullscreen = false,
     onMapFullscreenChange,
+    deviceLocation = null,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
@@ -1196,6 +1199,7 @@ function HomeMapContainerComponent({
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                         onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
                         onMapBlankClick={handleMapBlankClick}
+                        deviceLocation={deviceLocation}
                     />
                 </Suspense>
             ) : (
@@ -1215,6 +1219,7 @@ function HomeMapContainerComponent({
                         mapPadding={mapPadding}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                         onMapBlankClick={handleMapBlankClick}
+                        deviceLocation={deviceLocation}
                     />
                 </Suspense>
             )}

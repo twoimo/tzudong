@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Noto_Serif_KR } from "next/font/google";
 import Script from "next/script";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -97,7 +98,9 @@ export default function RootLayout({
 
                 <QueryProvider>
                     <AppProviders>
-                        <MainLayout>{children}</MainLayout>
+                        <Suspense fallback={null}>
+                            <MainLayout>{children}</MainLayout>
+                        </Suspense>
                     </AppProviders>
                 </QueryProvider>
                 <SpeedInsights />
