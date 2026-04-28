@@ -147,7 +147,15 @@ def build_gdrive_upload_expected(args: argparse.Namespace) -> dict:
     for item in _load_residual_items(residual_queue_path, frames_dir, retention_days=args.retention_days):
         items_by_key[item["dedupeKey"]] = item
 
-    items = sorted(items_by_key.values(), key=lambda item: item["relativePath"])
+    all_items = sorted(items_by_key.values(), key=lambda item: item["relativePath"])
+    max_items = max(0, int(args.max_items or 0))
+    if max_items:
+        items = all_items[:max_items]
+        overflow_items = all_items[max_items:]
+        _persist_overflow_queue_items(residual_queue_path, overflow_items, generated_at, frames_dir, args.retention_days)
+    else:
+        items = all_items
+        overflow_items = []
     return {
         "schemaVersion": UPLOAD_SCHEMA_VERSION,
         "generatedAt": generated_at,
@@ -155,6 +163,8 @@ def build_gdrive_upload_expected(args: argparse.Namespace) -> dict:
         "sourceRoot": args.source_root or str(frames_dir),
         "remoteRoot": args.remote_root,
         "recentMinutes": args.recent_minutes,
+        "maxItems": max_items,
+        "overflowCount": len(overflow_items),
         "residualQueuePath": str(residual_queue_path) if residual_queue_path else None,
         "expectedCount": len(items),
         "items": items,
@@ -208,6 +218,68 @@ def _write_queue(path: Path, entries: Sequence[dict]) -> None:
         "".join(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n" for entry in entries),
         encoding="utf-8",
     )
+
+
+def _queue_entry(
+    item: dict,
+    generated_at: str,
+    now_epoch: int,
+    *,
+    previous: Optional[dict] = None,
+    attempts_increment: int = 0,
+    last_exit_code: int = 0,
+) -> dict:
+    previous = previous or {}
+    attempts = _safe_int(str(previous.get("attempts", "0")), 0) + attempts_increment
+    return {
+        "schemaVersion": UPLOAD_SCHEMA_VERSION,
+        "firstSeenAt": previous.get("firstSeenAt") or generated_at,
+        "firstSeenEpoch": previous.get("firstSeenEpoch") or now_epoch,
+        "lastAttemptAt": generated_at,
+        "attempts": attempts,
+        "lastExitCode": last_exit_code,
+        "item": item,
+    }
+
+
+def _persist_overflow_queue_items(
+    residual_queue_path: Optional[Path],
+    items: Sequence[dict],
+    generated_at: str,
+    frames_dir: Path,
+    retention_days: int,
+) -> None:
+    """Keep unattempted upload overflow durable for the next bounded run."""
+
+    if residual_queue_path is None or not items:
+        return
+
+    previous_entries = _prune_queue_entries(_load_queue_entries(residual_queue_path), frames_dir, retention_days)
+    previous_by_key = {
+        str((entry.get("item") or {}).get("dedupeKey", "")): entry
+        for entry in previous_entries
+        if isinstance(entry.get("item"), dict)
+    }
+    overflow_keys = {str(item.get("dedupeKey", "")) for item in items}
+    retained = [
+        entry
+        for entry in previous_entries
+        if str((entry.get("item") or {}).get("dedupeKey", "")) not in overflow_keys
+    ]
+    now_epoch = int(time.time())
+    for item in items:
+        key = str(item.get("dedupeKey", ""))
+        retained.append(
+            _queue_entry(
+                item,
+                generated_at,
+                now_epoch,
+                previous=previous_by_key.get(key),
+                attempts_increment=0,
+                last_exit_code=0,
+            )
+        )
+    _write_queue(residual_queue_path, retained)
 
 
 def _prune_queue_entries(entries: Sequence[dict], frames_dir: Path, retention_days: int) -> List[dict]:
@@ -265,6 +337,7 @@ def build_gdrive_upload_status(args: argparse.Namespace) -> dict:
     residual_count = len(residual_items)
     residual_queue_path = Path(args.residual_queue) if args.residual_queue else None
     max_residual_attempts = 0
+    pending_backlog_count = 0
     if residual_queue_path is not None:
         previous_entries = _load_queue_entries(residual_queue_path)
         source_root = args.source_root or expected.get("sourceRoot") or ""
@@ -284,17 +357,17 @@ def build_gdrive_upload_status(args: argparse.Namespace) -> dict:
                 attempts = _safe_int(str(previous.get("attempts", "0")), 0) + 1
                 max_residual_attempts = max(max_residual_attempts, attempts)
                 retained.append(
-                    {
-                        "schemaVersion": UPLOAD_SCHEMA_VERSION,
-                        "firstSeenAt": previous.get("firstSeenAt") or generated_at,
-                        "firstSeenEpoch": previous.get("firstSeenEpoch") or now_epoch,
-                        "lastAttemptAt": generated_at,
-                        "attempts": attempts,
-                        "lastExitCode": exit_code,
-                        "item": item,
-                    }
+                    _queue_entry(
+                        item,
+                        generated_at,
+                        now_epoch,
+                        previous=previous,
+                        attempts_increment=1,
+                        last_exit_code=exit_code,
+                    )
                 )
         _write_queue(residual_queue_path, retained)
+        pending_backlog_count = len(retained)
 
     policy = args.policy
     if residual_count and max_residual_attempts >= args.backfill_threshold_attempts:
@@ -313,6 +386,7 @@ def build_gdrive_upload_status(args: argparse.Namespace) -> dict:
         "uploadedCountConfidence": uploaded_confidence,
         "skippedExistingCount": skipped_existing_count,
         "residualCount": residual_count,
+        "pendingBacklogCount": pending_backlog_count,
         "maxResidualAttempts": max_residual_attempts,
         "backfillThresholdAttempts": args.backfill_threshold_attempts,
         "timeout": timed_out,
@@ -383,6 +457,7 @@ def _add_gdrive_expected_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--remote-root", default="")
     parser.add_argument("--recent-minutes", type=int, default=120)
     parser.add_argument("--retention-days", type=int, default=7)
+    parser.add_argument("--max-items", type=int, default=0)
     parser.add_argument("--generated-at", default="")
 
 
