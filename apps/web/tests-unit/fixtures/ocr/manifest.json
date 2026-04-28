@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "id": "kakaotalk-20260425-231206797",
+      "gold_path": "kakaotalk-20260425-231206797.gold.json",
+      "image_path": "~/src/KakaoTalk_20260425_231206797.jpg",
+      "language": "ko",
+      "domain": "restaurant_receipt",
+      "source": "user_provided_local_receipt",
+      "license": "private_local_evaluation_only",
+      "redaction_status": "no_sensitive_fields_detected",
+      "committable": true
+    }
+  ]
+}

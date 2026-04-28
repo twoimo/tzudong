@@ -4,10 +4,43 @@ import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { debugLog } from '@/lib/debug-log';
+import { callGeminiReceiptOcr, GeminiOcrError } from '@/lib/ocr/gemini';
 import { callNvidiaNimReceiptOcr, NIM_OCR_DEFAULT_MODEL, NvidiaNimOcrError } from '@/lib/ocr/nvidia-nim';
+import {
+    RECEIPT_OCR_EXTRACTION_PROMPT,
+    RECEIPT_OCR_PREPROCESS_VERSION,
+    RECEIPT_OCR_PROMPT_VERSION,
+} from '@/lib/ocr/receipt-prompt';
+import { resolveOcrAiRuntimeConfig, type OcrAiRuntimeConfigCandidate } from '@/lib/admin/ai-settings-store';
+import {
+    buildOcrCacheVersion,
+    doesOcrCacheMetadataMatch,
+    RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
+    RECEIPT_OCR_RAW_CACHE_KIND,
+    type OcrCacheMetadata,
+} from '@/lib/ocr/cache-version';
+import {
+    buildReceiptOcrEnvelope,
+    flattenReceiptOcrEnvelope,
+    RECEIPT_OCR_NORMALIZATION_VERSION,
+} from '@/lib/ocr/receipt-normalization';
+import { findOcrRestaurantMatches } from '@/lib/ocr/restaurant-matching';
+import {
+    buildOcrResponseFromRawCache,
+    buildOcrSuccessLogMetadata,
+    createRestaurantLookupCallbacks,
+    getRunnableCredentials,
+    hasRunnableOcrCredentials,
+    parseSelectedRestaurantContext,
+} from '@/lib/ocr/route-helpers';
+import {
+    canForceRefreshOcr,
+    checkOcrDailyQuota,
+    isOcrForceRefreshRequested,
+    OCR_DAILY_QUOTA,
+} from '@/lib/ocr/quota';
 
 // --- 설정 ---
-const NVIDIA_NIM_API_KEY = process.env.NVIDIA_NIM_API_KEY;
 
 // --- 이미지 최적화 (비용 절감) ---
 async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savings: string }> {
@@ -15,16 +48,24 @@ async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savin
         const originalSize = buffer.length;
         const metadata = await sharp(buffer).metadata();
 
-        // 너비 1024px 제한, JPEG 70% 품질로 압축
+        // 영수증 OCR은 작은 글자/흐린 잉크가 핵심이라 과압축 시 모델이
+        // 가게명·메뉴명을 오인식한다. 이미 2MB 이하이고 1800px 이하인
+        // 실기기 사진은 원본을 유지해 정확도를 우선한다.
+        if (originalSize <= 2 * 1024 * 1024 && (!metadata.width || metadata.width <= 1800)) {
+            debugLog(`[OCR] 이미지 원본 유지: ${(originalSize / 1024).toFixed(0)}KB`);
+            return { optimized: buffer, savings: '0%' };
+        }
+
+        // 큰 이미지만 완만하게 축소한다. 1024px/70%는 영수증 글자에 손실이 커서 피한다.
         let optimized: Buffer;
-        if (metadata.width && metadata.width > 1024) {
+        if (metadata.width && metadata.width > 1600) {
             optimized = await sharp(buffer)
-                .resize({ width: 1024 })
-                .jpeg({ quality: 70 })
+                .resize({ width: 1600 })
+                .jpeg({ quality: 85 })
                 .toBuffer();
         } else {
             optimized = await sharp(buffer)
-                .jpeg({ quality: 70 })
+                .jpeg({ quality: 85 })
                 .toBuffer();
         }
 
@@ -39,74 +80,11 @@ async function optimizeImage(buffer: Buffer): Promise<{ optimized: Buffer; savin
     }
 }
 
-const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
-
-## 핵심 지침
-  - 하단의 "주문매장: 스시로이" 같은 명확한 텍스트를 우선 참조하세요.
-- **일반 영수증**: 상단 로고/상호명 영역에서 추출
-- **유명 브랜드 자동 완성 금지**: "초특가마R"라고 적혀있으면 "초록마을"로 고치지 말고 보이는 그대로(또는 문맥상 "초특가마트"가 확실하면 그렇게) 추출하세요.
-- **알 수 없는 문자열이 가게명으로 보이면**: 영수증 전체를 다시 살펴보고 "주문매장", "상호", "가맹점" 필드를 찾으세요.
-
-### 2. 한글 음식명 정확 인식 (필수!)
-- 흐릿하거나 작은 글씨도 문맥상 추론하세요.
-- 자주 등장하는 메뉴 예시:
-  - 우동, 라멘, 소바, 덮밥, 카레
-  - 육회, 초밥, 스시, 사시미, 롤
-  - 콜라, 사이다, 음료, 맥주
-- "ㅜ"와 "ㅁ"을 혼동하지 마세요.
-
-### 3. 메뉴 항목 완전 추출 (하나도 빠뜨리지 말 것!)
-- 모든 주문 항목을 items 배열에 포함
-- **각 항목은 이름과 가격을 함께 추출**: { "name": "메뉴명", "price": 가격 }
-- 옵션/변경사항도 포함: "육회초밥 소고기불초밥으로 변경"
-- 수량이 있으면 이름에 포함: "우동 x2"
-- 가격을 읽을 수 없으면 price를 null로 설정
-
-### 4. 금액 및 날짜 추출
-- "총결제금액", "합계" 필드 우선 (쉼표 제거)
-- "거래일시", "주문일시" 필드 (YYYY-MM-DD, HH:MM)
-
-### 5. 카테고리 분류 (다음 목록 중 하나 선택)
-- 선택지: "치킨", "중식", "돈까스·회", "피자", "패스트푸드", "찜·탕", "족발·보쌈", "분식", "카페·디저트", "한식", "고기", "양식", "아시안", "야식", "도시락"
-- 메뉴를 보고 가장 적절한 카테고리 1개를 선택 (예: 짜장면 -> "중식", 삼겹살 -> "고기")
-- 없으면 "한식"으로 설정
-
-### 6. 리뷰 초안 작성 (3줄 정도, 풍성하게)
-- 영수증 내용을 바탕으로 **자연스러운 3줄 정도의 후기**를 작성하세요.
-- 포함 내용: 가게 분위기 추론(메뉴 기반), 맛 표현, 가성비 언급.
-- 줄바꿈 문자(\\n)를 사용하여 문단을 나누세요.
-- 이모지 2~3개 포함.
-- 예시:
-  "오늘 [가게명]에서 [메뉴1]랑 [메뉴2] 먹고 왔어요! 😋
-  양도 진짜 푸짐하고 맛도 있어서 완전 배부르게 잘 먹었네요.
-  가격도 [금액]원이라 가성비 최고! 다음에 또 올게요. 👍"
-
-## 응답 형식 (JSON만 반환)
-
-성공 시:
-{
-  "store_name": "가게명",
-  "date": "YYYY-MM-DD",
-  "time": "HH:MM",
-  "total_amount": 15000,
-  "category": "중식",
-  "review_draft": "홍콩반점에서 짜장면이랑 탕수육 먹고 왔어요! 😋\\n양도 진짜 많고 소스도 달콤해서 너무 맛있게 먹었네요.\\n총 15,000원 나왔는데 가성비 진짜 최고인 듯! 강추합니다. 👍",
-  "items": [
-    { "name": "메뉴명", "price": 15000 }
-  ],
-  "confidence": 0.0~1.0
-}
-
-실패 시:
-{
-  "error": "not_receipt / unreadable",
-  "confidence": 0.0
-}
-`;
+const OCR_PROMPT = RECEIPT_OCR_EXTRACTION_PROMPT;
 
 type OcrResultPayload = Record<string, unknown>;
 
-type OcrLogMetadata = {
+type OcrLogMetadata = OcrCacheMetadata & {
     ocr_result?: OcrResultPayload;
     error?: string;
 };
@@ -143,18 +121,27 @@ export async function POST(req: Request) {
     let buffer: Buffer | null = null;
     let accessToken: string | null = null;
     let authenticatedUserId: string | null = null;
+    let failureModel = `${NIM_OCR_DEFAULT_MODEL}:fail`;
+    let failureProvider = 'unknown';
 
     try {
-        // API 키 확인
-        if (!NVIDIA_NIM_API_KEY) {
+        const aiRuntime = await resolveOcrAiRuntimeConfig();
+        const providerCandidates = [aiRuntime, ...aiRuntime.fallbackCandidates];
+        const runnableCandidates = providerCandidates.filter(candidate => hasRunnableOcrCredentials([candidate]));
+        const effectiveCandidates = runnableCandidates.length ? runnableCandidates : providerCandidates;
+        failureModel = `${effectiveCandidates[0]?.model || effectiveCandidates[0]?.models[0] || NIM_OCR_DEFAULT_MODEL}:fail`;
+        failureProvider = effectiveCandidates[0]?.provider ?? 'unknown';
+        if (!hasRunnableOcrCredentials(runnableCandidates)) {
             return NextResponse.json(
-                { error: 'NVIDIA_NIM_API_KEY 환경변수가 설정되지 않았습니다.' },
+                { error: 'OCR API 키가 설정되지 않았습니다. Gemini 또는 NVIDIA NIM 키를 확인해주세요.' },
                 { status: 500 }
             );
         }
 
         const formData = await req.formData();
         const file = formData.get('image') as File;
+        const forceRefreshRequested = isOcrForceRefreshRequested({ formData, headers: req.headers });
+        const selectedRestaurantContext = parseSelectedRestaurantContext(formData);
 
         if (!file) {
             return NextResponse.json({ error: '이미지가 제공되지 않았습니다' }, { status: 400 });
@@ -200,85 +187,171 @@ export async function POST(req: Request) {
         const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
         const imageHash = hashBuffer.toString('hex');
 
-        // [비용 절감] 3. 캐시 확인 - 동일 이미지 재사용
+        const ocrCacheVersions = providerCandidates.map(candidate => buildOcrCacheVersion({
+            cacheKind: RECEIPT_OCR_RAW_CACHE_KIND,
+            provider: candidate.provider,
+            model: candidate.models[0] ?? candidate.model,
+            promptVersion: RECEIPT_OCR_PROMPT_VERSION,
+            preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
+            extractionSchemaVersion: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
+            routingMode: aiRuntime.routingMode,
+        }));
+
+        // [비용 절감] 3. 캐시 확인 - 동일 이미지+provider/model/prompt/preprocess 재사용
         const ocrSupabase = createOcrLogsSupabaseClient(accessToken) ?? supabase;
         const ocrLogsTable = ocrSupabase.from('ocr_logs' as never);
-        const { data: cachedResultRaw } = await ocrLogsTable
-            .select('metadata')
-            .eq('user_id', user.id)
-            .eq('image_hash', imageHash)
-            .eq('success', true)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        const forceRefresh = forceRefreshRequested
+            ? await canForceRefreshOcr({ userId: user.id, roleClient: supabase as never })
+            : false;
 
-        const cachedResult = cachedResultRaw as { metadata?: OcrLogMetadata | null } | null;
-        const cachedMetadata = cachedResult?.metadata as OcrLogMetadata | null;
-        if (cachedMetadata?.ocr_result) {
-            debugLog('[OCR] 캐시 히트! API 호출 생략');
-            return NextResponse.json({
-                ...cachedMetadata.ocr_result,
-                cached: true
-            });
+        if (forceRefreshRequested && !forceRefresh) {
+            return NextResponse.json(
+                { error: 'OCR 강제 재호출은 개발 환경 또는 관리자 계정에서만 사용할 수 있습니다.' },
+                { status: 403 }
+            );
         }
 
-        // [보안] 4. 일일 쿼터 확인 (하루 5회)
-        const MAX_DAILY_QUOTA = 5;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        if (!forceRefresh) {
+            const { data: cachedResultRaw } = await ocrLogsTable
+                .select('metadata')
+                .eq('user_id', user.id)
+                .eq('image_hash', imageHash)
+                .eq('success', true)
+                .order('created_at', { ascending: false })
+                .limit(5);
 
-        const { count, error: countError } = await ocrLogsTable
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .gte('created_at', today.toISOString());
+            const cachedRows = (cachedResultRaw as Array<{ metadata?: OcrLogMetadata | null }> | null) ?? [];
+            const cachedMetadata = cachedRows
+                .map(row => row.metadata ?? null)
+                .find(metadata => ocrCacheVersions.some(version => doesOcrCacheMetadataMatch(metadata, version)))
+                ?? cachedRows
+                    .map(row => row.metadata ?? null)
+                    .find(metadata => Boolean(metadata?.raw_ocr_result && metadata.provider && metadata.model))
+                ?? null;
+            const cachedResponse = await buildOcrResponseFromRawCache({
+                metadata: cachedMetadata,
+                selectedRestaurantContext,
+                lookupCallbacks: createRestaurantLookupCallbacks(ocrSupabase as never),
+            });
+            if (cachedResponse) {
+                debugLog('[OCR] raw 캐시 히트! 현재 맛집 문맥으로 보정 재계산');
+                return NextResponse.json({
+                    ...cachedResponse.responsePayload,
+                    cached: true
+                });
+            }
+        }
 
-        if (countError) {
+        // [보안] 4. 일일 쿼터 확인 (일반 사용자 하루 5회, 관리자 무제한)
+        try {
+            const quota = await checkOcrDailyQuota({
+                userId: user.id,
+                logsClient: ocrSupabase as never,
+                roleClient: supabase as never,
+            });
+
+            if (quota.exceeded) {
+                return NextResponse.json(
+                    { error: `일일 무료 분석 한도(${OCR_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.` },
+                    { status: 429 }
+                );
+            }
+        } catch (countError) {
             console.error("쿼터 확인 실패:", countError);
-        } else if (count !== null && count >= MAX_DAILY_QUOTA) {
-            return NextResponse.json(
-                { error: `일일 무료 분석 한도(${MAX_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.` },
-                { status: 429 }
-            );
         }
 
         // [비용 절감] 5. 이미지 압축
         const { optimized, savings } = await optimizeImage(buffer);
         const base64Image = optimized.toString('base64');
 
-        // NVIDIA NIM VLM OCR 호출
-        const nimResult = await callNvidiaNimReceiptOcr({
-            apiKey: NVIDIA_NIM_API_KEY,
-            imageBase64: base64Image,
-            mimeType: 'image/jpeg',
-            prompt: OCR_PROMPT,
+        let ocrResult: Awaited<ReturnType<typeof callGeminiReceiptOcr>> | null = null;
+        let usedCandidate: OcrAiRuntimeConfigCandidate | null = null;
+        let usedCredentialSource = 'none';
+        const failedAttempts: unknown[] = [];
+        for (const candidate of effectiveCandidates) {
+            const credentials = getRunnableCredentials({ candidate, routingMode: aiRuntime.routingMode });
+            for (const credential of credentials) {
+                try {
+                    ocrResult = candidate.provider === 'gemini'
+                        ? await callGeminiReceiptOcr({
+                            apiKey: credential.apiKey,
+                            imageBase64: base64Image,
+                            mimeType: 'image/jpeg',
+                            prompt: OCR_PROMPT,
+                            env: { ...process.env, GEMINI_OCR_MODEL: candidate.models.join(',') },
+                        })
+                        : await callNvidiaNimReceiptOcr({
+                            apiKey: credential.apiKey,
+                            imageBase64: base64Image,
+                            mimeType: 'image/jpeg',
+                            prompt: OCR_PROMPT,
+                            env: { ...process.env, NVIDIA_NIM_OCR_MODEL: candidate.models.join(',') },
+                        });
+                    usedCandidate = candidate;
+                    usedCredentialSource = credential.sourceName ?? credential.source;
+                    break;
+                } catch (error) {
+                    failedAttempts.push({
+                        provider: candidate.provider,
+                        credential_source: credential.sourceName ?? credential.source,
+                        error: error instanceof Error ? error.message : String(error),
+                        attempts: error instanceof NvidiaNimOcrError || error instanceof GeminiOcrError ? error.attempts : undefined,
+                    });
+                    if (aiRuntime.routingMode === 'manual') throw error;
+                }
+            }
+            if (ocrResult) break;
+        }
+        if (!ocrResult || !usedCandidate) {
+            throw new Error(`모든 OCR provider 호출에 실패했습니다: ${JSON.stringify(failedAttempts)}`);
+        }
+        const restaurantMatches = await findOcrRestaurantMatches({
+            receiptStoreName: ocrResult.data.store_name,
+            selectedRestaurant: selectedRestaurantContext,
+            ...createRestaurantLookupCallbacks(ocrSupabase as never),
         });
-        const data = nimResult.data;
+        const envelope = buildReceiptOcrEnvelope({
+            provider: usedCandidate.provider,
+            model: ocrResult.model,
+            attempts: ocrResult.attempts,
+            data: ocrResult.data,
+            matchedRestaurantCandidates: restaurantMatches.candidates,
+        });
+        const responsePayload = flattenReceiptOcrEnvelope(envelope);
 
         // 성공 로그 (캐싱용 결과 포함)
         const { error: logError } = await ocrLogsTable.insert({
             user_id: user.id,
             image_hash: imageHash,
-            model_used: nimResult.model,
+            model_used: ocrResult.model,
             success: true,
-            metadata: {
-                file_size: file.size,
-                compressed_size: optimized.length,
+            metadata: buildOcrSuccessLogMetadata({
+                fileSize: file.size,
+                compressedSize: optimized.length,
                 savings,
-                store_found: !!data.store_name,
-                provider: 'nvidia-nim',
-                model_attempts: nimResult.attempts,
-                ocr_result: data  // 캐싱용 결과 저장
-            }
+                provider: usedCandidate.provider,
+                model: ocrResult.model,
+                promptVersion: RECEIPT_OCR_PROMPT_VERSION,
+                preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
+                routingMode: aiRuntime.routingMode,
+                normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
+                credentialSource: usedCredentialSource,
+                fallbackUsed: usedCandidate.provider !== aiRuntime.provider || failedAttempts.length > 0,
+                forceRefresh,
+                envelope,
+                ocrResult: responsePayload,
+                restaurantLookupStats: restaurantMatches.stats,
+            })
         } as never);
         if (logError) console.error('OCR Log Insert Error:', logError);
 
-        return NextResponse.json(data);
+        return NextResponse.json(responsePayload);
 
     } catch (error: unknown) {
         const errorMessage = getErrorMessage(error);
         console.error('OCR 처리 오류:', errorMessage);
-        if (error instanceof NvidiaNimOcrError) {
-            console.error('NVIDIA NIM OCR attempts:', error.attempts);
+        if (error instanceof NvidiaNimOcrError || error instanceof GeminiOcrError) {
+            console.error('OCR provider attempts:', error.attempts);
         }
 
         // 실패 로그 기록
@@ -294,9 +367,9 @@ export async function POST(req: Request) {
                 await ocrLogsTable.insert({
                     user_id: userId,
                     image_hash: imageHash,
-                    model_used: `${NIM_OCR_DEFAULT_MODEL}:fail`,
+                    model_used: failureModel,
                     success: false,
-                    metadata: { error: errorMessage }
+                    metadata: { error: errorMessage, provider: failureProvider }
                 } as never);
             }
         } catch {

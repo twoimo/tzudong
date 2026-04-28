@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import stat
 import subprocess
 import textwrap
+import time
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -12,8 +14,322 @@ from typing import Callable, Optional
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = BACKEND_ROOT.parent
 RUN_DAILY_SOURCE = BACKEND_ROOT / "run_daily.sh"
 RUN_DAILY_HELPER_SOURCE = BACKEND_ROOT / "utils" / "run_daily_helpers.py"
+DAILY_CRAWLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "daily-crawler.yml"
+
+
+class GDriveUploadContractTests(unittest.TestCase):
+    maxDiff = None
+
+    def setUp(self) -> None:
+        self.tmp = TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.frames_dir = self.root / "frames"
+        self.frames_dir.mkdir()
+        self.expected_path = self.root / "current-upload-expected.json"
+        self.status_path = self.root / "current-upload-status.json"
+        self.files_from_path = self.root / "current-upload-files-from.txt"
+        self.residual_queue_path = self.root / "gdrive-upload-residual-queue.jsonl"
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_gdrive_expected_manifest_includes_recent_frames_and_residual_retry(self) -> None:
+        recent = self.frames_dir / "recent.jpg"
+        old = self.frames_dir / "old.webp"
+        recent.write_text("recent\n", encoding="utf-8")
+        old.write_text("old\n", encoding="utf-8")
+        old_time = time.time() - (3 * 60 * 60)
+        os.utime(old, (old_time, old_time))
+        old_stat = old.stat()
+        old_item = {
+            "relativePath": "old.webp",
+            "size": old_stat.st_size,
+            "mtimeEpoch": int(old_stat.st_mtime),
+            "dedupeKey": f"old.webp:{old_stat.st_size}:{int(old_stat.st_mtime)}",
+            "required": True,
+            "reason": "new_frame",
+        }
+        self.residual_queue_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "firstSeenAt": "2026-04-28T00:00:00Z",
+                    "firstSeenEpoch": int(time.time()),
+                    "lastAttemptAt": "2026-04-28T00:00:00Z",
+                    "attempts": 1,
+                    "lastExitCode": 124,
+                    "item": old_item,
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        result = self._helper(
+            "write-gdrive-upload-expected",
+            "--frames-dir",
+            str(self.frames_dir),
+            "--output",
+            str(self.expected_path),
+            "--files-from-output",
+            str(self.files_from_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--remote-root",
+            "gdrive:frames",
+            "--recent-minutes",
+            "120",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.assertEqual(2, expected["expectedCount"])
+        self.assertEqual(["old.webp", "recent.jpg"], [item["relativePath"] for item in expected["items"]])
+        self.assertEqual("residual_retry", expected["items"][0]["reason"])
+        self.assertEqual("old.webp\nrecent.jpg\n", "".join(sorted(self.files_from_path.read_text(encoding="utf-8").splitlines(True))))
+
+    def test_workflow_upload_step_keeps_validation_status_scope(self) -> None:
+        workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
+        upload_step = workflow.split("- name: Upload Results to GDrive", 1)[1].split("- name: Upload GDrive Status Artifacts", 1)[0]
+
+        self.assertIn("RUN_DAILY_TARGET_BRANCH:", upload_step)
+        self.assertIn("github.event.inputs.checkout_ref", upload_step)
+        self.assertIn('GDRIVE_STATUS_SCOPE_PATH="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE"', upload_step)
+        self.assertIn('GDrive status scope path: $GDRIVE_STATUS_SCOPE_PATH', upload_step)
+
+    def test_gdrive_upload_status_timeout_records_partial_and_residual_queue(self) -> None:
+        frame = self.frames_dir / "pending.jpg"
+        frame.write_text("frame\n", encoding="utf-8")
+        self._write_expected()
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "124",
+            "--timeout",
+            "true",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("partial", status["status"])
+        self.assertTrue(status["timeout"])
+        self.assertEqual(1, status["expectedCount"])
+        self.assertEqual(1, status["attemptedCount"])
+        self.assertEqual(1, status["residualCount"])
+        self.assertEqual(
+            status["expectedCount"],
+            status["uploadedCount"] + status["skippedExistingCount"] + status["residualCount"],
+        )
+        queue_lines = [line for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
+        self.assertEqual(1, len(queue_lines))
+        self.assertIn("pending.jpg", queue_lines[0])
+
+    def test_gdrive_upload_status_success_clears_matching_residual(self) -> None:
+        frame = self.frames_dir / "done.jpg"
+        frame.write_text("frame\n", encoding="utf-8")
+        self._write_expected()
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.residual_queue_path.write_text(
+            json.dumps({"item": expected["items"][0], "attempts": 2}, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "0",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("complete", status["status"])
+        self.assertEqual(0, status["uploadedCount"])
+        self.assertEqual(1, status["skippedExistingCount"])
+        self.assertEqual("unknown", status["uploadedCountConfidence"])
+        self.assertEqual(0, status["residualCount"])
+        self.assertEqual("", self.residual_queue_path.read_text(encoding="utf-8"))
+
+    def test_gdrive_upload_status_embeds_in_summary_manifest_when_requested(self) -> None:
+        frame = self.frames_dir / "summary.jpg"
+        frame.write_text("frame\n", encoding="utf-8")
+        self._write_expected()
+        summary_path = self.root / "current-summary.json"
+        summary_path.write_text(json.dumps({"finalStatus": "OK"}, sort_keys=True), encoding="utf-8")
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--summary-manifest",
+            str(summary_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "0",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        self.assertEqual("OK", summary["finalStatus"])
+        self.assertEqual("complete", summary["gdriveUpload"]["status"])
+        self.assertEqual(1, summary["gdriveUpload"]["expectedCount"])
+
+    def test_gdrive_upload_status_prunes_missing_and_stale_residual_entries_on_skip(self) -> None:
+        stale_file = self.frames_dir / "stale.jpg"
+        stale_file.write_text("stale\n", encoding="utf-8")
+        stale_stat = stale_file.stat()
+        stale_item = {
+            "relativePath": "stale.jpg",
+            "size": stale_stat.st_size,
+            "mtimeEpoch": int(stale_stat.st_mtime),
+            "dedupeKey": f"stale.jpg:{stale_stat.st_size}:{int(stale_stat.st_mtime)}",
+            "required": True,
+            "reason": "residual_retry",
+        }
+        missing_item = {
+            "relativePath": "missing.jpg",
+            "size": 1,
+            "mtimeEpoch": 1,
+            "dedupeKey": "missing.jpg:1:1",
+            "required": True,
+            "reason": "residual_retry",
+        }
+        old_epoch = int(time.time()) - (8 * 24 * 60 * 60)
+        self.residual_queue_path.write_text(
+            json.dumps({"item": stale_item, "firstSeenEpoch": old_epoch}, sort_keys=True)
+            + "\n"
+            + json.dumps({"item": missing_item, "firstSeenEpoch": int(time.time())}, sort_keys=True)
+            + "\n",
+            encoding="utf-8",
+        )
+        self.expected_path.write_text(
+            json.dumps({"schemaVersion": 1, "sourceRoot": str(self.frames_dir), "expectedCount": 0, "items": []}),
+            encoding="utf-8",
+        )
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--source-root",
+            str(self.frames_dir),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "0",
+            "--skipped",
+            "true",
+            "--retention-days",
+            "7",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual("", self.residual_queue_path.read_text(encoding="utf-8"))
+
+    def test_gdrive_upload_status_escalates_repeated_residual_to_backfill_required(self) -> None:
+        frame = self.frames_dir / "repeat.jpg"
+        frame.write_text("frame\n", encoding="utf-8")
+        self._write_expected()
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.residual_queue_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "firstSeenAt": "2026-04-28T00:00:00Z",
+                    "firstSeenEpoch": int(time.time()),
+                    "lastAttemptAt": "2026-04-28T00:00:00Z",
+                    "attempts": 2,
+                    "lastExitCode": 124,
+                    "item": expected["items"][0],
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--source-root",
+            str(self.frames_dir),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "124",
+            "--timeout",
+            "true",
+            "--backfill-threshold-attempts",
+            "3",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("backfill_required", status["policy"])
+        self.assertEqual(3, status["maxResidualAttempts"])
+        queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
+        self.assertEqual(3, queue[0]["attempts"])
+
+    def _write_expected(self) -> None:
+        result = self._helper(
+            "write-gdrive-upload-expected",
+            "--frames-dir",
+            str(self.frames_dir),
+            "--output",
+            str(self.expected_path),
+            "--files-from-output",
+            str(self.files_from_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--remote-root",
+            "gdrive:frames",
+        )
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+
+    def _helper(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["/usr/bin/python3", str(RUN_DAILY_HELPER_SOURCE), *args],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def _format_process_output(self, result: subprocess.CompletedProcess[str]) -> str:
+        return f"exit={result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
 
 class RunDailyRegressionTests(unittest.TestCase):
@@ -38,6 +354,10 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertEqual([], manifest["downstreamSkips"])
         self.assertTrue(manifest["noWorkShortCircuit"])
         self.assertEqual("end_to_end", manifest["policyMode"])
+        self.assertIn("[TIMING] Step 3 (Transcript):", result.stdout)
+        self.assertIn("[TIMING] Step 3.1 (Context Generation):", result.stdout)
+        self.assertIn("[TIMING] Step 4 (Heatmap & Frames):", result.stdout)
+        self.assertIn("[METRIC] Step 4 frame files (directory total): before=0, after=1, delta=1", result.stdout)
 
     def test_transcript_failure_returns_non_zero_exit(self) -> None:
         result = self._run_script(transcript_exit=17)
@@ -568,6 +888,8 @@ class RunDailyRegressionTests(unittest.TestCase):
             echo "성공 1개"
             ;;
           04-extract-frames-with-heatmap.js)
+            mkdir -p backend/restaurant-crawling/data/frames/stub-video
+            printf 'stub-frame\n' > backend/restaurant-crawling/data/frames/stub-video/frame-001.jpg
             echo "Heatmap saved"
             echo "Frames extracted"
             ;;

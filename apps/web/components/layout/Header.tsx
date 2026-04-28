@@ -320,6 +320,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     router.push('/admin/banners');
   }, [router]);
 
+  const handleAdminAiSettingsClick = useCallback(() => {
+    router.push('/admin/ai-settings');
+  }, [router]);
+
 
 
   const toggleFullscreen = useCallback(() => {
@@ -795,6 +799,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <DropdownMenuItem onClick={() => router.push('/admin/costs')} className="text-foreground hover:bg-accent py-1.5">
                     <DollarSign className="mr-2 h-4 w-4" />
                     서버비용
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleAdminAiSettingsClick} className="text-foreground hover:bg-accent py-1.5">
+                    <Settings className="mr-2 h-4 w-4" />
+                    AI 설정
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
                     <BarChart2 className="mr-2 h-4 w-4" />
