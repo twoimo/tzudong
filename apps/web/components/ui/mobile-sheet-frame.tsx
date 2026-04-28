@@ -27,17 +27,17 @@ export const MOBILE_COMPACT_FORM_SHEET: BottomSheetPreset = {
 };
 
 export const mobileSheetStyles = {
-    frame: 'flex min-h-[100dvh] flex-col bg-background',
-    header: 'sticky top-0 z-10 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur',
-    compactHeader: 'border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
+    frame: 'flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-background',
+    header: 'sticky top-0 z-10 shrink-0 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur',
+    compactHeader: 'shrink-0 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
     title: 'text-2xl font-bold leading-tight tracking-tight bg-gradient-primary bg-clip-text text-transparent',
     compactTitle: 'text-lg font-semibold leading-tight tracking-tight text-foreground',
     description: 'mt-1 text-sm leading-relaxed text-muted-foreground',
-    content: 'flex-1 space-y-4 px-4 py-4',
+    content: 'min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4',
     compactContent: 'space-y-4 px-4 py-4',
     section: 'rounded-xl border border-border/70 bg-card/80 p-4 shadow-sm',
     mutedSection: 'rounded-xl border border-border/70 bg-muted/70 p-4 shadow-sm',
-    footer: 'sticky bottom-0 z-10 border-t bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur',
+    footer: 'z-10 shrink-0 border-t bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur',
     actionRow: 'flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center',
     primaryAction: 'bg-gradient-primary hover:opacity-90',
     meta: 'text-[10px] leading-none text-muted-foreground',
