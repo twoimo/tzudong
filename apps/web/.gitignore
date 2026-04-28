@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OCR evaluation raw datasets (license/PII-sensitive; use manifest + reports only)
+.omx/datasets/ocr/raw/
