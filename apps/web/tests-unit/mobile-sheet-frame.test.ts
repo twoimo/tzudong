@@ -113,3 +113,17 @@ describe('MobileSheetStepIndicator', () => {
         expect(html).toContain('✓');
     });
 });
+
+describe('mobileSheetStyles form shell', () => {
+    test('keeps full-height forms in a flex shell with a dedicated scroll body and fixed footer', async () => {
+        const { mobileSheetStyles } = await import('../components/ui/mobile-sheet-frame');
+
+        expect(mobileSheetStyles.frame).toContain('h-[100dvh]');
+        expect(mobileSheetStyles.frame).toContain('min-h-0');
+        expect(mobileSheetStyles.frame).toContain('overflow-hidden');
+        expect(mobileSheetStyles.content).toContain('overflow-y-auto');
+        expect(mobileSheetStyles.content).toContain('overscroll-contain');
+        expect(mobileSheetStyles.footer).toContain('shrink-0');
+        expect(mobileSheetStyles.footer).toContain('env(safe-area-inset-bottom)');
+    });
+});
