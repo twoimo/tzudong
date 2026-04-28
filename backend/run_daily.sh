@@ -481,6 +481,25 @@ step_end() {
     log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
 }
 
+step_duration_from() {
+    local STEP_NAME="$1"
+    local START_TIME="$2"
+    local END_TIME="${3:-$(date +%s)}"
+    local DURATION=$((END_TIME - START_TIME))
+    local MINUTES=$((DURATION / 60))
+    local SECONDS=$((DURATION % 60))
+    log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
+}
+
+count_frame_files() {
+    local FRAMES_DIR="$PROJECT_ROOT/backend/restaurant-crawling/data/frames"
+    if [ ! -d "$FRAMES_DIR" ]; then
+        echo 0
+        return 0
+    fi
+    find "$FRAMES_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) 2>/dev/null | wc -l | tr -d ' '
+}
+
 FAILED_REQUIRED_STEPS=()
 SKIPPED_OPTIONAL_STEPS=()
 SKIPPED_DOWNSTREAM_STEPS=()
@@ -1101,24 +1120,34 @@ TEMP_LOG_3=""
 TEMP_LOG_4=""
 EXIT_3=0
 EXIT_4=0
+STEP3_START_TIME=0
+STEP4_START_TIME=0
+STEP31_START_TIME=0
+FRAME_COUNT_BEFORE=$(count_frame_files)
 
 if STEP34_NODE_MISSING="$(missing_backend_node_packages dotenv ffmpeg-static ffprobe-static 2>/dev/null)"; then
     record_required_failure "Step 3 (Transcript)" "필수 Node 패키지 누락(${STEP34_NODE_MISSING})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
     record_required_failure "Step 4 (Heatmap & Frames)" "필수 Node 패키지 누락(${STEP34_NODE_MISSING})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
     EXIT_3=1
     EXIT_4=1
+    step_duration_from "Step 3 (Transcript)" "$STEP_START_TIME"
+    step_duration_from "Step 4 (Heatmap & Frames)" "$STEP_START_TIME"
 else
     TEMP_LOG_3=$(mktemp)
     TEMP_LOG_4=$(mktemp)
 
     # Step 3 (Transcript) + Step 4 (Frames) 동시 시작
+    STEP3_START_TIME=$(date +%s)
     node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang > "$TEMP_LOG_3" 2>&1 &
     PID_3=$!
+    STEP4_START_TIME=$(date +%s)
     node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache > "$TEMP_LOG_4" 2>&1 &
     PID_4=$!
 
     # Step 3 완료 대기 -> 로그 출력
     wait $PID_3; EXIT_3=$?
+    STEP3_END_TIME=$(date +%s)
+    step_duration_from "Step 3 (Transcript)" "$STEP3_START_TIME" "$STEP3_END_TIME"
     log "INFO" "--- [Step 3 Transcript] ---"
     cat "$TEMP_LOG_3" | tee -a "$LOG_FILE"
     if [ $EXIT_3 -ne 0 ]; then
@@ -1131,6 +1160,7 @@ echo "::endgroup::"
 
 # Step 3.1 실행 (Step 3 완료 필요, Step 4는 백그라운드 계속)
 echo "::group::[Step 3.1] Context Generation"
+STEP31_START_TIME=$(date +%s)
 log "INFO" "[Step 3.1] 자막 문맥 생성 중..."
 # [Config] 실행 모드에 따른 배치 크기 제한
 if [ -z "$CI" ]; then
@@ -1153,6 +1183,7 @@ else
     STEP_31_EXIT=${PIPESTATUS[0]}
     record_exit_if_failed "Step 3.1 (Context Generation)" "$STEP_31_EXIT"
 fi
+step_duration_from "Step 3.1 (Context Generation)" "$STEP31_START_TIME"
 echo "::endgroup::"
 
 # Step 4 완료 대기 (실시간 로그 스트리밍)
@@ -1162,6 +1193,8 @@ if [ -n "$TEMP_LOG_4" ]; then
     tail -f "$TEMP_LOG_4" 2>/dev/null &
     TAIL_PID=$!
     wait $PID_4; EXIT_4=$?
+    STEP4_END_TIME=$(date +%s)
+    step_duration_from "Step 4 (Heatmap & Frames)" "$STEP4_START_TIME" "$STEP4_END_TIME"
     sleep 1
     kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
     cat "$TEMP_LOG_4" >> "$LOG_FILE"
@@ -1173,6 +1206,9 @@ if [ -n "$TEMP_LOG_4" ]; then
 else
     log "WARN" "[Step 4] 필수 Node 패키지 누락으로 프레임 추출을 실행하지 않았습니다."
 fi
+FRAME_COUNT_AFTER=$(count_frame_files)
+FRAME_COUNT_DELTA=$((FRAME_COUNT_AFTER - FRAME_COUNT_BEFORE))
+log "INFO" "[METRIC] Step 4 frame files (directory total): before=${FRAME_COUNT_BEFORE}, after=${FRAME_COUNT_AFTER}, delta=${FRAME_COUNT_DELTA}"
 
 step_end "Step 3+4 (Transcript+Frames+Context)"
 echo "::endgroup::"
