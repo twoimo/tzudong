@@ -100,8 +100,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("github.event.inputs.checkout_ref", upload_step)
         self.assertIn('GDRIVE_STATUS_SCOPE_PATH="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE"', upload_step)
         self.assertIn('GDrive status scope path: $GDRIVE_STATUS_SCOPE_PATH', upload_step)
-        self.assertIn('GDRIVE_UPLOAD_MAX_FILES: "900"', upload_step)
-        self.assertIn('--max-items "${GDRIVE_UPLOAD_MAX_FILES:-900}"', upload_step)
+        self.assertIn('GDRIVE_UPLOAD_MAX_FILES: "0"', upload_step)
+        self.assertIn('--max-items "${GDRIVE_UPLOAD_MAX_FILES:-0}"', upload_step)
 
     def test_gdrive_expected_manifest_caps_batch_and_queues_overflow(self) -> None:
         for name in ("a.jpg", "b.jpg", "c.jpg"):

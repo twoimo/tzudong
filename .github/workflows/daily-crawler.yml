@@ -339,7 +339,7 @@ jobs:
           RUN_DAILY_TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'data') || 'data' }}
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
           GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
-          GDRIVE_UPLOAD_MAX_FILES: "900"
+          GDRIVE_UPLOAD_MAX_FILES: "0"
         run: |
           set -euo pipefail
           FRAMES_DIR="backend/restaurant-crawling/data/frames"
@@ -376,7 +376,7 @@ jobs:
             --remote-root "$GDRIVE_FRAMES_PATH" \
             --recent-minutes 120 \
             --retention-days 7 \
-            --max-items "${GDRIVE_UPLOAD_MAX_FILES:-900}"
+            --max-items "${GDRIVE_UPLOAD_MAX_FILES:-0}"
 
           EXPECTED_COUNT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("expectedCount", 0))' "$EXPECTED_MANIFEST")
           OVERFLOW_COUNT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("overflowCount", 0))' "$EXPECTED_MANIFEST")
