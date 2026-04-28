@@ -240,3 +240,70 @@ test('processSingleVideo fails closed when no usable media fallback exists', asy
     fs.rmSync(framesDir, { recursive: true, force: true });
     fs.rmSync(channelDir, { recursive: true, force: true });
 });
+
+test('downloadVideo gives up when yt-dlp exceeds the configured per-attempt timeout', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const outputDir = makeTempDir('heatmap-output-');
+    const binDir = makeTempDir('heatmap-bin-');
+    const fakeYtDlp = path.join(binDir, 'fake-yt-dlp.sh');
+    fs.writeFileSync(fakeYtDlp, '#!/usr/bin/env bash\nsleep 2\n', 'utf8');
+    fs.chmodSync(fakeYtDlp, 0o755);
+
+    const { downloadVideo } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+        GDRIVE_REMOTE_PATH: undefined,
+        YT_DLP_CMD: fakeYtDlp,
+        YT_DLP_DOWNLOAD_TIMEOUT_MS: '50',
+        YT_DLP_MAX_RETRIES: '1',
+    });
+
+    const previousYtDlpCmd = process.env.YT_DLP_CMD;
+    const previousTimeoutMs = process.env.YT_DLP_DOWNLOAD_TIMEOUT_MS;
+    const previousMaxRetries = process.env.YT_DLP_MAX_RETRIES;
+    process.env.YT_DLP_CMD = fakeYtDlp;
+    process.env.YT_DLP_DOWNLOAD_TIMEOUT_MS = '50';
+    process.env.YT_DLP_MAX_RETRIES = '1';
+
+    let selectedPath;
+    const startedAt = Date.now();
+    try {
+        selectedPath = await downloadVideo('abc123', outputDir, '360p', {
+            validateMediaPath: async () => true,
+        });
+    } finally {
+        if (previousYtDlpCmd === undefined) delete process.env.YT_DLP_CMD; else process.env.YT_DLP_CMD = previousYtDlpCmd;
+        if (previousTimeoutMs === undefined) delete process.env.YT_DLP_DOWNLOAD_TIMEOUT_MS; else process.env.YT_DLP_DOWNLOAD_TIMEOUT_MS = previousTimeoutMs;
+        if (previousMaxRetries === undefined) delete process.env.YT_DLP_MAX_RETRIES; else process.env.YT_DLP_MAX_RETRIES = previousMaxRetries;
+    }
+
+    assert.equal(selectedPath, null);
+    assert.ok(Date.now() - startedAt < 1500, 'download should be bounded by the configured timeout');
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+    fs.rmSync(outputDir, { recursive: true, force: true });
+    fs.rmSync(binDir, { recursive: true, force: true });
+});
+
+test('yt-dlp timeout helpers prefer explicit millisecond override', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const { buildYtDlpExecOptions, getYtDlpDownloadTimeoutMs, getYtDlpMaxRetries } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+    });
+
+    assert.equal(getYtDlpDownloadTimeoutMs({ YT_DLP_DOWNLOAD_TIMEOUT_SECONDS: '7' }), 7000);
+    assert.equal(getYtDlpDownloadTimeoutMs({ YT_DLP_DOWNLOAD_TIMEOUT_MS: '123', YT_DLP_DOWNLOAD_TIMEOUT_SECONDS: '7' }), 123);
+    assert.equal(getYtDlpMaxRetries({ YT_DLP_MAX_RETRIES: '1' }), 1);
+    assert.deepEqual(buildYtDlpExecOptions({ YT_DLP_DOWNLOAD_TIMEOUT_MS: '321' }), {
+        timeout: 321,
+        killSignal: 'SIGTERM',
+        maxBuffer: 20 * 1024 * 1024,
+    });
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+});
