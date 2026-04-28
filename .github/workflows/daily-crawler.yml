@@ -35,6 +35,10 @@ on:
 permissions:
   contents: write
 
+# GitHub Actions Node 20 deprecation 사전 대응: JS actions를 Node 24 런타임으로 강제
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 # [PERF] 운영(default branch -> data sync) 런은 직렬화하고, 검증용 non-default workflow_dispatch 는 브랜치별로 분리
 # schedule 및 수동 default branch 재실행은 운영 락을 공유하고, 검증 브랜치는 별도 group 으로 실행
 concurrency:
@@ -329,45 +333,148 @@ jobs:
       - name: Upload Results to GDrive
         if: always()
         continue-on-error: true
-        timeout-minutes: 20
+        # 7.8k 프레임 운영 검증에서 18m 소프트 타임아웃을 초과했으므로 hard limit 아래에서 여유 있게 대기
+        timeout-minutes: 45
         env:
+          RUN_DAILY_TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && ((github.event.inputs.checkout_ref || github.event.repository.default_branch) != github.event.repository.default_branch && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || 'data') || 'data' }}
           GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
+          GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
         run: |
+          set -euo pipefail
           FRAMES_DIR="backend/restaurant-crawling/data/frames"
-          if [ ! -d "$FRAMES_DIR" ]; then
-            echo "No frames directory found, skipping upload."
+          UPLOAD_LOG_DIR="backend/log/cron"
+          SUMMARY_MANIFEST="$UPLOAD_LOG_DIR/current-summary.json"
+          EXPECTED_MANIFEST="$UPLOAD_LOG_DIR/current-upload-expected.json"
+          UPLOAD_STATUS="$UPLOAD_LOG_DIR/current-upload-status.json"
+          RESIDUAL_QUEUE="$UPLOAD_LOG_DIR/gdrive-upload-residual-queue.jsonl"
+          FILES_FROM="$UPLOAD_LOG_DIR/current-upload-files-from.txt"
+          RCLONE_LOG="$UPLOAD_LOG_DIR/current-upload-rclone.log"
+          mkdir -p "$UPLOAD_LOG_DIR"
+          STATUS_SCOPE="main"
+          if [ "${RUN_DAILY_TARGET_BRANCH:-data}" != "data" ]; then
+            STATUS_SCOPE="$(printf '%s' "${RUN_DAILY_TARGET_BRANCH:-validation}" | tr '/ :' '---')"
+          fi
+          GDRIVE_STATUS_SCOPE_PATH="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE"
+          echo "GDrive status scope path: $GDRIVE_STATUS_SCOPE_PATH"
+
+          if [ -n "${GDRIVE_STATUS_PATH:-}" ]; then
+            if rclone copyto "$GDRIVE_STATUS_SCOPE_PATH/gdrive-upload-residual-queue.jsonl" "$RESIDUAL_QUEUE" --stats 0 2>/dev/null; then
+              echo "Restored previous GDrive residual queue from $GDRIVE_STATUS_SCOPE_PATH."
+            else
+              echo "No previous GDrive residual queue restored; starting from local state."
+            fi
+          fi
+
+          python3 backend/utils/run_daily_helpers.py write-gdrive-upload-expected \
+            --frames-dir "$FRAMES_DIR" \
+            --output "$EXPECTED_MANIFEST" \
+            --files-from-output "$FILES_FROM" \
+            --residual-queue "$RESIDUAL_QUEUE" \
+            --run-id "${GITHUB_RUN_ID:-}" \
+            --source-root "$FRAMES_DIR" \
+            --remote-root "$GDRIVE_FRAMES_PATH" \
+            --recent-minutes 120 \
+            --retention-days 7
+
+          EXPECTED_COUNT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("expectedCount", 0))' "$EXPECTED_MANIFEST")
+          UPLOAD_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          if [ "$EXPECTED_COUNT" -eq 0 ]; then
+            echo "No expected frame files detected, skipping GDrive upload."
+            python3 backend/utils/run_daily_helpers.py write-gdrive-upload-status \
+              --expected-manifest "$EXPECTED_MANIFEST" \
+              --output "$UPLOAD_STATUS" \
+              --summary-manifest "$SUMMARY_MANIFEST" \
+              --residual-queue "$RESIDUAL_QUEUE" \
+              --run-id "${GITHUB_RUN_ID:-}" \
+              --policy warn \
+              --source-root "$FRAMES_DIR" \
+              --remote-root "$GDRIVE_FRAMES_PATH" \
+              --started-at "$UPLOAD_STARTED_AT" \
+              --completed-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              --exit-code 0 \
+              --skipped true \
+              --backfill-threshold-attempts 3 \
+              --note "no expected frame files"
+            if [ -n "${GDRIVE_STATUS_PATH:-}" ]; then
+              rclone copyto "$RESIDUAL_QUEUE" "$GDRIVE_STATUS_SCOPE_PATH/gdrive-upload-residual-queue.jsonl" --stats 0 || true
+              rclone copyto "$UPLOAD_STATUS" "$GDRIVE_STATUS_SCOPE_PATH/current-upload-status.json" --stats 0 || true
+              rclone copyto "$EXPECTED_MANIFEST" "$GDRIVE_STATUS_SCOPE_PATH/current-upload-expected.json" --stats 0 || true
+            fi
+            cat "$UPLOAD_STATUS" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
-          MANIFEST_FILE=$(mktemp)
-          trap 'rm -f "$MANIFEST_FILE"' EXIT
-
-          # [PERF] 최근 2시간 내 생성된 프레임 이미지 파일만 manifest로 추려 업로드 범위를 축소
-          find "$FRAMES_DIR" -type f \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) -mmin -120 -printf '%P\n' 2>/dev/null | sort > "$MANIFEST_FILE"
-          NEW_COUNT=$(wc -l < "$MANIFEST_FILE" | tr -d ' ')
-
-          if [ "$NEW_COUNT" -eq 0 ]; then
-            echo "No recent frame files detected, skipping GDrive upload."
-            exit 0
-          fi
-
-          echo "Uploading $NEW_COUNT recent frame files to GDrive..."
+          echo "Uploading $EXPECTED_COUNT expected frame files to GDrive..."
           UPLOAD_EXIT=0
           (
             cd "$FRAMES_DIR"
             # --no-traverse: 대형 원격 트리 전체 리스팅을 피함
             # --ignore-existing: 재실행 시 이미 올라간 프레임 재업로드를 피함
-            # timeout 18m: GitHub step hard-timeout(20m) 전에 소프트 종료
+            # timeout 40m: GitHub step hard-timeout(45m) 전에 소프트 종료
             # --transfers 4 --checkers 4 --tpslimit 4: 구글 드라이브 API 할당량 초과(403) 방지
-            timeout 18m rclone copy . "$GDRIVE_FRAMES_PATH" \
-              --files-from "$MANIFEST_FILE" \
+            timeout 40m rclone copy . "$GDRIVE_FRAMES_PATH" \
+              --files-from "../../../../$FILES_FROM" \
               --no-traverse --ignore-existing \
+              --log-file "../../../../$RCLONE_LOG" \
               --stats 30s --transfers 4 --checkers 4 --tpslimit 4
           ) || UPLOAD_EXIT=$?
 
+          UPLOAD_TIMED_OUT=false
           if [ "$UPLOAD_EXIT" -eq 124 ]; then
-            echo "GDrive upload reached soft time limit before the GitHub step timeout; stopping early without failing the workflow."
+            UPLOAD_TIMED_OUT=true
+            echo "GDrive upload reached soft time limit before the GitHub step timeout; recording partial status without failing the workflow."
+          fi
+
+          STATUS_NOTE="rclone exit=$UPLOAD_EXIT"
+          if [ "$UPLOAD_TIMED_OUT" = "true" ]; then
+            STATUS_NOTE="$STATUS_NOTE; soft timeout"
+          fi
+          python3 backend/utils/run_daily_helpers.py write-gdrive-upload-status \
+            --expected-manifest "$EXPECTED_MANIFEST" \
+            --output "$UPLOAD_STATUS" \
+            --summary-manifest "$SUMMARY_MANIFEST" \
+            --residual-queue "$RESIDUAL_QUEUE" \
+            --run-id "${GITHUB_RUN_ID:-}" \
+            --policy warn \
+            --source-root "$FRAMES_DIR" \
+            --remote-root "$GDRIVE_FRAMES_PATH" \
+            --started-at "$UPLOAD_STARTED_AT" \
+            --completed-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --exit-code "$UPLOAD_EXIT" \
+            --timeout "$UPLOAD_TIMED_OUT" \
+            --backfill-threshold-attempts 3 \
+            --note "$STATUS_NOTE"
+
+          if [ -n "${GDRIVE_STATUS_PATH:-}" ]; then
+            rclone copyto "$RESIDUAL_QUEUE" "$GDRIVE_STATUS_SCOPE_PATH/gdrive-upload-residual-queue.jsonl" --stats 0 || true
+            rclone copyto "$UPLOAD_STATUS" "$GDRIVE_STATUS_SCOPE_PATH/current-upload-status.json" --stats 0 || true
+            rclone copyto "$EXPECTED_MANIFEST" "$GDRIVE_STATUS_SCOPE_PATH/current-upload-expected.json" --stats 0 || true
+          fi
+
+          {
+            echo "### GDrive upload status"
+            echo
+            echo '```json'
+            cat "$UPLOAD_STATUS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$UPLOAD_TIMED_OUT" = "true" ]; then
             exit 0
           fi
 
           exit "$UPLOAD_EXIT"
+
+      - name: Upload GDrive Status Artifacts
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: gdrive-upload-status-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            backend/log/cron/current-upload-expected.json
+            backend/log/cron/current-upload-status.json
+            backend/log/cron/gdrive-upload-residual-queue.jsonl
+            backend/log/cron/current-upload-files-from.txt
+            backend/log/cron/current-upload-rclone.log

@@ -669,7 +669,7 @@ export default function FeedContent({
                                 "h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90",
                                 isOverlay
                                     ? "absolute right-8 bottom-8 z-[100]"
-                                    : "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] md:right-8 md:bottom-8 z-50"
+                                    : "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
                             )}
                             size="icon"
                         >
