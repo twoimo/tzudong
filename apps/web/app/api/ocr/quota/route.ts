@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getOcrQuotaStatus } from '@/lib/ocr/quota';
 
 export async function GET() {
     try {
@@ -10,34 +11,13 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const MAX_DAILY_QUOTA = 5;
-
-        const { count, error: countError } = await supabase
-            .from('ocr_logs')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .gte('created_at', today.toISOString());
-
-        if (countError) {
-            throw countError;
-        }
-
-        const used = count || 0;
-        const remaining = Math.max(0, MAX_DAILY_QUOTA - used);
-
-        // 다음 리셋 시간: 내일 00:00:00
-        const resetAt = new Date(today);
-        resetAt.setDate(resetAt.getDate() + 1);
-
-        return NextResponse.json({
-            used,
-            max: MAX_DAILY_QUOTA,
-            remaining,
-            resetAt: resetAt.toISOString()
+        const quota = await getOcrQuotaStatus({
+            userId: user.id,
+            logsClient: supabase as never,
+            roleClient: supabase as never,
         });
+
+        return NextResponse.json(quota);
 
     } catch (error: unknown) {
         console.error('Quota check failed:', error);

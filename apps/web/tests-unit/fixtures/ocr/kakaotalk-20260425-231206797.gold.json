@@ -1,0 +1,18 @@
+{
+  "store_name": "천안초밥 스시린",
+  "canonical_store_name": "천안초밥 스시린",
+  "date": "2025-12-15",
+  "time": "12:09",
+  "total_amount": 48000,
+  "items": [
+    {
+      "name": "2인(린특)치즈",
+      "price": 48000
+    }
+  ],
+  "source": "user_provided_local_receipt",
+  "license": "private_local_evaluation_only",
+  "redaction_status": "no_sensitive_fields_detected",
+  "language": "ko",
+  "domain": "restaurant_receipt"
+}

@@ -1,6 +1,6 @@
-export const NIM_OCR_DEFAULT_MODEL = 'nvidia/nemotron-nano-12b-v2-vl';
-export const NIM_OCR_FALLBACK_MODEL = 'meta/llama-4-maverick-17b-128e-instruct';
-export const NIM_OCR_SECOND_FALLBACK_MODEL = 'mistralai/mistral-small-4-119b-2603';
+export const NIM_OCR_DEFAULT_MODEL = 'meta/llama-4-maverick-17b-128e-instruct';
+export const NIM_OCR_FALLBACK_MODEL = 'mistralai/mistral-small-4-119b-2603';
+export const NIM_OCR_SECOND_FALLBACK_MODEL = 'nvidia/nemotron-nano-12b-v2-vl';
 
 const DEFAULT_TIMEOUT_MS = 6_000;
 const DEFAULT_TOTAL_TIMEOUT_MS = 10_000;
@@ -56,6 +56,12 @@ interface ChatCompletionResponse {
   detail?: string;
 }
 
+interface ChatCompletionStreamResponse {
+  choices?: Array<{ delta?: { content?: unknown }; message?: { content?: unknown } }>;
+  error?: { message?: string };
+  detail?: string;
+}
+
 export class NvidiaNimOcrError extends Error {
   attempts: NvidiaNimReceiptOcrAttempt[];
 
@@ -105,6 +111,7 @@ export function buildNvidiaNimOcrPayload(input: {
   prompt: string;
   imageBase64: string;
   mimeType: string;
+  stream?: boolean;
 }) {
   return {
     model: input.model,
@@ -119,6 +126,7 @@ export function buildNvidiaNimOcrPayload(input: {
     ],
     temperature: 0,
     max_tokens: 900,
+    ...(input.stream ? { stream: true } : {}),
   };
 }
 
@@ -175,20 +183,38 @@ function normalizeItems(value: unknown): Array<{ name: string; price: number | n
   return items.length ? items : undefined;
 }
 
+function inferReceiptCategoryFromText(input: {
+  storeName?: string;
+  category?: string;
+  items?: Array<{ name: string; price: number | null }>;
+}): string | undefined {
+  const text = [
+    input.storeName,
+    input.category,
+    ...(input.items?.map((item) => item.name) ?? []),
+  ].filter(Boolean).join(' ');
+
+  if (/초밥|스시|사시미|회덮밥|참치회|연어회|광어회/.test(text)) return '돈까스·회';
+  return input.category;
+}
+
 export function normalizeNvidiaNimOcrData(raw: Record<string, unknown>): NvidiaNimReceiptOcrData {
   const error = typeof raw.error === 'string' ? raw.error : undefined;
   if (error) {
     return { error, confidence: toConfidence(raw.confidence) ?? 0 };
   }
 
+  const storeName = typeof raw.store_name === 'string' ? raw.store_name.trim() : undefined;
+  const items = normalizeItems(raw.items);
+  const normalizedCategory = normalizeCategory(raw.category);
   const normalized: NvidiaNimReceiptOcrData = {
-    store_name: typeof raw.store_name === 'string' ? raw.store_name.trim() : undefined,
+    store_name: storeName,
     date: typeof raw.date === 'string' ? raw.date.trim() : undefined,
     time: typeof raw.time === 'string' ? raw.time.trim() : undefined,
     total_amount: toNumber(raw.total_amount),
-    category: normalizeCategory(raw.category),
+    category: inferReceiptCategoryFromText({ storeName, category: normalizedCategory, items }),
     review_draft: typeof raw.review_draft === 'string' ? raw.review_draft.trim() : undefined,
-    items: normalizeItems(raw.items),
+    items,
     confidence: toConfidence(raw.confidence),
   };
 
@@ -203,6 +229,213 @@ export function normalizeNvidiaNimOcrData(raw: Record<string, unknown>): NvidiaN
 
 function formatNimError(body: ChatCompletionResponse | null, fallback: string): string {
   return body?.error?.message || body?.detail || fallback;
+}
+
+
+export function parseNvidiaNimStreamChunk(chunk: string): string[] {
+  const deltas: string[] = [];
+
+  for (const rawLine of chunk.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line.startsWith('data:')) continue;
+
+    const payload = line.slice('data:'.length).trim();
+    if (!payload || payload === '[DONE]') continue;
+
+    try {
+      const parsed = JSON.parse(payload) as ChatCompletionStreamResponse;
+      const content = parsed.choices?.[0]?.delta?.content ?? parsed.choices?.[0]?.message?.content;
+      if (typeof content === 'string' && content) {
+        deltas.push(content);
+      }
+    } catch {
+      // Ignore non-JSON frames.
+    }
+  }
+
+  return deltas;
+}
+
+function extractJsonStringField(text: string, key: string): string | undefined {
+  const match = text.match(new RegExp(`"${key}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`));
+  if (!match) return undefined;
+  try {
+    return JSON.parse(`"${match[1]}"`);
+  } catch {
+    return match[1];
+  }
+}
+
+function extractJsonNumberField(text: string, key: string): number | undefined {
+  const match = text.match(new RegExp(`"${key}"\\s*:\\s*(-?[0-9][0-9,.]*)`));
+  if (!match) return undefined;
+  return toNumber(match[1]);
+}
+
+export function extractPartialNvidiaNimOcrData(text: string): NvidiaNimReceiptOcrData {
+  try {
+    return normalizeNvidiaNimOcrData(extractJsonObject(text));
+  } catch {
+    const partial: NvidiaNimReceiptOcrData = {
+      store_name: extractJsonStringField(text, 'store_name'),
+      date: extractJsonStringField(text, 'date'),
+      time: extractJsonStringField(text, 'time'),
+      total_amount: extractJsonNumberField(text, 'total_amount'),
+      category: normalizeCategory(extractJsonStringField(text, 'category')),
+      review_draft: extractJsonStringField(text, 'review_draft'),
+      confidence: extractJsonNumberField(text, 'confidence'),
+    };
+
+    Object.keys(partial).forEach((key) => {
+      if (partial[key as keyof NvidiaNimReceiptOcrData] === undefined) {
+        delete partial[key as keyof NvidiaNimReceiptOcrData];
+      }
+    });
+
+    return partial;
+  }
+}
+
+export async function callNvidiaNimReceiptOcrStreaming(input: {
+  apiKey: string;
+  imageBase64: string;
+  mimeType: string;
+  prompt: string;
+  fetchImpl?: typeof fetch;
+  env?: NodeJS.ProcessEnv;
+  signal?: AbortSignal;
+  onDelta?: (delta: string, accumulatedText: string, model: string) => void;
+  onAttempt?: (attempt: NvidiaNimReceiptOcrAttempt) => void;
+}): Promise<NvidiaNimReceiptOcrResult> {
+  const apiKey = input.apiKey?.trim();
+  if (!apiKey) throw new Error('NVIDIA_NIM_API_KEY 환경변수가 설정되지 않았습니다.');
+
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const env = input.env ?? process.env;
+  const endpoint = env.NVIDIA_NIM_ENDPOINT?.trim() || DEFAULT_ENDPOINT;
+  const models = getNvidiaNimOcrModels(env);
+  const timeoutMs = parseTimeoutMs(env);
+  const totalTimeoutMs = parseTotalTimeoutMs(env);
+  const overallStartedAt = Date.now();
+  const attempts: NvidiaNimReceiptOcrAttempt[] = [];
+
+  for (const model of models) {
+    const remainingMs = totalTimeoutMs - (Date.now() - overallStartedAt);
+    if (remainingMs <= 0) {
+      const attempt = { model, ok: false, elapsedMs: 0, error: `total timeout ${totalTimeoutMs}ms` };
+      attempts.push(attempt);
+      input.onAttempt?.(attempt);
+      break;
+    }
+
+    const startedAt = Date.now();
+    const controller = new AbortController();
+    const modelTimeoutMs = Math.min(timeoutMs, remainingMs);
+    const timeout = setTimeout(() => controller.abort(), modelTimeoutMs);
+    const abortFromCaller = () => controller.abort();
+    input.signal?.addEventListener('abort', abortFromCaller, { once: true });
+
+    try {
+      if (input.signal?.aborted) {
+        controller.abort();
+      }
+      const response = await fetchImpl(endpoint, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildNvidiaNimOcrPayload({
+          model,
+          prompt: input.prompt,
+          imageBase64: input.imageBase64,
+          mimeType: input.mimeType,
+          stream: true,
+        })),
+      });
+
+      if (!response.ok || !response.body) {
+        const text = await response.text();
+        let body: ChatCompletionResponse | null = null;
+        try {
+          body = JSON.parse(text) as ChatCompletionResponse;
+        } catch {
+          body = null;
+        }
+        const attempt = {
+          model,
+          ok: false,
+          status: response.status,
+          elapsedMs: Date.now() - startedAt,
+          error: formatNimError(body, text.slice(0, 240) || `HTTP ${response.status}`),
+        };
+        attempts.push(attempt);
+        input.onAttempt?.(attempt);
+        continue;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffered = '';
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffered += decoder.decode(value, { stream: true });
+        const parts = buffered.split(/\r?\n\r?\n/);
+        buffered = parts.pop() ?? '';
+
+        for (const part of parts) {
+          for (const delta of parseNvidiaNimStreamChunk(part)) {
+            accumulated += delta;
+            input.onDelta?.(delta, accumulated, model);
+          }
+        }
+      }
+
+      for (const delta of parseNvidiaNimStreamChunk(buffered + decoder.decode())) {
+        accumulated += delta;
+        input.onDelta?.(delta, accumulated, model);
+      }
+
+      if (!accumulated.trim()) {
+        const attempt = {
+          model,
+          ok: false,
+          status: response.status,
+          elapsedMs: Date.now() - startedAt,
+          error: 'NVIDIA NIM 스트림 응답에 OCR 텍스트가 없습니다.',
+        };
+        attempts.push(attempt);
+        input.onAttempt?.(attempt);
+        continue;
+      }
+
+      const data = normalizeNvidiaNimOcrData(extractJsonObject(accumulated));
+      const attempt = { model, ok: true, status: response.status, elapsedMs: Date.now() - startedAt };
+      attempts.push(attempt);
+      input.onAttempt?.(attempt);
+      return { data, model, attempts };
+    } catch (error) {
+      const attempt = {
+        model,
+        ok: false,
+        elapsedMs: Date.now() - startedAt,
+        error: error instanceof Error && error.name === 'AbortError'
+          ? `timeout ${modelTimeoutMs}ms`
+          : error instanceof Error ? error.message : String(error),
+      };
+      attempts.push(attempt);
+      input.onAttempt?.(attempt);
+    } finally {
+      clearTimeout(timeout);
+      input.signal?.removeEventListener('abort', abortFromCaller);
+    }
+  }
+
+  throw new NvidiaNimOcrError(attempts);
 }
 
 export async function callNvidiaNimReceiptOcr(input: {

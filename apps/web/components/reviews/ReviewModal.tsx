@@ -13,6 +13,15 @@ import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
 import { MobileSheetHeader, MobileSheetStepIndicator, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from "@/lib/mobile-sheet-layout";
+import {
+    OCR_PROGRESS_STEPS,
+    addAiFilledField,
+    getOcrProgressRank,
+    shouldSuppressOcrAutoNavigation,
+    canReplaceSelectedRestaurantFromOcr,
+    type OcrProgressStage,
+    type ReviewOcrFieldKey,
+} from "@/lib/ocr/review-modal-ocr-ux";
 
 // 음식 사진용 압축 옵션 (스토리지 최적화)
 const FOOD_PHOTO_OPTIONS = {
@@ -112,6 +121,14 @@ interface OCRItem {
     price: number | null;
 }
 
+type OcrFieldTrustPayload = {
+    field?: string;
+    level?: 'high' | 'medium' | 'low';
+    source?: string;
+    reason?: string;
+    needsReview?: boolean;
+};
+
 export interface OCRResult {
     store_name?: string;
     date?: string;
@@ -121,21 +138,133 @@ export interface OCRResult {
     category?: string;
     review_draft?: string;
     confidence?: number;
+    field_trust?: OcrFieldTrustPayload[];
+    needs_review?: string[];
 }
+
+type OcrProgressState = {
+    message: string;
+    stage: OcrProgressStage;
+    model?: string;
+    fields: string[];
+    fallbackUsed?: boolean;
+};
+
+type OcrStreamPayload = {
+    message?: string;
+    model?: string;
+    stage?: OcrProgressStage;
+    data?: Partial<OCRResult>;
+    final?: boolean;
+    attempt?: { model?: string; ok?: boolean; elapsedMs?: number };
+};
+
+type OcrFallbackNotice = {
+    type: 'fallback' | 'error';
+    message: string;
+    detail?: string;
+};
+
+class OcrStreamHttpError extends Error {
+    status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'OcrStreamHttpError';
+        this.status = status;
+    }
+}
+
+type OcrQuotaPayload = {
+    used: number;
+    max: number | null;
+    remaining: number | null;
+    unlimited?: boolean;
+    resetAt: string;
+};
 
 interface RestaurantNameRow {
     id: string;
     name: string;
 }
 
+
+type OcrRestaurantContextSource = {
+    id?: string | null;
+    name?: string | null;
+    road_address?: string | null;
+    jibun_address?: string | null;
+    category?: string | null;
+    categories?: string[] | null;
+};
+
+function appendSelectedRestaurantOcrContext(formData: FormData, restaurant: OcrRestaurantContextSource | null | undefined) {
+    if (restaurant?.id) formData.append('selectedRestaurantId', restaurant.id);
+    if (restaurant?.name) formData.append('selectedRestaurantName', restaurant.name);
+    if (restaurant?.road_address) formData.append('selectedRestaurantRoadAddress', restaurant.road_address);
+    if (restaurant?.jibun_address) formData.append('selectedRestaurantJibunAddress', restaurant.jibun_address);
+    const category = restaurant?.category ?? restaurant?.categories?.[0];
+    if (category) formData.append('selectedRestaurantCategory', category);
+}
+
+function buildRestaurantSearchCandidates(value: string): string[] {
+    const normalized = value.trim().replace(/\s+/g, ' ');
+    if (!normalized) return [];
+
+    const tokens = normalized
+        .split(' ')
+        .map(token => token.trim())
+        .filter(token => token.length >= 2);
+
+    return Array.from(new Set([normalized, ...tokens])).sort((a, b) => b.length - a.length);
+}
+
+function scoreRestaurantNameMatch(restaurantName: string, receiptName: string): number {
+    const normalizedRestaurantName = restaurantName.replace(/\s+/g, '').toLowerCase();
+    const normalizedReceiptName = receiptName.replace(/\s+/g, '').toLowerCase();
+    if (!normalizedRestaurantName || !normalizedReceiptName) return 0;
+    if (normalizedRestaurantName === normalizedReceiptName) return 100;
+    if (normalizedRestaurantName.includes(normalizedReceiptName) || normalizedReceiptName.includes(normalizedRestaurantName)) {
+        return 90;
+    }
+
+    return buildRestaurantSearchCandidates(receiptName).reduce((score, token) => {
+        const normalizedToken = token.replace(/\s+/g, '').toLowerCase();
+        if (!normalizedToken) return score;
+        if (normalizedRestaurantName.includes(normalizedToken)) {
+            return Math.max(score, 40 + Math.min(normalizedToken.length * 5, 40));
+        }
+        return score;
+    }, 0);
+}
+
 type VerificationInputMode = "ai" | "manual";
 type ReviewFormStep = 1 | 2 | 3;
+type OcrFocusTarget = "restaurant" | "date" | "time" | "category" | "review";
 
 const REVIEW_FORM_STEPS: Array<{ id: ReviewFormStep; label: string }> = [
     { id: 1, label: "인증" },
     { id: 2, label: "방문 정보" },
     { id: 3, label: "리뷰" },
 ];
+
+
+function ObjectUrlPreviewImage({ src, alt, className }: { src: string | null; alt: string; className?: string }) {
+    if (!src) {
+        return null;
+    }
+
+    return (
+        // eslint-disable-next-line @next/next/no-img-element -- Local blob URLs are already browser-local previews; Next Image can fail to paint them on Android pickers.
+        <img
+            src={src}
+            alt={alt}
+            className={className}
+            loading="eager"
+            decoding="sync"
+        />
+    );
+}
 
 export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false }: ReviewModalProps) {
     const { user } = useAuth();
@@ -152,7 +281,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
     // OCR 분석 상태
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [ocrProgress, setOcrProgress] = useState<OcrProgressState | null>(null);
     const [verificationInputMode, setVerificationInputMode] = useState<VerificationInputMode>("ai");
+    const [forceOcrRefresh, setForceOcrRefresh] = useState(false);
+    const [ocrFocusTarget, setOcrFocusTarget] = useState<OcrFocusTarget | null>(null);
+    const [aiFilledFields, setAiFilledFields] = useState<Set<ReviewOcrFieldKey>>(() => new Set());
+    const [ocrFallbackNotice, setOcrFallbackNotice] = useState<OcrFallbackNotice | null>(null);
     const [currentStep, setCurrentStep] = useState<ReviewFormStep>(1);
 
     // 맛집 검색 상태
@@ -168,6 +302,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const verificationFileInputRef = useRef<HTMLInputElement>(null);
     const foodPhotosFileInputRef = useRef<HTMLInputElement>(null);
     const verificationPhotoUrlRef = useRef<string | null>(null);
+    const ocrAbortControllerRef = useRef<AbortController | null>(null);
+    const lastOcrRevealSignatureRef = useRef<string | null>(null);
+    const lastManualOcrInteractionAtRef = useRef(0);
+    const userStepOverrideDuringOcrRef = useRef(false);
+    const manuallyEditedOcrFieldsRef = useRef<Set<ReviewOcrFieldKey>>(new Set());
     const mobileFrameRef = useRef<HTMLDivElement>(null);
     const mobileScrollRef = useRef<HTMLDivElement>(null);
 
@@ -175,6 +314,118 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [isVerificationDragging, setIsVerificationDragging] = useState(false);
     const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
     const [verificationPhotoUrl, setVerificationPhotoUrl] = useState<string | null>(null);
+
+    const getOcrFocusClass = useCallback((target: OcrFocusTarget) => (
+        ocrFocusTarget === target
+            ? "rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary/5 transition-shadow"
+            : "transition-shadow"
+    ), [ocrFocusTarget]);
+
+    const isOcrNavigationSuppressed = useCallback(() => (
+        shouldSuppressOcrAutoNavigation({
+            lastManualInteractionAt: lastManualOcrInteractionAtRef.current,
+            userStepOverride: userStepOverrideDuringOcrRef.current,
+        })
+    ), []);
+
+    const markManualOcrInteraction = useCallback((field?: ReviewOcrFieldKey) => {
+        lastManualOcrInteractionAtRef.current = Date.now();
+        if (field) {
+            manuallyEditedOcrFieldsRef.current.add(field);
+        }
+    }, []);
+
+    const markAiFilledField = useCallback((field: ReviewOcrFieldKey) => {
+        setAiFilledFields(prev => addAiFilledField(prev, field));
+    }, []);
+
+    const renderAiFilledBadge = useCallback((field: ReviewOcrFieldKey) => (
+        aiFilledFields.has(field) ? (
+            <Badge variant="secondary" className="h-5 rounded-full bg-primary/10 px-2 text-[10px] font-medium text-primary">
+                AI 입력 · 확인 필요
+            </Badge>
+        ) : null
+    ), [aiFilledFields]);
+
+    const focusOcrTarget = useCallback((target: OcrFocusTarget, delayMs = 0) => {
+        window.setTimeout(() => {
+            if (isOcrNavigationSuppressed()) {
+                setOcrProgress(prev => prev
+                    ? { ...prev, message: '사용자 입력 중이라 자동 이동 없이 값만 채웠어요.' }
+                    : prev);
+                return;
+            }
+
+            const nextStep: ReviewFormStep = target === "review" ? 3 : 2;
+
+            setOcrFocusTarget(target);
+            if (isMobileOrTablet) {
+                setCurrentStep(nextStep);
+            }
+
+            window.setTimeout(() => {
+                if (isOcrNavigationSuppressed()) return;
+                const root = mobileFrameRef.current ?? document;
+                const element = root.querySelector<HTMLElement>(`[data-ocr-focus="${target}"]`);
+                if (!element) return;
+
+                element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+
+                // 모바일에서는 자동 focus가 키보드/날짜 피커를 띄워 오히려 흐름을 방해하므로
+                // 시각적 focus(스크롤+하이라이트)만 적용한다. 데스크톱은 입력 위치를 실제 focus한다.
+                if (!isMobileOrTablet) {
+                    const focusTarget = element.matches("input, textarea, button")
+                        ? element
+                        : element.querySelector<HTMLElement>("input, textarea, button");
+                    focusTarget?.focus({ preventScroll: true });
+                }
+            }, isMobileOrTablet ? 240 : 40);
+
+            window.setTimeout(() => {
+                setOcrFocusTarget(current => current === target ? null : current);
+            }, 2200);
+        }, delayMs);
+    }, [isMobileOrTablet, isOcrNavigationSuppressed]);
+
+    const getOcrFocusTargetForPatch = useCallback((data: Partial<OCRResult>): OcrFocusTarget | null => {
+        if (data.date) return "date";
+        if (data.time) return "time";
+        if (data.store_name) return "restaurant";
+        if (data.category) return "category";
+        if (data.review_draft) return "review";
+        return null;
+    }, []);
+
+    const revealOcrAutoFillSequence = useCallback((data: Partial<OCRResult>) => {
+        const signature = JSON.stringify({
+            store_name: data.store_name ?? null,
+            date: data.date ?? null,
+            time: data.time ?? null,
+            category: data.category ?? null,
+            review_draft: data.review_draft ?? null,
+            items_count: data.items?.length ?? 0,
+        });
+        if (lastOcrRevealSignatureRef.current === signature) {
+            return;
+        }
+        lastOcrRevealSignatureRef.current = signature;
+
+        const step2Target = getOcrFocusTargetForPatch({
+            store_name: data.store_name,
+            date: data.date,
+            time: data.time,
+            category: data.category,
+        });
+        const hasReviewContent = Boolean(data.review_draft || data.items?.length);
+
+        if (step2Target) {
+            focusOcrTarget(step2Target, 0);
+        }
+
+        if (hasReviewContent) {
+            focusOcrTarget("review", step2Target ? 2600 : 0);
+        }
+    }, [focusOcrTarget, getOcrFocusTargetForPatch]);
 
     // 인증 사진 미리보기 URL은 렌더 중 생성하지 않고 이벤트에서 동기 갱신해
     // 모바일 파일 선택기 복귀 직후 바텀시트가 재계산되며 깜빡이는 일을 줄인다.
@@ -214,8 +465,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         replaceVerificationPhoto(file);
         verificationFileInputRef.current?.blur();
         if (verificationInputMode === "ai") {
-            // 미리보기 DOM이 먼저 안정화된 뒤 OCR 오버레이/자동 입력 상태가 붙도록 한다.
-            requestAnimationFrame(() => analyzeReceipt(file));
+            // Android 파일 선택기 복귀 직후 requestAnimationFrame이 누락되는 케이스가 있어
+            // macrotask로 OCR을 시작한다. 상태 업데이트는 이미 큐에 들어가므로 미리보기가 먼저 그려진다.
+            window.setTimeout(() => {
+                void analyzeReceipt(file);
+            }, 0);
         }
     };
 
@@ -334,6 +588,44 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }
     }, []);
 
+    const findRestaurantFromReceiptName = useCallback(async (receiptStoreName: string): Promise<RestaurantNameRow | null> => {
+        const candidates = buildRestaurantSearchCandidates(receiptStoreName);
+        if (candidates.length === 0) return null;
+
+        const { data: exactRestaurants, error: exactError } = await supabase
+            .from('restaurants')
+            .select('id, name:approved_name')
+            .eq('approved_name', receiptStoreName)
+            .limit(1);
+
+        if (!exactError && exactRestaurants?.length) {
+            return exactRestaurants[0] as RestaurantNameRow;
+        }
+
+        const fallbackResults = await Promise.all(
+            candidates.map(async (candidate) => {
+                const { data } = await supabase
+                    .from('restaurants')
+                    .select('id, name:approved_name')
+                    .ilike('approved_name', `%${candidate}%`)
+                    .limit(5);
+                return (data ?? []) as RestaurantNameRow[];
+            })
+        );
+
+        const deduped = new Map<string, RestaurantNameRow>();
+        for (const row of fallbackResults.flat()) {
+            deduped.set(row.id, row);
+        }
+
+        const [bestMatch] = Array.from(deduped.values())
+            .map(row => ({ row, score: scoreRestaurantNameMatch(row.name, receiptStoreName) }))
+            .filter(match => match.score > 0)
+            .sort((a, b) => b.score - a.score);
+
+        return bestMatch?.row ?? null;
+    }, []);
+
     // 검색어 디바운스
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -354,40 +646,240 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     // 모달 닫을 때나 성공 시 초안 삭제 (이 부분은 handleSubmit 성공 시와 handleClose에서 처리해야 함)
     // handleClose에서는 삭제하지 않음 (임시 저장 의도). handleSubmit 성공 시에만 삭제.
 
+    const markOcrFieldApplied = useCallback((label: string, field?: ReviewOcrFieldKey) => {
+        if (field) {
+            markAiFilledField(field);
+        }
+        setOcrProgress(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                fields: prev.fields.includes(label) ? prev.fields : [...prev.fields, label],
+            };
+        });
+    }, [markAiFilledField]);
+
+    const applyOcrFieldPatch = useCallback((data: Partial<OCRResult>) => {
+        const manuallyEdited = manuallyEditedOcrFieldsRef.current;
+        if (data.store_name && !restaurant && !manuallyEdited.has("restaurant")) {
+            setSearchQuery(data.store_name);
+            markOcrFieldApplied("맛집", "restaurant");
+        }
+        if (data.date && !manuallyEdited.has("date")) {
+            setVisitedDate(data.date);
+            markOcrFieldApplied("방문일", "date");
+        }
+        if (data.time && !manuallyEdited.has("time")) {
+            setVisitedTime(data.time);
+            markOcrFieldApplied("시간", "time");
+        }
+        if (data.category && !manuallyEdited.has("category")) {
+            const validCategory = CATEGORIES.find(c => c === data.category);
+            if (validCategory) {
+                setCategories([validCategory]);
+                markOcrFieldApplied("카테고리", "category");
+            }
+        }
+        if (data.review_draft && !manuallyEdited.has("review")) {
+            setContent(data.review_draft);
+            markOcrFieldApplied("리뷰 초안", "review");
+        }
+    }, [markOcrFieldApplied, restaurant]);
+
+    const handleOcrStreamEvent = useCallback((event: string, payload: OcrStreamPayload) => {
+        if (event === 'progress' && payload.message) {
+            setOcrProgress(prev => ({
+                message: payload.message ?? prev?.message ?? 'AI가 영수증을 분석하고 있어요.',
+                stage: payload.stage ?? prev?.stage ?? 'prepare',
+                model: payload.model ?? prev?.model,
+                fields: prev?.fields ?? [],
+                fallbackUsed: prev?.fallbackUsed,
+            }));
+            return;
+        }
+
+        if (event === 'model_attempt' && payload.attempt?.model) {
+            setOcrProgress(prev => ({
+                message: payload.attempt?.ok === false
+                    ? '더 정확한 모델로 다시 확인하고 있어요.'
+                    : 'AI 분석 결과를 정리하고 있어요.',
+                stage: payload.attempt?.ok === false ? 'model_retry' : 'model_start',
+                model: payload.attempt?.model,
+                fields: prev?.fields ?? [],
+                fallbackUsed: prev?.fallbackUsed,
+            }));
+            return;
+        }
+
+        if (event === 'field_patch' && payload.data) {
+            applyOcrFieldPatch(payload.data);
+            if (payload.final) {
+                revealOcrAutoFillSequence(payload.data);
+            } else {
+                const target = getOcrFocusTargetForPatch(payload.data);
+                if (target && target !== "review") {
+                    focusOcrTarget(target);
+                }
+            }
+            setOcrProgress(prev => ({
+                message: payload.final ? '자동 입력 결과를 최종 확인하고 있어요.' : '인식한 정보를 바로 입력하고 있어요.',
+                stage: payload.final ? 'finalize' : 'patching',
+                model: payload.model ?? prev?.model,
+                fields: prev?.fields ?? [],
+                fallbackUsed: prev?.fallbackUsed,
+            }));
+        }
+    }, [applyOcrFieldPatch, focusOcrTarget, getOcrFocusTargetForPatch, revealOcrAutoFillSequence]);
+
+    const parseOcrStreamFrame = useCallback((frame: string): { event: string; payload: OcrStreamPayload } | null => {
+        let event = 'message';
+        const dataLines: string[] = [];
+
+        for (const line of frame.split(/\r?\n/)) {
+            if (line.startsWith('event:')) {
+                event = line.slice('event:'.length).trim();
+            } else if (line.startsWith('data:')) {
+                dataLines.push(line.slice('data:'.length).trim());
+            }
+        }
+
+        if (dataLines.length === 0) return null;
+        try {
+            return { event, payload: JSON.parse(dataLines.join('\n')) as OcrStreamPayload };
+        } catch {
+            return null;
+        }
+    }, []);
+
+    const isAbortError = useCallback((error: unknown) => {
+        return (error instanceof DOMException && error.name === 'AbortError')
+            || (error instanceof Error && error.name === 'AbortError');
+    }, []);
+
+    const isTerminalOcrStreamError = useCallback((error: unknown) => (
+        error instanceof OcrStreamHttpError
+        && [400, 401, 403, 413, 415, 422, 429].includes(error.status)
+    ), []);
+
+    const analyzeReceiptWithStream = useCallback(async (file: File, token: string, signal: AbortSignal, forceRefresh: boolean): Promise<OCRResult> => {
+        const formData = new FormData();
+        formData.append('image', file);
+        appendSelectedRestaurantOcrContext(formData, selectedRestaurant || restaurant);
+        if (forceRefresh) {
+            formData.append('force', '1');
+        }
+
+        const response = await fetch('/api/ocr/extract/stream', {
+            method: 'POST',
+            body: formData,
+            signal,
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include',
+        });
+
+        if (!response.ok || !response.body) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new OcrStreamHttpError(errorData.error || 'OCR 스트리밍 분석 실패', response.status);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalData: OCRResult | null = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop() ?? '';
+
+            for (const frame of frames) {
+                const parsed = parseOcrStreamFrame(frame);
+                if (!parsed) continue;
+                if (parsed.event === 'error') {
+                    throw new Error(parsed.payload.message || 'OCR 스트리밍 분석 실패');
+                }
+                handleOcrStreamEvent(parsed.event, parsed.payload);
+                if (parsed.event === 'done' && parsed.payload.data) {
+                    finalData = parsed.payload.data as OCRResult;
+                }
+            }
+        }
+
+        const parsed = parseOcrStreamFrame(buffer + decoder.decode());
+        if (parsed) {
+            if (parsed.event === 'error') throw new Error(parsed.payload.message || 'OCR 스트리밍 분석 실패');
+            handleOcrStreamEvent(parsed.event, parsed.payload);
+            if (parsed.event === 'done' && parsed.payload.data) {
+                finalData = parsed.payload.data as OCRResult;
+            }
+        }
+
+        if (!finalData) throw new Error('OCR 스트리밍 결과가 비어 있습니다.');
+        return finalData;
+    }, [handleOcrStreamEvent, parseOcrStreamFrame, restaurant, selectedRestaurant]);
+
     // OCR 분석 실행 (모달 내부에서 처리)
     async function analyzeReceipt(file: File) {
-        // 1. 캐싱 키 생성 (파일 메타데이터 + 크기 기반)
-        const fileKey = `ocr_cache_${file.name}_${file.size}_${file.lastModified}`;
-
+        // OCR 결과 캐시는 provider/model/prompt/preprocess-aware server cache만 사용한다.
+        // file metadata 기반 sessionStorage cache는 provider 전환 실험을 오염시킬 수 있어 사용하지 않는다.
         setIsAnalyzing(true);
+        setOcrProgress({ message: '영수증 사진을 준비하고 있어요.', stage: 'prepare', fields: [] });
+        setOcrFallbackNotice(null);
+        setAiFilledFields(new Set());
+        lastOcrRevealSignatureRef.current = null;
+        lastManualOcrInteractionAtRef.current = 0;
+        userStepOverrideDuringOcrRef.current = false;
+        manuallyEditedOcrFieldsRef.current = new Set();
+        ocrAbortControllerRef.current?.abort();
+        const abortController = new AbortController();
+        ocrAbortControllerRef.current = abortController;
+        const shouldForceOcrRefresh = canForceOcrRefresh && forceOcrRefresh;
         try {
             let data: OCRResult;
 
-            // 2. 세션 스토리지에서 캐시 확인
-            const cachedData = sessionStorage.getItem(fileKey);
+            // 2. provider-aware server cache is handled inside the OCR API route.
+            // 3. 캐시가 없으면 API 호출
+            const formData = new FormData();
+            formData.append('image', file);
+            appendSelectedRestaurantOcrContext(formData, selectedRestaurant || restaurant);
+            if (shouldForceOcrRefresh) {
+                formData.append('force', '1');
+            }
 
-            if (cachedData) {
-                data = JSON.parse(cachedData);
-            } else {
-                // 3. 캐시가 없으면 API 호출
-                const formData = new FormData();
-                formData.append('image', file);
+            if (!user) {
+                throw new Error('로그인이 필요한 서비스입니다');
+            }
 
-                if (!user) {
-                    throw new Error('로그인이 필요한 서비스입니다');
+            // [보안] 3. 토큰 직접 조회 (쿠키 전송 실패 대비)
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            if (!token) {
+                throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+            }
+
+            try {
+                data = await analyzeReceiptWithStream(file, token, abortController.signal, shouldForceOcrRefresh);
+            } catch (streamError) {
+                if (isAbortError(streamError)) return;
+                if (isTerminalOcrStreamError(streamError)) {
+                    if (streamError instanceof OcrStreamHttpError && streamError.status === 429) {
+                        mutateQuota();
+                    }
+                    throw streamError;
                 }
-
-                // [보안] 3. 토큰 직접 조회 (쿠키 전송 실패 대비)
-                const { data: { session } } = await supabase.auth.getSession();
-                const token = session?.access_token;
-
-                if (!token) {
-                    throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
-                }
-
+                setOcrFallbackNotice({
+                    type: 'fallback',
+                    message: '실시간 스트리밍이 불안정해 일반 분석으로 자동 전환했어요.',
+                    detail: '첨부한 영수증과 이미 입력한 값은 그대로 유지됩니다.',
+                });
+                setOcrProgress({ message: '스트리밍 연결이 불안정해 일반 분석으로 전환했어요.', stage: 'fallback', fields: [], fallbackUsed: true });
                 const response = await fetch('/api/ocr/extract', {
                     method: 'POST',
                     body: formData,
+                    signal: abortController.signal,
                     headers: {
                         'Authorization': `Bearer ${token}`
                     },
@@ -406,37 +898,40 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 }
 
                 data = await response.json();
-
-                // 4. 결과 캐싱 (세션 스토리지에 저장)
-                try {
-                    sessionStorage.setItem(fileKey, JSON.stringify(data));
-                } catch (e) {
-                    console.error("OCR 결과 캐싱 실패", e);
-                    // 쿼터 초과 등의 경우 무시
-                }
             }
 
+            // 4. provider/model/prompt/preprocess-aware server cache에만 저장한다.
+            // 클라이언트 sessionStorage cache는 Track 1 정확도 실험 동안 사용하지 않는다.
+
             const autoFilledParts: string[] = [];
+            // 캐시/일반 fallback 응답도 SSE 최종 응답과 동일하게 폼에 반영하고,
+            // 모바일에서는 방문 정보(2단계) -> 리뷰(3단계) 순서로 실제 입력 위치를 보여준다.
+            applyOcrFieldPatch(data);
+            revealOcrAutoFillSequence(data);
 
             // 1. 맛집 자동 검색 및 설정
             // 수정: 이미 선택된 맛집이 있어도(selectedRestaurant) OCR 결과가 있으면 교체 시도 (단, props로 고정된 restaurant가 없어야 함)
-            if (data.store_name && !restaurant) {
-                const { data: restaurants, error } = await supabase
-                    .from('restaurants')
-                    .select('id, name:approved_name') // [수정] approved_name을 name으로 사용
-                    .eq('approved_name', data.store_name) // 정확한 일치 우선 검색
-                    .limit(1);
-                const matchedRestaurants = (restaurants ?? []) as RestaurantNameRow[];
+            const manuallyEdited = manuallyEditedOcrFieldsRef.current;
 
-                if (!error && matchedRestaurants.length > 0) {
-                    setSelectedRestaurant(matchedRestaurants[0]);
+            const canApplyOcrRestaurant = canReplaceSelectedRestaurantFromOcr({
+                hasSelectedRestaurant: Boolean(selectedRestaurant),
+                manuallyEditedRestaurant: manuallyEdited.has("restaurant"),
+                fieldTrust: data.field_trust,
+            });
+
+            if (data.store_name && !restaurant && canApplyOcrRestaurant) {
+                const matchedRestaurant = await findRestaurantFromReceiptName(data.store_name);
+
+                if (matchedRestaurant) {
+                    setSelectedRestaurant(matchedRestaurant);
+                    setSearchQuery(matchedRestaurant.name);
                     autoFilledParts.push("맛집");
 
                     // 만약 기존에 선택된 맛집과 다르다면 알림
-                    if (selectedRestaurant && selectedRestaurant.id !== matchedRestaurants[0].id) {
+                    if (selectedRestaurant && selectedRestaurant.id !== matchedRestaurant.id) {
                         toast({
                             title: "맛집 정보 업데이트",
-                            description: `영수증 정보에 맞춰 맛집이 '${matchedRestaurants[0].name}'(으)로 변경되었습니다.`,
+                            description: `영수증 정보에 맞춰 맛집이 '${matchedRestaurant.name}'(으)로 변경되었습니다.`,
                         });
                     }
                 } else {
@@ -450,7 +945,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         description: `'${data.store_name}' 검색 결과를 확인하고 선택해주세요.`,
                     });
                 }
-            } else if (data.store_name && restaurant) {
+            } else if (data.store_name && restaurant && !manuallyEdited.has("restaurant")) {
                 // 이미 선택된 경우 검증만 수행
                 const currentName = selectedRestaurant?.name || restaurant?.name || "";
                 if (!currentName.includes(data.store_name) && !data.store_name.includes(currentName)) {
@@ -463,35 +958,32 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             }
 
             // 2. 날짜 및 시간
-            if (data.date) {
-                setVisitedDate(data.date);
+            if (data.date && !manuallyEdited.has("date")) {
                 autoFilledParts.push("방문일");
             }
-            if (data.time) {
-                setVisitedTime(data.time);
+            if (data.time && !manuallyEdited.has("time")) {
                 autoFilledParts.push("시간");
             }
 
             // 3. 카테고리
-            if (data.category) {
+            if (data.category && !manuallyEdited.has("category")) {
                 // 카테고리 유효성 검사
                 const validCategory = CATEGORIES.find(c => c === data.category);
                 if (validCategory) {
-                    setCategories([validCategory]);
                     autoFilledParts.push("카테고리");
                 }
             }
 
             // 4. 리뷰 내용 (자동 생성된 초안 사용)
-            if (data.review_draft) {
-                setContent(data.review_draft);
+            if (data.review_draft && !manuallyEdited.has("review")) {
                 autoFilledParts.push("리뷰 내용");
-            } else if (data.items && data.items.length > 0) {
+            } else if (data.items && data.items.length > 0 && !manuallyEdited.has("review")) {
                 // 초안이 없으면 기존 방식대로 메뉴 목록 추가
                 const menuText = data.items.map(item => `- ${item.name}: ${item.price?.toLocaleString() || 0}원`).join('\\n');
                 const totalText = data.total_amount ? `\\n총 결제금액: ${data.total_amount.toLocaleString()}원` : '';
                 const newContent = content ? `${content}\\n\\n[영수증 메뉴]\\n${menuText}${totalText}` : `[영수증 메뉴]\\n${menuText}${totalText}`;
                 setContent(newContent);
+                markAiFilledField("review");
             }
 
             // 결과 리포트
@@ -511,14 +1003,23 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             mutateQuota();
 
         } catch (error) {
-            console.error("OCR 오류:", error);
+            if (isAbortError(error)) return;
+            setOcrFallbackNotice({
+                type: 'error',
+                message: 'AI 분석에 실패했어요. 사진은 유지되니 직접 입력하거나 다시 시도할 수 있어요.',
+                detail: error instanceof Error ? error.message : undefined,
+            });
             toast({
                 title: "스마트 스캔 실패",
                 description: "영수증을 분석하지 못했습니다. 직접 입력해주세요.",
                 variant: "destructive"
             });
         } finally {
+            if (ocrAbortControllerRef.current === abortController) {
+                ocrAbortControllerRef.current = null;
+            }
             setIsAnalyzing(false);
+            setOcrProgress(null);
         }
     }
     const handleSubmit = async () => {
@@ -677,6 +1178,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     };
 
     const handleClose = useCallback(() => {
+        ocrAbortControllerRef.current?.abort();
+        ocrAbortControllerRef.current = null;
         setVisitedDate("");
         setVisitedTime("");
         setCategories([]);
@@ -684,6 +1187,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         replaceVerificationPhoto(null);
         setFoodPhotos([]);
         setVerificationInputMode("ai");
+        setForceOcrRefresh(false);
+        setOcrFocusTarget(null);
+        setOcrProgress(null);
+        setOcrFallbackNotice(null);
+        setAiFilledFields(new Set());
         setCurrentStep(1);
         onClose();
     }, [onClose, replaceVerificationPhoto]);
@@ -713,6 +1221,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     }, [isAnalyzing]);
 
     const handleNextStep = useCallback(() => {
+        userStepOverrideDuringOcrRef.current = true;
+        lastManualOcrInteractionAtRef.current = Date.now();
         if (!isStepValid[currentStep]) {
             toast({
                 title: "아직 다음 단계로 이동할 수 없어요",
@@ -726,6 +1236,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     }, [currentStep, getStepValidationMessage, isStepValid]);
 
     const handlePreviousStep = useCallback(() => {
+        userStepOverrideDuringOcrRef.current = true;
+        lastManualOcrInteractionAtRef.current = Date.now();
         setCurrentStep((step) => Math.max(step - 1, 1) as ReviewFormStep);
     }, []);
 
@@ -821,7 +1333,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         async (url) => {
             const res = await fetch(url);
             if (!res.ok) throw new Error('Quota fetch failed');
-            return res.json();
+            return res.json() as Promise<OcrQuotaPayload>;
         },
         {
             revalidateOnFocus: false, // 포커스 시 재조회 방지 (너무 잦은 조회 방지)
@@ -829,13 +1341,53 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }
     );
 
-    const ocrLimitReached = quota?.remaining === 0;
+    const ocrLimitReached = quota?.unlimited ? false : quota?.remaining === 0;
+    const canForceOcrRefresh = process.env.NODE_ENV !== "production" || quota?.unlimited === true;
+    const renderOcrQuotaBadge = useCallback(() => {
+        if (!quota) return null;
+
+        return (
+            <Badge
+                variant="outline"
+                className={`text-xs font-normal border-primary/20 ${quota.unlimited
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : quota.remaining === 0
+                        ? 'bg-amber-50 text-amber-600'
+                        : 'bg-primary/5 text-primary'}`}
+            >
+                AI 분석 남은 횟수: {quota.unlimited ? '무제한' : `${quota.remaining}/${quota.max}회`}
+            </Badge>
+        );
+    }, [quota]);
+
+    const renderForceOcrRefreshToggle = useCallback(() => {
+        if (!canForceOcrRefresh) return null;
+
+        return (
+            <button
+                type="button"
+                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${forceOcrRefresh
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'}`}
+                onClick={() => setForceOcrRefresh(value => !value)}
+                aria-pressed={forceOcrRefresh}
+            >
+                <span className={`h-2 w-2 rounded-full ${forceOcrRefresh ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                {forceOcrRefresh ? '이번 분석은 캐시 없이 재호출' : 'dev/admin: OCR 강제 재호출'}
+            </button>
+        );
+    }, [canForceOcrRefresh, forceOcrRefresh]);
 
     useEffect(() => {
         if (!ocrLimitReached) return;
         if (verificationInputMode !== "ai") return;
         setVerificationInputMode("manual");
     }, [ocrLimitReached, verificationInputMode]);
+
+    useEffect(() => {
+        if (canForceOcrRefresh) return;
+        setForceOcrRefresh(false);
+    }, [canForceOcrRefresh]);
 
     // 초기 로딩 및 모달 열릴 때 임시 저장 불러오기
     useEffect(() => {
@@ -861,6 +1413,130 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
         return () => resetMobileSheetLayoutState('review-modal');
     }, [isMobileOrTablet, isOpen]);
+
+    const renderFoodPhotosSection = useCallback(() => (
+        <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+                음식 사진 (다양한 각도) <span className="text-red-500">*</span>
+            </Label>
+
+            {foodPhotos.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                    {foodPhotos.map((photo, index) => (
+                        <div key={index} className="relative group">
+                            <Card className="p-2 hover:shadow-md transition-shadow">
+                                <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                                    <Image
+                                        src={foodPhotoUrls[index] || ''}
+                                        alt={`음식 사진 ${index + 1}`}
+                                        fill
+                                        unoptimized
+                                        sizes="(max-width: 640px) 45vw, 180px"
+                                        className="object-cover"
+                                    />
+                                </div>
+                                <div className="mt-2 space-y-1">
+                                    <p className="text-xs font-medium truncate" title={photo.name}>{photo.name}</p>
+                                    <p className="text-xs text-muted-foreground">{(photo.size / 1024 / 1024).toFixed(1)}MB</p>
+                                </div>
+                            </Card>
+                            <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                onClick={() => removeFoodPhoto(index)}
+                            >
+                                <XIcon className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <Card
+                ref={foodPhotosDropRef}
+                className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
+                    ? 'border-primary bg-primary/5'
+                    : foodPhotos.length > 0
+                        ? 'border-green-300 bg-green-50/50'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                onDragOver={handleDragOver}
+                onDragEnter={handleFoodPhotosDragEnter}
+                onDragLeave={handleFoodPhotosDragLeave}
+                onDrop={handleFoodPhotosDrop}
+                onClick={openFoodPhotosFileDialog}
+            >
+                <div className="flex flex-col items-center gap-4">
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'}`}>
+                        <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <p className="font-medium">
+                            {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            먹은 음식을 다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                            <Button variant="outline" size="sm" className="gap-2" onClick={(e) => { e.stopPropagation(); openFoodPhotosFileDialog(); }}>
+                                <Plus className="h-4 w-4" />
+                                사진 추가
+                            </Button>
+                            {foodPhotos.length > 0 && (
+                                <Badge variant="secondary" className="px-3 py-1">
+                                    📷 {foodPhotos.length}장 업로드됨
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <input ref={foodPhotosFileInputRef} type="file" accept="image/*" multiple onChange={handleFoodPhotosChange} className="hidden" />
+            </Card>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
+                <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
+            </div>
+        </div>
+    ), [foodPhotoUrls, foodPhotos, handleDragOver, handleFoodPhotosChange, handleFoodPhotosDragEnter, handleFoodPhotosDragLeave, handleFoodPhotosDrop, isFoodPhotosDragging, openFoodPhotosFileDialog, removeFoodPhoto]);
+
+    const renderReviewContentSection = useCallback((id: string) => (
+        <div data-ocr-focus="review" className={`space-y-3 ${getOcrFocusClass("review")}`}>
+            <Label htmlFor={id} className="flex items-center gap-2">
+                리뷰 내용 <span className="text-red-500">*</span>
+                {renderAiFilledBadge("review")}
+            </Label>
+
+            <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
+                <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
+                    <p className="font-semibold flex items-center gap-1">
+                        💡 작성 가이드
+                    </p>
+                    <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
+                        <li>어떤 메뉴를 드셨나요?</li>
+                        <li>맛은 어떠셨나요?</li>
+                        <li>분위기나 서비스는 어땠나요?</li>
+                        <li>추천하고 싶은 메뉴가 있나요?</li>
+                    </ul>
+                </div>
+            </Card>
+
+            <Textarea
+                id={id}
+                placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
+                value={content}
+                onChange={(e) => {
+                    markManualOcrInteraction("review");
+                    setContent(e.target.value);
+                }}
+                rows={8}
+                className="resize-none"
+            />
+            <p className="text-xs text-muted-foreground text-right">
+                {content.length} / 최소 20자
+            </p>
+        </div>
+    ), [content, getOcrFocusClass, markManualOcrInteraction, renderAiFilledBadge]);
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
@@ -944,11 +1620,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         >
                                             사진만 첨부
                                         </Button>
-                                        {quota && (
-                                            <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
-                                                AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
-                                            </Badge>
-                                        )}
+                                        {renderOcrQuotaBadge()}
                                     </div>
                                 </div>
                                 {verificationInputMode === "manual" && (
@@ -961,6 +1633,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
                                     </p>
                                 )}
+                                {renderForceOcrRefreshToggle()}
+                                {ocrFallbackNotice ? (
+                                    <div className={`rounded-lg border px-3 py-2 text-xs ${ocrFallbackNotice.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
+                                        <p className="font-semibold">{ocrFallbackNotice.message}</p>
+                                        {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
+                                    </div>
+                                ) : null}
                             </div>
                             <Card
                                 ref={verificationDropRef}
@@ -981,14 +1660,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         <div className="w-full space-y-3">
                                             <div className="flex items-center justify-center relative">
                                                 <div className="relative">
-                                                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
-                                                        <Image
-                                                            src={verificationPhotoUrl || ''}
+                                                    <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
+                                                        <ObjectUrlPreviewImage
+                                                            src={verificationPhotoUrl}
                                                             alt="인증 사진 미리보기"
-                                                            fill
-                                                            unoptimized
-                                                            sizes="80px"
-                                                            className="object-cover"
+                                                            className="h-full w-full object-contain"
                                                         />
                                                     </div>
                                                     <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
@@ -1064,10 +1740,37 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                             </div>
                                         </div>
-                                        <h3 className="text-lg font-bold text-primary mb-2">AI가 영수증을 분석하고 있어요</h3>
-                                        <p className="text-sm text-muted-foreground mb-4">
-                                            가게명, 방문일시, 메뉴 정보, 리뷰 내용을<br />자동으로 입력합니다 ✨
+                                        <h3 className="text-lg font-bold text-primary mb-2">실시간 AI 자동 입력 중</h3>
+                                        <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
+                                            {ocrProgress?.message || '가게명, 방문일시, 메뉴 정보, 리뷰 내용을 자동으로 입력합니다 ✨'}
                                         </p>
+                                        {ocrProgress?.fields.length ? (
+                                            <div className="mb-3 flex flex-wrap justify-center gap-1.5">
+                                                {ocrProgress.fields.map((field) => (
+                                                    <Badge key={field} variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-200">
+                                                        ✓ {field}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        ) : null}
+                                        {ocrProgress ? (
+                                            <div className="mb-3 grid w-full max-w-xs grid-cols-5 gap-1" aria-label="AI 분석 진행 단계">
+                                                {OCR_PROGRESS_STEPS.map((step) => {
+                                                    const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
+                                                    return (
+                                                        <div key={step.stage} className={`rounded-full px-2 py-1 text-[10px] font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                            {step.label}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : null}
+                                        {ocrProgress?.model ? (
+                                            <p className="mb-3 text-[10px] text-muted-foreground">분석 모델: {ocrProgress.model}</p>
+                                        ) : null}
+                                        {ocrProgress?.fallbackUsed ? (
+                                            <p className="mb-3 rounded-md bg-amber-50 px-2 py-1 text-[10px] text-amber-700">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                        ) : null}
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                             <CheckCircle2 className="w-3 h-3 text-green-600" />
                                             <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
@@ -1081,12 +1784,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         <div className="space-y-6 relative rounded-xl transition-all">
 
                             {/* 방문 맛집 정보 */}
-                            <div className={`space-y-2 transition-all duration-500 ${(!selectedRestaurant && searchQuery && !isSearching)
+                            <div data-ocr-focus="restaurant" className={`space-y-2 transition-all duration-500 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
                                 ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                 : ""
                                 }`}>
-                                <Label>
+                                <Label className="flex items-center gap-2">
                                     방문한 쯔양 맛집 <span className="text-red-500">*</span>
+                                    {renderAiFilledBadge("restaurant")}
                                 </Label>
                                 {(selectedRestaurant || restaurant) ? (
                                     <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -1099,6 +1803,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => {
+                                                    markManualOcrInteraction("restaurant");
                                                     setSelectedRestaurant(null);
                                                     setSearchQuery("");
                                                 }}
@@ -1115,7 +1820,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             <Input
                                                 placeholder="맛집 이름을 검색하세요..."
                                                 value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onChange={(e) => {
+                                                    markManualOcrInteraction("restaurant");
+                                                    setSearchQuery(e.target.value);
+                                                }}
                                                 inputMode="search"
                                                 enterKeyHint="search"
                                                 autoComplete="off"
@@ -1141,6 +1849,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     <button
                                                         key={result.id}
                                                         onClick={() => {
+                                                            markManualOcrInteraction("restaurant");
                                                             setSelectedRestaurant(result);
                                                             setSearchQuery("");
                                                             setSearchResults([]);
@@ -1163,42 +1872,51 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                             {/* 방문 날짜 및 시간 */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
+                                <div data-ocr-focus="date" className={`space-y-2 ${getOcrFocusClass("date")}`}>
                                     <Label htmlFor="inline-visitDate" className="flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
                                         방문 날짜 <span className="text-red-500">*</span>
+                                        {renderAiFilledBadge("date")}
                                     </Label>
                                     <Input
                                         id="inline-visitDate"
                                         type="date"
                                         value={visitedDate}
-                                        onChange={(e) => setVisitedDate(e.target.value)}
+                                        onChange={(e) => {
+                                            markManualOcrInteraction("date");
+                                            setVisitedDate(e.target.value);
+                                        }}
                                         max={new Date().toISOString().split('T')[0]}
                                         min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                                         enterKeyHint="next"
                                     />
                                 </div>
 
-                                <div className="space-y-2">
+                                <div data-ocr-focus="time" className={`space-y-2 ${getOcrFocusClass("time")}`}>
                                     <Label htmlFor="inline-visitTime" className="flex items-center gap-2">
                                         <Clock className="h-4 w-4" />
                                         방문 시간 <span className="text-red-500">*</span>
+                                        {renderAiFilledBadge("time")}
                                     </Label>
                                     <Input
                                         id="inline-visitTime"
                                         type="time"
                                         step="60"
                                         value={visitedTime}
-                                        onChange={(e) => setVisitedTime(e.target.value)}
+                                        onChange={(e) => {
+                                            markManualOcrInteraction("time");
+                                            setVisitedTime(e.target.value);
+                                        }}
                                         enterKeyHint="next"
                                     />
                                 </div>
                             </div>
 
                             {/* 카테고리 */}
-                            <div className="space-y-2">
-                                <Label>
+                            <div data-ocr-focus="category" className={`space-y-2 ${getOcrFocusClass("category")}`}>
+                                <Label className="flex items-center gap-2">
                                     카테고리 <span className="text-red-500">*</span>
+                                    {renderAiFilledBadge("category")}
                                 </Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -1222,6 +1940,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                             id={`inline-category-${cat}`}
                                                             checked={categories.includes(cat)}
                                                             onCheckedChange={(checked) => {
+                                                                markManualOcrInteraction("category");
                                                                 if (checked) {
                                                                     setCategories([...categories, cat]);
                                                                 } else {
@@ -1237,7 +1956,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             </div>
                                             {categories.length > 0 && (
                                                 <div className="pt-2 border-t">
-                                                    <Button variant="outline" size="sm" onClick={() => setCategories([])} className="w-full">
+                                                    <Button variant="outline" size="sm" onClick={() => {
+                                                        markManualOcrInteraction("category");
+                                                        setCategories([]);
+                                                    }} className="w-full">
                                                         선택 해제
                                                     </Button>
                                                 </div>
@@ -1252,7 +1974,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 {category}
                                                 <button
                                                     type="button"
-                                                    onClick={() => setCategories(categories.filter(c => c !== category))}
+                                                    onClick={() => {
+                                                        markManualOcrInteraction("category");
+                                                        setCategories(categories.filter(c => c !== category));
+                                                    }}
                                                     className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                                                 >
                                                     <XIcon className="h-3 w-3" />
@@ -1263,124 +1988,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 )}
                             </div>
 
-
-                            {/* 음식 사진 */}
-                            <div className="space-y-2">
-                                <Label className="flex items-center gap-2">
-                                    음식 사진 (다양한 각도) <span className="text-red-500">*</span>
-                                </Label>
-
-                                {foodPhotos.length > 0 && (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                                        {foodPhotos.map((photo, index) => (
-                                            <div key={index} className="relative group">
-                                                <Card className="p-2 hover:shadow-md transition-shadow">
-                                                    <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-                                                        <Image
-                                                            src={foodPhotoUrls[index] || ''}
-                                                            alt={`음식 사진 ${index + 1}`}
-                                                            fill
-                                                            unoptimized
-                                                            sizes="(max-width: 640px) 45vw, 180px"
-                                                            className="object-cover"
-                                                        />
-                                                    </div>
-                                                    <div className="mt-2 space-y-1">
-                                                        <p className="text-xs font-medium truncate" title={photo.name}>{photo.name}</p>
-                                                        <p className="text-xs text-muted-foreground">{(photo.size / 1024 / 1024).toFixed(1)}MB</p>
-                                                    </div>
-                                                </Card>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                    onClick={() => removeFoodPhoto(index)}
-                                                >
-                                                    <XIcon className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <Card
-                                    ref={foodPhotosDropRef}
-                                    className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
-                                        ? 'border-primary bg-primary/5'
-                                        : foodPhotos.length > 0
-                                            ? 'border-green-300 bg-green-50/50'
-                                            : 'border-border hover:border-primary/50'
-                                        }`}
-                                    onDragOver={handleDragOver}
-                                    onDragEnter={handleFoodPhotosDragEnter}
-                                    onDragLeave={handleFoodPhotosDragLeave}
-                                    onDrop={handleFoodPhotosDrop}
-                                    onClick={openFoodPhotosFileDialog}
-                                >
-                                    <div className="flex flex-col items-center gap-4">
-                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'}`}>
-                                            <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'}`} />
-                                        </div>
-                                        <div className="text-center space-y-2">
-                                            <p className="font-medium">
-                                                {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
-                                            </p>
-                                            <div className="flex gap-2 justify-center">
-                                                <Button variant="outline" size="sm" className="gap-2" onClick={(e) => { e.stopPropagation(); openFoodPhotosFileDialog(); }}>
-                                                    <Plus className="h-4 w-4" />
-                                                    사진 추가
-                                                </Button>
-                                                {foodPhotos.length > 0 && (
-                                                    <Badge variant="secondary" className="px-3 py-1">
-                                                        📷 {foodPhotos.length}장 업로드됨
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input ref={foodPhotosFileInputRef} type="file" accept="image/*" multiple onChange={handleFoodPhotosChange} className="hidden" />
-                                </Card>
-
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
-                                    <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                </div>
-                            </div>
-
-                            {/* 리뷰 내용 */}
-                            <div className="space-y-3">
-                                <Label htmlFor="inline-content">
-                                    리뷰 내용 <span className="text-red-500">*</span>
-                                </Label>
-
-                                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
-                                    <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
-                                        <p className="font-semibold flex items-center gap-1">
-                                            💡 작성 가이드
-                                        </p>
-                                        <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
-                                            <li>어떤 메뉴를 드셨나요?</li>
-                                            <li>맛은 어떠셨나요?</li>
-                                            <li>분위기나 서비스는 어땠나요?</li>
-                                            <li>추천하고 싶은 메뉴가 있나요?</li>
-                                        </ul>
-                                    </div>
-                                </Card>
-
-                                <Textarea
-                                    id="inline-content"
-                                    placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    rows={8}
-                                    className="resize-none"
-                                />
-                                <div className="text-right text-xs text-muted-foreground">
-                                    {content.length} / 최소 20자
-                                </div>
-                            </div>
+                            {renderReviewContentSection("inline-content")}
+                            {renderFoodPhotosSection()}
                         </div>
                     </div>
                 </div>
@@ -1419,35 +2028,35 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
         return (
             <div
-                className="fixed inset-0 z-[110] bg-background"
+                className="fixed inset-0 z-[110] h-[100dvh] bg-background"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="review-sheet-title"
-                aria-describedby="review-sheet-description"
             >
                 <div
                     ref={mobileScrollRef}
-                    className="h-full overflow-y-auto overscroll-contain bg-background"
+                    className="h-[100dvh] overflow-y-auto overscroll-contain bg-background"
                     style={{ WebkitOverflowScrolling: 'touch' }}
                 >
                     <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
                         <MobileSheetHeader
                             title="쯔동여지도 리뷰 작성"
-                            description="맛집 방문 후기를 공유해주세요"
                             titleId="review-sheet-title"
-                            descriptionId="review-sheet-description"
-                            icon={<ImageIcon className="h-5 w-5" />}
+                            compact
+                            className="pt-1.5 pb-1.5"
                             action={(
                                 <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 작성 닫기">
                                     <XIcon className="h-5 w-5" />
                                 </Button>
                             )}
-                        >
-                            <div className="mb-1 flex min-h-4 items-center gap-1 text-[10px] text-muted-foreground" aria-live="polite">
-                                {lastSavedAt ? (
-                                    isSaving ? (
+                        />
+
+                        <div className="flex-1 space-y-3 px-4 pb-4 pt-2">
+                            {lastSavedAt ? (
+                                <div className="flex items-center gap-1 text-[10px] leading-none text-muted-foreground" aria-live="polite">
+                                    {isSaving ? (
                                         <>
-                                            <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
+                                            <div className="h-2.5 w-2.5 animate-spin rounded-full border border-primary border-t-transparent" />
                                             <span>저장 중</span>
                                         </>
                                     ) : (
@@ -1457,14 +2066,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </>
-                                    )
-                                ) : (
-                                    <span className="invisible">저장 상태</span>
-                                )}
-                            </div>
-                        </MobileSheetHeader>
-
-                        <div className={mobileSheetStyles.content}>
+                                    )}
+                                </div>
+                            ) : null}
                             <MobileSheetStepIndicator steps={REVIEW_FORM_STEPS} currentStep={currentStep} className="grid-cols-3" />
 
                             <div className="space-y-4">
@@ -1485,7 +2089,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                         {/* 인증 사진 (최상단 배치) */}
                                         <div className="space-y-2">
-                                    <div className="space-y-2">
                                         <div className="flex items-center justify-between gap-2 flex-wrap">
                                             <Label className="flex items-center gap-2">
                                                 인증 사진 <span className="text-red-500">*</span>
@@ -1510,11 +2113,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 >
                                                     사진만 첨부
                                                 </Button>
-                                                {quota && (
-                                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
-                                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
-                                                    </Badge>
-                                                )}
+                                                {renderOcrQuotaBadge()}
                                             </div>
                                         </div>
                                         {verificationInputMode === "manual" && (
@@ -1527,6 +2126,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
                                             </p>
                                         )}
+                                        {renderForceOcrRefreshToggle()}
+                                        {ocrFallbackNotice ? (
+                                            <div className={`rounded-lg border px-3 py-2 text-xs ${ocrFallbackNotice.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
+                                                <p className="font-semibold">{ocrFallbackNotice.message}</p>
+                                                {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
+                                            </div>
+                                        ) : null}
                                     </div>
                                     <Card
                                         ref={verificationDropRef}
@@ -1547,14 +2153,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <div className="w-full space-y-3">
                                                     <div className="flex items-center justify-center relative">
                                                         <div className="relative">
-                                                            <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
-                                                                <Image
-                                                                    src={verificationPhotoUrl || ''}
+                                                            <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
+                                                                <ObjectUrlPreviewImage
+                                                                    src={verificationPhotoUrl}
                                                                     alt="인증 사진 미리보기"
-                                                                    fill
-                                                                    unoptimized
-                                                                    sizes="80px"
-                                                                    className="object-cover"
+                                                                    className="h-full w-full object-contain"
                                                                 />
                                                             </div>
                                                             <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
@@ -1630,10 +2233,37 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                                     </div>
                                                 </div>
-                                                <h3 className="text-lg font-bold text-primary mb-2">AI가 영수증을 분석하고 있어요</h3>
-                                                <p className="text-sm text-muted-foreground mb-4">
-                                                    가게명, 방문일시, 메뉴 정보, 리뷰 내용을<br />자동으로 입력합니다 ✨
+                                                <h3 className="text-lg font-bold text-primary mb-2">실시간 AI 자동 입력 중</h3>
+                                                <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
+                                                    {ocrProgress?.message || '가게명, 방문일시, 메뉴 정보, 리뷰 내용을 자동으로 입력합니다 ✨'}
                                                 </p>
+                                                {ocrProgress?.fields.length ? (
+                                                    <div className="mb-3 flex flex-wrap justify-center gap-1.5">
+                                                        {ocrProgress.fields.map((field) => (
+                                                            <Badge key={field} variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-200">
+                                                                ✓ {field}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
+                                                {ocrProgress ? (
+                                                    <div className="mb-3 grid w-full max-w-xs grid-cols-5 gap-1" aria-label="AI 분석 진행 단계">
+                                                        {OCR_PROGRESS_STEPS.map((step) => {
+                                                            const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
+                                                            return (
+                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-[10px] font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                                    {step.label}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : null}
+                                                {ocrProgress?.model ? (
+                                                    <p className="mb-3 text-[10px] text-muted-foreground">분석 모델: {ocrProgress.model}</p>
+                                                ) : null}
+                                                {ocrProgress?.fallbackUsed ? (
+                                                    <p className="mb-3 rounded-md bg-amber-50 px-2 py-1 text-[10px] text-amber-700">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                                ) : null}
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3 text-green-600" />
                                                     <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
@@ -1641,19 +2271,19 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             </div>
                                         )}
                                     </Card>
-                                        </div>
                                     </>
                                 )}
 
                                 {currentStep === 2 && (
                                     <>
                                         {/* 방문 맛집 정보 */}
-                                        <div className={`space-y-2 transition-all duration-500 ${(!selectedRestaurant && searchQuery && !isSearching)
+                                        <div data-ocr-focus="restaurant" className={`space-y-2 transition-all duration-500 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
                                     ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                     : ""
                                     }`}>
-                                    <Label>
+                                    <Label className="flex items-center gap-2">
                                         방문한 쯔양 맛집 <span className="text-red-500">*</span>
+                                        {renderAiFilledBadge("restaurant")}
                                     </Label>
                                     {(selectedRestaurant || restaurant) ? (
                                         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -1666,6 +2296,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => {
+                                                        markManualOcrInteraction("restaurant");
                                                         setSelectedRestaurant(null);
                                                         setSearchQuery("");
                                                     }}
@@ -1682,7 +2313,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <Input
                                                     placeholder="맛집 이름을 검색하세요..."
                                                     value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    onChange={(e) => {
+                                                        markManualOcrInteraction("restaurant");
+                                                        setSearchQuery(e.target.value);
+                                                    }}
                                                     inputMode="search"
                                                     enterKeyHint="search"
                                                     autoComplete="off"
@@ -1708,6 +2342,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         <button
                                                             key={result.id}
                                                             onClick={() => {
+                                                                markManualOcrInteraction("restaurant");
                                                                 setSelectedRestaurant(result);
                                                                 setSearchQuery("");
                                                                 setSearchResults([]);
@@ -1730,42 +2365,51 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                         {/* 방문 날짜 및 시간 */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
+                                    <div data-ocr-focus="date" className={`space-y-2 ${getOcrFocusClass("date")}`}>
                                         <Label htmlFor="visitDate" className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4" />
                                             방문 날짜 <span className="text-red-500">*</span>
+                                            {renderAiFilledBadge("date")}
                                         </Label>
                                         <Input
                                             id="visitDate"
                                             type="date"
                                             value={visitedDate}
-                                            onChange={(e) => setVisitedDate(e.target.value)}
+                                            onChange={(e) => {
+                                                markManualOcrInteraction("date");
+                                                setVisitedDate(e.target.value);
+                                            }}
                                             max={new Date().toISOString().split('T')[0]}
                                             min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                                             enterKeyHint="next"
                                         />
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div data-ocr-focus="time" className={`space-y-2 ${getOcrFocusClass("time")}`}>
                                         <Label htmlFor="visitTime" className="flex items-center gap-2">
                                             <Clock className="h-4 w-4" />
                                             방문 시간 <span className="text-red-500">*</span>
+                                            {renderAiFilledBadge("time")}
                                         </Label>
                                         <Input
                                             id="visitTime"
                                             type="time"
                                             step="60"
                                             value={visitedTime}
-                                            onChange={(e) => setVisitedTime(e.target.value)}
+                                            onChange={(e) => {
+                                                markManualOcrInteraction("time");
+                                                setVisitedTime(e.target.value);
+                                            }}
                                             enterKeyHint="next"
                                         />
                                     </div>
                                         </div>
 
                                         {/* 카테고리 */}
-                                        <div className="space-y-2">
-                                    <Label>
+                                        <div data-ocr-focus="category" className={`space-y-2 ${getOcrFocusClass("category")}`}>
+                                    <Label className="flex items-center gap-2">
                                         카테고리 <span className="text-red-500">*</span>
+                                        {renderAiFilledBadge("category")}
                                     </Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
@@ -1792,6 +2436,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                                 id={`review-category-${cat}`}
                                                                 checked={categories.includes(cat)}
                                                                 onCheckedChange={(checked) => {
+                                                                    markManualOcrInteraction("category");
                                                                     if (checked) {
                                                                         setCategories([...categories, cat]);
                                                                     } else {
@@ -1813,7 +2458,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => setCategories([])}
+                                                            onClick={() => {
+                                                                markManualOcrInteraction("category");
+                                                                setCategories([]);
+                                                            }}
                                                             className="w-full"
                                                         >
                                                             선택 해제
@@ -1830,7 +2478,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     {category}
                                                     <button
                                                         type="button"
-                                                        onClick={() => setCategories(categories.filter(c => c !== category))}
+                                                        onClick={() => {
+                                                            markManualOcrInteraction("category");
+                                                            setCategories(categories.filter(c => c !== category));
+                                                        }}
                                                         className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                                                     >
                                                         <XIcon className="h-3 w-3" />
@@ -1846,149 +2497,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                 {currentStep === 3 && (
                                     <>
-                                        {/* 음식 사진 */}
-                                        <div className="space-y-2">
-                                    <Label className="flex items-center gap-2">
-                                        음식 사진 (다양한 각도) <span className="text-red-500">*</span>
-                                    </Label>
-
-                                    {/* 업로드된 사진들 미리보기 */}
-                                    {foodPhotos.length > 0 && (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                                            {foodPhotos.map((photo, index) => (
-                                                <div key={index} className="relative group">
-                                                    <Card className="p-2 hover:shadow-md transition-shadow">
-                                                        <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-                                                            <Image
-                                                                src={foodPhotoUrls[index] || ''}
-                                                                alt={`음식 사진 ${index + 1}`}
-                                                                fill
-                                                                unoptimized
-                                                                sizes="(max-width: 640px) 45vw, 180px"
-                                                                className="object-cover"
-                                                            />
-                                                        </div>
-                                                        <div className="mt-2 space-y-1">
-                                                            <p className="text-xs font-medium truncate" title={photo.name}>
-                                                                {photo.name}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {(photo.size / 1024 / 1024).toFixed(1)}MB
-                                                            </p>
-                                                        </div>
-                                                    </Card>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="icon"
-                                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                        onClick={() => removeFoodPhoto(index)}
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 드래그 앤 드롭 영역 */}
-                                    <Card
-                                        ref={foodPhotosDropRef}
-                                        className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : foodPhotos.length > 0
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-border hover:border-primary/50'
-                                            }`}
-                                        onDragOver={handleDragOver}
-                                        onDragEnter={handleFoodPhotosDragEnter}
-                                        onDragLeave={handleFoodPhotosDragLeave}
-                                        onDrop={handleFoodPhotosDrop}
-                                        onClick={openFoodPhotosFileDialog}
-                                    >
-                                        <div className="flex flex-col items-center gap-4">
-                                            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'
-                                                }`}>
-                                                <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'
-                                                    }`} />
-                                            </div>
-                                            <div className="text-center space-y-2">
-                                                <p className="font-medium">
-                                                    {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    먹은 음식을 다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
-                                                </p>
-                                                <div className="flex gap-2 justify-center">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openFoodPhotosFileDialog();
-                                                        }}
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                        사진 추가
-                                                    </Button>
-                                                    {foodPhotos.length > 0 && (
-                                                        <Badge variant="secondary" className="px-3 py-1">
-                                                            📷 {foodPhotos.length}장 업로드됨
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* 숨겨진 파일 입력 */}
-                                        <input
-                                            ref={foodPhotosFileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={handleFoodPhotosChange}
-                                            className="hidden"
-                                        />
-                                    </Card>
-
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
-                                        <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                    </div>
-                                        </div>
-
-                                        {/* 리뷰 내용 */}
-                                        <div className="space-y-3">
-                                    <Label htmlFor="content">
-                                        리뷰 내용 <span className="text-red-500">*</span>
-                                    </Label>
-
-                                    {/* 작성 가이드 (항상 표시) */}
-                                    <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
-                                        <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
-                                            <p className="font-semibold flex items-center gap-1">
-                                                💡 작성 가이드
-                                            </p>
-                                            <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
-                                                <li>어떤 메뉴를 드셨나요?</li>
-                                                <li>맛은 어떠셨나요?</li>
-                                                <li>분위기나 서비스는 어땠나요?</li>
-                                                <li>추천하고 싶은 메뉴가 있나요?</li>
-                                            </ul>
-                                        </div>
-                                    </Card>
-
-                                    <Textarea
-                                        id="content"
-                                        placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        rows={8}
-                                        className="resize-none"
-                                    />
-                                    <p className="text-xs text-muted-foreground text-right">
-                                        {content.length} / 최소 20자
-                                    </p>
-                                        </div>
+                                        {renderReviewContentSection("content")}
+                                        {renderFoodPhotosSection()}
                                     </>
                                 )}
                             </div>
@@ -2156,11 +2666,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 >
                                                     사진만 첨부
                                                 </Button>
-                                                {quota && (
-                                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
-                                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
-                                                    </Badge>
-                                                )}
+                                                {renderOcrQuotaBadge()}
                                             </div>
                                         </div>
                                         {verificationInputMode === "manual" && (
@@ -2173,6 +2679,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 AI 분석 한도를 모두 사용했습니다. 사진 첨부 후 필요한 정보를 직접 입력해주세요.
                                             </p>
                                         )}
+                                        {renderForceOcrRefreshToggle()}
+                                        {ocrFallbackNotice ? (
+                                            <div className={`rounded-lg border px-3 py-2 text-xs ${ocrFallbackNotice.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
+                                                <p className="font-semibold">{ocrFallbackNotice.message}</p>
+                                                {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
+                                            </div>
+                                        ) : null}
                                     </div>
                                     <Card
                                         ref={verificationDropRef}
@@ -2193,14 +2706,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <div className="w-full space-y-3">
                                                     <div className="flex items-center justify-center relative">
                                                         <div className="relative">
-                                                            <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
-                                                                <Image
-                                                                    src={verificationPhotoUrl || ''}
+                                                            <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
+                                                                <ObjectUrlPreviewImage
+                                                                    src={verificationPhotoUrl}
                                                                     alt="인증 사진 미리보기"
-                                                                    fill
-                                                                    unoptimized
-                                                                    sizes="80px"
-                                                                    className="object-cover"
+                                                                    className="h-full w-full object-contain"
                                                                 />
                                                             </div>
                                                             <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
@@ -2276,10 +2786,37 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
                                                     </div>
                                                 </div>
-                                                <h3 className="text-lg font-bold text-primary mb-2">AI가 영수증을 분석하고 있어요</h3>
-                                                <p className="text-sm text-muted-foreground mb-4">
-                                                    가게명, 방문일시, 메뉴 정보, 리뷰 내용을<br />자동으로 입력합니다 ✨
+                                                <h3 className="text-lg font-bold text-primary mb-2">실시간 AI 자동 입력 중</h3>
+                                                <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
+                                                    {ocrProgress?.message || '가게명, 방문일시, 메뉴 정보, 리뷰 내용을 자동으로 입력합니다 ✨'}
                                                 </p>
+                                                {ocrProgress?.fields.length ? (
+                                                    <div className="mb-3 flex flex-wrap justify-center gap-1.5">
+                                                        {ocrProgress.fields.map((field) => (
+                                                            <Badge key={field} variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-200">
+                                                                ✓ {field}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
+                                                {ocrProgress ? (
+                                                    <div className="mb-3 grid w-full max-w-xs grid-cols-5 gap-1" aria-label="AI 분석 진행 단계">
+                                                        {OCR_PROGRESS_STEPS.map((step) => {
+                                                            const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
+                                                            return (
+                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-[10px] font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                                    {step.label}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : null}
+                                                {ocrProgress?.model ? (
+                                                    <p className="mb-3 text-[10px] text-muted-foreground">분석 모델: {ocrProgress.model}</p>
+                                                ) : null}
+                                                {ocrProgress?.fallbackUsed ? (
+                                                    <p className="mb-3 rounded-md bg-amber-50 px-2 py-1 text-[10px] text-amber-700">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                                ) : null}
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3 text-green-600" />
                                                     <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
@@ -2290,12 +2827,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 </div>
 
                                 {/* 방문 맛집 정보 */}
-                                <div className={`space-y-2 transition-all duration-500 ${(!selectedRestaurant && searchQuery && !isSearching)
+                                <div data-ocr-focus="restaurant" className={`space-y-2 transition-all duration-500 ${getOcrFocusClass("restaurant")} ${(!selectedRestaurant && searchQuery && !isSearching)
                                     ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
                                     : ""
                                     }`}>
-                                    <Label>
+                                    <Label className="flex items-center gap-2">
                                         방문한 쯔양 맛집 <span className="text-red-500">*</span>
+                                        {renderAiFilledBadge("restaurant")}
                                     </Label>
                                     {(selectedRestaurant || restaurant) ? (
                                         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -2308,6 +2846,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => {
+                                                        markManualOcrInteraction("restaurant");
                                                         setSelectedRestaurant(null);
                                                         setSearchQuery("");
                                                     }}
@@ -2324,7 +2863,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <Input
                                                     placeholder="맛집 이름을 검색하세요..."
                                                     value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    onChange={(e) => {
+                                                        markManualOcrInteraction("restaurant");
+                                                        setSearchQuery(e.target.value);
+                                                    }}
                                                     inputMode="search"
                                                     enterKeyHint="search"
                                                     autoComplete="off"
@@ -2350,6 +2892,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         <button
                                                             key={result.id}
                                                             onClick={() => {
+                                                                markManualOcrInteraction("restaurant");
                                                                 setSelectedRestaurant(result);
                                                                 setSearchQuery("");
                                                                 setSearchResults([]);
@@ -2372,42 +2915,51 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                 {/* 방문 날짜 및 시간 */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
+                                    <div data-ocr-focus="date" className={`space-y-2 ${getOcrFocusClass("date")}`}>
                                         <Label htmlFor="visitDate" className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4" />
                                             방문 날짜 <span className="text-red-500">*</span>
+                                            {renderAiFilledBadge("date")}
                                         </Label>
                                         <Input
                                             id="visitDate"
                                             type="date"
                                             value={visitedDate}
-                                            onChange={(e) => setVisitedDate(e.target.value)}
+                                            onChange={(e) => {
+                                                markManualOcrInteraction("date");
+                                                setVisitedDate(e.target.value);
+                                            }}
                                             max={new Date().toISOString().split('T')[0]}
                                             min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                                             enterKeyHint="next"
                                         />
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div data-ocr-focus="time" className={`space-y-2 ${getOcrFocusClass("time")}`}>
                                         <Label htmlFor="visitTime" className="flex items-center gap-2">
                                             <Clock className="h-4 w-4" />
                                             방문 시간 <span className="text-red-500">*</span>
+                                            {renderAiFilledBadge("time")}
                                         </Label>
                                         <Input
                                             id="visitTime"
                                             type="time"
                                             step="60"
                                             value={visitedTime}
-                                            onChange={(e) => setVisitedTime(e.target.value)}
+                                            onChange={(e) => {
+                                                markManualOcrInteraction("time");
+                                                setVisitedTime(e.target.value);
+                                            }}
                                             enterKeyHint="next"
                                         />
                                     </div>
                                 </div>
 
                                 {/* 카테고리 */}
-                                <div className="space-y-2">
-                                    <Label>
+                                <div data-ocr-focus="category" className={`space-y-2 ${getOcrFocusClass("category")}`}>
+                                    <Label className="flex items-center gap-2">
                                         카테고리 <span className="text-red-500">*</span>
+                                        {renderAiFilledBadge("category")}
                                     </Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
@@ -2434,6 +2986,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                                 id={`review-category-${cat}`}
                                                                 checked={categories.includes(cat)}
                                                                 onCheckedChange={(checked) => {
+                                                                    markManualOcrInteraction("category");
                                                                     if (checked) {
                                                                         setCategories([...categories, cat]);
                                                                     } else {
@@ -2455,7 +3008,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => setCategories([])}
+                                                            onClick={() => {
+                                                                markManualOcrInteraction("category");
+                                                                setCategories([]);
+                                                            }}
                                                             className="w-full"
                                                         >
                                                             선택 해제
@@ -2472,7 +3028,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     {category}
                                                     <button
                                                         type="button"
-                                                        onClick={() => setCategories(categories.filter(c => c !== category))}
+                                                        onClick={() => {
+                                                            markManualOcrInteraction("category");
+                                                            setCategories(categories.filter(c => c !== category));
+                                                        }}
                                                         className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                                                     >
                                                         <XIcon className="h-3 w-3" />
@@ -2483,150 +3042,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     )}
                                 </div>
 
-
-                                {/* 음식 사진 */}
-                                <div className="space-y-2">
-                                    <Label className="flex items-center gap-2">
-                                        음식 사진 (다양한 각도) <span className="text-red-500">*</span>
-                                    </Label>
-
-                                    {/* 업로드된 사진들 미리보기 */}
-                                    {foodPhotos.length > 0 && (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                                            {foodPhotos.map((photo, index) => (
-                                                <div key={index} className="relative group">
-                                                    <Card className="p-2 hover:shadow-md transition-shadow">
-                                                        <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-                                                            <Image
-                                                                src={foodPhotoUrls[index] || ''}
-                                                                alt={`음식 사진 ${index + 1}`}
-                                                                fill
-                                                                unoptimized
-                                                                sizes="(max-width: 640px) 45vw, 180px"
-                                                                className="object-cover"
-                                                            />
-                                                        </div>
-                                                        <div className="mt-2 space-y-1">
-                                                            <p className="text-xs font-medium truncate" title={photo.name}>
-                                                                {photo.name}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {(photo.size / 1024 / 1024).toFixed(1)}MB
-                                                            </p>
-                                                        </div>
-                                                    </Card>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="icon"
-                                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                        onClick={() => removeFoodPhoto(index)}
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 드래그 앤 드롭 영역 */}
-                                    <Card
-                                        ref={foodPhotosDropRef}
-                                        className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : foodPhotos.length > 0
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-border hover:border-primary/50'
-                                            }`}
-                                        onDragOver={handleDragOver}
-                                        onDragEnter={handleFoodPhotosDragEnter}
-                                        onDragLeave={handleFoodPhotosDragLeave}
-                                        onDrop={handleFoodPhotosDrop}
-                                        onClick={openFoodPhotosFileDialog}
-                                    >
-                                        <div className="flex flex-col items-center gap-4">
-                                            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'
-                                                }`}>
-                                                <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'
-                                                    }`} />
-                                            </div>
-                                            <div className="text-center space-y-2">
-                                                <p className="font-medium">
-                                                    {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    먹은 음식을 다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
-                                                </p>
-                                                <div className="flex gap-2 justify-center">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openFoodPhotosFileDialog();
-                                                        }}
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                        사진 추가
-                                                    </Button>
-                                                    {foodPhotos.length > 0 && (
-                                                        <Badge variant="secondary" className="px-3 py-1">
-                                                            📷 {foodPhotos.length}장 업로드됨
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* 숨겨진 파일 입력 */}
-                                        <input
-                                            ref={foodPhotosFileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={handleFoodPhotosChange}
-                                            className="hidden"
-                                        />
-                                    </Card>
-
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
-                                        <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                    </div>
-                                </div>
-
-                                {/* 리뷰 내용 */}
-                                <div className="space-y-3">
-                                    <Label htmlFor="content">
-                                        리뷰 내용 <span className="text-red-500">*</span>
-                                    </Label>
-
-                                    {/* 작성 가이드 (항상 표시) */}
-                                    <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
-                                        <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
-                                            <p className="font-semibold flex items-center gap-1">
-                                                💡 작성 가이드
-                                            </p>
-                                            <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
-                                                <li>어떤 메뉴를 드셨나요?</li>
-                                                <li>맛은 어떠셨나요?</li>
-                                                <li>분위기나 서비스는 어땠나요?</li>
-                                                <li>추천하고 싶은 메뉴가 있나요?</li>
-                                            </ul>
-                                        </div>
-                                    </Card>
-
-                                    <Textarea
-                                        id="content"
-                                        placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        rows={8}
-                                        className="resize-none"
-                                    />
-                                    <p className="text-xs text-muted-foreground text-right">
-                                        {content.length} / 최소 20자
-                                    </p>
-                                </div>
+                                {renderReviewContentSection("content")}
+                                {renderFoodPhotosSection()}
                             </div>
                         </div>
 
