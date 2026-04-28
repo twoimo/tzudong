@@ -2,8 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildNvidiaNimOcrPayload,
   callNvidiaNimReceiptOcr,
+  callNvidiaNimReceiptOcrStreaming,
   extractJsonObject,
+  extractPartialNvidiaNimOcrData,
   getNvidiaNimOcrModels,
+  parseNvidiaNimStreamChunk,
   NvidiaNimOcrError,
   normalizeNvidiaNimOcrData,
 } from '@/lib/ocr/nvidia-nim';
@@ -37,14 +40,82 @@ describe('nvidia nim receipt ocr helper', () => {
     });
   });
 
+
+
+  test('uses sushi and sashimi receipt context to correct overly broad Korean category guesses', () => {
+    const normalized = normalizeNvidiaNimOcrData({
+      store_name: '스시린 불당본점',
+      category: '한식',
+      items: [
+        { name: '특선초밥', price: '24000' },
+        { name: '연어초밥', price: '12000' },
+      ],
+    });
+
+    expect(normalized.category).toBe('돈까스·회');
+  });
+
+  test('builds streaming payload and parses SSE deltas for live auto-fill', async () => {
+    const payload = buildNvidiaNimOcrPayload({
+      model: 'stream-model',
+      prompt: 'read receipt',
+      imageBase64: 'abc123',
+      mimeType: 'image/jpeg',
+      stream: true,
+    });
+    expect(payload).toMatchObject({ stream: true });
+
+    const deltas = parseNvidiaNimStreamChunk([
+      'data: {"choices":[{"delta":{"content":"{\\\"store_name\\\":\\\"데일리"}}]}',
+      'data: {"choices":[{"delta":{"content":"픽스\\\",\\\"date\\\":\\\"2026-04-25\\\"}"}}]}',
+      'data: [DONE]',
+    ].join('\n'));
+
+    expect(deltas.join('')).toContain('데일리픽스');
+    expect(extractPartialNvidiaNimOcrData(deltas.join(''))).toMatchObject({
+      store_name: '데일리픽스',
+      date: '2026-04-25',
+    });
+  });
+
+  test('streams receipt OCR deltas before returning the final result', async () => {
+    const encoder = new TextEncoder();
+    const frames = [
+      'data: {"choices":[{"delta":{"content":"{\\\"store_name\\\":\\\"데일리픽스\\\","}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"\\\"date\\\":\\\"2026-04-25\\\",\\\"time\\\":\\\"12:30\\\",\\\"category\\\":\\\"카페·디저트\\\",\\\"review_draft\\\":\\\"맛있어요\\\",\\\"confidence\\\":0.9}"}}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const fetchImpl = async () => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const frame of frames) controller.enqueue(encoder.encode(frame));
+        controller.close();
+      },
+    }), { status: 200 });
+    const seen: string[] = [];
+
+    const result = await callNvidiaNimReceiptOcrStreaming({
+      apiKey: 'nvapi-test',
+      imageBase64: 'abc123',
+      mimeType: 'image/jpeg',
+      prompt: 'read',
+      fetchImpl: fetchImpl as typeof fetch,
+      env: { NVIDIA_NIM_OCR_MODEL: 'stream-model', NVIDIA_NIM_OCR_TIMEOUT_MS: '1000' } as NodeJS.ProcessEnv,
+      onDelta: (_delta, accumulated) => seen.push(accumulated),
+    });
+
+    expect(seen.length).toBeGreaterThan(0);
+    expect(result.model).toBe('stream-model');
+    expect(result.data.store_name).toBe('데일리픽스');
+  });
+
   test('uses configured model list before defaults', () => {
     expect(getNvidiaNimOcrModels({ NVIDIA_NIM_OCR_MODEL: 'a, b , ,c' } as NodeJS.ProcessEnv)).toEqual(['a', 'b', 'c']);
   });
 
-  test('defaults to one fast OCR model plus one fallback for UX budget', () => {
+  test('defaults to accuracy-first OCR models with a fast fallback for UX budget', () => {
     expect(getNvidiaNimOcrModels({} as NodeJS.ProcessEnv)).toEqual([
-      'nvidia/nemotron-nano-12b-v2-vl',
       'meta/llama-4-maverick-17b-128e-instruct',
+      'mistralai/mistral-small-4-119b-2603',
     ]);
   });
 

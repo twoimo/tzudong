@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "dataset_id": "cord",
+      "source_url": "https://github.com/clovaai/cord",
+      "license_url_or_text": "CC-BY-4.0 shown by upstream repository",
+      "redistribution_allowed": true,
+      "derivative_labels_allowed": true,
+      "contains_pii_risk": true,
+      "redaction_policy": "exclude_sensitive_fields",
+      "storage_path": ".omx/datasets/ocr/raw/cord",
+      "committable": false,
+      "notes": "Indonesian receipt OCR/KIE dataset; use for layout/item extraction experiments, not Korean-store-name promotion by itself.",
+      "access_status": "approved"
+    },
+    {
+      "dataset_id": "sroie-hf",
+      "source_url": "https://huggingface.co/datasets/jsdnrs/ICDAR2019-SROIE",
+      "license_url_or_text": "Dataset card indicates CC-BY-4.0 lineage; verify before local download.",
+      "redistribution_allowed": true,
+      "derivative_labels_allowed": true,
+      "contains_pii_risk": true,
+      "redaction_policy": "exclude_sensitive_fields",
+      "storage_path": ".omx/datasets/ocr/raw/sroie-hf",
+      "committable": false,
+      "notes": "Scanned receipt KIE; treat addresses/company details as sensitive in committed artifacts.",
+      "access_status": "approved"
+    },
+    {
+      "dataset_id": "aihub-large-public-ocr",
+      "source_url": "https://aihub.or.kr/aihubdata/data/view.do?dataSetSn=71299",
+      "license_url_or_text": "AI Hub signed-in license review required before download",
+      "redistribution_allowed": false,
+      "derivative_labels_allowed": false,
+      "contains_pii_risk": true,
+      "redaction_policy": "local_only",
+      "storage_path": ".omx/datasets/ocr/raw/aihub-large-public-ocr",
+      "committable": false,
+      "notes": "Korean OCR robustness candidate only; AI Hub page requires signed-in/application/manual download review before reading real files, and it is not receipt-domain by itself.",
+      "access_status": "manual_download_required"
+    },
+    {
+      "dataset_id": "kaggle-receipt-placeholder",
+      "source_url": "https://www.kaggle.com/search?q=receipt+ocr+dataset",
+      "license_url_or_text": "unknown",
+      "redistribution_allowed": false,
+      "derivative_labels_allowed": false,
+      "contains_pii_risk": true,
+      "redaction_policy": "local_only",
+      "storage_path": ".omx/datasets/ocr/raw/kaggle-receipt-placeholder",
+      "committable": false,
+      "notes": "Placeholder only; replace with an exact Kaggle dataset URL and license/access_status=approved before reading real files.",
+      "access_status": "license_review_required"
+    }
+  ]
+}

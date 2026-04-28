@@ -27,7 +27,7 @@ export const MOBILE_COMPACT_FORM_SHEET: BottomSheetPreset = {
 };
 
 export const mobileSheetStyles = {
-    frame: 'flex min-h-full flex-col bg-background',
+    frame: 'flex min-h-[100dvh] flex-col bg-background',
     header: 'sticky top-0 z-10 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur',
     compactHeader: 'border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
     title: 'text-2xl font-bold leading-tight tracking-tight bg-gradient-primary bg-clip-text text-transparent',
