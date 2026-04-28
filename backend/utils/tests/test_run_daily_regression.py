@@ -100,6 +100,64 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("github.event.inputs.checkout_ref", upload_step)
         self.assertIn('GDRIVE_STATUS_SCOPE_PATH="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE"', upload_step)
         self.assertIn('GDrive status scope path: $GDRIVE_STATUS_SCOPE_PATH', upload_step)
+        self.assertIn('GDRIVE_UPLOAD_MAX_FILES: "900"', upload_step)
+        self.assertIn('--max-items "${GDRIVE_UPLOAD_MAX_FILES:-900}"', upload_step)
+
+    def test_gdrive_expected_manifest_caps_batch_and_queues_overflow(self) -> None:
+        for name in ("a.jpg", "b.jpg", "c.jpg"):
+            (self.frames_dir / name).write_text(f"{name}\n", encoding="utf-8")
+
+        result = self._helper(
+            "write-gdrive-upload-expected",
+            "--frames-dir",
+            str(self.frames_dir),
+            "--output",
+            str(self.expected_path),
+            "--files-from-output",
+            str(self.files_from_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--remote-root",
+            "gdrive:frames",
+            "--max-items",
+            "2",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.assertEqual(2, expected["expectedCount"])
+        self.assertEqual(2, expected["maxItems"])
+        self.assertEqual(1, expected["overflowCount"])
+        self.assertEqual(["a.jpg", "b.jpg"], [item["relativePath"] for item in expected["items"]])
+        self.assertEqual("a.jpg\nb.jpg\n", self.files_from_path.read_text(encoding="utf-8"))
+        queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
+        self.assertEqual(1, len(queue))
+        self.assertEqual("c.jpg", queue[0]["item"]["relativePath"])
+        self.assertEqual(0, queue[0]["attempts"])
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--source-root",
+            str(self.frames_dir),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "0",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("complete", status["status"])
+        self.assertEqual(0, status["residualCount"])
+        self.assertEqual(1, status["pendingBacklogCount"])
+        queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
+        self.assertEqual(["c.jpg"], [entry["item"]["relativePath"] for entry in queue])
 
     def test_gdrive_upload_status_timeout_records_partial_and_residual_queue(self) -> None:
         frame = self.frames_dir / "pending.jpg"
