@@ -138,13 +138,33 @@ jobs:
             --include "current-upload-staging-manifest.json" \
             --include "**/current-upload-staging-manifest.json" \
             --exclude "*" --stats 0 || true
+          if ! rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --stats 0 > "$REMOTE_LIST_JSON"; then
+            echo "Remote preflight inventory failed; planning from residual queue only."
+            printf '[]\n' > "$REMOTE_LIST_JSON"
+          fi
 
-          python3 - "$RESIDUAL_QUEUE" "$PLAN_JSON" "$MAX_BACKFILL_BATCHES" "$STAGING_MANIFEST_DIR" "$STAGING_MANIFEST" <<'PY'
+          python3 - "$RESIDUAL_QUEUE" "$PLAN_JSON" "$MAX_BACKFILL_BATCHES" "$STAGING_MANIFEST_DIR" "$STAGING_MANIFEST" "$EXPECTED_MANIFEST" "$REMOTE_LIST_JSON" "$VERIFIED_FILES" <<'PY'
           import json, sys
           from collections import OrderedDict
           from pathlib import Path
-          queue_path, plan_path, max_batches_raw, manifest_dir, staging_manifest_path = sys.argv[1:6]
+          queue_path, plan_path, max_batches_raw, manifest_dir, staging_manifest_path, expected_path, remote_list_path, verified_path = sys.argv[1:9]
           max_batches = max(1, int(max_batches_raw or '1'))
+          expected = json.load(open(expected_path, encoding='utf-8'))
+          remote_entries = json.load(open(remote_list_path, encoding='utf-8'))
+          remote_sizes = {str(entry.get('Path', '')): int(entry.get('Size', -1)) for entry in remote_entries if isinstance(entry, dict)}
+          expected_sizes = {}
+          for expected_item in expected.get('items', []):
+              if not isinstance(expected_item, dict):
+                  continue
+              rel = str(expected_item.get('relativePath') or '')
+              if not rel:
+                  continue
+              try:
+                  expected_sizes[rel] = int(expected_item.get('size'))
+              except Exception:
+                  continue
+          remote_verified = {rel for rel, size in expected_sizes.items() if remote_sizes.get(rel) == size}
+          Path(verified_path).write_text('\n'.join(sorted(remote_verified)) + ('\n' if remote_verified else ''), encoding='utf-8')
           staging_by_rel = {}
           shard_items = OrderedDict()
           for manifest_path in sorted(Path(manifest_dir).rglob('current-upload-staging-manifest.json')):
@@ -177,6 +197,8 @@ jobs:
               rel = item.get('relativePath')
               state = entry.get('state') or item.get('state')
               shard = entry.get('stagingShard') or item.get('stagingShard') or staging_by_rel.get(rel)
+              if rel in remote_verified:
+                  continue
               if state in eligible_states and rel and shard:
                   shards.setdefault(shard, []).append(rel)
               elif state == 'missing_local':
@@ -199,6 +221,7 @@ jobs:
               'selectedShardCount': len(selected),
               'selectedItemCount': sum(len(items) for _, items in selected),
               'missingLocalCount': len(missing),
+              'remoteVerifiedBeforeCount': len(remote_verified),
               'stagingManifestItems': len(staging_by_rel),
           }, sort_keys=True))
           PY
@@ -209,12 +232,11 @@ jobs:
           fi
 
           SHARD_COUNT=$(jq '.shards | length' "$PLAN_JSON")
+          BACKFILL_EXIT=0
           if [ "$SHARD_COUNT" -eq 0 ]; then
-            echo "No staged shards to backfill."
-            exit 0
+            echo "No staged shards to backfill; writing cumulative remote status."
           fi
 
-          BACKFILL_EXIT=0
           for index in $(seq 0 $((SHARD_COUNT - 1))); do
             REMOTE_SHARD=$(jq -r ".shards[$index].remoteShard" "$PLAN_JSON")
             ARCHIVE_NAME="$(basename "$REMOTE_SHARD")"
