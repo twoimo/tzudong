@@ -225,6 +225,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("trap cleanup_lock EXIT", workflow)
         self.assertIn("set +e", workflow)
         self.assertIn("BACKFILL_EXIT", workflow)
+        self.assertIn("RCLONE_LOG_ABS", workflow)
+        self.assertIn("FILES_FROM_ABS", workflow)
+        self.assertNotIn('../../../$RCLONE_LOG', workflow)
+        self.assertNotIn('../../../$FILES_FROM', workflow)
         self.assertIn('exit "$BACKFILL_EXIT"', workflow)
 
     def test_gdrive_upload_status_timeout_records_partial_and_residual_queue(self) -> None:
