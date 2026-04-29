@@ -1,0 +1,255 @@
+name: GDrive Frame Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      status_scope:
+        description: 'GDrive status scope to backfill (default: main)'
+        required: false
+        default: 'main'
+        type: string
+      max_batches:
+        description: 'Maximum staged shard archives to process in this run'
+        required: false
+        default: '4'
+        type: string
+      dry_run:
+        description: 'Plan only; do not upload or mutate status'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gdrive-frame-backfill-${{ github.event.inputs.status_scope || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
+      GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
+      STATUS_SCOPE: ${{ github.event.inputs.status_scope || 'main' }}
+      MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '4' }}
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install rclone and jq
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends rclone jq
+          rclone version | head -1
+
+      - name: Setup rclone credentials
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.config/rclone
+          if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
+            echo "${{ secrets.GDRIVE_RCLONE_CONFIG }}" | base64 -d > ~/.config/rclone/rclone.conf
+          fi
+          test -s ~/.config/rclone/rclone.conf
+
+      - name: Backfill staged frame shards
+        run: |
+          set -euo pipefail
+          STATUS_SCOPE_SAFE="$(printf '%s' "${STATUS_SCOPE:-main}" | tr '/ :' '---')"
+          STATUS_REMOTE="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE_SAFE"
+          LOCK_REMOTE="$STATUS_REMOTE/backfill.lock.json"
+          WORK_DIR="backend/log/cron/gdrive-backfill"
+          RESTORE_DIR="$WORK_DIR/restored"
+          EXTRACT_DIR="$WORK_DIR/extracted"
+          PLAN_JSON="$WORK_DIR/backfill-plan.json"
+          EXPECTED_MANIFEST="$WORK_DIR/current-upload-expected.json"
+          UPLOAD_STATUS="$WORK_DIR/current-upload-status.json"
+          RESIDUAL_QUEUE="$WORK_DIR/gdrive-upload-residual-queue.jsonl"
+          VERIFIED_FILES="$WORK_DIR/backfill-verified-files.txt"
+          RCLONE_LOG="$WORK_DIR/backfill-rclone.log"
+          mkdir -p "$RESTORE_DIR" "$EXTRACT_DIR"
+          : > "$VERIFIED_FILES"
+          : > "$RCLONE_LOG"
+
+          if rclone copyto "$LOCK_REMOTE" "$WORK_DIR/backfill.lock.remote.json" --stats 0 2>/dev/null; then
+            set +e
+            python3 - "$WORK_DIR/backfill.lock.remote.json" <<'PY'
+          import json, sys
+          from datetime import datetime, timezone
+          path = sys.argv[1]
+          lock = json.load(open(path, encoding='utf-8'))
+          expires = lock.get('expiresAt')
+          if expires:
+              expires_at = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+              if expires_at > datetime.now(timezone.utc):
+                  print(f"lease_held by {lock.get('ownerRunId')} until {expires}")
+                  raise SystemExit(42)
+          PY
+            LOCK_STATUS=$?
+            set -e
+            case "$LOCK_STATUS" in
+              42) exit 0 ;;
+              0) ;;
+              *) exit "$LOCK_STATUS" ;;
+            esac
+          fi
+
+          python3 - "$WORK_DIR/backfill.lock.json" "${GITHUB_RUN_ID:-manual}" "$STATUS_SCOPE_SAFE" <<'PY'
+          import json, sys
+          from datetime import datetime, timedelta, timezone
+          path, run_id, scope = sys.argv[1:4]
+          now = datetime.now(timezone.utc).replace(microsecond=0)
+          lock = {
+            'ownerRunId': run_id,
+            'scope': scope,
+            'startedAt': now.isoformat().replace('+00:00', 'Z'),
+            'heartbeatAt': now.isoformat().replace('+00:00', 'Z'),
+            'expiresAt': (now + timedelta(minutes=75)).isoformat().replace('+00:00', 'Z'),
+          }
+          open(path, 'w', encoding='utf-8').write(json.dumps(lock, indent=2, sort_keys=True) + '\n')
+          PY
+          LOCK_ACQUIRED=false
+          cleanup_lock() {
+            if [ "$LOCK_ACQUIRED" = "true" ] && [ "$DRY_RUN" != "true" ]; then
+              rclone deletefile "$LOCK_REMOTE" --stats 0 || true
+            fi
+          }
+          trap cleanup_lock EXIT
+
+          if [ "$DRY_RUN" != "true" ]; then
+            rclone copyto "$WORK_DIR/backfill.lock.json" "$LOCK_REMOTE" --stats 0
+            LOCK_ACQUIRED=true
+          fi
+
+          rclone copyto "$STATUS_REMOTE/current-upload-expected.json" "$EXPECTED_MANIFEST" --stats 0
+          rclone copyto "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" "$RESIDUAL_QUEUE" --stats 0
+          rclone copyto "$STATUS_REMOTE/current-upload-status.json" "$UPLOAD_STATUS.previous" --stats 0 || true
+
+          python3 - "$RESIDUAL_QUEUE" "$PLAN_JSON" "$MAX_BACKFILL_BATCHES" <<'PY'
+          import json, sys
+          from collections import OrderedDict
+          queue_path, plan_path, max_batches_raw = sys.argv[1:4]
+          max_batches = max(1, int(max_batches_raw or '1'))
+          shards = OrderedDict()
+          missing = []
+          for line in open(queue_path, encoding='utf-8'):
+              if not line.strip():
+                  continue
+              entry = json.loads(line)
+              item = entry.get('item') or {}
+              rel = item.get('relativePath')
+              shard = entry.get('stagingShard') or item.get('stagingShard')
+              if entry.get('state') == 'staged' and rel and shard:
+                  shards.setdefault(shard, []).append(rel)
+              elif entry.get('state') == 'missing_local':
+                  missing.append(rel)
+          selected = list(shards.items())[:max_batches]
+          plan = {'shards': [{'remoteShard': remote, 'items': items} for remote, items in selected], 'missingItems': missing}
+          open(plan_path, 'w', encoding='utf-8').write(json.dumps(plan, indent=2, sort_keys=True) + '\n')
+          print(json.dumps({'selectedShardCount': len(selected), 'missingLocalCount': len(missing)}, sort_keys=True))
+          PY
+
+          if [ "$DRY_RUN" = "true" ]; then
+            cat "$PLAN_JSON"
+            exit 0
+          fi
+
+          SHARD_COUNT=$(jq '.shards | length' "$PLAN_JSON")
+          if [ "$SHARD_COUNT" -eq 0 ]; then
+            echo "No staged shards to backfill."
+            exit 0
+          fi
+
+          BACKFILL_EXIT=0
+          for index in $(seq 0 $((SHARD_COUNT - 1))); do
+            REMOTE_SHARD=$(jq -r ".shards[$index].remoteShard" "$PLAN_JSON")
+            ARCHIVE_NAME="$(basename "$REMOTE_SHARD")"
+            LOCAL_ARCHIVE="$RESTORE_DIR/$ARCHIVE_NAME"
+            FILES_FROM="$WORK_DIR/backfill-shard-$index.txt"
+            jq -r ".shards[$index].items[]" "$PLAN_JSON" > "$FILES_FROM"
+            SHARD_EXIT=0
+            set +e
+            rclone copyto "$REMOTE_SHARD" "$LOCAL_ARCHIVE" --stats 30s
+            COPY_EXIT=$?
+            if [ "$COPY_EXIT" -eq 0 ]; then
+              tar -xzf "$LOCAL_ARCHIVE" -C "$EXTRACT_DIR"
+              TAR_EXIT=$?
+            else
+              TAR_EXIT=1
+            fi
+            if [ "$COPY_EXIT" -eq 0 ] && [ "$TAR_EXIT" -eq 0 ]; then
+              (
+                cd "$EXTRACT_DIR"
+                rclone copy . "$GDRIVE_FRAMES_PATH" \
+                  --files-from "../../../$FILES_FROM" \
+                  --no-traverse --ignore-existing \
+                  --log-file "../../../$RCLONE_LOG" \
+                  --stats 30s --transfers 4 --checkers 4 --tpslimit 4
+                rclone check . "$GDRIVE_FRAMES_PATH" \
+                  --files-from "../../../$FILES_FROM" \
+                  --size-only --one-way --stats 0 \
+                  --log-file "../../../$RCLONE_LOG"
+              )
+              SHARD_EXIT=$?
+            else
+              SHARD_EXIT=1
+            fi
+            set -e
+            if [ "$SHARD_EXIT" -eq 0 ]; then
+              cat "$FILES_FROM" >> "$VERIFIED_FILES"
+            else
+              BACKFILL_EXIT="$SHARD_EXIT"
+              echo "Backfill shard $(basename "$REMOTE_SHARD") failed with exit=$SHARD_EXIT; preserving residual queue."
+            fi
+          done
+
+          COMPLETION_PROOF="remote_size_check"
+          if [ "$BACKFILL_EXIT" -ne 0 ]; then
+            COMPLETION_PROOF="none"
+          fi
+
+          python3 backend/utils/run_daily_helpers.py write-gdrive-upload-status \
+            --expected-manifest "$EXPECTED_MANIFEST" \
+            --output "$UPLOAD_STATUS" \
+            --residual-queue "$RESIDUAL_QUEUE" \
+            --verified-files-from "$VERIFIED_FILES" \
+            --run-id "${GITHUB_RUN_ID:-}" \
+            --policy warn \
+            --upload-mode backfill \
+            --completion-proof "$COMPLETION_PROOF" \
+            --source-root "$EXTRACT_DIR" \
+            --remote-root "$GDRIVE_FRAMES_PATH" \
+            --started-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --completed-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --exit-code "$BACKFILL_EXIT" \
+            --timeout false \
+            --backfill-threshold-attempts 3 \
+            --note "backfill processed staged shards"
+
+          rclone copyto "$RESIDUAL_QUEUE" "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" --stats 0 || true
+          rclone copyto "$UPLOAD_STATUS" "$STATUS_REMOTE/current-upload-status.json" --stats 0 || true
+          rclone copyto "$EXPECTED_MANIFEST" "$STATUS_REMOTE/current-upload-expected.json" --stats 0 || true
+
+          {
+            echo "### GDrive frame backfill status"
+            echo
+            echo '```json'
+            cat "$UPLOAD_STATUS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$BACKFILL_EXIT"
+
+      - name: Upload backfill artifacts
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: gdrive-frame-backfill-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            backend/log/cron/gdrive-backfill/**
