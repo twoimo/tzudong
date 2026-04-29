@@ -229,6 +229,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("FILES_FROM_ABS", workflow)
         self.assertIn("STAGING_MANIFEST_DIR", workflow)
         self.assertIn("stagingManifestItems", workflow)
+        self.assertIn("MAX_BACKFILL_ITEMS", workflow)
+        self.assertIn("maxSelectedItemCount", workflow)
         self.assertIn("REMOTE_LIST_JSON", workflow)
         self.assertIn("remoteVerifiedCount", workflow)
         self.assertIn("remoteVerifiedBeforeCount", workflow)
