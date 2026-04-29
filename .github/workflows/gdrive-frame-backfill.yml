@@ -72,6 +72,7 @@ jobs:
           RESIDUAL_QUEUE="$WORK_DIR/gdrive-upload-residual-queue.jsonl"
           VERIFIED_FILES="$WORK_DIR/backfill-verified-files.txt"
           RCLONE_LOG="$WORK_DIR/backfill-rclone.log"
+          REMOTE_LIST_JSON="$WORK_DIR/backfill-remote-files.json"
           STAGING_MANIFEST="$WORK_DIR/current-upload-staging-manifest.json"
           STAGING_MANIFEST_DIR="$WORK_DIR/staging-manifests"
           mkdir -p "$RESTORE_DIR" "$EXTRACT_DIR" "$STAGING_MANIFEST_DIR"
@@ -258,7 +259,37 @@ jobs:
           done
 
           COMPLETION_PROOF="remote_size_check"
-          if [ "$BACKFILL_EXIT" -ne 0 ]; then
+          if [ "$BACKFILL_EXIT" -eq 0 ]; then
+            if rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --stats 0 > "$REMOTE_LIST_JSON"; then
+              python3 - "$EXPECTED_MANIFEST" "$REMOTE_LIST_JSON" "$VERIFIED_FILES" <<'PY'
+          import json, sys
+          expected_path, remote_list_path, verified_path = sys.argv[1:4]
+          expected = json.load(open(expected_path, encoding='utf-8'))
+          remote_entries = json.load(open(remote_list_path, encoding='utf-8'))
+          remote_sizes = {str(entry.get('Path', '')): int(entry.get('Size', -1)) for entry in remote_entries if isinstance(entry, dict)}
+          verified = []
+          for item in expected.get('items', []):
+              if not isinstance(item, dict):
+                  continue
+              rel = str(item.get('relativePath') or '')
+              if not rel:
+                  continue
+              try:
+                  size = int(item.get('size'))
+              except Exception:
+                  continue
+              if remote_sizes.get(rel) == size:
+                  verified.append(rel)
+          with open(verified_path, 'w', encoding='utf-8') as fh:
+              fh.write('\n'.join(sorted(set(verified))) + ('\n' if verified else ''))
+          print(json.dumps({'remoteVerifiedCount': len(set(verified)), 'remoteListedCount': len(remote_sizes)}, sort_keys=True))
+          PY
+            else
+              BACKFILL_EXIT=1
+              COMPLETION_PROOF="none"
+              echo "Remote cumulative verification failed; preserving residual queue."
+            fi
+          else
             COMPLETION_PROOF="none"
           fi
 
