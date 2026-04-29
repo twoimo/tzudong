@@ -13,6 +13,11 @@ on:
         required: false
         default: '4'
         type: string
+      max_items:
+        description: 'Maximum frame items to process in this run'
+        required: false
+        default: '1000'
+        type: string
       dry_run:
         description: 'Plan only; do not upload or mutate status'
         required: false
@@ -35,6 +40,7 @@ jobs:
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
       STATUS_SCOPE: ${{ github.event.inputs.status_scope || 'main' }}
       MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '4' }}
+      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1000' }}
       DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     steps:
       - name: Checkout repository
@@ -143,12 +149,13 @@ jobs:
             printf '[]\n' > "$REMOTE_LIST_JSON"
           fi
 
-          python3 - "$RESIDUAL_QUEUE" "$PLAN_JSON" "$MAX_BACKFILL_BATCHES" "$STAGING_MANIFEST_DIR" "$STAGING_MANIFEST" "$EXPECTED_MANIFEST" "$REMOTE_LIST_JSON" "$VERIFIED_FILES" <<'PY'
+          python3 - "$RESIDUAL_QUEUE" "$PLAN_JSON" "$MAX_BACKFILL_BATCHES" "$MAX_BACKFILL_ITEMS" "$STAGING_MANIFEST_DIR" "$STAGING_MANIFEST" "$EXPECTED_MANIFEST" "$REMOTE_LIST_JSON" "$VERIFIED_FILES" <<'PY'
           import json, sys
           from collections import OrderedDict
           from pathlib import Path
-          queue_path, plan_path, max_batches_raw, manifest_dir, staging_manifest_path, expected_path, remote_list_path, verified_path = sys.argv[1:9]
+          queue_path, plan_path, max_batches_raw, max_items_raw, manifest_dir, staging_manifest_path, expected_path, remote_list_path, verified_path = sys.argv[1:10]
           max_batches = max(1, int(max_batches_raw or '1'))
+          max_items = max(1, int(max_items_raw or '1000'))
           expected = json.load(open(expected_path, encoding='utf-8'))
           remote_entries = json.load(open(remote_list_path, encoding='utf-8'))
           remote_sizes = {str(entry.get('Path', '')): int(entry.get('Size', -1)) for entry in remote_entries if isinstance(entry, dict)}
@@ -203,7 +210,16 @@ jobs:
                   shards.setdefault(shard, []).append(rel)
               elif state == 'missing_local':
                   missing.append(rel)
-          selected = list(shards.items())[:max_batches]
+          selected = []
+          selected_item_count = 0
+          for remote, items in list(shards.items())[:max_batches]:
+              remaining = max_items - selected_item_count
+              if remaining <= 0:
+                  break
+              selected_items = items[:remaining]
+              if selected_items:
+                  selected.append((remote, selected_items))
+                  selected_item_count += len(selected_items)
           staging_manifest = {
               'schemaVersion': 2,
               'shards': [
@@ -219,7 +235,8 @@ jobs:
           Path(plan_path).write_text(json.dumps(plan, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           print(json.dumps({
               'selectedShardCount': len(selected),
-              'selectedItemCount': sum(len(items) for _, items in selected),
+              'selectedItemCount': selected_item_count,
+              'maxSelectedItemCount': max_items,
               'missingLocalCount': len(missing),
               'remoteVerifiedBeforeCount': len(remote_verified),
               'stagingManifestItems': len(staging_by_rel),
