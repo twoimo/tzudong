@@ -18,6 +18,7 @@ REPO_ROOT = BACKEND_ROOT.parent
 RUN_DAILY_SOURCE = BACKEND_ROOT / "run_daily.sh"
 RUN_DAILY_HELPER_SOURCE = BACKEND_ROOT / "utils" / "run_daily_helpers.py"
 DAILY_CRAWLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "daily-crawler.yml"
+GDRIVE_BACKFILL_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "gdrive-frame-backfill.yml"
 
 
 class GDriveUploadContractTests(unittest.TestCase):
@@ -92,6 +93,46 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("residual_retry", expected["items"][0]["reason"])
         self.assertEqual("old.webp\nrecent.jpg\n", "".join(sorted(self.files_from_path.read_text(encoding="utf-8").splitlines(True))))
 
+
+    def test_gdrive_expected_manifest_preserves_old_missing_residual(self) -> None:
+        missing_item = {
+            "relativePath": "missing-old.jpg",
+            "size": 1,
+            "mtimeEpoch": 1,
+            "dedupeKey": "missing-old.jpg:1:1",
+            "required": True,
+            "reason": "residual_retry",
+        }
+        old_epoch = int(time.time()) - (30 * 24 * 60 * 60)
+        self.residual_queue_path.write_text(
+            json.dumps({"item": missing_item, "firstSeenEpoch": old_epoch, "attempts": 5}, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        result = self._helper(
+            "write-gdrive-upload-expected",
+            "--frames-dir",
+            str(self.frames_dir),
+            "--output",
+            str(self.expected_path),
+            "--files-from-output",
+            str(self.files_from_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--remote-root",
+            "gdrive:frames",
+            "--retention-days",
+            "7",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.assertEqual(1, expected["expectedCount"])
+        self.assertEqual(1, expected["missingLocalCount"])
+        self.assertEqual("missing_local", expected["items"][0]["state"])
+        self.assertEqual("missing-old.jpg", expected["items"][0]["relativePath"])
+        self.assertEqual("", self.files_from_path.read_text(encoding="utf-8"))
+
     def test_workflow_upload_step_keeps_validation_status_scope(self) -> None:
         workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
         upload_step = workflow.split("- name: Upload Results to GDrive", 1)[1].split("- name: Upload GDrive Status Artifacts", 1)[0]
@@ -102,6 +143,11 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn('GDrive status scope path: $GDRIVE_STATUS_SCOPE_PATH', upload_step)
         self.assertIn('GDRIVE_UPLOAD_MAX_FILES: "0"', upload_step)
         self.assertIn('--max-items "${GDRIVE_UPLOAD_MAX_FILES:-0}"', upload_step)
+        self.assertIn("write-gdrive-upload-batches", upload_step)
+        self.assertIn("write-gdrive-staging-shards", upload_step)
+        self.assertIn("rclone check", upload_step)
+        self.assertIn("current-upload-batches.json", workflow)
+        self.assertIn("current-upload-staging-manifest.json", workflow)
 
     def test_gdrive_expected_manifest_caps_batch_and_queues_overflow(self) -> None:
         for name in ("a.jpg", "b.jpg", "c.jpg"):
@@ -128,6 +174,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(2, expected["expectedCount"])
         self.assertEqual(2, expected["maxItems"])
         self.assertEqual(1, expected["overflowCount"])
+        self.assertEqual(2, expected["uploadableCount"])
         self.assertEqual(["a.jpg", "b.jpg"], [item["relativePath"] for item in expected["items"]])
         self.assertEqual("a.jpg\nb.jpg\n", self.files_from_path.read_text(encoding="utf-8"))
         queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
@@ -135,6 +182,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("c.jpg", queue[0]["item"]["relativePath"])
         self.assertEqual(0, queue[0]["attempts"])
 
+        verified_path = self.root / "verified.txt"
+        verified_path.write_text("a.jpg\nb.jpg\n", encoding="utf-8")
         result = self._helper(
             "write-gdrive-upload-status",
             "--expected-manifest",
@@ -143,21 +192,40 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(self.status_path),
             "--residual-queue",
             str(self.residual_queue_path),
+            "--verified-files-from",
+            str(verified_path),
             "--source-root",
             str(self.frames_dir),
             "--remote-root",
             "gdrive:frames",
+            "--completion-proof",
+            "remote_size_check",
             "--exit-code",
             "0",
         )
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         status = json.loads(self.status_path.read_text(encoding="utf-8"))
-        self.assertEqual("complete", status["status"])
-        self.assertEqual(0, status["residualCount"])
+        self.assertEqual("backfill_required", status["status"])
+        self.assertEqual(1, status["residualCount"])
         self.assertEqual(1, status["pendingBacklogCount"])
         queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
         self.assertEqual(["c.jpg"], [entry["item"]["relativePath"] for entry in queue])
+
+    def test_gdrive_backfill_workflow_has_lease_and_remote_proof(self) -> None:
+        workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("concurrency:", workflow)
+        self.assertIn("gdrive-frame-backfill", workflow)
+        self.assertIn("backfill.lock.json", workflow)
+        self.assertIn("rclone check", workflow)
+        self.assertIn("--upload-mode backfill", workflow)
+        self.assertIn('--completion-proof "$COMPLETION_PROOF"', workflow)
+        self.assertIn("actions/upload-artifact@v7.0.1", workflow)
+        self.assertIn("trap cleanup_lock EXIT", workflow)
+        self.assertIn("set +e", workflow)
+        self.assertIn("BACKFILL_EXIT", workflow)
+        self.assertIn('exit "$BACKFILL_EXIT"', workflow)
 
     def test_gdrive_upload_status_timeout_records_partial_and_residual_queue(self) -> None:
         frame = self.frames_dir / "pending.jpg"
@@ -195,11 +263,13 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(1, len(queue_lines))
         self.assertIn("pending.jpg", queue_lines[0])
 
-    def test_gdrive_upload_status_success_clears_matching_residual(self) -> None:
+    def test_gdrive_upload_status_success_requires_remote_proof_and_clears_matching_residual(self) -> None:
         frame = self.frames_dir / "done.jpg"
         frame.write_text("frame\n", encoding="utf-8")
         self._write_expected()
         expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        verified_path = self.root / "verified-files.txt"
+        verified_path.write_text("done.jpg\n", encoding="utf-8")
         self.residual_queue_path.write_text(
             json.dumps({"item": expected["items"][0], "attempts": 2}, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -213,6 +283,12 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(self.status_path),
             "--residual-queue",
             str(self.residual_queue_path),
+            "--verified-files-from",
+            str(verified_path),
+            "--completion-proof",
+            "remote_size_check",
+            "--source-root",
+            str(self.frames_dir),
             "--remote-root",
             "gdrive:frames",
             "--exit-code",
@@ -222,8 +298,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         status = json.loads(self.status_path.read_text(encoding="utf-8"))
         self.assertEqual("complete", status["status"])
+        self.assertEqual("remote_size_check", status["completionProof"])
+        self.assertEqual(1, status["verifiedCount"])
         self.assertEqual(0, status["uploadedCount"])
-        self.assertEqual(1, status["skippedExistingCount"])
+        self.assertEqual(0, status["skippedExistingCount"])
         self.assertEqual("unknown", status["uploadedCountConfidence"])
         self.assertEqual(0, status["residualCount"])
         self.assertEqual("", self.residual_queue_path.read_text(encoding="utf-8"))
@@ -235,6 +313,9 @@ class GDriveUploadContractTests(unittest.TestCase):
         summary_path = self.root / "current-summary.json"
         summary_path.write_text(json.dumps({"finalStatus": "OK"}, sort_keys=True), encoding="utf-8")
 
+        verified_path = self.root / "summary-verified.txt"
+        verified_path.write_text("summary.jpg\n", encoding="utf-8")
+
         result = self._helper(
             "write-gdrive-upload-status",
             "--expected-manifest",
@@ -245,6 +326,12 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(summary_path),
             "--residual-queue",
             str(self.residual_queue_path),
+            "--verified-files-from",
+            str(verified_path),
+            "--completion-proof",
+            "remote_size_check",
+            "--source-root",
+            str(self.frames_dir),
             "--remote-root",
             "gdrive:frames",
             "--exit-code",
@@ -256,8 +343,9 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("OK", summary["finalStatus"])
         self.assertEqual("complete", summary["gdriveUpload"]["status"])
         self.assertEqual(1, summary["gdriveUpload"]["expectedCount"])
+        self.assertEqual(1, summary["gdriveUpload"]["verifiedCount"])
 
-    def test_gdrive_upload_status_prunes_missing_and_stale_residual_entries_on_skip(self) -> None:
+    def test_gdrive_upload_status_preserves_missing_residual_entries_on_skip(self) -> None:
         stale_file = self.frames_dir / "stale.jpg"
         stale_file.write_text("stale\n", encoding="utf-8")
         stale_stat = stale_file.stat()
@@ -311,7 +399,15 @@ class GDriveUploadContractTests(unittest.TestCase):
         )
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
-        self.assertEqual("", self.residual_queue_path.read_text(encoding="utf-8"))
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("backfill_required", status["status"])
+        self.assertEqual("backfill_required", status["policy"])
+        self.assertEqual(1, status["missingLocalCount"])
+        self.assertEqual(1, status["residualCount"])
+        queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
+        self.assertEqual(1, len(queue))
+        self.assertEqual("missing_local", queue[0]["state"])
+        self.assertEqual("missing.jpg", queue[0]["item"]["relativePath"])
 
     def test_gdrive_upload_status_escalates_repeated_residual_to_backfill_required(self) -> None:
         frame = self.frames_dir / "repeat.jpg"
@@ -357,10 +453,107 @@ class GDriveUploadContractTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("backfill_required", status["status"])
         self.assertEqual("backfill_required", status["policy"])
         self.assertEqual(3, status["maxResidualAttempts"])
         queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
         self.assertEqual(3, queue[0]["attempts"])
+
+
+    def test_gdrive_upload_batches_respect_file_and_byte_limits(self) -> None:
+        for index, size in enumerate([5, 6, 7], start=1):
+            (self.frames_dir / f"batch-{index}.jpg").write_text("x" * size, encoding="utf-8")
+        self._write_expected()
+        batch_manifest = self.root / "batches.json"
+        batch_dir = self.root / "batches"
+
+        result = self._helper(
+            "write-gdrive-upload-batches",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(batch_manifest),
+            "--output-dir",
+            str(batch_dir),
+            "--max-files",
+            "2",
+            "--max-bytes",
+            "11",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        manifest = json.loads(batch_manifest.read_text(encoding="utf-8"))
+        self.assertEqual(2, manifest["batchCount"])
+        self.assertEqual([2, 1], [batch["itemCount"] for batch in manifest["batches"]])
+        self.assertTrue((batch_dir / "batch-0001.txt").exists())
+        self.assertTrue((batch_dir / "batch-0002.txt").exists())
+
+    def test_gdrive_staging_shards_archive_unverified_local_items(self) -> None:
+        uploaded = self.frames_dir / "uploaded.jpg"
+        pending = self.frames_dir / "pending.jpg"
+        uploaded.write_text("uploaded\n", encoding="utf-8")
+        pending.write_text("pending\n", encoding="utf-8")
+        self._write_expected()
+        verified_path = self.root / "verified.txt"
+        verified_path.write_text("uploaded.jpg\n", encoding="utf-8")
+        staging_manifest = self.root / "staging.json"
+        staging_dir = self.root / "staging"
+
+        result = self._helper(
+            "write-gdrive-staging-shards",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(staging_manifest),
+            "--output-dir",
+            str(staging_dir),
+            "--verified-files-from",
+            str(verified_path),
+            "--source-root",
+            str(self.frames_dir),
+            "--remote-staging-root",
+            "gdrive:status/main/staging/run-1",
+            "--max-files",
+            "10",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        manifest = json.loads(staging_manifest.read_text(encoding="utf-8"))
+        self.assertEqual(1, manifest["stagedShardCount"])
+        self.assertEqual(1, manifest["stagedShardItemCount"])
+        self.assertEqual("pending.jpg", manifest["shards"][0]["items"][0]["relativePath"])
+        self.assertTrue((staging_dir / "shard-0001.tar.gz").exists())
+
+    def test_rclone_exit_zero_without_remote_proof_requires_backfill(self) -> None:
+        frame = self.frames_dir / "weak.jpg"
+        frame.write_text("frame\n", encoding="utf-8")
+        self._write_expected()
+
+        result = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--source-root",
+            str(self.frames_dir),
+            "--remote-root",
+            "gdrive:frames",
+            "--exit-code",
+            "0",
+            "--completion-proof",
+            "rclone_exit_zero",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        status = json.loads(self.status_path.read_text(encoding="utf-8"))
+        self.assertEqual("backfill_required", status["status"])
+        self.assertTrue(status["verificationRequired"])
+        self.assertEqual(1, status["residualCount"])
+        queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
+        self.assertEqual(True, queue[0]["item"]["verificationRequired"])
 
     def _write_expected(self) -> None:
         result = self._helper(
