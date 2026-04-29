@@ -231,6 +231,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("stagingManifestItems", workflow)
         self.assertIn("REMOTE_LIST_JSON", workflow)
         self.assertIn("remoteVerifiedCount", workflow)
+        self.assertIn("remoteVerifiedBeforeCount", workflow)
+        self.assertIn("No staged shards to backfill; writing cumulative remote status.", workflow)
         self.assertIn('rclone lsjson "$GDRIVE_FRAMES_PATH"', workflow)
         self.assertIn('--staging-manifest "$STAGING_MANIFEST"', workflow)
         self.assertNotIn('../../../$RCLONE_LOG', workflow)
