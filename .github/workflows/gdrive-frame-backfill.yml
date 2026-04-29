@@ -72,7 +72,9 @@ jobs:
           RESIDUAL_QUEUE="$WORK_DIR/gdrive-upload-residual-queue.jsonl"
           VERIFIED_FILES="$WORK_DIR/backfill-verified-files.txt"
           RCLONE_LOG="$WORK_DIR/backfill-rclone.log"
-          mkdir -p "$RESTORE_DIR" "$EXTRACT_DIR"
+          STAGING_MANIFEST="$WORK_DIR/current-upload-staging-manifest.json"
+          STAGING_MANIFEST_DIR="$WORK_DIR/staging-manifests"
+          mkdir -p "$RESTORE_DIR" "$EXTRACT_DIR" "$STAGING_MANIFEST_DIR"
           : > "$VERIFIED_FILES"
           : > "$RCLONE_LOG"
           ROOT_DIR="$PWD"
@@ -131,12 +133,39 @@ jobs:
           rclone copyto "$STATUS_REMOTE/current-upload-expected.json" "$EXPECTED_MANIFEST" --stats 0
           rclone copyto "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" "$RESIDUAL_QUEUE" --stats 0
           rclone copyto "$STATUS_REMOTE/current-upload-status.json" "$UPLOAD_STATUS.previous" --stats 0 || true
+          rclone copy "$STATUS_REMOTE/staging" "$STAGING_MANIFEST_DIR" \
+            --include "current-upload-staging-manifest.json" \
+            --include "**/current-upload-staging-manifest.json" \
+            --exclude "*" --stats 0 || true
 
-          python3 - "$RESIDUAL_QUEUE" "$PLAN_JSON" "$MAX_BACKFILL_BATCHES" <<'PY'
+          python3 - "$RESIDUAL_QUEUE" "$PLAN_JSON" "$MAX_BACKFILL_BATCHES" "$STAGING_MANIFEST_DIR" "$STAGING_MANIFEST" <<'PY'
           import json, sys
           from collections import OrderedDict
-          queue_path, plan_path, max_batches_raw = sys.argv[1:4]
+          from pathlib import Path
+          queue_path, plan_path, max_batches_raw, manifest_dir, staging_manifest_path = sys.argv[1:6]
           max_batches = max(1, int(max_batches_raw or '1'))
+          staging_by_rel = {}
+          shard_items = OrderedDict()
+          for manifest_path in sorted(Path(manifest_dir).rglob('current-upload-staging-manifest.json')):
+              try:
+                  payload = json.loads(manifest_path.read_text(encoding='utf-8'))
+              except Exception:
+                  continue
+              for shard in payload.get('shards', []):
+                  if not isinstance(shard, dict):
+                      continue
+                  remote = shard.get('remoteShard') or shard.get('archivePath')
+                  if not remote:
+                      continue
+                  bucket = shard_items.setdefault(remote, OrderedDict())
+                  for item in shard.get('items', []):
+                      if not isinstance(item, dict):
+                          continue
+                      rel = item.get('relativePath')
+                      if isinstance(rel, str) and rel:
+                          staging_by_rel[rel] = remote
+                          bucket.setdefault(rel, item)
+          eligible_states = {'staged', 'missing_local', 'pending_local'}
           shards = OrderedDict()
           missing = []
           for line in open(queue_path, encoding='utf-8'):
@@ -145,15 +174,32 @@ jobs:
               entry = json.loads(line)
               item = entry.get('item') or {}
               rel = item.get('relativePath')
-              shard = entry.get('stagingShard') or item.get('stagingShard')
-              if entry.get('state') == 'staged' and rel and shard:
+              state = entry.get('state') or item.get('state')
+              shard = entry.get('stagingShard') or item.get('stagingShard') or staging_by_rel.get(rel)
+              if state in eligible_states and rel and shard:
                   shards.setdefault(shard, []).append(rel)
-              elif entry.get('state') == 'missing_local':
+              elif state == 'missing_local':
                   missing.append(rel)
           selected = list(shards.items())[:max_batches]
+          staging_manifest = {
+              'schemaVersion': 2,
+              'shards': [
+                  {
+                      'remoteShard': remote,
+                      'items': list(items_by_rel.values()),
+                  }
+                  for remote, items_by_rel in shard_items.items()
+              ],
+          }
+          Path(staging_manifest_path).write_text(json.dumps(staging_manifest, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           plan = {'shards': [{'remoteShard': remote, 'items': items} for remote, items in selected], 'missingItems': missing}
-          open(plan_path, 'w', encoding='utf-8').write(json.dumps(plan, indent=2, sort_keys=True) + '\n')
-          print(json.dumps({'selectedShardCount': len(selected), 'missingLocalCount': len(missing)}, sort_keys=True))
+          Path(plan_path).write_text(json.dumps(plan, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps({
+              'selectedShardCount': len(selected),
+              'selectedItemCount': sum(len(items) for _, items in selected),
+              'missingLocalCount': len(missing),
+              'stagingManifestItems': len(staging_by_rel),
+          }, sort_keys=True))
           PY
 
           if [ "$DRY_RUN" = "true" ]; then
@@ -221,6 +267,7 @@ jobs:
             --output "$UPLOAD_STATUS" \
             --residual-queue "$RESIDUAL_QUEUE" \
             --verified-files-from "$VERIFIED_FILES" \
+            --staging-manifest "$STAGING_MANIFEST" \
             --run-id "${GITHUB_RUN_ID:-}" \
             --policy warn \
             --upload-mode backfill \
