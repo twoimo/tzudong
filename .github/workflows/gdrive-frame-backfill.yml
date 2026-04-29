@@ -75,6 +75,8 @@ jobs:
           mkdir -p "$RESTORE_DIR" "$EXTRACT_DIR"
           : > "$VERIFIED_FILES"
           : > "$RCLONE_LOG"
+          ROOT_DIR="$PWD"
+          RCLONE_LOG_ABS="$ROOT_DIR/$RCLONE_LOG"
 
           if rclone copyto "$LOCK_REMOTE" "$WORK_DIR/backfill.lock.remote.json" --stats 0 2>/dev/null; then
             set +e
@@ -171,6 +173,7 @@ jobs:
             ARCHIVE_NAME="$(basename "$REMOTE_SHARD")"
             LOCAL_ARCHIVE="$RESTORE_DIR/$ARCHIVE_NAME"
             FILES_FROM="$WORK_DIR/backfill-shard-$index.txt"
+            FILES_FROM_ABS="$ROOT_DIR/$FILES_FROM"
             jq -r ".shards[$index].items[]" "$PLAN_JSON" > "$FILES_FROM"
             SHARD_EXIT=0
             set +e
@@ -186,14 +189,14 @@ jobs:
               (
                 cd "$EXTRACT_DIR"
                 rclone copy . "$GDRIVE_FRAMES_PATH" \
-                  --files-from "../../../$FILES_FROM" \
+                  --files-from "$FILES_FROM_ABS" \
                   --no-traverse --ignore-existing \
-                  --log-file "../../../$RCLONE_LOG" \
+                  --log-file "$RCLONE_LOG_ABS" \
                   --stats 30s --transfers 4 --checkers 4 --tpslimit 4
                 rclone check . "$GDRIVE_FRAMES_PATH" \
-                  --files-from "../../../$FILES_FROM" \
+                  --files-from "$FILES_FROM_ABS" \
                   --size-only --one-way --stats 0 \
-                  --log-file "../../../$RCLONE_LOG"
+                  --log-file "$RCLONE_LOG_ABS"
               )
               SHARD_EXIT=$?
             else
