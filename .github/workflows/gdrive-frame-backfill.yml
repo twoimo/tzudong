@@ -1,6 +1,14 @@
 name: GDrive Frame Backfill
 
 on:
+  schedule:
+    # Budget-safe catch-up windows after Daily Data Collection (UTC 19:00 / KST 04:00).
+    # Do not add more default windows without re-checking the monthly Actions budget.
+    - cron: '0 21 * * *'
+    - cron: '0 23 * * *'
+  workflow_run:
+    workflows: ["Daily Data Collection"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       status_scope:
@@ -35,12 +43,13 @@ jobs:
   backfill:
     runs-on: ubuntu-latest
     timeout-minutes: 75
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'schedule') }}
     env:
       GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
       STATUS_SCOPE: ${{ github.event.inputs.status_scope || 'main' }}
-      MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '4' }}
-      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1000' }}
+      MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}
+      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}
       DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     steps:
       - name: Checkout repository
@@ -86,6 +95,92 @@ jobs:
           : > "$RCLONE_LOG"
           ROOT_DIR="$PWD"
           RCLONE_LOG_ABS="$ROOT_DIR/$RCLONE_LOG"
+          : > "$RESIDUAL_QUEUE"
+
+          rclone copyto "$STATUS_REMOTE/current-upload-status.json" "$UPLOAD_STATUS.previous" --stats 0 || true
+          rclone copyto "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" "$RESIDUAL_QUEUE" --stats 0 || true
+          rclone copy "$STATUS_REMOTE/staging" "$STAGING_MANIFEST_DIR" \
+            --include "current-upload-staging-manifest.json" \
+            --include "**/current-upload-staging-manifest.json" \
+            --exclude "*" --stats 0 || true
+
+          set +e
+          python3 - "$UPLOAD_STATUS.previous" "$RESIDUAL_QUEUE" "$STAGING_MANIFEST_DIR" "${GITHUB_EVENT_NAME:-unknown}" "$MAX_BACKFILL_BATCHES" "$MAX_BACKFILL_ITEMS" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          status_path, queue_path, staging_dir, event_name, max_batches, max_items = sys.argv[1:7]
+          status = {}
+          status_file = Path(status_path)
+          if status_file.exists() and status_file.stat().st_size > 0:
+              try:
+                  status = json.loads(status_file.read_text(encoding='utf-8'))
+              except Exception as exc:
+                  status = {'parseError': str(exc)}
+
+          queue_file = Path(queue_path)
+          queue_line_count = 0
+          if queue_file.exists() and queue_file.stat().st_size > 0:
+              queue_line_count = sum(1 for line in queue_file.read_text(encoding='utf-8').splitlines() if line.strip())
+
+          staging_manifest_count = 0
+          staging_item_count = 0
+          for manifest_path in Path(staging_dir).rglob('current-upload-staging-manifest.json'):
+              staging_manifest_count += 1
+              try:
+                  payload = json.loads(manifest_path.read_text(encoding='utf-8'))
+              except Exception:
+                  continue
+              staging_item_count += sum(len(shard.get('items') or []) for shard in payload.get('shards', []) if isinstance(shard, dict))
+
+          numeric_fields = {}
+          for key in ('residualCount', 'pendingBacklogCount', 'stagedShardCount', 'stagedShardItemCount'):
+              try:
+                  numeric_fields[key] = int(status.get(key) or 0)
+              except Exception:
+                  numeric_fields[key] = 0
+
+          reasons = []
+          if status.get('status') == 'backfill_required':
+              reasons.append('status=backfill_required')
+          for key, value in numeric_fields.items():
+              if value > 0:
+                  reasons.append(f'{key}={value}')
+          if queue_line_count > 0:
+              reasons.append(f'residualQueueLines={queue_line_count}')
+
+          telemetry = {
+              'trigger': event_name,
+              'status': status.get('status') or 'missing',
+              'backlogDetected': bool(reasons),
+              'backlogReason': reasons,
+              'residualCount': numeric_fields['residualCount'],
+              'pendingBacklogCount': numeric_fields['pendingBacklogCount'],
+              'stagedShardCount': numeric_fields['stagedShardCount'],
+              'stagedShardItemCount': numeric_fields['stagedShardItemCount'],
+              'residualQueueLines': queue_line_count,
+              'stagingManifestCount': staging_manifest_count,
+              'stagingItemCount': staging_item_count,
+              'maxBackfillBatches': max_batches,
+              'maxSelectedItemCount': max_items,
+          }
+          print('Backfill preflight: ' + json.dumps(telemetry, sort_keys=True))
+          if not reasons:
+              print('No GDrive backfill backlog detected; exiting.')
+              raise SystemExit(42)
+          PY
+          PREFLIGHT_STATUS=$?
+          set -e
+          if [ "$PREFLIGHT_STATUS" -eq 42 ]; then
+            {
+              echo "### GDrive frame backfill preflight"
+              echo
+              echo "No GDrive backfill backlog detected; exiting."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          elif [ "$PREFLIGHT_STATUS" -ne 0 ]; then
+            exit "$PREFLIGHT_STATUS"
+          fi
 
           if rclone copyto "$LOCK_REMOTE" "$WORK_DIR/backfill.lock.remote.json" --stats 0 2>/dev/null; then
             set +e
@@ -138,12 +233,6 @@ jobs:
           fi
 
           rclone copyto "$STATUS_REMOTE/current-upload-expected.json" "$EXPECTED_MANIFEST" --stats 0
-          rclone copyto "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" "$RESIDUAL_QUEUE" --stats 0
-          rclone copyto "$STATUS_REMOTE/current-upload-status.json" "$UPLOAD_STATUS.previous" --stats 0 || true
-          rclone copy "$STATUS_REMOTE/staging" "$STAGING_MANIFEST_DIR" \
-            --include "current-upload-staging-manifest.json" \
-            --include "**/current-upload-staging-manifest.json" \
-            --exclude "*" --stats 0 || true
           if ! rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --stats 0 > "$REMOTE_LIST_JSON"; then
             echo "Remote preflight inventory failed; planning from residual queue only."
             printf '[]\n' > "$REMOTE_LIST_JSON"
@@ -233,7 +322,7 @@ jobs:
           Path(staging_manifest_path).write_text(json.dumps(staging_manifest, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           plan = {'shards': [{'remoteShard': remote, 'items': items} for remote, items in selected], 'missingItems': missing}
           Path(plan_path).write_text(json.dumps(plan, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-          print(json.dumps({
+          print('Backfill plan telemetry: ' + json.dumps({
               'selectedShardCount': len(selected),
               'selectedItemCount': selected_item_count,
               'maxSelectedItemCount': max_items,
