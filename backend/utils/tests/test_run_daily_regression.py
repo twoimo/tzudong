@@ -215,6 +215,17 @@ class GDriveUploadContractTests(unittest.TestCase):
     def test_gdrive_backfill_workflow_has_lease_and_remote_proof(self) -> None:
         workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
 
+        self.assertIn("schedule:", workflow)
+        self.assertEqual(1, workflow.count("cron: '0 21 * * *'"))
+        self.assertEqual(1, workflow.count("cron: '0 23 * * *'"))
+        self.assertEqual(2, workflow.count("cron: '0 "))
+        self.assertIn("workflow_run:", workflow)
+        self.assertIn('workflows: ["Daily Data Collection"]', workflow)
+        self.assertIn("types: [completed]", workflow)
+        self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
+        self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
+        self.assertIn("MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}", workflow)
+        self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}", workflow)
         self.assertIn("concurrency:", workflow)
         self.assertIn("gdrive-frame-backfill", workflow)
         self.assertIn("backfill.lock.json", workflow)
@@ -231,6 +242,19 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("stagingManifestItems", workflow)
         self.assertIn("MAX_BACKFILL_ITEMS", workflow)
         self.assertIn("maxSelectedItemCount", workflow)
+        self.assertIn("Backfill preflight:", workflow)
+        self.assertIn("Backfill plan telemetry:", workflow)
+        self.assertIn("backlogDetected", workflow)
+        self.assertIn("backlogReason", workflow)
+        self.assertIn("stagingManifestCount", workflow)
+        self.assertIn("stagingItemCount", workflow)
+        self.assertNotIn("reasons.append(f'stagingManifests=", workflow)
+        self.assertNotIn("reasons.append(f'stagingItems=", workflow)
+        self.assertIn("No GDrive backfill backlog detected; exiting.", workflow)
+        self.assertLess(
+            workflow.index("No GDrive backfill backlog detected; exiting."),
+            workflow.index('rclone copyto "$WORK_DIR/backfill.lock.json" "$LOCK_REMOTE"'),
+        )
         self.assertIn("REMOTE_LIST_JSON", workflow)
         self.assertIn("remoteVerifiedCount", workflow)
         self.assertIn("remoteVerifiedBeforeCount", workflow)
