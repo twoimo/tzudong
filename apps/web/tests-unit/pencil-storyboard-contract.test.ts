@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 
 import {
@@ -11,15 +13,18 @@ import {
 } from '../lib/pencil-storyboard/contracts';
 
 function makeStoryboardFixtureRoot(): string {
-    const root = fs.mkdtempSync(`${fs.realpathSync.native(process.cwd())}/.tmp-pencil-storyboard-contract-`);
-    fs.mkdirSync(`${root}/app`, { recursive: true });
-    fs.mkdirSync(`${root}/components/map`, { recursive: true });
-    fs.mkdirSync(`${root}/design/pencil/storyboards`, { recursive: true });
-    fs.mkdirSync(`${root}/design/pencil/exports`, { recursive: true });
-    fs.writeFileSync(`${root}/app/page.tsx`, 'export default function Page() { return null; }\n');
-    fs.writeFileSync(`${root}/components/map/HomeMap.tsx`, 'export function HomeMap() { return null; }\n');
-    fs.writeFileSync(`${root}/design/pencil/storyboards/home-map.pen`, 'pen');
-    fs.writeFileSync(`${root}/design/pencil/exports/home-map.png`, 'png');
+    const root = fs.mkdtempSync(join(tmpdir(), 'pencil-storyboard-contract-'));
+    fs.mkdirSync(join(root, 'app'), { recursive: true });
+    fs.mkdirSync(join(root, 'components/map'), { recursive: true });
+    fs.mkdirSync(join(root, 'design/pencil/storyboards'), { recursive: true });
+    fs.mkdirSync(join(root, 'design/pencil/screenshots'), { recursive: true });
+    fs.mkdirSync(join(root, 'design/pencil/exports'), { recursive: true });
+    fs.writeFileSync(join(root, 'app/page.tsx'), 'export default function Page() { return null; }\n');
+    fs.writeFileSync(join(root, 'components/map/HomeMap.tsx'), 'export function HomeMap() { return null; }\n');
+    fs.writeFileSync(join(root, 'design/pencil/storyboards/home-map.pen'), 'pen');
+    fs.writeFileSync(join(root, 'design/pencil/screenshots/home-mobile.png'), 'png');
+    fs.writeFileSync(join(root, 'design/pencil/exports/home-map.png'), 'png');
+    fs.writeFileSync(join(root, 'design/pencil/exports/home-map-frame.png'), 'png');
     return root;
 }
 
@@ -103,7 +108,7 @@ describe('pencil storyboard sync contract', () => {
         expect(result).toEqual({ ok: true, errors: [] });
     });
 
-    test('rejects unstable ids, missing source files, invalid viewports, and duplicate manifest entries', () => {
+    test('rejects unstable ids, missing source files, and invalid viewports', () => {
         const manifest = makeStoryboardManifest();
         manifest.entries = [
             {
@@ -134,6 +139,24 @@ describe('pencil storyboard sync contract', () => {
         expect(result.errors).toContain('entries[0].sourcePaths entry does not exist: app/missing-page.tsx');
         expect(result.errors).toContain('entries[].viewports[0].key must be mobile, tablet, or desktop');
         expect(result.errors).toContain('entries[].viewports[0].width must be a positive number');
+    });
+
+    test('rejects duplicate manifest entry ids when the manifest otherwise looks healthy', () => {
+        const manifest = makeStoryboardManifest();
+        manifest.entries = [
+            manifest.entries[0],
+            {
+                ...manifest.entries[0],
+                title: 'Home map duplicate',
+            },
+        ];
+
+        const result = validatePencilStoryboardManifest(manifest, {
+            rootDir: makeStoryboardFixtureRoot(),
+            requireExistingFiles: true,
+        });
+
+        expect(result.ok).toBe(false);
         expect(result.errors).toContain('duplicate storyboard entry id: home-map');
     });
 
@@ -212,4 +235,3 @@ describe('pencil storyboard sync contract', () => {
         expect(buildStoryboardDriftFingerprint(stale)).not.toBe(buildStoryboardDriftFingerprint(entry));
     });
 });
-
