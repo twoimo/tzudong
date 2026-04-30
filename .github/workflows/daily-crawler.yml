@@ -38,6 +38,7 @@ permissions:
 # GitHub Actions Node 20 deprecation 사전 대응: JS actions를 Node 24 런타임으로 강제
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  GEMINI_CLI_TRUST_WORKSPACE: "true"
 
 # [PERF] 운영(default branch -> data sync) 런은 직렬화하고, 검증용 non-default workflow_dispatch 는 브랜치별로 분리
 # schedule 및 수동 default branch 재실행은 운영 락을 공유하고, 검증 브랜치는 별도 group 으로 실행
