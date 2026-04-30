@@ -107,6 +107,10 @@ bun run qa:insights-chat -- --live
 - `apps/web/scripts/insight-chat-db-ops.mjs`
 - `apps/web/tests-unit/insight-chat-api-routes.test.ts`
 
+## 🎨 Pencil storyboard sync
+
+Frontend ↔ Pencil Desktop storyboard work follows a controlled sync contract: app code/runtime stays the source of truth, code-to-Pencil artifacts are generated from manifests, and Pencil-to-code changes are review-queue proposals only. See [`docs/pencil-storyboard-sync.md`](docs/pencil-storyboard-sync.md) for the route inventory seed, artifact layout, reverse-sync guardrails, and code-review checklist.
+
 ## 📱 모바일 바텀시트 패턴
 
 모바일 전용 폼/모달은 `components/ui/mobile-sheet-frame.tsx`의 공통 프리셋과 헤더를 우선 재사용합니다.
