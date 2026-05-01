@@ -113,6 +113,8 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertIn("증거부족", (output / "coarse-address-recrawl-jobs.md").read_text(encoding="utf-8"))
             self.assertEqual(0, summary["provider_search_review_jobs"])
             self.assertTrue((output / "provider-search-review-jobs.jsonl").exists())
+            self.assertEqual(0, summary["distance_no_candidate_review_jobs"])
+            self.assertTrue((output / "distance-no-candidate-review-jobs.jsonl").exists())
             self.assertTrue((output / "unresolved_followup_queues" / "multi_candidate.jsonl").exists())
 
     def test_build_coarse_address_recrawl_jobs_adds_queries_and_private_flag(self):
@@ -222,6 +224,67 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertTrue((root / "provider-search-review-jobs.md").exists())
             self.assertTrue((root / "provider-search-review-manifest.json").exists())
             self.assertIn("숙달돼지", (root / "provider-search-review-jobs.md").read_text(encoding="utf-8"))
+
+
+    def test_build_distance_no_candidate_review_jobs_adds_radius_and_coordinate_flags(self):
+        rows = [
+            {
+                "trace_id": "distance",
+                "source_line": 21,
+                "video_id": "v1",
+                "youtube_link": "https://www.youtube.com/watch?v=v1",
+                "origin_name": "치킨플러스 여의도점",
+                "origin_address_text": "서울특별시 영등포구 여의도동",
+                "recrawl_bucket": "distance_no_candidate_review",
+                "problem_tags": ["no_candidate_within_20m"],
+                "source_lat": None,
+                "source_lng": None,
+                "evidence_text": "20m 이내 후보 없음",
+            },
+            {"trace_id": "other", "recrawl_bucket": "provider_search_no_result"},
+        ]
+
+        jobs = package.build_distance_no_candidate_review_jobs(rows)
+
+        self.assertEqual(1, len(jobs))
+        self.assertEqual("dong_level", jobs[0]["address_precision"])
+        self.assertEqual(20, jobs[0]["distance_threshold_m"])
+        self.assertEqual([50, 100, 200, 500], jobs[0]["suggested_review_radius_m"])
+        self.assertIn("missing_source_coordinates", jobs[0]["problem_tags"])
+        self.assertIn("coarse_address_context", jobs[0]["problem_tags"])
+        self.assertIn("correct_source_coordinates_then_rerun_stage2", jobs[0]["next_action_options"])
+        self.assertEqual(
+            "verify_source_coordinates_radius_or_video_evidence_before_accepting_distance_exception",
+            jobs[0]["review_instruction"],
+        )
+
+    def test_write_distance_no_candidate_review_outputs_creates_exports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rows = [
+                {
+                    "trace_id": "distance",
+                    "source_line": 21,
+                    "video_id": "v1",
+                    "youtube_link": "https://www.youtube.com/watch?v=v1",
+                    "origin_name": "인천분식",
+                    "origin_address_text": "경북 구미시 선산읍 선산중앙로 78",
+                    "recrawl_bucket": "distance_no_candidate_review",
+                    "problem_tags": ["no_candidate_within_20m"],
+                    "source_lat": 36.0,
+                    "source_lng": 128.0,
+                }
+            ]
+
+            summary = package.write_distance_no_candidate_review_outputs(root, rows)
+
+            self.assertEqual(1, summary["distance_no_candidate_review_jobs"])
+            self.assertEqual(0, summary["distance_no_candidate_missing_source_coordinates"])
+            self.assertTrue((root / "distance-no-candidate-review-jobs.jsonl").exists())
+            self.assertTrue((root / "distance-no-candidate-review-jobs.csv").exists())
+            self.assertTrue((root / "distance-no-candidate-review-jobs.md").exists())
+            self.assertTrue((root / "distance-no-candidate-review-manifest.json").exists())
+            self.assertIn("인천분식", (root / "distance-no-candidate-review-jobs.md").read_text(encoding="utf-8"))
 
     def test_markdown_cell_escapes_pipes_and_lists(self):
         self.assertEqual("A\\|B", package.markdown_cell("A|B"))

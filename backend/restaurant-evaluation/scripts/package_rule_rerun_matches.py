@@ -824,6 +824,140 @@ def write_provider_search_review_outputs(output_dir: Path, rows: list[dict[str, 
         "provider_search_review_outputs": manifest,
     }
 
+
+
+def distance_review_flags(row: dict[str, Any]) -> list[str]:
+    flags = {"distance_threshold_review", "no_candidate_within_20m"}
+    if row.get("source_lat") is None or row.get("source_lng") is None:
+        flags.add("missing_source_coordinates")
+    if is_address_coarse(norm_space(row.get("origin_address_text"))):
+        flags.add("coarse_address_context")
+    if "google_no_usable_candidate" in set(row.get("problem_tags") or []):
+        flags.add("google_no_usable_candidate")
+    return sorted(flags)
+
+
+def build_distance_no_candidate_review_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    jobs: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("recrawl_bucket") != "distance_no_candidate_review":
+            continue
+        address = norm_space(row.get("origin_address_text"))
+        problem_tags = sorted(set(row.get("problem_tags") or []) | set(distance_review_flags(row)))
+        jobs.append(
+            {
+                "trace_id": row.get("trace_id"),
+                "source_line": row.get("source_line"),
+                "video_id": row.get("video_id"),
+                "youtube_link": row.get("youtube_link"),
+                "origin_name": row.get("origin_name"),
+                "origin_address_text": address,
+                "address_precision": coarse_address_level(address),
+                "source_lat": row.get("source_lat"),
+                "source_lng": row.get("source_lng"),
+                "source_selection_file": row.get("source_selection_file") or row.get("selection_file"),
+                "suggested_search_queries": provider_search_queries(row) or build_suggested_queries(row),
+                "review_instruction": "verify_source_coordinates_radius_or_video_evidence_before_accepting_distance_exception",
+                "distance_threshold_m": 20,
+                "suggested_review_radius_m": [50, 100, 200, 500],
+                "required_evidence": [
+                    "video_address_or_map_evidence",
+                    "source_coordinate_origin_and_precision",
+                    "nearest_provider_candidate_distance_and_address",
+                    "reason_to_accept_or_reject_distance_exception",
+                ],
+                "next_action_options": [
+                    "correct_source_coordinates_then_rerun_stage2",
+                    "recrawl_precise_address_then_rerun_stage1_stage2",
+                    "accept_nearest_candidate_with_manual_evidence",
+                    "tag_source_data_error_or_manual_review",
+                ],
+                "problem_tags": problem_tags,
+                "evidence_text": row.get("evidence_text"),
+            }
+        )
+    return jobs
+
+
+def distance_no_candidate_csv_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "trace_id": row.get("trace_id"),
+        "source_line": row.get("source_line"),
+        "origin_name": row.get("origin_name"),
+        "origin_address_text": row.get("origin_address_text"),
+        "address_precision": row.get("address_precision"),
+        "source_lat": row.get("source_lat"),
+        "source_lng": row.get("source_lng"),
+        "distance_threshold_m": row.get("distance_threshold_m"),
+        "suggested_review_radius_m": " ; ".join(str(item) for item in row.get("suggested_review_radius_m") or []),
+        "suggested_search_queries": " ; ".join(row.get("suggested_search_queries") or []),
+        "next_action_options": " ; ".join(row.get("next_action_options") or []),
+        "problem_tags": ";".join(row.get("problem_tags") or []),
+        "source_selection_file": row.get("source_selection_file"),
+        "youtube_link": row.get("youtube_link"),
+    }
+
+
+def write_distance_no_candidate_review_outputs(output_dir: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    jobs = build_distance_no_candidate_review_jobs(rows)
+    write_jsonl(output_dir / "distance-no-candidate-review-jobs.jsonl", jobs)
+    fieldnames = list(distance_no_candidate_csv_row({}).keys())
+    write_dict_csv(
+        output_dir / "distance-no-candidate-review-jobs.csv",
+        [distance_no_candidate_csv_row(row) for row in jobs],
+        fieldnames,
+    )
+    lines = [
+        "# Distance No-candidate Review Jobs",
+        "",
+        "이 표는 distance_no_candidate_review 버킷을 좌표/반경/영상 증거 검토 작업으로 실행하기 위한 report-only 작업 패키지입니다.",
+        "",
+        "| trace_id | origin | address | precision | source_coord | radius_m | action_options | youtube |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in jobs:
+        source_coord = ""
+        if row.get("source_lat") is not None and row.get("source_lng") is not None:
+            source_coord = f"{row.get('source_lat')},{row.get('source_lng')}"
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(str(row.get("trace_id") or "")[:12]),
+                    markdown_cell(row.get("origin_name")),
+                    markdown_cell(row.get("origin_address_text")),
+                    markdown_cell(row.get("address_precision")),
+                    markdown_cell(source_coord),
+                    markdown_cell(row.get("suggested_review_radius_m")),
+                    markdown_cell(row.get("next_action_options")),
+                    markdown_cell(row.get("youtube_link")),
+                ]
+            )
+            + " |"
+        )
+    (output_dir / "distance-no-candidate-review-jobs.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    manifest = {
+        "slug": "distance_no_candidate_review_jobs",
+        "count": len(jobs),
+        "jsonl_path": str(output_dir / "distance-no-candidate-review-jobs.jsonl"),
+        "csv_path": str(output_dir / "distance-no-candidate-review-jobs.csv"),
+        "markdown_path": str(output_dir / "distance-no-candidate-review-jobs.md"),
+        "address_precision_counter": dict(Counter(row.get("address_precision") for row in jobs)),
+        "missing_source_coordinates": sum(1 for row in jobs if row.get("source_lat") is None or row.get("source_lng") is None),
+        "problem_tag_counter": dict(Counter(tag for row in jobs for tag in row.get("problem_tags", []))),
+    }
+    (output_dir / "distance-no-candidate-review-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "distance_no_candidate_review_jobs": len(jobs),
+        "distance_no_candidate_missing_source_coordinates": manifest["missing_source_coordinates"],
+        "distance_no_candidate_precision_counter": manifest["address_precision_counter"],
+        "distance_no_candidate_problem_tag_counter": manifest["problem_tag_counter"],
+        "distance_no_candidate_review_outputs": manifest,
+    }
+
 def evidence_text(row: dict[str, Any]) -> str:
     summary = row.get("evidence_summary")
     if isinstance(summary, list):
@@ -1014,6 +1148,7 @@ def package_report(
     insufficient_evidence_summary = write_insufficient_evidence_outputs(output_dir, insufficient_evidence_rows)
     coarse_address_summary = write_coarse_address_recrawl_outputs(output_dir, insufficient_evidence_rows)
     provider_search_summary = write_provider_search_review_outputs(output_dir, insufficient_evidence_rows)
+    distance_no_candidate_summary = write_distance_no_candidate_review_outputs(output_dir, insufficient_evidence_rows)
 
     summary = {
         "generated_at": utc_now(),
@@ -1031,6 +1166,7 @@ def package_report(
         **insufficient_evidence_summary,
         **coarse_address_summary,
         **provider_search_summary,
+        **distance_no_candidate_summary,
         "risk_flag_counter": dict(Counter(flag for row in review_candidates for flag in row["risk_flags"])),
         "unresolved_pending_reason_counter": dict(Counter(row.get("pending_reason") or "unknown" for row in unresolved_rows)),
     }
@@ -1065,6 +1201,8 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
         "- `coarse-address-recrawl-manifest.json`: coarse-address job counts and precision breakdown",
         "- `provider-search-review-jobs.*`: closed/renamed/name-query review jobs for provider no-result rows",
         "- `provider-search-review-manifest.json`: provider no-result job counts and tag breakdown",
+        "- `distance-no-candidate-review-jobs.*`: source-coordinate/radius/video-evidence review jobs",
+        "- `distance-no-candidate-review-manifest.json`: distance no-candidate job counts and tag breakdown",
         "- `missing-source-transform.jsonl`: matched rows not found in source transforms",
         "- `missing-rule-result.jsonl`: matched rows whose scratch rule output could not be loaded",
         "- `unresolved_followup_queues/`: unresolved rows split by pending reason",
@@ -1113,6 +1251,17 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
     lines.append(f"- jsonl: `{summary['provider_search_review_outputs']['jsonl_path']}`")
     lines.append(f"- csv: `{summary['provider_search_review_outputs']['csv_path']}`")
     lines.append(f"- markdown: `{summary['provider_search_review_outputs']['markdown_path']}`")
+    lines += ["", "## Distance no-candidate review jobs", ""]
+    lines.append(f"- jobs: {summary['distance_no_candidate_review_jobs']}")
+    lines.append(f"- missing_source_coordinates: {summary['distance_no_candidate_missing_source_coordinates']}")
+    for precision, count in sorted(summary["distance_no_candidate_precision_counter"].items()):
+        lines.append(f"- `{precision}`: {count}")
+    lines.append("- problem_tags:")
+    for tag, count in sorted(summary["distance_no_candidate_problem_tag_counter"].items()):
+        lines.append(f"  - `{tag}`: {count}")
+    lines.append(f"- jsonl: `{summary['distance_no_candidate_review_outputs']['jsonl_path']}`")
+    lines.append(f"- csv: `{summary['distance_no_candidate_review_outputs']['csv_path']}`")
+    lines.append(f"- markdown: `{summary['distance_no_candidate_review_outputs']['markdown_path']}`")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
