@@ -496,6 +496,170 @@ def write_multi_candidate_tables(output_dir: Path, rows: list[dict[str, Any]]) -
     }
 
 
+
+def address_region_tokens(address: str, limit: int = 3) -> str:
+    return " ".join(norm_space(address).split()[:limit])
+
+
+def coarse_address_level(address: str) -> str:
+    """Classify how precise a source address is for recrawl triage."""
+    address = norm_space(address)
+    if not address:
+        return "missing"
+    if STREET_OR_LOT_RE.search(address):
+        return "road_or_lot_present"
+    parts = address.split()
+    if not parts:
+        return "missing"
+    last = parts[-1]
+    if last.endswith(("동", "읍", "면", "리")):
+        return "dong_level"
+    if last.endswith(("구", "시", "군")):
+        return "district_or_city_level"
+    return "coarse_unknown_level"
+
+
+def is_private_or_masked_name(name: Any) -> bool:
+    text = norm_space(name)
+    return any(marker in text for marker in ("[비공개]", "비공개", "비공개 식당", "***"))
+
+
+def searchable_name_hint(name: Any) -> str:
+    text = norm_space(name)
+    text = text.replace("[비공개]", " ").replace("비공개", " ").replace("***", " ")
+    return norm_space(text)
+
+
+def build_suggested_queries(row: dict[str, Any]) -> list[str]:
+    name = norm_space(row.get("origin_name"))
+    search_name = searchable_name_hint(name) or name
+    address = norm_space(row.get("origin_address_text"))
+    region = address_region_tokens(address)
+    candidates = [
+        f"{search_name} {address}",
+        f"{search_name} {region}",
+        f"{search_name} 맛집",
+    ]
+    if is_private_or_masked_name(name) and region:
+        candidates.append(f"{region} {search_name}")
+        candidates.append(f"{region} 맛집")
+    seen: set[str] = set()
+    queries: list[str] = []
+    for query in candidates:
+        query = norm_space(query)
+        if query and query not in seen:
+            seen.add(query)
+            queries.append(query)
+    return queries
+
+
+def build_coarse_address_recrawl_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    jobs: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("recrawl_bucket") != "coarse_source_address_recrawl":
+            continue
+        address = norm_space(row.get("origin_address_text"))
+        private_or_masked = is_private_or_masked_name(row.get("origin_name"))
+        problem_tags = sorted(
+            set(row.get("problem_tags") or [])
+            | ({"private_masked_name_manual_review"} if private_or_masked else set())
+        )
+        jobs.append(
+            {
+                "trace_id": row.get("trace_id"),
+                "source_line": row.get("source_line"),
+                "video_id": row.get("video_id"),
+                "youtube_link": row.get("youtube_link"),
+                "origin_name": row.get("origin_name"),
+                "current_coarse_address": address,
+                "address_precision": coarse_address_level(address),
+                "is_private_or_masked_name": private_or_masked,
+                "source_selection_file": row.get("source_selection_file") or row.get("selection_file"),
+                "suggested_search_queries": build_suggested_queries(row),
+                "recrawl_instruction": "recover_precise_road_or_jibun_address_from_video_evidence",
+                "required_evidence": [
+                    "address_subtitle_or_caption",
+                    "map_link_or_place_name",
+                    "road_or_jibun_detail",
+                    "candidate_source_timestamp_if_possible",
+                ],
+                "next_action": "recrawl_or_enrich_source_address_then_rerun_stage1_stage2",
+                "problem_tags": problem_tags,
+                "evidence_text": row.get("evidence_text"),
+            }
+        )
+    return jobs
+
+
+def coarse_address_recrawl_csv_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "trace_id": row.get("trace_id"),
+        "source_line": row.get("source_line"),
+        "origin_name": row.get("origin_name"),
+        "current_coarse_address": row.get("current_coarse_address"),
+        "address_precision": row.get("address_precision"),
+        "is_private_or_masked_name": row.get("is_private_or_masked_name"),
+        "suggested_search_queries": " ; ".join(row.get("suggested_search_queries") or []),
+        "required_evidence": " ; ".join(row.get("required_evidence") or []),
+        "problem_tags": ";".join(row.get("problem_tags") or []),
+        "source_selection_file": row.get("source_selection_file"),
+        "youtube_link": row.get("youtube_link"),
+    }
+
+
+def write_coarse_address_recrawl_outputs(output_dir: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    jobs = build_coarse_address_recrawl_jobs(rows)
+    write_jsonl(output_dir / "coarse-address-recrawl-jobs.jsonl", jobs)
+    fieldnames = list(coarse_address_recrawl_csv_row({}).keys())
+    write_dict_csv(
+        output_dir / "coarse-address-recrawl-jobs.csv",
+        [coarse_address_recrawl_csv_row(row) for row in jobs],
+        fieldnames,
+    )
+    lines = [
+        "# Coarse Address Recrawl Jobs",
+        "",
+        "이 표는 coarse_source_address_recrawl 버킷을 영상/출처 재확인 작업으로 실행하기 위한 report-only 작업 패키지입니다.",
+        "",
+        "| trace_id | origin | coarse_address | precision | private_or_masked | queries | youtube |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in jobs:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(str(row.get("trace_id") or "")[:12]),
+                    markdown_cell(row.get("origin_name")),
+                    markdown_cell(row.get("current_coarse_address")),
+                    markdown_cell(row.get("address_precision")),
+                    markdown_cell(row.get("is_private_or_masked_name")),
+                    markdown_cell(row.get("suggested_search_queries")),
+                    markdown_cell(row.get("youtube_link")),
+                ]
+            )
+            + " |"
+        )
+    (output_dir / "coarse-address-recrawl-jobs.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    manifest = {
+        "slug": "coarse_address_recrawl_jobs",
+        "count": len(jobs),
+        "jsonl_path": str(output_dir / "coarse-address-recrawl-jobs.jsonl"),
+        "csv_path": str(output_dir / "coarse-address-recrawl-jobs.csv"),
+        "markdown_path": str(output_dir / "coarse-address-recrawl-jobs.md"),
+        "private_or_masked_count": sum(1 for row in jobs if row.get("is_private_or_masked_name")),
+        "address_precision_counter": dict(Counter(row.get("address_precision") for row in jobs)),
+    }
+    (output_dir / "coarse-address-recrawl-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "coarse_address_recrawl_jobs": len(jobs),
+        "coarse_address_private_or_masked": manifest["private_or_masked_count"],
+        "coarse_address_precision_counter": manifest["address_precision_counter"],
+        "coarse_address_recrawl_outputs": manifest,
+    }
 def evidence_text(row: dict[str, Any]) -> str:
     summary = row.get("evidence_summary")
     if isinstance(summary, list):
@@ -682,10 +846,9 @@ def package_report(
             **write_multi_candidate_tables(output_dir, comparison_rows),
             "multi_candidate_live_lookup": True,
         }
-    insufficient_evidence_summary = write_insufficient_evidence_outputs(
-        output_dir,
-        build_insufficient_evidence_rows(unresolved_rows, transform_index),
-    )
+    insufficient_evidence_rows = build_insufficient_evidence_rows(unresolved_rows, transform_index)
+    insufficient_evidence_summary = write_insufficient_evidence_outputs(output_dir, insufficient_evidence_rows)
+    coarse_address_summary = write_coarse_address_recrawl_outputs(output_dir, insufficient_evidence_rows)
 
     summary = {
         "generated_at": utc_now(),
@@ -701,6 +864,7 @@ def package_report(
         "unresolved_followup_manifest": unresolved_manifest,
         **multi_candidate_summary,
         **insufficient_evidence_summary,
+        **coarse_address_summary,
         "risk_flag_counter": dict(Counter(flag for row in review_candidates for flag in row["risk_flags"])),
         "unresolved_pending_reason_counter": dict(Counter(row.get("pending_reason") or "unknown" for row in unresolved_rows)),
     }
@@ -731,6 +895,8 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
         "- `multi-candidate-comparison.*`: optional live Naver candidate comparison exports when enabled",
         "- `insufficient-evidence-recrawl-table.*`: recrawl/evidence-enrichment table for insufficient-evidence rows",
         "- `insufficient_evidence_recrawl_queues/`: insufficient-evidence rows split by recrawl bucket",
+        "- `coarse-address-recrawl-jobs.*`: actionable source-address enrichment jobs for coarse addresses",
+        "- `coarse-address-recrawl-manifest.json`: coarse-address job counts and precision breakdown",
         "- `missing-source-transform.jsonl`: matched rows not found in source transforms",
         "- `missing-rule-result.jsonl`: matched rows whose scratch rule output could not be loaded",
         "- `unresolved_followup_queues/`: unresolved rows split by pending reason",
@@ -761,6 +927,14 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
     lines += ["", "## Insufficient evidence queue files", ""]
     for item in summary["insufficient_evidence_manifest"]:
         lines.append(f"- `{item['slug']}`: {item['count']} rows → `{item['path']}`")
+    lines += ["", "## Coarse address recrawl jobs", ""]
+    lines.append(f"- jobs: {summary['coarse_address_recrawl_jobs']}")
+    lines.append(f"- private_or_masked: {summary['coarse_address_private_or_masked']}")
+    for precision, count in sorted(summary["coarse_address_precision_counter"].items()):
+        lines.append(f"- `{precision}`: {count}")
+    lines.append(f"- jsonl: `{summary['coarse_address_recrawl_outputs']['jsonl_path']}`")
+    lines.append(f"- csv: `{summary['coarse_address_recrawl_outputs']['csv_path']}`")
+    lines.append(f"- markdown: `{summary['coarse_address_recrawl_outputs']['markdown_path']}`")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
