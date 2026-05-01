@@ -286,9 +286,9 @@ const STORYBOARD_WEB_SEARCH_TIMEOUT_MS = Number(process.env.STORYBOARD_WEB_SEARC
 const INSIGHT_QUERY_TTL_MS = Number(process.env.INSIGHT_QUERY_CACHE_TTL_MS || '45000');
 
 const GEMINI_API_KEY_ENV = (
-  process.env.GEMINI_OCR_YEON?.trim()
+  process.env.GEMINI_API_KEY?.trim()
+  || process.env.GEMINI_OCR_YEON?.trim()
   || process.env.STORYBOARD_AGENT_GEMINI_API_KEY?.trim()
-  || process.env.GEMINI_API_KEY?.trim()
   || process.env.GOOGLE_API_KEY?.trim()
   || process.env.NEXT_PUBLIC_GOOGLE_API_KEY?.trim()
   || ''

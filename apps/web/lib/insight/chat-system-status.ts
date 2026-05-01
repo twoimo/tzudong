@@ -169,9 +169,9 @@ const SUPABASE_ENV_CHECK_SNIPPET = [
 
 const GEMINI_KEY_CHECK_SNIPPET = [
   '# Gemini 서버 키 점검 (택1)',
-  'GEMINI_OCR_YEON="${GEMINI_OCR_YEON:-<GEMINI_KEY>}"',
+  'GEMINI_API_KEY="${GEMINI_API_KEY:-<GEMINI_KEY>}"',
   '# 또는 STORYBOARD_AGENT_GEMINI_API_KEY / GOOGLE_API_KEY',
-  '[ -n "$GEMINI_OCR_YEON" ] || echo "Gemini key missing"',
+  '[ -n "$GEMINI_API_KEY" ] || echo "Gemini key missing"',
 ].join('\n');
 
 const OPENAI_KEY_CHECK_SNIPPET = [
@@ -219,9 +219,9 @@ export function resolveAdminInsightSystemKeyFlags(
     supabaseServiceRoleKey: hasNonEmptyValue(env.SUPABASE_SERVICE_ROLE_KEY),
     geminiServerKey: Boolean(
       pickFirstEnvValue(env, [
+        'GEMINI_API_KEY',
         'GEMINI_OCR_YEON',
         'STORYBOARD_AGENT_GEMINI_API_KEY',
-        'GEMINI_API_KEY',
         'GOOGLE_API_KEY',
         'NEXT_PUBLIC_GOOGLE_API_KEY',
       ]),
@@ -600,7 +600,7 @@ export function buildAdminInsightOpsChecklist(
       severity: 'medium',
       category: 'provider-key',
       action:
-        'Gemini 서버 키가 없습니다. `GEMINI_OCR_YEON` 또는 `STORYBOARD_AGENT_GEMINI_API_KEY`(또는 `GOOGLE_API_KEY`)를 설정하거나, 설정 패널에서 브라우저 키로 추가하세요.',
+        'Gemini 서버 키가 없습니다. `GEMINI_API_KEY` 또는 `STORYBOARD_AGENT_GEMINI_API_KEY`(또는 `GOOGLE_API_KEY`)를 설정하거나, 설정 패널에서 브라우저 키로 추가하세요.',
       command: GEMINI_KEY_CHECK_SNIPPET,
       commandSnippet: GEMINI_KEY_CHECK_SNIPPET,
       source: 'provider-key',
