@@ -813,6 +813,13 @@ describe('admin insight system status API route', () => {
             summaryPath: '/tmp/summary.md',
             noWorkShortCircuit: false,
             policyMode: 'end_to_end',
+            runtime: {
+                githubRunId: '25206693886',
+                githubRunUrl: 'https://github.com/twoimo/tzudong/actions/runs/25206693886',
+                githubWorkflow: 'Daily Data Collection',
+                executionBranch: 'main',
+                targetBranch: 'data',
+            },
         }));
 
         const restoreEnv = withEnv({
@@ -840,6 +847,10 @@ describe('admin insight system status API route', () => {
             expect(payload.runDaily?.finalStatus).toBe('ERROR');
             expect(payload.runDaily?.finalExitCode).toBe(1);
             expect(payload.runDaily?.failedRequiredSteps).toContain('Step 13 (Supabase) - exit=23');
+            expect(payload.runDaily?.runtime?.githubRunId).toBe('25206693886');
+            expect(payload.runDaily?.runtime?.githubRunUrl).toBe('https://github.com/twoimo/tzudong/actions/runs/25206693886');
+            expect(payload.runDaily?.runtime?.executionBranch).toBe('main');
+            expect(payload.runDaily?.runtime?.targetBranch).toBe('data');
             expect(payload.checklist.some((item) => item.id === 'run-daily-required-failed')).toBe(true);
             expect(payload.githubActions?.enabled).toBe(false);
             expect(payload.githubActions?.detail).toBe('disabled');
