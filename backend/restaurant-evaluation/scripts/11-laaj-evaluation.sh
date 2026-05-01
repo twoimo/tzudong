@@ -237,7 +237,7 @@ if [ -n "$USE_OAUTH" ] && [ "$USE_OAUTH" = "true" ]; then
 fi
 
 # Gemini API 키 및 모델 설정
-export GEMINI_API_KEY="${GEMINI_API_KEY_BYEON:-$GEMINI_API_KEY}"
+export GEMINI_API_KEY="${GEMINI_API_KEY:-$GEMINI_API_KEY_BYEON}"
 export PRIMARY_MODEL="gemini-3-flash-preview"
 export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.1-pro-preview}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
