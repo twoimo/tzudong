@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import {
+  canAutoSoftDeleteDuplicateSource,
   findActiveRestaurantIdentityConflict,
   formatActiveRestaurantIdentityConflictMessage,
   isActiveRestaurantIdentityConflictError,
@@ -690,6 +691,36 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           similarity_score: 1,
           detected_at: updatedAt,
         };
+
+        if (canAutoSoftDeleteDuplicateSource(record)) {
+          await supabase
+            .from('restaurants')
+            // @ts-expect-error - Supabase 자동 생성 타입 문제
+            .update({
+              status: 'deleted',
+              db_error_message: conflictMessage,
+              db_error_details: errorDetails,
+              updated_by_admin_id: adminUserId,
+              updated_at: updatedAt,
+            })
+            .eq('id', record.id);
+
+          onSuccess(record.id, {
+            status: 'deleted',
+            db_error_message: conflictMessage,
+            db_error_details: errorDetails,
+            updated_by_admin_id: adminUserId,
+            updated_at: updatedAt,
+          });
+
+          toast({
+            title: '중복 레코드 정리 완료',
+            description: `이미 승인된 "${identityConflict.name}" 레코드가 있어 현재 pending 중복 레코드를 삭제 처리했습니다.`,
+          });
+          onOpenChange(false);
+          resetForm();
+          return;
+        }
 
         await supabase
           .from('restaurants')
