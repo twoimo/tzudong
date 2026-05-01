@@ -38,6 +38,8 @@ LOCAL_URL = "https://openapi.naver.com/v1/search/local.json"
 LARGE_DISTANCE_M = 200.0
 VERY_LARGE_DISTANCE_M = 1000.0
 HTML_TAG_RE = re.compile(r"<[^>]+>")
+COARSE_SUFFIX_RE = re.compile(r"(동|읍|면|리|구|시|군)$")
+STREET_OR_LOT_RE = re.compile(r"(\d|로\b|길\b|번지|산\s*\d)")
 
 
 def utc_now() -> str:
@@ -133,6 +135,26 @@ def source_coordinates(record: dict[str, Any]) -> tuple[float | None, float | No
     if isinstance(origin_address, dict):
         return float_or_none(origin_address.get("lat")), float_or_none(origin_address.get("lng"))
     return None, None
+
+
+def origin_address_text(record: dict[str, Any]) -> str:
+    origin_address = record.get("origin_address")
+    if isinstance(origin_address, dict):
+        for key in ("address", "roadAddress", "jibunAddress"):
+            value = norm_space(origin_address.get(key))
+            if value:
+                return value
+    return norm_space(origin_address)
+
+
+def is_address_coarse(address: str) -> bool:
+    address = norm_space(address)
+    if not address:
+        return True
+    parts = address.split()
+    if len(parts) <= 3 and COARSE_SUFFIX_RE.search(parts[-1] if parts else ""):
+        return True
+    return not bool(STREET_OR_LOT_RE.search(address))
 
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -474,6 +496,137 @@ def write_multi_candidate_tables(output_dir: Path, rows: list[dict[str, Any]]) -
     }
 
 
+def evidence_text(row: dict[str, Any]) -> str:
+    summary = row.get("evidence_summary")
+    if isinstance(summary, list):
+        return " | ".join(norm_space(item) for item in summary)
+    return norm_space(summary)
+
+
+def insufficient_evidence_bucket(row: dict[str, Any], source_record: dict[str, Any]) -> tuple[str, str, list[str]]:
+    evidence = evidence_text(row)
+    address = norm_space(row.get("origin_address_text")) or origin_address_text(source_record)
+    tags: list[str] = []
+    if is_address_coarse(address):
+        tags.append("coarse_source_address")
+    if "Google search returned no usable candidate" in evidence:
+        tags.append("google_no_usable_candidate")
+    if "검색 결과 없음" in evidence:
+        tags.append("naver_search_no_result")
+    if "20m 이내 후보 없음" in evidence:
+        tags.append("no_candidate_within_20m")
+
+    action = row.get("recommended_action")
+    if "no_candidate_within_20m" in tags:
+        return "distance_no_candidate_review", "review_source_coordinates_or_expand_radius_with_video_evidence", tags
+    if action == "rerun_rule_evaluation_with_candidate_review":
+        return "candidate_review_still_insufficient", "manual_candidate_review_against_video_evidence", tags
+    if "coarse_source_address" in tags:
+        return "coarse_source_address_recrawl", "recrawl_or_enrich_source_address", tags
+    if "naver_search_no_result" in tags:
+        return "provider_search_no_result", "closed_renamed_or_name_query_review", tags
+    return "generic_evidence_gap", "manual_evidence_enrichment", tags
+
+
+def build_insufficient_evidence_rows(
+    unresolved_rows: list[dict[str, Any]],
+    transform_index: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    output_rows: list[dict[str, Any]] = []
+    for row in unresolved_rows:
+        if row.get("pending_reason") != "insufficient_evidence":
+            continue
+        trace_id = str(row.get("trace_id") or "")
+        source_record = transform_index.get(trace_id, {})
+        bucket, next_action, tags = insufficient_evidence_bucket(row, source_record)
+        source_lat, source_lng = source_coordinates(source_record)
+        output_rows.append(
+            {
+                "trace_id": trace_id,
+                "source_line": source_record.get("_line"),
+                "video_id": row.get("video_id"),
+                "youtube_link": row.get("youtube_link"),
+                "origin_name": row.get("origin_name"),
+                "origin_address_text": row.get("origin_address_text") or origin_address_text(source_record),
+                "stage": row.get("stage"),
+                "recommended_action": row.get("recommended_action"),
+                "pending_reason": row.get("pending_reason"),
+                "evidence_text": evidence_text(row),
+                "recrawl_bucket": bucket,
+                "next_action": next_action,
+                "problem_tags": sorted(set(tags)),
+                "source_lat": source_lat,
+                "source_lng": source_lng,
+                "source_selection_file": row.get("source_selection_file"),
+                "selection_file": row.get("selection_file"),
+            }
+        )
+    return output_rows
+
+
+def write_insufficient_evidence_outputs(output_dir: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    queue_dir = output_dir / "insufficient_evidence_recrawl_queues"
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[str(row.get("recrawl_bucket") or "generic_evidence_gap")].append(row)
+
+    manifest = []
+    for slug, queue_rows in sorted(grouped.items()):
+        path = queue_dir / f"{slug}.jsonl"
+        write_jsonl(path, queue_rows)
+        manifest.append({"slug": slug, "count": len(queue_rows), "path": str(path)})
+
+    fieldnames = [
+        "trace_id",
+        "source_line",
+        "origin_name",
+        "origin_address_text",
+        "recrawl_bucket",
+        "next_action",
+        "problem_tags",
+        "stage",
+        "recommended_action",
+        "evidence_text",
+        "youtube_link",
+    ]
+    csv_rows = [{**row, "problem_tags": ";".join(row.get("problem_tags") or [])} for row in rows]
+    write_jsonl(output_dir / "insufficient-evidence-recrawl-table.jsonl", rows)
+    write_dict_csv(output_dir / "insufficient-evidence-recrawl-table.csv", csv_rows, fieldnames)
+    lines = [
+        "# Insufficient Evidence Recrawl Table",
+        "",
+        "이 표는 insufficient_evidence 112개를 재크롤링/증거 보강 작업 큐로 나눈 report-only 산출물입니다.",
+        "",
+        "| trace_id | origin | bucket | next_action | tags | youtube |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in rows:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(str(row.get("trace_id") or "")[:12]),
+                    markdown_cell(row.get("origin_name")),
+                    markdown_cell(row.get("recrawl_bucket")),
+                    markdown_cell(row.get("next_action")),
+                    markdown_cell(row.get("problem_tags")),
+                    markdown_cell(row.get("youtube_link")),
+                ]
+            )
+            + " |"
+        )
+    (output_dir / "insufficient-evidence-recrawl-table.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (queue_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "insufficient_evidence_rows": len(rows),
+        "insufficient_evidence_manifest": manifest,
+        "insufficient_evidence_bucket_counter": dict(Counter(row["recrawl_bucket"] for row in rows)),
+    }
+
+
 def package_report(
     rule_rerun_report_dir: Path,
     transforms_path: Path,
@@ -529,6 +682,10 @@ def package_report(
             **write_multi_candidate_tables(output_dir, comparison_rows),
             "multi_candidate_live_lookup": True,
         }
+    insufficient_evidence_summary = write_insufficient_evidence_outputs(
+        output_dir,
+        build_insufficient_evidence_rows(unresolved_rows, transform_index),
+    )
 
     summary = {
         "generated_at": utc_now(),
@@ -543,6 +700,7 @@ def package_report(
         "unresolved_input_rows": len(unresolved_rows),
         "unresolved_followup_manifest": unresolved_manifest,
         **multi_candidate_summary,
+        **insufficient_evidence_summary,
         "risk_flag_counter": dict(Counter(flag for row in review_candidates for flag in row["risk_flags"])),
         "unresolved_pending_reason_counter": dict(Counter(row.get("pending_reason") or "unknown" for row in unresolved_rows)),
     }
@@ -571,6 +729,8 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
         "- `matched-review-candidates.csv`: spreadsheet-friendly review table",
         "- `matched-review-table.md`: Markdown review table for quick inspection",
         "- `multi-candidate-comparison.*`: optional live Naver candidate comparison exports when enabled",
+        "- `insufficient-evidence-recrawl-table.*`: recrawl/evidence-enrichment table for insufficient-evidence rows",
+        "- `insufficient_evidence_recrawl_queues/`: insufficient-evidence rows split by recrawl bucket",
         "- `missing-source-transform.jsonl`: matched rows not found in source transforms",
         "- `missing-rule-result.jsonl`: matched rows whose scratch rule output could not be loaded",
         "- `unresolved_followup_queues/`: unresolved rows split by pending reason",
@@ -595,6 +755,12 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
         f"- comparison_rows: {summary['multi_candidate_comparison_rows']}",
         f"- trace_ids_with_live_candidates: {summary['multi_candidate_trace_ids_with_live_candidates']}",
     ]
+    lines += ["", "## Insufficient evidence recrawl queues", ""]
+    for bucket, count in sorted(summary["insufficient_evidence_bucket_counter"].items()):
+        lines.append(f"- `{bucket}`: {count}")
+    lines += ["", "## Insufficient evidence queue files", ""]
+    for item in summary["insufficient_evidence_manifest"]:
+        lines.append(f"- `{item['slug']}`: {item['count']} rows → `{item['path']}`")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
