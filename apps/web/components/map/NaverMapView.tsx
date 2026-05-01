@@ -364,6 +364,7 @@ const NaverMapView = memo(({
     const announcementToastInitialTimerRef = useRef<NodeJS.Timeout | null>(null);
     const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
     const [isMapInitialized, setIsMapInitialized] = useState(false);
+    const [mapInitError, setMapInitError] = useState<string | null>(null);
 
     const activeSearchedRestaurant = useMemo(() => getActiveSearchedRestaurant({
         searchedRestaurant,
@@ -1944,6 +1945,7 @@ const NaverMapView = memo(({
         }
 
         try {
+            setMapInitError(null);
             const { naver } = window;
 
             const { hasValidUrlState, initialCenter, initialZoom } = resolveNaverInitialMapView({
@@ -1958,6 +1960,12 @@ const NaverMapView = memo(({
                 positionTopRight: naver.maps.Position.TOP_RIGHT,
                 zoom: initialZoom,
             }));
+
+            try {
+                map.getBounds();
+            } catch {
+                throw new Error("네이버 지도 API가 현재 로컬 주소에서 정상 초기화되지 않았습니다.");
+            }
 
             mapInstanceRef.current = map;
             setIsMapInitialized(true);
@@ -1989,6 +1997,11 @@ const NaverMapView = memo(({
 
         } catch (error) {
             console.error("네이버 지도 초기화 오류:", error);
+            markerPool.clear();
+            clusterAnimationManager.clear();
+            mapInstanceRef.current = null;
+            setIsMapInitialized(false);
+            setMapInitError(error instanceof Error ? error.message : "네이버 지도를 초기화하지 못했습니다.");
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
     }, [isLoaded, getDeviceAdjustedZoom, selectedRegion, showMapToast]);
@@ -2219,8 +2232,8 @@ const NaverMapView = memo(({
 
 
     // 로딩 에러 처리
-    if (loadError) {
-        return <NaverMapLoadErrorState message={loadError.message} />;
+    if (loadError || mapInitError) {
+        return <NaverMapLoadErrorState message={loadError?.message ?? mapInitError ?? "네이버 지도를 초기화하지 못했습니다."} />;
     }
 
     // 로딩 중

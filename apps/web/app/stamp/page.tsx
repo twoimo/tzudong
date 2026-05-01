@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,25 +24,21 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
+import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
+import type { Restaurant } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
-import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
-import { EditRestaurantModal } from "@/components/modals/EditRestaurantModal";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
 import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPanel";
 import { REGIONS, extractRegion, parseCategory, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
-import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import {
     collectDirectRestaurantReviewIds,
@@ -53,6 +50,27 @@ import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-reques
 import type { Json, Tables } from "@/integrations/supabase/types";
 
 type SortColumn = StampRestaurantSortColumn;
+
+const ReviewModal = dynamic(
+    () => import("@/components/reviews/ReviewModal").then((mod) => ({ default: mod.ReviewModal })),
+    { ssr: false }
+);
+const ReviewEditModal = dynamic(
+    () => import("@/components/reviews/ReviewEditModal").then((mod) => ({ default: mod.ReviewEditModal })),
+    { ssr: false }
+);
+const EditRestaurantModal = dynamic(
+    () => import("@/components/modals/EditRestaurantModal").then((mod) => ({ default: mod.EditRestaurantModal })),
+    { ssr: false }
+);
+const RestaurantReviewsPanel = dynamic(
+    () => import("@/components/stamp/RestaurantReviewsPanel").then((mod) => ({ default: mod.RestaurantReviewsPanel })),
+    { ssr: false }
+);
+const RestaurantDetailPanel = dynamic(
+    () => import("@/components/restaurant/RestaurantDetailPanel").then((mod) => ({ default: mod.RestaurantDetailPanel })),
+    { ssr: false }
+);
 type SortDirection = StampRestaurantSortDirection;
 type ViewMode = "grid" | "list";
 type ReviewRow = Tables<'reviews'>;
@@ -1272,16 +1290,18 @@ export default function StampPage() {
             )}
 
             {/* 리뷰 모달 (Review Modal) */}
-            <ReviewModal
-                isOpen={isReviewModalOpen}
-                onClose={() => setIsReviewModalOpen(false)}
-                restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
-                    queryClient.invalidateQueries({ queryKey: ['user-stamp-reviews', user?.id] });
-                    completeStampGuide();
-                }}
-            />
+            {isReviewModalOpen && (
+                <ReviewModal
+                    isOpen={isReviewModalOpen}
+                    onClose={() => setIsReviewModalOpen(false)}
+                    restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
+                    onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
+                        queryClient.invalidateQueries({ queryKey: ['user-stamp-reviews', user?.id] });
+                        completeStampGuide();
+                    }}
+                />
+            )}
 
             {restaurantToEdit && (
                 <EditRestaurantModal
@@ -1293,15 +1313,17 @@ export default function StampPage() {
             )}
 
             {/* 리뷰 수정 모달 (Review Edit Modal) */}
-            <ReviewEditModal
-                isOpen={!!editingReview}
-                onClose={() => setEditingReview(null)}
-                review={editingReview}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
-                    setEditingReview(null);
-                }}
-            />
+            {editingReview && (
+                <ReviewEditModal
+                    isOpen={true}
+                    onClose={() => setEditingReview(null)}
+                    review={editingReview}
+                    onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
+                        setEditingReview(null);
+                    }}
+                />
+            )}
         </>
     );
 }

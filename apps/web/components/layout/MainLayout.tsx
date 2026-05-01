@@ -4,8 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import MobileBottomNav from '@/components/layout/MobileBottomNav';
-import NavigationPrefetcher from '@/components/layout/NavigationPrefetcher';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLayout } from '@/contexts/LayoutContext';
 import { useDeviceType } from '@/hooks/useDeviceType';
@@ -42,7 +40,14 @@ const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPre
     ssr: false,
 });
 
-// [PERF] 오버레이 레이아웃 지연 로딩
+const MobileBottomNav = dynamic(() => import('@/components/layout/MobileBottomNav'), {
+    ssr: false,
+});
+
+const NavigationPrefetcher = dynamic(() => import('@/components/layout/NavigationPrefetcher'), {
+    ssr: false,
+});
+
 const OverlayLayout = dynamic(() => import('@/components/layout/OverlayLayout'), {
     ssr: false,
 });
@@ -59,6 +64,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+    const [hasMounted, setHasMounted] = useState(false);
 
     const prevPathnameRef = useRef(pathname);
 
@@ -130,6 +136,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
+    useEffect(() => {
         setMobileHomeHeaderVars(isMobileHomeHeaderHidden);
 
         const openAuthListener = (event: Event) => {
@@ -155,6 +165,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             setMobileHomeHeaderVars(false);
         };
     }, [handleMobileAuthRequest, handleMobileProfileRequest, isMobileHomeHeaderHidden, setMobileHomeHeaderVars]);
+
+    if (!hasMounted) {
+        return <div className="min-h-screen bg-background" aria-hidden="true" />;
+    }
 
     // [NEW] 데스크탑에서는 항상 오버레이 레이아웃 사용 (사이드바 완전 제거)
     if (isDesktop) {

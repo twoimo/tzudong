@@ -1,7 +1,7 @@
 'use client'; // [CSR] 사용자 입력 및 상호작용 처리
 
 import { useRef, useEffect, useState, useCallback, memo } from 'react';
-import { Region, Restaurant } from '@/types/restaurant';
+import type { Region, Restaurant } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeviceType } from '@/hooks/useDeviceType';
