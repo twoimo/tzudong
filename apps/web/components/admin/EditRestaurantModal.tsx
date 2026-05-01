@@ -12,6 +12,11 @@ import { EvaluationRecord } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import {
+  findActiveRestaurantIdentityConflict,
+  formatActiveRestaurantIdentityConflictMessage,
+  isActiveRestaurantIdentityConflictError,
+} from '@/lib/admin-restaurant-update-conflict';
 import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -663,6 +668,53 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         return;
       }
 
+      const identityConflict = await findActiveRestaurantIdentityConflict({
+        restaurantId: record.id,
+        restaurantName: trimmedName,
+        youtubeLink: record.youtube_link || formData.youtube_link || null,
+      });
+
+      if (identityConflict) {
+        const conflictMessage = formatActiveRestaurantIdentityConflictMessage({
+          restaurantName: trimmedName,
+          conflict: identityConflict,
+        });
+        const errorDetails = {
+          error_type: 'duplicate' as const,
+          conflicting_restaurant: {
+            id: identityConflict.id,
+            name: identityConflict.name,
+            jibun_address: identityConflict.jibun_address || '',
+            road_address: identityConflict.road_address || undefined,
+          },
+          similarity_score: 1,
+          detected_at: updatedAt,
+        };
+
+        await supabase
+          .from('restaurants')
+          // @ts-expect-error - Supabase 자동 생성 타입 문제
+          .update({
+            db_error_message: conflictMessage,
+            db_error_details: errorDetails,
+            updated_at: updatedAt,
+          })
+          .eq('id', record.id);
+
+        onSuccess(record.id, {
+          db_error_message: conflictMessage,
+          db_error_details: errorDetails,
+          updated_at: updatedAt,
+        });
+
+        toast({
+          variant: 'destructive',
+          title: '중복 레코드 충돌',
+          description: conflictMessage,
+        });
+        return;
+      }
+
       // 수정 사항만 업데이트 (status는 변경하지 않음)
       const updateData: Record<string, unknown> = {
         approved_name: trimmedName,
@@ -702,6 +754,9 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       if (updateError) {
         console.error('❌ DB 업데이트 에러:', updateError);
+        if (isActiveRestaurantIdentityConflictError(updateError)) {
+          throw new Error(formatActiveRestaurantIdentityConflictMessage({ restaurantName: trimmedName }));
+        }
         throw updateError;
       }
 
