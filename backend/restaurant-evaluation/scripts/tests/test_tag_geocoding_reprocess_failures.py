@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -61,6 +63,33 @@ class StageReprocessTaggingTest(unittest.TestCase):
         )
         self.assertTrue(summary["has_source_coordinates"])
         self.assertLessEqual(summary["nearest_distance_m"], 1)
+
+    def test_write_action_queues_creates_priority_manifest(self):
+        rows = [
+            {
+                "trace_id": "b",
+                "stage": "candidate_location_mismatch",
+                "recommended_action": "manual_distance_review",
+            },
+            {
+                "trace_id": "a",
+                "stage": "source_location_unresolved",
+                "recommended_action": "rerun_rule_evaluation_with_recovered_source_geocode",
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = tagger.write_action_queues(Path(tmp), rows)
+            self.assertEqual(
+                [
+                    "10-rerun-rule-evaluation-with-recovered-source-geocode",
+                    "80-manual-distance-review",
+                ],
+                [item["slug"] for item in manifest],
+            )
+            queue_dir = Path(tmp) / "next_action_queues"
+            self.assertTrue((queue_dir / "manifest.json").exists())
+            first_queue = queue_dir / "10-rerun-rule-evaluation-with-recovered-source-geocode.jsonl"
+            self.assertEqual("a", json.loads(first_queue.read_text(encoding="utf-8"))["trace_id"])
 
     def test_geocoder_failed_retry_recovery(self):
         status, tags, action = tagger.tag_geocoder_failed(
