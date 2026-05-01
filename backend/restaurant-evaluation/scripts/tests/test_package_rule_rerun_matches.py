@@ -56,6 +56,16 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
                         "trace_id": "unresolved",
                         "pending_reason": "multi_candidate",
                         "recommended_action": "rerun_stage1_source_geocode_then_stage2",
+                    },
+                    {
+                        "trace_id": "no-evidence",
+                        "video_id": "v2",
+                        "youtube_link": "https://www.youtube.com/watch?v=v2",
+                        "origin_name": "증거부족",
+                        "origin_address_text": "서울특별시 중구",
+                        "pending_reason": "insufficient_evidence",
+                        "recommended_action": "rerun_rule_evaluation_with_recovered_source_geocode",
+                        "evidence_summary": ["Naver 실패: 1단계 실패: 검색 결과 없음"],
                     }
                 ],
             )
@@ -85,7 +95,9 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             summary = package.package_report(report, transforms, output)
 
             self.assertEqual(1, summary["review_candidates"])
-            self.assertEqual(1, summary["unresolved_input_rows"])
+            self.assertEqual(2, summary["unresolved_input_rows"])
+            self.assertEqual(1, summary["insufficient_evidence_rows"])
+            self.assertEqual(1, summary["insufficient_evidence_bucket_counter"]["coarse_source_address_recrawl"])
             self.assertEqual(1, summary["risk_flag_counter"]["large_distance_over_200m"])
             review_rows = [json.loads(line) for line in (output / "matched-review-candidates.jsonl").read_text().splitlines()]
             self.assertEqual("admin_review_before_sync", review_rows[0]["review_recommendation"])
@@ -94,6 +106,8 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertTrue((output / "matched-review-candidates.csv").exists())
             self.assertIn("trace_id,source_line,origin_name", (output / "matched-review-candidates.csv").read_text(encoding="utf-8-sig"))
             self.assertIn("| trace_id | line | origin |", (output / "matched-review-table.md").read_text(encoding="utf-8"))
+            self.assertTrue((output / "insufficient-evidence-recrawl-table.csv").exists())
+            self.assertTrue((output / "insufficient_evidence_recrawl_queues" / "coarse_source_address_recrawl.jsonl").exists())
             self.assertTrue((output / "unresolved_followup_queues" / "multi_candidate.jsonl").exists())
 
     def test_markdown_cell_escapes_pipes_and_lists(self):
@@ -161,6 +175,18 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertEqual(1, summary["multi_candidate_comparison_rows"])
             self.assertTrue((root / "multi-candidate-comparison.csv").exists())
             self.assertIn("가게 후보", (root / "multi-candidate-comparison.md").read_text(encoding="utf-8"))
+
+    def test_insufficient_evidence_bucket_prioritizes_distance_review(self):
+        row = {
+            "recommended_action": "rerun_stage1_source_geocode_then_stage2",
+            "origin_address_text": "서울특별시 중구 세종대로 1",
+            "evidence_summary": ["Naver 실패: 2단계 실패: 20m 이내 후보 없음"],
+        }
+        bucket, action, tags = package.insufficient_evidence_bucket(row, {})
+
+        self.assertEqual("distance_no_candidate_review", bucket)
+        self.assertEqual("review_source_coordinates_or_expand_radius_with_video_evidence", action)
+        self.assertIn("no_candidate_within_20m", tags)
 
     def test_latest_rule_rerun_prefers_expanded_reports(self):
         with tempfile.TemporaryDirectory() as tmp:
