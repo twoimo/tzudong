@@ -1740,7 +1740,7 @@ const LLM_PROVIDER_LABELS: Record<LlmProvider, string> = {
     anthropic: 'Anthropic',
 };
 const LLM_PROVIDER_SERVER_KEY_HINTS: Record<LlmProvider, string> = {
-    gemini: 'GEMINI_OCR_YEON / STORYBOARD_AGENT_GEMINI_API_KEY / GOOGLE_API_KEY',
+    gemini: 'GEMINI_API_KEY / STORYBOARD_AGENT_GEMINI_API_KEY / GOOGLE_API_KEY',
     openai: 'OPENAI_API_KEY / STORYBOARD_AGENT_OPENAI_API_KEY',
     anthropic: 'ANTHROPIC_API_KEY / STORYBOARD_AGENT_ANTHROPIC_API_KEY',
 };

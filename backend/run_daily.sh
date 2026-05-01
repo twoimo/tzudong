@@ -565,6 +565,23 @@ record_exit_if_failed() {
     return 1
 }
 
+record_youtube_api_exit() {
+    local step_name="$1"
+    local exit_code="$2"
+    local step_log="$3"
+
+    if [ "$exit_code" -eq 0 ]; then
+        return 0
+    fi
+
+    if grep -q "API Key not found. Please pass a valid API key" "$step_log" 2>/dev/null; then
+        record_external_dependency_issue "$step_name" "YouTube API 키(YOUTUBE_API_KEY_BYEON)가 Google API에서 거부되어 실행 생략(API Key not found)"
+        return 0
+    fi
+
+    record_exit_if_failed "$step_name" "$exit_code"
+}
+
 has_any_env() {
     local key
     for key in "$@"; do
@@ -684,7 +701,7 @@ has_youtube_api_key() {
         return 1
     fi
 
-    [ -n "${YOUTUBE_API_KEY_BYEON:-}" ]
+    has_any_env YOUTUBE_API_KEY_BYEON YOUTUBE_API_KEY
 }
 
 has_gemini_api_key() {
@@ -1027,9 +1044,11 @@ if ! has_youtube_api_key; then
     record_external_dependency_issue "Step 1 (URL Collection)" "YouTube API 키(YOUTUBE_API_KEY_BYEON) 미설정으로 실행 생략"
 else
     log "INFO" "[Step 1] URL 수집 중..."
-    $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+    STEP_1_LOG="$(mktemp)"
+    $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee "$STEP_1_LOG" | tee -a "$LOG_FILE"
     STEP_1_EXIT=${PIPESTATUS[0]}
-    record_exit_if_failed "Step 1 (URL Collection)" "$STEP_1_EXIT"
+    record_youtube_api_exit "Step 1 (URL Collection)" "$STEP_1_EXIT" "$STEP_1_LOG"
+    rm -f "$STEP_1_LOG"
 fi
 step_end "Step 1 (URL Collection)"
 echo "::endgroup::"
@@ -1070,9 +1089,11 @@ if ! has_youtube_api_key; then
     record_external_dependency_issue "Step 2 (Metadata)" "YouTube API 키(YOUTUBE_API_KEY_BYEON) 미설정으로 실행 생략"
 else
     log "INFO" "[Step 2] 메타데이터 수집 및 스케줄링..."
-    $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+    STEP_2_LOG="$(mktemp)"
+    $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee "$STEP_2_LOG" | tee -a "$LOG_FILE"
     STEP_2_EXIT=${PIPESTATUS[0]}
-    record_exit_if_failed "Step 2 (Metadata)" "$STEP_2_EXIT"
+    record_youtube_api_exit "Step 2 (Metadata)" "$STEP_2_EXIT" "$STEP_2_LOG"
+    rm -f "$STEP_2_LOG"
 fi
 step_end "Step 2 (Metadata)"
 echo "::endgroup::"
@@ -1803,6 +1824,15 @@ if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
         --summary-path "$SUMMARY_MD"
         --no-work-short-circuit "${NO_WORK_SHORT_CIRCUIT:-false}"
         --policy-mode "${RUN_DAILY_POLICY_MODE:-end_to_end}"
+        --github-run-id "${GITHUB_RUN_ID:-}"
+        --github-run-attempt "${GITHUB_RUN_ATTEMPT:-}"
+        --github-run-url "${GITHUB_RUN_ID:+${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID}}"
+        --github-workflow "${GITHUB_WORKFLOW:-}"
+        --github-sha "${GITHUB_SHA:-}"
+        --github-ref "${GITHUB_REF:-}"
+        --github-event-name "${GITHUB_EVENT_NAME:-}"
+        --execution-branch "${RUN_DAILY_EXECUTION_BRANCH:-}"
+        --target-branch "${RUN_DAILY_TARGET_BRANCH:-}"
     )
     for item in "${FAILED_REQUIRED_STEPS[@]}"; do
         MANIFEST_ARGS+=(--failed-required-step "$item")

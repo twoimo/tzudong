@@ -38,6 +38,41 @@ const SUPPORTED_VIDEO_CONTAINER_RE = /\.(mp4|webm|mkv)$/i;
 const YTDLP_FRAGMENT_FILE_RE = /\.f\d+\.(mp4|webm|mkv)$/i;
 
 const execPromise = util.promisify(exec);
+const DEFAULT_YT_DLP_DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_YT_DLP_MAX_RETRIES = 3;
+const YT_DLP_EXEC_MAX_BUFFER_BYTES = 20 * 1024 * 1024;
+
+function parsePositiveInteger(value) {
+    if (value === undefined || value === null || value === '') return null;
+    const parsed = Number.parseInt(String(value), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getYtDlpDownloadTimeoutMs(env = process.env) {
+    const timeoutMs = parsePositiveInteger(env.YT_DLP_DOWNLOAD_TIMEOUT_MS);
+    if (timeoutMs) return timeoutMs;
+
+    const timeoutSeconds = parsePositiveInteger(env.YT_DLP_DOWNLOAD_TIMEOUT_SECONDS);
+    if (timeoutSeconds) return timeoutSeconds * 1000;
+
+    return DEFAULT_YT_DLP_DOWNLOAD_TIMEOUT_MS;
+}
+
+function getYtDlpMaxRetries(env = process.env) {
+    return parsePositiveInteger(env.YT_DLP_MAX_RETRIES) || DEFAULT_YT_DLP_MAX_RETRIES;
+}
+
+function buildYtDlpExecOptions(env = process.env) {
+    return {
+        timeout: getYtDlpDownloadTimeoutMs(env),
+        killSignal: 'SIGTERM',
+        maxBuffer: YT_DLP_EXEC_MAX_BUFFER_BYTES,
+    };
+}
+
+function isExecTimeoutError(error) {
+    return Boolean(error && (error.killed || error.signal === 'SIGTERM'));
+}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -1104,14 +1139,15 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
     // [수정] ffmpeg-static 경로를 yt-dlp에 명시적으로 전달하여 병합(Merge)이 가능하도록 함
     // 이를 통해 비디오+오디오가 분리된 포맷(예: f251+f303)도 정상적으로 합쳐짐
     const cmd = `${ytDlpCmd} --ffmpeg-location "${ffmpegPath}" ${cookieArg} ${runtimesArg} --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    const execOptions = buildYtDlpExecOptions();
 
-    const maxRetries = 3;
+    const maxRetries = getYtDlpMaxRetries();
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             log('info', `[Downloader] 영상 다운로드 시작(HTTP): ${videoId} (목표 화질: ${height}p) [시도 ${attempt}/${maxRetries}]`);
             // yt-dlp 명령어는 stderr로 진행상황을 출력하므로, 오류 감지가 까다로울 수 있음.
             // execPromise 사용 시 stderr도 에러로 간주되지 않음.
-            await execPromise(cmd);
+            await execPromise(cmd, execOptions);
 
             // 다운로드된 파일 찾기
             const files = fs.readdirSync(outputDir).filter(f => f.startsWith(videoId));
@@ -1133,7 +1169,8 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
             log('warn', `[Warn] 다운로드 완료 보고되었으나 사용 가능한 비디오 파일 없음 (재시도 대기...)`);
 
         } catch (e) {
-            log('warn', `[Warn] 다운로드 실패 (시도 ${attempt}/${maxRetries}): ${e.message}`);
+            const timeoutNote = isExecTimeoutError(e) ? ` after ${execOptions.timeout}ms timeout` : '';
+            log('warn', `[Warn] 다운로드 실패 (시도 ${attempt}/${maxRetries})${timeoutNote}: ${e.message}`);
         }
 
         // 재시도 전 대기 (2초)
@@ -1739,7 +1776,10 @@ if (isDirectExecution) {
 
 export {
     downloadVideo,
+    buildYtDlpExecOptions,
     fetchUsableGDriveVideo,
+    getYtDlpDownloadTimeoutMs,
+    getYtDlpMaxRetries,
     hasVideoStream,
     pickUsableLocalVideoCandidate,
     processSingleVideo,

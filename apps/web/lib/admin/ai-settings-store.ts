@@ -90,9 +90,9 @@ type ProviderKeyRow = {
 
 const ENV_PROVIDER_KEYS: Record<AdminAiProvider, readonly string[]> = {
   gemini: [
+    'GEMINI_API_KEY',
     'GEMINI_OCR_YEON',
     'STORYBOARD_AGENT_GEMINI_API_KEY',
-    'GEMINI_API_KEY',
     'GEMINI_API_KEY_BYEON',
     'GOOGLE_API_KEY',
     'NEXT_PUBLIC_GOOGLE_API_KEY',

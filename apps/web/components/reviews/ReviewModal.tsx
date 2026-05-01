@@ -11,7 +11,6 @@ import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
 import { MobileSheetHeader, MobileSheetStepIndicator, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
-import { ReceiptEvidenceViewer } from "@/components/reviews/ReceiptEvidenceViewer";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from "@/lib/mobile-sheet-layout";
 import {
@@ -23,12 +22,6 @@ import {
     type OcrProgressStage,
     type ReviewOcrFieldKey,
 } from "@/lib/ocr/review-modal-ocr-ux";
-import { getReceiptEvidenceTitle, type ReceiptEvidenceSource } from "@/lib/ocr/receipt-evidence-viewer";
-import {
-    createOcrRequestToken,
-    shouldApplyOcrPatch,
-    type OcrRequestToken,
-} from "@/lib/ocr/review-ocr-request-guard";
 
 // 음식 사진용 압축 옵션 (스토리지 최적화)
 const FOOD_PHOTO_OPTIONS = {
@@ -273,34 +266,6 @@ function ObjectUrlPreviewImage({ src, alt, className }: { src: string | null; al
     );
 }
 
-function ReceiptPreviewButton({ imageUrl, onOpen }: { imageUrl: string | null; onOpen: () => void }) {
-    if (!imageUrl) {
-        return null;
-    }
-
-    return (
-        <button
-            type="button"
-            className="group relative mx-auto flex h-[clamp(320px,52dvh,620px)] w-full max-w-[min(92vw,36rem)] items-center justify-center overflow-hidden rounded-lg border-2 border-green-200 bg-background text-left shadow-sm transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onOpen();
-            }}
-            aria-label="영수증 사진 크게 보기"
-        >
-            <ObjectUrlPreviewImage
-                src={imageUrl}
-                alt="인증 사진 미리보기"
-                className="h-full w-full object-contain"
-            />
-            <span className="absolute bottom-3 right-3 rounded-full bg-background/95 px-3 py-1 text-xs font-medium text-primary shadow-sm transition group-hover:bg-primary group-hover:text-primary-foreground">
-                크게 보기
-            </span>
-        </button>
-    );
-}
-
 export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false }: ReviewModalProps) {
     const { user } = useAuth();
     const { isMobileOrTablet } = useDeviceType();
@@ -337,10 +302,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const verificationFileInputRef = useRef<HTMLInputElement>(null);
     const foodPhotosFileInputRef = useRef<HTMLInputElement>(null);
     const verificationPhotoUrlRef = useRef<string | null>(null);
-    const verificationPhotoRef = useRef<File | null>(null);
     const ocrAbortControllerRef = useRef<AbortController | null>(null);
-    const ocrRequestSeqRef = useRef(0);
-    const currentOcrRequestRef = useRef<OcrRequestToken>(createOcrRequestToken(null, 0));
     const lastOcrRevealSignatureRef = useRef<string | null>(null);
     const lastManualOcrInteractionAtRef = useRef(0);
     const userStepOverrideDuringOcrRef = useRef(false);
@@ -352,31 +314,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [isVerificationDragging, setIsVerificationDragging] = useState(false);
     const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
     const [verificationPhotoUrl, setVerificationPhotoUrl] = useState<string | null>(null);
-    const [receiptEvidenceViewer, setReceiptEvidenceViewer] = useState<{
-        isOpen: boolean;
-        openedFrom: ReceiptEvidenceSource;
-    }>({ isOpen: false, openedFrom: "receipt" });
-
-    const openReceiptEvidenceViewer = useCallback((openedFrom: ReceiptEvidenceSource = "receipt") => {
-        if (!verificationPhotoUrl) return;
-        setReceiptEvidenceViewer({ isOpen: true, openedFrom });
-    }, [verificationPhotoUrl]);
-
-    const closeReceiptEvidenceViewer = useCallback(() => {
-        setReceiptEvidenceViewer(prev => ({ ...prev, isOpen: false }));
-    }, []);
-
-    useEffect(() => {
-        if (!verificationPhotoUrl) {
-            setReceiptEvidenceViewer(prev => prev.isOpen ? { ...prev, isOpen: false } : prev);
-        }
-    }, [verificationPhotoUrl]);
-
-    useEffect(() => {
-        if (!isOpen) {
-            setReceiptEvidenceViewer(prev => prev.isOpen ? { ...prev, isOpen: false } : prev);
-        }
-    }, [isOpen]);
 
     const getOcrFocusClass = useCallback((target: OcrFocusTarget) => (
         ocrFocusTarget === target
@@ -402,38 +339,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         setAiFilledFields(prev => addAiFilledField(prev, field));
     }, []);
 
-    const renderAiFilledBadge = useCallback((field: ReviewOcrFieldKey) => {
-        if (!aiFilledFields.has(field)) return null;
-
-        if (!verificationPhotoUrl) {
-            return (
-                <Badge
-                    variant="secondary"
-                    className="h-5 rounded-full bg-primary/10 px-2 text-[10px] font-medium text-primary"
-                    aria-disabled="true"
-                    title="영수증 사진이 있으면 AI 입력 근거를 확인할 수 있어요."
-                >
-                    AI 입력 · 확인 필요
-                </Badge>
-            );
-        }
-
-        return (
-            <button
-                type="button"
-                className="inline-flex h-5 items-center rounded-full bg-primary/10 px-2 text-[10px] font-medium text-primary transition hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    openReceiptEvidenceViewer(field);
-                }}
-                aria-label={`${getReceiptEvidenceTitle(field)} 열기`}
-                title="첨부한 영수증 사진으로 AI 입력 근거를 확인합니다."
-            >
+    const renderAiFilledBadge = useCallback((field: ReviewOcrFieldKey) => (
+        aiFilledFields.has(field) ? (
+            <Badge variant="secondary" className="h-5 rounded-full bg-primary/10 px-2 text-[10px] font-medium text-primary">
                 AI 입력 · 확인 필요
-            </button>
-        );
-    }, [aiFilledFields, openReceiptEvidenceViewer, verificationPhotoUrl]);
+            </Badge>
+        ) : null
+    ), [aiFilledFields]);
 
     const focusOcrTarget = useCallback((target: OcrFocusTarget, delayMs = 0) => {
         window.setTimeout(() => {
@@ -515,36 +427,18 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }
     }, [focusOcrTarget, getOcrFocusTargetForPatch]);
 
-    const invalidateOcrRequest = useCallback((nextFile: File | null) => {
-        ocrAbortControllerRef.current?.abort();
-        ocrAbortControllerRef.current = null;
-        currentOcrRequestRef.current = createOcrRequestToken(nextFile, ++ocrRequestSeqRef.current);
-    }, []);
-
-    const canApplyOcrRequest = useCallback((requestToken: OcrRequestToken) => (
-        shouldApplyOcrPatch(requestToken, currentOcrRequestRef.current, verificationPhotoRef.current)
-    ), []);
-
     // 인증 사진 미리보기 URL은 렌더 중 생성하지 않고 이벤트에서 동기 갱신해
     // 모바일 파일 선택기 복귀 직후 바텀시트가 재계산되며 깜빡이는 일을 줄인다.
     const replaceVerificationPhoto = useCallback((file: File | null) => {
-        invalidateOcrRequest(file);
         if (verificationPhotoUrlRef.current) {
             URL.revokeObjectURL(verificationPhotoUrlRef.current);
         }
 
         const nextUrl = file ? URL.createObjectURL(file) : null;
         verificationPhotoUrlRef.current = nextUrl;
-        verificationPhotoRef.current = file;
         setVerificationPhotoUrl(nextUrl);
         setVerificationPhoto(file);
-        setOcrProgress(null);
-        setOcrFallbackNotice(null);
-        setAiFilledFields(new Set());
-        if (!file) {
-            setIsAnalyzing(false);
-        }
-    }, [invalidateOcrRequest]);
+    }, []);
 
     const foodPhotoUrls = useMemo(() => {
         return foodPhotos.map(photo => URL.createObjectURL(photo));
@@ -792,11 +686,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }
     }, [markOcrFieldApplied, restaurant]);
 
-    const handleOcrStreamEvent = useCallback((requestToken: OcrRequestToken, event: string, payload: OcrStreamPayload) => {
-        if (!canApplyOcrRequest(requestToken)) {
-            return;
-        }
-
+    const handleOcrStreamEvent = useCallback((event: string, payload: OcrStreamPayload) => {
         if (event === 'progress' && payload.message) {
             setOcrProgress(prev => ({
                 message: payload.message ?? prev?.message ?? 'AI가 영수증을 분석하고 있어요.',
@@ -822,7 +712,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }
 
         if (event === 'field_patch' && payload.data) {
-            if (!canApplyOcrRequest(requestToken)) return;
             applyOcrFieldPatch(payload.data);
             if (payload.final) {
                 revealOcrAutoFillSequence(payload.data);
@@ -840,7 +729,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 fallbackUsed: prev?.fallbackUsed,
             }));
         }
-    }, [applyOcrFieldPatch, canApplyOcrRequest, focusOcrTarget, getOcrFocusTargetForPatch, revealOcrAutoFillSequence]);
+    }, [applyOcrFieldPatch, focusOcrTarget, getOcrFocusTargetForPatch, revealOcrAutoFillSequence]);
 
     const parseOcrStreamFrame = useCallback((frame: string): { event: string; payload: OcrStreamPayload } | null => {
         let event = 'message';
@@ -872,7 +761,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         && [400, 401, 403, 413, 415, 422, 429].includes(error.status)
     ), []);
 
-    const analyzeReceiptWithStream = useCallback(async (file: File, token: string, signal: AbortSignal, forceRefresh: boolean, requestToken: OcrRequestToken): Promise<OCRResult> => {
+    const analyzeReceiptWithStream = useCallback(async (file: File, token: string, signal: AbortSignal, forceRefresh: boolean): Promise<OCRResult> => {
         const formData = new FormData();
         formData.append('image', file);
         appendSelectedRestaurantOcrContext(formData, selectedRestaurant || restaurant);
@@ -911,7 +800,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 if (parsed.event === 'error') {
                     throw new Error(parsed.payload.message || 'OCR 스트리밍 분석 실패');
                 }
-                handleOcrStreamEvent(requestToken, parsed.event, parsed.payload);
+                handleOcrStreamEvent(parsed.event, parsed.payload);
                 if (parsed.event === 'done' && parsed.payload.data) {
                     finalData = parsed.payload.data as OCRResult;
                 }
@@ -921,7 +810,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         const parsed = parseOcrStreamFrame(buffer + decoder.decode());
         if (parsed) {
             if (parsed.event === 'error') throw new Error(parsed.payload.message || 'OCR 스트리밍 분석 실패');
-            handleOcrStreamEvent(requestToken, parsed.event, parsed.payload);
+            handleOcrStreamEvent(parsed.event, parsed.payload);
             if (parsed.event === 'done' && parsed.payload.data) {
                 finalData = parsed.payload.data as OCRResult;
             }
@@ -945,8 +834,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         manuallyEditedOcrFieldsRef.current = new Set();
         ocrAbortControllerRef.current?.abort();
         const abortController = new AbortController();
-        const requestToken = createOcrRequestToken(file, ++ocrRequestSeqRef.current);
-        currentOcrRequestRef.current = requestToken;
         ocrAbortControllerRef.current = abortController;
         const shouldForceOcrRefresh = canForceOcrRefresh && forceOcrRefresh;
         try {
@@ -974,12 +861,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             }
 
             try {
-                data = await analyzeReceiptWithStream(file, token, abortController.signal, shouldForceOcrRefresh, requestToken);
+                data = await analyzeReceiptWithStream(file, token, abortController.signal, shouldForceOcrRefresh);
             } catch (streamError) {
                 if (isAbortError(streamError)) return;
-                if (!canApplyOcrRequest(requestToken)) {
-                    return;
-                }
                 if (isTerminalOcrStreamError(streamError)) {
                     if (streamError instanceof OcrStreamHttpError && streamError.status === 429) {
                         mutateQuota();
@@ -1016,10 +900,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 data = await response.json();
             }
 
-            if (!canApplyOcrRequest(requestToken)) {
-                return;
-            }
-
             // 4. provider/model/prompt/preprocess-aware server cache에만 저장한다.
             // 클라이언트 sessionStorage cache는 Track 1 정확도 실험 동안 사용하지 않는다.
 
@@ -1041,9 +921,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
             if (data.store_name && !restaurant && canApplyOcrRestaurant) {
                 const matchedRestaurant = await findRestaurantFromReceiptName(data.store_name);
-                if (!canApplyOcrRequest(requestToken)) {
-                    return;
-                }
 
                 if (matchedRestaurant) {
                     setSelectedRestaurant(matchedRestaurant);
@@ -1138,11 +1015,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 variant: "destructive"
             });
         } finally {
-            if (currentOcrRequestRef.current.requestId === requestToken.requestId && ocrAbortControllerRef.current === abortController) {
+            if (ocrAbortControllerRef.current === abortController) {
                 ocrAbortControllerRef.current = null;
-                setIsAnalyzing(false);
-                setOcrProgress(null);
             }
+            setIsAnalyzing(false);
+            setOcrProgress(null);
         }
     }
     const handleSubmit = async () => {
@@ -1652,31 +1529,19 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     markManualOcrInteraction("review");
                     setContent(e.target.value);
                 }}
-                rows={isMobileOrTablet ? 9 : 8}
-                className="min-h-[min(32dvh,16rem)] resize-none"
+                rows={8}
+                className="resize-none"
             />
             <p className="text-xs text-muted-foreground text-right">
                 {content.length} / 최소 20자
             </p>
         </div>
-    ), [content, getOcrFocusClass, isMobileOrTablet, markManualOcrInteraction, renderAiFilledBadge]);
-
-    const receiptEvidenceViewerNode = (
-        <ReceiptEvidenceViewer
-            isOpen={isOpen && receiptEvidenceViewer.isOpen}
-            imageUrl={verificationPhotoUrl}
-            fileName={verificationPhoto?.name}
-            openedFrom={receiptEvidenceViewer.openedFrom}
-            onClose={closeReceiptEvidenceViewer}
-        />
-    );
+    ), [content, getOcrFocusClass, markManualOcrInteraction, renderAiFilledBadge]);
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
         return (
-            <>
-                {receiptEvidenceViewerNode}
-                <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex flex-col h-full overflow-hidden">
                 {/* 헤더 */}
                 <div className="px-6 pt-6 pb-4 border-b relative shrink-0">
                     {lastSavedAt && (
@@ -1795,7 +1660,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         <div className="w-full space-y-3">
                                             <div className="flex items-center justify-center relative">
                                                 <div className="relative">
-                                                    <ReceiptPreviewButton imageUrl={verificationPhotoUrl} onOpen={() => openReceiptEvidenceViewer("receipt")} />
+                                                    <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
+                                                        <ObjectUrlPreviewImage
+                                                            src={verificationPhotoUrl}
+                                                            alt="인증 사진 미리보기"
+                                                            className="h-full w-full object-contain"
+                                                        />
+                                                    </div>
                                                     <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
                                                         <CheckCircle2 className="h-4 w-4" />
                                                     </div>
@@ -2148,8 +2019,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         </Button>
                     </div>
                 </div>
-                </div>
-            </>
+            </div>
         );
     }
 
@@ -2158,13 +2028,16 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
         return (
             <div
-                className="fixed inset-0 z-[110] flex h-[100dvh] flex-col overflow-hidden bg-background"
+                className="fixed inset-0 z-[110] h-[100dvh] bg-background"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="review-sheet-title"
             >
-                {receiptEvidenceViewerNode}
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+                <div
+                    ref={mobileScrollRef}
+                    className="h-[100dvh] overflow-y-auto overscroll-contain bg-background"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                >
                     <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
                         <MobileSheetHeader
                             title="쯔동여지도 리뷰 작성"
@@ -2178,7 +2051,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             )}
                         />
 
-                        <div className="flex min-h-0 flex-1 flex-col space-y-3 px-4 pt-2">
+                        <div className="flex-1 space-y-3 px-4 pb-4 pt-2">
                             {lastSavedAt ? (
                                 <div className="flex items-center gap-1 text-[10px] leading-none text-muted-foreground" aria-live="polite">
                                     {isSaving ? (
@@ -2198,11 +2071,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             ) : null}
                             <MobileSheetStepIndicator steps={REVIEW_FORM_STEPS} currentStep={currentStep} className="grid-cols-3" />
 
-                            <div
-                                ref={mobileScrollRef}
-                                className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pb-4"
-                                style={{ WebkitOverflowScrolling: 'touch' }}
-                            >
+                            <div className="space-y-4">
                                 {currentStep === 1 && (
                                     <>
                                         <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
@@ -2284,7 +2153,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <div className="w-full space-y-3">
                                                     <div className="flex items-center justify-center relative">
                                                         <div className="relative">
-                                                            <ReceiptPreviewButton imageUrl={verificationPhotoUrl} onOpen={() => openReceiptEvidenceViewer("receipt")} />
+                                                            <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
+                                                                <ObjectUrlPreviewImage
+                                                                    src={verificationPhotoUrl}
+                                                                    alt="인증 사진 미리보기"
+                                                                    className="h-full w-full object-contain"
+                                                                />
+                                                            </div>
                                                             <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
                                                                 <CheckCircle2 className="h-4 w-4" />
                                                             </div>
@@ -2712,7 +2587,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
     return (
         <>
-            {receiptEvidenceViewerNode}
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 {isOpen && (
                     <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none">
@@ -2832,7 +2706,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <div className="w-full space-y-3">
                                                     <div className="flex items-center justify-center relative">
                                                         <div className="relative">
-                                                            <ReceiptPreviewButton imageUrl={verificationPhotoUrl} onOpen={() => openReceiptEvidenceViewer("receipt")} />
+                                                            <div className="relative mx-auto h-[min(42dvh,26rem)] w-full max-w-[min(92vw,28rem)] rounded-lg overflow-hidden border-2 border-green-200 bg-background">
+                                                                <ObjectUrlPreviewImage
+                                                                    src={verificationPhotoUrl}
+                                                                    alt="인증 사진 미리보기"
+                                                                    className="h-full w-full object-contain"
+                                                                />
+                                                            </div>
                                                             <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
                                                                 <CheckCircle2 className="h-4 w-4" />
                                                             </div>
