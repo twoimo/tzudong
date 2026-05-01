@@ -16,6 +16,15 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+tests/.auth/**
+
+# Pencil storyboard transient artifacts
+design/pencil/screenshots/**
+design/pencil/traces/**
+design/pencil/exports/**
+design/pencil/parity/**
+design/pencil/drift/**
+*.trace.zip
 
 # next.js
 /.next/

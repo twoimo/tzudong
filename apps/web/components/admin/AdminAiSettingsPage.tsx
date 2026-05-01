@@ -18,7 +18,7 @@ import {
   type AdminAiSettingsResponse,
   OCR_ROUTING_PROVIDERS,
   getProviderLabel,
-} from '@/lib/admin/ai-settings-store';
+} from '@/lib/admin/ai-settings-shared';
 
 const PROVIDERS: AdminAiProvider[] = ['gemini', 'openai', 'nvidia_nim'];
 const ROUTING_PROVIDERS: AdminAiProvider[] = [...OCR_ROUTING_PROVIDERS];

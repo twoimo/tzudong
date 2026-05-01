@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Restaurant, Region } from '@/types/restaurant';
+import type { Restaurant, Region } from '@/types/restaurant';
 
 interface UseRestaurantPopupListenerProps {
     mapMode: 'domestic' | 'overseas';

@@ -21,13 +21,25 @@ interface UseNaverMapsOptions {
 type IdleCallbackHandle = number;
 type RequestIdleCallbackLike = (callback: () => void, options?: { timeout: number }) => IdleCallbackHandle;
 
+function hasUsableNaverMaps() {
+    if (typeof window === 'undefined') return false;
+
+    const maps = window.naver?.maps;
+    return Boolean(
+        maps
+        && maps.Map
+        && maps.LatLng
+        && maps.Point
+        && maps.Event
+    );
+}
+
 export function useNaverMaps(options: UseNaverMapsOptions = {}) {
     const { autoLoad = false, strategy = 'afterInteractive' } = options;
 
     // 초기 상태를 스크립트 로드 여부로 설정 (페이지 전환 시 즉시 감지)
     const [isLoaded, setIsLoaded] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        return !!(window.naver && window.naver.maps);
+        return hasUsableNaverMaps();
     });
     const [loadError, setLoadError] = useState<Error | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +56,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
         }
 
         // 이미 로드되었는지 확인 - window 객체 재확인
-        if (window.naver && window.naver.maps) {
+        if (hasUsableNaverMaps()) {
             setIsLoaded(true);
             return;
         }
@@ -57,7 +69,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
         if (existingScript) {
             setIsLoading(true);
             existingScript.addEventListener("load", () => {
-                if (window.naver && window.naver.maps) {
+                if (hasUsableNaverMaps()) {
                     setIsLoaded(true);
                     setIsLoading(false);
                 } else {
@@ -81,7 +93,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
             script.async = true;
 
             script.onload = () => {
-                if (window.naver && window.naver.maps) {
+                if (hasUsableNaverMaps()) {
                     setIsLoaded(true);
                     setIsLoading(false);
                 } else {
