@@ -115,6 +115,8 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertTrue((output / "provider-search-review-jobs.jsonl").exists())
             self.assertEqual(0, summary["distance_no_candidate_review_jobs"])
             self.assertTrue((output / "distance-no-candidate-review-jobs.jsonl").exists())
+            self.assertEqual(0, summary["generic_evidence_gap_jobs"])
+            self.assertTrue((output / "generic-evidence-gap-jobs.jsonl").exists())
             self.assertTrue((output / "unresolved_followup_queues" / "multi_candidate.jsonl").exists())
 
     def test_build_coarse_address_recrawl_jobs_adds_queries_and_private_flag(self):
@@ -285,6 +287,65 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertTrue((root / "distance-no-candidate-review-jobs.md").exists())
             self.assertTrue((root / "distance-no-candidate-review-manifest.json").exists())
             self.assertIn("인천분식", (root / "distance-no-candidate-review-jobs.md").read_text(encoding="utf-8"))
+
+
+    def test_build_generic_evidence_gap_jobs_adds_manual_classification_options(self):
+        rows = [
+            {
+                "trace_id": "generic",
+                "source_line": 31,
+                "video_id": "v1",
+                "youtube_link": "https://www.youtube.com/watch?v=v1",
+                "origin_name": "세븐일레븐 종로청운점",
+                "origin_address_text": "서울특별시 종로구 자하문로 102",
+                "recrawl_bucket": "generic_evidence_gap",
+                "problem_tags": [],
+                "source_lat": None,
+                "source_lng": None,
+                "evidence_text": "Exact-title candidate looked like a non-restaurant facility",
+                "recommended_action": "rerun_stage1_source_geocode_then_stage2",
+            },
+            {"trace_id": "other", "recrawl_bucket": "distance_no_candidate_review"},
+        ]
+
+        jobs = package.build_generic_evidence_gap_jobs(rows)
+
+        self.assertEqual(1, len(jobs))
+        self.assertEqual("road_or_lot_present", jobs[0]["address_precision"])
+        self.assertIn("non_restaurant_candidate_check", jobs[0]["problem_tags"])
+        self.assertIn("missing_source_coordinates", jobs[0]["problem_tags"])
+        self.assertIn("tag_non_restaurant_or_out_of_scope", jobs[0]["next_action_options"])
+        self.assertEqual(
+            "manually_enrich_video_or_source_evidence_and_classify_final_blocker",
+            jobs[0]["review_instruction"],
+        )
+
+    def test_write_generic_evidence_gap_outputs_creates_exports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rows = [
+                {
+                    "trace_id": "generic",
+                    "source_line": 31,
+                    "video_id": "v1",
+                    "youtube_link": "https://www.youtube.com/watch?v=v1",
+                    "origin_name": "세븐일레븐 종로청운점",
+                    "origin_address_text": "서울특별시 종로구 자하문로 102",
+                    "recrawl_bucket": "generic_evidence_gap",
+                    "problem_tags": [],
+                    "evidence_text": "Exact-title candidate looked like a non-restaurant facility",
+                }
+            ]
+
+            summary = package.write_generic_evidence_gap_outputs(root, rows)
+
+            self.assertEqual(1, summary["generic_evidence_gap_jobs"])
+            self.assertEqual(1, summary["generic_evidence_gap_problem_tag_counter"]["generic_evidence_gap"])
+            self.assertTrue((root / "generic-evidence-gap-jobs.jsonl").exists())
+            self.assertTrue((root / "generic-evidence-gap-jobs.csv").exists())
+            self.assertTrue((root / "generic-evidence-gap-jobs.md").exists())
+            self.assertTrue((root / "generic-evidence-gap-manifest.json").exists())
+            self.assertIn("세븐일레븐", (root / "generic-evidence-gap-jobs.md").read_text(encoding="utf-8"))
 
     def test_markdown_cell_escapes_pipes_and_lists(self):
         self.assertEqual("A\\|B", package.markdown_cell("A|B"))
