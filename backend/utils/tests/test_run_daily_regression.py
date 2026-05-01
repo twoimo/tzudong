@@ -154,6 +154,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         daily_workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
         backfill_workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
 
+        self.assertIn("python-version: '3.11'", daily_workflow)
+        self.assertNotIn("python-version: '3.10'", daily_workflow)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile gdrive-backfill", backfill_workflow)
         self.assertIn("YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}", daily_workflow)
