@@ -25,6 +25,7 @@ const requestedRoutes = readArgs('--route');
 const includeWarm = !hasFlag('--no-warm');
 const cold = hasFlag('--cold');
 const trace = hasFlag('--trace');
+const failOnHttpError = !hasFlag('--allow-http-errors');
 
 function parsePositiveIntegerArg(name, fallback) {
   const raw = readArg(name, String(fallback));
@@ -37,6 +38,8 @@ function parsePositiveIntegerArg(name, fallback) {
 
 const timeoutMs = parsePositiveIntegerArg('--timeout-ms', 240000);
 const routeTimeoutMs = parsePositiveIntegerArg('--route-timeout-ms', 180000);
+const retries = parsePositiveIntegerArg('--retries', 1);
+const retryDelayMs = parsePositiveIntegerArg('--retry-delay-ms', 1000);
 
 const artifactTimestamp = new Date().toISOString().replace(/[:.]/g, '');
 const safeLabel = String(label).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'routes';
@@ -150,6 +153,10 @@ async function waitForReady({ getLog, processExited, timeoutAt }) {
   return null;
 }
 
+function shouldRetryRequest(result) {
+  return result.status === 0 || result.status >= 500;
+}
+
 async function timedFetch(url, requestLabel) {
   const controller = new AbortController();
   const abortTimer = setTimeout(() => controller.abort(), routeTimeoutMs);
@@ -163,6 +170,22 @@ async function timedFetch(url, requestLabel) {
   } finally {
     clearTimeout(abortTimer);
   }
+}
+
+async function timedFetchWithRetries(url, requestLabel) {
+  const attempts = [];
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const result = await timedFetch(url, attempt === 0 ? requestLabel : `${requestLabel} retry ${attempt}`);
+    attempts.push({ ...result, attempt: attempt + 1 });
+    if (!shouldRetryRequest(result) || attempt === retries) break;
+    await delay(retryDelayMs);
+  }
+  const final = attempts.at(-1);
+  return {
+    ...final,
+    attempts,
+    retry_count: attempts.length - 1,
+  };
 }
 
 function summarize(values) {
@@ -179,7 +202,7 @@ function writeArtifacts(result) {
     const text = value === null || value === undefined ? '' : String(value);
     return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
-  const rows = ['round,route,kind,source,status,elapsed_ms,log_total_ms,log_next_ms,log_proxy_ms,log_app_ms,bytes,error'];
+  const rows = ['round,route,kind,source,status,ok,retry_count,elapsed_ms,log_total_ms,log_next_ms,log_proxy_ms,log_app_ms,bytes,error'];
   for (const row of result.requests) {
     rows.push([
       row.round,
@@ -187,6 +210,8 @@ function writeArtifacts(result) {
       row.kind,
       row.source,
       row.status,
+      row.ok,
+      row.retry_count ?? 0,
       row.elapsed_ms,
       row.log_total_ms ?? '',
       row.log_next_ms ?? '',
@@ -210,6 +235,8 @@ function writeArtifacts(result) {
   lines.push(`- port: ${result.port}`);
   lines.push(`- ready: ${result.ready_ms}ms`);
   lines.push(`- trace: ${trace ? 'enabled' : 'disabled'}`);
+  lines.push(`- fail_on_http_error: ${result.fail_on_http_error ? 'enabled' : 'disabled'}`);
+  lines.push(`- retries: ${result.retries}`);
   lines.push(`- log: \`${logPath}\``);
   lines.push(`- csv: \`${csvPath}\``);
   lines.push(`- json: \`${jsonPath}\``);
@@ -223,11 +250,11 @@ function writeArtifacts(result) {
     lines.push(`- max: ${(summary.max_ms / 1000).toFixed(3)}s`);
     lines.push(`- min: ${(summary.min_ms / 1000).toFixed(3)}s`);
     lines.push('');
-    lines.push('| route | status | seconds | log next/app | source |');
-    lines.push('|---|---:|---:|---:|---|');
+    lines.push('| route | status | retry | seconds | log next/app | source |');
+    lines.push('|---|---:|---:|---:|---:|---|');
     for (const row of rowsForRound.toSorted((a, b) => b.elapsed_ms - a.elapsed_ms)) {
       const logParts = row.log_next_ms === null || row.log_next_ms === undefined ? '' : `${(row.log_next_ms / 1000).toFixed(3)}/${row.log_app_ms === null || row.log_app_ms === undefined ? '?' : (row.log_app_ms / 1000).toFixed(3)}`;
-      lines.push(`| \`${row.route}\` | ${row.status} | ${(row.elapsed_ms / 1000).toFixed(3)} | ${logParts} | \`${row.source}\` |`);
+      lines.push(`| \`${row.route}\` | ${row.status} | ${row.retry_count ?? 0} | ${(row.elapsed_ms / 1000).toFixed(3)} | ${logParts} | \`${row.source}\` |`);
     }
     lines.push('');
   }
@@ -259,6 +286,9 @@ async function main() {
     port,
     cold,
     trace,
+    fail_on_http_error: failOnHttpError,
+    retries,
+    retry_delay_ms: retryDelayMs,
     ready_ms: null,
     routes,
     requests: [],
@@ -308,7 +338,7 @@ async function main() {
     const baseUrl = `http://127.0.0.1:${port}`;
     for (const round of ['coldish', ...(includeWarm ? ['warm'] : [])]) {
       for (const route of routes) {
-        const request = await timedFetch(`${baseUrl}${route.route}`, `${round} GET ${route.route}`);
+        const request = await timedFetchWithRetries(`${baseUrl}${route.route}`, `${round} GET ${route.route}`);
         await delay(50);
         const timing = parseRouteTiming(getLog(), route.route);
         result.requests.push({
@@ -319,7 +349,10 @@ async function main() {
           status: request.status,
           elapsed_ms: request.elapsed_ms,
           bytes: request.bytes,
+          ok: request.ok,
           error: request.error,
+          retry_count: request.retry_count,
+          attempts: request.attempts,
           log_total_ms: timing?.total_ms ?? null,
           log_next_ms: timing?.next_ms ?? null,
           log_proxy_ms: timing?.proxy_ms ?? null,
@@ -339,8 +372,13 @@ async function main() {
     writeArtifacts(result);
   }
 
+  const failedRequests = result.requests.filter((row) => row.status === 0 || (failOnHttpError && !row.ok));
+  if (failedRequests.length > 0) {
+    result.errors.push(`${failedRequests.length} request(s) failed status validation`);
+    writeArtifacts(result);
+  }
   console.log(JSON.stringify({ jsonPath, mdPath, csvPath, logPath, result: { ready_ms: result.ready_ms, request_count: result.requests.length, errors: result.errors, error_like_lines: result.error_like_lines.length } }, null, 2));
-  if (result.errors.length > 0 || result.requests.some((row) => row.status === 0)) process.exitCode = 1;
+  if (result.errors.length > 0) process.exitCode = 1;
 }
 
 main().catch((error) => {
