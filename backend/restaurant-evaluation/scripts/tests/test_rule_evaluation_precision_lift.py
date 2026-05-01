@@ -45,6 +45,29 @@ class RuleEvaluationPrecisionLiftTests(unittest.TestCase):
         self.assertEqual("원본식당", category_results[0]["name"])
         self.assertEqual("origin_name", name_sources["원본식당"])
 
+    def test_evaluate_category_validity_accepts_valid_multi_label_categories(self):
+        restaurants = [{"origin_name": "복합식당", "category": ["한식", "고기"]}]
+
+        category_results, _ = rule_eval.evaluate_category_validity(restaurants, [])
+
+        self.assertTrue(category_results[0]["eval_value"])
+        self.assertNotIn("invalid_categories", category_results[0])
+
+    def test_evaluate_category_validity_rejects_unknown_multi_label_categories(self):
+        restaurants = [{"origin_name": "일식당", "category": ["한식", "일식"]}]
+
+        category_results, _ = rule_eval.evaluate_category_validity(restaurants, [])
+
+        self.assertFalse(category_results[0]["eval_value"])
+        self.assertEqual(["일식"], category_results[0]["invalid_categories"])
+
+    def test_evaluate_category_validity_rejects_empty_multi_label_categories(self):
+        restaurants = [{"origin_name": "빈식당", "category": []}]
+
+        category_results, _ = rule_eval.evaluate_category_validity(restaurants, [])
+
+        self.assertFalse(category_results[0]["eval_value"])
+
     def test_unique_exact_title_region_match_promotes_true(self):
         result = rule_eval.evaluate_with_unique_naver_title_match(
             "을밀대",
