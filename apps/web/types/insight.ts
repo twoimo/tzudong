@@ -241,6 +241,18 @@ export type AdminInsightSystemFrameCaptionStatus = {
   checkedAt: string;
 };
 
+export type AdminInsightSystemRunDailyRuntime = {
+  githubRunId?: string;
+  githubRunAttempt?: string;
+  githubRunUrl?: string;
+  githubWorkflow?: string;
+  githubSha?: string;
+  githubRef?: string;
+  githubEventName?: string;
+  executionBranch?: string;
+  targetBranch?: string;
+};
+
 export type AdminInsightSystemRunDailyStatus = {
   scriptPath?: string;
   executable: boolean;
@@ -254,6 +266,7 @@ export type AdminInsightSystemRunDailyStatus = {
   downstreamSkips?: string[];
   noWorkShortCircuit?: boolean;
   policyMode?: string;
+  runtime?: AdminInsightSystemRunDailyRuntime;
   stale: boolean;
   checkedAt: string;
 };

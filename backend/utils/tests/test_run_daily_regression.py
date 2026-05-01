@@ -17,6 +17,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = BACKEND_ROOT.parent
 RUN_DAILY_SOURCE = BACKEND_ROOT / "run_daily.sh"
 RUN_DAILY_HELPER_SOURCE = BACKEND_ROOT / "utils" / "run_daily_helpers.py"
+ENV_CONTRACT_SOURCE = BACKEND_ROOT / "bin" / "check_env_contract.py"
 DAILY_CRAWLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "daily-crawler.yml"
 GDRIVE_BACKFILL_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "gdrive-frame-backfill.yml"
 
@@ -148,6 +149,70 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("rclone check", upload_step)
         self.assertIn("current-upload-batches.json", workflow)
         self.assertIn("current-upload-staging-manifest.json", workflow)
+
+    def test_workflows_validate_canonical_env_contracts_without_removed_secrets(self) -> None:
+        daily_workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
+        backfill_workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
+
+        self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
+        self.assertIn("python3 backend/bin/check_env_contract.py --profile gdrive-backfill", backfill_workflow)
+        self.assertIn("YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}", daily_workflow)
+        self.assertIn("GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}", daily_workflow)
+        self.assertNotIn("secrets.GEMINI_CREDENTIALS_BASE64", daily_workflow)
+        self.assertNotIn("secrets.GEMINI_CREDENTIALS_BASE64_2", daily_workflow)
+
+    def test_env_contract_guard_fails_closed_without_printing_values(self) -> None:
+        env = os.environ.copy()
+        for name in (
+            "YOUTUBE_API_KEY_BYEON",
+            "GEMINI_API_KEY",
+            "SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "NAVER_CLIENT_ID_BYEON",
+            "NAVER_CLIENT_SECRET_BYEON",
+            "NCP_MAPS_KEY_ID_BYEON",
+            "NCP_MAPS_KEY_BYEON",
+            "RCLONE_CONFIG_BASE64",
+            "GEMINI_CREDENTIALS_BASE64",
+        ):
+            env.pop(name, None)
+        env.update({
+            "YOUTUBE_API_KEY_BYEON": "stub-youtube",
+            "GEMINI_API_KEY": "stub-gemini",
+            "SUPABASE_URL": "https://stub.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "stub-service-role",
+            "NAVER_CLIENT_ID_BYEON": "stub-naver-id",
+            "NAVER_CLIENT_SECRET_BYEON": "stub-naver-secret",
+            "NCP_MAPS_KEY_ID_BYEON": "stub-ncp-id",
+            "NCP_MAPS_KEY_BYEON": "stub-ncp-key",
+            "RCLONE_CONFIG_BASE64": "stub-rclone",
+        })
+
+        ok = subprocess.run(
+            ["/usr/bin/python3", str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(0, ok.returncode, self._format_process_output(ok))
+        ok_payload = json.loads(ok.stdout)
+        self.assertTrue(ok_payload["ok"])
+        self.assertNotIn("stub-gemini", ok.stdout)
+        self.assertNotIn("stub-service-role", ok.stdout)
+
+        env["GEMINI_CREDENTIALS_BASE64"] = "removed-secret-value"
+        failed = subprocess.run(
+            ["/usr/bin/python3", str(ENV_CONTRACT_SOURCE), "--profile", "daily", "--json"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertNotEqual(0, failed.returncode, self._format_process_output(failed))
+        failed_payload = json.loads(failed.stdout)
+        self.assertEqual(["GEMINI_CREDENTIALS_BASE64"], failed_payload["forbiddenPresent"])
+        self.assertNotIn("removed-secret-value", failed.stdout)
 
     def test_gdrive_expected_manifest_caps_batch_and_queues_overflow(self) -> None:
         for name in ("a.jpg", "b.jpg", "c.jpg"):
@@ -343,6 +408,45 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("unknown", status["uploadedCountConfidence"])
         self.assertEqual(0, status["residualCount"])
         self.assertEqual("", self.residual_queue_path.read_text(encoding="utf-8"))
+
+    def test_run_daily_summary_manifest_records_runtime_telemetry(self) -> None:
+        summary_path = self.root / "runtime-summary.json"
+        result = self._helper(
+            "write-summary-manifest",
+            "--output",
+            str(summary_path),
+            "--date",
+            "2026-05-01",
+            "--final-status",
+            "OK",
+            "--final-exit-code",
+            "0",
+            "--github-run-id",
+            "25206693886",
+            "--github-run-attempt",
+            "1",
+            "--github-run-url",
+            "https://github.com/twoimo/tzudong/actions/runs/25206693886",
+            "--github-workflow",
+            "Daily Data Collection",
+            "--github-event-name",
+            "workflow_dispatch",
+            "--execution-branch",
+            "main",
+            "--target-branch",
+            "data",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        self.assertEqual("OK", summary["finalStatus"])
+        self.assertEqual("25206693886", summary["runtime"]["githubRunId"])
+        self.assertEqual(
+            "https://github.com/twoimo/tzudong/actions/runs/25206693886",
+            summary["runtime"]["githubRunUrl"],
+        )
+        self.assertEqual("main", summary["runtime"]["executionBranch"])
+        self.assertEqual("data", summary["runtime"]["targetBranch"])
 
     def test_gdrive_upload_status_embeds_in_summary_manifest_when_requested(self) -> None:
         frame = self.frames_dir / "summary.jpg"

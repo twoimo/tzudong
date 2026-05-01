@@ -72,6 +72,11 @@ jobs:
           fi
           test -s ~/.config/rclone/rclone.conf
 
+      - name: Validate runtime environment contract
+        env:
+          RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+        run: python3 backend/bin/check_env_contract.py --profile gdrive-backfill
+
       - name: Backfill staged frame shards
         run: |
           set -euo pipefail
