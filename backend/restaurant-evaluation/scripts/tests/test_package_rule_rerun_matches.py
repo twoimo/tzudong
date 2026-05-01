@@ -111,6 +111,8 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertEqual(1, summary["coarse_address_recrawl_jobs"])
             self.assertTrue((output / "coarse-address-recrawl-jobs.jsonl").exists())
             self.assertIn("증거부족", (output / "coarse-address-recrawl-jobs.md").read_text(encoding="utf-8"))
+            self.assertEqual(0, summary["provider_search_review_jobs"])
+            self.assertTrue((output / "provider-search-review-jobs.jsonl").exists())
             self.assertTrue((output / "unresolved_followup_queues" / "multi_candidate.jsonl").exists())
 
     def test_build_coarse_address_recrawl_jobs_adds_queries_and_private_flag(self):
@@ -166,6 +168,60 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertTrue((root / "coarse-address-recrawl-jobs.md").exists())
             self.assertTrue((root / "coarse-address-recrawl-manifest.json").exists())
             self.assertIn("가게", (root / "coarse-address-recrawl-jobs.md").read_text(encoding="utf-8"))
+
+
+    def test_build_provider_search_review_jobs_adds_query_variants_and_actions(self):
+        rows = [
+            {
+                "trace_id": "provider",
+                "source_line": 12,
+                "video_id": "v1",
+                "youtube_link": "https://www.youtube.com/watch?v=v1",
+                "origin_name": "테그42 신림점",
+                "origin_address_text": "서울특별시 관악구 신림로 340",
+                "recrawl_bucket": "provider_search_no_result",
+                "problem_tags": ["naver_search_no_result"],
+                "source_selection_file": "selection.jsonl",
+                "evidence_text": "검색 결과 없음",
+            },
+            {"trace_id": "other", "recrawl_bucket": "coarse_source_address_recrawl"},
+        ]
+
+        jobs = package.build_provider_search_review_jobs(rows)
+
+        self.assertEqual(1, len(jobs))
+        self.assertEqual("road_or_lot_present", jobs[0]["address_precision"])
+        self.assertIn("테그42 신림점 서울특별시 관악구 신림로 340", jobs[0]["suggested_search_queries"])
+        self.assertIn("테그42 서울특별시 관악구 신림로", jobs[0]["suggested_search_queries"])
+        self.assertIn("name_variant_query_check", jobs[0]["problem_tags"])
+        self.assertIn("correct_source_name_then_rerun_stage1_stage2", jobs[0]["next_action_options"])
+        self.assertEqual("verify_closed_renamed_or_name_query_issue_before_recrawl", jobs[0]["review_instruction"])
+
+    def test_write_provider_search_review_outputs_creates_exports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rows = [
+                {
+                    "trace_id": "provider",
+                    "source_line": 12,
+                    "video_id": "v1",
+                    "youtube_link": "https://www.youtube.com/watch?v=v1",
+                    "origin_name": "숙달돼지 삼성점",
+                    "origin_address_text": "서울특별시 강남구 삼성로104길 13",
+                    "recrawl_bucket": "provider_search_no_result",
+                    "problem_tags": ["naver_search_no_result"],
+                }
+            ]
+
+            summary = package.write_provider_search_review_outputs(root, rows)
+
+            self.assertEqual(1, summary["provider_search_review_jobs"])
+            self.assertEqual(1, summary["provider_search_problem_tag_counter"]["provider_search_no_result"])
+            self.assertTrue((root / "provider-search-review-jobs.jsonl").exists())
+            self.assertTrue((root / "provider-search-review-jobs.csv").exists())
+            self.assertTrue((root / "provider-search-review-jobs.md").exists())
+            self.assertTrue((root / "provider-search-review-manifest.json").exists())
+            self.assertIn("숙달돼지", (root / "provider-search-review-jobs.md").read_text(encoding="utf-8"))
 
     def test_markdown_cell_escapes_pipes_and_lists(self):
         self.assertEqual("A\\|B", package.markdown_cell("A|B"))
