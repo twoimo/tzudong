@@ -81,4 +81,13 @@ describe('admin restaurant update identity conflicts', () => {
       },
     })).toContain('기존 레코드를 병합/삭제 처리');
   });
+
+  test('auto soft-delete is limited to unreviewed pending duplicate sources', async () => {
+    const { canAutoSoftDeleteDuplicateSource } = await loadModule();
+
+    expect(canAutoSoftDeleteDuplicateSource({ status: 'pending', updated_by_admin_id: null })).toBe(true);
+    expect(canAutoSoftDeleteDuplicateSource({ status: 'pending', updated_by_admin_id: 'admin-id' })).toBe(false);
+    expect(canAutoSoftDeleteDuplicateSource({ status: 'approved', updated_by_admin_id: null })).toBe(false);
+    expect(canAutoSoftDeleteDuplicateSource({ status: 'deleted', updated_by_admin_id: null })).toBe(false);
+  });
 });
