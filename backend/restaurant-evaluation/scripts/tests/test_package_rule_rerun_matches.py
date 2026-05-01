@@ -89,7 +89,16 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertEqual(1, summary["risk_flag_counter"]["large_distance_over_200m"])
             review_rows = [json.loads(line) for line in (output / "matched-review-candidates.jsonl").read_text().splitlines()]
             self.assertEqual("admin_review_before_sync", review_rows[0]["review_recommendation"])
+            self.assertEqual(250.0, review_rows[0]["matched_distance_m"])
+            self.assertEqual("가게", review_rows[0]["naver_name"])
+            self.assertTrue((output / "matched-review-candidates.csv").exists())
+            self.assertIn("trace_id,source_line,origin_name", (output / "matched-review-candidates.csv").read_text(encoding="utf-8-sig"))
+            self.assertIn("| trace_id | line | origin |", (output / "matched-review-table.md").read_text(encoding="utf-8"))
             self.assertTrue((output / "unresolved_followup_queues" / "multi_candidate.jsonl").exists())
+
+    def test_markdown_cell_escapes_pipes_and_lists(self):
+        self.assertEqual("A\\|B", package.markdown_cell("A|B"))
+        self.assertEqual("a, b", package.markdown_cell(["a", "b"]))
 
     def test_latest_rule_rerun_prefers_expanded_reports(self):
         with tempfile.TemporaryDirectory() as tmp:
