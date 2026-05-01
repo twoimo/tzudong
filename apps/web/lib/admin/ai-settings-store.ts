@@ -4,52 +4,32 @@ import { getLatestOcrLeaderboardCandidateModels } from '@/lib/admin/ai-leaderboa
 import { getGeminiOcrModels } from '@/lib/ocr/gemini';
 import { getNvidiaNimOcrModels } from '@/lib/ocr/nvidia-nim';
 import { getCurrentReceiptOcrProductionPromotionGate } from '@/lib/ocr/current-promotion-gate';
-import type { ReceiptOcrPromotionGateResult } from '@/lib/ocr/promotion-gate';
+import {
+  ADMIN_AI_PROVIDERS,
+  OCR_ROUTING_PROVIDERS,
+  getProviderLabel,
+  type AdminAiCandidateModel,
+  type AdminAiProvider,
+  type AdminAiProviderKeySummary,
+  type AdminAiSettingsRecord,
+  type AdminAiSettingsResponse,
+  type OcrRoutingMode,
+  type OcrRoutingProvider,
+} from '@/lib/admin/ai-settings-shared';
 
-export const ADMIN_AI_PROVIDERS = ['gemini', 'openai', 'nvidia_nim'] as const;
-export const OCR_ROUTING_PROVIDERS = ['gemini', 'nvidia_nim'] as const;
-export const OCR_ROUTING_MODES = ['automatic', 'manual'] as const;
-
-export type AdminAiProvider = (typeof ADMIN_AI_PROVIDERS)[number];
-export type OcrRoutingProvider = (typeof OCR_ROUTING_PROVIDERS)[number];
-export type OcrRoutingMode = (typeof OCR_ROUTING_MODES)[number];
-
-export type AdminAiCandidateModel = {
-  id: string;
-  provider: AdminAiProvider;
-  model: string;
-  label: string;
-};
-
-export type AdminAiProviderKeySummary = {
-  provider: AdminAiProvider;
-  hasStoredKey: boolean;
-  hasEnvKey: boolean;
-  source: 'database' | 'environment' | 'none';
-  maskedSecret: string | null;
-  updatedAt: string | null;
-  updatedByAdminId: string | null;
-};
-
-export type AdminAiSettingsRecord = {
-  routingMode: OcrRoutingMode;
-  manualProvider: AdminAiProvider | null;
-  manualModel: string | null;
-  candidateModels: AdminAiCandidateModel[];
-  updatedAt: string | null;
-  updatedByAdminId: string | null;
-  persisted: boolean;
-};
-
-export type AdminAiSettingsResponse = {
-  settings: AdminAiSettingsRecord;
-  providers: AdminAiProviderKeySummary[];
-  promotionGate: ReceiptOcrPromotionGateResult;
-  storage: {
-    serviceRoleConfigured: boolean;
-    databaseConfigured: boolean;
-  };
-};
+export {
+  ADMIN_AI_PROVIDERS,
+  OCR_ROUTING_MODES,
+  OCR_ROUTING_PROVIDERS,
+  getProviderLabel,
+  type AdminAiCandidateModel,
+  type AdminAiProvider,
+  type AdminAiProviderKeySummary,
+  type AdminAiSettingsRecord,
+  type AdminAiSettingsResponse,
+  type OcrRoutingMode,
+  type OcrRoutingProvider,
+} from '@/lib/admin/ai-settings-shared';
 
 export type OcrCredentialCandidate = {
   apiKey: string;
@@ -103,12 +83,6 @@ const ENV_PROVIDER_KEYS: Record<AdminAiProvider, readonly string[]> = {
     'NEXT_OPENAI_API_KEY_BYEON',
   ],
   nvidia_nim: ['NVIDIA_NIM_API_KEY'],
-};
-
-const PROVIDER_LABELS: Record<AdminAiProvider, string> = {
-  gemini: 'Google Gemini',
-  openai: 'OpenAI',
-  nvidia_nim: 'NVIDIA NIM',
 };
 
 const ENCRYPTED_SECRET_PREFIX = 'enc:v1';
@@ -195,10 +169,6 @@ export function decryptStoredProviderSecret(value: string | null | undefined, en
   } catch {
     return null;
   }
-}
-
-export function getProviderLabel(provider: AdminAiProvider): string {
-  return PROVIDER_LABELS[provider];
 }
 
 export function getEnvFallbackSecrets(

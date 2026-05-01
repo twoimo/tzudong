@@ -7,7 +7,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "@/lib/no-toast";
 import { requestAuthUi } from "@/lib/auth-ui-events";
-import { Restaurant } from "@/types/restaurant";
+import type { Restaurant } from "@/types/restaurant";
 import {
     resolveDeviceOrientationHeading,
     resolveGeolocationHeading,
@@ -43,7 +43,7 @@ import { useHomeState } from "./hooks/useHomeState";
 import { useHomeHandlers } from "./hooks/useHomeHandlers";
 import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
 
-import { Announcement } from '@/types/announcement';
+import type { Announcement } from '@/types/announcement';
 
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();

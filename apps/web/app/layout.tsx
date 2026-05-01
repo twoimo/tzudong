@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Noto_Serif_KR } from "next/font/google";
 import Script from "next/script";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { AppSpeedInsights } from "./app-speed-insights";
 import { QueryProvider } from "./providers";
 import { AppProviders } from "./app-providers";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -103,7 +103,7 @@ export default function RootLayout({
                         </Suspense>
                     </AppProviders>
                 </QueryProvider>
-                <SpeedInsights />
+                <AppSpeedInsights />
             </body>
         </html>
     );
