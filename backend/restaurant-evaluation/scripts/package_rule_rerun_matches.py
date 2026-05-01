@@ -660,6 +660,170 @@ def write_coarse_address_recrawl_outputs(output_dir: Path, rows: list[dict[str, 
         "coarse_address_precision_counter": manifest["address_precision_counter"],
         "coarse_address_recrawl_outputs": manifest,
     }
+
+
+def name_query_variants(name: Any) -> list[str]:
+    clean = searchable_name_hint(name)
+    if not clean:
+        return []
+    candidates = [clean]
+    parts = clean.split()
+    if len(parts) > 1 and parts[-1].endswith(("점", "본점", "직영점")):
+        candidates.append(" ".join(parts[:-1]))
+    compact = re.sub(r"\s+", "", clean)
+    if compact != clean:
+        candidates.append(compact)
+    seen: set[str] = set()
+    variants: list[str] = []
+    for candidate in candidates:
+        candidate = norm_space(candidate)
+        if candidate and candidate not in seen:
+            seen.add(candidate)
+            variants.append(candidate)
+    return variants
+
+
+def provider_search_queries(row: dict[str, Any]) -> list[str]:
+    address = norm_space(row.get("origin_address_text"))
+    region = address_region_tokens(address)
+    candidates: list[str] = []
+    for name in name_query_variants(row.get("origin_name")):
+        candidates.extend(
+            [
+                f"{name} {address}",
+                f"{name} {region}",
+                name,
+                f"{region} {name}",
+            ]
+        )
+    seen: set[str] = set()
+    queries: list[str] = []
+    for query in candidates:
+        query = norm_space(query)
+        if query and query not in seen:
+            seen.add(query)
+            queries.append(query)
+    return queries
+
+
+def provider_name_review_flags(row: dict[str, Any]) -> list[str]:
+    flags = {"closed_or_renamed_check", "provider_search_no_result"}
+    variants = name_query_variants(row.get("origin_name"))
+    if len(variants) > 1:
+        flags.add("name_variant_query_check")
+    if is_private_or_masked_name(row.get("origin_name")):
+        flags.add("private_masked_name_manual_review")
+    if is_address_coarse(norm_space(row.get("origin_address_text"))):
+        flags.add("coarse_address_context")
+    return sorted(flags)
+
+
+def build_provider_search_review_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    jobs: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("recrawl_bucket") != "provider_search_no_result":
+            continue
+        problem_tags = sorted(set(row.get("problem_tags") or []) | set(provider_name_review_flags(row)))
+        jobs.append(
+            {
+                "trace_id": row.get("trace_id"),
+                "source_line": row.get("source_line"),
+                "video_id": row.get("video_id"),
+                "youtube_link": row.get("youtube_link"),
+                "origin_name": row.get("origin_name"),
+                "origin_address_text": norm_space(row.get("origin_address_text")),
+                "address_precision": coarse_address_level(norm_space(row.get("origin_address_text"))),
+                "source_selection_file": row.get("source_selection_file") or row.get("selection_file"),
+                "suggested_search_queries": provider_search_queries(row),
+                "review_instruction": "verify_closed_renamed_or_name_query_issue_before_recrawl",
+                "required_evidence": [
+                    "current_provider_listing_or_absence",
+                    "closed_or_renamed_signal",
+                    "video_place_name_or_address_evidence",
+                    "alternative_name_candidate_if_found",
+                ],
+                "next_action_options": [
+                    "tag_closed_or_moved",
+                    "correct_source_name_then_rerun_stage1_stage2",
+                    "recrawl_video_source_evidence",
+                    "manual_provider_search_review",
+                ],
+                "problem_tags": problem_tags,
+                "evidence_text": row.get("evidence_text"),
+            }
+        )
+    return jobs
+
+
+def provider_search_review_csv_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "trace_id": row.get("trace_id"),
+        "source_line": row.get("source_line"),
+        "origin_name": row.get("origin_name"),
+        "origin_address_text": row.get("origin_address_text"),
+        "address_precision": row.get("address_precision"),
+        "suggested_search_queries": " ; ".join(row.get("suggested_search_queries") or []),
+        "next_action_options": " ; ".join(row.get("next_action_options") or []),
+        "problem_tags": ";".join(row.get("problem_tags") or []),
+        "source_selection_file": row.get("source_selection_file"),
+        "youtube_link": row.get("youtube_link"),
+    }
+
+
+def write_provider_search_review_outputs(output_dir: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    jobs = build_provider_search_review_jobs(rows)
+    write_jsonl(output_dir / "provider-search-review-jobs.jsonl", jobs)
+    fieldnames = list(provider_search_review_csv_row({}).keys())
+    write_dict_csv(
+        output_dir / "provider-search-review-jobs.csv",
+        [provider_search_review_csv_row(row) for row in jobs],
+        fieldnames,
+    )
+    lines = [
+        "# Provider Search No-result Review Jobs",
+        "",
+        "이 표는 provider_search_no_result 버킷을 폐업/이전/상호변경/검색어 문제 검토 작업으로 실행하기 위한 report-only 작업 패키지입니다.",
+        "",
+        "| trace_id | origin | address | precision | queries | action_options | youtube |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in jobs:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(str(row.get("trace_id") or "")[:12]),
+                    markdown_cell(row.get("origin_name")),
+                    markdown_cell(row.get("origin_address_text")),
+                    markdown_cell(row.get("address_precision")),
+                    markdown_cell(row.get("suggested_search_queries")),
+                    markdown_cell(row.get("next_action_options")),
+                    markdown_cell(row.get("youtube_link")),
+                ]
+            )
+            + " |"
+        )
+    (output_dir / "provider-search-review-jobs.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    manifest = {
+        "slug": "provider_search_review_jobs",
+        "count": len(jobs),
+        "jsonl_path": str(output_dir / "provider-search-review-jobs.jsonl"),
+        "csv_path": str(output_dir / "provider-search-review-jobs.csv"),
+        "markdown_path": str(output_dir / "provider-search-review-jobs.md"),
+        "address_precision_counter": dict(Counter(row.get("address_precision") for row in jobs)),
+        "problem_tag_counter": dict(Counter(tag for row in jobs for tag in row.get("problem_tags", []))),
+    }
+    (output_dir / "provider-search-review-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "provider_search_review_jobs": len(jobs),
+        "provider_search_precision_counter": manifest["address_precision_counter"],
+        "provider_search_problem_tag_counter": manifest["problem_tag_counter"],
+        "provider_search_review_outputs": manifest,
+    }
+
 def evidence_text(row: dict[str, Any]) -> str:
     summary = row.get("evidence_summary")
     if isinstance(summary, list):
@@ -849,6 +1013,7 @@ def package_report(
     insufficient_evidence_rows = build_insufficient_evidence_rows(unresolved_rows, transform_index)
     insufficient_evidence_summary = write_insufficient_evidence_outputs(output_dir, insufficient_evidence_rows)
     coarse_address_summary = write_coarse_address_recrawl_outputs(output_dir, insufficient_evidence_rows)
+    provider_search_summary = write_provider_search_review_outputs(output_dir, insufficient_evidence_rows)
 
     summary = {
         "generated_at": utc_now(),
@@ -865,6 +1030,7 @@ def package_report(
         **multi_candidate_summary,
         **insufficient_evidence_summary,
         **coarse_address_summary,
+        **provider_search_summary,
         "risk_flag_counter": dict(Counter(flag for row in review_candidates for flag in row["risk_flags"])),
         "unresolved_pending_reason_counter": dict(Counter(row.get("pending_reason") or "unknown" for row in unresolved_rows)),
     }
@@ -897,6 +1063,8 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
         "- `insufficient_evidence_recrawl_queues/`: insufficient-evidence rows split by recrawl bucket",
         "- `coarse-address-recrawl-jobs.*`: actionable source-address enrichment jobs for coarse addresses",
         "- `coarse-address-recrawl-manifest.json`: coarse-address job counts and precision breakdown",
+        "- `provider-search-review-jobs.*`: closed/renamed/name-query review jobs for provider no-result rows",
+        "- `provider-search-review-manifest.json`: provider no-result job counts and tag breakdown",
         "- `missing-source-transform.jsonl`: matched rows not found in source transforms",
         "- `missing-rule-result.jsonl`: matched rows whose scratch rule output could not be loaded",
         "- `unresolved_followup_queues/`: unresolved rows split by pending reason",
@@ -935,6 +1103,16 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
     lines.append(f"- jsonl: `{summary['coarse_address_recrawl_outputs']['jsonl_path']}`")
     lines.append(f"- csv: `{summary['coarse_address_recrawl_outputs']['csv_path']}`")
     lines.append(f"- markdown: `{summary['coarse_address_recrawl_outputs']['markdown_path']}`")
+    lines += ["", "## Provider search no-result review jobs", ""]
+    lines.append(f"- jobs: {summary['provider_search_review_jobs']}")
+    for precision, count in sorted(summary["provider_search_precision_counter"].items()):
+        lines.append(f"- `{precision}`: {count}")
+    lines.append("- problem_tags:")
+    for tag, count in sorted(summary["provider_search_problem_tag_counter"].items()):
+        lines.append(f"  - `{tag}`: {count}")
+    lines.append(f"- jsonl: `{summary['provider_search_review_outputs']['jsonl_path']}`")
+    lines.append(f"- csv: `{summary['provider_search_review_outputs']['csv_path']}`")
+    lines.append(f"- markdown: `{summary['provider_search_review_outputs']['markdown_path']}`")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
