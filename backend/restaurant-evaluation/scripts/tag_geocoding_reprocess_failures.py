@@ -38,6 +38,20 @@ GEOCODE_URL = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
 COARSE_SUFFIX_RE = re.compile(r"(동|읍|면|리|구|시|군)$")
 STREET_OR_LOT_RE = re.compile(r"(\d|로\b|길\b|번지|산\s*\d)")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
+ACTION_PRIORITY = {
+    "rerun_rule_evaluation_with_recovered_source_geocode": 10,
+    "rerun_rule_evaluation_with_candidate_review": 20,
+    "rerun_stage1_source_geocode_then_stage2": 30,
+    "recrawl_or_manual_source_address_enrichment": 40,
+    "recrawl_source_evidence_or_manual_geocode": 50,
+    "manual_address_review_or_recrawl": 60,
+    "manual_search_or_closed_business_check": 70,
+    "manual_distance_review": 80,
+    "retry_geocoder_after_api_check": 90,
+    "retry_local_search_after_api_check": 91,
+    "recover_transform_or_recrawl": 92,
+    "manual_review": 99,
+}
 
 
 def utc_now() -> str:
@@ -380,6 +394,64 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
 
+def action_slug(action: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (action or "unknown").lower()).strip("-")
+    return slug or "unknown"
+
+
+def action_priority(action: str) -> int:
+    return ACTION_PRIORITY.get(action or "", 100)
+
+
+def build_action_queues(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        grouped[str(row.get("recommended_action") or "manual_review")].append(row)
+
+    queues: list[dict[str, Any]] = []
+    for action, action_rows in grouped.items():
+        priority = action_priority(action)
+        slug = f"{priority:02d}-{action_slug(action)}"
+        queue_rows = sorted(
+            action_rows,
+            key=lambda row: (str(row.get("stage") or ""), str(row.get("trace_id") or "")),
+        )
+        queues.append(
+            {
+                "action": action,
+                "count": len(queue_rows),
+                "priority": priority,
+                "slug": slug,
+                "rows": queue_rows,
+            }
+        )
+    return sorted(queues, key=lambda queue: (queue["priority"], queue["slug"]))
+
+
+def write_action_queues(report_dir: Path, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    queue_dir = report_dir / "next_action_queues"
+    queue_dir.mkdir(parents=True, exist_ok=True)
+    manifest: list[dict[str, Any]] = []
+    for queue in build_action_queues(rows):
+        filename = f"{queue['slug']}.jsonl"
+        path = queue_dir / filename
+        write_jsonl(path, queue["rows"])
+        manifest.append(
+            {
+                "action": queue["action"],
+                "count": queue["count"],
+                "priority": queue["priority"],
+                "path": str(path),
+                "slug": queue["slug"],
+            }
+        )
+    (queue_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
 def write_markdown(path: Path, payload: dict[str, Any]) -> None:
     summary = payload["summary"]
     lines = [
@@ -410,7 +482,12 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "- `stage-reprocess-tags.jsonl`: all tagged records",
         "- `reprocess_candidates.jsonl`: rows that recovered enough evidence to rerun rule evaluation",
         "- `unresolved_tagged.jsonl`: rows still needing manual review/recrawl/closed-business checks",
+        "- `next_action_queues/`: exclusive action queues split by recommended_action",
     ]
+    if payload.get("action_queue_manifest"):
+        lines += ["", "## Next action queues", ""]
+        for queue in payload["action_queue_manifest"]:
+            lines.append(f"- `{queue['slug']}`: {queue['count']} rows → `{queue['path']}`")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -473,6 +550,8 @@ def main() -> None:
     write_jsonl(report_dir / "stage-reprocess-tags.jsonl", results)
     write_jsonl(report_dir / "reprocess_candidates.jsonl", reprocess_candidates)
     write_jsonl(report_dir / "unresolved_tagged.jsonl", unresolved)
+    action_queue_manifest = write_action_queues(report_dir, results)
+    payload["action_queue_manifest"] = action_queue_manifest
     (report_dir / "stage-reprocess-summary.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
