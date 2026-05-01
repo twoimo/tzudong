@@ -958,6 +958,133 @@ def write_distance_no_candidate_review_outputs(output_dir: Path, rows: list[dict
         "distance_no_candidate_review_outputs": manifest,
     }
 
+
+
+def generic_evidence_gap_flags(row: dict[str, Any]) -> list[str]:
+    flags = {"generic_evidence_gap", "manual_evidence_enrichment"}
+    evidence = norm_space(row.get("evidence_text"))
+    if "non-restaurant" in evidence or "비음식" in evidence:
+        flags.add("non_restaurant_candidate_check")
+    if row.get("source_lat") is None or row.get("source_lng") is None:
+        flags.add("missing_source_coordinates")
+    if is_address_coarse(norm_space(row.get("origin_address_text"))):
+        flags.add("coarse_address_context")
+    return sorted(flags)
+
+
+def build_generic_evidence_gap_jobs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    jobs: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("recrawl_bucket") != "generic_evidence_gap":
+            continue
+        address = norm_space(row.get("origin_address_text"))
+        problem_tags = sorted(set(row.get("problem_tags") or []) | set(generic_evidence_gap_flags(row)))
+        jobs.append(
+            {
+                "trace_id": row.get("trace_id"),
+                "source_line": row.get("source_line"),
+                "video_id": row.get("video_id"),
+                "youtube_link": row.get("youtube_link"),
+                "origin_name": row.get("origin_name"),
+                "origin_address_text": address,
+                "address_precision": coarse_address_level(address),
+                "source_lat": row.get("source_lat"),
+                "source_lng": row.get("source_lng"),
+                "source_selection_file": row.get("source_selection_file") or row.get("selection_file"),
+                "suggested_search_queries": provider_search_queries(row) or build_suggested_queries(row),
+                "review_instruction": "manually_enrich_video_or_source_evidence_and_classify_final_blocker",
+                "required_evidence": [
+                    "video_place_name_or_address_evidence",
+                    "provider_listing_or_non_restaurant_signal",
+                    "source_address_and_coordinate_origin",
+                    "final_classification_reason",
+                ],
+                "next_action_options": [
+                    "recrawl_video_source_evidence",
+                    "correct_source_name_or_address_then_rerun",
+                    "tag_non_restaurant_or_out_of_scope",
+                    "tag_source_data_error_or_manual_review",
+                ],
+                "problem_tags": problem_tags,
+                "evidence_text": row.get("evidence_text"),
+                "recommended_action": row.get("recommended_action"),
+            }
+        )
+    return jobs
+
+
+def generic_evidence_gap_csv_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "trace_id": row.get("trace_id"),
+        "source_line": row.get("source_line"),
+        "origin_name": row.get("origin_name"),
+        "origin_address_text": row.get("origin_address_text"),
+        "address_precision": row.get("address_precision"),
+        "source_lat": row.get("source_lat"),
+        "source_lng": row.get("source_lng"),
+        "suggested_search_queries": " ; ".join(row.get("suggested_search_queries") or []),
+        "next_action_options": " ; ".join(row.get("next_action_options") or []),
+        "problem_tags": ";".join(row.get("problem_tags") or []),
+        "evidence_text": row.get("evidence_text"),
+        "source_selection_file": row.get("source_selection_file"),
+        "youtube_link": row.get("youtube_link"),
+    }
+
+
+def write_generic_evidence_gap_outputs(output_dir: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    jobs = build_generic_evidence_gap_jobs(rows)
+    write_jsonl(output_dir / "generic-evidence-gap-jobs.jsonl", jobs)
+    fieldnames = list(generic_evidence_gap_csv_row({}).keys())
+    write_dict_csv(
+        output_dir / "generic-evidence-gap-jobs.csv",
+        [generic_evidence_gap_csv_row(row) for row in jobs],
+        fieldnames,
+    )
+    lines = [
+        "# Generic Evidence Gap Jobs",
+        "",
+        "이 표는 남은 generic_evidence_gap 버킷을 수동 증거 보강/재크롤링/데이터 오류 태깅 작업으로 마무리하기 위한 report-only 작업 패키지입니다.",
+        "",
+        "| trace_id | origin | address | evidence | tags | action_options | youtube |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in jobs:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(str(row.get("trace_id") or "")[:12]),
+                    markdown_cell(row.get("origin_name")),
+                    markdown_cell(row.get("origin_address_text")),
+                    markdown_cell(row.get("evidence_text")),
+                    markdown_cell(row.get("problem_tags")),
+                    markdown_cell(row.get("next_action_options")),
+                    markdown_cell(row.get("youtube_link")),
+                ]
+            )
+            + " |"
+        )
+    (output_dir / "generic-evidence-gap-jobs.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    manifest = {
+        "slug": "generic_evidence_gap_jobs",
+        "count": len(jobs),
+        "jsonl_path": str(output_dir / "generic-evidence-gap-jobs.jsonl"),
+        "csv_path": str(output_dir / "generic-evidence-gap-jobs.csv"),
+        "markdown_path": str(output_dir / "generic-evidence-gap-jobs.md"),
+        "address_precision_counter": dict(Counter(row.get("address_precision") for row in jobs)),
+        "problem_tag_counter": dict(Counter(tag for row in jobs for tag in row.get("problem_tags", []))),
+    }
+    (output_dir / "generic-evidence-gap-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "generic_evidence_gap_jobs": len(jobs),
+        "generic_evidence_gap_precision_counter": manifest["address_precision_counter"],
+        "generic_evidence_gap_problem_tag_counter": manifest["problem_tag_counter"],
+        "generic_evidence_gap_outputs": manifest,
+    }
+
 def evidence_text(row: dict[str, Any]) -> str:
     summary = row.get("evidence_summary")
     if isinstance(summary, list):
@@ -1149,6 +1276,7 @@ def package_report(
     coarse_address_summary = write_coarse_address_recrawl_outputs(output_dir, insufficient_evidence_rows)
     provider_search_summary = write_provider_search_review_outputs(output_dir, insufficient_evidence_rows)
     distance_no_candidate_summary = write_distance_no_candidate_review_outputs(output_dir, insufficient_evidence_rows)
+    generic_evidence_gap_summary = write_generic_evidence_gap_outputs(output_dir, insufficient_evidence_rows)
 
     summary = {
         "generated_at": utc_now(),
@@ -1167,6 +1295,7 @@ def package_report(
         **coarse_address_summary,
         **provider_search_summary,
         **distance_no_candidate_summary,
+        **generic_evidence_gap_summary,
         "risk_flag_counter": dict(Counter(flag for row in review_candidates for flag in row["risk_flags"])),
         "unresolved_pending_reason_counter": dict(Counter(row.get("pending_reason") or "unknown" for row in unresolved_rows)),
     }
@@ -1203,6 +1332,8 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
         "- `provider-search-review-manifest.json`: provider no-result job counts and tag breakdown",
         "- `distance-no-candidate-review-jobs.*`: source-coordinate/radius/video-evidence review jobs",
         "- `distance-no-candidate-review-manifest.json`: distance no-candidate job counts and tag breakdown",
+        "- `generic-evidence-gap-jobs.*`: final manual evidence enrichment jobs for uncategorized gaps",
+        "- `generic-evidence-gap-manifest.json`: generic evidence gap job counts and tag breakdown",
         "- `missing-source-transform.jsonl`: matched rows not found in source transforms",
         "- `missing-rule-result.jsonl`: matched rows whose scratch rule output could not be loaded",
         "- `unresolved_followup_queues/`: unresolved rows split by pending reason",
@@ -1262,6 +1393,16 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
     lines.append(f"- jsonl: `{summary['distance_no_candidate_review_outputs']['jsonl_path']}`")
     lines.append(f"- csv: `{summary['distance_no_candidate_review_outputs']['csv_path']}`")
     lines.append(f"- markdown: `{summary['distance_no_candidate_review_outputs']['markdown_path']}`")
+    lines += ["", "## Generic evidence gap jobs", ""]
+    lines.append(f"- jobs: {summary['generic_evidence_gap_jobs']}")
+    for precision, count in sorted(summary["generic_evidence_gap_precision_counter"].items()):
+        lines.append(f"- `{precision}`: {count}")
+    lines.append("- problem_tags:")
+    for tag, count in sorted(summary["generic_evidence_gap_problem_tag_counter"].items()):
+        lines.append(f"  - `{tag}`: {count}")
+    lines.append(f"- jsonl: `{summary['generic_evidence_gap_outputs']['jsonl_path']}`")
+    lines.append(f"- csv: `{summary['generic_evidence_gap_outputs']['csv_path']}`")
+    lines.append(f"- markdown: `{summary['generic_evidence_gap_outputs']['markdown_path']}`")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
