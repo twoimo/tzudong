@@ -269,7 +269,7 @@ function writeArtifacts(result) {
 
 async function main() {
   fs.mkdirSync(outputDir, { recursive: true });
-  if (cold) fs.rmSync(path.join(projectRoot, '.next', 'dev'), { recursive: true, force: true });
+  if (cold) fs.rmSync(path.join(projectRoot, '.next'), { recursive: true, force: true });
 
   const routes = discoverRoutes();
   const port = await choosePort();

@@ -12,6 +12,11 @@ describe('measure-dev-routes source contract', () => {
         expect(source).toContain('process.exitCode = 1');
     });
 
+    test('removes the full Next cache for cold measurements', () => {
+        expect(source).toContain("path.join(projectRoot, '.next')");
+        expect(source).not.toContain("path.join(projectRoot, '.next', 'dev')");
+    });
+
     test('retries transient dev-server failures and records retry metadata', () => {
         expect(source).toContain("parsePositiveIntegerArg('--retries', 1)");
         expect(source).toContain('function shouldRetryRequest(result)');
