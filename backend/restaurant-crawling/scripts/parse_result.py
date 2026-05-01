@@ -7,9 +7,10 @@ Gemini CLI 크롤링 도구 (통합)
 Merged from: tool_get_pending_crawling.py + parse_result.py
 """
 
-import json
-import sys
 import argparse
+import json
+import re
+import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Set
 
@@ -222,7 +223,85 @@ def validate_restaurant_data(data: Dict[str, Any]) -> bool:
             if field not in restaurant:
                 print(f"[ERROR] restaurants[{idx}]에 '{field}' 필드가 없습니다", file=sys.stderr)
                 return False
+        unsupported_reason = detect_unsupported_identity_inference(restaurant)
+        if unsupported_reason:
+            print(
+                f"[ERROR] restaurants[{idx}] 상호명 추론 근거가 불충분합니다: {unsupported_reason}",
+                file=sys.stderr,
+            )
+            return False
     return True
+
+
+_RISKY_IDENTITY_INFERENCE_RE = re.compile(
+    r"(키워드|검색\s*정보|조합|종합|추정|유추|특정됩니다|특정함|글씨체)",
+    re.IGNORECASE,
+)
+_DIRECT_PLACE_EVIDENCE_RE = re.compile(
+    r"(\[\d{1,2}:\d{2}\]|상호명\s*(?:확인|노출|명시)|"
+    r"식당\s*이름\s*(?:확인|노출|명시)|간판에\s*['\"]?|"
+    r"메뉴판에\s*['\"]?|주소\s*(?:확인|노출|명시)|도로명|"
+    r"네이버\s*(?:지도|플레이스)|구글\s*(?:지도|Maps)|place\s*id)",
+    re.IGNORECASE,
+)
+
+
+def detect_unsupported_identity_inference(restaurant: Dict[str, Any]) -> Optional[str]:
+    """Reject high-risk place identity guesses that lack direct evidence.
+
+    The crawler previously accepted a model answer that inferred
+    "청량리 할머니 냉면" from title/location/menu keywords even though the
+    concrete on-screen place was different. We still allow uncertain rows
+    with ``origin_name = null``; the unsafe case is a named restaurant whose
+    reasoning explicitly says it was synthesized from weak clues without a
+    timestamp, map/place, address, signboard, or menu-board evidence anchor.
+    """
+
+    origin_name = str(restaurant.get("origin_name") or "").strip()
+    reasoning_basis = str(restaurant.get("reasoning_basis") or "").strip()
+
+    if not origin_name or not reasoning_basis:
+        return None
+    if not _RISKY_IDENTITY_INFERENCE_RE.search(reasoning_basis):
+        return None
+    if _DIRECT_PLACE_EVIDENCE_RE.search(reasoning_basis):
+        return None
+
+    return "검색/지역/메뉴 키워드 조합 추론은 직접 상호명·주소 근거 없이는 허용하지 않습니다"
+
+
+def load_manual_place_correction(youtube_url: str) -> Optional[Dict[str, Any]]:
+    corrections_path = Path(__file__).resolve().parents[1] / "data" / "manual_place_corrections.json"
+    if not corrections_path.exists():
+        return None
+
+    try:
+        corrections = json.loads(corrections_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"[WARN] 수동 장소 보정 파일 로드 실패: {exc}", file=sys.stderr)
+        return None
+
+    return corrections.get(youtube_url)
+
+
+def apply_manual_place_correction(youtube_url: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    correction = load_manual_place_correction(youtube_url)
+    if not correction:
+        return data
+
+    restaurants = correction.get("restaurants")
+    if not isinstance(restaurants, list):
+        print(f"[WARN] 수동 장소 보정 restaurants 형식 오류: {youtube_url}", file=sys.stderr)
+        return data
+
+    corrected = dict(data)
+    corrected["restaurants"] = restaurants
+    corrected["manual_place_correction"] = {
+        "source": correction.get("source", "manual_verified"),
+        "reason": correction.get("reason"),
+    }
+    print(f"[INFO] 수동 검증 장소 보정 적용: {youtube_url}", file=sys.stderr)
+    return corrected
 
 
 def save_to_jsonl(
@@ -271,6 +350,7 @@ def parse_result(args: argparse.Namespace) -> None:
     data = parse_gemini_response(response_text)
     if not data:
         sys.exit(1)
+    data = apply_manual_place_correction(youtube_url, data)
 
     if not validate_restaurant_data(data):
         sys.exit(1)
