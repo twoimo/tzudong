@@ -217,7 +217,8 @@ jobs:
           fi
           
           # Gemini Credentials (자동 계정 우회 지원)
-          # Note: API Key is injected manually as GEMINI_API_KEY_BYEON
+          # Note: API Key is injected as GEMINI_API_KEY. The BYEON alias is
+          # mirrored from the canonical secret only for legacy scripts.
           if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
             echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
             echo '{"security": {"auth": {"selectedType": "oauth-personal"}}}' > ~/.gemini/settings.json
@@ -292,8 +293,9 @@ jobs:
         timeout-minutes: 80
         env:
           # API Keys
-          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
-          GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY_BYEON }}
+          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Supabase
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
