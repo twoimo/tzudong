@@ -578,6 +578,33 @@ def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
     return None
 
 
+def normalize_category_values(category: Any) -> List[str]:
+    """Return non-empty normalized category labels from string or multi-label input."""
+    if isinstance(category, str):
+        value = _norm_space(category)
+        return [value] if value else []
+    if isinstance(category, list):
+        values: List[str] = []
+        for item in category:
+            if not isinstance(item, str):
+                continue
+            value = _norm_space(item)
+            if value:
+                values.append(value)
+        return values
+    return []
+
+
+def is_valid_category_value(category: Any) -> bool:
+    """Validate both legacy string categories and current multi-label categories."""
+    values = normalize_category_values(category)
+    return bool(values) and all(value in VALID_CATEGORIES for value in values)
+
+
+def invalid_category_values(category: Any) -> List[str]:
+    return [value for value in normalize_category_values(category) if value not in VALID_CATEGORIES]
+
+
 # ========= 평가 로직 (기존 backup 그대로 + naver_name 추가) =========
 def evaluate_category_validity(
     restaurants: List[Dict[str, Any]],
@@ -610,8 +637,11 @@ def evaluate_category_validity(
         name = naver_name_map.get(origin_name) or google_name_map.get(origin_name) or origin_name
         name_source = "naver_name" if naver_name_map.get(origin_name) else ("google_name" if google_name_map.get(origin_name) else "origin_name")
         category = restaurant.get("category")
-        is_valid = category is not None and category in VALID_CATEGORIES
-        results.append({"name": name, "eval_value": is_valid})
+        result = {"name": name, "eval_value": is_valid_category_value(category)}
+        invalid_categories = invalid_category_values(category)
+        if invalid_categories:
+            result["invalid_categories"] = invalid_categories
+        results.append(result)
         evaluation_name_source[origin_name] = name_source
     return results, evaluation_name_source
 
