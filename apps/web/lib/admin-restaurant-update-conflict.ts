@@ -62,6 +62,13 @@ export function formatActiveRestaurantIdentityConflictMessage(params: {
   return `같은 YouTube 영상에 이미 활성 상태의 "${params.restaurantName}" 레코드가 있어 저장할 수 없습니다. 중복 레코드를 먼저 병합/삭제 처리해주세요.`;
 }
 
+export function canAutoSoftDeleteDuplicateSource(record: {
+  status?: string | null;
+  updated_by_admin_id?: string | null;
+}): boolean {
+  return record.status === 'pending' && !record.updated_by_admin_id;
+}
+
 export async function findActiveRestaurantIdentityConflict(params: {
   restaurantId: string;
   restaurantName: string;
