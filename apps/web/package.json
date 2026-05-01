@@ -19,7 +19,8 @@
     "qa:insights-chat:db": "bun run scripts/insight-chat-db-ops.mjs",
     "dev:webpack": "node scripts/clean-next.mjs --skip-clean -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
     "dev:webpack:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
-    "bench:dev": "node scripts/measure-dev-compile.mjs"
+    "bench:dev": "node scripts/measure-dev-compile.mjs",
+    "bench:routes": "node scripts/measure-dev-routes.mjs"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

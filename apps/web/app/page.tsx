@@ -1,6 +1,6 @@
-// [SSR] 서버 컴포넌트 - SEO 최적화 및 초기 로딩 성능 개선
+// [SSR] 서버 컴포넌트 - SEO 메타데이터와 가벼운 홈 클라이언트 로더
 import type { Metadata } from 'next';
-import HomeClient from './home-client';
+import HomeClientLoader from './home-client-loader';
 
 // [SSR] 메타데이터 생성 - 검색 엔진 최적화
 export const metadata: Metadata = {
@@ -30,9 +30,9 @@ export const metadata: Metadata = {
     },
 };
 
-// [SSR] 서버 컴포넌트 홈 페이지 - 빠른 초기 렌더링
+// [SSR] 서버 컴포넌트 홈 페이지 - 무거운 지도 앱 그래프는 클라이언트에서 지연 로딩
 export default function HomePage() {
     return (
-        <HomeClient />
+        <HomeClientLoader />
     );
 }

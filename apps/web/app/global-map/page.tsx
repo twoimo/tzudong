@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense, lazy } from "react";
-import MapView from "@/components/map/MapView";
+import dynamic from "next/dynamic";
 import { FilterPanel } from "@/components/filters/FilterPanel";
 import type { FilterState } from "@/components/filters/filter-state";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { MapPin, Grid3X3, Map, ChevronsUpDown, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Restaurant } from "@/types/restaurant";
+import type { Restaurant } from "@/types/restaurant";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -22,9 +22,6 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
 import { toast } from "@/lib/no-toast";
-import { AdminRestaurantModal } from "@/components/admin/AdminRestaurantModal";
-import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
-import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
@@ -33,6 +30,22 @@ import { debugLog as logDebug } from "@/lib/debug-log";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
+const MapView = dynamic(() => import("@/components/map/MapView"), {
+    ssr: false,
+    loading: () => <MapSkeleton />,
+});
+const AdminRestaurantModal = dynamic(
+    () => import("@/components/admin/AdminRestaurantModal").then((mod) => ({ default: mod.AdminRestaurantModal })),
+    { ssr: false }
+);
+const RestaurantDetailPanel = dynamic(
+    () => import("@/components/restaurant/RestaurantDetailPanel").then((mod) => ({ default: mod.RestaurantDetailPanel })),
+    { ssr: false }
+);
+const ReviewModal = dynamic(
+    () => import("@/components/reviews/ReviewModal").then((mod) => ({ default: mod.ReviewModal })),
+    { ssr: false }
+);
 
 // 글로벌 페이지용 국가 목록
 const GLOBAL_COUNTRIES = [
@@ -718,16 +731,18 @@ export default function GlobalMapPage() {
             </Dialog>
 
             {/* 리뷰 작성 모달 */}
-            <ReviewModal
-                isOpen={isReviewModalOpen}
-                onClose={() => setIsReviewModalOpen(false)}
-                restaurant={panelRestaurant ? { id: panelRestaurant.id, name: panelRestaurant.name } : null}
-                onSuccess={() => {
-                    // refreshTrigger를 업데이트해서 데이터 새로고침
-                    // 부모 컴포넌트에서 refreshTrigger를 관리하므로 여기서는 사용하지 않음
-                    toast.success("리뷰가 성공적으로 등록되었습니다!");
-                }}
-            />
+            {isReviewModalOpen && (
+                <ReviewModal
+                    isOpen={isReviewModalOpen}
+                    onClose={() => setIsReviewModalOpen(false)}
+                    restaurant={panelRestaurant ? { id: panelRestaurant.id, name: panelRestaurant.name } : null}
+                    onSuccess={() => {
+                        // refreshTrigger를 업데이트해서 데이터 새로고침
+                        // 부모 컴포넌트에서 refreshTrigger를 관리하므로 여기서는 사용하지 않음
+                        toast.success("리뷰가 성공적으로 등록되었습니다!");
+                    }}
+                />
+            )}
             {/* 관리자 맛집 수정 모달 */}
             {isAdmin && (
                 <AdminRestaurantModal
