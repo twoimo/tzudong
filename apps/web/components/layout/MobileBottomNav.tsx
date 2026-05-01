@@ -42,6 +42,10 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
     const [, startTransition] = useTransition();
 
     const prefetchRoute = useCallback((path: string) => {
+        if (process.env.NODE_ENV === 'development') {
+            return;
+        }
+
         try {
             router.prefetch(path);
         } catch {

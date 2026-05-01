@@ -2,10 +2,25 @@
 
 import Link from 'next/link';
 import { memo } from 'react';
+import dynamic from 'next/dynamic';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import InsightChatSection from '@/components/insight/InsightChatSection';
 import styles from './insight-overhaul.module.css';
+
+const InsightChatSection = dynamic(() => import('@/components/insight/InsightChatSection'), {
+    ssr: false,
+    loading: () => (
+        <section className={styles.centerShell} aria-live="polite" aria-busy="true">
+            <section className={styles.centerPanel}>
+                <div className={styles.statusBadge}>
+                    <Loader2 className={styles.spin} aria-hidden="true" />
+                    인사이트 콘솔 로딩 중
+                </div>
+                <p className={styles.panelHint}>대화 도구를 불러오고 있습니다.</p>
+            </section>
+        </section>
+    ),
+});
 
 const InsightClientComponent = () => {
     const { isAdmin, isLoading: isAuthLoading } = useAuth();
