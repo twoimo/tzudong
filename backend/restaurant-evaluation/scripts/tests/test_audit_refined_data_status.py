@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -72,6 +74,35 @@ class AuditRefinedDataStatusTest(unittest.TestCase):
         self.assertEqual(0, comparison["actionable_queue_counts_after_db_lock"]["02_approval_ready"])
         self.assertEqual(0, comparison["actionable_queue_counts_after_db_lock"]["01_pure_geocoding_failures"])
         self.assertEqual(1, comparison["actionable_queue_counts_after_db_lock"]["03_missing_recovery"])
+        self.assertEqual(["missing"], comparison["actionable_trace_ids_by_queue"]["03_missing_recovery"])
+        self.assertEqual([], comparison["db_missing_local_records"])
+
+    def test_db_overlay_writes_actionable_and_missing_files(self):
+        records = [
+            ready_record(trace_id="ready"),
+            ready_record(trace_id="geo", geocoding_success=False, evaluation_results=None),
+            ready_record(trace_id="no-db", geocoding_success=False, evaluation_results=None),
+        ]
+        queues = audit.queue_records(records)
+        comparison = audit.compare_with_db(
+            records,
+            {
+                "ready": {"trace_id": "ready", "status": "approved", "updated_by_admin_id": "admin"},
+                "geo": {"trace_id": "geo", "status": "pending", "updated_by_admin_id": None},
+            },
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            report_dir = Path(tmp)
+            audit.write_supabase_overlay_outputs(report_dir, queues, comparison)
+            actionable_geo = report_dir / "actionable_after_db_lock" / "01_pure_geocoding_failures.jsonl"
+            missing = report_dir / "supabase_missing_local_records.jsonl"
+
+            actionable_rows = [json.loads(line) for line in actionable_geo.read_text().splitlines()]
+            missing_rows = [json.loads(line) for line in missing.read_text().splitlines()]
+
+        self.assertEqual(["geo", "no-db"], [row["trace_id"] for row in actionable_rows])
+        self.assertEqual(["no-db"], [row["trace_id"] for row in missing_rows])
 
 
 if __name__ == "__main__":

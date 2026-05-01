@@ -13,7 +13,6 @@ import json
 import os
 import sys
 from collections import Counter
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -74,6 +73,40 @@ def is_ready_for_approval(record: dict[str, Any]) -> bool:
     )
 
 
+def string_or_empty(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def origin_address_text(record: dict[str, Any]) -> str:
+    origin_address = record.get("origin_address")
+    if isinstance(origin_address, dict):
+        for key in ("address", "roadAddress", "jibunAddress"):
+            value = string_or_empty(origin_address.get(key))
+            if value:
+                return value
+    return string_or_empty(origin_address)
+
+
+def geocoding_failure_bucket(record: dict[str, Any]) -> str:
+    if record.get("geocoding_success") is True:
+        return "geocoding_success"
+    if record.get("is_missing") is True:
+        return "missing"
+    if is_not_selected(record):
+        return "not_selected"
+
+    false_stage = record.get("geocoding_false_stage")
+    if false_stage is None:
+        return "geocoder_failed_or_no_result"
+    if false_stage == 0:
+        return "not_evaluation_target"
+    if false_stage == 1:
+        return "source_location_unresolved"
+    if false_stage == 2:
+        return "candidate_location_mismatch"
+    return f"unknown_stage_{false_stage}"
+
+
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with path.open(encoding="utf-8") as handle:
@@ -87,6 +120,7 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def safe_record_view(record: dict[str, Any]) -> dict[str, Any]:
+    address_text = origin_address_text(record)
     return {
         "line": record.get("_line"),
         "trace_id": record.get("trace_id"),
@@ -97,8 +131,12 @@ def safe_record_view(record: dict[str, Any]) -> dict[str, Any]:
         "youtube_link": record.get("youtube_link"),
         "geocoding_success": record.get("geocoding_success"),
         "geocoding_false_stage": record.get("geocoding_false_stage"),
+        "geocoding_failure_bucket": geocoding_failure_bucket(record),
+        "has_origin_address": bool(address_text),
+        "has_description_map_url": bool(string_or_empty(record.get("description_map_url"))),
         "is_missing": record.get("is_missing"),
         "is_not_selected": is_not_selected(record),
+        "origin_address_text": address_text,
         "ready_for_approval": is_ready_for_approval(record),
         "source_type": record.get("source_type"),
     }
@@ -205,7 +243,14 @@ def compare_with_db(records: list[dict[str, Any]], db_rows: dict[str, dict[str, 
                 queue_membership.setdefault(str(row["trace_id"]), set()).add(queue_name)
 
     reviewed_rows: list[dict[str, Any]] = []
+    db_missing_rows: list[dict[str, Any]] = []
     locked_trace_ids_by_queue: dict[str, set[str]] = {name: set() for name in queues}
+    trace_ids_with_db_rows = set(db_rows)
+
+    for trace_id, local_row in local_by_trace.items():
+        if trace_id not in trace_ids_with_db_rows:
+            db_missing_rows.append(safe_record_view(local_row))
+
     for trace_id, db_row in db_rows.items():
         local_row = local_by_trace.get(trace_id)
         if not local_row:
@@ -237,6 +282,15 @@ def compare_with_db(records: list[dict[str, Any]], db_rows: dict[str, dict[str, 
         name: count - len(locked_trace_ids_by_queue.get(name, set()))
         for name, count in queue_counts.items()
     }
+    actionable_trace_ids_by_queue = {
+        name: sorted(
+            str(row["trace_id"])
+            for row in rows
+            if row.get("trace_id")
+            and str(row["trace_id"]) not in locked_trace_ids_by_queue.get(name, set())
+        )
+        for name, rows in queues.items()
+    }
 
     return {
         "db_enabled": True,
@@ -247,7 +301,10 @@ def compare_with_db(records: list[dict[str, Any]], db_rows: dict[str, dict[str, 
         "admin_locked_rows": len(reviewed_rows),
         "admin_locked_by_queue": dict(locked_by_queue),
         "actionable_queue_counts_after_db_lock": actionable_after_db_lock,
+        "actionable_trace_ids_by_queue": actionable_trace_ids_by_queue,
+        "db_missing_local_records": db_missing_rows,
         "reviewed_rows_sample": reviewed_rows[:50],
+        "reviewed_rows": reviewed_rows,
     }
 
 
@@ -255,6 +312,30 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def filter_rows_by_trace_ids(rows: list[dict[str, Any]], trace_ids: set[str]) -> list[dict[str, Any]]:
+    return [row for row in rows if row.get("trace_id") and str(row["trace_id"]) in trace_ids]
+
+
+def write_supabase_overlay_outputs(
+    report_dir: Path,
+    queues: dict[str, list[dict[str, Any]]],
+    comparison: dict[str, Any] | None,
+) -> None:
+    if not comparison or not comparison.get("db_enabled"):
+        return
+
+    actionable_dir = report_dir / "actionable_after_db_lock"
+    actionable_dir.mkdir(parents=True, exist_ok=True)
+    trace_ids_by_queue = comparison.get("actionable_trace_ids_by_queue", {})
+
+    for queue_name, rows in queues.items():
+        trace_ids = set(trace_ids_by_queue.get(queue_name, []))
+        write_jsonl(actionable_dir / f"{queue_name}.jsonl", filter_rows_by_trace_ids(rows, trace_ids))
+
+    write_jsonl(report_dir / "supabase_missing_local_records.jsonl", comparison.get("db_missing_local_records", []))
+    write_jsonl(report_dir / "supabase_admin_locked_rows.jsonl", comparison.get("reviewed_rows", []))
 
 
 def write_markdown(path: Path, payload: dict[str, Any]) -> None:
@@ -301,6 +382,9 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
             f"- local_to_db_status_drift: `{json.dumps(db['local_to_db_status_drift'], ensure_ascii=False, sort_keys=True)}`",
             f"- admin_locked_by_queue: `{json.dumps(db['admin_locked_by_queue'], ensure_ascii=False, sort_keys=True)}`",
             f"- actionable_queue_counts_after_db_lock: `{json.dumps(db.get('actionable_queue_counts_after_db_lock', {}), ensure_ascii=False, sort_keys=True)}`",
+            "",
+            "Actionable queue files are written under `actionable_after_db_lock/` and exclude Supabase admin-locked rows.",
+            "`supabase_missing_local_records.jsonl` lists local records with no matching DB trace_id.",
         ]
     else:
         lines += [
@@ -347,6 +431,7 @@ def main() -> None:
         trace_ids = sorted({str(row["trace_id"]) for row in records if row.get("trace_id")})
         db_rows = fetch_db_rows_by_trace_id(trace_ids)
         comparison = compare_with_db(records, db_rows) if db_rows else {"db_enabled": False, "reason": "no db rows or client unavailable"}
+        write_supabase_overlay_outputs(report_dir, queues, comparison)
 
     payload = {
         "generated_at": utc_now(),
