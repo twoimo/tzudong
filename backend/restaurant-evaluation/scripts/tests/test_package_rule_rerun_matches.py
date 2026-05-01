@@ -108,7 +108,64 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
             self.assertIn("| trace_id | line | origin |", (output / "matched-review-table.md").read_text(encoding="utf-8"))
             self.assertTrue((output / "insufficient-evidence-recrawl-table.csv").exists())
             self.assertTrue((output / "insufficient_evidence_recrawl_queues" / "coarse_source_address_recrawl.jsonl").exists())
+            self.assertEqual(1, summary["coarse_address_recrawl_jobs"])
+            self.assertTrue((output / "coarse-address-recrawl-jobs.jsonl").exists())
+            self.assertIn("증거부족", (output / "coarse-address-recrawl-jobs.md").read_text(encoding="utf-8"))
             self.assertTrue((output / "unresolved_followup_queues" / "multi_candidate.jsonl").exists())
+
+    def test_build_coarse_address_recrawl_jobs_adds_queries_and_private_flag(self):
+        rows = [
+            {
+                "trace_id": "coarse",
+                "source_line": 7,
+                "video_id": "v1",
+                "youtube_link": "https://www.youtube.com/watch?v=v1",
+                "origin_name": "[비공개] 동해시 킹크랩 식당",
+                "origin_address_text": "강원도 동해시",
+                "recrawl_bucket": "coarse_source_address_recrawl",
+                "problem_tags": ["coarse_source_address"],
+                "source_selection_file": "selection.jsonl",
+                "evidence_text": "검색 결과 없음",
+            },
+            {"trace_id": "other", "recrawl_bucket": "provider_search_no_result"},
+        ]
+
+        jobs = package.build_coarse_address_recrawl_jobs(rows)
+
+        self.assertEqual(1, len(jobs))
+        self.assertEqual("district_or_city_level", jobs[0]["address_precision"])
+        self.assertTrue(jobs[0]["is_private_or_masked_name"])
+        self.assertIn("private_masked_name_manual_review", jobs[0]["problem_tags"])
+        self.assertIn("동해시 킹크랩 식당 강원도 동해시", jobs[0]["suggested_search_queries"])
+        self.assertIn("강원도 동해시 동해시 킹크랩 식당", jobs[0]["suggested_search_queries"])
+        self.assertNotIn("[비공개]", " ".join(jobs[0]["suggested_search_queries"]))
+        self.assertEqual("recover_precise_road_or_jibun_address_from_video_evidence", jobs[0]["recrawl_instruction"])
+
+    def test_write_coarse_address_recrawl_outputs_creates_exports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rows = [
+                {
+                    "trace_id": "coarse",
+                    "source_line": 7,
+                    "video_id": "v1",
+                    "youtube_link": "https://www.youtube.com/watch?v=v1",
+                    "origin_name": "가게",
+                    "origin_address_text": "서울특별시 마포구 연남동",
+                    "recrawl_bucket": "coarse_source_address_recrawl",
+                    "problem_tags": ["coarse_source_address"],
+                }
+            ]
+
+            summary = package.write_coarse_address_recrawl_outputs(root, rows)
+
+            self.assertEqual(1, summary["coarse_address_recrawl_jobs"])
+            self.assertEqual(0, summary["coarse_address_private_or_masked"])
+            self.assertTrue((root / "coarse-address-recrawl-jobs.jsonl").exists())
+            self.assertTrue((root / "coarse-address-recrawl-jobs.csv").exists())
+            self.assertTrue((root / "coarse-address-recrawl-jobs.md").exists())
+            self.assertTrue((root / "coarse-address-recrawl-manifest.json").exists())
+            self.assertIn("가게", (root / "coarse-address-recrawl-jobs.md").read_text(encoding="utf-8"))
 
     def test_markdown_cell_escapes_pipes_and_lists(self):
         self.assertEqual("A\\|B", package.markdown_cell("A|B"))
