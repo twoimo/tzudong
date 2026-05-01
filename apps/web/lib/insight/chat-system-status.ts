@@ -782,6 +782,7 @@ export async function getAdminInsightSystemStatus(
       downstreamSkips: runDailyFailureInfo.downstreamSkips,
       ...(runDailyManifestInfo.noWorkShortCircuit !== undefined ? { noWorkShortCircuit: runDailyManifestInfo.noWorkShortCircuit } : {}),
       ...(runDailyManifestInfo.policyMode ? { policyMode: runDailyManifestInfo.policyMode } : {}),
+      ...(runDailyManifestInfo.runtime ? { runtime: runDailyManifestInfo.runtime } : {}),
       stale: runDailyLogInfo.stale,
       checkedAt: asOf,
     },

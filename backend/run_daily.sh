@@ -701,7 +701,7 @@ has_youtube_api_key() {
         return 1
     fi
 
-    [ -n "${YOUTUBE_API_KEY_BYEON:-}" ]
+    has_any_env YOUTUBE_API_KEY_BYEON YOUTUBE_API_KEY
 }
 
 has_gemini_api_key() {
@@ -1824,6 +1824,15 @@ if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
         --summary-path "$SUMMARY_MD"
         --no-work-short-circuit "${NO_WORK_SHORT_CIRCUIT:-false}"
         --policy-mode "${RUN_DAILY_POLICY_MODE:-end_to_end}"
+        --github-run-id "${GITHUB_RUN_ID:-}"
+        --github-run-attempt "${GITHUB_RUN_ATTEMPT:-}"
+        --github-run-url "${GITHUB_RUN_ID:+${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID}}"
+        --github-workflow "${GITHUB_WORKFLOW:-}"
+        --github-sha "${GITHUB_SHA:-}"
+        --github-ref "${GITHUB_REF:-}"
+        --github-event-name "${GITHUB_EVENT_NAME:-}"
+        --execution-branch "${RUN_DAILY_EXECUTION_BRANCH:-}"
+        --target-branch "${RUN_DAILY_TARGET_BRANCH:-}"
     )
     for item in "${FAILED_REQUIRED_STEPS[@]}"; do
         MANIFEST_ARGS+=(--failed-required-step "$item")

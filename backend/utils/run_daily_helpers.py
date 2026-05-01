@@ -739,6 +739,28 @@ def build_gdrive_upload_status(args: argparse.Namespace) -> dict:
     return payload
 
 
+def _optional_string(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _build_runtime_telemetry(args: argparse.Namespace) -> dict:
+    runtime = {
+        "githubRunId": _optional_string(args.github_run_id),
+        "githubRunAttempt": _optional_string(args.github_run_attempt),
+        "githubRunUrl": _optional_string(args.github_run_url),
+        "githubWorkflow": _optional_string(args.github_workflow),
+        "githubSha": _optional_string(args.github_sha),
+        "githubRef": _optional_string(args.github_ref),
+        "githubEventName": _optional_string(args.github_event_name),
+        "executionBranch": _optional_string(args.execution_branch),
+        "targetBranch": _optional_string(args.target_branch),
+    }
+    return {key: value for key, value in runtime.items() if value is not None}
+
+
 def build_summary_manifest(args: argparse.Namespace) -> dict:
     """Build the stable run_daily summary manifest payload."""
     generated_at = args.generated_at or datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -755,6 +777,9 @@ def build_summary_manifest(args: argparse.Namespace) -> dict:
         "noWorkShortCircuit": _truthy(args.no_work_short_circuit),
         "policyMode": args.policy_mode,
     }
+    runtime = _build_runtime_telemetry(args)
+    if runtime:
+        manifest["runtime"] = runtime
     return manifest
 
 
@@ -775,6 +800,15 @@ def _add_manifest_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--no-work-short-circuit", default="false")
     parser.add_argument("--policy-mode", default="end_to_end")
     parser.add_argument("--generated-at", default="")
+    parser.add_argument("--github-run-id", default=os.environ.get("GITHUB_RUN_ID", ""))
+    parser.add_argument("--github-run-attempt", default=os.environ.get("GITHUB_RUN_ATTEMPT", ""))
+    parser.add_argument("--github-run-url", default="")
+    parser.add_argument("--github-workflow", default=os.environ.get("GITHUB_WORKFLOW", ""))
+    parser.add_argument("--github-sha", default=os.environ.get("GITHUB_SHA", ""))
+    parser.add_argument("--github-ref", default=os.environ.get("GITHUB_REF", ""))
+    parser.add_argument("--github-event-name", default=os.environ.get("GITHUB_EVENT_NAME", ""))
+    parser.add_argument("--execution-branch", default=os.environ.get("RUN_DAILY_EXECUTION_BRANCH", ""))
+    parser.add_argument("--target-branch", default=os.environ.get("RUN_DAILY_TARGET_BRANCH", ""))
     parser.add_argument("--failed-required-step", action="append", default=[])
     parser.add_argument("--optional-skip", action="append", default=[])
     parser.add_argument("--downstream-skip", action="append", default=[])

@@ -141,6 +141,18 @@ export function resolveRunDailyLogInfo(
   }
 }
 
+export type RunDailyManifestRuntime = {
+  githubRunId?: string;
+  githubRunAttempt?: string;
+  githubRunUrl?: string;
+  githubWorkflow?: string;
+  githubSha?: string;
+  githubRef?: string;
+  githubEventName?: string;
+  executionBranch?: string;
+  targetBranch?: string;
+};
+
 export type RunDailyManifestStatus = {
   manifestPath?: string;
   finalStatus?: 'OK' | 'WARN' | 'ERROR' | 'UNKNOWN';
@@ -150,6 +162,7 @@ export type RunDailyManifestStatus = {
   downstreamSkips: string[];
   noWorkShortCircuit?: boolean;
   policyMode?: string;
+  runtime?: RunDailyManifestRuntime;
   detail?: string;
 };
 
@@ -162,6 +175,31 @@ function normalizeFinalStatus(value: unknown): 'OK' | 'WARN' | 'ERROR' | 'UNKNOW
   return value === 'OK' || value === 'WARN' || value === 'ERROR' || value === 'UNKNOWN'
     ? value
     : undefined;
+}
+
+const RUN_DAILY_RUNTIME_FIELDS: Array<keyof RunDailyManifestRuntime> = [
+  'githubRunId',
+  'githubRunAttempt',
+  'githubRunUrl',
+  'githubWorkflow',
+  'githubSha',
+  'githubRef',
+  'githubEventName',
+  'executionBranch',
+  'targetBranch',
+];
+
+function normalizeRunDailyRuntime(value: unknown): RunDailyManifestRuntime | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const runtime = value as Record<string, unknown>;
+  const normalized: RunDailyManifestRuntime = {};
+  for (const field of RUN_DAILY_RUNTIME_FIELDS) {
+    const fieldValue = runtime[field];
+    if (typeof fieldValue === 'string' && fieldValue.trim().length > 0) {
+      normalized[field] = fieldValue.trim();
+    }
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
 function resolveRunDailyManifestCandidate(env: NodeJS.ProcessEnv, scriptPath: string | undefined): string | undefined {
@@ -203,6 +241,7 @@ export function resolveRunDailyManifestStatus(
       downstreamSkips: toStringList(parsed.downstreamSkips),
       noWorkShortCircuit: typeof parsed.noWorkShortCircuit === 'boolean' ? parsed.noWorkShortCircuit : undefined,
       policyMode: typeof parsed.policyMode === 'string' ? parsed.policyMode : undefined,
+      runtime: normalizeRunDailyRuntime(parsed.runtime),
     };
   } catch (error) {
     return {

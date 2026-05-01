@@ -208,27 +208,17 @@ jobs:
           echo "${{ github.workspace }}/backend/bin" >> $GITHUB_PATH
           chmod +x ${{ github.workspace }}/backend/bin/gemini
           
-          # Google Credentials
-          echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 -d > backend/restaurant-crawling/data/credentials.json
+          # Google Credentials (optional; kept only for legacy scripts that read credentials.json)
+          if [ -n "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" ]; then
+            echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 -d > backend/restaurant-crawling/data/credentials.json
+          fi
           
           # YouTube Cookies
           if [ -n "${{ secrets.YOUTUBE_COOKIES_TXT }}" ]; then
             echo "${{ secrets.YOUTUBE_COOKIES_TXT }}" > backend/restaurant-crawling/data/cookies.txt
           fi
           
-          # Gemini Credentials (자동 계정 우회 지원)
-          # Note: API Key is injected as GEMINI_API_KEY. The BYEON alias is
-          # mirrored from the canonical secret only for legacy scripts.
-          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" ]; then
-            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64 }}" | base64 -d > ~/.gemini/oauth_creds.json
-            echo '{"security": {"auth": {"selectedType": "oauth-personal"}}}' > ~/.gemini/settings.json
-            echo '{"projects": {}}' > ~/.gemini/projects.json
-          fi
-          
-          # 백업 계정 (쿼타 우회용)
-          if [ -n "${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}" ]; then
-            echo "${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}" | base64 -d > ~/.gemini/oauth_creds_backup.json
-          fi
+          # Gemini runs through the canonical GEMINI_API_KEY secret. OAuth credential secrets are intentionally unsupported.
           
           # RClone Config
           if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
@@ -236,6 +226,22 @@ jobs:
           fi
           
           echo "[OK] All credentials configured"
+
+      - name: Validate runtime environment contract
+        env:
+          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+          NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
+          NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
+          RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+          YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
+          OPENAI_API_KEY_BYEON: ${{ secrets.OPENAI_API_KEY_BYEON }}
+        run: python3 backend/bin/check_env_contract.py --profile daily
 
       # ============================================================
       # Ollama 설정 (AI Model) - 조건부 실행
