@@ -89,6 +89,27 @@ class ParseResultRegressionTests(unittest.TestCase):
         ok = parse_result.validate_restaurant_data({"restaurants": []})
         self.assertFalse(ok)
 
+    def test_validate_rejects_keyword_only_restaurant_identity_inference(self):
+        ok = parse_result.validate_restaurant_data({
+            "restaurants": [{
+                "origin_name": "청량리 할머니 냉면",
+                "address": "서울특별시 동대문구 제기동 457",
+                "category": ["한식", "분식"],
+                "reasoning_basis": "영상 내 45년 전통, 청량리 시장, 매운 냉면이라는 키워드와 간판의 글씨체, 할머니가 언급되는 점을 종합할 때 청량리 할머니 냉면으로 특정됩니다.",
+            }]
+        })
+        self.assertFalse(ok)
+
+    def test_manual_place_correction_overrides_verified_video(self):
+        with patch.object(parse_result, "__file__", str(Path.cwd() / "restaurant-crawling" / "scripts" / "parse_result.py")):
+            corrected = parse_result.apply_manual_place_correction(
+                "https://www.youtube.com/watch?v=GQyNACahbyM",
+                {"restaurants": [{"origin_name": "청량리 할머니 냉면", "address": "x", "category": ["한식"]}]},
+            )
+
+        self.assertEqual("춘천냉면", corrected["restaurants"][0]["origin_name"])
+        self.assertIn("왕산로37길 50", corrected["restaurants"][0]["address"])
+
 
 if __name__ == "__main__":
     unittest.main()
