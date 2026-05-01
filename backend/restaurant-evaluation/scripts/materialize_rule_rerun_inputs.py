@@ -21,6 +21,7 @@ DEFAULT_REPORT_ROOT = Path("../.omx/reports/refined-data")
 RERUN_ACTIONS = {
     "rerun_rule_evaluation_with_recovered_source_geocode",
     "rerun_rule_evaluation_with_candidate_review",
+    "rerun_stage1_source_geocode_then_stage2",
 }
 
 
@@ -59,7 +60,7 @@ def default_queue_paths(stage_report_dir: Path) -> list[Path]:
                 for item in manifest
                 if item.get("action") in RERUN_ACTIONS and int(item.get("count") or 0) > 0
             ]
-        return sorted(queue_dir.glob("1*.jsonl")) + sorted(queue_dir.glob("2*.jsonl"))
+        return sorted(queue_dir.glob("1*.jsonl")) + sorted(queue_dir.glob("2*.jsonl")) + sorted(queue_dir.glob("3*.jsonl"))
     return [stage_report_dir / "reprocess_candidates.jsonl"]
 
 

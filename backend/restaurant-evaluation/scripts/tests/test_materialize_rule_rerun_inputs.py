@@ -80,6 +80,45 @@ class MaterializeRuleRerunInputsTest(unittest.TestCase):
 
         self.assertEqual(["A"], [row["origin_name"] for row in materialized["restaurants"]])
 
+    def test_default_queue_paths_include_stage1_then_stage2_action(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            queue_dir = root / "next_action_queues"
+            queue_dir.mkdir()
+            queue_paths = [
+                queue_dir / "10-rerun-rule-evaluation-with-recovered-source-geocode.jsonl",
+                queue_dir / "30-rerun-stage1-source-geocode-then-stage2.jsonl",
+                queue_dir / "40-recrawl-or-manual-source-address-enrichment.jsonl",
+            ]
+            for path in queue_paths:
+                path.write_text("", encoding="utf-8")
+            (queue_dir / "manifest.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "action": "rerun_rule_evaluation_with_recovered_source_geocode",
+                            "count": 1,
+                            "path": str(queue_paths[0]),
+                        },
+                        {
+                            "action": "rerun_stage1_source_geocode_then_stage2",
+                            "count": 1,
+                            "path": str(queue_paths[1]),
+                        },
+                        {
+                            "action": "recrawl_or_manual_source_address_enrichment",
+                            "count": 1,
+                            "path": str(queue_paths[2]),
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            selected = materialize.default_queue_paths(root)
+
+            self.assertEqual([queue_paths[0], queue_paths[1]], selected)
+
     def test_summarize_rule_results_marks_matched_and_unresolved(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
