@@ -100,6 +100,68 @@ class PackageRuleRerunMatchesTest(unittest.TestCase):
         self.assertEqual("A\\|B", package.markdown_cell("A|B"))
         self.assertEqual("a, b", package.markdown_cell(["a", "b"]))
 
+    def test_build_multi_candidate_comparisons_uses_live_candidates(self):
+        rows = [
+            {
+                "trace_id": "trace",
+                "video_id": "v1",
+                "origin_name": "가게",
+                "origin_address_text": "서울 중구",
+                "youtube_link": "https://www.youtube.com/watch?v=v1",
+            }
+        ]
+        transforms = {"trace": {"origin_address": {"lat": 37.5, "lng": 127.0}}}
+
+        def fake_search(query, headers, timeout):
+            return {
+                "status": "ok",
+                "items": [
+                    {
+                        "title": "<b>가게</b>",
+                        "category": "한식",
+                        "roadAddress": "서울 중구 테스트로 1",
+                        "address": "서울 중구 테스트동 1",
+                        "mapx": "1270000000",
+                        "mapy": "375000000",
+                    }
+                ],
+            }
+
+        original = package.naver_local_search
+        package.naver_local_search = fake_search
+        try:
+            comparisons = package.build_multi_candidate_comparisons(rows, transforms, {}, 1.0)
+        finally:
+            package.naver_local_search = original
+
+        self.assertEqual(1, len(comparisons))
+        self.assertEqual("가게", comparisons[0]["candidate_title"])
+        self.assertEqual(1, comparisons[0]["candidate_rank"])
+        self.assertLessEqual(comparisons[0]["candidate_distance_m"], 1)
+
+    def test_write_multi_candidate_tables_creates_review_exports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rows = [
+                {
+                    "trace_id": "trace",
+                    "video_id": "v1",
+                    "origin_name": "가게",
+                    "candidate_rank": 1,
+                    "candidate_title": "가게 후보",
+                    "candidate_category": "한식",
+                    "candidate_road_address": "서울",
+                    "candidate_distance_m": 3.0,
+                    "youtube_link": "https://www.youtube.com/watch?v=v1",
+                }
+            ]
+
+            summary = package.write_multi_candidate_tables(root, rows)
+
+            self.assertEqual(1, summary["multi_candidate_comparison_rows"])
+            self.assertTrue((root / "multi-candidate-comparison.csv").exists())
+            self.assertIn("가게 후보", (root / "multi-candidate-comparison.md").read_text(encoding="utf-8"))
+
     def test_latest_rule_rerun_prefers_expanded_reports(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
