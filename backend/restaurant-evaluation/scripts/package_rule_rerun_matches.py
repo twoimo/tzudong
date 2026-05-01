@@ -13,6 +13,7 @@ Supabase.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -127,6 +128,9 @@ def build_review_candidate(
     rule_result_file: Path,
 ) -> dict[str, Any]:
     flags = risk_flags(matched_row, source_record, location_result)
+    matched_address = location_result.get("matched_address")
+    if not isinstance(matched_address, dict):
+        matched_address = {}
     return {
         "trace_id": matched_row.get("trace_id"),
         "source_line": source_record.get("_line"),
@@ -142,6 +146,15 @@ def build_review_candidate(
         "review_recommendation": "admin_review_before_sync",
         "risk_flags": flags,
         "requires_manual_review": bool(flags),
+        "matched_provider": location_result.get("matched_provider"),
+        "matched_name": location_result.get("matched_name"),
+        "naver_name": location_result.get("naver_name"),
+        "google_name": location_result.get("google_name"),
+        "matched_distance_m": matched_distance_m(location_result),
+        "matched_road_address": matched_address.get("roadAddress"),
+        "matched_jibun_address": matched_address.get("jibunAddress"),
+        "evidence_summary": location_result.get("evidence_summary"),
+        "evidence_families": location_result.get("evidence_families"),
         "proposed_sync_fields": {
             "geocoding_success": True,
             "geocoding_false_stage": None,
@@ -154,7 +167,71 @@ def build_review_candidate(
             "evidence_families": location_result.get("evidence_families"),
             "match_status": location_result.get("match_status"),
         },
+}
+
+
+def review_csv_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "trace_id": row.get("trace_id"),
+        "source_line": row.get("source_line"),
+        "origin_name": row.get("origin_name"),
+        "naver_name": row.get("naver_name"),
+        "matched_name": row.get("matched_name"),
+        "origin_address_text": row.get("origin_address_text"),
+        "matched_road_address": row.get("matched_road_address"),
+        "matched_jibun_address": row.get("matched_jibun_address"),
+        "matched_distance_m": row.get("matched_distance_m"),
+        "recommended_action": row.get("recommended_action"),
+        "risk_flags": ";".join(row.get("risk_flags") or []),
+        "requires_manual_review": row.get("requires_manual_review"),
+        "youtube_link": row.get("youtube_link"),
     }
+
+
+def write_review_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    fieldnames = list(review_csv_row({}).keys())
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(review_csv_row(row))
+
+
+def markdown_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        value = ", ".join(str(item) for item in value)
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def write_review_table(path: Path, rows: list[dict[str, Any]]) -> None:
+    columns = (
+        ("trace_id", "trace_id"),
+        ("source_line", "line"),
+        ("origin_name", "origin"),
+        ("naver_name", "naver"),
+        ("matched_distance_m", "distance_m"),
+        ("risk_flags", "risk_flags"),
+        ("youtube_link", "youtube"),
+    )
+    lines = [
+        "# Matched Rule Rerun Review Table",
+        "",
+        "이 표는 DB/원본 데이터 반영 전 검수용 산출물입니다.",
+        "",
+        "| " + " | ".join(header for _, header in columns) + " |",
+        "| " + " | ".join("---" for _ in columns) + " |",
+    ]
+    for row in rows:
+        values = []
+        for key, _ in columns:
+            value = row.get(key)
+            if key == "trace_id" and isinstance(value, str):
+                value = value[:12]
+            values.append(markdown_cell(value))
+        lines.append("| " + " | ".join(values) + " |")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def unresolved_slug(row: dict[str, Any]) -> str:
@@ -207,6 +284,8 @@ def package_report(rule_rerun_report_dir: Path, transforms_path: Path, output_di
 
     output_dir.mkdir(parents=True, exist_ok=True)
     write_jsonl(output_dir / "matched-review-candidates.jsonl", review_candidates)
+    write_review_csv(output_dir / "matched-review-candidates.csv", review_candidates)
+    write_review_table(output_dir / "matched-review-table.md", review_candidates)
     write_jsonl(output_dir / "missing-source-transform.jsonl", missing_source)
     write_jsonl(output_dir / "missing-rule-result.jsonl", missing_rule_result)
     unresolved_manifest = write_unresolved_followups(output_dir, unresolved_rows)
@@ -248,6 +327,8 @@ def write_markdown(path: Path, summary: dict[str, Any]) -> None:
         "## Output files",
         "",
         "- `matched-review-candidates.jsonl`: matched rows packaged for admin review before sync",
+        "- `matched-review-candidates.csv`: spreadsheet-friendly review table",
+        "- `matched-review-table.md`: Markdown review table for quick inspection",
         "- `missing-source-transform.jsonl`: matched rows not found in source transforms",
         "- `missing-rule-result.jsonl`: matched rows whose scratch rule output could not be loaded",
         "- `unresolved_followup_queues/`: unresolved rows split by pending reason",
