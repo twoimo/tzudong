@@ -12,9 +12,9 @@ export async function GET() {
     if (!auth.ok) return auth.response;
 
     const hasGeminiServerKey =
-        process.env.GEMINI_OCR_YEON?.trim()
+        process.env.GEMINI_API_KEY?.trim()
+        || process.env.GEMINI_OCR_YEON?.trim()
         || process.env.STORYBOARD_AGENT_GEMINI_API_KEY?.trim()
-        || process.env.GEMINI_API_KEY?.trim()
         || process.env.GOOGLE_API_KEY?.trim()
         ? true
         : false;
