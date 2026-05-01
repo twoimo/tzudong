@@ -101,7 +101,20 @@ class ParseResultRegressionTests(unittest.TestCase):
         self.assertFalse(ok)
 
     def test_manual_place_correction_overrides_verified_video(self):
-        with patch.object(parse_result, "__file__", str(Path.cwd() / "restaurant-crawling" / "scripts" / "parse_result.py")):
+        corrections_path = self.root / "data" / "manual_place_corrections.json"
+        corrections_path.write_text(json.dumps({
+            "https://www.youtube.com/watch?v=GQyNACahbyM": {
+                "source": "unit_test",
+                "reason": "verified onscreen",
+                "restaurants": [{
+                    "origin_name": "춘천냉면",
+                    "address": "서울 동대문구 왕산로37길 50",
+                    "category": ["한식", "분식"],
+                }],
+            }
+        }, ensure_ascii=False), encoding="utf-8")
+
+        with patch.object(parse_result, "__file__", str(self.scripts_dir / "parse_result.py")):
             corrected = parse_result.apply_manual_place_correction(
                 "https://www.youtube.com/watch?v=GQyNACahbyM",
                 {"restaurants": [{"origin_name": "청량리 할머니 냉면", "address": "x", "category": ["한식"]}]},
