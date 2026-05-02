@@ -7,8 +7,8 @@ const SpeedInsights = dynamic(
     { ssr: false }
 );
 
-export function AppSpeedInsights() {
-    if (process.env.NODE_ENV !== 'production') return null;
+export function AppSpeedInsights({ enabled }: { enabled: boolean }) {
+    if (!enabled || process.env.NODE_ENV !== 'production') return null;
 
     return <SpeedInsights />;
 }
