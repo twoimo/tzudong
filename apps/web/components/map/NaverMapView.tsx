@@ -20,7 +20,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import {
     buildDeviceLocationMarkerHtml,
-    shouldFocusDeviceLocation,
+    resolveDeviceLocationMapRenderPlan,
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
 import type Supercluster from 'supercluster';
@@ -421,6 +421,11 @@ const NaverMapView = memo(({
             content: buildDeviceLocationMarkerHtml(deviceLocation),
             anchor: new naver.maps.Point(28, 28),
         };
+        const deviceLocationRenderPlan = resolveDeviceLocationMapRenderPlan({
+            currentZoom: map.getZoom(),
+            location: deviceLocation,
+            previousFocusRequestId: lastFocusedDeviceLocationRequestRef.current,
+        });
 
         if (!deviceLocationMarkerRef.current) {
             deviceLocationMarkerRef.current = new naver.maps.Marker({
@@ -435,8 +440,8 @@ const NaverMapView = memo(({
             deviceLocationMarkerRef.current.setMap(map);
         }
 
-        if (typeof deviceLocation.accuracy === 'number' && Number.isFinite(deviceLocation.accuracy)) {
-            const radius = Math.max(12, Math.min(deviceLocation.accuracy, 500));
+        if (deviceLocationRenderPlan.accuracyRadius !== null) {
+            const radius = deviceLocationRenderPlan.accuracyRadius;
             if (!deviceLocationAccuracyCircleRef.current) {
                 deviceLocationAccuracyCircleRef.current = new naver.maps.Circle({
                     map,
@@ -459,10 +464,9 @@ const NaverMapView = memo(({
             deviceLocationAccuracyCircleRef.current = null;
         }
 
-        if (shouldFocusDeviceLocation(lastFocusedDeviceLocationRequestRef.current, deviceLocation)) {
-            lastFocusedDeviceLocationRequestRef.current = deviceLocation.focusRequestId;
-            const nextZoom = Math.max(map.getZoom(), 15);
-            map.morph(position, nextZoom, { duration: 450, easing: 'easeOutCubic' });
+        if (deviceLocationRenderPlan.shouldFocus) {
+            lastFocusedDeviceLocationRequestRef.current = deviceLocationRenderPlan.nextFocusedRequestId;
+            map.morph(position, deviceLocationRenderPlan.focusZoom, { duration: 450, easing: 'easeOutCubic' });
         }
     }, [deviceLocation, isMapInitialized]);
 
