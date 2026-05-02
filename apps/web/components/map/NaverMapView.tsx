@@ -50,8 +50,7 @@ import {
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
     buildNaverClusterAnimationIconPlan,
-    buildNaverClusterMarkerRenderPlan,
-    getClusterVisualKey,
+    buildNaverClusterMarkerAcquirePlan,
 } from "@/lib/naver-map-cluster-visuals";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
@@ -1558,15 +1557,15 @@ const NaverMapView = memo(({
             uniqueKey: string | number,
             onClick: () => void
         ) => {
-            const hash = getClusterVisualKey(uniqueKey);
-
-            clusterAnimationManager.register(hash);
-            const currentIndex = clusterAnimationManager.getCurrentIndex(hash, categories.length);
-            const renderPlan = buildNaverClusterMarkerRenderPlan({
+            const renderPlan = buildNaverClusterMarkerAcquirePlan({
                 categories,
                 count,
-                currentIndex,
+                getCurrentIndex: (hash, categoryCount) => {
+                    clusterAnimationManager.register(hash);
+                    return clusterAnimationManager.getCurrentIndex(hash, categoryCount);
+                },
                 position,
+                uniqueKey,
             });
 
             markerPool.acquire(
@@ -2253,6 +2252,7 @@ const NaverMapView = memo(({
                     badgePositionClass={floatingBadgePositionClass}
                     centerOffsetStyle={centerOffsetStyle}
                     count={onlineUsersCount}
+                    dataTestId="map-container"
                     floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}
