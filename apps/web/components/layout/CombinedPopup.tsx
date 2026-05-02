@@ -43,17 +43,25 @@ const SlideIndicator = memo(({
             {Array.from({ length: count }, (_, index) => (
                 <button
                     key={index}
+                    type="button"
+                    aria-label={`${index + 1}번째 배너 보기`}
+                    aria-current={current === index ? 'true' : undefined}
                     onClick={(e) => {
                         e.stopPropagation();
                         onSelect(index);
                     }}
-                    className={cn(
-                        "w-2 h-2 rounded-full transition-all",
-                        current === index
-                            ? "bg-white scale-110 shadow-md"
-                            : "bg-white/50"
-                    )}
-                />
+                    className="flex h-6 w-6 items-center justify-center rounded-full"
+                >
+                    <span
+                        aria-hidden="true"
+                        className={cn(
+                            "h-2 w-2 rounded-full transition-all",
+                            current === index
+                                ? "bg-white scale-110 shadow-md"
+                                : "bg-white/50"
+                        )}
+                    />
+                </button>
             ))}
         </div>
     );
@@ -405,16 +413,20 @@ const CombinedPopupComponent = () => {
                     {banners.length > 1 && (
                         <>
                             <button
+                                type="button"
+                                aria-label="이전 배너 보기"
                                 onClick={(e) => { e.stopPropagation(); prevSlide(); }}
                                 className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
                             >
-                                <ChevronLeft className="w-5 h-5" />
+                                <ChevronLeft className="w-5 h-5" aria-hidden="true" />
                             </button>
                             <button
+                                type="button"
+                                aria-label="다음 배너 보기"
                                 onClick={(e) => { e.stopPropagation(); nextSlide(); }}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
                             >
-                                <ChevronRight className="w-5 h-5" />
+                                <ChevronRight className="w-5 h-5" aria-hidden="true" />
                             </button>
                         </>
                     )}
