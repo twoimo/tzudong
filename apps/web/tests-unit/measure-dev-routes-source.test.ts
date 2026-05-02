@@ -44,6 +44,9 @@ describe('measure-dev-routes source contract', () => {
         expect(source).toContain('process_count_matching_next_node_bun');
         expect(source).toContain("readArg('--measurement-mode'");
         expect(source).toContain('Environment snapshot');
+        expect(source).toContain('function classifyVariability(summary)');
+        expect(source).toContain('high-CV results as noisy local evidence');
+        expect(source).toContain('| CV | variability |');
     });
 
 });

@@ -348,6 +348,18 @@ function formatSeconds(value) {
   return value === null || value === undefined || !Number.isFinite(value) ? '?' : `${(value / 1000).toFixed(3)}s`;
 }
 
+function formatPercent(value) {
+  return value === null || value === undefined || !Number.isFinite(value) ? '?' : `${(value * 100).toFixed(1)}%`;
+}
+
+function classifyVariability(summary) {
+  if (!summary || summary.count < 3) return 'insufficient-repeat';
+  if (!Number.isFinite(summary.cv)) return 'unknown';
+  if (summary.cv <= 0.15) return 'stable';
+  if (summary.cv <= 0.35) return 'moderate-noise';
+  return 'high-noise';
+}
+
 function writeArtifacts(result) {
   result.summaries = buildSummaries(result.requests, result.iterations);
   fs.writeFileSync(jsonPath, `${JSON.stringify(result, null, 2)}\n`);
@@ -406,6 +418,7 @@ function writeArtifacts(result) {
   lines.push(`- disk: ${env.disk_df_pk ?? 'unknown'}`);
   lines.push(`- .next size at start: ${(env.next_dir_size_bytes / 1024 / 1024).toFixed(1)}MiB`);
   lines.push(`- matching next/node/bun processes at start: ${env.process_count_matching_next_node_bun}`);
+  lines.push('- interpretation: compare medians and p75s across repeated runs; treat single-run or high-CV results as noisy local evidence, not an absolute performance claim.');
   lines.push('');
 
   for (const [round, summary] of Object.entries(result.summaries.by_round)) {
@@ -420,13 +433,13 @@ function writeArtifacts(result) {
   }
 
   lines.push('## Route summary');
-  lines.push('| route | count | median | p75 | min | max | MAD | median next/app | source |');
-  lines.push('|---|---:|---:|---:|---:|---:|---:|---:|---|');
+  lines.push('| route | count | median | p75 | min | max | MAD | CV | variability | median next/app | source |');
+  lines.push('|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---|');
   const sourceByRoute = new Map(result.routes.map((route) => [route.route, route.source]));
   for (const [route, summaries] of Object.entries(result.summaries.by_route).sort((a, b) => (b[1].elapsed_ms.p75_ms ?? 0) - (a[1].elapsed_ms.p75_ms ?? 0))) {
     const elapsed = summaries.elapsed_ms;
     const nextApp = `${formatSeconds(summaries.log_next_ms.median_ms)}/${formatSeconds(summaries.log_app_ms.median_ms)}`;
-    lines.push(`| \`${route}\` | ${elapsed.count} | ${formatSeconds(elapsed.median_ms)} | ${formatSeconds(elapsed.p75_ms)} | ${formatSeconds(elapsed.min_ms)} | ${formatSeconds(elapsed.max_ms)} | ${formatSeconds(elapsed.mad_ms)} | ${nextApp} | \`${sourceByRoute.get(route) ?? '<manual>'}\` |`);
+    lines.push(`| \`${route}\` | ${elapsed.count} | ${formatSeconds(elapsed.median_ms)} | ${formatSeconds(elapsed.p75_ms)} | ${formatSeconds(elapsed.min_ms)} | ${formatSeconds(elapsed.max_ms)} | ${formatSeconds(elapsed.mad_ms)} | ${formatPercent(elapsed.cv)} | ${classifyVariability(elapsed)} | ${nextApp} | \`${sourceByRoute.get(route) ?? '<manual>'}\` |`);
   }
   lines.push('');
 
