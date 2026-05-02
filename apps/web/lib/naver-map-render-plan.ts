@@ -9,6 +9,12 @@ const formatCoordForSignature = (value: number | null | undefined): string =>
 const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'): string =>
     `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}`;
 
+type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
+
+function hasRenderableCoordinates(restaurant: Restaurant): restaurant is RestaurantWithRenderableCoordinates {
+    return Boolean(restaurant.lat && restaurant.lng);
+}
+
 export function deriveClusterRenderPlan(
     currentZoom: number,
     hasSelectedRegion: boolean,
@@ -51,6 +57,28 @@ export function getVisibleRestaurantsForRender(
         (restaurant) =>
             restaurant.id === selectedRestaurantId ||
             isRestaurantInViewport(restaurant, extendedBounds)
+    );
+}
+
+export function getRestaurantsWithRenderableCoordinates(restaurants: Restaurant[]) {
+    return restaurants.filter(hasRenderableCoordinates);
+}
+
+export function getSeoulIndividualRestaurantsForRender({
+    displayRestaurants,
+    seoulIndividualIds,
+}: {
+    displayRestaurants: Restaurant[];
+    seoulIndividualIds: string[];
+}) {
+    if (seoulIndividualIds.length === 0 || displayRestaurants.length === 0) {
+        return [];
+    }
+
+    const seoulIndividualSet = new Set(seoulIndividualIds);
+
+    return displayRestaurants.filter((restaurant): restaurant is RestaurantWithRenderableCoordinates =>
+        seoulIndividualSet.has(restaurant.id) && hasRenderableCoordinates(restaurant)
     );
 }
 

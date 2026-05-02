@@ -94,6 +94,8 @@ import {
 import {
     buildRenderTargetIdsForSignature,
     deriveClusterRenderPlan,
+    getRestaurantsWithRenderableCoordinates,
+    getSeoulIndividualRestaurantsForRender,
     getVisibleRestaurantsForRender,
     shouldReportNaverMarkerRenderPerformance,
 } from "@/lib/naver-map-render-plan";
@@ -1641,11 +1643,10 @@ const NaverMapView = memo(({
 
             // 1-2. 서울 자치구 개별 마커 (줌 11-12에서만, 마커 2개 이하인 구)
             if (shouldUseSeoulDistrictFiltered && seoulIndividualIds.length > 0) {
-                const seoulIndividualSet = new Set(seoulIndividualIds);
-                displayRestaurants.forEach((restaurant) => {
-                    if (!seoulIndividualSet.has(restaurant.id)) return;
-                    if (!restaurant.lat || !restaurant.lng) return;
-
+                getSeoulIndividualRestaurantsForRender({
+                    displayRestaurants,
+                    seoulIndividualIds,
+                }).forEach((restaurant) => {
                     activeIds.add(restaurant.id);
                     const isSelected = selectedRestaurant?.id === restaurant.id;
                     const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
@@ -1732,9 +1733,7 @@ const NaverMapView = memo(({
                 // 참고: 서울 자치구 모드가 활성화된 경우, 서울 내의 개별 마커를 숨겨야 할까요?
                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
 
-                visibleRestaurants.forEach(restaurant => {
-                    if (!restaurant.lat || !restaurant.lng) return;
-
+                getRestaurantsWithRenderableCoordinates(visibleRestaurants).forEach(restaurant => {
                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
                     if (shouldHideInSeoulDistrictMode({
                         address: restaurant.road_address || restaurant.jibun_address || '',
