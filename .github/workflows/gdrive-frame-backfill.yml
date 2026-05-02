@@ -108,9 +108,9 @@ jobs:
           rclone copyto "$STATUS_REMOTE/current-upload-status.json" "$UPLOAD_STATUS.previous" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
           rclone copyto "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" "$RESIDUAL_QUEUE" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
           rclone copy "$STATUS_REMOTE/staging" "$STAGING_MANIFEST_DIR" \
-            --include "current-upload-staging-manifest.json" \
-            --include "**/current-upload-staging-manifest.json" \
-            --exclude "*" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
+            --filter "+ current-upload-staging-manifest.json" \
+            --filter "+ **/current-upload-staging-manifest.json" \
+            --filter "- **" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
 
           set +e
           python3 - "$UPLOAD_STATUS.previous" "$RESIDUAL_QUEUE" "$STAGING_MANIFEST_DIR" "${GITHUB_EVENT_NAME:-unknown}" "$MAX_BACKFILL_BATCHES" "$MAX_BACKFILL_ITEMS" <<'PY'
