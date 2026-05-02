@@ -208,12 +208,14 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
                 onClose={() => setIsProfileModalOpen(false)}
             />
 
-            <AdminRestaurantModal
-                isOpen={isAdminModalOpen}
-                onClose={() => setIsAdminModalOpen(false)}
-                restaurant={selectedRestaurant}
-                onSuccess={handleAdminSuccess}
-            />
+            {isAdminModalOpen && (
+                <AdminRestaurantModal
+                    isOpen={isAdminModalOpen}
+                    onClose={() => setIsAdminModalOpen(false)}
+                    restaurant={selectedRestaurant}
+                    onSuccess={handleAdminSuccess}
+                />
+            )}
 
             <NicknameSetupModal
                 isOpen={needsNicknameSetup}

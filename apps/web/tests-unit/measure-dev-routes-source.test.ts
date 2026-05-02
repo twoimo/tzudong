@@ -15,6 +15,9 @@ describe('measure-dev-routes source contract', () => {
     test('removes the full Next cache for cold measurements', () => {
         expect(source).toContain("path.join(projectRoot, '.next')");
         expect(source).not.toContain("path.join(projectRoot, '.next', 'dev')");
+        expect(source).toContain('async function removeNextCacheForColdIteration()');
+        expect(source).toContain('maxRetries: 3');
+        expect(source).toContain('await removeNextCacheForColdIteration()');
     });
 
     test('retries transient dev-server failures and records retry metadata', () => {
@@ -24,4 +27,23 @@ describe('measure-dev-routes source contract', () => {
         expect(source).toContain('retry_count');
         expect(source).toContain('attempts');
     });
+
+    test('records repeated measurements with distribution summaries', () => {
+        expect(source).toContain("parsePositiveIntegerArg('--repeat', 1)");
+        expect(source).toContain('function percentile(sorted, fraction)');
+        expect(source).toContain('mad_ms');
+        expect(source).toContain('p75_ms');
+        expect(source).toContain('buildSummaries(result.requests, result.iterations)');
+        expect(source).toContain('iteration,round,route,kind,source');
+    });
+
+    test('captures environment context for noisy local benchmarks', () => {
+        expect(source).toContain('function collectEnvironmentSnapshot(stage)');
+        expect(source).toContain('free_memory_bytes');
+        expect(source).toContain('next_dir_size_bytes');
+        expect(source).toContain('process_count_matching_next_node_bun');
+        expect(source).toContain("readArg('--measurement-mode'");
+        expect(source).toContain('Environment snapshot');
+    });
+
 });
