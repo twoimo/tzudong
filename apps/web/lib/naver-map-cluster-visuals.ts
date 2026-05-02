@@ -118,25 +118,3 @@ export function buildNaverClusterAnimationIconPlan({
         hash,
     } as const;
 }
-
-export function buildNaverClusterMarkerAcquirePlan({
-    categories,
-    count,
-    getCurrentIndex,
-    position,
-    uniqueKey,
-}: {
-    categories: string[];
-    count: number;
-    getCurrentIndex: (hash: number, categoryCount: number) => number;
-    position: { lat: number; lng: number };
-    uniqueKey: string | number;
-}) {
-    return buildNaverClusterAnimationIconPlan({
-        categories,
-        count,
-        getCurrentIndex,
-        position,
-        uniqueKey,
-    });
-}

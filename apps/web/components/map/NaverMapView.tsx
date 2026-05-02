@@ -50,7 +50,6 @@ import {
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
     buildNaverClusterAnimationIconPlan,
-    buildNaverClusterMarkerAcquirePlan,
 } from "@/lib/naver-map-cluster-visuals";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
@@ -1557,7 +1556,7 @@ const NaverMapView = memo(({
             uniqueKey: string | number,
             onClick: () => void
         ) => {
-            const renderPlan = buildNaverClusterMarkerAcquirePlan({
+            const renderPlan = buildNaverClusterAnimationIconPlan({
                 categories,
                 count,
                 getCurrentIndex: (hash, categoryCount) => {

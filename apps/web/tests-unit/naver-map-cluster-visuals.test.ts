@@ -4,7 +4,6 @@ import {
     buildNaverClusterAnimationIconPlan,
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
-    buildNaverClusterMarkerAcquirePlan,
     buildNaverClusterMarkerRenderPlan,
     getClusterVisualKey,
     getNaverClusterMarkerVisual,
@@ -79,26 +78,5 @@ describe('naver map cluster visuals', () => {
         expect(plan.anchor).toEqual({ x: 24, y: 24 });
         expect(plan.content).toContain('6');
         expect(plan.content).toContain('/images/maker-images/korean.png');
-    });
-
-    test('builds acquire plan with register-friendly hash and animation index', () => {
-        const seen: Array<{ categoryCount: number; hash: number }> = [];
-        const plan = buildNaverClusterMarkerAcquirePlan({
-            categories: ['분식', '한식'],
-            count: 8,
-            getCurrentIndex: (hash, categoryCount) => {
-                seen.push({ hash, categoryCount });
-                return 1;
-            },
-            position: { lat: 37.7, lng: 127.2 },
-            uniqueKey: 'regional-key',
-        });
-
-        expect(seen).toEqual([{ hash: getClusterVisualKey('regional-key'), categoryCount: 2 }]);
-        expect(plan.currentIndex).toBe(1);
-        expect(plan.hash).toBe(getClusterVisualKey('regional-key'));
-        expect(plan.position).toEqual({ lat: 37.7, lng: 127.2 });
-        expect(plan.anchor).toEqual({ x: 24, y: 24 });
-        expect(plan.content).toContain('8');
     });
 });
