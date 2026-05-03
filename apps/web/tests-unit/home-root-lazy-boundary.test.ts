@@ -22,9 +22,11 @@ describe('home root lazy boundary', () => {
         const speedInsightsSource = source('app/app-speed-insights.tsx');
 
         expect(layoutSource).not.toContain('@vercel/speed-insights/next');
-        expect(layoutSource).toContain('AppSpeedInsights');
+        expect(layoutSource).toContain('AppSpeedInsights enabled={shouldEnableSpeedInsights}');
+        expect(layoutSource).toContain("process.env.VERCEL === '1'");
         expect(speedInsightsSource).toContain("import('@vercel/speed-insights/next')");
         expect(speedInsightsSource).toContain("process.env.NODE_ENV !== 'production'");
+        expect(speedInsightsSource).toContain('enabled');
         expect(speedInsightsSource).toContain('return null');
     });
 

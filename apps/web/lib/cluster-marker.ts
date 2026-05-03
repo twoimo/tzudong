@@ -114,35 +114,77 @@ class ClusterAnimationManager {
 export const clusterAnimationManager = new ClusterAnimationManager();
 
 /**
- * 카테고리별 이모지 매핑
+ * 카테고리별 CSS 마커 토큰.
+ * Lighthouse에서 25~50px로 표시되는 마커가 90~128KB PNG를 여러 개 내려받는 문제가 있어,
+ * 지도 위 마커는 네트워크 이미지 대신 텍스트/그라디언트 기반 glyph로 렌더링한다.
  */
-/**
- * 카테고리별 이미지 경로 매핑
- */
-const CATEGORY_IMAGES: Record<string, string> = {
-  '고기': '/images/maker-images/meat_bbq.png',
-  '치킨': '/images/maker-images/chicken.png',
-  '한식': '/images/maker-images/korean.png',
-  '중식': '/images/maker-images/chinese.png',
-  '일식': '/images/maker-images/cutlet_sashimi.png',
-  '양식': '/images/maker-images/western.png',
-  '분식': '/images/maker-images/snack_bar.png',
-  '카페·디저트': '/images/maker-images/cafe_dessert.png',
-  '아시안': '/images/maker-images/asian.png',
-  '패스트푸드': '/images/maker-images/fastfood.png',
-  '족발·보쌈': '/images/maker-images/pork_feet.png',
-  '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
-  '피자': '/images/maker-images/pizza.png',
-  '찜·탕': '/images/maker-images/stew.png',
-  '야식': '/images/maker-images/late_night.png',
-  '도시락': '/images/maker-images/lunch_box.png',
+type CategoryMarkerVisual = {
+  glyph: string;
+  label: string;
+  gradient: string;
 };
 
-/**
- * 카테고리 이미지 경로 가져오기
- */
-const getCategoryIsImage = (category: string): string => {
-  return CATEGORY_IMAGES[category] || '/images/maker-images/korean.png';
+const CATEGORY_MARKER_VISUALS: Record<string, CategoryMarkerVisual> = {
+  '고기': { glyph: '고', label: '고기', gradient: 'linear-gradient(135deg, #ef4444, #b91c1c)' },
+  '치킨': { glyph: '치', label: '치킨', gradient: 'linear-gradient(135deg, #f97316, #c2410c)' },
+  '한식': { glyph: '한', label: '한식', gradient: 'linear-gradient(135deg, #22c55e, #15803d)' },
+  '중식': { glyph: '중', label: '중식', gradient: 'linear-gradient(135deg, #dc2626, #991b1b)' },
+  '일식': { glyph: '일', label: '일식', gradient: 'linear-gradient(135deg, #0ea5e9, #0369a1)' },
+  '양식': { glyph: '양', label: '양식', gradient: 'linear-gradient(135deg, #6366f1, #4338ca)' },
+  '분식': { glyph: '분', label: '분식', gradient: 'linear-gradient(135deg, #f59e0b, #b45309)' },
+  '카페·디저트': { glyph: '카', label: '카페 디저트', gradient: 'linear-gradient(135deg, #ec4899, #be185d)' },
+  '아시안': { glyph: '아', label: '아시안', gradient: 'linear-gradient(135deg, #14b8a6, #0f766e)' },
+  '패스트푸드': { glyph: '패', label: '패스트푸드', gradient: 'linear-gradient(135deg, #eab308, #a16207)' },
+  '족발·보쌈': { glyph: '족', label: '족발 보쌈', gradient: 'linear-gradient(135deg, #92400e, #78350f)' },
+  '돈까스·회': { glyph: '회', label: '돈까스 회', gradient: 'linear-gradient(135deg, #38bdf8, #075985)' },
+  '피자': { glyph: '피', label: '피자', gradient: 'linear-gradient(135deg, #fb7185, #be123c)' },
+  '찜·탕': { glyph: '탕', label: '찜 탕', gradient: 'linear-gradient(135deg, #f97316, #9a3412)' },
+  '야식': { glyph: '야', label: '야식', gradient: 'linear-gradient(135deg, #8b5cf6, #5b21b6)' },
+  '도시락': { glyph: '도', label: '도시락', gradient: 'linear-gradient(135deg, #84cc16, #4d7c0f)' },
+  '기타': { glyph: '맛', label: '맛집', gradient: 'linear-gradient(135deg, #64748b, #334155)' },
+};
+
+const DEFAULT_MARKER_VISUAL = CATEGORY_MARKER_VISUALS['기타'];
+
+const escapeHtml = (value: string): string => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const getCategoryMarkerVisual = (category: string): CategoryMarkerVisual => {
+  return CATEGORY_MARKER_VISUALS[category] || DEFAULT_MARKER_VISUAL;
+};
+
+const createCategoryMarkerGlyphHTML = ({
+  category,
+  fontSize,
+}: {
+  category: string;
+  fontSize: number;
+}): string => {
+  const visual = getCategoryMarkerVisual(category);
+  return `
+    <span
+      aria-hidden="true"
+      title="${escapeHtml(visual.label)}"
+      style="
+        width: 100%;
+        height: 100%;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: ${visual.gradient};
+        color: white;
+        font-size: ${fontSize}px;
+        font-weight: 800;
+        line-height: 1;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
+      "
+    >${escapeHtml(visual.glyph)}</span>
+  `;
 };
 
 /**
@@ -160,8 +202,6 @@ export const createClusterMarkerHTML = (
 ): string => {
   const count = cluster.properties.point_count || 0;
   const displayCategory = categories[currentIndex % categories.length] || '기타';
-  const imagePath = getCategoryIsImage(displayCategory);
-
   // 개수에 따라 크기 동적 조정 (32px ~ 72px) - 이미지에 맞춰 조정
   let size: number;
   if (count < 3) {
@@ -201,7 +241,7 @@ export const createClusterMarkerHTML = (
         z-index: ${zIndex};
       "
     >
-      <!-- 카테고리 이미지 (애니메이션) -->
+      <!-- 카테고리 CSS glyph (애니메이션) -->
       <div 
         class="cluster-icon"
         style="
@@ -209,12 +249,10 @@ export const createClusterMarkerHTML = (
           height: ${iconSize}px;
         "
       >
-        <img 
-            src="${imagePath}" 
-            alt="cluster" 
-            style="width: 100%; height: 100%; object-fit: contain;"
-            draggable="false" 
-        />
+        ${createCategoryMarkerGlyphHTML({
+          category: displayCategory,
+          fontSize: Math.max(13, Math.floor(iconSize * 0.46)),
+        })}
       </div>
       
       <!-- 맛집 개수 배지 (우측 하단) -->
@@ -255,8 +293,7 @@ export const createIndividualMarkerHTML = (
   category: string,
   isSelected: boolean
 ): string => {
-  const imagePath = getCategoryIsImage(category);
-  // 이미지 마커: 선택 시 42px, 기본 32px
+  // CSS 마커: 선택 시 42px, 기본 32px
   const size = isSelected ? 42 : 32;
 
   const dropShadow = isSelected
@@ -288,16 +325,10 @@ export const createIndividualMarkerHTML = (
       role="button"
       data-testid="marker"
     >
-        <img 
-            src="${imagePath}" 
-            alt="marker"
-            style="
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-            "
-            draggable="false"
-        />
+        ${createCategoryMarkerGlyphHTML({
+          category,
+          fontSize: isSelected ? 17 : 14,
+        })}
     </div>
   `;
 };
