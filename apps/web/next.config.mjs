@@ -85,6 +85,24 @@ const nextConfig = {
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
+            {
+                source: '/favicon.ico',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            {
+                source: '/:icon(favicon-32x32|apple-touch-icon).png',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            {
+                source: '/scripts/:path*',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
         ];
     },
     webpack: (config, { dev }) => {

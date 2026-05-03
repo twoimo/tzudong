@@ -13,7 +13,7 @@ export function useOverseasCountryCounts(mapMode: 'domestic' | 'overseas') {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('*, name:approved_name')
+                .select('id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count')
                 .eq('status', 'approved');
 
             if (error) {
