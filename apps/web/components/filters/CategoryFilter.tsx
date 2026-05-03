@@ -44,7 +44,7 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
         queryFn: async () => {
             let query = supabase
                 .from('restaurants')
-                .select('*')
+                .select('id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count')
                 .eq('status', 'approved');
 
             // 지역 또는 국가 필터링 적용
@@ -71,6 +71,7 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
             // 병합 로직 적용하여 중복 제거
             return mergeRestaurants(data || []);
         },
+        enabled: isOpen,
     });
 
     // 카테고리별 맛집 수 계산 (병합된 데이터 기준)

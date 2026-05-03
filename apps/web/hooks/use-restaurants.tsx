@@ -39,6 +39,7 @@ interface UseRestaurantsOptions {
     region?: Region;
     minReviews?: number;
     enabled?: boolean;
+    includeVerifiedReviewCounts?: boolean;
 }
 
 type NormalizedBounds = [number, number, number, number];
@@ -486,13 +487,16 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 }
 
 export function useRestaurants(options: UseRestaurantsOptions = {}) {
-    const { bounds, category, region, minReviews, enabled = true } = options;
+    const { bounds, category, region, minReviews, enabled = true, includeVerifiedReviewCounts = true } = options;
 
     const normalizedBounds = normalizeBounds(bounds);
     const normalizedCategory = normalizeCategories(category);
     const normalizedRegion = normalizeRegion(region);
     const normalizedMinReviews = normalizeMinReviews(minReviews);
-    const queryKey = buildRestaurantQueryKey(normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews);
+    const queryKey = [
+        ...buildRestaurantQueryKey(normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews),
+        includeVerifiedReviewCounts,
+    ] as const;
 
     return useQuery({
         queryKey,
@@ -566,6 +570,10 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산합니다.
             const rawRestaurants = (data || []) as RestaurantWithOptionalName[];
             const restaurants = mergeRestaurants(rawRestaurants);
+            if (!includeVerifiedReviewCounts) {
+                return restaurants as Restaurant[];
+            }
+
             const verifiedCountMap = await buildRelatedVerifiedReviewCounts(restaurants as RestaurantWithOptionalName[]);
 
             return restaurants.map(r => ({

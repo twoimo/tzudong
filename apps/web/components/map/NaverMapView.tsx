@@ -1359,51 +1359,72 @@ const NaverMapView = memo(({
             return;
         }
 
-        // GeoJSON 변환
-        const geoJsonPoints = restaurantsToGeoJSON(displayRestaurants);
+        let cancelled = false;
+        const scheduleIdleWork = window.requestIdleCallback
+            ? window.requestIdleCallback.bind(window)
+            : ((callback: IdleRequestCallback) => window.setTimeout(() => callback({
+                didTimeout: false,
+                timeRemaining: () => 0,
+            } as IdleDeadline), 0) as unknown as number);
+        const cancelIdleWork = window.cancelIdleCallback
+            ? window.cancelIdleCallback.bind(window)
+            : window.clearTimeout.bind(window);
 
-        // 클러스터 인덱스 생성 (지역별 동적 maxZoom, 성능 티어별 반경)
-        // 현재 줌 레벨을 가져와서 동적 반경 계산
-        const currentZoom = mapInstanceRef.current.getZoom();
-        const clusterRadius = mapOptimization.getClusterRadius(currentZoom);
+        const idleHandle = scheduleIdleWork(() => {
+            if (cancelled || !mapInstanceRef.current) return;
 
-        const index = createClusterIndex(selectedRegion, {
-            radius: clusterRadius,
-            minPoints: mapOptimization.clusterMinPoints,
+            // GeoJSON 변환
+            const geoJsonPoints = restaurantsToGeoJSON(displayRestaurants);
+
+            // 클러스터 인덱스 생성 (지역별 동적 maxZoom, 성능 티어별 반경)
+            // 현재 줌 레벨을 가져와서 동적 반경 계산
+            const currentZoom = mapInstanceRef.current.getZoom();
+            const clusterRadius = mapOptimization.getClusterRadius(currentZoom);
+
+            const index = createClusterIndex(selectedRegion, {
+                radius: clusterRadius,
+                minPoints: mapOptimization.clusterMinPoints,
+            });
+
+            // 데이터 로드
+            index.load(geoJsonPoints);
+            if (cancelled) return;
+            clusterIndexRef.current = index;
+
+            // 초기 클러스터 계산
+            const map = mapInstanceRef.current;
+            // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
+            const zoom = quantizeNaverClusterZoom(map.getZoom());
+            let bounds = null;
+            try {
+                bounds = map.getBounds();
+            } catch {
+                bounds = null;
+            }
+            const bbox = resolveNaverClusterBoundsBbox(bounds);
+
+            const newClusters = getClusters(index, bbox, zoom);
+            setClusters(newClusters);
+
+            // 17개 행정구역 클러스터도 계산
+            const newRegionalClusters = getRegionalClusters(displayRestaurants);
+            setRegionalClusters(newRegionalClusters);
+
+            // 서울 25개 자치구 클러스터 계산 (두 가지 모드)
+            // 줌 9-10: 모든 구를 클러스터로 (minClusterSize=1)
+            const seoulResultAll = getSeoulDistrictClusters(displayRestaurants, 1);
+            setSeoulDistrictClusters(seoulResultAll.clusters);
+
+            // 줌 11-12: 마커 3개 이상만 클러스터, 2개 이하는 개별 마커 (minClusterSize=3)
+            const seoulResultFiltered = getSeoulDistrictClusters(displayRestaurants, 3);
+            setSeoulDistrictClustersFiltered(seoulResultFiltered.clusters);
+            setSeoulIndividualIds(seoulResultFiltered.individualRestaurantIds);
         });
 
-        // 데이터 로드
-        index.load(geoJsonPoints);
-        clusterIndexRef.current = index;
-
-        // 초기 클러스터 계산
-        const map = mapInstanceRef.current;
-        // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
-        const zoom = quantizeNaverClusterZoom(map.getZoom());
-        let bounds = null;
-        try {
-            bounds = map.getBounds();
-        } catch {
-            bounds = null;
-        }
-        const bbox = resolveNaverClusterBoundsBbox(bounds);
-
-        const newClusters = getClusters(index, bbox, zoom);
-        setClusters(newClusters);
-
-        // 17개 행정구역 클러스터도 계산
-        const newRegionalClusters = getRegionalClusters(displayRestaurants);
-        setRegionalClusters(newRegionalClusters);
-
-        // 서울 25개 자치구 클러스터 계산 (두 가지 모드)
-        // 줌 9-10: 모든 구를 클러스터로 (minClusterSize=1)
-        const seoulResultAll = getSeoulDistrictClusters(displayRestaurants, 1);
-        setSeoulDistrictClusters(seoulResultAll.clusters);
-
-        // 줌 11-12: 마커 3개 이상만 클러스터, 2개 이하는 개별 마커 (minClusterSize=3)
-        const seoulResultFiltered = getSeoulDistrictClusters(displayRestaurants, 3);
-        setSeoulDistrictClustersFiltered(seoulResultFiltered.clusters);
-        setSeoulIndividualIds(seoulResultFiltered.individualRestaurantIds);
+        return () => {
+            cancelled = true;
+            cancelIdleWork(idleHandle);
+        };
     }, [displayRestaurants, selectedRegion, isMapInitialized, mapOptimization]);
 
     // [Cluster] 지도 이동/줌 시 클러스터 업데이트
