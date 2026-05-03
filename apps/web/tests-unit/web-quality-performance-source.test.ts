@@ -5,13 +5,13 @@ import { join } from 'node:path';
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('web quality performance source contracts', () => {
-    test('map marker HTML avoids loading oversized maker-image PNGs in the initial viewport', () => {
+    test('map marker HTML keeps the restored category image markers', () => {
         const clusterMarkerSource = source('lib/cluster-marker.ts');
 
-        expect(clusterMarkerSource).toContain('CATEGORY_MARKER_VISUALS');
-        expect(clusterMarkerSource).toContain('createCategoryMarkerGlyphHTML');
-        expect(clusterMarkerSource).not.toContain("'/images/maker-images/korean.png'");
-        expect(clusterMarkerSource).not.toContain('src="${imagePath}"');
+        expect(clusterMarkerSource).toContain('CATEGORY_IMAGES');
+        expect(clusterMarkerSource).toContain("'/images/maker-images/korean.png'");
+        expect(clusterMarkerSource).toContain('src="${imagePath}"');
+        expect(clusterMarkerSource).not.toContain('createCategoryMarkerGlyphHTML');
     });
 
     test('popup ad banners are deferred out of the initial CWV window and inactive media has no src', () => {
