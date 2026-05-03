@@ -493,7 +493,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                 </Button>
                 <button
                   type="button"
-                  className="w-full text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                  className="min-h-6 w-full py-1 text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   비밀번호를 잊으셨나요?
@@ -612,7 +612,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                     >
                       <button
                         type="button"
-                        className="text-primary underline hover:text-primary/80"
+                        className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
                         onClick={() => setIsPrivacyModalOpen(true)}
                       >
                         개인정보 처리방침
@@ -664,7 +664,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
           <div className={`${mobileSheetStyles.footer} text-center text-xs text-muted-foreground`}>
             <button
               type="button"
-              className="text-primary underline hover:text-primary/80"
+              className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
               onClick={() => setIsPrivacyModalOpen(true)}
             >
               개인정보 처리방침
@@ -735,7 +735,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                 </Button>
                 <button
                   type="button"
-                  className="w-full text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                  className="min-h-6 w-full py-1 text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   비밀번호를 잊으셨나요?
@@ -851,7 +851,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                     >
                       <button
                         type="button"
-                        className="text-primary underline hover:text-primary/80"
+                        className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
                         onClick={() => setIsPrivacyModalOpen(true)}
                       >
                         개인정보 처리방침
@@ -903,7 +903,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
           <div className="text-xs text-center text-muted-foreground">
             <button
               type="button"
-              className="text-primary underline hover:text-primary/80"
+              className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
               onClick={() => setIsPrivacyModalOpen(true)}
             >
               개인정보 처리방침
