@@ -32,9 +32,12 @@ export const metadata: Metadata = {
     description: "쯔양 유튜브에 나온 전국 맛집을 지도에서 한눈에! 영상 보기, 리뷰, 도장 깨기까지",
     icons: {
         icon: [
+            { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
             { url: '/favicon.ico', sizes: 'any' },
         ],
-        apple: '/favicon.ico',
+        apple: [
+            { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+        ],
     },
     openGraph: {
         title: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에!',
@@ -91,6 +94,8 @@ export default function RootLayout({
                 <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
                 {/* DNS Prefetch - 보조 도메인 (preconnect보다 가볍고 빠름) */}
                 <link rel="dns-prefetch" href="https://nrbe.pstatic.net" />
+                <link rel="dns-prefetch" href="//nrbe.map.naver.net" />
+                <link rel="dns-prefetch" href="//static.naver.net" />
                 <link rel="dns-prefetch" href="https://i.ytimg.com" />
                 <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
             </head>

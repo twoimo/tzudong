@@ -91,4 +91,31 @@ describe('web quality performance source contracts', () => {
         expect(myPageSidebarSource).toContain("await import('@/lib/image-utils')");
         expect(myPageSidebarSource).not.toContain("import { compressImage } from '@/lib/image-utils'");
     });
+
+    test('global chrome assets stay small and cacheable without changing page UI', () => {
+        const layoutSource = source('app/layout.tsx');
+        const nextConfigSource = source('next.config.mjs');
+        const viewportFixSource = source('public/scripts/viewport-height-fix.js');
+        const faviconPath = join(import.meta.dir, '..', 'public/favicon.ico');
+        const faviconPngPath = join(import.meta.dir, '..', 'public/favicon-32x32.png');
+        const appleIconPath = join(import.meta.dir, '..', 'public/apple-touch-icon.png');
+
+        expect(statSync(faviconPath).size).toBeLessThan(16 * 1024);
+        expect(statSync(faviconPngPath).size).toBeLessThan(8 * 1024);
+        expect(statSync(appleIconPath).size).toBeLessThan(32 * 1024);
+        expect(layoutSource).toContain("{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' }");
+        expect(layoutSource).toContain("{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }");
+        expect(layoutSource).toContain('href="https://oapi.map.naver.com"');
+        expect(layoutSource).toContain('href="https://openapi.map.naver.com"');
+        expect(layoutSource).toContain('href="https://ssl.pstatic.net"');
+        expect(layoutSource).toContain('href="https://img.youtube.com"');
+        expect(layoutSource).toContain('href="//nrbe.map.naver.net"');
+        expect(layoutSource).toContain('href="//static.naver.net"');
+        expect(viewportFixSource).toContain("if (window.CSS?.supports?.('height', '100dvh'))");
+        expect(viewportFixSource).toContain('window.requestAnimationFrame(updateViewportHeight)');
+        expect(nextConfigSource).toContain("source: '/favicon.ico'");
+        expect(nextConfigSource).toContain("source: '/:icon(favicon-32x32|apple-touch-icon).png'");
+        expect(nextConfigSource).toContain("source: '/scripts/:path*'");
+    });
+
 });
