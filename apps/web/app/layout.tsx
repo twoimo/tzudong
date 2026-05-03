@@ -22,6 +22,9 @@ const notoSerifKR = Noto_Serif_KR({
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tzudong.vercel.app';
 const supabasePreconnectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const shouldPreconnectSupabase = Boolean(supabasePreconnectUrl && /^https?:\/\//i.test(supabasePreconnectUrl));
+const shouldEnableSpeedInsights =
+    process.env.VERCEL === '1'
+    || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true';
 
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),
@@ -60,8 +63,6 @@ export const metadata: Metadata = {
 export const viewport = {
     width: 'device-width',
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
     viewportFit: 'cover',
 };
 
@@ -103,7 +104,7 @@ export default function RootLayout({
                         </Suspense>
                     </AppProviders>
                 </QueryProvider>
-                <AppSpeedInsights />
+                <AppSpeedInsights enabled={shouldEnableSpeedInsights} />
             </body>
         </html>
     );

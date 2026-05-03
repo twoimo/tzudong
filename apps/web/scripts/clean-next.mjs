@@ -84,6 +84,9 @@ if (fs.existsSync(repoEnvLocalPath)) {
     loadEnv({ path: repoEnvLocalPath, override: false });
 }
 
+process.env.BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA ??= 'true';
+process.env.BROWSERSLIST_IGNORE_OLD_DATA ??= 'true';
+
 if (!skipClean) {
     purgeStaleCaches();
 
