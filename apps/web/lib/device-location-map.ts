@@ -16,6 +16,23 @@ export interface DeviceLocationButtonStateInput {
     isPending: boolean;
 }
 
+export interface DeviceLocationMapRenderPlanInput {
+    currentZoom: number;
+    location: Pick<DeviceMapLocation, 'accuracy' | 'focusRequestId'> | null;
+    maxAccuracyRadius?: number;
+    minAccuracyRadius?: number;
+    minimumFocusZoom?: number;
+    previousFocusRequestId: number | null;
+}
+
+export interface DeviceLocationMapRenderPlan {
+    accuracyRadius: number | null;
+    focusZoom: number;
+    hasLocation: boolean;
+    nextFocusedRequestId: number | null;
+    shouldFocus: boolean;
+}
+
 export function normalizeCompassHeading(value: number | null | undefined): number | null {
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
     return ((value % 360) + 360) % 360;
@@ -56,6 +73,49 @@ export function shouldFocusDeviceLocation(
     location: Pick<DeviceMapLocation, 'focusRequestId'> | null
 ): boolean {
     return location !== null && previousFocusRequestId !== location.focusRequestId;
+}
+
+export function resolveDeviceLocationAccuracyRadius(
+    accuracy: number | null | undefined,
+    minRadius = 12,
+    maxRadius = 500
+): number | null {
+    if (typeof accuracy !== 'number' || !Number.isFinite(accuracy)) return null;
+    return Math.max(minRadius, Math.min(accuracy, maxRadius));
+}
+
+export function resolveDeviceLocationFocusZoom(currentZoom: number, minimumFocusZoom = 15): number {
+    if (typeof currentZoom !== 'number' || !Number.isFinite(currentZoom)) return minimumFocusZoom;
+    return Math.max(currentZoom, minimumFocusZoom);
+}
+
+export function resolveDeviceLocationMapRenderPlan({
+    currentZoom,
+    location,
+    maxAccuracyRadius = 500,
+    minAccuracyRadius = 12,
+    minimumFocusZoom = 15,
+    previousFocusRequestId,
+}: DeviceLocationMapRenderPlanInput): DeviceLocationMapRenderPlan {
+    if (!location) {
+        return {
+            accuracyRadius: null,
+            focusZoom: resolveDeviceLocationFocusZoom(currentZoom, minimumFocusZoom),
+            hasLocation: false,
+            nextFocusedRequestId: null,
+            shouldFocus: false,
+        };
+    }
+
+    const shouldFocus = shouldFocusDeviceLocation(previousFocusRequestId, location);
+
+    return {
+        accuracyRadius: resolveDeviceLocationAccuracyRadius(location.accuracy, minAccuracyRadius, maxAccuracyRadius),
+        focusZoom: resolveDeviceLocationFocusZoom(currentZoom, minimumFocusZoom),
+        hasLocation: true,
+        nextFocusedRequestId: shouldFocus ? location.focusRequestId : previousFocusRequestId,
+        shouldFocus,
+    };
 }
 
 export function buildDeviceLocationMarkerHtml(location: Pick<DeviceMapLocation, 'accuracy' | 'heading' | 'mode'>): string {

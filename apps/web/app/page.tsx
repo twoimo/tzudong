@@ -33,6 +33,9 @@ export const metadata: Metadata = {
 // [SSR] 서버 컴포넌트 홈 페이지 - 무거운 지도 앱 그래프는 클라이언트에서 지연 로딩
 export default function HomePage() {
     return (
-        <HomeClientLoader />
+        <>
+            <h1 className="sr-only">쯔동여지도</h1>
+            <HomeClientLoader />
+        </>
     );
 }

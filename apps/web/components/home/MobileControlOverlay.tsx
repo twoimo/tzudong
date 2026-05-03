@@ -1027,11 +1027,12 @@ function MobileControlOverlayComponent({
                         variant="ghost"
                         onClick={() => toggleSheet('search')}
                         className="flex-1 h-10 rounded-full justify-start gap-2 px-2.5 hover:bg-secondary/80"
-                        aria-label="맛집 검색 열기"
+                        aria-label={searchQuery.trim() ? `${searchQuery.trim()} 검색 열기` : '쯔동여지도 검색하기'}
                     >
                         <Image
                             src="/logo.png"
-                            alt="로고"
+                            alt=""
+                            aria-hidden="true"
                             width={26}
                             height={26}
                             className="rounded-md object-contain shrink-0"

@@ -528,6 +528,10 @@ async function handleSupabaseAuthRoute(route: Route) {
 
 export async function installMobileHomeMapTestMocks(page: Page) {
     await page.addInitScript({ content: MOCK_NAVER_MAPS_SOURCE });
+    await installMobileHomeDataMocks(page);
+}
+
+export async function installMobileHomeDataMocks(page: Page) {
     await page.route(SUPABASE_REST_ROUTE, handleSupabaseRestRoute);
     await page.route(SUPABASE_AUTH_ROUTE, handleSupabaseAuthRoute);
 }
