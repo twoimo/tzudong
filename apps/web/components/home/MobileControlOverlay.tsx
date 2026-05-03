@@ -221,6 +221,7 @@ function MobileControlOverlayComponent({
             if (error) return [];
             return mergeRestaurants(data || []);
         },
+        enabled: activeSheet === 'region' || activeSheet === 'category',
         staleTime: 1000 * 60 * 5, // 5분간 fresh
         gcTime: 1000 * 60 * 15, // 15분간 캐시 유지
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 방지

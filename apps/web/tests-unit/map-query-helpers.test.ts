@@ -26,6 +26,7 @@ describe('map query helpers', () => {
             category: ['한식'],
             region: '미국',
             minReviews: 5,
+            includeVerifiedReviewCounts: false,
             enabled: true,
         });
     });
@@ -47,6 +48,7 @@ describe('map query helpers', () => {
             category: undefined,
             minReviews: 3,
             region: '일본(나고야)',
+            includeVerifiedReviewCounts: false,
             enabled: true,
             refreshTrigger: 7,
         });
@@ -69,6 +71,7 @@ describe('map query helpers', () => {
             category: ['카페'],
             region: '서울',
             minReviews: 11,
+            includeVerifiedReviewCounts: false,
             enabled: true,
         });
     });

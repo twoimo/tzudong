@@ -48,6 +48,8 @@ const getSearchQueryFromUrl = () => {
 };
 
 const POPULAR_RESTAURANTS_QUERY_KEY = ["popular-searches-weekly"] as const;
+const RESTAURANT_SEARCH_SELECT =
+  'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at';
 
 type SearchRestaurantsByYoutubeTitleArgs = {
   search_query: string;
@@ -118,6 +120,7 @@ const RestaurantSearch = ({
     () => normalizedCategoryFilter.join('|'),
     [normalizedCategoryFilter]
   );
+  const isInlineView = resultView === 'inline';
 
   // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 5개) - [OPTIMIZATION] 병합 로직 적용
   const { data: popularRestaurants = [] } = useQuery({
@@ -146,6 +149,7 @@ const RestaurantSearch = ({
         return [];
       }
     },
+    enabled: isFocused || isInlineView,
     staleTime: 1000 * 60 * 10, // 10분간 캐시 (인기 검색어는 자주 변하지 않음)
     gcTime: 1000 * 60 * 30, // 30분간 메모리 보존
   });
@@ -177,7 +181,7 @@ const RestaurantSearch = ({
 
           let query = supabase
             .from('restaurants')
-            .select('*, name:approved_name')
+            .select(RESTAURANT_SEARCH_SELECT)
             .eq('status', 'approved')
             .ilike('approved_name', `%${trimmedQuery}%`)
             .limit(50);
@@ -304,7 +308,7 @@ const RestaurantSearch = ({
   const handleHistoryOrPopularSelect = useCallback(async (name: string, selectedRestaurantId?: string) => {
     const { data } = await supabase
       .from('restaurants')
-      .select('*, name:approved_name')
+      .select(RESTAURANT_SEARCH_SELECT)
       .eq('approved_name', name)
       .eq('status', 'approved');
 
@@ -322,7 +326,6 @@ const RestaurantSearch = ({
     }
   }, [handleSelect]);
 
-  const isInlineView = resultView === 'inline';
   const showResults = isInlineView
     ? trimmedDebouncedSearchQuery.length > 0 || restaurants.length > 0
     : isFocused && (trimmedDebouncedSearchQuery.length > 0 || restaurants.length > 0);
