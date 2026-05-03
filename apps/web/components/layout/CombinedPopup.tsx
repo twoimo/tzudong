@@ -11,6 +11,7 @@ import { AdBanner } from '@/types/ad-banner';
 
 // 로컬 스토리지 키
 const DISMISSED_DATE_KEY = 'combinedPopup_dismissedDate';
+const POPUP_BANNER_IDLE_DELAY_MS = 30000;
 
 // 오늘 날짜 문자열 (캐시)
 let todayStringCache: string | null = null;
@@ -43,17 +44,25 @@ const SlideIndicator = memo(({
             {Array.from({ length: count }, (_, index) => (
                 <button
                     key={index}
+                    type="button"
+                    aria-label={`${index + 1}번째 배너 보기`}
+                    aria-current={current === index ? 'true' : undefined}
                     onClick={(e) => {
                         e.stopPropagation();
                         onSelect(index);
                     }}
-                    className={cn(
-                        "w-2 h-2 rounded-full transition-all",
-                        current === index
-                            ? "bg-white scale-110 shadow-md"
-                            : "bg-white/50"
-                    )}
-                />
+                    className="flex h-6 w-6 items-center justify-center rounded-full"
+                >
+                    <span
+                        aria-hidden="true"
+                        className={cn(
+                            "h-2 w-2 rounded-full transition-all",
+                            current === index
+                                ? "bg-white scale-110 shadow-md"
+                                : "bg-white/50"
+                        )}
+                    />
+                </button>
             ))}
         </div>
     );
@@ -110,13 +119,14 @@ const BannerSlide = memo(({
             {banner.video_url ? (
                 <video
                     ref={videoRef}
-                    src={banner.video_url}
+                    src={isActive ? banner.video_url : undefined}
                     className="w-full h-full object-cover"
                     muted
                     playsInline
+                    preload="metadata"
                     onEnded={onVideoEnded}
                 />
-            ) : banner.image_url ? (
+            ) : banner.image_url && isActive ? (
                 /* 이미지 배너 (우선순위 2) */
                 <div className="relative h-full w-full">
                     <Image
@@ -142,9 +152,9 @@ const BannerSlide = memo(({
                     <div className="absolute inset-2 border-2 border-double border-border rounded-md pointer-events-none dark:border-transparent" />
                     <div className="relative h-full flex flex-col items-center justify-center text-center p-6">
                         <Scroll className="w-8 h-8 text-muted-foreground mb-3 opacity-60" />
-                        <h3 className="text-xl font-serif font-bold text-foreground mb-2 tracking-wide">
+                        <h2 className="text-xl font-serif font-bold text-foreground mb-2 tracking-wide">
                             {banner.title}
-                        </h3>
+                        </h2>
                         {banner.description && (
                             <p className="text-sm font-serif text-foreground/80 whitespace-pre-line leading-relaxed">
                                 {banner.description}
@@ -176,6 +186,7 @@ const CombinedPopupComponent = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
     const [isDragging, setIsDragging] = useState(false);
+    const [canLoadBanners, setCanLoadBanners] = useState(false);
 
     // [OPTIMIZATION] useRef for drag coordinates to avoid re-renders on every move
     const dragStartRef = useRef<number | null>(null);
@@ -185,7 +196,7 @@ const CombinedPopupComponent = () => {
     const slideContainerRef = useRef<HTMLDivElement>(null);
 
     // 배너 데이터
-    const { data: banners = [] } = usePopupAdBanners();
+    const { data: banners = [] } = usePopupAdBanners({ enabled: canLoadBanners });
 
     // 오늘 이미 닫았는지 확인
     const shouldShowPopup = useCallback(() => {
@@ -195,9 +206,31 @@ const CombinedPopupComponent = () => {
         return true;
     }, []);
 
+    // Non-critical ad media is deferred out of the initial CWV window.
+    // Load on the first real user intent, with a slow idle fallback for long sessions.
+    useEffect(() => {
+        if (!shouldShowPopup()) return;
+
+        let timer: number;
+        const loadBanners = () => {
+            window.clearTimeout(timer);
+            setCanLoadBanners(true);
+        };
+        timer = window.setTimeout(loadBanners, POPUP_BANNER_IDLE_DELAY_MS);
+        const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
+        events.forEach((eventName) => {
+            window.addEventListener(eventName, loadBanners, { once: true, passive: true });
+        });
+
+        return () => {
+            window.clearTimeout(timer);
+            events.forEach((eventName) => window.removeEventListener(eventName, loadBanners));
+        };
+    }, [shouldShowPopup]);
+
     // 팝업 표시
     useEffect(() => {
-        if (banners.length === 0 || hasShownRef.current) return;
+        if (!canLoadBanners || banners.length === 0 || hasShownRef.current) return;
 
         if (shouldShowPopup()) {
             const timer = setTimeout(() => {
@@ -206,7 +239,7 @@ const CombinedPopupComponent = () => {
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [banners.length, shouldShowPopup]);
+    }, [banners.length, canLoadBanners, shouldShowPopup]);
 
     // 자동 슬라이드 (영상 배너가 아닐 때만)
     useEffect(() => {
@@ -405,16 +438,20 @@ const CombinedPopupComponent = () => {
                     {banners.length > 1 && (
                         <>
                             <button
+                                type="button"
+                                aria-label="이전 배너 보기"
                                 onClick={(e) => { e.stopPropagation(); prevSlide(); }}
                                 className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
                             >
-                                <ChevronLeft className="w-5 h-5" />
+                                <ChevronLeft className="w-5 h-5" aria-hidden="true" />
                             </button>
                             <button
+                                type="button"
+                                aria-label="다음 배너 보기"
                                 onClick={(e) => { e.stopPropagation(); nextSlide(); }}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
                             >
-                                <ChevronRight className="w-5 h-5" />
+                                <ChevronRight className="w-5 h-5" aria-hidden="true" />
                             </button>
                         </>
                     )}
