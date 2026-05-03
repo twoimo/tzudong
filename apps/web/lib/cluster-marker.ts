@@ -116,30 +116,62 @@ export const clusterAnimationManager = new ClusterAnimationManager();
 /**
  * 카테고리별 이미지 경로 매핑
  */
-const CATEGORY_IMAGES: Record<string, string> = {
-  '고기': '/images/maker-images/meat_bbq.png',
-  '치킨': '/images/maker-images/chicken.png',
-  '한식': '/images/maker-images/korean.png',
-  '중식': '/images/maker-images/chinese.png',
-  '일식': '/images/maker-images/cutlet_sashimi.png',
-  '양식': '/images/maker-images/western.png',
-  '분식': '/images/maker-images/snack_bar.png',
-  '카페·디저트': '/images/maker-images/cafe_dessert.png',
-  '아시안': '/images/maker-images/asian.png',
-  '패스트푸드': '/images/maker-images/fastfood.png',
-  '족발·보쌈': '/images/maker-images/pork_feet.png',
-  '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
-  '피자': '/images/maker-images/pizza.png',
-  '찜·탕': '/images/maker-images/stew.png',
-  '야식': '/images/maker-images/late_night.png',
-  '도시락': '/images/maker-images/lunch_box.png',
+type CategoryMarkerImage = {
+  webp: string;
+  png: string;
+};
+
+const createCategoryMarkerImage = (name: string): CategoryMarkerImage => ({
+  webp: `/images/maker-images/webp/${name}.webp`,
+  png: `/images/maker-images/${name}.png`,
+});
+
+const CATEGORY_IMAGES: Record<string, CategoryMarkerImage> = {
+  '고기': createCategoryMarkerImage('meat_bbq'),
+  '치킨': createCategoryMarkerImage('chicken'),
+  '한식': createCategoryMarkerImage('korean'),
+  '중식': createCategoryMarkerImage('chinese'),
+  '일식': createCategoryMarkerImage('cutlet_sashimi'),
+  '양식': createCategoryMarkerImage('western'),
+  '분식': createCategoryMarkerImage('snack_bar'),
+  '카페·디저트': createCategoryMarkerImage('cafe_dessert'),
+  '아시안': createCategoryMarkerImage('asian'),
+  '패스트푸드': createCategoryMarkerImage('fastfood'),
+  '족발·보쌈': createCategoryMarkerImage('pork_feet'),
+  '돈까스·회': createCategoryMarkerImage('cutlet_sashimi'),
+  '피자': createCategoryMarkerImage('pizza'),
+  '찜·탕': createCategoryMarkerImage('stew'),
+  '야식': createCategoryMarkerImage('late_night'),
+  '도시락': createCategoryMarkerImage('lunch_box'),
 };
 
 /**
  * 카테고리 이미지 경로 가져오기
  */
-const getCategoryIsImage = (category: string): string => {
-  return CATEGORY_IMAGES[category] || '/images/maker-images/korean.png';
+const getCategoryImage = (category: string): CategoryMarkerImage => {
+  return CATEGORY_IMAGES[category] || createCategoryMarkerImage('korean');
+};
+
+const createCategoryImageHTML = ({
+  image,
+  alt,
+}: {
+  image: CategoryMarkerImage;
+  alt: string;
+}): string => {
+  return `
+        <picture style="display: block; width: 100%; height: 100%;">
+          <source srcset="${image.webp}" type="image/webp" />
+          <img
+              src="${image.png}"
+              alt="${alt}"
+              style="width: 100%; height: 100%; object-fit: contain;"
+              draggable="false"
+              decoding="async"
+              fetchpriority="low"
+          />
+        </picture>
+  `;
 };
 
 /**
@@ -157,7 +189,7 @@ export const createClusterMarkerHTML = (
 ): string => {
   const count = cluster.properties.point_count || 0;
   const displayCategory = categories[currentIndex % categories.length] || '기타';
-  const imagePath = getCategoryIsImage(displayCategory);
+  const image = getCategoryImage(displayCategory);
 
   // 개수에 따라 크기 동적 조정 (32px ~ 72px) - 이미지에 맞춰 조정
   let size: number;
@@ -206,12 +238,7 @@ export const createClusterMarkerHTML = (
           height: ${iconSize}px;
         "
       >
-        <img
-            src="${imagePath}"
-            alt="cluster"
-            style="width: 100%; height: 100%; object-fit: contain;"
-            draggable="false"
-        />
+        ${createCategoryImageHTML({ image, alt: 'cluster' })}
       </div>
 
       <!-- 맛집 개수 배지 (우측 하단) -->
@@ -252,7 +279,7 @@ export const createIndividualMarkerHTML = (
   category: string,
   isSelected: boolean
 ): string => {
-  const imagePath = getCategoryIsImage(category);
+  const image = getCategoryImage(category);
   // 이미지 마커: 선택 시 42px, 기본 32px
   const size = isSelected ? 42 : 32;
 
@@ -285,16 +312,7 @@ export const createIndividualMarkerHTML = (
       role="button"
       data-testid="marker"
     >
-        <img
-            src="${imagePath}"
-            alt="marker"
-            style="
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-            "
-            draggable="false"
-        />
+        ${createCategoryImageHTML({ image, alt: 'marker' })}
     </div>
   `;
 };

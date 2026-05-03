@@ -30,7 +30,9 @@ describe('naver map cluster visuals', () => {
             lng: 127.0,
         });
         expect(html).toContain('4');
+        expect(html).toContain('/images/maker-images/webp/korean.webp');
         expect(html).toContain('/images/maker-images/korean.png');
+        expect(html).toContain('type="image/webp"');
     });
 
     test('returns naver cluster marker visual payload', () => {
@@ -42,6 +44,7 @@ describe('naver map cluster visuals', () => {
             lng: 127.0,
         });
         expect(visual.anchor).toEqual({ x: 24, y: 24 });
+        expect(visual.content).toContain('/images/maker-images/webp/korean.webp');
         expect(visual.content).toContain('/images/maker-images/korean.png');
     });
 
@@ -56,6 +59,7 @@ describe('naver map cluster visuals', () => {
         expect(plan.position).toEqual({ lat: 37.6, lng: 127.1 });
         expect(plan.anchor).toEqual({ x: 24, y: 24 });
         expect(plan.content).toContain('5');
+        expect(plan.content).toContain('/images/maker-images/webp/snack_bar.webp');
         expect(plan.content).toContain('/images/maker-images/snack_bar.png');
     });
 
@@ -77,6 +81,7 @@ describe('naver map cluster visuals', () => {
         expect(plan.position).toEqual({ lat: 37.55, lng: 126.98 });
         expect(plan.anchor).toEqual({ x: 24, y: 24 });
         expect(plan.content).toContain('6');
+        expect(plan.content).toContain('/images/maker-images/webp/korean.webp');
         expect(plan.content).toContain('/images/maker-images/korean.png');
     });
 });
