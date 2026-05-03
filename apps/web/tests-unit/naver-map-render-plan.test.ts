@@ -4,6 +4,8 @@ import type { Restaurant } from '../types/restaurant';
 import {
     buildRenderTargetIdsForSignature,
     deriveClusterRenderPlan,
+    getRestaurantsWithRenderableCoordinates,
+    getSeoulIndividualRestaurantsForRender,
     getVisibleRestaurantsForRender,
     shouldReportNaverMarkerRenderPerformance,
 } from '../lib/naver-map-render-plan';
@@ -47,6 +49,30 @@ describe('naver map render plan helpers', () => {
             true,
         );
         expect(result.map((restaurant) => restaurant.id)).toEqual(['selected', 'visible']);
+    });
+
+    test('keeps only restaurants that can produce Naver marker coordinates', () => {
+        const result = getRestaurantsWithRenderableCoordinates([
+            makeRestaurant({ id: 'valid', lat: 37.5, lng: 127.0 }),
+            makeRestaurant({ id: 'missing-lat', lat: null as any, lng: 127.0 }),
+            makeRestaurant({ id: 'missing-lng', lat: 37.5, lng: null as any }),
+            makeRestaurant({ id: 'zero-lat', lat: 0, lng: 127.0 }),
+        ]);
+
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['valid']);
+    });
+
+    test('filters Seoul individual marker candidates by id and coordinates', () => {
+        const result = getSeoulIndividualRestaurantsForRender({
+            displayRestaurants: [
+                makeRestaurant({ id: 'renderable', lat: 37.5, lng: 127.0 }),
+                makeRestaurant({ id: 'not-requested', lat: 37.6, lng: 127.1 }),
+                makeRestaurant({ id: 'missing-coordinate', lat: null as any, lng: 127.2 }),
+            ],
+            seoulIndividualIds: ['renderable', 'missing-coordinate', 'missing-from-data'],
+        });
+
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['renderable']);
     });
 
     test('builds stable render target ids for restaurants and regional clusters', () => {

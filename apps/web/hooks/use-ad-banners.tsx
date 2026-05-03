@@ -37,7 +37,10 @@ export function useAdBannersAdmin() {
 /**
  * 활성화된 광고 배너 조회 (공개용)
  */
-export function useActiveAdBanners(displayTarget?: DisplayTarget) {
+export function useActiveAdBanners(
+    displayTarget?: DisplayTarget,
+    options: { enabled?: boolean } = {},
+) {
     return useQuery({
         queryKey: [...AD_BANNERS_QUERY_KEY, 'active', displayTarget],
         queryFn: async (): Promise<AdBanner[]> => {
@@ -78,6 +81,7 @@ export function useActiveAdBanners(displayTarget?: DisplayTarget) {
                     : FALLBACK_AD_BANNERS;
             }
         },
+        enabled: options.enabled ?? true,
         staleTime: 5 * 60 * 1000, // 5분
         gcTime: 10 * 60 * 1000, // 10분
     });
@@ -100,8 +104,8 @@ export function useMobilePopupAdBanners() {
 /**
  * 팝업형 광고 배너 (모바일/데스크탑 통합)
  */
-export function usePopupAdBanners() {
-    return useActiveAdBanners('mobile_popup');
+export function usePopupAdBanners(options: { enabled?: boolean } = {}) {
+    return useActiveAdBanners('mobile_popup', options);
 }
 
 /**

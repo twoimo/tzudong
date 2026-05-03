@@ -20,7 +20,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import {
     buildDeviceLocationMarkerHtml,
-    shouldFocusDeviceLocation,
+    resolveDeviceLocationMapRenderPlan,
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
 import type Supercluster from 'supercluster';
@@ -50,8 +50,6 @@ import {
     buildClusterMarkerContent,
     buildClusterMarkerFeature,
     buildNaverClusterAnimationIconPlan,
-    buildNaverClusterMarkerRenderPlan,
-    getClusterVisualKey,
 } from "@/lib/naver-map-cluster-visuals";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
@@ -94,6 +92,8 @@ import {
 import {
     buildRenderTargetIdsForSignature,
     deriveClusterRenderPlan,
+    getRestaurantsWithRenderableCoordinates,
+    getSeoulIndividualRestaurantsForRender,
     getVisibleRestaurantsForRender,
     shouldReportNaverMarkerRenderPerformance,
 } from "@/lib/naver-map-render-plan";
@@ -421,6 +421,11 @@ const NaverMapView = memo(({
             content: buildDeviceLocationMarkerHtml(deviceLocation),
             anchor: new naver.maps.Point(28, 28),
         };
+        const deviceLocationRenderPlan = resolveDeviceLocationMapRenderPlan({
+            currentZoom: map.getZoom(),
+            location: deviceLocation,
+            previousFocusRequestId: lastFocusedDeviceLocationRequestRef.current,
+        });
 
         if (!deviceLocationMarkerRef.current) {
             deviceLocationMarkerRef.current = new naver.maps.Marker({
@@ -435,8 +440,8 @@ const NaverMapView = memo(({
             deviceLocationMarkerRef.current.setMap(map);
         }
 
-        if (typeof deviceLocation.accuracy === 'number' && Number.isFinite(deviceLocation.accuracy)) {
-            const radius = Math.max(12, Math.min(deviceLocation.accuracy, 500));
+        if (deviceLocationRenderPlan.accuracyRadius !== null) {
+            const radius = deviceLocationRenderPlan.accuracyRadius;
             if (!deviceLocationAccuracyCircleRef.current) {
                 deviceLocationAccuracyCircleRef.current = new naver.maps.Circle({
                     map,
@@ -459,10 +464,9 @@ const NaverMapView = memo(({
             deviceLocationAccuracyCircleRef.current = null;
         }
 
-        if (shouldFocusDeviceLocation(lastFocusedDeviceLocationRequestRef.current, deviceLocation)) {
-            lastFocusedDeviceLocationRequestRef.current = deviceLocation.focusRequestId;
-            const nextZoom = Math.max(map.getZoom(), 15);
-            map.morph(position, nextZoom, { duration: 450, easing: 'easeOutCubic' });
+        if (deviceLocationRenderPlan.shouldFocus) {
+            lastFocusedDeviceLocationRequestRef.current = deviceLocationRenderPlan.nextFocusedRequestId;
+            map.morph(position, deviceLocationRenderPlan.focusZoom, { duration: 450, easing: 'easeOutCubic' });
         }
     }, [deviceLocation, isMapInitialized]);
 
@@ -1552,15 +1556,15 @@ const NaverMapView = memo(({
             uniqueKey: string | number,
             onClick: () => void
         ) => {
-            const hash = getClusterVisualKey(uniqueKey);
-
-            clusterAnimationManager.register(hash);
-            const currentIndex = clusterAnimationManager.getCurrentIndex(hash, categories.length);
-            const renderPlan = buildNaverClusterMarkerRenderPlan({
+            const renderPlan = buildNaverClusterAnimationIconPlan({
                 categories,
                 count,
-                currentIndex,
+                getCurrentIndex: (hash, categoryCount) => {
+                    clusterAnimationManager.register(hash);
+                    return clusterAnimationManager.getCurrentIndex(hash, categoryCount);
+                },
                 position,
+                uniqueKey,
             });
 
             markerPool.acquire(
@@ -1637,11 +1641,10 @@ const NaverMapView = memo(({
 
             // 1-2. 서울 자치구 개별 마커 (줌 11-12에서만, 마커 2개 이하인 구)
             if (shouldUseSeoulDistrictFiltered && seoulIndividualIds.length > 0) {
-                const seoulIndividualSet = new Set(seoulIndividualIds);
-                displayRestaurants.forEach((restaurant) => {
-                    if (!seoulIndividualSet.has(restaurant.id)) return;
-                    if (!restaurant.lat || !restaurant.lng) return;
-
+                getSeoulIndividualRestaurantsForRender({
+                    displayRestaurants,
+                    seoulIndividualIds,
+                }).forEach((restaurant) => {
                     activeIds.add(restaurant.id);
                     const isSelected = selectedRestaurant?.id === restaurant.id;
                     const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
@@ -1728,9 +1731,7 @@ const NaverMapView = memo(({
                 // 참고: 서울 자치구 모드가 활성화된 경우, 서울 내의 개별 마커를 숨겨야 할까요?
                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
 
-                visibleRestaurants.forEach(restaurant => {
-                    if (!restaurant.lat || !restaurant.lng) return;
-
+                getRestaurantsWithRenderableCoordinates(visibleRestaurants).forEach(restaurant => {
                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
                     if (shouldHideInSeoulDistrictMode({
                         address: restaurant.road_address || restaurant.jibun_address || '',
@@ -2250,6 +2251,7 @@ const NaverMapView = memo(({
                     badgePositionClass={floatingBadgePositionClass}
                     centerOffsetStyle={centerOffsetStyle}
                     count={onlineUsersCount}
+                    dataTestId="map-container"
                     floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}

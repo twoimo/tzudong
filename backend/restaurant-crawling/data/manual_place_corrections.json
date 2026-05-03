@@ -1,0 +1,17 @@
+{
+  "https://www.youtube.com/watch?v=GQyNACahbyM": {
+    "source": "user_verified_onscreen_2026-05-01",
+    "reason": "At 00:01:17 the video shows the exact restaurant/address; previous keyword-based extraction picked a nearby wrong restaurant.",
+    "restaurants": [
+      {
+        "origin_name": "춘천냉면",
+        "address": "서울특별시 동대문구 왕산로37길 50",
+        "lat": 37.5821845,
+        "lng": 127.0439578,
+        "category": ["한식", "분식"],
+        "reasoning_basis": "[01:17] 영상 화면의 직접 장소 정보에 '춘천냉면, 서울 동대문구 왕산로37길 50'가 표시되어 상호명과 주소를 확정함. 기존 '청량리 할머니 냉면'은 지역/메뉴/전통 키워드 조합 추론으로 확인된 직접 상호명이 아니므로 폐기함.",
+        "youtuber_review": "원래 매운 냉면 전문점이나 겨울 한정 메뉴인 떡만둣국을 먹기 위해 방문함. 떡국은 사골과 소 골반을 4시간 동안 고아 만든 국물이 매우 깔끔하고 개운하며, 만두피가 부드럽고 속이 알참. 냉면은 3단계 매운맛이 있으며 보통 맛도 신라면보다 맵고 칼칼함. 특히 온육수가 감칠맛이 좋아 강력 추천함."
+      }
+    ]
+  }
+}
