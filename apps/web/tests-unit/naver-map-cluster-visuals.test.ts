@@ -30,9 +30,7 @@ describe('naver map cluster visuals', () => {
             lng: 127.0,
         });
         expect(html).toContain('4');
-        expect(html).toContain('title="한식"');
-        expect(html).toContain('>한</span>');
-        expect(html).not.toContain('<img');
+        expect(html).toContain('/images/maker-images/korean.png');
     });
 
     test('returns naver cluster marker visual payload', () => {
@@ -44,8 +42,7 @@ describe('naver map cluster visuals', () => {
             lng: 127.0,
         });
         expect(visual.anchor).toEqual({ x: 24, y: 24 });
-        expect(visual.content).toContain('title="한식"');
-        expect(visual.content).not.toContain('<img');
+        expect(visual.content).toContain('/images/maker-images/korean.png');
     });
 
     test('builds cluster marker render plan from position and current animation index', () => {
@@ -59,9 +56,7 @@ describe('naver map cluster visuals', () => {
         expect(plan.position).toEqual({ lat: 37.6, lng: 127.1 });
         expect(plan.anchor).toEqual({ x: 24, y: 24 });
         expect(plan.content).toContain('5');
-        expect(plan.content).toContain('title="분식"');
-        expect(plan.content).toContain('>분</span>');
-        expect(plan.content).not.toContain('<img');
+        expect(plan.content).toContain('/images/maker-images/snack_bar.png');
     });
 
     test('builds animation icon plan from key and injected index resolver', () => {
@@ -82,7 +77,6 @@ describe('naver map cluster visuals', () => {
         expect(plan.position).toEqual({ lat: 37.55, lng: 126.98 });
         expect(plan.anchor).toEqual({ x: 24, y: 24 });
         expect(plan.content).toContain('6');
-        expect(plan.content).toContain('title="한식"');
-        expect(plan.content).not.toContain('<img');
+        expect(plan.content).toContain('/images/maker-images/korean.png');
     });
 });

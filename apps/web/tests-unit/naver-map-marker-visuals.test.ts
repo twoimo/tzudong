@@ -7,17 +7,13 @@ describe('naver map marker visuals', () => {
         const visual = getNaverIndividualMarkerVisual({ categories: ['한식'], category: [] }, true);
         expect(visual.anchor).toEqual({ x: 18, y: 18 });
         expect(visual.zIndex).toBe(100);
-        expect(visual.content).toContain('title="한식"');
-        expect(visual.content).toContain('>한</span>');
-        expect(visual.content).not.toContain('<img');
+        expect(visual.content).toContain('/images/maker-images/korean.png');
     });
 
     test('returns unselected marker payload', () => {
         const visual = getNaverIndividualMarkerVisual({ categories: [], category: ['분식'] }, false);
         expect(visual.anchor).toEqual({ x: 14, y: 14 });
         expect(visual.zIndex).toBe(1);
-        expect(visual.content).toContain('title="분식"');
-        expect(visual.content).toContain('>분</span>');
-        expect(visual.content).not.toContain('<img');
+        expect(visual.content).toContain('/images/maker-images/snack_bar.png');
     });
 });
