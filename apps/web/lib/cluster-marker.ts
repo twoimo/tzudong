@@ -16,7 +16,7 @@ class ClusterAnimationManager {
 
   /**
    * 애니메이션 시작 (requestAnimationFrame 사용)
-   * 
+   *
    * @param intervalMs 애니메이션 주기 (ms)
    */
   public start(intervalMs: number = 1000): void {
@@ -57,7 +57,7 @@ class ClusterAnimationManager {
 
   /**
    * 클러스터 등록
-   * 
+   *
    * @param clusterId 클러스터 ID
    */
   public register(clusterId: number): void {
@@ -68,7 +68,7 @@ class ClusterAnimationManager {
 
   /**
    * 클러스터 제거
-   * 
+   *
    * @param clusterId 클러스터 ID
    */
   public unregister(clusterId: number): void {
@@ -77,7 +77,7 @@ class ClusterAnimationManager {
 
   /**
    * 현재 카테고리 인덱스 가져오기
-   * 
+   *
    * @param clusterId 클러스터 ID
    * @param totalCategories 총 카테고리 개수
    * @returns 현재 인덱스
@@ -89,7 +89,7 @@ class ClusterAnimationManager {
 
   /**
    * 업데이트 리스너 등록
-   * 
+   *
    * @param listener 콜백 함수
    * @returns cleanup 함수
    */
@@ -114,82 +114,69 @@ class ClusterAnimationManager {
 export const clusterAnimationManager = new ClusterAnimationManager();
 
 /**
- * 카테고리별 CSS 마커 토큰.
- * Lighthouse에서 25~50px로 표시되는 마커가 90~128KB PNG를 여러 개 내려받는 문제가 있어,
- * 지도 위 마커는 네트워크 이미지 대신 텍스트/그라디언트 기반 glyph로 렌더링한다.
+ * 카테고리별 이미지 경로 매핑
  */
-type CategoryMarkerVisual = {
-  glyph: string;
-  label: string;
-  gradient: string;
+type CategoryMarkerImage = {
+  webp: string;
+  png: string;
 };
 
-const CATEGORY_MARKER_VISUALS: Record<string, CategoryMarkerVisual> = {
-  '고기': { glyph: '고', label: '고기', gradient: 'linear-gradient(135deg, #ef4444, #b91c1c)' },
-  '치킨': { glyph: '치', label: '치킨', gradient: 'linear-gradient(135deg, #f97316, #c2410c)' },
-  '한식': { glyph: '한', label: '한식', gradient: 'linear-gradient(135deg, #22c55e, #15803d)' },
-  '중식': { glyph: '중', label: '중식', gradient: 'linear-gradient(135deg, #dc2626, #991b1b)' },
-  '일식': { glyph: '일', label: '일식', gradient: 'linear-gradient(135deg, #0ea5e9, #0369a1)' },
-  '양식': { glyph: '양', label: '양식', gradient: 'linear-gradient(135deg, #6366f1, #4338ca)' },
-  '분식': { glyph: '분', label: '분식', gradient: 'linear-gradient(135deg, #f59e0b, #b45309)' },
-  '카페·디저트': { glyph: '카', label: '카페 디저트', gradient: 'linear-gradient(135deg, #ec4899, #be185d)' },
-  '아시안': { glyph: '아', label: '아시안', gradient: 'linear-gradient(135deg, #14b8a6, #0f766e)' },
-  '패스트푸드': { glyph: '패', label: '패스트푸드', gradient: 'linear-gradient(135deg, #eab308, #a16207)' },
-  '족발·보쌈': { glyph: '족', label: '족발 보쌈', gradient: 'linear-gradient(135deg, #92400e, #78350f)' },
-  '돈까스·회': { glyph: '회', label: '돈까스 회', gradient: 'linear-gradient(135deg, #38bdf8, #075985)' },
-  '피자': { glyph: '피', label: '피자', gradient: 'linear-gradient(135deg, #fb7185, #be123c)' },
-  '찜·탕': { glyph: '탕', label: '찜 탕', gradient: 'linear-gradient(135deg, #f97316, #9a3412)' },
-  '야식': { glyph: '야', label: '야식', gradient: 'linear-gradient(135deg, #8b5cf6, #5b21b6)' },
-  '도시락': { glyph: '도', label: '도시락', gradient: 'linear-gradient(135deg, #84cc16, #4d7c0f)' },
-  '기타': { glyph: '맛', label: '맛집', gradient: 'linear-gradient(135deg, #64748b, #334155)' },
+const createCategoryMarkerImage = (name: string): CategoryMarkerImage => ({
+  webp: `/images/maker-images/webp/${name}.webp`,
+  png: `/images/maker-images/${name}.png`,
+});
+
+const CATEGORY_IMAGES: Record<string, CategoryMarkerImage> = {
+  '고기': createCategoryMarkerImage('meat_bbq'),
+  '치킨': createCategoryMarkerImage('chicken'),
+  '한식': createCategoryMarkerImage('korean'),
+  '중식': createCategoryMarkerImage('chinese'),
+  '일식': createCategoryMarkerImage('cutlet_sashimi'),
+  '양식': createCategoryMarkerImage('western'),
+  '분식': createCategoryMarkerImage('snack_bar'),
+  '카페·디저트': createCategoryMarkerImage('cafe_dessert'),
+  '아시안': createCategoryMarkerImage('asian'),
+  '패스트푸드': createCategoryMarkerImage('fastfood'),
+  '족발·보쌈': createCategoryMarkerImage('pork_feet'),
+  '돈까스·회': createCategoryMarkerImage('cutlet_sashimi'),
+  '피자': createCategoryMarkerImage('pizza'),
+  '찜·탕': createCategoryMarkerImage('stew'),
+  '야식': createCategoryMarkerImage('late_night'),
+  '도시락': createCategoryMarkerImage('lunch_box'),
 };
 
-const DEFAULT_MARKER_VISUAL = CATEGORY_MARKER_VISUALS['기타'];
-
-const escapeHtml = (value: string): string => value
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;');
-
-const getCategoryMarkerVisual = (category: string): CategoryMarkerVisual => {
-  return CATEGORY_MARKER_VISUALS[category] || DEFAULT_MARKER_VISUAL;
+/**
+ * 카테고리 이미지 경로 가져오기
+ */
+const getCategoryImage = (category: string): CategoryMarkerImage => {
+  return CATEGORY_IMAGES[category] || createCategoryMarkerImage('korean');
 };
 
-const createCategoryMarkerGlyphHTML = ({
-  category,
-  fontSize,
+const createCategoryImageHTML = ({
+  image,
+  alt,
 }: {
-  category: string;
-  fontSize: number;
+  image: CategoryMarkerImage;
+  alt: string;
 }): string => {
-  const visual = getCategoryMarkerVisual(category);
   return `
-    <span
-      aria-hidden="true"
-      title="${escapeHtml(visual.label)}"
-      style="
-        width: 100%;
-        height: 100%;
-        border-radius: 9999px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: ${visual.gradient};
-        color: white;
-        font-size: ${fontSize}px;
-        font-weight: 800;
-        line-height: 1;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
-      "
-    >${escapeHtml(visual.glyph)}</span>
+        <picture style="display: block; width: 100%; height: 100%;">
+          <source srcset="${image.webp}" type="image/webp" />
+          <img
+              src="${image.png}"
+              alt="${alt}"
+              style="width: 100%; height: 100%; object-fit: contain;"
+              draggable="false"
+              decoding="async"
+              fetchpriority="low"
+          />
+        </picture>
   `;
 };
 
 /**
  * 클러스터 마커 HTML 생성 (애니메이션 포함)
- * 
+ *
  * @param cluster 클러스터 Feature
  * @param categories 클러스터에 포함된 카테고리 목록
  * @param currentIndex 현재 표시할 카테고리 인덱스
@@ -202,6 +189,8 @@ export const createClusterMarkerHTML = (
 ): string => {
   const count = cluster.properties.point_count || 0;
   const displayCategory = categories[currentIndex % categories.length] || '기타';
+  const image = getCategoryImage(displayCategory);
+
   // 개수에 따라 크기 동적 조정 (32px ~ 72px) - 이미지에 맞춰 조정
   let size: number;
   if (count < 3) {
@@ -226,7 +215,7 @@ export const createClusterMarkerHTML = (
   const zIndex = Math.min(100 + Math.floor(count / 5), 200);
 
   return `
-    <div 
+    <div
       class="cluster-marker-container"
       style="
         width: ${size}px;
@@ -241,20 +230,17 @@ export const createClusterMarkerHTML = (
         z-index: ${zIndex};
       "
     >
-      <!-- 카테고리 CSS glyph (애니메이션) -->
-      <div 
+      <!-- 카테고리 이미지 (애니메이션) -->
+      <div
         class="cluster-icon"
         style="
           width: ${iconSize}px;
           height: ${iconSize}px;
         "
       >
-        ${createCategoryMarkerGlyphHTML({
-          category: displayCategory,
-          fontSize: Math.max(13, Math.floor(iconSize * 0.46)),
-        })}
+        ${createCategoryImageHTML({ image, alt: 'cluster' })}
       </div>
-      
+
       <!-- 맛집 개수 배지 (우측 하단) -->
       ${count > 0 ? `
       <div
@@ -284,7 +270,7 @@ export const createClusterMarkerHTML = (
 
 /**
  * 개별 마커 HTML 생성 (기존과 동일)
- * 
+ *
  * @param category 카테고리
  * @param isSelected 선택 여부
  * @returns HTML 문자열
@@ -293,7 +279,8 @@ export const createIndividualMarkerHTML = (
   category: string,
   isSelected: boolean
 ): string => {
-  // CSS 마커: 선택 시 42px, 기본 32px
+  const image = getCategoryImage(category);
+  // 이미지 마커: 선택 시 42px, 기본 32px
   const size = isSelected ? 42 : 32;
 
   const dropShadow = isSelected
@@ -305,7 +292,7 @@ export const createIndividualMarkerHTML = (
   const zIndex = isSelected ? '100' : '1';
 
   return `
-    <div 
+    <div
       class="${animationClass}"
       style="
         width: ${size}px;
@@ -325,10 +312,7 @@ export const createIndividualMarkerHTML = (
       role="button"
       data-testid="marker"
     >
-        ${createCategoryMarkerGlyphHTML({
-          category,
-          fontSize: isSelected ? 17 : 14,
-        })}
+        ${createCategoryImageHTML({ image, alt: 'marker' })}
     </div>
   `;
 };
@@ -365,12 +349,12 @@ export const injectClusterCSS = (): void => {
         transform: scale(0.8);
       }
     }
-    
+
     @keyframes marker-bounce {
       0%, 100% { transform: scale(1.15) translateY(0); }
       50% { transform: scale(1.15) translateY(-4px); }
     }
-    
+
     .marker-bounce {
       animation: marker-bounce 1s ease-in-out infinite;
     }
@@ -378,12 +362,12 @@ export const injectClusterCSS = (): void => {
     .cluster-icon {
       animation: cluster-fade 6s ease-in-out infinite !important;
     }
-    
+
     .cluster-marker-container:hover .cluster-circle {
       transform: scale(1.1);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.3);
     }
-    
+
     .marker-fade-out {
       opacity: 0 !important;
       transition: opacity 0.3s ease-out !important;

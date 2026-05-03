@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -20,13 +20,15 @@ interface RegionSelectorProps {
 }
 
 const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, className }: RegionSelectorProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   // 모든 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
   const { data: restaurants = [] } = useQuery({
     queryKey: ['restaurants-count'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('restaurants')
-        .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
+        .select('id, name:approved_name, approved_name, road_address, jibun_address, categories, status, review_count')
         .eq('status', 'approved')
         .returns<Restaurant[]>();
 
@@ -37,6 +39,7 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
       // 병합 로직 적용하여 중복 제거
       return mergeRestaurants(data || []);
     },
+    enabled: isOpen,
   });
 
   // 지역별 맛집 수 계산 (병합된 데이터 기준)
@@ -94,7 +97,7 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
   };
 
   return (
-    <Select value={selectedRegion || "all"} onValueChange={handleRegionChange}>
+    <Select value={selectedRegion || "all"} onValueChange={handleRegionChange} open={isOpen} onOpenChange={setIsOpen}>
       <SelectTrigger className={`w-full min-w-0 sm:w-[200px] ${className}`}>
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />

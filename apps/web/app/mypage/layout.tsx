@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { GlobalLoader } from "@/components/ui/global-loader";
 
-import { MyPageSidebar } from "@/components/mypage/MyPageSidebar";
+const MyPageSidebar = dynamic(
+  () => import("@/components/mypage/MyPageSidebar").then((mod) => mod.MyPageSidebar),
+  {
+    ssr: false,
+    loading: () => <aside className="hidden md:flex w-64 shrink-0 border-r border-border bg-card" aria-hidden="true" />,
+  }
+);
 
 export default function MyPageLayout({
   children,
@@ -17,11 +24,22 @@ export default function MyPageLayout({
   const { user, isLoading: userLoading } = useAuth();
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [shouldRenderSidebar, setShouldRenderSidebar] = useState(false);
   const myPageBottomNavAutoHide = useMobileBottomNavAutoHide({
     scrollRef,
     source: 'mypage-scroll',
     disabled: !user,
   });
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const syncSidebarVisibility = () => setShouldRenderSidebar(mediaQuery.matches);
+
+    syncSidebarVisibility();
+    mediaQuery.addEventListener("change", syncSidebarVisibility);
+
+    return () => mediaQuery.removeEventListener("change", syncSidebarVisibility);
+  }, []);
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -40,7 +58,7 @@ export default function MyPageLayout({
     <div className="h-full min-h-0 bg-background overflow-hidden">
       <div className="container mx-auto h-full min-h-0 max-w-6xl flex">
         {/* 사이드바는 자체 높이를 가지며 레이아웃 내에 고정됨 */}
-        {user && <MyPageSidebar />}
+        {user && shouldRenderSidebar && <MyPageSidebar />}
 
         {/* 콘텐츠 영역만 스크롤 가능하도록 설정 */}
         <div
