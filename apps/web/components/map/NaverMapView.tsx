@@ -53,9 +53,8 @@ import {
 } from "@/lib/naver-map-cluster-visuals";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
-import { supabase } from "@/integrations/supabase/client";
 import { calculateHoverAnchoredCenter } from "@/lib/map-hover-anchor";
-import { useBannerAnnouncements } from "@/hooks/use-announcements";
+import { useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import {
     buildMarkerRenderSignature,
     shouldSkipMarkerUpdate,
@@ -158,7 +157,6 @@ import {
     buildNaverMapInteractionListenerPlan,
     NAVER_INTERACTION_LISTENER_OPTIONS,
     NAVER_INTERACTION_REMOVE_OPTIONS,
-    NAVER_NONCRITICAL_SIDE_EFFECT_ACTIVATION_EVENTS,
 } from "@/lib/naver-map-interaction-helpers";
 import {
     buildNaverResizeObserverCleanup,
@@ -177,7 +175,6 @@ import {
     resolveNaverRestaurantCountUpdatePlan,
 } from "@/lib/naver-map-current-state-helpers";
 import {
-    countUniqueNaverPresenceUsers,
     resolveNaverInitialOnlineToastPlan,
     resolveNaverOnlineToastDisplayPlan,
 } from "@/lib/naver-map-presence-helpers";
@@ -266,7 +263,7 @@ const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 const MOBILE_MARKER_CENTER_FINE_TUNE_PX = -6; // 선택 마커 translateY(-5px) 시각 보정
 const ONLINE_USERS_TOAST_INTERVAL_MS = 60000;
 const ANNOUNCEMENT_TOAST_INTERVAL_MS = 70000;
-const NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 12000;
+const NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 30000;
 
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
@@ -449,18 +446,7 @@ const NaverMapView = memo(({
         if (shouldRunNoncriticalMapEffects) return;
 
         const timeout = setTimeout(activateNoncriticalMapEffects, NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS);
-        const mapElement = mapRef.current;
-
-        NAVER_NONCRITICAL_SIDE_EFFECT_ACTIVATION_EVENTS.forEach((eventName) => {
-            mapElement?.addEventListener(eventName, activateNoncriticalMapEffects, NAVER_INTERACTION_LISTENER_OPTIONS);
-        });
-
-        return () => {
-            clearTimeout(timeout);
-            NAVER_NONCRITICAL_SIDE_EFFECT_ACTIVATION_EVENTS.forEach((eventName) => {
-                mapElement?.removeEventListener(eventName, activateNoncriticalMapEffects, NAVER_INTERACTION_REMOVE_OPTIONS);
-            });
-        };
+        return () => clearTimeout(timeout);
     }, [activateNoncriticalMapEffects, shouldRunNoncriticalMapEffects]);
 
     const releaseSearchSelectionOnUserInteraction = useCallback(() => {
@@ -1078,21 +1064,12 @@ const NaverMapView = memo(({
         // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
         const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
             hasUserMovedMapRef,
-            onUserInteraction: activateNoncriticalMapEffects,
             releaseSearchSelectionOnUserInteraction,
         });
-        const wrappedHandleSearchReleaseInteraction = () => {
-            activateNoncriticalMapEffects();
-            handleSearchReleaseInteraction();
-        };
-        const wrappedHandleUserInteraction = () => {
-            activateNoncriticalMapEffects();
-            handleUserInteraction();
-        };
         const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
         const interactionHandlers = {
-            searchRelease: wrappedHandleSearchReleaseInteraction,
-            userInteraction: wrappedHandleUserInteraction,
+            searchRelease: handleSearchReleaseInteraction,
+            userInteraction: handleUserInteraction,
         };
 
         const mapElement = mapRef.current;
@@ -1108,7 +1085,7 @@ const NaverMapView = memo(({
         }
 
         const mapEventListeners = interactionListenerPlan.mapEventNames.map((eventName) =>
-            naver.maps.Event.addListener(map, eventName, wrappedHandleSearchReleaseInteraction)
+            naver.maps.Event.addListener(map, eventName, handleSearchReleaseInteraction)
         );
 
         return () => {
@@ -1139,7 +1116,6 @@ const NaverMapView = memo(({
         isGridMode,
         onMarkerClick,
         isSidebarOpen, // 사이드바 토글 시에도 중심 재조정 로직 실행
-        activateNoncriticalMapEffects,
         getDeviceAdjustedZoom,
         getMobileVerticalOffset,
         getViewportOffset,
@@ -1326,41 +1302,39 @@ const NaverMapView = memo(({
             hideTimerRef.current = setTimeout(() => setShowOnlineUsers(false), toastDisplayPlan.hideDelayMs);
         };
 
-        // Supabase Presence 채널 구독
-        const channel = supabase.channel('map-online-users')
-            .on('presence', { event: 'sync' }, () => {
-                const count = countUniqueNaverPresenceUsers(channel.presenceState());
-                setOnlineUsersCount(count);
-                onlineUsersCountRef.current = count;
+        let cleanupPresence: (() => void) | null = null;
+        let isCancelled = false;
 
-                // 첫 번째 sync 후 5초 뒤에 토스트 표시
-                const initialToastPlan = resolveNaverInitialOnlineToastPlan({
-                    hasExistingInitialTimer: initialTimerRef.current !== null,
-                    hasShownInitialToast: hasShownInitialToastRef.current,
-                });
-                if (initialToastPlan.shouldScheduleInitialToast) {
-                    hasShownInitialToastRef.current = initialToastPlan.nextHasShownInitialToast;
-                    if (initialToastPlan.shouldClearExistingInitialTimer && initialTimerRef.current) {
-                        clearTimeout(initialTimerRef.current);
-                    }
-                    initialTimerRef.current = setTimeout(showOnlineToast, initialToastPlan.initialDelayMs);
-                }
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.track({
-                        user_id: `map-user-${Math.random().toString(36).slice(2)}`,
-                        online_at: new Date().toISOString(),
+        void import('@/lib/naver-map-presence-client').then(({ startNaverMapPresence }) => {
+            if (isCancelled) return;
+
+            // Supabase Presence 채널 구독은 비핵심 지도 효과가 시작된 뒤에만 별도 청크로 로드합니다.
+            cleanupPresence = startNaverMapPresence({
+                intervalMs: ONLINE_USERS_TOAST_INTERVAL_MS,
+                onInterval: showOnlineToast,
+                onSync: (count) => {
+                    setOnlineUsersCount(count);
+                    onlineUsersCountRef.current = count;
+
+                    // 첫 번째 sync 후 5초 뒤에 토스트 표시
+                    const initialToastPlan = resolveNaverInitialOnlineToastPlan({
+                        hasExistingInitialTimer: initialTimerRef.current !== null,
+                        hasShownInitialToast: hasShownInitialToastRef.current,
                     });
-                }
+                    if (initialToastPlan.shouldScheduleInitialToast) {
+                        hasShownInitialToastRef.current = initialToastPlan.nextHasShownInitialToast;
+                        if (initialToastPlan.shouldClearExistingInitialTimer && initialTimerRef.current) {
+                            clearTimeout(initialTimerRef.current);
+                        }
+                        initialTimerRef.current = setTimeout(showOnlineToast, initialToastPlan.initialDelayMs);
+                    }
+                },
             });
-
-        // 60초마다 동시 접속자 토스트 표시
-        const interval = setInterval(showOnlineToast, ONLINE_USERS_TOAST_INTERVAL_MS);
+        });
 
         return () => {
-            supabase.removeChannel(channel);
-            clearInterval(interval);
+            isCancelled = true;
+            cleanupPresence?.();
             if (initialTimerRef.current) {
                 clearTimeout(initialTimerRef.current);
                 initialTimerRef.current = null;

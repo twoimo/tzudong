@@ -8,7 +8,7 @@
     "dev:playwright": "node scripts/clean-next.mjs --skip-clean -- node node_modules/next/dist/bin/next dev --port 8080",
     "build": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build",
     "start": "node scripts/sync-standalone-static.mjs && node scripts/clean-next.mjs --skip-clean -- node .next/standalone/apps/web/server.js",
-    "start:playwright": "node scripts/sync-standalone-static.mjs && PORT=8080 HOSTNAME=127.0.0.1 node scripts/clean-next.mjs --skip-clean -- node .next/standalone/apps/web/server.js",
+    "start:playwright": "node scripts/sync-standalone-static.mjs && PORT=8080 HOSTNAME=localhost node scripts/clean-next.mjs --skip-clean -- node .next/standalone/apps/web/server.js",
     "lint": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
     "lint:fix": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "analyze": "set ANALYZE=true&& next build --webpack",

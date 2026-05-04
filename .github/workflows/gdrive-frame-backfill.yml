@@ -478,5 +478,6 @@ jobs:
         with:
           name: gdrive-frame-backfill-${{ github.run_id }}
           if-no-files-found: ignore
+          retention-days: 7
           path: |
             backend/log/cron/gdrive-backfill/**
