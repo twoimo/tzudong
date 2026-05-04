@@ -40,7 +40,7 @@ GOOGLE_GEOCODING_API_KEY=your_google_geocoding_server_key
 
 # Naver Maps (국내 지도)
 NEXT_PUBLIC_NAVER_CLIENT_ID=your_naver_client_id
-NEXT_PUBLIC_NAVER_CLIENT_SECRET=your_naver_client_secret
+NEXT_NAVER_CLIENT_SECRET=your_naver_client_secret
 
 # Storyboard Agent (옵션)
 STORYBOARD_AGENT_REMOTE_ENABLED=false
