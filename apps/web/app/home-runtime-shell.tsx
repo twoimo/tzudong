@@ -1,15 +1,17 @@
 'use client';
 
 import './home-app-globals.css';
-import { Suspense, lazy, type ReactNode, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, type ComponentType, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AppProviders } from './app-providers';
 import { QueryProvider } from './providers';
 import { LayoutProvider } from '@/contexts/LayoutContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { AnonymousHomeAuthProvider, useAuth } from '@/contexts/AuthContextBase';
+import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
+import { HOME_AUTH_SESSION_UPDATED_EVENT } from '@/lib/home-auth-events';
+import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import {
     APP_HEADER_HEIGHT_VAR,
     MOBILE_SHEET_HEADER_OFFSET_VAR,
@@ -17,11 +19,115 @@ import {
 } from '@/lib/mobile-sheet-layout';
 
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
-const AuthModal = lazy(() => import('@/components/auth/AuthModal'));
-const ProfileModal = lazy(() => import('@/components/profile/ProfileModal').then((mod) => ({ default: mod.ProfileModal })));
-const NicknameSetupModal = lazy(() => import('@/components/profile/NicknameSetupModal').then((mod) => ({ default: mod.NicknameSetupModal })));
-const UserDataPrefetcher = lazy(() => import('@/components/layout/UserDataPrefetcher'));
 const MobileBottomNav = lazy(() => import('@/components/layout/MobileBottomNav'));
+
+type AuthModalProps = { isOpen: boolean; onClose: () => void };
+type ProfileModalProps = AuthModalProps;
+type NicknameSetupModalProps = { isOpen: boolean; onComplete: () => void };
+type ProviderProps = { children: ReactNode };
+
+const loadAuthProvider = async () => {
+    const mod = await import('@/contexts/AuthContext');
+    return mod.AuthProvider as ComponentType<ProviderProps>;
+};
+
+const loadNotificationProvider = async () => {
+    const mod = await import('@/contexts/NotificationContext');
+    return mod.NotificationProvider as ComponentType<ProviderProps>;
+};
+
+function hasSupabaseAuthSessionHint() {
+    try {
+        for (let index = 0; index < window.localStorage.length; index += 1) {
+            const key = window.localStorage.key(index);
+            if (!key?.startsWith('sb-') || !key.endsWith('-auth-token')) continue;
+
+            const value = window.localStorage.getItem(key);
+            if (value && /access_token|refresh_token/.test(value)) {
+                return true;
+            }
+        }
+    } catch {
+        return false;
+    }
+
+    return false;
+}
+
+
+function HomeSessionProviders({ children }: ProviderProps) {
+    const [hasStoredSession, setHasStoredSession] = useState(false);
+
+    useEffect(() => {
+        const updateSessionHint = () => setHasStoredSession(hasSupabaseAuthSessionHint());
+
+        updateSessionHint();
+        window.addEventListener(HOME_AUTH_SESSION_UPDATED_EVENT, updateSessionHint);
+        window.addEventListener('storage', updateSessionHint);
+
+        return () => {
+            window.removeEventListener(HOME_AUTH_SESSION_UPDATED_EVENT, updateSessionHint);
+            window.removeEventListener('storage', updateSessionHint);
+        };
+    }, []);
+
+    const AuthProvider = useDeferredComponent<ProviderProps>(hasStoredSession, loadAuthProvider);
+    const NotificationProvider = useDeferredComponent<ProviderProps>(hasStoredSession, loadNotificationProvider);
+
+    if (hasStoredSession && AuthProvider && NotificationProvider) {
+        return (
+            <AuthProvider>
+                <NotificationProvider>{children}</NotificationProvider>
+            </AuthProvider>
+        );
+    }
+
+    return (
+        <AnonymousHomeAuthProvider>
+            <StaticNotificationProvider>{children}</StaticNotificationProvider>
+        </AnonymousHomeAuthProvider>
+    );
+}
+
+function DeferredAuthModal(props: AuthModalProps) {
+    const AuthModal = useDeferredComponent<AuthModalProps>(props.isOpen, async () => {
+        const mod = await import('@/components/auth/AuthModal');
+        return mod.default as ComponentType<AuthModalProps>;
+    });
+
+    if (!props.isOpen || !AuthModal) return null;
+    return <AuthModal {...props} />;
+}
+
+function DeferredProfileModal(props: ProfileModalProps) {
+    const ProfileModal = useDeferredComponent<ProfileModalProps>(props.isOpen, async () => {
+        const mod = await import('@/components/profile/ProfileModal');
+        return mod.ProfileModal as ComponentType<ProfileModalProps>;
+    });
+
+    if (!props.isOpen || !ProfileModal) return null;
+    return <ProfileModal {...props} />;
+}
+
+function DeferredNicknameSetupModal(props: NicknameSetupModalProps) {
+    const NicknameSetupModal = useDeferredComponent<NicknameSetupModalProps>(props.isOpen, async () => {
+        const mod = await import('@/components/profile/NicknameSetupModal');
+        return mod.NicknameSetupModal as ComponentType<NicknameSetupModalProps>;
+    });
+
+    if (!props.isOpen || !NicknameSetupModal) return null;
+    return <NicknameSetupModal {...props} />;
+}
+
+function DeferredUserDataPrefetcher({ enabled }: { enabled: boolean }) {
+    const UserDataPrefetcher = useDeferredComponent<Record<string, never>>(enabled, async () => {
+        const mod = await import('@/components/layout/UserDataPrefetcher');
+        return mod.default as ComponentType<Record<string, never>>;
+    });
+
+    if (!enabled || !UserDataPrefetcher) return null;
+    return <UserDataPrefetcher />;
+}
 
 function MobileHomeLayout({ children }: { children: ReactNode }) {
     const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
@@ -72,11 +178,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 
     return (
         <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
-            {user && (
-                <Suspense fallback={null}>
-                    <UserDataPrefetcher />
-                </Suspense>
-            )}
+            <DeferredUserDataPrefetcher enabled={Boolean(user)} />
 
             <div className="flex-1 flex flex-col overflow-hidden transition-[margin] duration-300">
                 <a href="#main-content" className="skip-link">
@@ -103,7 +205,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 
             {isAuthModalOpen && (
                 <Suspense fallback={null}>
-                    <AuthModal
+                    <DeferredAuthModal
                         isOpen={isAuthModalOpen}
                         onClose={() => setIsAuthModalOpen(false)}
                     />
@@ -112,7 +214,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 
             {isProfileModalOpen && (
                 <Suspense fallback={null}>
-                    <ProfileModal
+                    <DeferredProfileModal
                         isOpen={isProfileModalOpen}
                         onClose={() => setIsProfileModalOpen(false)}
                     />
@@ -121,7 +223,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 
             {needsNicknameSetup && (
                 <Suspense fallback={null}>
-                    <NicknameSetupModal
+                    <DeferredNicknameSetupModal
                         isOpen={needsNicknameSetup}
                         onComplete={completeNicknameSetup}
                     />
@@ -166,11 +268,11 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
 export function HomeRuntimeShell({ children }: { children: ReactNode }) {
     return (
         <QueryProvider>
-            <AppProviders>
+            <HomeSessionProviders>
                 <LayoutProvider>
                     <HomeLayoutContent>{children}</HomeLayoutContent>
                 </LayoutProvider>
-            </AppProviders>
+            </HomeSessionProviders>
         </QueryProvider>
     );
 }

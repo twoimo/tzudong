@@ -1,17 +1,34 @@
-import { lazy, Suspense, type MouseEvent, type RefObject } from 'react';
+import { Suspense, type ComponentType, type MouseEvent, type RefObject } from 'react';
 
 import type { Restaurant } from '@/types/restaurant';
+import { useDeferredComponent } from '@/hooks/use-deferred-component';
 
-const RestaurantDetailPanel = lazy(() =>
-    import('@/components/restaurant/RestaurantDetailPanel').then((mod) => ({
-        default: mod.RestaurantDetailPanel,
-    }))
-);
-const ReviewModal = lazy(() =>
-    import('@/components/reviews/ReviewModal').then((mod) => ({
-        default: mod.ReviewModal,
-    }))
-);
+type RestaurantDetailPanelProps = {
+    restaurant: Restaurant;
+    onClose: () => void;
+    onWriteReview: () => void;
+    onEditRestaurant?: () => void;
+    onRequestEditRestaurant?: () => void;
+    onToggleCollapse: () => void;
+    isPanelOpen: boolean;
+};
+
+type ReviewModalProps = {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    restaurant: { id: string; name: string } | null;
+};
+
+const loadRestaurantDetailPanel = async () => {
+    const mod = await import('@/components/restaurant/RestaurantDetailPanel');
+    return mod.RestaurantDetailPanel as ComponentType<RestaurantDetailPanelProps>;
+};
+
+const loadReviewModal = async () => {
+    const mod = await import('@/components/reviews/ReviewModal');
+    return mod.ReviewModal as ComponentType<ReviewModalProps>;
+};
 
 export function NaverMapDetailPanelShell({
     activePanel,
@@ -38,6 +55,8 @@ export function NaverMapDetailPanelShell({
     onWriteReview: () => void;
     restaurant: Restaurant;
 }) {
+    const RestaurantDetailPanel = useDeferredComponent(true, loadRestaurantDetailPanel);
+
     return (
         <div
             className={`h-full relative shadow-xl bg-background transition-[width] duration-300 ${internalPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
@@ -46,17 +65,19 @@ export function NaverMapDetailPanelShell({
             onFocusCapture={onFocusCapture}
         >
             <div ref={detailPanelRef} className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
-                <Suspense fallback={null}>
-                    <RestaurantDetailPanel
-                        restaurant={restaurant}
-                        onClose={onClose}
-                        onWriteReview={onWriteReview}
-                        onEditRestaurant={onEditRestaurant}
-                        onRequestEditRestaurant={onRequestEditRestaurant}
-                        onToggleCollapse={onToggleCollapse}
-                        isPanelOpen={internalPanelOpen}
-                    />
-                </Suspense>
+                {RestaurantDetailPanel && (
+                    <Suspense fallback={null}>
+                        <RestaurantDetailPanel
+                            restaurant={restaurant}
+                            onClose={onClose}
+                            onWriteReview={onWriteReview}
+                            onEditRestaurant={onEditRestaurant}
+                            onRequestEditRestaurant={onRequestEditRestaurant}
+                            onToggleCollapse={onToggleCollapse}
+                            isPanelOpen={internalPanelOpen}
+                        />
+                    </Suspense>
+                )}
             </div>
         </div>
     );
@@ -67,13 +88,10 @@ export function NaverMapReviewModal({
     onClose,
     onSuccess,
     restaurant,
-}: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
-    restaurant: { id: string; name: string } | null;
-}) {
-    if (!isOpen) return null;
+}: ReviewModalProps) {
+    const ReviewModal = useDeferredComponent(isOpen, loadReviewModal);
+
+    if (!isOpen || !ReviewModal) return null;
 
     return (
         <Suspense fallback={null}>

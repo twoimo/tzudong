@@ -77,7 +77,10 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(restaurantSearchSource).toContain('enabled: isFocused || isInlineView');
-        expect(homeControlPanelSource).toContain('const HomeDesktopControlPanel = lazy(');
+        expect(homeControlPanelSource).toContain('const loadHomeDesktopControlPanel = async () =>');
+        expect(homeControlPanelSource).toContain("import('@/components/home/home-desktop-control-panel')");
+        expect(homeControlPanelSource).toContain('shouldLoadDesktopPanel');
+        expect(homeControlPanelSource).not.toContain('const HomeDesktopControlPanel = lazy(');
         expect(homeControlPanelSource).not.toContain('components/search/RestaurantSearch');
         expect(homeControlPanelSource).not.toContain('components/region/RegionSelector');
         expect(homeControlPanelSource).not.toContain('components/filters/CategoryFilter');

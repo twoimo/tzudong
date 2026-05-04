@@ -19,7 +19,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNotifications } from "@/contexts/NotificationContext";
+import { useNotifications } from "@/contexts/NotificationContextBase";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";

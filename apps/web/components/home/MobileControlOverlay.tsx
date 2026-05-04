@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
+import { memo, useState, useCallback, useMemo, useRef, useEffect, type ComponentType } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
     Filter,
@@ -49,9 +49,10 @@ import { fetchSupabaseExactCount, fetchSupabaseRows } from '@/lib/supabase-rest-
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from '@/lib/no-toast';
 import type { User } from '@supabase/supabase-js';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from '@/contexts/NotificationContext';
+import { useAuth } from '@/contexts/AuthContextBase';
+import { useNotifications } from '@/contexts/NotificationContextBase';
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
+import { useDeferredComponent } from '@/hooks/use-deferred-component';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -92,9 +93,41 @@ const findScrollableTouchTarget = (
     return null;
 };
 
-// [OPTIMIZATION] RestaurantSearch만 lazy loading
-const RestaurantSearch = lazy(() => import('@/components/search/RestaurantSearch'));
-const MobileBookmarkMenuButton = lazy(() => import('@/components/home/MobileBookmarkMenuButton'));
+
+
+type SearchType = 'name' | 'youtube';
+
+type RestaurantSearchComponentProps = {
+    onRestaurantSelect: (restaurant: Restaurant) => void;
+    onSearchExecute?: () => void;
+    onRestaurantSearch?: (restaurant: Restaurant) => void;
+    className?: string;
+    filters?: FilterState;
+    selectedRegion?: string | null;
+    isKoreanOnly?: boolean;
+    maxItems?: number;
+    resultView?: 'dropdown' | 'inline';
+    hideSearchControls?: boolean;
+    searchQueryValue?: string;
+    onSearchQueryChange?: (value: string) => void;
+    searchTypeValue?: SearchType;
+    onSearchTypeChange?: (value: SearchType) => void;
+    clearQueryOnSelect?: boolean;
+};
+
+type MobileBookmarkMenuButtonProps = {
+    user: User;
+};
+
+const loadMobileBookmarkMenuButton = async () => {
+    const mod = await import('@/components/home/MobileBookmarkMenuButton');
+    return mod.default as ComponentType<MobileBookmarkMenuButtonProps>;
+};
+
+const loadRestaurantSearch = async () => {
+    const mod = await import('@/components/search/RestaurantSearch');
+    return mod.default as ComponentType<RestaurantSearchComponentProps>;
+};
 
 // [OPTIMIZATION] 로딩 스켈레톤
 const SheetLoading = () => (
@@ -171,6 +204,14 @@ function MobileControlOverlayComponent({
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
     const [adminBadgeCounts, setAdminBadgeCounts] = useState({ submissions: 0, reviews: 0 });
+    const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
+        Boolean(user),
+        loadMobileBookmarkMenuButton
+    );
+    const DeferredRestaurantSearch = useDeferredComponent<RestaurantSearchComponentProps>(
+        activeSheet === 'search',
+        loadRestaurantSearch
+    );
     const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
         hasLocation: Boolean(deviceLocation),
         isHeadingMode: isDeviceHeadingMode,
@@ -752,13 +793,9 @@ function MobileControlOverlayComponent({
     );
 
     const renderBookmarkMenuButton = () => {
-        if (!user) return renderAnonymousBookmarkMenuButton();
+        if (!user || !DeferredMobileBookmarkMenuButton) return renderAnonymousBookmarkMenuButton();
 
-        return (
-            <Suspense fallback={renderAnonymousBookmarkMenuButton()}>
-                <MobileBookmarkMenuButton user={user} />
-            </Suspense>
-        );
+        return <DeferredMobileBookmarkMenuButton user={user} />;
     };
 
     const renderNotificationMenuButton = () => (
@@ -1213,8 +1250,8 @@ function MobileControlOverlayComponent({
                         </div>
 
                         <div className="flex-1 overflow-hidden px-3 pb-2">
-                            <Suspense fallback={<SheetLoading />}>
-                                <RestaurantSearch
+                            {DeferredRestaurantSearch ? (
+                                <DeferredRestaurantSearch
                                     onRestaurantSelect={(restaurant) => {
                                         onRestaurantSelect(restaurant);
                                     }}
@@ -1238,7 +1275,9 @@ function MobileControlOverlayComponent({
                                     clearQueryOnSelect={false}
                                     className="h-full w-full"
                                 />
-                            </Suspense>
+                            ) : (
+                                <SheetLoading />
+                            )}
                         </div>
                     </div>
                 </div>
