@@ -352,7 +352,30 @@ const NaverMapView = memo(({ markers, onMarkerClick, selectedMarkerId, isPanelOp
     const mapInstanceRef = useRef<NaverMapLike | null>(null);
     const markersRef = useRef<NaverMarkerLike[]>([]);
     const selectedMarkerRef = useRef<RestaurantMarker | null>(null);
-    const { isLoaded, isLoading, loadError, load } = useNaverMaps({ autoLoad: true });
+    const [isMapRuntimeActive, setIsMapRuntimeActive] = useState(false);
+    const { isLoaded, isLoading, loadError, load } = useNaverMaps({ autoLoad: isMapRuntimeActive });
+
+    useEffect(() => {
+        if (isMapRuntimeActive || !mapRef.current) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            const [entry] = entries;
+            if (entry?.isIntersecting) {
+                setIsMapRuntimeActive(true);
+                observer.disconnect();
+            }
+        }, {
+            root: null,
+            threshold: 0.25,
+            rootMargin: '120px',
+        });
+
+        observer.observe(mapRef.current);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [isMapRuntimeActive]);
 
     // 지도 중심 이동 함수 (단순 이동)
     const updateCenter = useCallback((targetMarker: RestaurantMarker) => {

@@ -40,6 +40,7 @@ interface UseRestaurantsOptions {
     minReviews?: number;
     enabled?: boolean;
     includeVerifiedReviewCounts?: boolean;
+    compact?: boolean;
 }
 
 type NormalizedBounds = [number, number, number, number];
@@ -487,7 +488,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 }
 
 export function useRestaurants(options: UseRestaurantsOptions = {}) {
-    const { bounds, category, region, minReviews, enabled = true, includeVerifiedReviewCounts = true } = options;
+    const { bounds, category, region, minReviews, enabled = true, includeVerifiedReviewCounts = true, compact = false } = options;
 
     const normalizedBounds = normalizeBounds(bounds);
     const normalizedCategory = normalizeCategories(category);
@@ -496,6 +497,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
     const queryKey = [
         ...buildRestaurantQueryKey(normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews),
         includeVerifiedReviewCounts,
+        compact,
     ] as const;
 
     return useQuery({
@@ -504,9 +506,13 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
             // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
+            const selectFields = compact
+                ? "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, status"
+                : "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at";
+
             let query = supabase
                 .from("restaurants")
-                .select("id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
+                .select(selectFields)
                 .eq("status", "approved") // status가 approved인 것만 조회
                 .order("approved_name"); // 이름순으로 정렬
 
