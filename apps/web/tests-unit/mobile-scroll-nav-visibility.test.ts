@@ -43,7 +43,7 @@ describe('mobile mypage scroll frame guards', () => {
         readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
     test('mypage scroll frame uses the parent viewport instead of a nested 100vh calc', () => {
-        const layoutSource = readProjectFile('app/mypage/layout.tsx');
+        const layoutSource = readProjectFile('app/mypage/mypage-layout-content.tsx');
 
         expect(layoutSource).not.toContain('h-[calc(100vh-64px)]');
         expect(layoutSource).toContain('h-full min-h-0 bg-background overflow-hidden');
@@ -53,7 +53,7 @@ describe('mobile mypage scroll frame guards', () => {
     });
 
     test('mypage scroll frame avoids snap locking so the top area remains freely scrollable', () => {
-        const layoutSource = readProjectFile('app/mypage/layout.tsx');
+        const layoutSource = readProjectFile('app/mypage/mypage-layout-content.tsx');
         const bookmarksSource = readProjectFile('app/mypage/bookmarks/page.tsx');
         const reviewsSource = readProjectFile('app/mypage/reviews/page.tsx');
 

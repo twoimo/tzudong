@@ -68,9 +68,47 @@ describe('map query helpers', () => {
         });
 
         expect(options).toEqual({
+            bounds: undefined,
             category: ['카페'],
+            compact: false,
             region: '서울',
             minReviews: 11,
+            includeVerifiedReviewCounts: false,
+            enabled: true,
+        });
+    });
+
+    test('builds compact naver query options with region bounds', () => {
+        const options = buildNaverRestaurantsQueryOptions({
+            bounds: {
+                south: 33,
+                west: 124,
+                north: 39,
+                east: 132,
+            },
+            compact: true,
+            filters: {
+                categories: [],
+                minRating: 1,
+                minReviews: 0,
+                minUserVisits: 0,
+                minJjyangVisits: 0,
+            },
+            isLoaded: true,
+            selectedRegion: '서울',
+        });
+
+        expect(options).toEqual({
+            bounds: {
+                south: 33,
+                west: 124,
+                north: 39,
+                east: 132,
+            },
+            category: undefined,
+            compact: true,
+            region: '서울',
+            minReviews: 0,
             includeVerifiedReviewCounts: false,
             enabled: true,
         });

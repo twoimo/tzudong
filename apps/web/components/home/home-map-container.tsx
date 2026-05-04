@@ -19,6 +19,7 @@ import {
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
+import { useRestaurant } from '@/hooks/use-restaurants';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -172,6 +173,8 @@ function HomeMapContainerComponent({
     deviceLocation = null,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
+    const { data: fullPanelRestaurant } = useRestaurant(panelRestaurant?.id ?? null);
+    const detailPanelRestaurant = fullPanelRestaurant ?? panelRestaurant;
 
     // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
     const viewportHeightRef = useRef(typeof window !== 'undefined'
@@ -1225,7 +1228,7 @@ function HomeMapContainerComponent({
             )}
 
             {/* [CSR] 맛집 상세 패널 - 데스크탑: 사이드 패널, 모바일/태블릿: 바텀시트 */}
-            {panelRestaurant && (
+            {detailPanelRestaurant && (
                 <>
                     {/* 데스크탑 오버레이 패널 */}
                     {isDesktop && (
@@ -1257,7 +1260,7 @@ function HomeMapContainerComponent({
                                 </button>
                                 <Suspense fallback={null}>
                                     <RestaurantDetailPanel
-                                        restaurant={panelRestaurant}
+                                        restaurant={detailPanelRestaurant}
                                         onClose={onPanelClose}
                                         onWriteReview={onReviewModalOpen}
                                         onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
@@ -1335,7 +1338,7 @@ function HomeMapContainerComponent({
                                 >
                                     <Suspense fallback={null}>
                                         <RestaurantDetailPanel
-                                            restaurant={panelRestaurant}
+                                            restaurant={detailPanelRestaurant}
                                             onClose={onPanelClose}
                                             onWriteReview={onReviewModalOpen}
                                             onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
