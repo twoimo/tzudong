@@ -14,7 +14,7 @@
 │                                       ↓                                      │
 │                              03-collect-transcript.js                        │
 │                                       ↓                                      │
-│                              04-collect-heatmap.js                           │
+│                              04-extract-frames-with-heatmap.js               │
 └─────────────────────────────────────────────────────────────────────────────┘
                                         ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -71,7 +71,7 @@
 ```
 
 ### 실행 순서
-`urls.txt` → `01` (탐색) → `02` (메타/스케줄) → `04` (히트맵 5일차) → `03` (자막)
+`urls.txt` → `01` (탐색) → `02` (메타/스케줄) → `04` (히트맵 D+7 이후) → `03` (자막)
 
 ---
 
@@ -125,8 +125,9 @@ YouTube Data API로 영상 메타데이터를 수집하고, 광고 분석을 수
 
 | 영상 연령 (D+일) | 저장 주기 (Schedule) | 목적 | 비고 |
 | :--- | :--- | :--- | :--- |
-| **D+0 ~ D+5** | **저장 대기** (Wait) | 숙성기 (초기 불안정) | 5일차까지 데이터 수집 안 함 |
-| **D+5 ~ D+14** | **매일** 저장 (Daily) | **최초 히트맵** 집중 포획 | 5일부터 2주차까지 매일 확인 |
+| **D+0 ~ D+7 미만** | **저장 대기** (Wait) | 숙성기 (초기 불안정) | 7일차 전까지 히트맵 수집 안 함 |
+| **D+7 이후 + 히트맵 없음** | **매일** 저장 (Daily) | **최초 히트맵** 집중 포획 | 히트맵 생성 즉시 포착 |
+| **히트맵 첫 수집 후 14일 이내** | **주 1회** 저장 (Weekly) | 초기 변화 감지 | video_id 해시로 요일 분산 |
 | **D+14 이후** | **월 1회** 저장 (Monthly) | 장기 변화/유지보수 | 14일 이후엔 월 1회만 점검 |
 
 > **💡 중요**: 위 스케줄과 관계없이, **[제목 / 썸네일 / 영상길이]** 중 하나라도 변경되면 **즉시 저장**합니다.
@@ -233,10 +234,10 @@ if (!latestTranscript || recollectVars.includes("duration_changed")) {
 
 ---
 
-## 04-collect-heatmap.js
+## 04-extract-frames-with-heatmap.js
 
 ### 기능
-Puppeteer로 YouTube 히트맵(SVG 경로)을 수집합니다.
+YouTube 히트맵(가장 많이 다시 본 구간)을 수집하고 해당 구간의 프레임을 추출합니다.
 
 ### 입력
 | 소스 | 파일 |
@@ -252,8 +253,8 @@ Puppeteer로 YouTube 히트맵(SVG 경로)을 수집합니다.
 
 ### 수집 조건
 ```javascript
-// (신규 OR title_changed OR duration_changed OR 주기적 수집)
-// AND (업로드 5일 경과)
+// (신규 OR duration_changed OR scheduled_daily/weekly/monthly OR heatmap_changed)
+// AND (업로드 D+7 경과)
 
 // 참고: 메타데이터 변경(ID 증가) 없이도 주기적 수집 가능
 ```
@@ -266,7 +267,7 @@ Puppeteer로 YouTube 히트맵(SVG 경로)을 수집합니다.
 
 ### 저장되지 않는 경우
 1. SVG path 추출 실패 (`svg_not_found`)
-2. **업로드 5일 미만** 영상 (히트맵 생성 대기)
+2. **업로드 D+7 미만** 영상 (히트맵 생성 대기)
 
 ### 출력 구조
 ```json
@@ -582,7 +583,7 @@ fc-cache -fv
 python 01-collect-urls.py --channel meatcreator
 python 02-collect-meta.py --channel meatcreator
 node 03-collect-transcript.js --channel meatcreator
-node 04-collect-heatmap.js --channel meatcreator
+node 04-extract-frames-with-heatmap.js --channel meatcreator
 
 # 맛집 정보 수집 (정육왕)
 node 05-map-url-crawling.js --channel meatcreator
