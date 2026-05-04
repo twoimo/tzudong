@@ -49,16 +49,27 @@ export function buildOverseasRestaurantsQueryOptions({
 }
 
 export function buildNaverRestaurantsQueryOptions({
+    bounds,
+    compact = false,
     filters,
     isLoaded,
     selectedRegion,
 }: {
+    bounds?: {
+        south: number;
+        west: number;
+        north: number;
+        east: number;
+    };
+    compact?: boolean;
     filters: FilterState;
     isLoaded: boolean;
     selectedRegion: Region | null;
 }) {
     return {
+        bounds,
         category: filters.categories.length > 0 ? filters.categories : undefined,
+        compact,
         region: selectedRegion || undefined,
         minReviews: filters.minReviews,
         includeVerifiedReviewCounts: false,

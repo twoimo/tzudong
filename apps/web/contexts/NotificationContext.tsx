@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Notification, NotificationContextType, NotificationType } from '@/types/notification';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -31,7 +30,19 @@ type SupabaseRpcClient = {
     rpc: (fn: string, params?: Record<string, unknown>) => Promise<RpcResult>;
 };
 
-const RPC_CLIENT = supabase as unknown as SupabaseRpcClient;
+type SupabaseClient = typeof import('@/integrations/supabase/client').supabase;
+
+let supabaseClientPromise: Promise<SupabaseClient> | null = null;
+
+function getSupabaseClient(): Promise<SupabaseClient> {
+    supabaseClientPromise ??= import('@/integrations/supabase/client').then((mod) => mod.supabase);
+    return supabaseClientPromise;
+}
+
+async function callRpc(fn: string, params?: Record<string, unknown>) {
+    const supabase = await getSupabaseClient();
+    return (supabase as unknown as SupabaseRpcClient).rpc(fn, params);
+}
 
 function normalizeNotification(input: Partial<NotificationRecord>): Notification {
     return {
@@ -58,6 +69,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
 
         try {
+            const supabase = await getSupabaseClient();
             const { data, error } = await supabase
                 .from('notifications')
                 .select('*')
@@ -96,31 +108,44 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     useEffect(() => {
         if (!userId) return;
 
-        const channel = supabase
-            .channel('notifications')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'notifications',
-                    filter: `user_id=eq.${userId}`
-                },
-                (payload) => {
-                    const next = normalizeNotification(payload.new as Partial<NotificationRecord>);
-                    const newNotification: Notification = next;
-                    setNotifications(prev => [newNotification, ...prev]);
-                }
-            )
-            .subscribe((status) => {
-                // 개발 환경에서만 한 번만 경고 표시
-                if (status === 'CHANNEL_ERROR' && process.env.NODE_ENV === 'development') {
-                    console.info('[NotificationContext] 알림 실시간 구독 실패 (notifications 테이블이 없을 수 있음, 무시됨)');
-                }
-            });
+        let isCancelled = false;
+        let channel: ReturnType<SupabaseClient['channel']> | undefined;
+
+        void getSupabaseClient().then((supabase) => {
+            if (isCancelled) return;
+
+            channel = supabase
+                .channel('notifications')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'notifications',
+                        filter: `user_id=eq.${userId}`
+                    },
+                    (payload) => {
+                        const next = normalizeNotification(payload.new as Partial<NotificationRecord>);
+                        const newNotification: Notification = next;
+                        setNotifications(prev => [newNotification, ...prev]);
+                    }
+                )
+                .subscribe((status) => {
+                    // 개발 환경에서만 한 번만 경고 표시
+                    if (status === 'CHANNEL_ERROR' && process.env.NODE_ENV === 'development') {
+                        console.info('[NotificationContext] 알림 실시간 구독 실패 (notifications 테이블이 없을 수 있음, 무시됨)');
+                    }
+                });
+        });
 
         return () => {
-            supabase.removeChannel(channel);
+            isCancelled = true;
+            const channelToRemove = channel;
+            if (channelToRemove) {
+                void getSupabaseClient().then((supabase) => {
+                    void supabase.removeChannel(channelToRemove);
+                });
+            }
         };
     }, [userId]); // [OPTIMIZATION] user → userId
 
@@ -128,7 +153,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const markAsRead = async (id: string) => {
         try {
-            const { error } = await RPC_CLIENT.rpc('mark_notification_read', { notification_uuid: id });
+            const { error } = await callRpc('mark_notification_read', { notification_uuid: id });
             if (error) throw error;
 
             setNotifications(prev =>
@@ -145,7 +170,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const markAllAsRead = async () => {
         try {
-            const { error } = await RPC_CLIENT.rpc('mark_all_notifications_read');
+            const { error } = await callRpc('mark_all_notifications_read');
             if (error) throw error;
 
             setNotifications(prev =>
@@ -164,7 +189,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         if (!user) return;
 
         try {
-            const { error } = await RPC_CLIENT.rpc('create_user_notification', {
+            const { error } = await callRpc('create_user_notification', {
                 p_user_id: user.id,
                 p_type: notification.type,
                 p_title: notification.title,
@@ -184,7 +209,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const removeNotification = async (id: string) => {
         try {
-            const { error } = await RPC_CLIENT.rpc('delete_notification', { notification_uuid: id });
+            const { error } = await callRpc('delete_notification', { notification_uuid: id });
             if (error) throw error;
 
             setNotifications(prev => prev.filter(n => n.id !== id));
@@ -222,7 +247,7 @@ export const useNotifications = () => {
 // 관리자 공지사항 등록 알림 생성 함수 (모든 사용자에게)
 export const createAdminAnnouncement = async (title: string, message: string, customData?: Record<string, unknown>) => {
     try {
-        const { error } = await RPC_CLIENT.rpc('create_admin_announcement_notification', {
+        const { error } = await callRpc('create_admin_announcement_notification', {
             p_title: title,
             p_message: message,
             p_data: customData || {}
@@ -240,7 +265,7 @@ export const createNewRestaurantNotification = async (restaurantName: string, ad
     const message = `"${restaurantName}" 맛집이 쯔동여지도에 새로 등록되었습니다!`;
 
     try {
-        const { error } = await RPC_CLIENT.rpc('create_new_restaurant_notification', {
+        const { error } = await callRpc('create_new_restaurant_notification', {
             p_title: title,
             p_message: message,
             p_data: {
@@ -259,7 +284,7 @@ export const createNewRestaurantNotification = async (restaurantName: string, ad
 // 사용자 랭킹 업데이트 알림 생성 함수
 export const createUserRankingNotification = async (userId: string, ranking: number, period: string = 'monthly') => {
     try {
-        const { error } = await RPC_CLIENT.rpc('create_ranking_notification', {
+        const { error } = await callRpc('create_ranking_notification', {
             p_user_id: userId,
             p_ranking: ranking,
             p_period: period
@@ -280,7 +305,7 @@ export const createUserNotification = async (
     customData?: Record<string, unknown>
 ) => {
     try {
-        const { error } = await RPC_CLIENT.rpc('create_user_notification', {
+        const { error } = await callRpc('create_user_notification', {
             p_user_id: userId,
             p_type: type,
             p_title: title,
@@ -306,7 +331,7 @@ export const createSubmissionApprovedNotification = async (
     const message = `"${restaurantName}" ${typeLabel}가 관리자에 의해 승인되어 지도에 반영되었습니다!`;
 
     try {
-        const { error } = await RPC_CLIENT.rpc('create_user_notification', {
+        const { error } = await callRpc('create_user_notification', {
             p_user_id: userId,
             p_type: 'submission_approved',
             p_title: title,
@@ -332,7 +357,7 @@ export const createSubmissionRejectedNotification = async (
     const message = `"${restaurantName}" ${typeLabel}가 다음 사유로 반려되었습니다: ${rejectionReason}`;
 
     try {
-        const { error } = await RPC_CLIENT.rpc('create_user_notification', {
+        const { error } = await callRpc('create_user_notification', {
             p_user_id: userId,
             p_type: 'submission_rejected',
             p_title: title,
@@ -355,7 +380,7 @@ export const createReviewApprovedNotification = async (
     const message = `"${restaurantName}" 리뷰가 승인되었습니다.`;
 
     try {
-        const { error } = await RPC_CLIENT.rpc('create_user_notification', {
+        const { error } = await callRpc('create_user_notification', {
             p_user_id: userId,
             p_type: 'review_approved',
             p_title: title,
@@ -379,7 +404,7 @@ export const createReviewRejectedNotification = async (
     const message = `"${restaurantName}" 리뷰가 반려되었습니다: ${rejectionReason}`;
 
     try {
-        const { error } = await RPC_CLIENT.rpc('create_user_notification', {
+        const { error } = await callRpc('create_user_notification', {
             p_user_id: userId,
             p_type: 'review_rejected',
             p_title: title,
@@ -406,7 +431,7 @@ export const createBatchNewRestaurantsNotification = async (
         : `"${restaurantNames.slice(0, 3).join('", "')}"${count > 3 ? ` 외 ${count - 3}곳` : ''} 맛집이 쯔동여지도에 새로 등록되었습니다!`;
 
     try {
-        const { error } = await RPC_CLIENT.rpc('create_new_restaurant_notification', {
+        const { error } = await callRpc('create_new_restaurant_notification', {
             p_title: title,
             p_message: message,
             p_data: { restaurantNames, count, ...customData }
