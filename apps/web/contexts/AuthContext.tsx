@@ -1,24 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
-import type { User, Session } from "@supabase/supabase-js";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
 
-interface AuthContextType {
-    user: User | null;
-    session: Session | null;
-    isLoading: boolean;
-    isAdmin: boolean;
-    needsNicknameSetup: boolean;
-    signIn: (email: string, password: string) => Promise<void>;
-    signInWithGoogle: () => Promise<void>;
-    signUp: (email: string, password: string, username: string) => Promise<{ session: Session | null }>;
-    signOut: () => Promise<void>;
-    completeNicknameSetup: () => void;
-    resetPassword: (email: string) => Promise<void>;
-    updatePassword: (newPassword: string) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export { AnonymousHomeAuthProvider, useAuth } from "@/contexts/AuthContextBase";
 
 type SupabaseClient = typeof import("@/integrations/supabase/client").supabase;
 
@@ -39,6 +25,33 @@ function shouldDelayAuthBootstrap() {
         && !window.location.search
         && !window.location.hash
     );
+}
+
+function hasPersistedSupabaseSessionHint() {
+    if (typeof window === 'undefined') return false;
+
+    try {
+        for (let index = 0; index < window.localStorage.length; index += 1) {
+            const key = window.localStorage.key(index) ?? '';
+            if (!/^sb-.+-auth-token$/.test(key)) continue;
+
+            const value = window.localStorage.getItem(key);
+            if (value && value !== 'null' && value !== 'undefined') {
+                return true;
+            }
+        }
+    } catch {
+        // localStorage may be blocked; fall back to timeout-based bootstrap.
+    }
+
+    return false;
+}
+
+function shouldBootstrapAuthOnGeneralInteraction() {
+    if (typeof window === 'undefined') return false;
+    if (hasPersistedSupabaseSessionHint()) return true;
+
+    return window.matchMedia('(min-width: 1024px)').matches;
 }
 
 const isRefreshTokenNotFoundError = (error: unknown) => {
@@ -251,8 +264,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         if (shouldDelayAuthBootstrap()) {
-            for (const eventName of HOME_AUTH_BOOTSTRAP_EVENTS) {
-                window.addEventListener(eventName, startOnce, { once: true, passive: true });
+            if (shouldBootstrapAuthOnGeneralInteraction()) {
+                for (const eventName of HOME_AUTH_BOOTSTRAP_EVENTS) {
+                    window.addEventListener(eventName, startOnce, { once: true, passive: true });
+                }
             }
             bootstrapTimer = window.setTimeout(startOnce, HOME_AUTH_BOOTSTRAP_DELAY_MS);
         } else {
@@ -361,12 +376,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth must be used within an AuthProvider");
-    }
-    return context;
-}
-

@@ -1,7 +1,16 @@
 import type { MouseEvent, RefObject } from 'react';
-import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
-import { ReviewModal } from '@/components/reviews/ReviewModal';
+import dynamic from 'next/dynamic';
 import type { Restaurant } from '@/types/restaurant';
+
+const RestaurantDetailPanel = dynamic(
+    () => import('@/components/map/map-view-deferred-panels').then((mod) => ({ default: mod.RestaurantDetailPanel })),
+    { ssr: false }
+);
+
+const ReviewModal = dynamic(
+    () => import('@/components/map/map-view-deferred-panels').then((mod) => ({ default: mod.ReviewModal })),
+    { ssr: false }
+);
 
 export function MapViewAdminAddButton({ onClick }: { onClick: () => void }) {
     return (

@@ -4,7 +4,7 @@ import { memo, useCallback, useMemo, useRef, useEffect, useTransition, type CSSP
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, MessageSquareText, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextBase';
 import { AUTH_NAV_ROUTES } from '@/components/layout/navigation-routes';
 import { updateMobileBottomNavHeight } from '@/lib/mobile-sheet-layout';
 import { requestAuthUi } from '@/lib/auth-ui-events';
