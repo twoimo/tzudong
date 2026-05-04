@@ -25,7 +25,9 @@ describe('home root runtime boundary', () => {
         expect(homeClientSource).toContain('<HomeMapContainer');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
-        expect(homeRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
+        expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeCssSource).toContain('@config "../tailwind.home.config.ts"');
         expect(homeTailwindConfigSource).toContain('./components/home/**/*');
         expect(homeTailwindConfigSource).not.toContain('./components/admin/');

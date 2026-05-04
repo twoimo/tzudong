@@ -45,13 +45,12 @@ import { Region, REGIONS, Restaurant } from '@/types/restaurant';
 import type { Notification } from '@/types/notification';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchSupabaseExactCount, fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from '@/lib/no-toast';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { useBookmarks } from '@/hooks/use-bookmarks';
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
 
 // 카테고리 상수
@@ -95,6 +94,7 @@ const findScrollableTouchTarget = (
 
 // [OPTIMIZATION] RestaurantSearch만 lazy loading
 const RestaurantSearch = lazy(() => import('@/components/search/RestaurantSearch'));
+const MobileBookmarkMenuButton = lazy(() => import('@/components/home/MobileBookmarkMenuButton'));
 
 // [OPTIMIZATION] 로딩 스켈레톤
 const SheetLoading = () => (
@@ -160,7 +160,6 @@ function MobileControlOverlayComponent({
     const router = useRouter();
     const { signOut } = useAuth();
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-    const { data: bookmarksData = [] } = useBookmarks();
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     const [sheetHeight, setSheetHeight] = useState(50); // 최종 높이 (스냅 시에만 업데이트)
     // [OPTIMIZATION] isDragging은 UI 업데이트용으로만 사용, 실제 드래그 로직은 ref 사용
@@ -213,13 +212,15 @@ function MobileControlOverlayComponent({
     const { data: restaurants = [] } = useQuery({
         queryKey: ['mobile-control-restaurants', mapMode],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('restaurants')
-                .select('id, name:approved_name, road_address, jibun_address, categories')
-                .eq('status', 'approved');
-
-            if (error) return [];
-            return mergeRestaurants(data || []);
+            try {
+                const data = await fetchSupabaseRows<Restaurant>('restaurants', [
+                    ['select', 'id, name:approved_name, road_address, jibun_address, categories'],
+                    ['status', 'eq.approved'],
+                ]);
+                return mergeRestaurants(data);
+            } catch {
+                return [];
+            }
         },
         enabled: activeSheet === 'region' || activeSheet === 'category',
         staleTime: 1000 * 60 * 5, // 5분간 fresh
@@ -617,21 +618,21 @@ function MobileControlOverlayComponent({
         let isMounted = true;
         const loadPendingCounts = async () => {
             try {
-                const [{ count: submissionsCount }, { count: reviewsCount }] = await Promise.all([
-                    supabase
-                        .from('restaurant_submissions')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('status', 'pending'),
-                    supabase
-                        .from('reviews')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_verified', false),
+                const [submissionsCount, reviewsCount] = await Promise.all([
+                    fetchSupabaseExactCount('restaurant_submissions', [
+                        ['select', 'id'],
+                        ['status', 'eq.pending'],
+                    ]),
+                    fetchSupabaseExactCount('reviews', [
+                        ['select', 'id'],
+                        ['is_verified', 'eq.false'],
+                    ]),
                 ]);
 
                 if (!isMounted) return;
                 setAdminBadgeCounts({
-                    submissions: submissionsCount ?? 0,
-                    reviews: reviewsCount ?? 0,
+                    submissions: submissionsCount,
+                    reviews: reviewsCount,
                 });
             } catch {
                 if (!isMounted) return;
@@ -709,7 +710,7 @@ function MobileControlOverlayComponent({
         router.push('/?panel=announcement');
     }, [markAsRead, router]);
 
-    const renderBookmarkMenuButton = () => (
+    const renderAnonymousBookmarkMenuButton = () => (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
@@ -732,12 +733,8 @@ function MobileControlOverlayComponent({
                         size="sm"
                         type="button"
                         onClick={() => {
-                            if (!user) {
-                                toast.error('로그인 후 북마크를 확인할 수 있어요');
-                                onTopShellUserIconClick?.();
-                                return;
-                            }
-                            router.push('/mypage/bookmarks');
+                            toast.error('로그인 후 북마크를 확인할 수 있어요');
+                            onTopShellUserIconClick?.();
                         }}
                         className="h-6 px-2 text-xs"
                     >
@@ -746,64 +743,23 @@ function MobileControlOverlayComponent({
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
                 <ScrollArea className="h-64">
-                    {!user ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                            로그인 후 북마크를 확인할 수 있어요
-                        </div>
-                    ) : bookmarksData.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                            북마크한 맛집이 없습니다
-                        </div>
-                    ) : (
-                        <DropdownMenuGroup>
-                            {bookmarksData.slice(0, 20).map((bookmark) => (
-                                <DropdownMenuItem
-                                    key={bookmark.id}
-                                    className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full"
-                                    onClick={() => {
-                                        const restaurant = bookmark.restaurant;
-                                        const isOverseas = restaurant.lat && restaurant.lng && (
-                                            restaurant.lat < 33 || restaurant.lat > 39 ||
-                                            restaurant.lng < 124 || restaurant.lng > 132
-                                        );
-
-                                        if (pathname === '/') {
-                                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', {
-                                                detail: {
-                                                    id: bookmark.restaurant.id,
-                                                    mode: isOverseas ? 'overseas' : 'domestic'
-                                                }
-                                            }));
-                                            return;
-                                        }
-
-                                        const modeParam = isOverseas ? '&mode=overseas' : '';
-                                        router.push(`/?r=${bookmark.restaurant.id}${modeParam}&z=13`);
-                                    }}
-                                >
-                                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                        <div className="flex items-center justify-between gap-2 w-full">
-                                            <span className="text-sm font-medium text-foreground truncate block">
-                                                {bookmark.restaurant.name}
-                                            </span>
-                                            {bookmark.restaurant.category?.[0] && (
-                                                <Badge variant="secondary" className="text-[10px] shrink-0 h-5 px-1.5 font-normal">
-                                                    {bookmark.restaurant.category[0]}
-                                                </Badge>
-                                            )}
-                                        </div>
-                                        <span className="text-xs text-muted-foreground truncate block">
-                                            {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
-                                        </span>
-                                    </div>
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuGroup>
-                    )}
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                        로그인 후 북마크를 확인할 수 있어요
+                    </div>
                 </ScrollArea>
             </DropdownMenuContent>
         </DropdownMenu>
     );
+
+    const renderBookmarkMenuButton = () => {
+        if (!user) return renderAnonymousBookmarkMenuButton();
+
+        return (
+            <Suspense fallback={renderAnonymousBookmarkMenuButton()}>
+                <MobileBookmarkMenuButton user={user} />
+            </Suspense>
+        );
+    };
 
     const renderNotificationMenuButton = () => (
         <DropdownMenu>

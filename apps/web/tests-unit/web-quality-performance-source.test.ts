@@ -58,6 +58,8 @@ describe('web quality performance source contracts', () => {
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
         const restaurantSearchSource = source('components/search/RestaurantSearch.tsx');
         const mobileControlSource = source('components/home/MobileControlOverlay.tsx');
+        const homeControlPanelSource = source('components/home/home-control-panel.tsx');
+        const homeDesktopControlPanelSource = source('components/home/home-desktop-control-panel.tsx');
         const regionSelectorSource = source('components/region/RegionSelector.tsx');
         const categoryFilterSource = source('components/filters/CategoryFilter.tsx');
         const mapQuerySource = source('lib/map-query-helpers.ts');
@@ -70,14 +72,30 @@ describe('web quality performance source contracts', () => {
         expect(pageSource).not.toContain('지도 준비하기');
         expect(homeClientSource).toContain('<HomeMapContainer');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
-        expect(homeRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
+        expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(restaurantSearchSource).toContain('enabled: isFocused || isInlineView');
+        expect(homeControlPanelSource).toContain('const HomeDesktopControlPanel = lazy(');
+        expect(homeControlPanelSource).not.toContain('components/search/RestaurantSearch');
+        expect(homeControlPanelSource).not.toContain('components/region/RegionSelector');
+        expect(homeControlPanelSource).not.toContain('components/filters/CategoryFilter');
+        expect(homeDesktopControlPanelSource).toContain('components/search/RestaurantSearch');
+        expect(homeDesktopControlPanelSource).toContain('components/region/RegionSelector');
+        expect(homeDesktopControlPanelSource).toContain('components/filters/CategoryFilter');
         expect(mobileControlSource).toContain("enabled: activeSheet === 'region' || activeSheet === 'category'");
         expect(regionSelectorSource).toContain('enabled: isOpen');
         expect(categoryFilterSource).toContain('enabled: isOpen');
         expect(mapQuerySource).toContain('includeVerifiedReviewCounts: false');
         expect(naverMapSource).toContain('autoLoad: false');
+        expect(naverMapSource).toContain('useBannerAnnouncements } from "@/hooks/use-banner-announcements"');
+        expect(naverMapSource).toContain("import('@/integrations/supabase/client')");
+        expect(naverMapSource).not.toContain('import { supabase } from "@/integrations/supabase/client"');
+        expect(source('hooks/use-restaurants.tsx')).toContain('fetchSupabaseRows');
+        expect(source('hooks/use-restaurants.tsx')).not.toContain('import { supabase } from "@/integrations/supabase/client"');
+        expect(source('components/home/MobileControlOverlay.tsx')).toContain('fetchSupabaseRows');
+        expect(source('components/home/MobileControlOverlay.tsx')).not.toContain("import { supabase } from '@/integrations/supabase/client'");
     });
 
     test('/mypage avoids client-side redirect work and defers desktop-only sidebar cost', () => {
@@ -137,7 +155,9 @@ describe('web quality performance source contracts', () => {
         expect(appRuntimeShellSource).toContain('<AppProviders>');
         expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
-        expect(homeRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
+        expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeAppGlobalsSource).toContain('@config "../tailwind.home.config.ts"');
         expect(homeTailwindConfigSource).toContain('./components/home/**/*');
         expect(homeTailwindConfigSource).not.toContain('./components/admin/');
@@ -153,6 +173,10 @@ describe('web quality performance source contracts', () => {
         expect(source('contexts/AuthContext.tsx')).not.toContain('import { supabase }');
         expect(source('contexts/NotificationContext.tsx')).toContain("import('@/integrations/supabase/client')");
         expect(source('contexts/NotificationContext.tsx')).not.toContain('import { supabase }');
+        expect(source('components/layout/Header.tsx')).toContain('fetchSupabaseExactCount');
+        expect(source('components/layout/Header.tsx')).not.toContain('import { supabase }');
+        expect(source('components/layout/Header.tsx')).not.toContain('useBookmarks');
+        expect(source('components/layout/HeaderBookmarkMenuButton.tsx')).toContain('useBookmarks');
         expect(mainLayoutSource).toContain('if (!hasMounted)');
         expect(mainLayoutSource).toContain('{children}');
         expect(mainLayoutSource).not.toContain('min-h-screen bg-background" aria-hidden="true"');
