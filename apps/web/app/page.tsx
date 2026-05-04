@@ -1,7 +1,7 @@
-// [SSR] 서버 컴포넌트 - SEO 메타데이터와 가벼운 홈 클라이언트 로더
+// [SSR] 서버 컴포넌트 - SEO 메타데이터와 홈 앱 런타임
 import type { Metadata } from 'next';
-import { HomeLandingShell } from './home-landing-shell';
-import HomeMapIsland from './home-map-island';
+import { HomeRuntimeShell } from './home-runtime-shell';
+import HomeClient from './home-client';
 
 // [SSR] 메타데이터 생성 - 검색 엔진 최적화
 export const metadata: Metadata = {
@@ -31,11 +31,11 @@ export const metadata: Metadata = {
     },
 };
 
-// [SSR] 서버 컴포넌트 홈 페이지 - 첫 화면은 앱 소유 랜딩 셸로 그리고 지도 런타임은 HomeMapIsland가 활성화합니다.
+// [SSR] 서버 컴포넌트 홈 페이지 - 별도 랜딩 게이트 없이 실제 지도 홈 UI를 바로 렌더합니다.
 export default function HomePage() {
     return (
-        <HomeMapIsland>
-            <HomeLandingShell />
-        </HomeMapIsland>
+        <HomeRuntimeShell>
+            <HomeClient />
+        </HomeRuntimeShell>
     );
 }

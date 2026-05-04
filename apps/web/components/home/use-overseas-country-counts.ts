@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import { OVERSEAS_REGIONS, OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 import type { Restaurant } from '@/types/restaurant';
 
@@ -11,17 +11,16 @@ export function useOverseasCountryCounts(mapMode: 'domestic' | 'overseas') {
     const { data: globalRestaurants = [] } = useQuery({
         queryKey: ['global-restaurants-count'],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('restaurants')
-                .select('id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count')
-                .eq('status', 'approved');
-
-            if (error) {
+            try {
+                const data = await fetchSupabaseRows<Restaurant>('restaurants', [
+                    ['select', 'id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count'],
+                    ['status', 'eq.approved'],
+                ]);
+                return mergeRestaurants(data);
+            } catch (error) {
                 console.error('글로벌 맛집 데이터 조회 실패:', error);
                 return [];
             }
-
-            return mergeRestaurants((data || []) as Restaurant[]);
         },
         enabled: mapMode === 'overseas',
     });

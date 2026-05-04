@@ -1,33 +1,46 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
+const root = join(import.meta.dir, '..');
+const source = (relativePath: string) => readFileSync(join(root, relativePath), 'utf8');
+const exists = (relativePath: string) => existsSync(join(root, relativePath));
 
-describe('home root lazy boundary', () => {
-    test('keeps the heavy HomeClient graph behind an SSR landing shell and activation island', () => {
+describe('home root runtime boundary', () => {
+    test('renders the real home map runtime directly without the temporary landing gate', () => {
         const pageSource = source('app/page.tsx');
-        const islandSource = source('app/home-map-island.tsx');
-        const shellSource = source('app/home-landing-shell.tsx');
+        const homeClientSource = source('app/home-client.tsx');
+        const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
+        const homeCssSource = source('app/home-app-globals.css');
+        const homeTailwindConfigSource = source('tailwind.home.config.ts');
 
-        expect(pageSource).toContain("import { HomeLandingShell } from './home-landing-shell'");
-        expect(pageSource).toContain("import HomeMapIsland from './home-map-island'");
-        expect(pageSource).toContain('<HomeMapIsland>');
-        expect(pageSource).toContain('<HomeLandingShell />');
-        expect(pageSource).not.toContain("import HomeClient from './home-client'");
+        expect(pageSource).toContain("import { HomeRuntimeShell } from './home-runtime-shell'");
+        expect(pageSource).toContain("import HomeClient from './home-client'");
+        expect(pageSource).toContain('<HomeRuntimeShell>');
+        expect(pageSource).toContain('<HomeClient />');
+        expect(pageSource).not.toContain('HomeLandingShell');
+        expect(pageSource).not.toContain('HomeMapIsland');
+        expect(pageSource).not.toContain('지도 준비하기');
 
-        expect(islandSource).toContain("'use client'");
-        expect(islandSource).toContain("import('./home-client')");
-        expect(islandSource).toContain("import('./app-runtime-shell')");
-        expect(islandSource).toContain('buildHomeMapActivationPlan');
-        expect(islandSource).toContain('!activatedRuntime');
-        expect(islandSource).toContain('<AppRuntimeShell>');
-        expect(islandSource).toContain('<HomeClientComponent />');
-        expect(islandSource).not.toContain('@/components/skeletons/MapSkeleton');
+        expect(homeClientSource).toContain('<HomeMapContainer');
+        expect(homeClientSource).not.toContain('home-map-activate-button');
+        expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
+        expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
+        expect(homeCssSource).toContain('@config "../tailwind.home.config.ts"');
+        expect(homeTailwindConfigSource).toContain('./components/home/**/*');
+        expect(homeTailwindConfigSource).not.toContain('./components/admin/');
+        expect(homeTailwindConfigSource).not.toContain('./components/restaurant/**/*');
+        expect(source('tailwind.home.detail.config.ts')).toContain('./components/restaurant/**/*');
+        expect(source('components/map/map-view-deferred-panels.tsx')).toContain("import '@/app/home-detail-globals.css'");
+        expect(source('tailwind.home.deferred.config.ts')).toContain('./components/admin/AdminRestaurantModal.tsx');
+        expect(source('app/home-client-sidepanels.tsx')).toContain("import './home-deferred-globals.css'");
 
-        expect(shellSource).not.toContain("'use client'");
-        expect(shellSource).toContain('data-testid="home-landing-shell"');
-        expect(shellSource).toContain('쯔동여지도');
+        expect(exists('app/home-landing-shell.tsx')).toBe(false);
+        expect(exists('app/home-landing-shell.module.css')).toBe(false);
+        expect(exists('app/home-map-island.tsx')).toBe(false);
+        expect(exists('app/home-map-runtime-activation.ts')).toBe(false);
     });
 
     test('does not statically pull Vercel SpeedInsights into dev root layout', () => {
@@ -55,6 +68,7 @@ describe('home root lazy boundary', () => {
         expect(appProvidersSource).not.toContain('TooltipProvider');
         expect(appProvidersSource).toContain('AuthProvider');
         expect(appProvidersSource).toContain('NotificationProvider');
+        expect(source('app/app-runtime-shell.tsx')).toContain("import './app-globals.css'");
         expect(source('app/app-runtime-shell.tsx')).toContain('MainLayout');
     });
 });
