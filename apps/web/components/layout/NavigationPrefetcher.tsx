@@ -7,6 +7,8 @@ import { getNavigationPrefetchRoutes } from '@/components/layout/navigation-rout
 
 type IdleCallbackHandle = number;
 
+const HOME_ROUTE_PREFETCH_DELAY_MS = 8000;
+
 function runWhenIdle(callback: () => void): () => void {
     if (typeof window === 'undefined') {
         return () => undefined;
@@ -80,7 +82,7 @@ export default function NavigationPrefetcher() {
         }
 
         let cancelled = false;
-        const cancel = runWhenIdle(() => {
+        const runPrefetch = () => {
             if (cancelled) {
                 return;
             }
@@ -92,13 +94,27 @@ export default function NavigationPrefetcher() {
                     // Prefetch failure should not block navigation.
                 }
             });
-        });
+        };
+
+        let cancel: () => void = () => undefined;
+        let homeDelayTimer: number | null = null;
+
+        if (pathname === '/') {
+            homeDelayTimer = window.setTimeout(() => {
+                cancel = runWhenIdle(runPrefetch);
+            }, HOME_ROUTE_PREFETCH_DELAY_MS);
+        } else {
+            cancel = runWhenIdle(runPrefetch);
+        }
 
         return () => {
             cancelled = true;
+            if (homeDelayTimer !== null) {
+                window.clearTimeout(homeDelayTimer);
+            }
             cancel();
         };
-    }, [router, routesToPrefetch]);
+    }, [pathname, router, routesToPrefetch]);
 
     return null;
 }

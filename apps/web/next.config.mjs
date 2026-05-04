@@ -70,6 +70,15 @@ const nextConfig = {
     output: 'standalone',
     typedRoutes: false,
     outputFileTracingRoot: path.join(__dirname, '../../'),
+    async redirects() {
+        return [
+            {
+                source: '/submissions',
+                destination: '/mypage',
+                permanent: false,
+            },
+        ];
+    },
     // [PERF] 정적 자산에 대한 장기 캐시 헤더 설정
     async headers() {
         return [

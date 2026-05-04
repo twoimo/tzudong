@@ -62,15 +62,6 @@ All colors MUST be HSL.
   src: local('Noto Serif KR'), local('NotoSerifKR-Regular');
 }
 
-/* 조선100년체 로컬 폰트 */
-@font-face {
-  font-family: 'ChosunCentennial';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/ChosunCentennial_otf.otf') format('opentype');
-}
-
 @layer base {
   :root {
     /* 한지 색상 (Background) - HSL: 38 30% 98% */
@@ -370,3 +361,80 @@ div[style*="z-index"]>div>.custom-marker {
 
 
 
+
+@layer utilities {
+  .animate-in {
+    --tw-enter-opacity: 1;
+    --tw-enter-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 0;
+    animation-name: tz-enter;
+    animation-duration: 150ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: both;
+  }
+
+  .animate-out {
+    --tw-exit-opacity: 1;
+    --tw-exit-scale: 1;
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 0;
+    animation-name: tz-exit;
+    animation-duration: 150ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: both;
+  }
+
+  .fade-in,
+  .fade-in-0 { --tw-enter-opacity: 0; }
+  .fade-in-80 { --tw-enter-opacity: 0.8; }
+  .fade-out,
+  .fade-out-0 { --tw-exit-opacity: 0; }
+  .fade-out-80 { --tw-exit-opacity: 0.8; }
+
+  .zoom-in { --tw-enter-scale: 0.95; }
+  .zoom-in-90 { --tw-enter-scale: 0.9; }
+  .zoom-in-95 { --tw-enter-scale: 0.95; }
+  .zoom-out-95 { --tw-exit-scale: 0.95; }
+
+  .slide-in-from-top { --tw-enter-translate-y: -100%; }
+  .slide-in-from-top-2 { --tw-enter-translate-y: -0.5rem; }
+  .slide-in-from-top-3 { --tw-enter-translate-y: -0.75rem; }
+  .slide-in-from-top-\[48\%\] { --tw-enter-translate-y: -48%; }
+  .slide-in-from-top-full { --tw-enter-translate-y: -100%; }
+  .slide-in-from-bottom { --tw-enter-translate-y: 100%; }
+  .slide-in-from-bottom-2 { --tw-enter-translate-y: 0.5rem; }
+  .slide-in-from-bottom-4 { --tw-enter-translate-y: 1rem; }
+  .slide-in-from-bottom-full { --tw-enter-translate-y: 100%; }
+  .slide-in-from-left { --tw-enter-translate-x: -100%; }
+  .slide-in-from-left-1\/2 { --tw-enter-translate-x: -50%; }
+  .slide-in-from-left-2 { --tw-enter-translate-x: -0.5rem; }
+  .slide-in-from-left-52 { --tw-enter-translate-x: -13rem; }
+  .slide-in-from-right { --tw-enter-translate-x: 100%; }
+  .slide-in-from-right-2 { --tw-enter-translate-x: 0.5rem; }
+  .slide-in-from-right-52 { --tw-enter-translate-x: 13rem; }
+
+  .slide-out-to-top { --tw-exit-translate-y: -100%; }
+  .slide-out-to-top-\[48\%\] { --tw-exit-translate-y: -48%; }
+  .slide-out-to-bottom { --tw-exit-translate-y: 100%; }
+  .slide-out-to-left { --tw-exit-translate-x: -100%; }
+  .slide-out-to-left-1\/2 { --tw-exit-translate-x: -50%; }
+  .slide-out-to-left-52 { --tw-exit-translate-x: -13rem; }
+  .slide-out-to-right { --tw-exit-translate-x: 100%; }
+  .slide-out-to-right-52 { --tw-exit-translate-x: 13rem; }
+  .slide-out-to-right-full { --tw-exit-translate-x: 100%; }
+
+  @keyframes tz-enter {
+    from {
+      opacity: var(--tw-enter-opacity);
+      transform: translate3d(var(--tw-enter-translate-x), var(--tw-enter-translate-y), 0) scale3d(var(--tw-enter-scale), var(--tw-enter-scale), var(--tw-enter-scale));
+    }
+  }
+
+  @keyframes tz-exit {
+    to {
+      opacity: var(--tw-exit-opacity);
+      transform: translate3d(var(--tw-exit-translate-x), var(--tw-exit-translate-y), 0) scale3d(var(--tw-exit-scale), var(--tw-exit-scale), var(--tw-exit-scale));
+    }
+  }
+}
