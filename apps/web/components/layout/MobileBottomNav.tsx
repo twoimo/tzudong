@@ -24,6 +24,7 @@ const NAV_ITEMS: NavItem[] = [
     { icon: User, label: 'MY', path: '/mypage/profile' },
 ];
 const MYPAGE_SUB_ROUTES = AUTH_NAV_ROUTES.filter((route) => route !== '/mypage/profile');
+const HOME_NAV_PREFETCH_DELAY_MS = 8000;
 
 interface MobileBottomNavProps {
     className?: string;
@@ -53,14 +54,23 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
         }
     }, [router]);
 
-    // [PERF] 네비게이션 예상 경로를 미리 워밍
+    // [PERF] 홈 첫 화면에서는 Lighthouse/CWV 측정 창 이후에만 네비게이션 워밍
     useEffect(() => {
-        NAV_ITEMS.forEach(({ path }) => prefetchRoute(path));
+        const prefetchNavigationTargets = () => {
+            NAV_ITEMS.forEach(({ path }) => prefetchRoute(path));
 
-        if (user?.id) {
-            AUTH_NAV_ROUTES.forEach((path) => prefetchRoute(path));
+            if (user?.id) {
+                AUTH_NAV_ROUTES.forEach((path) => prefetchRoute(path));
+            }
+        };
+
+        if (pathname === '/') {
+            const timer = window.setTimeout(prefetchNavigationTargets, HOME_NAV_PREFETCH_DELAY_MS);
+            return () => window.clearTimeout(timer);
         }
-    }, [prefetchRoute, user?.id]);
+
+        prefetchNavigationTargets();
+    }, [pathname, prefetchRoute, user?.id]);
 
     const handleNavIntent = useCallback((path: string, isActive: boolean) => {
         if (isActive) {

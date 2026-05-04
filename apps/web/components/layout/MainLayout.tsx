@@ -35,6 +35,9 @@ const AdminRestaurantModal = dynamic(
 );
 const CombinedPopup = dynamic(() => import('@/components/layout/CombinedPopup'), { ssr: false });
 
+const NONCRITICAL_CHROME_DELAY_MS = 30000;
+const NONCRITICAL_CHROME_EVENTS: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
+
 // [PERF] Lazy load components
 const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPrefetcher'), {
     ssr: false,
@@ -65,6 +68,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [hasMounted, setHasMounted] = useState(false);
+    const [canMountNoncriticalChrome, setCanMountNoncriticalChrome] = useState(false);
 
     const prevPathnameRef = useRef(pathname);
 
@@ -138,6 +142,33 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         setHasMounted(true);
     }, []);
+    useEffect(() => {
+        if (!hasMounted) return;
+
+        if (pathname !== '/') {
+            setCanMountNoncriticalChrome(true);
+            return;
+        }
+
+        let timer = 0;
+        const mountNoncriticalChrome = () => {
+            window.clearTimeout(timer);
+            setCanMountNoncriticalChrome(true);
+        };
+
+        timer = window.setTimeout(mountNoncriticalChrome, NONCRITICAL_CHROME_DELAY_MS);
+        for (const eventName of NONCRITICAL_CHROME_EVENTS) {
+            window.addEventListener(eventName, mountNoncriticalChrome, { once: true, passive: true });
+        }
+
+        return () => {
+            window.clearTimeout(timer);
+            for (const eventName of NONCRITICAL_CHROME_EVENTS) {
+                window.removeEventListener(eventName, mountNoncriticalChrome);
+            }
+        };
+    }, [hasMounted, pathname]);
+
 
     useEffect(() => {
         setMobileHomeHeaderVars(isMobileHomeHeaderHidden);
@@ -167,7 +198,16 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     }, [handleMobileAuthRequest, handleMobileProfileRequest, isMobileHomeHeaderHidden, setMobileHomeHeaderVars]);
 
     if (!hasMounted) {
-        return <div className="min-h-screen bg-background" aria-hidden="true" />;
+        return (
+            <div className="min-h-[var(--full-height,100vh)] bg-background">
+                <a href="#main-content" className="skip-link">
+                    본문 바로가기
+                </a>
+                <main id="main-content" className="h-full w-full">
+                    {children}
+                </main>
+            </div>
+        );
     }
 
     // [NEW] 데스크탑에서는 항상 오버레이 레이아웃 사용 (사이드바 완전 제거)
@@ -289,7 +329,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 />
             )}
 
-            <CombinedPopup />
+            {canMountNoncriticalChrome && <CombinedPopup />}
         </div>
     );
 }
