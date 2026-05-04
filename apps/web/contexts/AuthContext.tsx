@@ -41,6 +41,33 @@ function shouldDelayAuthBootstrap() {
     );
 }
 
+function hasPersistedSupabaseSessionHint() {
+    if (typeof window === 'undefined') return false;
+
+    try {
+        for (let index = 0; index < window.localStorage.length; index += 1) {
+            const key = window.localStorage.key(index) ?? '';
+            if (!/^sb-.+-auth-token$/.test(key)) continue;
+
+            const value = window.localStorage.getItem(key);
+            if (value && value !== 'null' && value !== 'undefined') {
+                return true;
+            }
+        }
+    } catch {
+        // localStorage may be blocked; fall back to timeout-based bootstrap.
+    }
+
+    return false;
+}
+
+function shouldBootstrapAuthOnGeneralInteraction() {
+    if (typeof window === 'undefined') return false;
+    if (hasPersistedSupabaseSessionHint()) return true;
+
+    return window.matchMedia('(min-width: 1024px)').matches;
+}
+
 const isRefreshTokenNotFoundError = (error: unknown) => {
     if (!error || typeof error !== 'object') return false;
 
@@ -251,8 +278,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         if (shouldDelayAuthBootstrap()) {
-            for (const eventName of HOME_AUTH_BOOTSTRAP_EVENTS) {
-                window.addEventListener(eventName, startOnce, { once: true, passive: true });
+            if (shouldBootstrapAuthOnGeneralInteraction()) {
+                for (const eventName of HOME_AUTH_BOOTSTRAP_EVENTS) {
+                    window.addEventListener(eventName, startOnce, { once: true, passive: true });
+                }
             }
             bootstrapTimer = window.setTimeout(startOnce, HOME_AUTH_BOOTSTRAP_DELAY_MS);
         } else {

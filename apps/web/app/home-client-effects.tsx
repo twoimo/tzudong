@@ -11,17 +11,6 @@ import type { useHomeState } from './hooks/useHomeState';
 type HomeState = ReturnType<typeof useHomeState>;
 type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
 
-type AnnouncementRow = {
-    id: string;
-    title: string;
-    content: string;
-    is_active: boolean;
-    show_on_banner: boolean;
-    priority: number;
-    created_at: string;
-    updated_at: string;
-};
-
 type HomeClientEffectsProps = {
     activeRightPanel: PanelType;
     isAdmin: boolean;
@@ -71,28 +60,9 @@ export default function HomeClientEffects({
             if (announcementId) {
                 (async () => {
                     try {
-                        const { supabase } = await import('@/integrations/supabase/client');
-                        const announcementsTable = supabase.from('announcements' as never);
-                        const { data: rawAnnouncement, error } = await announcementsTable
-                            .select('id, title, content, is_active, show_on_banner, priority, created_at, updated_at')
-                            .eq('id', announcementId)
-                            .maybeSingle();
-
-                        const announcementRow = rawAnnouncement as AnnouncementRow | null;
-                        if (error || !announcementRow) {
-                            return;
-                        }
-
-                        const announcement: Announcement = {
-                            id: announcementRow.id,
-                            title: announcementRow.title,
-                            content: announcementRow.content,
-                            isActive: announcementRow.is_active,
-                            showOnBanner: announcementRow.show_on_banner,
-                            priority: announcementRow.priority,
-                            createdAt: announcementRow.created_at,
-                            updatedAt: announcementRow.updated_at,
-                        };
+                        const { fetchHomeAnnouncementById } = await import('./home-supabase-actions');
+                        const announcement = await fetchHomeAnnouncementById(announcementId);
+                        if (!announcement) return;
 
                         setTimeout(() => {
                             setSelectedAnnouncement(announcement);
@@ -115,51 +85,26 @@ export default function HomeClientEffects({
         if (restaurantId) {
             (async () => {
                 try {
-                    const { supabase } = await import('@/integrations/supabase/client');
-                    const { mergeRestaurants } = await import('@/hooks/use-restaurants');
-                    const { data: targetRestaurant, error } = await supabase
-                        .from('restaurants')
-                        .select('*, name:approved_name')
-                        .eq('id', restaurantId)
-                        .single();
+                    const { resolveHomeRestaurantDeepLink } = await import('./home-supabase-actions');
+                    const result = await resolveHomeRestaurantDeepLink(restaurantId);
+                    if (!result) return;
 
-                    if (error || !targetRestaurant) {
-                        console.error('맛집 조회 실패:', error);
-                        return;
+                    const zoomParam = searchParams.get('z');
+                    const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
+                    const modeParam = searchParams.get('mode');
+                    const targetMode: 'domestic' | 'overseas' | null =
+                        modeParam === 'overseas' ? 'overseas' : (modeParam === 'domestic' ? 'domestic' : result.inferredMode);
+
+                    if (targetMode) {
+                        setMapMode(targetMode);
                     }
 
-                    const { data: sameNameRestaurants } = await supabase
-                        .from('restaurants')
-                        .select('*')
-                        .eq('approved_name', (targetRestaurant as Restaurant).name)
-                        .eq('status', 'approved');
-
-                    const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as Restaurant[]);
-                    const mergedRestaurant = merged.find((restaurant) => restaurant.id === restaurantId) || merged[0];
-
-                    if (mergedRestaurant) {
-                        const zoomParam = searchParams.get('z');
-                        const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
-                        const modeParam = searchParams.get('mode');
-                        let targetMode: 'domestic' | 'overseas' | null =
-                            modeParam === 'overseas' ? 'overseas' : (modeParam === 'domestic' ? 'domestic' : null);
-
-                        if (!targetMode && mergedRestaurant.lat && mergedRestaurant.lng) {
-                            const { lat, lng } = mergedRestaurant;
-                            targetMode = lat < 33 || lat > 39 || lng < 124 || lng > 132 ? 'overseas' : 'domestic';
-                        }
-
-                        if (targetMode) {
-                            setMapMode(targetMode);
-                        }
-
-                        setTimeout(() => {
-                            openDetailPanelRef.current(
-                                mergedRestaurant,
-                                !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined
-                            );
-                        }, 300);
-                    }
+                    setTimeout(() => {
+                        openDetailPanelRef.current(
+                            result.restaurant,
+                            !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined
+                        );
+                    }, 300);
                 } catch (error) {
                     console.error('맛집 조회 실패:', error);
                 }
@@ -178,24 +123,8 @@ export default function HomeClientEffects({
             if (!isNaN(lat) && !isNaN(lng)) {
                 (async () => {
                     try {
-                        const { supabase } = await import('@/integrations/supabase/client');
-                        const { mergeRestaurants } = await import('@/hooks/use-restaurants');
-                        const tolerance = 0.0001;
-                        const { data: restaurants, error } = await supabase
-                            .from('restaurants')
-                            .select('*, name:approved_name')
-                            .gte('lat', lat - tolerance)
-                            .lte('lat', lat + tolerance)
-                            .gte('lng', lng - tolerance)
-                            .lte('lng', lng + tolerance)
-                            .eq('status', 'approved');
-
-                        if (error || !restaurants || restaurants.length === 0) {
-                            return;
-                        }
-
-                        const merged = mergeRestaurants(restaurants as Restaurant[]);
-                        const restaurant = merged[0];
+                        const { resolveHomeRestaurantByCoordinates } = await import('./home-supabase-actions');
+                        const restaurant = await resolveHomeRestaurantByCoordinates(lat, lng);
 
                         if (restaurant) {
                             setTimeout(() => {
@@ -284,34 +213,15 @@ export default function HomeClientEffects({
             }
 
             try {
-                const { supabase } = await import('@/integrations/supabase/client');
-                const { mergeRestaurants } = await import('@/hooks/use-restaurants');
-                const { data: targetRestaurant, error } = await supabase
-                    .from('restaurants')
-                    .select('*, name:approved_name')
-                    .eq('id', restaurantId)
-                    .single();
+                const { resolveHomeBookmarkRestaurantSelection } = await import('./home-supabase-actions');
+                const result = await resolveHomeBookmarkRestaurantSelection(restaurantId, mode);
+                if (!result) return;
 
-                if (error || !targetRestaurant) return;
-
-                const restaurant = targetRestaurant as Restaurant;
-                if (!mode && typeof restaurant.lat === 'number' && typeof restaurant.lng === 'number') {
-                    const isOverseasCoord = restaurant.lat < 33 || restaurant.lat > 39 || restaurant.lng < 124 || restaurant.lng > 132;
-                    setMapMode(isOverseasCoord ? 'overseas' : 'domestic');
+                if (result.inferredMode) {
+                    setMapMode(result.inferredMode);
                 }
 
-                const { data: sameNameRestaurants } = await supabase
-                    .from('restaurants')
-                    .select('*')
-                    .eq('approved_name', restaurant.name)
-                    .eq('status', 'approved');
-
-                const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as Restaurant[]);
-                const mergedRestaurant = merged.find((item) => item.id === restaurantId) || merged[0];
-
-                if (mergedRestaurant) {
-                    openDetailPanelRef.current(mergedRestaurant, 13);
-                }
+                openDetailPanelRef.current(result.restaurant, 13);
             } catch (error) {
                 console.error('맛집 조회 실패:', error);
             }
