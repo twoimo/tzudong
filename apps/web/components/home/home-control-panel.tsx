@@ -1,20 +1,15 @@
-'use client'; // [CSR] 사용자 입력 및 상호작용 처리
+'use client';
 
-import { useRef, useEffect, useState, useCallback, memo } from 'react';
+import { lazy, memo, Suspense } from 'react';
 import type { Region, Restaurant } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
+import MobileControlOverlay from '@/components/home/MobileControlOverlay';
+import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
 
-// [OPTIMIZATION] 사용자 요청으로 동시 로딩을 위해 lazy 제거 (번들 크기는 조금 커지지만 UX 개선)
-import RegionSelector from "@/components/region/RegionSelector";
-import RestaurantSearch from "@/components/search/RestaurantSearch";
-import CategoryFilter from "@/components/filters/CategoryFilter";
-import MobileControlOverlay from "@/components/home/MobileControlOverlay";
-import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
-import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
+const HomeDesktopControlPanel = lazy(() => import('@/components/home/home-desktop-control-panel'));
 
 interface HomeControlPanelProps {
     mapMode: 'domestic' | 'overseas';
@@ -43,9 +38,7 @@ interface HomeControlPanelProps {
     isDeviceHeadingMode?: boolean;
 }
 
-// [CSR] 지역/국가 선택, 카테고리 필터, 검색 통합 패널 - 모든 사용자 입력 처리
-// [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
-const HomeControlPanelComponent = ({
+function HomeControlPanelComponent({
     mapMode,
     selectedRegion,
     selectedCountry,
@@ -69,40 +62,10 @@ const HomeControlPanelComponent = ({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
-}: HomeControlPanelProps) => {
-    const { isMobileOrTablet, isDesktop } = useDeviceType();
+}: HomeControlPanelProps) {
+    const { isMobileOrTablet } = useDeviceType();
     const countryCounts = useOverseasCountryCounts(mapMode);
-    const [leftPosition, setLeftPosition] = useState<string>('50%');
-    const panelRef = useRef<HTMLDivElement>(null);
 
-    // [OPTIMIZATION] useCallback으로 메모이제이션
-    const updateLayout = useCallback(() => {
-        const windowWidth = window.innerWidth;
-        const availableWidth = windowWidth - leftSidebarWidth - rightPanelWidth;
-        const centerOfVisibleArea = leftSidebarWidth + (availableWidth / 2);
-        setLeftPosition(`${centerOfVisibleArea}px`);
-    }, [leftSidebarWidth, rightPanelWidth]);
-
-    // 데스크탑에서만 위치 계산
-    useEffect(() => {
-        if (!isDesktop) return;
-
-        updateLayout();
-        window.addEventListener('resize', updateLayout, { passive: true });
-        return () => window.removeEventListener('resize', updateLayout);
-    }, [isDesktop, updateLayout]);
-
-    // [OPTIMIZATION] 상호작용 핸들러 메모이제이션
-    const handlePanelMouseDownCapture = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        onPanelClick?.('control');
-    }, [onPanelClick]);
-
-    const handlePanelFocusCapture = useCallback(() => {
-        onPanelClick?.('control');
-    }, [onPanelClick]);
-
-    // 모바일/태블릿에서는 MobileControlOverlay 사용
     if (isMobileOrTablet) {
         return (
             <MobileControlOverlay
@@ -131,66 +94,29 @@ const HomeControlPanelComponent = ({
         );
     }
 
-    // 데스크탑에서는 기존 하단 패널 사용 (컴팩트 모드 제거됨)
     return (
-        <div
-            ref={panelRef}
-            className="fixed bottom-4 z-[50] hover:z-[60]"
-            style={{
-                left: leftPosition,
-                transform: 'translateX(-50%)'
-            }}
-            onMouseDownCapture={handlePanelMouseDownCapture}
-            onFocusCapture={handlePanelFocusCapture}
-        >
-            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border shadow-lg p-3 hover:shadow-xl hover:border-primary/50 transition-all duration-300">
-                {/* [CSR] 지역/국가 선택 - 드롭다운 인터랙션 */}
-                {mapMode === 'domestic' ? (
-                    <RegionSelector
-                        selectedRegion={selectedRegion}
-                        onRegionChange={onRegionChange}
-                        onRegionSelect={onSearchExecute}
-                    />
-                ) : (
-                    <Select value={selectedCountry || undefined} onValueChange={onCountryChange}>
-                        <SelectTrigger className="w-[clamp(9.5rem,18vw,12.5rem)]">
-                            <SelectValue placeholder="지역 선택" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {OVERSEAS_REGION_LIST.map((region) => (
-                                <SelectItem key={region} value={region}>
-                                    {region} ({countryCounts[region] || 0}개)
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
-
-                {/* [CSR] 카테고리 필터 - 선택 인터랙션 */}
-                <CategoryFilter
-                    selectedCategories={selectedCategories}
-                    onCategoryChange={onCategoryChange}
-                    selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
-                    selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
-                    className="w-[clamp(9.5rem,18vw,12.5rem)]"
-                />
-
-                {/* [CSR] 검색 - 텍스트 입력 및 자동완성 */}
-                <RestaurantSearch
-                    onRestaurantSelect={onRestaurantSelect}
-                    onRestaurantSearch={onRestaurantSearch}
-                    onSearchExecute={onSearchExecute}
-                    filters={filters}
-                    selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
-                    isKoreanOnly={mapMode === 'domestic'}
-                    maxItems={3}
-                />
-            </div>
-        </div>
+        <Suspense fallback={null}>
+            <HomeDesktopControlPanel
+                mapMode={mapMode}
+                selectedRegion={selectedRegion}
+                selectedCountry={selectedCountry}
+                selectedCategories={selectedCategories}
+                filters={filters}
+                countryCounts={countryCounts}
+                onRegionChange={onRegionChange}
+                onCountryChange={onCountryChange}
+                onCategoryChange={onCategoryChange}
+                onRestaurantSelect={onRestaurantSelect}
+                onRestaurantSearch={onRestaurantSearch}
+                onSearchExecute={onSearchExecute}
+                onPanelClick={onPanelClick}
+                leftSidebarWidth={leftSidebarWidth}
+                rightPanelWidth={rightPanelWidth}
+            />
+        </Suspense>
     );
-};
+}
 
-// [OPTIMIZATION] React.memo로 래핑하여 props 변경 시에만 리렌더링
 const HomeControlPanel = memo(HomeControlPanelComponent);
 HomeControlPanel.displayName = 'HomeControlPanel';
 

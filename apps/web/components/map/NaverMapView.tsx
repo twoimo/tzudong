@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import type { CSSProperties } from "react";
+
+type SupabaseBrowserClient = typeof import("@/integrations/supabase/client").supabase;
+type SupabaseRealtimeChannel = ReturnType<SupabaseBrowserClient["channel"]>;
 import { usePathname } from "next/navigation";
 
 import { useNaverMaps } from "@/hooks/use-naver-maps";
@@ -53,9 +56,8 @@ import {
 } from "@/lib/naver-map-cluster-visuals";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
-import { supabase } from "@/integrations/supabase/client";
 import { calculateHoverAnchoredCenter } from "@/lib/map-hover-anchor";
-import { useBannerAnnouncements } from "@/hooks/use-announcements";
+import { useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import {
     buildMarkerRenderSignature,
     shouldSkipMarkerUpdate,
@@ -1326,41 +1328,58 @@ const NaverMapView = memo(({
             hideTimerRef.current = setTimeout(() => setShowOnlineUsers(false), toastDisplayPlan.hideDelayMs);
         };
 
-        // Supabase Presence 채널 구독
-        const channel = supabase.channel('map-online-users')
-            .on('presence', { event: 'sync' }, () => {
-                const count = countUniqueNaverPresenceUsers(channel.presenceState());
-                setOnlineUsersCount(count);
-                onlineUsersCountRef.current = count;
+        let interval: ReturnType<typeof setInterval> | null = null;
+        let channel: SupabaseRealtimeChannel | null = null;
+        let supabase: SupabaseBrowserClient | null = null;
+        let isCancelled = false;
 
-                // 첫 번째 sync 후 5초 뒤에 토스트 표시
-                const initialToastPlan = resolveNaverInitialOnlineToastPlan({
-                    hasExistingInitialTimer: initialTimerRef.current !== null,
-                    hasShownInitialToast: hasShownInitialToastRef.current,
-                });
-                if (initialToastPlan.shouldScheduleInitialToast) {
-                    hasShownInitialToastRef.current = initialToastPlan.nextHasShownInitialToast;
-                    if (initialToastPlan.shouldClearExistingInitialTimer && initialTimerRef.current) {
-                        clearTimeout(initialTimerRef.current);
-                    }
-                    initialTimerRef.current = setTimeout(showOnlineToast, initialToastPlan.initialDelayMs);
-                }
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.track({
-                        user_id: `map-user-${Math.random().toString(36).slice(2)}`,
-                        online_at: new Date().toISOString(),
+        void import('@/integrations/supabase/client').then((mod) => {
+            if (isCancelled) return;
+            supabase = mod.supabase;
+
+            // Supabase Presence 채널 구독은 비핵심 지도 효과가 시작된 뒤에만 로드합니다.
+            channel = mod.supabase.channel('map-online-users')
+                .on('presence', { event: 'sync' }, () => {
+                    if (!channel) return;
+                    const count = countUniqueNaverPresenceUsers(channel.presenceState());
+                    setOnlineUsersCount(count);
+                    onlineUsersCountRef.current = count;
+
+                    // 첫 번째 sync 후 5초 뒤에 토스트 표시
+                    const initialToastPlan = resolveNaverInitialOnlineToastPlan({
+                        hasExistingInitialTimer: initialTimerRef.current !== null,
+                        hasShownInitialToast: hasShownInitialToastRef.current,
                     });
-                }
-            });
+                    if (initialToastPlan.shouldScheduleInitialToast) {
+                        hasShownInitialToastRef.current = initialToastPlan.nextHasShownInitialToast;
+                        if (initialToastPlan.shouldClearExistingInitialTimer && initialTimerRef.current) {
+                            clearTimeout(initialTimerRef.current);
+                        }
+                        initialTimerRef.current = setTimeout(showOnlineToast, initialToastPlan.initialDelayMs);
+                    }
+                })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        if (!channel) return;
+                        await channel.track({
+                            user_id: `map-user-${Math.random().toString(36).slice(2)}`,
+                            online_at: new Date().toISOString(),
+                        });
+                    }
+                });
 
-        // 60초마다 동시 접속자 토스트 표시
-        const interval = setInterval(showOnlineToast, ONLINE_USERS_TOAST_INTERVAL_MS);
+            // 60초마다 동시 접속자 토스트 표시
+            interval = setInterval(showOnlineToast, ONLINE_USERS_TOAST_INTERVAL_MS);
+        });
 
         return () => {
-            supabase.removeChannel(channel);
-            clearInterval(interval);
+            isCancelled = true;
+            if (supabase && channel) {
+                supabase.removeChannel(channel);
+            }
+            if (interval) {
+                clearInterval(interval);
+            }
             if (initialTimerRef.current) {
                 clearTimeout(initialTimerRef.current);
                 initialTimerRef.current = null;

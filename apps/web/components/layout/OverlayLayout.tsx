@@ -44,6 +44,9 @@ const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPre
     ssr: false,
 });
 
+const OVERLAY_NONCRITICAL_CHROME_DELAY_MS = 30000;
+const OVERLAY_NONCRITICAL_CHROME_EVENTS: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
+
 /**
  * 오버레이 기반 데스크탑 레이아웃
  * - 사이드바 완전 제거
@@ -62,7 +65,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [targetReviewId, setTargetReviewId] = useState<string | null>(null);
-
+    const [canMountNoncriticalChrome, setCanMountNoncriticalChrome] = useState(false);
 
     // 오버레이 패널 상태
     const [activeOverlayPanel, setActiveOverlayPanel] = useState<OverlayPanelType>(null);
@@ -119,6 +122,26 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
         window.addEventListener(AUTH_UI_REQUEST_EVENT, handleOpenAuth);
         return () => window.removeEventListener(AUTH_UI_REQUEST_EVENT, handleOpenAuth);
     }, [handleOpenAuth]);
+
+    useEffect(() => {
+        let timer = 0;
+        const mountNoncriticalChrome = () => {
+            window.clearTimeout(timer);
+            setCanMountNoncriticalChrome(true);
+        };
+
+        timer = window.setTimeout(mountNoncriticalChrome, OVERLAY_NONCRITICAL_CHROME_DELAY_MS);
+        for (const eventName of OVERLAY_NONCRITICAL_CHROME_EVENTS) {
+            window.addEventListener(eventName, mountNoncriticalChrome, { once: true, passive: true });
+        }
+
+        return () => {
+            window.clearTimeout(timer);
+            for (const eventName of OVERLAY_NONCRITICAL_CHROME_EVENTS) {
+                window.removeEventListener(eventName, mountNoncriticalChrome);
+            }
+        };
+    }, []);
 
     // 공지사항 클릭 핸들러
     const handleAnnouncementClick = useCallback((announcement: Announcement) => {
@@ -198,15 +221,19 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
             </main>
 
             {/* 모달들 */}
-            <AuthModal
-                isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
-            />
+            {isAuthModalOpen && (
+                <AuthModal
+                    isOpen={isAuthModalOpen}
+                    onClose={() => setIsAuthModalOpen(false)}
+                />
+            )}
 
-            <ProfileModal
-                isOpen={isProfileModalOpen}
-                onClose={() => setIsProfileModalOpen(false)}
-            />
+            {isProfileModalOpen && (
+                <ProfileModal
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                />
+            )}
 
             {isAdminModalOpen && (
                 <AdminRestaurantModal
@@ -217,12 +244,14 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
                 />
             )}
 
-            <NicknameSetupModal
-                isOpen={needsNicknameSetup}
-                onComplete={completeNicknameSetup}
-            />
+            {needsNicknameSetup && (
+                <NicknameSetupModal
+                    isOpen={needsNicknameSetup}
+                    onComplete={completeNicknameSetup}
+                />
+            )}
 
-            <CombinedPopup />
+            {canMountNoncriticalChrome && <CombinedPopup />}
         </div>
     );
 }
