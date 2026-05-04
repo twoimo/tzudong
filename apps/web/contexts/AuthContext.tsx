@@ -1,24 +1,10 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
-import type { User, Session } from "@supabase/supabase-js";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
 
-interface AuthContextType {
-    user: User | null;
-    session: Session | null;
-    isLoading: boolean;
-    isAdmin: boolean;
-    needsNicknameSetup: boolean;
-    signIn: (email: string, password: string) => Promise<void>;
-    signInWithGoogle: () => Promise<void>;
-    signUp: (email: string, password: string, username: string) => Promise<{ session: Session | null }>;
-    signOut: () => Promise<void>;
-    completeNicknameSetup: () => void;
-    resetPassword: (email: string) => Promise<void>;
-    updatePassword: (newPassword: string) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export { AnonymousHomeAuthProvider, useAuth } from "@/contexts/AuthContextBase";
 
 type SupabaseClient = typeof import("@/integrations/supabase/client").supabase;
 
@@ -390,12 +376,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth must be used within an AuthProvider");
-    }
-    return context;
-}
-

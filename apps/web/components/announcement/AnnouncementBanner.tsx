@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Announcement } from '@/types/announcement';
-import { useBannerAnnouncements } from '@/hooks/use-announcements';
+import { useBannerAnnouncements } from '@/hooks/use-banner-announcements';
 
 interface AnnouncementBannerProps {
     onAnnouncementClick: (announcement: Announcement) => void;

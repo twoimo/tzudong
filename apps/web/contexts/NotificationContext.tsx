@@ -1,10 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { useState, useEffect, ReactNode, useCallback } from 'react';
 import { Notification, NotificationContextType, NotificationType } from '@/types/notification';
 import { useAuth } from '@/contexts/AuthContext';
+import { NotificationContext } from '@/contexts/NotificationContextBase';
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+export { StaticNotificationProvider, useNotifications } from '@/contexts/NotificationContextBase';
 
 type NotificationRecord = {
     id: string;
@@ -234,14 +235,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             {children}
         </NotificationContext.Provider>
     );
-};
-
-export const useNotifications = () => {
-    const context = useContext(NotificationContext);
-    if (context === undefined) {
-        throw new Error('useNotifications must be used within a NotificationProvider');
-    }
-    return context;
 };
 
 // 관리자 공지사항 등록 알림 생성 함수 (모든 사용자에게)

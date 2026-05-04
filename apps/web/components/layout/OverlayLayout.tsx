@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import FloatingNavButtons, { OverlayPanelType } from '@/components/layout/FloatingNavButtons';
 import OverlayPagePanel from '@/components/layout/OverlayPagePanel';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextBase';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
