@@ -52,13 +52,10 @@ describe('web quality performance source contracts', () => {
         expect(hookSource).toContain('enabled: options.enabled ?? true');
     });
 
-    test('home map runtime is activated after the fast shell while supporting queries stay intent-gated', () => {
+    test('home map runtime renders directly while supporting queries stay intent-gated', () => {
         const pageSource = source('app/page.tsx');
         const homeClientSource = source('app/home-client.tsx');
-        const homeMapIslandSource = source('app/home-map-island.tsx');
-        const homeLandingShellSource = source('app/home-landing-shell.tsx');
-        const homeLandingShellCssSource = source('app/home-landing-shell.module.css');
-        const activationSource = source('app/home-map-runtime-activation.ts');
+        const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
         const restaurantSearchSource = source('components/search/RestaurantSearch.tsx');
         const mobileControlSource = source('components/home/MobileControlOverlay.tsx');
         const regionSelectorSource = source('components/region/RegionSelector.tsx');
@@ -66,19 +63,14 @@ describe('web quality performance source contracts', () => {
         const mapQuerySource = source('lib/map-query-helpers.ts');
         const naverMapSource = source('components/map/NaverMapView.tsx');
 
-        expect(pageSource).toContain('<HomeMapIsland>');
-        expect(pageSource).toContain('<HomeLandingShell />');
+        expect(pageSource).toContain('<HomeRuntimeShell>');
+        expect(pageSource).toContain('<HomeClient />');
+        expect(pageSource).not.toContain('HomeLandingShell');
+        expect(pageSource).not.toContain('HomeMapIsland');
+        expect(pageSource).not.toContain('지도 준비하기');
         expect(homeClientSource).toContain('<HomeMapContainer');
-        expect(homeMapIslandSource).toContain("import('./home-client')");
-        expect(homeMapIslandSource).toContain('if (!activatedRuntime)');
-        expect(homeMapIslandSource).toContain("import('./app-runtime-shell')");
-        expect(homeMapIslandSource).toContain('window.addEventListener(eventName, activateHomeRuntime');
-        expect(homeLandingShellSource).toContain('data-testid="home-landing-shell"');
-        expect(homeLandingShellSource).toContain("import styles from './home-landing-shell.module.css'");
-        expect(homeLandingShellCssSource).toContain('.shell');
-        expect(homeLandingShellCssSource).toContain('min-height: calc(var(--full-height, 100vh) - 56px)');
-        expect(activationSource).toContain('HOME_MAP_AUTO_ACTIVATION_DELAY_MS');
-        expect(activationSource).toContain('HOME_MAP_ACTIVATION_EVENTS');
+        expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
+        expect(homeRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(restaurantSearchSource).toContain('enabled: isFocused || isInlineView');
         expect(mobileControlSource).toContain("enabled: activeSheet === 'region' || activeSheet === 'category'");
@@ -109,7 +101,9 @@ describe('web quality performance source contracts', () => {
     test('global chrome assets stay small and cacheable without changing page UI', () => {
         const layoutSource = source('app/layout.tsx');
         const appRuntimeShellSource = source('app/app-runtime-shell.tsx');
-        const homeMapIslandSource = source('app/home-map-island.tsx');
+        const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
+        const homeAppGlobalsSource = source('app/home-app-globals.css');
+        const homeTailwindConfigSource = source('tailwind.home.config.ts');
         const mainLayoutSource = source('components/layout/MainLayout.tsx');
         const navigationPrefetcherSource = source('components/layout/NavigationPrefetcher.tsx');
         const mobileBottomNavSource = source('components/layout/MobileBottomNav.tsx');
@@ -142,7 +136,17 @@ describe('web quality performance source contracts', () => {
         expect(appRuntimeShellSource).toContain('<QueryProvider>');
         expect(appRuntimeShellSource).toContain('<AppProviders>');
         expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
-        expect(homeMapIslandSource).toContain("import('./app-runtime-shell')");
+        expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
+        expect(homeRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
+        expect(homeAppGlobalsSource).toContain('@config "../tailwind.home.config.ts"');
+        expect(homeTailwindConfigSource).toContain('./components/home/**/*');
+        expect(homeTailwindConfigSource).not.toContain('./components/admin/');
+        expect(homeTailwindConfigSource).not.toContain('./components/restaurant/**/*');
+        expect(source('tailwind.home.detail.config.ts')).toContain('./components/restaurant/**/*');
+        expect(source('components/map/map-view-deferred-panels.tsx')).toContain("import '@/app/home-detail-globals.css'");
+        expect(source('tailwind.home.deferred.config.ts')).toContain('./components/admin/AdminRestaurantModal.tsx');
+        expect(source('app/home-client-sidepanels.tsx')).toContain("import './home-deferred-globals.css'");
+        expect(source('app/page.tsx')).toContain('<HomeRuntimeShell>');
         expect(source('contexts/AuthContext.tsx')).toContain('HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000');
         expect(source('contexts/AuthContext.tsx')).toContain('shouldDelayAuthBootstrap');
         expect(source('contexts/AuthContext.tsx')).toContain('import("@/integrations/supabase/client")');

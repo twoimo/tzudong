@@ -31,6 +31,11 @@ const HomeMapContainer = dynamic(
         loading: () => <div className="flex-1 bg-muted/50 animate-pulse" aria-hidden="true" />
     }
 );
+const SubmissionFloatingButton = dynamic(
+    () => import('../components/home/SubmissionFloatingButton'),
+    { ssr: false }
+);
+
 const HomeClientSidePanels = dynamic(
     () => import('./home-client-sidepanels'),
     { ssr: false }
@@ -370,6 +375,15 @@ export default function HomeClient() {
         stopDeviceHeadingWatchers();
     }, [stopDeviceHeadingWatchers]);
 
+    const shouldRenderSidePanels = Boolean(
+        activeRightPanel ||
+        isAnnouncementSheetOpen ||
+        isSubmissionModalOpen ||
+        state.isEditModalOpen ||
+        state.isAdminEditModalOpen ||
+        state.isReviewModalOpen
+    );
+
     const handleTopShellUserIconClick = useCallback(() => {
         if (typeof window === 'undefined') return;
 
@@ -469,24 +483,30 @@ export default function HomeClient() {
                 deviceLocation={deviceLocation}
             />
 
-            <HomeClientSidePanels
-                activeRightPanel={activeRightPanel}
-                closeAllPanels={closeAllPanels}
-                isAdmin={isAdmin}
-                isAnnouncementSheetOpen={isAnnouncementSheetOpen}
-                isDesktop={isDesktop}
-                isMobileOrTablet={isMobileOrTablet}
-                isPanelCollapsed={isPanelCollapsed}
-                isSidebarOpen={isSidebarOpen}
-                isSubmissionModalOpen={isSubmissionModalOpen}
-                onSubmissionButtonClick={handleSubmissionButtonClick}
-                selectedAnnouncement={selectedAnnouncement}
-                setIsAnnouncementSheetOpen={setIsAnnouncementSheetOpen}
-                setIsSubmissionModalOpen={setIsSubmissionModalOpen}
-                setSelectedAnnouncement={setSelectedAnnouncement}
-                state={state}
-                togglePanelCollapse={togglePanelCollapse}
-            />
+            {isDesktop && (
+                <SubmissionFloatingButton
+                    onClick={handleSubmissionButtonClick}
+                    isSidebarOpen={isSidebarOpen}
+                />
+            )}
+
+            {shouldRenderSidePanels && (
+                <HomeClientSidePanels
+                    activeRightPanel={activeRightPanel}
+                    closeAllPanels={closeAllPanels}
+                    isAdmin={isAdmin}
+                    isAnnouncementSheetOpen={isAnnouncementSheetOpen}
+                    isMobileOrTablet={isMobileOrTablet}
+                    isPanelCollapsed={isPanelCollapsed}
+                    isSubmissionModalOpen={isSubmissionModalOpen}
+                    selectedAnnouncement={selectedAnnouncement}
+                    setIsAnnouncementSheetOpen={setIsAnnouncementSheetOpen}
+                    setIsSubmissionModalOpen={setIsSubmissionModalOpen}
+                    setSelectedAnnouncement={setSelectedAnnouncement}
+                    state={state}
+                    togglePanelCollapse={togglePanelCollapse}
+                />
+            )}
         </>
     );
 }
