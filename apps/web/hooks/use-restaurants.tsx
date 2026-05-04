@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
-import { Tables } from "@/integrations/supabase/types";
-import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn } from "@/lib/supabase-rest-client";
 import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
 
 type DBRestaurant = Tables<"restaurants">;
@@ -232,13 +232,12 @@ async function fetchRelatedRestaurantCandidates(names: string[]): Promise<Review
     const candidateRows: ReviewCountCandidateRestaurant[] = [];
     for (let index = 0; index < names.length; index += SUPABASE_IN_CHUNK_SIZE) {
         const nameChunk = names.slice(index, index + SUPABASE_IN_CHUNK_SIZE);
-        const { data, error } = await supabase
-            .from('restaurants')
-            .select(REVIEW_COUNT_RELATED_RESTAURANT_SELECT)
-            .in('approved_name', nameChunk);
+        const data = await fetchSupabaseRows<ReviewCountCandidateRestaurant>('restaurants', [
+            ['select', REVIEW_COUNT_RELATED_RESTAURANT_SELECT],
+            ['approved_name', postgrestIn(nameChunk)],
+        ]);
 
-        if (error) throw error;
-        candidateRows.push(...((data ?? []) as ReviewCountCandidateRestaurant[]));
+        candidateRows.push(...data);
     }
 
     return candidateRows;
@@ -250,14 +249,13 @@ async function fetchVerifiedReviewRows(restaurantIds: string[]): Promise<ReviewC
     const reviewRows: ReviewCountRow[] = [];
     for (let index = 0; index < restaurantIds.length; index += SUPABASE_IN_CHUNK_SIZE) {
         const idChunk = restaurantIds.slice(index, index + SUPABASE_IN_CHUNK_SIZE);
-        const { data, error } = await supabase
-            .from('reviews')
-            .select('restaurant_id')
-            .in('restaurant_id', idChunk)
-            .eq('is_verified', true);
+        const data = await fetchSupabaseRows<ReviewCountRow>('reviews', [
+            ['select', 'restaurant_id'],
+            ['restaurant_id', postgrestIn(idChunk)],
+            ['is_verified', 'eq.true'],
+        ]);
 
-        if (error) throw error;
-        reviewRows.push(...((data ?? []) as ReviewCountRow[]));
+        reviewRows.push(...data);
     }
 
     return reviewRows;
@@ -510,66 +508,66 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 ? "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, categories, review_count, status"
                 : "id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at";
 
-            let query = supabase
-                .from("restaurants")
-                .select(selectFields)
-                .eq("status", "approved") // status가 approved인 것만 조회
-                .order("approved_name"); // 이름순으로 정렬
+            const query: Array<[string, string | number]> = [
+                ['select', selectFields],
+                ['status', 'eq.approved'],
+                ['order', 'approved_name.asc'],
+            ];
 
             // 경계(Bounds) 필터 적용 (제공된 경우)
             if (bounds) {
                 // queryKey에는 반올림 bounds를 사용해 캐시 키 폭주를 막고,
                 // 실제 필터는 원본 bounds를 사용해 경계 데이터 누락을 방지합니다.
                 const { south, west, north, east } = bounds;
-                query = query
-                    .gte("lat", south)
-                    .lte("lat", north)
-                    .gte("lng", west)
-                    .lte("lng", east);
+                query.push(['lat', `gte.${south}`]);
+                query.push(['lat', `lte.${north}`]);
+                query.push(['lng', `gte.${west}`]);
+                query.push(['lng', `lte.${east}`]);
             }
 
             // 카테고리 필터 적용 (categories는 배열 타입)
             if (normalizedCategory.length > 0) {
                 // categories는 TEXT[] 타입으로 저장됨
-                query = query.overlaps("categories", normalizedCategory);
+                query.push(['categories', postgrestArrayOverlap(normalizedCategory)]);
             }
 
             // 지역(Region) 필터 적용
             if (normalizedRegion) {
                 if (normalizedRegion === "울릉도") {
                     // 울릉도는 주소에 '울릉'이 포함된 데이터 필터링
-                    query = query.or(`road_address.ilike.%울릉%,jibun_address.ilike.%울릉%`);
+                    query.push(['or', '(road_address.ilike.*울릉*,jibun_address.ilike.*울릉*)']);
                 } else if (normalizedRegion === "욕지도") {
                     // 욕지도는 주소에 '욕지'가 포함된 데이터 필터링
-                    query = query.or(`road_address.ilike.%욕지%,jibun_address.ilike.%욕지%`);
+                    query.push(['or', '(road_address.ilike.*욕지*,jibun_address.ilike.*욕지*)']);
                 } else if (normalizedRegion in OVERSEAS_REGIONS) {
                     const config = OVERSEAS_REGIONS[normalizedRegion as keyof typeof OVERSEAS_REGIONS];
                     const conditions: string[] = [];
                     config.keywords.forEach((keyword: string) => {
-                        conditions.push(`road_address.ilike.%${keyword}%`);
-                        conditions.push(`jibun_address.ilike.%${keyword}%`);
-                        conditions.push(`english_address.ilike.%${keyword}%`);
+                        conditions.push(`road_address.ilike.*${keyword}*`);
+                        conditions.push(`jibun_address.ilike.*${keyword}*`);
+                        conditions.push(`english_address.ilike.*${keyword}*`);
                     });
 
                     if (conditions.length > 0) {
-                        query = query.or(conditions.join(','));
+                        query.push(['or', `(${conditions.join(',')})`]);
                     }
                 } else {
                     // address_elements의 SIDO에서 지역 필터링
                     // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
-                    query = query.or(`road_address.ilike.%${normalizedRegion}%,jibun_address.ilike.%${normalizedRegion}%`);
+                    query.push(['or', `(road_address.ilike.*${normalizedRegion}*,jibun_address.ilike.*${normalizedRegion}*)`]);
                 }
             }
 
             // 리뷰 수 필터 적용
             if (normalizedMinReviews && normalizedMinReviews > 0) {
-                query = query.gte("review_count", normalizedMinReviews);
+                query.push(['review_count', `gte.${normalizedMinReviews}`]);
             }
 
-            const { data, error } = await query;
-
-            if (error) {
-                console.error('레스토랑 데이터 조회 실패:', error.message);
+            let data: RestaurantWithOptionalName[] = [];
+            try {
+                data = await fetchSupabaseRows<RestaurantWithOptionalName>('restaurants', query);
+            } catch (error) {
+                console.error('레스토랑 데이터 조회 실패:', error instanceof Error ? error.message : error);
                 throw error;
             }
 
@@ -599,18 +597,16 @@ export function useRestaurant(id: string | null) {
         queryFn: async () => {
             if (!id) return null;
 
-            const { data, error } = await supabase
-                .from("restaurants")
-                .select("*, name:approved_name")
-                .eq("id", id)
-                .single();
+            const rows = await fetchSupabaseRows<DBRestaurant>('restaurants', [
+                ['select', '*, name:approved_name'],
+                ['id', `eq.${id}`],
+                ['limit', 1],
+            ]);
 
-            if (error) throw error;
-
-            if (!data) return null;
+            const dbData = rows[0];
+            if (!dbData) return null;
 
             // 호환성을 위한 데이터 변환
-            const dbData = data as DBRestaurant;
             const restaurant: Restaurant = {
                 ...dbData,
                 address: dbData.road_address || dbData.jibun_address || '',
