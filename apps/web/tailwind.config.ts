@@ -1,5 +1,4 @@
 import type { Config } from "tailwindcss";
-import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: "class",
@@ -14,9 +13,9 @@ const config: Config = {
         xs: "375px",
       },
       fontFamily: {
-        sans: ['"Noto Serif KR"', 'serif'], // Original used Serif for Sans
-        serif: ['"Noto Serif KR"', 'serif'],
-        display: ['"ChosunCentennial"', '"Noto Serif KR"', 'cursive'],
+        sans: ['"Noto Serif KR"', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'ui-serif', 'Georgia', 'serif'],
+        serif: ['"Noto Serif KR"', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'ui-serif', 'Georgia', 'serif'],
+        display: ['"ChosunCentennial"', '"Noto Serif KR"', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'cursive'],
         stylish: ['"Stylish"', "sans-serif"],
         gugi: ['"Gugi"', "cursive"],
         brush: ['"Nanum Brush Script"', "cursive"],
@@ -109,7 +108,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [],
 };
 
 export default config;
