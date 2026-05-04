@@ -17,7 +17,7 @@ import { Eye, EyeOff, User, Mail, Lock, Trash2, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 
 interface ProfileModalProps {
     isOpen: boolean;
@@ -32,7 +32,7 @@ interface Profile {
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { user } = useAuth();
-    const { isMobileOrTablet } = useDeviceType();
+    const isMobileOrTablet = useImmediateMobileOrTablet();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(false);
 
