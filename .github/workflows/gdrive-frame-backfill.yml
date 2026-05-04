@@ -393,6 +393,32 @@ jobs:
             set -e
             if [ "$SHARD_EXIT" -eq 0 ]; then
               cat "$FILES_FROM" >> "$VERIFIED_FILES"
+              # Publish durable progress after every verified shard.  The final
+              # cumulative proof below still decides terminal success, but this
+              # prevents long catch-up runs from losing verified progress if the
+              # runner times out before the last shard finishes.
+              python3 backend/utils/run_daily_helpers.py write-gdrive-upload-status \
+                --expected-manifest "$EXPECTED_MANIFEST" \
+                --output "$UPLOAD_STATUS" \
+                --residual-queue "$RESIDUAL_QUEUE" \
+                --verified-files-from "$VERIFIED_FILES" \
+                --staging-manifest "$STAGING_MANIFEST" \
+                --run-id "${GITHUB_RUN_ID:-}" \
+                --policy warn \
+                --upload-mode backfill \
+                --completion-proof remote_size_check \
+                --source-root "$EXTRACT_DIR" \
+                --remote-root "$GDRIVE_FRAMES_PATH" \
+                --started-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                --completed-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                --exit-code 0 \
+                --timeout false \
+                --skipped true \
+                --backfill-threshold-attempts 3 \
+                --note "backfill verified shard progress"
+              rclone copyto "$RESIDUAL_QUEUE" "$STATUS_REMOTE/gdrive-upload-residual-queue.jsonl" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
+              rclone copyto "$UPLOAD_STATUS" "$STATUS_REMOTE/current-upload-status.json" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
+              rclone copyto "$EXPECTED_MANIFEST" "$STATUS_REMOTE/current-upload-expected.json" --stats 0 "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}" || true
             else
               BACKFILL_EXIT="$SHARD_EXIT"
               echo "Backfill shard $(basename "$REMOTE_SHARD") failed with exit=$SHARD_EXIT; preserving residual queue."
