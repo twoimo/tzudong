@@ -13,12 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/lib/no-toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { HOME_AUTH_SESSION_UPDATED_EVENT } from "@/lib/home-auth-events";
 
 // 쯔양 테마 랜덤 닉네임 생성
 const generateRandomNickname = (): string => {
@@ -255,7 +255,6 @@ PrivacyPolicyContent.displayName = "PrivacyPolicyContent";
 
 const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
   const { isMobileOrTablet } = useDeviceType();
-  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -296,14 +295,18 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
   const handleGoogleLogin = useCallback(async () => {
     setIsGoogleLoading(true);
     try {
-      await signInWithGoogle();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
     } catch (error) {
       console.error("Google login error:", error);
       const errorMessage = error instanceof Error ? error.message : "Google 로그인에 실패했습니다";
       toast.error(errorMessage);
       setIsGoogleLoading(false);
     }
-  }, [signInWithGoogle]);
+  }, []);
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,8 +317,10 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
     setIsLoading(true);
     try {
-      await signIn(email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       toast.success("로그인 성공!");
+      window.dispatchEvent(new Event(HOME_AUTH_SESSION_UPDATED_EVENT));
       resetForm();
       onClose();
     } catch (error) {
@@ -325,7 +330,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, signIn, resetForm, onClose]);
+  }, [email, password, resetForm, onClose]);
 
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,9 +370,16 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
         return;
       }
 
-      const { session } = await signUp(email, password, username);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { nickname: username } },
+      });
+      if (error) throw error;
+      const session = data.session;
       if (session) {
         toast.success("회원가입 완료! 환영합니다.");
+        window.dispatchEvent(new Event(HOME_AUTH_SESSION_UPDATED_EVENT));
       } else {
         toast.success("회원가입 완료! 이메일을 확인해주세요.");
       }
@@ -380,7 +392,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, username, confirmPassword, privacyAgreed, signUp, resetForm, onClose]);
+  }, [email, password, username, confirmPassword, privacyAgreed, resetForm, onClose]);
 
   const handleForgotPassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -390,7 +402,10 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
     }
     setIsSendingReset(true);
     try {
-      await resetPassword(forgotPasswordEmail);
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      if (error) throw error;
       toast.success("비밀번호 재설정 링크를 이메일로 발송했습니다");
       setShowForgotPassword(false);
       setForgotPasswordEmail("");
@@ -401,7 +416,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
     } finally {
       setIsSendingReset(false);
     }
-  }, [forgotPasswordEmail, resetPassword]);
+  }, [forgotPasswordEmail]);
 
   const handlePrivacyAgree = useCallback(() => {
     setPrivacyAgreed(true);

@@ -8,7 +8,7 @@ const syncScript = readFileSync(join(import.meta.dir, '..', 'scripts', 'sync-sta
 describe('standalone static sync source contract', () => {
     test('start scripts copy static and public assets before launching standalone server', () => {
         expect(packageJson).toContain('"start": "node scripts/sync-standalone-static.mjs &&');
-        expect(packageJson).toContain('"start:playwright": "node scripts/sync-standalone-static.mjs && PORT=8080 HOSTNAME=127.0.0.1');
+        expect(packageJson).toContain('"start:playwright": "node scripts/sync-standalone-static.mjs && PORT=8080 HOSTNAME=localhost');
     });
 
     test('sync script copies .next/static and public into the standalone app tree', () => {

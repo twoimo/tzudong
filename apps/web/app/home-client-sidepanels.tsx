@@ -1,13 +1,9 @@
 'use client';
 
+import './home-deferred-globals.css';
 import dynamic from 'next/dynamic';
 import type { Announcement } from '@/types/announcement';
 import type { useHomeState } from './hooks/useHomeState';
-
-const SubmissionFloatingButton = dynamic(
-    () => import('../components/home/SubmissionFloatingButton'),
-    { ssr: false }
-);
 
 const BottomSheet = dynamic(
     () => import('@/components/ui/bottom-sheet').then((mod) => ({ default: mod.BottomSheet })),
@@ -57,12 +53,9 @@ type HomeClientSidePanelsProps = {
     closeAllPanels: () => void;
     isAdmin: boolean;
     isAnnouncementSheetOpen: boolean;
-    isDesktop: boolean;
     isMobileOrTablet: boolean;
     isPanelCollapsed: boolean;
-    isSidebarOpen: boolean;
     isSubmissionModalOpen: boolean;
-    onSubmissionButtonClick: () => void;
     selectedAnnouncement: Announcement | null;
     setIsAnnouncementSheetOpen: (isOpen: boolean) => void;
     setIsSubmissionModalOpen: (isOpen: boolean) => void;
@@ -78,12 +71,9 @@ export default function HomeClientSidePanels({
     closeAllPanels,
     isAdmin,
     isAnnouncementSheetOpen,
-    isDesktop,
     isMobileOrTablet,
     isPanelCollapsed,
-    isSidebarOpen,
     isSubmissionModalOpen,
-    onSubmissionButtonClick,
     selectedAnnouncement,
     setIsAnnouncementSheetOpen,
     setIsSubmissionModalOpen,
@@ -93,13 +83,6 @@ export default function HomeClientSidePanels({
 }: HomeClientSidePanelsProps) {
     return (
         <>
-            {isDesktop && (
-                <SubmissionFloatingButton
-                    onClick={onSubmissionButtonClick}
-                    isSidebarOpen={isSidebarOpen}
-                />
-            )}
-
             {state.isEditModalOpen && (
                 <EditRestaurantModal
                     isOpen={state.isEditModalOpen}
