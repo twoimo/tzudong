@@ -577,6 +577,7 @@ jobs:
         with:
           name: gdrive-upload-status-${{ github.run_id }}
           if-no-files-found: ignore
+          retention-days: 7
           path: |
             backend/log/cron/current-upload-expected.json
             backend/log/cron/current-upload-status.json
