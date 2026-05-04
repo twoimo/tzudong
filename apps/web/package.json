@@ -2,6 +2,9 @@
   "name": "web",
   "version": "1.1.1",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "node scripts/dev-prewarm.mjs --port 8080",
     "dev:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --port 8080",
