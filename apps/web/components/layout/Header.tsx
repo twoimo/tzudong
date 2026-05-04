@@ -1,9 +1,10 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback, memo, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, memo, useMemo, useRef, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import {
   DropdownMenu,
@@ -18,7 +19,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useNotifications } from "@/contexts/NotificationContext";
+import { useNotifications } from "@/contexts/NotificationContextBase";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -26,17 +27,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { Announcement } from "@/types/announcement";
 import type { Notification } from "@/types/notification";
 import { useHydration } from "@/hooks/useHydration";
-import { supabase } from "@/integrations/supabase/client";
-import { useBookmarks } from "@/hooks/use-bookmarks";
 import { useDeviceType } from "@/hooks/useDeviceType";
-import {
-  useActiveAnnouncements,
-  useBannerAnnouncements,
-  useDeleteAnnouncement,
-  useToggleAnnouncementActive,
-  useToggleAnnouncementBanner,
-} from "@/hooks/use-announcements";
+import { useActiveAnnouncements, useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
+import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
+import { toast } from "@/lib/no-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -53,6 +49,8 @@ interface HeaderProps {
   hideToggleSidebar?: boolean;
 }
 
+const HeaderBookmarkMenuButton = dynamic(() => import("@/components/layout/HeaderBookmarkMenuButton"), { ssr: false });
+
 const BANNER_ROTATION_INTERVAL = 5000;
 
 const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
@@ -61,24 +59,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const headerRef = useRef<HTMLElement>(null);
 
   const { data: bannerAnnouncements = [], isLoading: isBannerAnnouncementsLoading } = useBannerAnnouncements();
   const { data: activeAnnouncements = [] } = useActiveAnnouncements();
-  const deleteAnnouncement = useDeleteAnnouncement();
-  const toggleAnnouncementActive = useToggleAnnouncementActive();
-  const toggleAnnouncementBanner = useToggleAnnouncementBanner();
-  const isAnnouncementMutationPending =
-    deleteAnnouncement.isPending ||
-    toggleAnnouncementActive.isPending ||
-    toggleAnnouncementBanner.isPending;
+  const [isAnnouncementMutationPending, setIsAnnouncementMutationPending] = useState(false);
 
   // 공지 배너 상태
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
-  const [visibleBookmarkCount, setVisibleBookmarkCount] = useState(20); // [New] 북마크 무한 스크롤 상태
-
   // 공지사항 바텀시트 상태
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
@@ -92,9 +83,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
   // 사업자 정보 펼치기 상태
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
-
-  // 북마크 데이터
-  const { data: bookmarksData = [] } = useBookmarks();
 
   // 성능 최적화: 조건부 렌더링 로직 메모이제이션
   const shouldShowAuthUI = useMemo(() => isHydrated && !isAuthLoading, [isHydrated, isAuthLoading]);
@@ -151,14 +139,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
     const fetchPendingCount = async () => {
       try {
-        const { count, error } = await supabase
-          .from('restaurant_submissions')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending');
-
-        if (!error && count !== null) {
-          setPendingSubmissionCount(count);
-        }
+        const count = await fetchSupabaseExactCount('restaurant_submissions', [
+          ['select', 'id'],
+          ['status', 'eq.pending'],
+        ]);
+        setPendingSubmissionCount(count);
       } catch (err) {
         console.error('Failed to fetch pending submission count:', err);
       }
@@ -176,14 +161,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
     const fetchPendingReviewCount = async () => {
       try {
-        const { count, error } = await supabase
-          .from('reviews')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_verified', false);
-
-        if (!error && count !== null) {
-          setPendingReviewCount(count);
-        }
+        const count = await fetchSupabaseExactCount('reviews', [
+          ['select', 'id'],
+          ['is_verified', 'eq.false'],
+        ]);
+        setPendingReviewCount(count);
       } catch (err) {
         console.error('Failed to fetch pending review count:', err);
       }
@@ -243,21 +225,45 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     }
   }, [isMobileOrTablet, pathname, router]);
 
+  const invalidateAnnouncementQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['announcements'] });
+  }, [queryClient]);
+
+  const withAnnouncementMutation = useCallback(async (operation: () => Promise<void>, successMessage: string) => {
+    setIsAnnouncementMutationPending(true);
+    try {
+      await operation();
+      invalidateAnnouncementQueries();
+      toast.success(successMessage);
+    } catch (error) {
+      console.error('공지사항 변경 실패:', error);
+      toast.error(error instanceof Error ? error.message : '공지사항 변경에 실패했습니다');
+      throw error;
+    } finally {
+      setIsAnnouncementMutationPending(false);
+    }
+  }, [invalidateAnnouncementQueries]);
+
   const handleDeleteAnnouncement = useCallback(async (id: string) => {
     if (!confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
       return;
     }
 
     try {
-      await deleteAnnouncement.mutateAsync(id);
+      await withAnnouncementMutation(async () => {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase.from('announcements').delete().eq('id', id);
+        if (error) throw error;
+      }, '공지사항이 삭제되었습니다');
+
       if (selectedAnnouncement?.id === id) {
         setSelectedAnnouncement(null);
       }
       setAnnouncementViewMode('list');
     } catch {
-      // mutation 훅에서 에러 토스트 처리
+      // 토스트는 공통 mutation 래퍼에서 처리
     }
-  }, [deleteAnnouncement, selectedAnnouncement?.id]);
+  }, [selectedAnnouncement?.id, withAnnouncementMutation]);
 
   const handleToggleAnnouncementActive = useCallback(async (id: string) => {
     const target =
@@ -266,19 +272,24 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     if (!target) return;
 
     try {
-      await toggleAnnouncementActive.mutateAsync({
-        id,
-        isActive: !target.isActive,
-      });
+      await withAnnouncementMutation(async () => {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase
+          .from('announcements')
+          .update({ is_active: !target.isActive } as never)
+          .eq('id', id);
+        if (error) throw error;
+      }, target.isActive ? '공지사항이 비활성화되었습니다' : '공지사항이 활성화되었습니다');
+
       if (selectedAnnouncement?.id === id) {
         setSelectedAnnouncement((prev) =>
           prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : prev
         );
       }
     } catch {
-      // mutation 훅에서 에러 토스트 처리
+      // 토스트는 공통 mutation 래퍼에서 처리
     }
-  }, [activeAnnouncements, selectedAnnouncement, toggleAnnouncementActive]);
+  }, [activeAnnouncements, selectedAnnouncement, withAnnouncementMutation]);
 
   const handleToggleAnnouncementBanner = useCallback(async (id: string) => {
     const target =
@@ -287,19 +298,24 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     if (!target) return;
 
     try {
-      await toggleAnnouncementBanner.mutateAsync({
-        id,
-        showOnBanner: !target.showOnBanner,
-      });
+      await withAnnouncementMutation(async () => {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase
+          .from('announcements')
+          .update({ show_on_banner: !target.showOnBanner } as never)
+          .eq('id', id);
+        if (error) throw error;
+      }, target.showOnBanner ? '배너 노출이 해제되었습니다' : '배너 노출이 설정되었습니다');
+
       if (selectedAnnouncement?.id === id) {
         setSelectedAnnouncement((prev) =>
           prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : prev
         );
       }
     } catch {
-      // mutation 훅에서 에러 토스트 처리
+      // 토스트는 공통 mutation 래퍼에서 처리
     }
-  }, [activeAnnouncements, selectedAnnouncement, toggleAnnouncementBanner]);
+  }, [activeAnnouncements, selectedAnnouncement, withAnnouncementMutation]);
 
   const handleMyPageClick = useCallback(() => {
     // 마이페이지 프로필 페이지로 이동
@@ -613,114 +629,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 북마크 - 드롭다운 */}
         {shouldShowHeaderIcons && (
-            <DropdownMenu onOpenChange={(open) => {
-              if (!open) {
-              // 닫힐 때 초기화 (300ms 지연) - 다시 열 때 스크롤 상단 등 UX 고려
-              setTimeout(() => setVisibleBookmarkCount(20), 300);
-            }
-          }}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                aria-label="북마크"
-                className="h-9 w-9 hover:bg-accent text-foreground relative transition-colors"
-              >
-                <Bookmark className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-72 bg-card border-border font-serif z-[100]"
-            >
-              <DropdownMenuLabel className="flex items-center justify-between text-foreground">
-                <span>북마크</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  aria-label="북마크 관리 페이지로 이동"
-                  onClick={() => router.push('/mypage/bookmarks')}
-                  className="h-6 w-6 hover:bg-accent text-foreground"
-                >
-                  <Settings className="h-3 w-3" />
-                </Button>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border" />
-              <ScrollArea className="h-64">
-                {bookmarksData.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    북마크한 맛집이 없습니다
-                  </div>
-                ) : (
-                  <DropdownMenuGroup>
-                    {bookmarksData.slice(0, visibleBookmarkCount).map((bookmark) => (
-                      <DropdownMenuItem
-                        key={bookmark.id}
-                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full"
-                        onClick={() => {
-                          const restaurant = bookmark.restaurant;
-                          const isOverseas = restaurant.lat && restaurant.lng && (
-                            restaurant.lat < 33 || restaurant.lat > 39 ||
-                            restaurant.lng < 124 || restaurant.lng > 132
-                          );
-
-                          if (pathname === '/') {
-                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', {
-                              detail: {
-                                id: bookmark.restaurant.id,
-                                mode: isOverseas ? 'overseas' : 'domestic'
-                              }
-                            }));
-                          } else {
-                            const modeParam = isOverseas ? '&mode=overseas' : '';
-                            router.push(`/?r=${bookmark.restaurant.id}${modeParam}&z=13`);
-                          }
-                        }}
-                      >
-                        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                          <div className="flex items-center justify-between gap-2 w-full">
-                            <span className="text-sm font-medium text-foreground truncate block">
-                              {bookmark.restaurant.name}
-                            </span>
-                            {bookmark.restaurant.category?.[0] && (
-                              <Badge variant="secondary" className="text-[10px] shrink-0 h-5 px-1.5 font-normal">
-                                {bookmark.restaurant.category[0]}
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground truncate block">
-                            {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
-                          </span>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                    {/* Infinite Scroll Sentinel */}
-                    {visibleBookmarkCount < bookmarksData.length && (
-                      <div
-                        className="h-4 w-full"
-                        ref={(el) => {
-                          if (el) {
-                            const observer = new IntersectionObserver(
-                              (entries) => {
-                                if (entries[0].isIntersecting) {
-                                  setVisibleBookmarkCount((prev) => Math.min(prev + 20, bookmarksData.length));
-                                }
-                              },
-                              { threshold: 0.5 }
-                            );
-                            observer.observe(el);
-                            return () => observer.disconnect();
-                          }
-                        }}
-                      />
-                    )}
-                  </DropdownMenuGroup>
-                )}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Suspense fallback={null}>
+            <HeaderBookmarkMenuButton />
+          </Suspense>
         )}
 
         {/* 전체화면 - 데스크탑에서만 표시 */}
