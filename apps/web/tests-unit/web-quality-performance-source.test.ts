@@ -52,9 +52,12 @@ describe('web quality performance source contracts', () => {
         expect(hookSource).toContain('enabled: options.enabled ?? true');
     });
 
-    test('home map loads immediately while heavy supporting queries stay intent-gated', () => {
+    test('home map runtime is activated after the fast shell while supporting queries stay intent-gated', () => {
+        const pageSource = source('app/page.tsx');
         const homeClientSource = source('app/home-client.tsx');
-        const homeClientLoaderSource = source('app/home-client-loader.tsx');
+        const homeMapIslandSource = source('app/home-map-island.tsx');
+        const homeLandingShellSource = source('app/home-landing-shell.tsx');
+        const activationSource = source('app/home-map-runtime-activation.ts');
         const restaurantSearchSource = source('components/search/RestaurantSearch.tsx');
         const mobileControlSource = source('components/home/MobileControlOverlay.tsx');
         const regionSelectorSource = source('components/region/RegionSelector.tsx');
@@ -62,38 +65,50 @@ describe('web quality performance source contracts', () => {
         const mapQuerySource = source('lib/map-query-helpers.ts');
         const naverMapSource = source('components/map/NaverMapView.tsx');
 
+        expect(pageSource).toContain('<HomeMapIsland>');
+        expect(pageSource).toContain('<HomeLandingShell />');
         expect(homeClientSource).toContain('<HomeMapContainer');
-        expect(homeClientLoaderSource).toContain('return <HomeClient />');
-        expect(homeClientSource).not.toContain('DeferredHomeMapPlaceholder');
-        expect(homeClientSource).not.toContain('isMapActivated ? (');
-        expect(homeClientLoaderSource).not.toContain('HomeMapIntentPlaceholder');
+        expect(homeMapIslandSource).toContain("import('./home-client')");
+        expect(homeMapIslandSource).toContain('if (!activatedRuntime)');
+        expect(homeMapIslandSource).toContain("import('./app-runtime-shell')");
+        expect(homeMapIslandSource).toContain('window.addEventListener(eventName, activateHomeRuntime');
+        expect(homeLandingShellSource).toContain('data-testid="home-landing-shell"');
+        expect(activationSource).toContain('HOME_MAP_AUTO_ACTIVATION_DELAY_MS');
+        expect(activationSource).toContain('HOME_MAP_ACTIVATION_EVENTS');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(restaurantSearchSource).toContain('enabled: isFocused || isInlineView');
         expect(mobileControlSource).toContain("enabled: activeSheet === 'region' || activeSheet === 'category'");
         expect(regionSelectorSource).toContain('enabled: isOpen');
         expect(categoryFilterSource).toContain('enabled: isOpen');
         expect(mapQuerySource).toContain('includeVerifiedReviewCounts: false');
-        expect(naverMapSource).toContain('window.requestIdleCallback');
+        expect(naverMapSource).toContain('autoLoad: false');
     });
 
     test('/mypage avoids client-side redirect work and defers desktop-only sidebar cost', () => {
         const myPageSource = source('app/mypage/page.tsx');
         const myPageLayoutSource = source('app/mypage/layout.tsx');
+        const myPageLayoutContentSource = source('app/mypage/mypage-layout-content.tsx');
         const myPageSidebarSource = source('components/mypage/MyPageSidebar.tsx');
 
         expect(myPageSource).toContain('redirect("/mypage/submissions/new")');
         expect(myPageSource).not.toContain('"use client"');
         expect(myPageSource).not.toContain('useEffect');
         expect(myPageSource).not.toContain('useRouter');
-        expect(myPageLayoutSource).toContain('dynamic(');
-        expect(myPageLayoutSource).toContain('shouldRenderSidebar');
-        expect(myPageLayoutSource).toContain('window.matchMedia("(min-width: 768px)")');
+        expect(myPageLayoutSource).toContain('<AppRuntimeLayout>');
+        expect(myPageLayoutContentSource).toContain('dynamic(');
+        expect(myPageLayoutContentSource).toContain('shouldRenderSidebar');
+        expect(myPageLayoutContentSource).toContain('window.matchMedia("(min-width: 768px)")');
         expect(myPageSidebarSource).toContain("await import('@/lib/image-utils')");
         expect(myPageSidebarSource).not.toContain("import { compressImage } from '@/lib/image-utils'");
     });
 
     test('global chrome assets stay small and cacheable without changing page UI', () => {
         const layoutSource = source('app/layout.tsx');
+        const appRuntimeShellSource = source('app/app-runtime-shell.tsx');
+        const homeMapIslandSource = source('app/home-map-island.tsx');
+        const mainLayoutSource = source('components/layout/MainLayout.tsx');
+        const navigationPrefetcherSource = source('components/layout/NavigationPrefetcher.tsx');
+        const mobileBottomNavSource = source('components/layout/MobileBottomNav.tsx');
         const nextConfigSource = source('next.config.mjs');
         const viewportFixSource = source('public/scripts/viewport-height-fix.js');
         const faviconPath = join(import.meta.dir, '..', 'public/favicon.ico');
@@ -111,11 +126,39 @@ describe('web quality performance source contracts', () => {
         expect(layoutSource).toContain('href="https://img.youtube.com"');
         expect(layoutSource).toContain('href="//nrbe.map.naver.net"');
         expect(layoutSource).toContain('href="//static.naver.net"');
+        expect(layoutSource).toContain('<script src="/scripts/viewport-height-fix.js" defer />');
+        expect(layoutSource).not.toContain('next/script');
+        expect(layoutSource).not.toContain('strategy="beforeInteractive"');
+        expect(layoutSource).not.toContain('next/font/google');
+        expect(layoutSource).not.toContain('Noto_Serif_KR');
+        expect(layoutSource).not.toContain('QueryProvider');
+        expect(layoutSource).not.toContain('AppProviders');
+        expect(layoutSource).not.toContain('MainLayout');
+        expect(appRuntimeShellSource).toContain('<QueryProvider>');
+        expect(appRuntimeShellSource).toContain('<AppProviders>');
+        expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
+        expect(homeMapIslandSource).toContain("import('./app-runtime-shell')");
+        expect(source('contexts/AuthContext.tsx')).toContain('HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000');
+        expect(source('contexts/AuthContext.tsx')).toContain('shouldDelayAuthBootstrap');
+        expect(source('contexts/AuthContext.tsx')).toContain('import("@/integrations/supabase/client")');
+        expect(source('contexts/AuthContext.tsx')).not.toContain('import { supabase }');
+        expect(source('contexts/NotificationContext.tsx')).toContain("import('@/integrations/supabase/client')");
+        expect(source('contexts/NotificationContext.tsx')).not.toContain('import { supabase }');
+        expect(mainLayoutSource).toContain('if (!hasMounted)');
+        expect(mainLayoutSource).toContain('{children}');
+        expect(mainLayoutSource).not.toContain('min-h-screen bg-background" aria-hidden="true"');
+        expect(mainLayoutSource).toContain('NONCRITICAL_CHROME_DELAY_MS = 30000');
+        expect(mainLayoutSource).toContain('canMountNoncriticalChrome && <CombinedPopup />');
+        expect(navigationPrefetcherSource).toContain('HOME_ROUTE_PREFETCH_DELAY_MS = 8000');
+        expect(mobileBottomNavSource).toContain('HOME_NAV_PREFETCH_DELAY_MS = 8000');
         expect(viewportFixSource).toContain("if (window.CSS?.supports?.('height', '100dvh'))");
         expect(viewportFixSource).toContain('window.requestAnimationFrame(updateViewportHeight)');
         expect(nextConfigSource).toContain("source: '/favicon.ico'");
         expect(nextConfigSource).toContain("source: '/:icon(favicon-32x32|apple-touch-icon).png'");
         expect(nextConfigSource).toContain("source: '/scripts/:path*'");
+        expect(source('tailwind.config.ts')).not.toContain('tailwindcss-animate');
+        expect(source('app/globals.css')).toContain('@keyframes tz-enter');
+        expect(source('app/globals.css')).toContain('.slide-in-from-top-\\[48\\%\\]');
     });
 
 });

@@ -1,8 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
     user: User | null;
@@ -20,6 +19,27 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+type SupabaseClient = typeof import("@/integrations/supabase/client").supabase;
+
+let supabaseClientPromise: Promise<SupabaseClient> | null = null;
+
+function getSupabaseClient(): Promise<SupabaseClient> {
+    supabaseClientPromise ??= import("@/integrations/supabase/client").then((mod) => mod.supabase);
+    return supabaseClientPromise;
+}
+
+const HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000;
+const HOME_AUTH_BOOTSTRAP_EVENTS = ['pointerdown', 'keydown'] as const;
+
+function shouldDelayAuthBootstrap() {
+    return (
+        typeof window !== 'undefined'
+        && window.location.pathname === '/'
+        && !window.location.search
+        && !window.location.hash
+    );
+}
 
 const isRefreshTokenNotFoundError = (error: unknown) => {
     if (!error || typeof error !== 'object') return false;
@@ -59,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const clearStaleSession = useCallback(async () => {
         try {
+            const supabase = await getSupabaseClient();
             await supabase.auth.signOut({ scope: 'local' });
         } catch {
             // no-op
@@ -72,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const checkAdminRole = useCallback(async (userId: string) => {
         try {
+            const supabase = await getSupabaseClient();
             const { data, error } = await supabase
                 .from("user_roles")
                 .select("role")
@@ -101,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const checkProfileStatus = useCallback(async (userId: string) => {
         try {
+            const supabase = await getSupabaseClient();
             const { data, error } = await supabase
                 .from("profiles")
                 .select("nickname")
@@ -136,68 +159,114 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [clearStaleSession]);
 
     useEffect(() => {
-        // 초기 세션 가져오기
-        // 초기 세션 가져오기
-        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-            if (error && isAuthSessionInvalidError(error)) {
-                await clearStaleSession();
-                setIsLoading(false);
-                return;
-            }
+        let subscription: { unsubscribe: () => void } | undefined;
+        let isCancelled = false;
 
-            let nextSession = session;
+        const startAuthBootstrap = () => {
+            void getSupabaseClient()
+                .then((supabase) => {
+                if (isCancelled) return;
 
-            if (isSessionExpired(nextSession)) {
-                const { data, error: refreshError } = await supabase.auth.refreshSession();
-                if (refreshError || !data.session) {
-                    if (refreshError && !isAuthSessionInvalidError(refreshError)) {
-                        console.error('Error refreshing session:', refreshError);
+                // 초기 세션 가져오기
+                supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+                    if (error && isAuthSessionInvalidError(error)) {
+                        await clearStaleSession();
+                        setIsLoading(false);
+                        return;
                     }
-                    await clearStaleSession();
+
+                    let nextSession = session;
+
+                    if (isSessionExpired(nextSession)) {
+                        const { data, error: refreshError } = await supabase.auth.refreshSession();
+                        if (refreshError || !data.session) {
+                            if (refreshError && !isAuthSessionInvalidError(refreshError)) {
+                                console.error('Error refreshing session:', refreshError);
+                            }
+                            await clearStaleSession();
+                            setIsLoading(false);
+                            return;
+                        }
+                        nextSession = data.session;
+                    }
+
+                    setSession(nextSession);
+                    setUser(nextSession?.user ?? null);
+                    if (nextSession?.user) {
+                        await Promise.all([
+                            checkAdminRole(nextSession.user.id),
+                            checkProfileStatus(nextSession.user.id)
+                        ]);
+                    }
                     setIsLoading(false);
-                    return;
-                }
-                nextSession = data.session;
-            }
+                }).catch(async (error) => {
+                    if (isAuthSessionInvalidError(error)) {
+                        await clearStaleSession();
+                    } else {
+                        console.error('Error loading session:', error);
+                    }
+                    setIsLoading(false);
+                });
 
-            setSession(nextSession);
-            setUser(nextSession?.user ?? null);
-            if (nextSession?.user) {
-                await Promise.all([
-                    checkAdminRole(nextSession.user.id),
-                    checkProfileStatus(nextSession.user.id)
-                ]);
-            }
-            setIsLoading(false);
-        }).catch(async (error) => {
-            if (isAuthSessionInvalidError(error)) {
-                await clearStaleSession();
-            } else {
-                console.error('Error loading session:', error);
-            }
-            setIsLoading(false);
-        });
+                // 인증 상태 변경 감지
+                const authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
+                    if (isSessionExpired(session)) {
+                        clearStaleSession();
+                        return;
+                    }
+                    setSession(session);
+                    setUser(session?.user ?? null);
+                    if (session?.user) {
+                        checkAdminRole(session.user.id);
+                        checkProfileStatus(session.user.id);
+                    } else {
+                        setIsAdmin(false);
+                        setNeedsNicknameSetup(false);
+                    }
+                });
+                subscription = authSubscription.data.subscription;
+            })
+                .catch((error) => {
+                    if (!isCancelled) {
+                        console.error('Error loading auth client:', error);
+                        setIsLoading(false);
+                    }
+                });
+        };
 
-        // 인증 상태 변경 감지
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (isSessionExpired(session)) {
-                clearStaleSession();
-                return;
+        let bootstrapTimer: number | undefined;
+        const removeBootstrapListeners = () => {
+            for (const eventName of HOME_AUTH_BOOTSTRAP_EVENTS) {
+                window.removeEventListener(eventName, startOnce);
             }
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                checkAdminRole(session.user.id);
-                checkProfileStatus(session.user.id);
-            } else {
-                setIsAdmin(false);
-                setNeedsNicknameSetup(false);
+        };
+        const startOnce = () => {
+            if (isCancelled) return;
+            if (bootstrapTimer) {
+                window.clearTimeout(bootstrapTimer);
+                bootstrapTimer = undefined;
             }
-        });
+            removeBootstrapListeners();
+            startAuthBootstrap();
+        };
 
-        return () => subscription.unsubscribe();
+        if (shouldDelayAuthBootstrap()) {
+            for (const eventName of HOME_AUTH_BOOTSTRAP_EVENTS) {
+                window.addEventListener(eventName, startOnce, { once: true, passive: true });
+            }
+            bootstrapTimer = window.setTimeout(startOnce, HOME_AUTH_BOOTSTRAP_DELAY_MS);
+        } else {
+            startAuthBootstrap();
+        }
+
+        return () => {
+            isCancelled = true;
+            if (bootstrapTimer) {
+                window.clearTimeout(bootstrapTimer);
+            }
+            removeBootstrapListeners();
+            subscription?.unsubscribe();
+        };
     }, [checkAdminRole, checkProfileStatus, clearStaleSession]);
 
     const completeNicknameSetup = useCallback(() => {
@@ -208,6 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [user, checkProfileStatus]);
 
     const signIn = useCallback(async (email: string, password: string) => {
+        const supabase = await getSupabaseClient();
         const { error } = await supabase.auth.signInWithPassword({
             email,
             password,
@@ -217,6 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signInWithGoogle = useCallback(async () => {
         const redirectUrl = `${window.location.origin}/auth/callback`;
+        const supabase = await getSupabaseClient();
 
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -229,6 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signUp = useCallback(async (email: string, password: string, username: string) => {
+        const supabase = await getSupabaseClient();
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -243,6 +315,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signOut = useCallback(async () => {
+        const supabase = await getSupabaseClient();
         const { error } = await supabase.auth.signOut();
         if (!error) return;
 
@@ -256,6 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const resetPassword = useCallback(async (email: string) => {
         const redirectUrl = `${window.location.origin}/auth/reset-password`;
+        const supabase = await getSupabaseClient();
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: redirectUrl,
         });
@@ -263,6 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const updatePassword = useCallback(async (newPassword: string) => {
+        const supabase = await getSupabaseClient();
         const { error } = await supabase.auth.updateUser({
             password: newPassword,
         });
