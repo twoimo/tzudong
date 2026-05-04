@@ -42,7 +42,9 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    # Public standard runners do not consume the Pro 3000-minute quota, and
+    # catch-up backfills can legitimately exceed the former budget guard.
+    timeout-minutes: 360
     if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'schedule') }}
     env:
       GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
