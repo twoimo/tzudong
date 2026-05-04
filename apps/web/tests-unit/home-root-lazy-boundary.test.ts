@@ -9,6 +9,7 @@ describe('home root lazy boundary', () => {
         const pageSource = source('app/page.tsx');
         const islandSource = source('app/home-map-island.tsx');
         const shellSource = source('app/home-landing-shell.tsx');
+        const shellCssSource = source('app/home-landing-shell.module.css');
 
         expect(pageSource).toContain("import { HomeLandingShell } from './home-landing-shell'");
         expect(pageSource).toContain("import HomeMapIsland from './home-map-island'");
@@ -28,6 +29,9 @@ describe('home root lazy boundary', () => {
         expect(shellSource).not.toContain("'use client'");
         expect(shellSource).toContain('data-testid="home-landing-shell"');
         expect(shellSource).toContain('쯔동여지도');
+        expect(shellSource).toContain("import styles from './home-landing-shell.module.css'");
+        expect(shellCssSource).toContain('.preview');
+        expect(shellCssSource).toContain('.launchButton');
     });
 
     test('does not statically pull Vercel SpeedInsights into dev root layout', () => {
@@ -55,6 +59,7 @@ describe('home root lazy boundary', () => {
         expect(appProvidersSource).not.toContain('TooltipProvider');
         expect(appProvidersSource).toContain('AuthProvider');
         expect(appProvidersSource).toContain('NotificationProvider');
+        expect(source('app/app-runtime-shell.tsx')).toContain("import './app-globals.css'");
         expect(source('app/app-runtime-shell.tsx')).toContain('MainLayout');
     });
 });

@@ -57,6 +57,7 @@ describe('web quality performance source contracts', () => {
         const homeClientSource = source('app/home-client.tsx');
         const homeMapIslandSource = source('app/home-map-island.tsx');
         const homeLandingShellSource = source('app/home-landing-shell.tsx');
+        const homeLandingShellCssSource = source('app/home-landing-shell.module.css');
         const activationSource = source('app/home-map-runtime-activation.ts');
         const restaurantSearchSource = source('components/search/RestaurantSearch.tsx');
         const mobileControlSource = source('components/home/MobileControlOverlay.tsx');
@@ -73,6 +74,9 @@ describe('web quality performance source contracts', () => {
         expect(homeMapIslandSource).toContain("import('./app-runtime-shell')");
         expect(homeMapIslandSource).toContain('window.addEventListener(eventName, activateHomeRuntime');
         expect(homeLandingShellSource).toContain('data-testid="home-landing-shell"');
+        expect(homeLandingShellSource).toContain("import styles from './home-landing-shell.module.css'");
+        expect(homeLandingShellCssSource).toContain('.shell');
+        expect(homeLandingShellCssSource).toContain('min-height: calc(var(--full-height, 100vh) - 56px)');
         expect(activationSource).toContain('HOME_MAP_AUTO_ACTIVATION_DELAY_MS');
         expect(activationSource).toContain('HOME_MAP_ACTIVATION_EVENTS');
         expect(homeClientSource).not.toContain('home-map-activate-button');
@@ -134,6 +138,7 @@ describe('web quality performance source contracts', () => {
         expect(layoutSource).not.toContain('QueryProvider');
         expect(layoutSource).not.toContain('AppProviders');
         expect(layoutSource).not.toContain('MainLayout');
+        expect(appRuntimeShellSource).toContain("import './app-globals.css'");
         expect(appRuntimeShellSource).toContain('<QueryProvider>');
         expect(appRuntimeShellSource).toContain('<AppProviders>');
         expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
@@ -157,8 +162,11 @@ describe('web quality performance source contracts', () => {
         expect(nextConfigSource).toContain("source: '/:icon(favicon-32x32|apple-touch-icon).png'");
         expect(nextConfigSource).toContain("source: '/scripts/:path*'");
         expect(source('tailwind.config.ts')).not.toContain('tailwindcss-animate');
-        expect(source('app/globals.css')).toContain('@keyframes tz-enter');
-        expect(source('app/globals.css')).toContain('.slide-in-from-top-\\[48\\%\\]');
+        expect(source('app/globals.css')).not.toContain('@tailwind utilities');
+        expect(source('app/globals.css')).toContain('Minimal home-first root CSS');
+        expect(source('app/app-globals.css')).toContain('@tailwind utilities');
+        expect(source('app/app-globals.css')).toContain('@keyframes tz-enter');
+        expect(source('app/app-globals.css')).toContain('.slide-in-from-top-\\[48\\%\\]');
     });
 
 });
