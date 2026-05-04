@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { User } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_COMPACT_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 
 interface NicknameSetupModalProps {
     isOpen: boolean;
@@ -25,7 +25,7 @@ interface NicknameSetupModalProps {
 
 export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalProps) {
     const { user } = useAuth();
-    const { isMobileOrTablet } = useDeviceType();
+    const isMobileOrTablet = useImmediateMobileOrTablet();
     const queryClient = useQueryClient();
     const [nickname, setNickname] = useState("");
     const [loading, setLoading] = useState(false);
