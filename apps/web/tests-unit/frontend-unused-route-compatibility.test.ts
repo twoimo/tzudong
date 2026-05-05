@@ -1,0 +1,63 @@
+import { describe, expect, test } from 'bun:test';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { getNavigationPrefetchRoutes } from '../components/layout/navigation-routes';
+
+const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
+const exists = (relativePath: string) => existsSync(join(import.meta.dir, '..', relativePath));
+
+describe('frontend unused route compatibility', () => {
+    test('keeps public submissions and costs as compatibility redirects', () => {
+        const nextConfigSource = source('next.config.mjs');
+        const submissionsPageSource = source('app/submissions/page.tsx');
+        const costsPageSource = source('app/costs/page.tsx');
+
+        expect(nextConfigSource).toContain("source: '/submissions'");
+        expect(nextConfigSource).toContain("destination: '/mypage'");
+        expect(nextConfigSource).toContain("source: '/costs'");
+        expect(nextConfigSource).toContain("destination: '/admin/costs'");
+        expect(submissionsPageSource).toContain("redirect('/mypage')");
+        expect(costsPageSource).toContain("redirect('/admin/costs')");
+        expect(costsPageSource).not.toContain('"use client"');
+        expect(costsPageSource).not.toContain('useQuery');
+    });
+
+    test('moves admin submissions to the canonical evaluations view', () => {
+        const adminSubmissionsSource = source('app/admin/submissions/page.tsx');
+        const adminEvaluationsSource = source('app/admin/evaluations/page.tsx');
+        const headerSource = source('components/layout/Header.tsx');
+        const homeEffectsSource = source('app/home-client-effects.tsx');
+
+        expect(adminSubmissionsSource).toContain("redirect('/admin/evaluations?view=submissions')");
+        expect(adminSubmissionsSource).not.toContain('"use client"');
+        expect(adminSubmissionsSource).not.toContain('useInfiniteQuery');
+        expect(adminEvaluationsSource).toContain("searchParams.get('view') === 'submissions'");
+        expect(adminEvaluationsSource).toContain("@/components/admin/EvaluationTableNew");
+        expect(headerSource).toContain("/admin/evaluations?view=submissions");
+        expect(headerSource).toContain("/admin/evaluations?view=submissions&tab=reviews");
+        expect(homeEffectsSource).toContain("/admin/evaluations?view=submissions");
+    });
+
+    test('prefetches canonical admin routes instead of retired submissions route', () => {
+        const adminRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: true });
+        const userRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: false });
+
+        expect(adminRoutes).toContain('/admin/evaluations');
+        expect(adminRoutes).toContain('/admin/costs');
+        expect(adminRoutes).not.toContain('/admin/submissions');
+        expect(userRoutes).not.toContain('/admin/evaluations');
+        expect(userRoutes).not.toContain('/admin/submissions');
+    });
+
+    test('defers insight and global map route retirement until parity is explicit', () => {
+        const insightsClientSource = source('app/insights/insights-client.tsx');
+        const recommendationPopupSource = source('components/recommendation/DailyRecommendationPopup.tsx');
+
+        expect(exists('app/admin/insight/page.tsx')).toBe(true);
+        expect(exists('app/admin/insight/insight-client.tsx')).toBe(true);
+        expect(exists('app/global-map/page.tsx')).toBe(true);
+        expect(insightsClientSource).toContain("@/app/admin/insight/insight-client");
+        expect(recommendationPopupSource).toContain("'/global-map'");
+    });
+});
