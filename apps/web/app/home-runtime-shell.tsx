@@ -10,8 +10,9 @@ import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
-import { HOME_AUTH_SESSION_UPDATED_EVENT } from '@/lib/home-auth-events';
+import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
+import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
 import {
     APP_HEADER_HEIGHT_VAR,
     MOBILE_SHEET_HEADER_OFFSET_VAR,
@@ -36,30 +37,19 @@ const loadNotificationProvider = async () => {
     return mod.NotificationProvider as ComponentType<ProviderProps>;
 };
 
-function hasSupabaseAuthSessionHint() {
-    try {
-        for (let index = 0; index < window.localStorage.length; index += 1) {
-            const key = window.localStorage.key(index);
-            if (!key?.startsWith('sb-') || !key.endsWith('-auth-token')) continue;
-
-            const value = window.localStorage.getItem(key);
-            if (value && /access_token|refresh_token/.test(value)) {
-                return true;
-            }
-        }
-    } catch {
-        return false;
-    }
-
-    return false;
-}
-
-
 function HomeSessionProviders({ children }: ProviderProps) {
     const [hasStoredSession, setHasStoredSession] = useState(false);
 
     useEffect(() => {
-        const updateSessionHint = () => setHasStoredSession(hasSupabaseAuthSessionHint());
+        const updateSessionHint = (event?: Event) => {
+            const detail = (event as CustomEvent<HomeAuthSessionUpdatedDetail> | undefined)?.detail;
+            if (typeof detail?.hasSession === 'boolean') {
+                setHasStoredSession(detail.hasSession);
+                return;
+            }
+
+            setHasStoredSession(hasSupabaseAuthSessionHint());
+        };
 
         updateSessionHint();
         window.addEventListener(HOME_AUTH_SESSION_UPDATED_EVENT, updateSessionHint);
