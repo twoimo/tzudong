@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
+import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
+import { hasSupabaseAuthSessionHint } from "@/lib/supabase-auth-session-hints";
 
 export { AnonymousHomeAuthProvider, useAuth } from "@/contexts/AuthContextBase";
 
@@ -28,23 +30,7 @@ function shouldDelayAuthBootstrap() {
 }
 
 function hasPersistedSupabaseSessionHint() {
-    if (typeof window === 'undefined') return false;
-
-    try {
-        for (let index = 0; index < window.localStorage.length; index += 1) {
-            const key = window.localStorage.key(index) ?? '';
-            if (!/^sb-.+-auth-token$/.test(key)) continue;
-
-            const value = window.localStorage.getItem(key);
-            if (value && value !== 'null' && value !== 'undefined') {
-                return true;
-            }
-        }
-    } catch {
-        // localStorage may be blocked; fall back to timeout-based bootstrap.
-    }
-
-    return false;
+    return hasSupabaseAuthSessionHint();
 }
 
 function shouldBootstrapAuthOnGeneralInteraction() {
@@ -102,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setIsAdmin(false);
         setNeedsNicknameSetup(false);
+        dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-clear-stale-session' });
     }, []);
 
     const checkAdminRole = useCallback(async (userId: string) => {
@@ -227,6 +214,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         clearStaleSession();
                         return;
                     }
+                    dispatchHomeAuthSessionUpdated({
+                        hasSession: Boolean(session),
+                        source: `auth-state:${_event}`,
+                    });
                     setSession(session);
                     setUser(session?.user ?? null);
                     if (session?.user) {
@@ -331,8 +322,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signOut = useCallback(async () => {
         const supabase = await getSupabaseClient();
-        const { error } = await supabase.auth.signOut();
-        if (!error) return;
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (!error) {
+            setSession(null);
+            setUser(null);
+            setIsAdmin(false);
+            setNeedsNicknameSetup(false);
+            dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-signout' });
+            return;
+        }
 
         if (isAuthSessionInvalidError(error)) {
             await clearStaleSession();
