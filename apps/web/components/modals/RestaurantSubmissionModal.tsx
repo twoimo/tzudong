@@ -16,7 +16,7 @@ import { toast } from "@/lib/no-toast";
 import { X, Send, CheckCircle2, ChevronLeft } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/submissionDraftDB";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import {
     RESTAURANT_SUBMISSION_STEPS,
     validateRestaurantSubmission,
@@ -38,7 +38,7 @@ export default function RestaurantSubmissionModal({
     };
 
     const { user } = useAuth();
-    const { isMobileOrTablet } = useDeviceType();
+    const isMobileOrTablet = useImmediateMobileOrTablet();
     const queryClient = useQueryClient();
     const [submissionMode, setSubmissionMode] = useState<'new' | 'request'>('new');
     const [currentStep, setCurrentStep] = useState<RestaurantSubmissionStep>(1);
