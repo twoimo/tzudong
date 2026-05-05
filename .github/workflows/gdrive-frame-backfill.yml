@@ -24,7 +24,7 @@ on:
       max_items:
         description: 'Maximum frame items to process in this run'
         required: false
-        default: '500'
+        default: '1000'
         type: string
       dry_run:
         description: 'Plan only; do not upload or mutate status'
@@ -51,7 +51,7 @@ jobs:
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
       STATUS_SCOPE: ${{ github.event.inputs.status_scope || 'main' }}
       MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}
-      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}
+      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1000' }}
       DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     steps:
       - name: Checkout repository
