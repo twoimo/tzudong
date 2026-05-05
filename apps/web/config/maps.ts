@@ -7,14 +7,6 @@ export const GOOGLE_MAPS_CONFIG = {
 // 홈 지도 Dynamic용 - 다른 사람의 네이버 지도 API 키
 export const NAVER_MAPS_CONFIG = {
     clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || '',
-    clientSecret: process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET || '',
-};
-
-// 관리자 재지오코딩용 - 본인의 NCP Maps API 키
-// MissingRestaurantForm, EditRestaurantModal에서 사용
-export const NCP_GEOCODING_CONFIG = {
-    clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || '',
-    clientSecret: process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET || '',
 };
 
 // 지역별 지도 중심 좌표 및 줌 레벨
