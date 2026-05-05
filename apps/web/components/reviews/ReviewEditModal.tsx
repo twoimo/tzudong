@@ -25,7 +25,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { saveDraft as saveEditDraft, getDraft as getEditDraft, deleteDraft as deleteEditDraft } from "@/lib/reviewDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -103,7 +103,7 @@ type Category = typeof CATEGORIES[number];
 
 export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEditModalProps) {
     const { user } = useAuth();
-    const { isMobileOrTablet } = useDeviceType();
+    const isMobileOrTablet = useImmediateMobileOrTablet();
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [newFoodPhotos, setNewFoodPhotos] = useState<File[]>([]);

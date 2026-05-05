@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
 import { MobileSheetHeader, MobileSheetStepIndicator, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from "@/lib/mobile-sheet-layout";
 import {
     OCR_PROGRESS_STEPS,
@@ -268,7 +268,7 @@ function ObjectUrlPreviewImage({ src, alt, className }: { src: string | null; al
 
 export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false }: ReviewModalProps) {
     const { user } = useAuth();
-    const { isMobileOrTablet } = useDeviceType();
+    const isMobileOrTablet = useImmediateMobileOrTablet();
     const [visitedDate, setVisitedDate] = useState("");
     const [visitedTime, setVisitedTime] = useState("");
     const [categories, setCategories] = useState<Category[]>([]);

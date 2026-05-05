@@ -17,6 +17,14 @@ export interface DeviceType {
     isTouch: boolean;
 }
 
+function isBrowserMobileOrTabletViewport(): boolean {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return window.innerWidth <= BREAKPOINTS.tabletMax;
+}
+
 function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
     let timeoutId: ReturnType<typeof setTimeout>;
     return ((...args: Parameters<T>) => {
@@ -87,7 +95,11 @@ export function useDeviceType(): DeviceType {
 
 export function useIsMobile(): boolean {
     const { isMobileOrTablet } = useDeviceType();
-    return isMobileOrTablet;
+    return isMobileOrTablet || isBrowserMobileOrTabletViewport();
+}
+
+export function useImmediateMobileOrTablet(): boolean {
+    return useIsMobile();
 }
 
 export { BREAKPOINTS };
