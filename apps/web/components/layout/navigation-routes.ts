@@ -19,6 +19,7 @@ export const ADMIN_NAV_ROUTES = [
     '/admin/evaluations',
     '/admin/banners',
     '/admin/costs',
+    '/admin/ai-settings',
 ] as const;
 
 export function getNavigationPrefetchRoutes(params: {

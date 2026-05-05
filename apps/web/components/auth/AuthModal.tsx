@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, type CSSProperties } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import { RefreshCw, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
-import { HOME_AUTH_SESSION_UPDATED_EVENT } from "@/lib/home-auth-events";
+import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
 
 // 쯔양 테마 랜덤 닉네임 생성
 const generateRandomNickname = (): string => {
@@ -38,6 +38,12 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME = "max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]";
+const AUTH_MODAL_DESKTOP_CONTENT_STYLE: CSSProperties = {
+  width: "min(calc(100vw - 2rem), 32rem)",
+  maxWidth: "calc(100vw - 2rem)",
+};
 
 // Google 아이콘을 별도 컴포넌트로 분리하여 재사용
 const GoogleIcon = memo(() => (
@@ -317,10 +323,13 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       toast.success("로그인 성공!");
-      window.dispatchEvent(new Event(HOME_AUTH_SESSION_UPDATED_EVENT));
+      dispatchHomeAuthSessionUpdated({
+        hasSession: Boolean(data.session),
+        source: 'auth-modal-password-login',
+      });
       resetForm();
       onClose();
     } catch (error) {
@@ -379,7 +388,10 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
       const session = data.session;
       if (session) {
         toast.success("회원가입 완료! 환영합니다.");
-        window.dispatchEvent(new Event(HOME_AUTH_SESSION_UPDATED_EVENT));
+        dispatchHomeAuthSessionUpdated({
+          hasSession: true,
+          source: 'auth-modal-signup',
+        });
       } else {
         toast.success("회원가입 완료! 이메일을 확인해주세요.");
       }
@@ -692,7 +704,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
       {!isMobileOrTablet && (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <DialogContent className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME} style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}>
           <DialogHeader className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">

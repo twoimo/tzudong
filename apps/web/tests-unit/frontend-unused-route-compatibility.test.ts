@@ -45,9 +45,11 @@ describe('frontend unused route compatibility', () => {
 
         expect(adminRoutes).toContain('/admin/evaluations');
         expect(adminRoutes).toContain('/admin/costs');
+        expect(adminRoutes).toContain('/admin/ai-settings');
         expect(adminRoutes).not.toContain('/admin/submissions');
         expect(userRoutes).not.toContain('/admin/evaluations');
         expect(userRoutes).not.toContain('/admin/submissions');
+        expect(userRoutes).not.toContain('/admin/ai-settings');
     });
 
     test('defers insight and global map route retirement until parity is explicit', () => {
@@ -59,5 +61,15 @@ describe('frontend unused route compatibility', () => {
         expect(exists('app/global-map/page.tsx')).toBe(true);
         expect(insightsClientSource).toContain("@/app/admin/insight/insight-client");
         expect(recommendationPopupSource).toContain("'/global-map'");
+    });
+
+    test('removes only zero-reference stale primitives and helpers', () => {
+        expect(exists('components/ui/drawer.tsx')).toBe(false);
+        expect(exists('components/ui/breadcrumb.tsx')).toBe(false);
+        expect(exists('components/ui/pagination.tsx')).toBe(false);
+        expect(exists('components/ui/toaster.tsx')).toBe(false);
+        expect(exists('lib/insight/keyword-label.ts')).toBe(false);
+        expect(exists('components/ui/scrollable-tag-container.tsx')).toBe(true);
+        expect(exists('lib/ocr/dataset-allowlist.ts')).toBe(true);
     });
 });
