@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { debugLog } from '@/lib/debug-log';
 
-const NAVER_CLIENT_ID = process.env.NEXT_NAVER_CLIENT_ID_BYEON || process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
-const NAVER_CLIENT_SECRET = process.env.NEXT_NAVER_CLIENT_SECRET_BYEON || process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET;
+const NAVER_CLIENT_ID = process.env.NEXT_NAVER_CLIENT_ID_BYEON || process.env.NEXT_NAVER_CLIENT_ID || process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
+const NAVER_CLIENT_SECRET = process.env.NEXT_NAVER_CLIENT_SECRET_BYEON || process.env.NEXT_NAVER_CLIENT_SECRET;
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);

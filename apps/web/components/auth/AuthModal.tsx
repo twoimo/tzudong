@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { HOME_AUTH_SESSION_UPDATED_EVENT } from "@/lib/home-auth-events";
 
 // 쯔양 테마 랜덤 닉네임 생성
@@ -254,7 +254,7 @@ const PrivacyPolicyContent = memo(() => (
 PrivacyPolicyContent.displayName = "PrivacyPolicyContent";
 
 const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
-  const { isMobileOrTablet } = useDeviceType();
+  const isMobileOrTablet = useImmediateMobileOrTablet();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
