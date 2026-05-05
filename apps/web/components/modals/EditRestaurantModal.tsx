@@ -17,7 +17,7 @@ import { toast } from "@/lib/no-toast";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/editRequestDraftDB";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import {
     EDIT_RESTAURANT_REQUEST_STEPS,
     validateEditRestaurantRequest,
@@ -39,7 +39,7 @@ interface EditRestaurantModalProps {
 }
 
 export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData }: EditRestaurantModalProps) {
-    const { isMobileOrTablet } = useDeviceType();
+    const isMobileOrTablet = useImmediateMobileOrTablet();
     const [editFormData, setEditFormData] = useState(initialFormData);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
