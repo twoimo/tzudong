@@ -140,6 +140,12 @@ describe('web quality performance source contracts', () => {
             expect(modalSource).toContain('useImmediateMobileOrTablet');
             expect(modalSource).not.toContain('const { isMobileOrTablet } = useDeviceType()');
         }
+
+        const authModalSource = source('components/auth/AuthModal.tsx');
+        expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME');
+        expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_STYLE');
+        expect(authModalSource).toContain('min(calc(100vw - 2rem), 32rem)');
+        expect(authModalSource).toContain('dispatchHomeAuthSessionUpdated');
     });
 
     test('global chrome assets stay small and cacheable without changing page UI', () => {
@@ -197,7 +203,10 @@ describe('web quality performance source contracts', () => {
         expect(source('components/map/NaverMapView.tsx')).toContain('NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 30000');
         expect(source('contexts/AuthContext.tsx')).toContain('shouldDelayAuthBootstrap');
         expect(source('contexts/AuthContext.tsx')).toContain('hasPersistedSupabaseSessionHint');
+        expect(source('contexts/AuthContext.tsx')).toContain('hasSupabaseAuthSessionHint');
         expect(source('contexts/AuthContext.tsx')).toContain('shouldBootstrapAuthOnGeneralInteraction');
+        expect(source('contexts/AuthContext.tsx')).toContain("signOut({ scope: 'local' })");
+        expect(source('contexts/AuthContext.tsx')).toContain('dispatchHomeAuthSessionUpdated');
         expect(source('contexts/AuthContext.tsx')).toContain('import("@/integrations/supabase/client")');
         expect(source('contexts/AuthContext.tsx')).not.toContain('import { supabase }');
         expect(source('contexts/NotificationContext.tsx')).toContain("import('@/integrations/supabase/client')");
