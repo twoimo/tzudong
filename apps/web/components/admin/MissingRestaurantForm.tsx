@@ -428,24 +428,13 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     error?: string
   }> => {
     try {
-      // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
-      const clientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
-      const clientSecret = process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET;
+      const response = await fetch(`/api/naver-geocode?query=${encodeURIComponent(address)}`);
 
-      if (!clientId || !clientSecret) {
-        return { success: false, error: 'Naver 지오코딩 API 키가 설정되지 않았습니다.' };
+      const data: NaverGeocodingResponse & { error?: string } = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Naver 지오코딩 요청에 실패했습니다.' };
       }
-
-      const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
-
-      const response = await fetch(url, {
-        headers: {
-          'X-NCP-APIGW-API-KEY-ID': clientId,
-          'X-NCP-APIGW-API-KEY': clientSecret,
-        },
-      });
-
-      const data: NaverGeocodingResponse = await response.json();
 
       if (data.errorMessage) {
         return { success: false, error: data.errorMessage };

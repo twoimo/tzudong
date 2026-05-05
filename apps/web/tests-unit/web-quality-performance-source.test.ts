@@ -119,6 +119,29 @@ describe('web quality performance source contracts', () => {
         expect(myPageSidebarSource).not.toContain("import { compressImage } from '@/lib/image-utils'");
     });
 
+    test('intent-loaded mobile modal shells do not render desktop dialog on the first client paint', () => {
+        const deviceTypeSource = source('hooks/useDeviceType.ts');
+        const mobileSheetModalPaths = [
+            'components/auth/AuthModal.tsx',
+            'components/modals/EditRestaurantModal.tsx',
+            'components/modals/RestaurantSubmissionModal.tsx',
+            'components/profile/NicknameSetupModal.tsx',
+            'components/profile/ProfileModal.tsx',
+            'components/reviews/ReviewEditModal.tsx',
+            'components/reviews/ReviewModal.tsx',
+        ];
+
+        expect(deviceTypeSource).toContain('function isBrowserMobileOrTabletViewport()');
+        expect(deviceTypeSource).toContain('window.innerWidth <= BREAKPOINTS.tabletMax');
+        expect(deviceTypeSource).toContain('export function useImmediateMobileOrTablet()');
+
+        for (const relativePath of mobileSheetModalPaths) {
+            const modalSource = source(relativePath);
+            expect(modalSource).toContain('useImmediateMobileOrTablet');
+            expect(modalSource).not.toContain('const { isMobileOrTablet } = useDeviceType()');
+        }
+    });
+
     test('global chrome assets stay small and cacheable without changing page UI', () => {
         const layoutSource = source('app/layout.tsx');
         const appRuntimeShellSource = source('app/app-runtime-shell.tsx');

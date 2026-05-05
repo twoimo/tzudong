@@ -8,26 +8,26 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
     }
 
-    const clientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
-    const clientSecret = process.env.NEXT_PUBLIC_NAVER_CLIENT_SECRET;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!clientId || !clientSecret) {
-        return NextResponse.json({ error: 'Naver API credentials not configured' }, { status: 500 });
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return NextResponse.json({ error: 'Supabase credentials not configured' }, { status: 500 });
     }
 
     try {
-        const response = await fetch(
-            `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(query)}`,
-            {
-                headers: {
-                    'X-NCP-APIGW-API-KEY-ID': clientId,
-                    'X-NCP-APIGW-API-KEY': clientSecret,
-                },
-            }
-        );
+        const response = await fetch(`${supabaseUrl}/functions/v1/naver-geocode`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${supabaseAnonKey}`,
+                apikey: supabaseAnonKey,
+            },
+            body: JSON.stringify({ query, count: 3 }),
+        });
 
         if (!response.ok) {
-            throw new Error(`Naver API error: ${response.status}`);
+            throw new Error(`Naver geocode proxy error: ${response.status}`);
         }
 
         const data = await response.json();
