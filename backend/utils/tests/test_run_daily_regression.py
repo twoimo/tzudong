@@ -106,6 +106,14 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         self.assertEqual("3", result.stdout.strip())
 
+    def test_print_summary_flow_guide_keeps_beginner_flow_block(self) -> None:
+        result = self._helper("print-summary-flow-guide")
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("TZUDONG PIPELINE FLOW", result.stdout)
+        self.assertIn("Phase 4", result.stdout)
+        self.assertTrue(result.stdout.endswith("+----------------------------------------------------------------------------------------------------------+\n"))
+
     def test_resolve_policy_action_keeps_fail_closed_policy_matrix(self) -> None:
         cases = [
             ("Step 13 (Supabase)", "missing_external_dependency", "end_to_end", "0", "optional_skip"),
@@ -1113,6 +1121,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         summary = (self.root / "project" / "tmp" / "summary.md").read_text(encoding="utf-8")
         self.assertIn("**Execution Branch**: [`main`]", summary)
         self.assertIn("**Data Sync Branch**: [`data`]", summary)
+        self.assertIn("TZUDONG PIPELINE FLOW", summary)
 
         project_data_dir = self.root / "project" / "backend" / "restaurant-crawling" / "data"
         self.assertTrue((project_data_dir / "credentials.json").exists())
