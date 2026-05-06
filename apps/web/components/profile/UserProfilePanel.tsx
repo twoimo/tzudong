@@ -5,7 +5,6 @@ import { useState, memo, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     ChevronLeft,
     Stamp,
@@ -93,12 +92,12 @@ interface StatCardProps {
 
 const StatCard = memo(function StatCard({ icon, label, value, valueClassName }: StatCardProps) {
     return (
-        <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg bg-muted/50">
-            <div className="flex items-center gap-1 text-muted-foreground mb-1">
+        <div className="flex min-w-0 flex-col items-center justify-center rounded-lg bg-muted/50 px-1.5 py-3 text-center">
+            <div className="flex max-w-full items-center gap-1 text-muted-foreground mb-1">
                 {icon}
-                <span className="text-xs">{label}</span>
+                <span className="truncate text-xs leading-none">{label}</span>
             </div>
-            <span className={cn("text-lg font-bold", valueClassName)}>{value}</span>
+            <span className={cn("max-w-full truncate text-base font-bold leading-none", valueClassName)}>{value}</span>
         </div>
     );
 });
@@ -112,6 +111,32 @@ interface UserProfilePanelProps {
 }
 
 const USER_PROFILE_PAGE_SIZE = 15;
+type UserProfileTab = 'stamps' | 'reviews' | 'likers';
+
+const PROFILE_TABS = [
+    {
+        value: 'stamps',
+        label: '도장',
+        icon: Stamp,
+    },
+    {
+        value: 'reviews',
+        label: '리뷰',
+        icon: MessageSquare,
+    },
+    {
+        value: 'likers',
+        label: '좋아요',
+        icon: Users,
+    },
+] as const satisfies ReadonlyArray<{
+    value: UserProfileTab;
+    label: string;
+    icon: typeof Stamp;
+}>;
+
+const getProfileTabId = (value: UserProfileTab) => `user-profile-tab-${value}`;
+const getProfileTabPanelId = (value: UserProfileTab) => `user-profile-tabpanel-${value}`;
 
 const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showBackButton = true, onUserClick, onRestaurantClick }: UserProfilePanelProps) {
     const router = useRouter();
@@ -124,7 +149,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
     const { data: leaderboard = [] } = useLeaderboard();
 
-    const [activeTab, setActiveTab] = useState<'stamps' | 'reviews' | 'likers'>('stamps');
+    const [activeTab, setActiveTab] = useState<UserProfileTab>('stamps');
     const [thumbnailIndices, setThumbnailIndices] = useState<Record<string, number>>({});
     const [visibleStampCount, setVisibleStampCount] = useState(15);
     const [visibleReviewCount, setVisibleReviewCount] = useState(15);
@@ -153,9 +178,15 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     }, [onClose, router]);
 
     // [최적화] 탭 변경 핸들러
-    const handleTabChange = useCallback((value: string) => {
-        setActiveTab(value as 'stamps' | 'reviews' | 'likers');
+    const handleTabChange = useCallback((value: UserProfileTab) => {
+        setActiveTab(value);
     }, []);
+
+    const tabCounts = useMemo<Record<UserProfileTab, number>>(() => ({
+        stamps: stamps.length,
+        reviews: reviews.length,
+        likers: likers.length,
+    }), [likers.length, reviews.length, stamps.length]);
 
     useEffect(() => {
         setVisibleStampCount(USER_PROFILE_PAGE_SIZE);
@@ -375,7 +406,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 </div>
 
                 {/* 통계 카드 */}
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
                     <StatCard
                         key="stat-stamps"
                         icon={<Stamp className="h-3 w-3" />}
@@ -400,34 +431,49 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
             </div>
 
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col overflow-hidden">
-                <TabsList className="w-full grid grid-cols-3 border-b rounded-none bg-transparent h-auto p-0">
-                    <TabsTrigger
-                        value="stamps"
-                        className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none py-3 text-sm"
-                    >
-                        <Stamp className="h-3.5 w-3.5 mr-1" />
-                        도장 ({stamps.length})
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="reviews"
-                        className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none py-3 text-sm"
-                    >
-                        <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                        리뷰 ({reviews.length})
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="likers"
-                        className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none py-3 text-sm"
-                    >
-                        <Users className="h-3.5 w-3.5 mr-1" />
-                        좋아요 ({likers.length})
-                    </TabsTrigger>
-                </TabsList>
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <div
+                    role="tablist"
+                    aria-label="사용자 프로필 콘텐츠"
+                    className="grid w-full grid-cols-[repeat(3,minmax(0,1fr))] border-b bg-transparent"
+                >
+                    {PROFILE_TABS.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.value;
+
+                        return (
+                            <button
+                                key={tab.value}
+                                id={getProfileTabId(tab.value)}
+                                type="button"
+                                role="tab"
+                                aria-selected={isActive}
+                                aria-controls={getProfileTabPanelId(tab.value)}
+                                onClick={() => handleTabChange(tab.value)}
+                                className={cn(
+                                    "flex min-w-0 items-center justify-center gap-1 whitespace-nowrap border-b-2 px-1.5 py-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm",
+                                    isActive
+                                        ? "border-primary text-foreground"
+                                        : "border-transparent text-stone-700 hover:text-foreground"
+                                )}
+                            >
+                                <Icon className="h-3.5 w-3.5 shrink-0" />
+                                <span className="min-w-0 truncate">{tab.label}</span>
+                                <span className="shrink-0">({tabCounts[tab.value]})</span>
+                            </button>
+                        );
+                    })}
+                </div>
 
                 <div className="flex-1 overflow-hidden bg-muted/10">
                     {/* 도장 탭 */}
-                    <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
+                    {activeTab === 'stamps' && (
+                    <div
+                        id={getProfileTabPanelId('stamps')}
+                        role="tabpanel"
+                        aria-labelledby={getProfileTabId('stamps')}
+                        className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden"
+                    >
                         <div ref={stampTabRef} className="h-full overflow-y-auto">
                         {stampsLoading ? (
                             <GlobalLoader message="도장 불러오는 중..." />
@@ -448,16 +494,24 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                         onThumbnailChange={handleThumbnailChange}
                                         onClick={handleRestaurantClick}
                                         size="default"
+                                        stampSize="compact"
                                     />
                                 ))}
                                 <div ref={stampLoadMoreRef} />
                             </div>
                         )}
                         </div>
-                    </TabsContent>
+                    </div>
+                    )}
 
                     {/* 리뷰 탭 */}
-                    <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
+                    {activeTab === 'reviews' && (
+                    <div
+                        id={getProfileTabPanelId('reviews')}
+                        role="tabpanel"
+                        aria-labelledby={getProfileTabId('reviews')}
+                        className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden"
+                    >
                         <div ref={reviewTabRef} className="h-full overflow-y-auto">
                         {reviewsLoading ? (
                             <GlobalLoader message="리뷰 불러오는 중..." />
@@ -503,10 +557,17 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             </div>
                         )}
                         </div>
-                    </TabsContent>
+                    </div>
+                    )}
 
                     {/* 좋아요 탭 */}
-                    <TabsContent value="likers" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
+                    {activeTab === 'likers' && (
+                    <div
+                        id={getProfileTabPanelId('likers')}
+                        role="tabpanel"
+                        aria-labelledby={getProfileTabId('likers')}
+                        className="h-full"
+                    >
                         <div ref={likerTabRef} className="h-full overflow-y-auto">
                         {likersLoading ? (
                             <GlobalLoader message="좋아요 불러오는 중..." />
@@ -528,9 +589,10 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                 </div>
                         )}
                         </div>
-                    </TabsContent>
+                    </div>
+                    )}
                 </div>
-            </Tabs>
+            </div>
         </div>
     );
 });
