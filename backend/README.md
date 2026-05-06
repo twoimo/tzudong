@@ -42,11 +42,14 @@ python3 backend/bin/check_env_contract.py --profile gdrive-backfill
 
 - `finalStatus`, `finalExitCode`
 - `failedRequiredSteps[]`, `optionalSkips[]`, `downstreamSkips[]`
+- `stepEvents[]`: 단계별 `name`, `status`, `durationSeconds`, 선택적 `reason`
 - `latestLogPath`, `summaryPath`, `noWorkShortCircuit`, `policyMode`
 - `runtime`: GitHub Actions run id/url/workflow/ref/event, 실행 브랜치, 데이터 동기화 대상 브랜치
 - `gdriveUpload`: GitHub Actions의 GDrive upload step이 후속으로 append할 수 있는 업로드 상태
 
 Admin ops status는 manifest를 우선 읽고, 없거나 파싱 실패하면 bounded log-tail fallback을 사용합니다.
+운영자가 수동으로 판정할 때는 [`docs/run-daily-operations.md`](docs/run-daily-operations.md)의
+체크리스트를 먼저 확인합니다.
 
 ## 검증 명령
 
