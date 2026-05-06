@@ -567,8 +567,8 @@ export function buildAdminInsightOpsChecklist(
       title: 'run_daily GDrive 업로드 후속 조치 필요',
       severity: upload?.status === 'failed' ? 'critical' : 'high',
       category: 'environment',
-      action:
-        `최근 run_daily GDrive upload 상태가 terminal success가 아닙니다${uploadFacts ? ` (${uploadFacts})` : ''}. backfill 또는 remote proof를 확인하세요.`,
+      action: upload?.operatorMessage?.action
+        ?? `최근 run_daily GDrive upload 상태가 terminal success가 아닙니다${uploadFacts ? ` (${uploadFacts})` : ''}. backfill 또는 remote proof를 확인하세요.`,
       command: buildRunDailyGdriveUploadSnippet(),
       commandSnippet: buildRunDailyGdriveUploadSnippet(),
       source: 'run_daily',

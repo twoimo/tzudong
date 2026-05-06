@@ -597,6 +597,7 @@ function buildRunDailyUploadStatusLine(status: AdminInsightSystemStatusResponse)
     upload.residualCount !== undefined ? `residual=${upload.residualCount}` : undefined,
     upload.pendingBacklogCount !== undefined ? `pending=${upload.pendingBacklogCount}` : undefined,
     upload.completionProof ? `proof=${upload.completionProof}` : undefined,
+    upload.operatorMessage?.summary ? `message=${upload.operatorMessage.summary}` : undefined,
   ].filter(Boolean);
   return `- run_daily GDrive upload: ${fragments.join(', ')}`;
 }
