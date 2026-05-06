@@ -653,13 +653,33 @@ count_pending_step08_work() {
 resolve_policy_action() {
     local step_name="$1"
     local issue_kind="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local pending_step08_work="0"
+    local helper_output=""
+
+    if [ "$step_name" = "Step 08 (Chunk Multimodal)" ] && [ "$issue_kind" = "quota_exhausted" ]; then
+        pending_step08_work="$(count_pending_step08_work)"
+    fi
+
+    if [ -f "$helper_path" ]; then
+        # Preserve the shell policy matrix below as a fail-safe for early-runner
+        # environments where the helper cannot be executed.
+        if helper_output=$("$PYTHON_CMD" "$helper_path" resolve-policy-action \
+            --step-name "$step_name" \
+            --issue-kind "$issue_kind" \
+            --policy-mode "${RUN_DAILY_POLICY_MODE:-end_to_end}" \
+            --pending-step08-work "${pending_step08_work:-0}" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
 
     case "${step_name}|${issue_kind}" in
         "Step 1 (URL Collection)|missing_external_dependency"|"Step 2 (Metadata)|missing_external_dependency"|"Step 2.1 (Meta Migration)|missing_external_dependency"|"Step 13 (Supabase)|missing_external_dependency")
             echo "optional_skip"
             ;;
         "Step 08 (Chunk Multimodal)|quota_exhausted")
-            if is_end_to_end_mode && [ "$(count_pending_step08_work)" -gt 0 ]; then
+            if is_end_to_end_mode && [ "$pending_step08_work" -gt 0 ]; then
                 echo "required_failure"
             else
                 echo "optional_skip"
