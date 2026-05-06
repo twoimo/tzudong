@@ -24,6 +24,8 @@ export interface StampCardProps {
     onClick: (restaurant: Restaurant) => void;
     /** 카드 크기 variant */
     size?: 'default' | 'compact';
+    /** 방문 완료 도장 이미지 크기 variant */
+    stampSize?: 'default' | 'compact';
     guideLabel?: string;
     guideTitle?: string;
     guideDescription?: string;
@@ -44,6 +46,7 @@ export const StampCard = memo(function StampCard({
     onThumbnailChange,
     onClick,
     size = 'default',
+    stampSize,
     guideLabel,
     guideTitle,
     guideDescription,
@@ -72,7 +75,8 @@ export const StampCard = memo(function StampCard({
     };
 
     const isCompact = size === 'compact';
-    const stampSizeClass = isCompact
+    const isStampCompact = (stampSize ?? size) === 'compact';
+    const stampSizeClass = isStampCompact
         ? "w-32 h-32 md:w-36 md:h-36"
         : "w-44 h-44 sm:w-52 sm:h-52";
 
