@@ -42,6 +42,19 @@ def count_pending_jsonl(source_dir: Path, target_dir: Path) -> int:
     return len(source_names - target_names)
 
 
+def count_frame_files(frames_dir: Path) -> int:
+    """Count frame image files below ``frames_dir`` for run_daily metrics."""
+    if not frames_dir.is_dir():
+        return 0
+
+    count = 0
+    for _root, _dirs, files in os.walk(str(frames_dir), onerror=lambda _exc: None):
+        for filename in files:
+            if Path(filename).suffix.lower() in FRAME_UPLOAD_EXTENSIONS:
+                count += 1
+    return count
+
+
 def _truthy(value: str) -> bool:
     return _parse_bool(value)
 
@@ -924,6 +937,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     count_parser.add_argument("--source-dir", required=True)
     count_parser.add_argument("--target-dir", required=True)
 
+    count_frames_parser = subparsers.add_parser("count-frame-files")
+    count_frames_parser.add_argument("--frames-dir", required=True)
+
     manifest_parser = subparsers.add_parser("write-summary-manifest")
     _add_manifest_args(manifest_parser)
 
@@ -943,6 +959,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.command == "count-pending-jsonl":
         print(count_pending_jsonl(Path(args.source_dir), Path(args.target_dir)))
+        return 0
+
+    if args.command == "count-frame-files":
+        print(count_frame_files(Path(args.frames_dir)))
         return 0
 
     if args.command == "write-summary-manifest":

@@ -94,6 +94,18 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("residual_retry", expected["items"][0]["reason"])
         self.assertEqual("old.webp\nrecent.jpg\n", "".join(sorted(self.files_from_path.read_text(encoding="utf-8").splitlines(True))))
 
+    def test_count_frame_files_counts_supported_extensions_recursively(self) -> None:
+        (self.frames_dir / "nested").mkdir()
+        (self.frames_dir / "recent.jpg").write_text("jpg\n", encoding="utf-8")
+        (self.frames_dir / "nested" / "clip.JPEG").write_text("jpeg\n", encoding="utf-8")
+        (self.frames_dir / "nested" / "clip.webp").write_text("webp\n", encoding="utf-8")
+        (self.frames_dir / "ignore.png").write_text("png\n", encoding="utf-8")
+
+        result = self._helper("count-frame-files", "--frames-dir", str(self.frames_dir))
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual("3", result.stdout.strip())
+
 
     def test_gdrive_expected_manifest_preserves_old_missing_residual(self) -> None:
         missing_item = {
