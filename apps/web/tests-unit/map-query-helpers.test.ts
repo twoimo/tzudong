@@ -4,6 +4,7 @@ import {
     buildMapViewRestaurantsQueryOptions,
     buildNaverRestaurantsQueryOptions,
     buildOverseasRestaurantsQueryOptions,
+    resolveNaverRestaurantQueryBounds,
 } from '../lib/map-query-helpers';
 
 describe('map query helpers', () => {
@@ -112,5 +113,24 @@ describe('map query helpers', () => {
             includeVerifiedReviewCounts: false,
             enabled: true,
         });
+    });
+
+    test('uses bounded naver data only before deferred full-map effects run', () => {
+        const initialBounds = {
+            south: 33,
+            west: 124,
+            north: 39,
+            east: 132,
+        };
+
+        expect(resolveNaverRestaurantQueryBounds({
+            firstLoadViewportBounds: initialBounds,
+            shouldUseFullMapData: false,
+        })).toBe(initialBounds);
+
+        expect(resolveNaverRestaurantQueryBounds({
+            firstLoadViewportBounds: initialBounds,
+            shouldUseFullMapData: true,
+        })).toBeUndefined();
     });
 });

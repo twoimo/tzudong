@@ -16,6 +16,7 @@ import { useRestaurants } from "@/hooks/use-restaurants";
 import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
+import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 
 const STAMP_PAGE_SIZE = 16;
 const STAMP_GUIDE_DEMO_RESTAURANT = {
@@ -77,7 +78,9 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
             if (restaurantsError) throw restaurantsError;
 
             const restaurantMap = new Map(
-                ((restaurantRows ?? []) as Restaurant[]).map((restaurant) => [restaurant.id, restaurant])
+                ((restaurantRows ?? []) as Restaurant[])
+                    .map((restaurant) => withRestaurantDisplayName(restaurant))
+                    .map((restaurant) => [restaurant.id, restaurant])
             );
 
             return reviews.map((review) => ({
@@ -130,7 +133,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
         if (filters.searchQuery.trim()) {
             const query = filters.searchQuery.trim().toLowerCase();
             result = result.filter(r =>
-                r.name.toLowerCase().includes(query) ||
+                getRestaurantDisplayName(r).toLowerCase().includes(query) ||
                 (r.road_address && r.road_address.toLowerCase().includes(query))
             );
         }

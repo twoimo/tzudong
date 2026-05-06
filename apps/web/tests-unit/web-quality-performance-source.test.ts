@@ -113,6 +113,35 @@ describe('web quality performance source contracts', () => {
         expect(source('components/home/MobileControlOverlay.tsx')).not.toContain("import { supabase } from '@/integrations/supabase/client'");
     });
 
+    test('profile/stamp/map regressions stay fixed while preserving deferred map loading', () => {
+        const overlayPanelSource = source('components/layout/OverlayPagePanel.tsx');
+        const stampCardSource = source('components/stamp/StampCard.tsx');
+        const userProfilePanelSource = source('components/profile/UserProfilePanel.tsx');
+        const naverMapSource = source('components/map/NaverMapView.tsx');
+
+        const userProfilePanelIndex = overlayPanelSource.indexOf('<UserProfilePanel');
+
+        expect(userProfilePanelIndex).toBeGreaterThan(0);
+        expect(overlayPanelSource.lastIndexOf('border-l border-border', userProfilePanelIndex)).toBeGreaterThan(0);
+        expect(overlayPanelSource.lastIndexOf('"w-[400px]"', userProfilePanelIndex)).toBeGreaterThan(0);
+        expect(stampCardSource).toContain('getRestaurantDisplayName(typedRestaurant)');
+        expect(stampCardSource).toContain('alt={`${restaurantDisplayName} 썸네일`}');
+        expect(stampCardSource).toContain('title={restaurantDisplayName}');
+        expect(stampCardSource).toContain('absolute inset-0 z-10 flex items-center justify-center overflow-hidden');
+        expect(stampCardSource).toContain('<img');
+        expect(stampCardSource).toContain('src="/images/stamp-clear.png"');
+        expect(userProfilePanelSource).toContain('const StampItem = memo(function StampItem');
+        expect(userProfilePanelSource).toContain('const ReviewItem = memo(function ReviewItem');
+        expect(userProfilePanelSource).toContain('<ScrollArea className="h-full">');
+        expect(userProfilePanelSource).toContain('{onClose ? <X className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}');
+        expect(userProfilePanelSource).not.toContain('className="flex-shrink-0 -mr-2 h-10 w-10"');
+        expect(userProfilePanelSource).not.toContain('import { StampCard }');
+        expect(userProfilePanelSource).not.toContain('import { ReviewCard }');
+        expect(naverMapSource).toContain('resolveNaverRestaurantQueryBounds');
+        expect(naverMapSource).toContain('shouldUseFullMapData: shouldRunNoncriticalMapEffects');
+        expect(naverMapSource.match(/activateNoncriticalMapEffects\(\);/g)?.length).toBeGreaterThanOrEqual(3);
+    });
+
     test('/mypage avoids client-side redirect work and defers desktop-only sidebar cost', () => {
         const myPageSource = source('app/mypage/page.tsx');
         const myPageLayoutSource = source('app/mypage/layout.tsx');

@@ -47,6 +47,7 @@ import {
 } from "@/lib/restaurant-review-lookup";
 import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRestaurantSortDirection } from "@/lib/stamp-restaurant-order";
 import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
+import { withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import type { Json, Tables } from "@/integrations/supabase/types";
 
 type SortColumn = StampRestaurantSortColumn;
@@ -282,7 +283,9 @@ export default function StampPage() {
             if (restaurantsError) throw restaurantsError;
 
             const restaurantMap = new Map(
-                ((restaurantRows ?? []) as RestaurantWithVerifiedCount[]).map((restaurant) => [restaurant.id, restaurant])
+                ((restaurantRows ?? []) as RestaurantWithVerifiedCount[])
+                    .map((restaurant) => withRestaurantDisplayName(restaurant))
+                    .map((restaurant) => [restaurant.id, restaurant])
             );
 
             return reviews.map((review) => ({

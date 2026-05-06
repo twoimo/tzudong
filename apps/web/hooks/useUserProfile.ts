@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Restaurant } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
 import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
+import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 
 // ============================================================================
 // Type Definitions
@@ -97,10 +98,6 @@ function incrementMapCount(map: Map<string, number>, key: string): void {
     map.set(key, (map.get(key) ?? 0) + 1);
 }
 
-function getRestaurantDisplayName(restaurant: Restaurant | null | undefined): string {
-    return restaurant?.name || restaurant?.approved_name || '알 수 없음';
-}
-
 async function fetchApprovedCanonicalRestaurantCandidates(reviewedRestaurants: Restaurant[]): Promise<Restaurant[]> {
     const approvedNames = [
         ...new Set(
@@ -118,7 +115,7 @@ async function fetchApprovedCanonicalRestaurantCandidates(reviewedRestaurants: R
         .eq('status', 'approved')
         .in('approved_name', approvedNames);
 
-    return (data ?? []) as Restaurant[];
+    return ((data ?? []) as Restaurant[]).map(withRestaurantDisplayName);
 }
 
 function resolveCanonicalReviewedRestaurant({
@@ -285,7 +282,8 @@ export function useUserReviews(userId: string, viewerId?: string) {
                     : Promise.resolve({ data: [] }),
             ]);
 
-            const typedRestaurants = (restaurantsResult.data ?? []) as UserProfileRestaurantRow[];
+            const typedRestaurants = ((restaurantsResult.data ?? []) as UserProfileRestaurantRow[])
+                .map((restaurant) => withRestaurantDisplayName(restaurant)) as Restaurant[];
             const restaurantMap = new Map(
                 typedRestaurants.map((r) => {
                     return [r.id, r as Restaurant];
@@ -427,7 +425,8 @@ export function useUserStamps(userId: string) {
                 .select(USER_PROFILE_RESTAURANT_SELECT)
                 .in('id', restaurantIds);
 
-            const typedRestaurants = (restaurants ?? []) as UserProfileRestaurantRow[];
+            const typedRestaurants = ((restaurants ?? []) as UserProfileRestaurantRow[])
+                .map((restaurant) => withRestaurantDisplayName(restaurant)) as Restaurant[];
             const restaurantMap = new Map(
                 typedRestaurants.map(r => {
                     return [r.id, r as Restaurant];
@@ -448,7 +447,8 @@ export function useUserStamps(userId: string) {
                     .eq('status', 'approved')
                     .in('approved_name', reviewedRestaurantNames)
                 : { data: [] };
-            const approvedRestaurants = (approvedRestaurantRows ?? []) as Restaurant[];
+            const approvedRestaurants = ((approvedRestaurantRows ?? []) as Restaurant[])
+                .map(withRestaurantDisplayName);
 
             // 4. 데이터 병합
             return typedReviews.map((r) => {

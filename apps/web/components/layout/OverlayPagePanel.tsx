@@ -243,9 +243,8 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                 {/* 우측 사이드 패널 영역 - 사용자 프로필 */}
                 {showUserProfile && (
                     <div className={cn(
-                        "flex-shrink-0 bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
-                        "w-[min(400px,calc(100vw-1rem))]",
-                        "rounded-2xl border border-border shadow-2xl overflow-hidden"
+                        "flex-shrink-0 border-l border-border bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
+                        "w-[400px]"
                     )}>
                         <UserProfilePanel
                             userId={selectedUserId!}
