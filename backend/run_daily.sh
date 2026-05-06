@@ -507,6 +507,16 @@ step_duration_from() {
 
 count_frame_files() {
     local FRAMES_DIR="$PROJECT_ROOT/backend/restaurant-crawling/data/frames"
+    local HELPER_PATH="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+
+    if [ -f "$HELPER_PATH" ]; then
+        local HELPER_OUTPUT
+        if HELPER_OUTPUT=$("$PYTHON_CMD" "$HELPER_PATH" count-frame-files --frames-dir "$FRAMES_DIR" 2>/dev/null); then
+            echo "$HELPER_OUTPUT"
+            return 0
+        fi
+    fi
+
     if [ ! -d "$FRAMES_DIR" ]; then
         echo 0
         return 0
