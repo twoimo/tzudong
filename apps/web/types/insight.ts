@@ -261,6 +261,12 @@ export type AdminInsightSystemRunDailyStepEvent = {
   upstreamStep?: string;
 };
 
+export type AdminInsightSystemRunDailyGdriveUploadOperatorMessage = {
+  severity?: 'ok' | 'info' | 'warning' | 'error';
+  summary?: string;
+  action?: string;
+};
+
 export type AdminInsightSystemRunDailyGdriveUpload = {
   status?: 'skipped' | 'complete' | 'partial' | 'backfill_required' | 'backfill_complete' | 'failed';
   exitCode?: number;
@@ -269,6 +275,7 @@ export type AdminInsightSystemRunDailyGdriveUpload = {
   pendingBacklogCount?: number;
   terminalIncomplete?: boolean;
   completionProof?: 'none' | 'rclone_exit_zero' | 'remote_size_check' | 'remote_manifest_check';
+  operatorMessage?: AdminInsightSystemRunDailyGdriveUploadOperatorMessage;
 };
 
 export type AdminInsightSystemRunDailyStatus = {

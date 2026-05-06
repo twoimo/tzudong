@@ -161,6 +161,12 @@ export type RunDailyManifestStepEvent = {
   upstreamStep?: string;
 };
 
+export type RunDailyManifestGdriveUploadOperatorMessage = {
+  severity?: 'ok' | 'info' | 'warning' | 'error';
+  summary?: string;
+  action?: string;
+};
+
 export type RunDailyManifestGdriveUpload = {
   status?: 'skipped' | 'complete' | 'partial' | 'backfill_required' | 'backfill_complete' | 'failed';
   exitCode?: number;
@@ -169,6 +175,7 @@ export type RunDailyManifestGdriveUpload = {
   pendingBacklogCount?: number;
   terminalIncomplete?: boolean;
   completionProof?: 'none' | 'rclone_exit_zero' | 'remote_size_check' | 'remote_manifest_check';
+  operatorMessage?: RunDailyManifestGdriveUploadOperatorMessage;
 };
 
 export type RunDailyManifestStatus = {
@@ -225,6 +232,7 @@ function normalizeRunDailyRuntime(value: unknown): RunDailyManifestRuntime | und
 const RUN_DAILY_STEP_EVENT_STATUSES = new Set(['completed', 'failed', 'optional_skipped', 'downstream_skipped']);
 const GDRIVE_UPLOAD_STATUSES = new Set(['skipped', 'complete', 'partial', 'backfill_required', 'backfill_complete', 'failed']);
 const GDRIVE_COMPLETION_PROOFS = new Set(['none', 'rclone_exit_zero', 'remote_size_check', 'remote_manifest_check']);
+const GDRIVE_OPERATOR_MESSAGE_SEVERITIES = new Set(['ok', 'info', 'warning', 'error']);
 
 function normalizeBoundedString(value: unknown, maxLength = 160): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -263,6 +271,21 @@ function normalizeRunDailyStepEvents(value: unknown): RunDailyManifestStepEvent[
   return events.length > 0 ? events : undefined;
 }
 
+function normalizeGdriveUploadOperatorMessage(value: unknown): RunDailyManifestGdriveUploadOperatorMessage | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const message = value as Record<string, unknown>;
+  const normalized: RunDailyManifestGdriveUploadOperatorMessage = {};
+  const severity = normalizeBoundedString(message.severity);
+  if (severity && GDRIVE_OPERATOR_MESSAGE_SEVERITIES.has(severity)) {
+    normalized.severity = severity as RunDailyManifestGdriveUploadOperatorMessage['severity'];
+  }
+  const summary = normalizeBoundedString(message.summary, 512);
+  if (summary) normalized.summary = summary;
+  const action = normalizeBoundedString(message.action, 512);
+  if (action) normalized.action = action;
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
 function normalizeGdriveUpload(value: unknown): RunDailyManifestGdriveUpload | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const upload = value as Record<string, unknown>;
@@ -280,6 +303,8 @@ function normalizeGdriveUpload(value: unknown): RunDailyManifestGdriveUpload | u
     if (numberValue !== undefined) normalized[key] = numberValue;
   }
   if (typeof upload.terminalIncomplete === 'boolean') normalized.terminalIncomplete = upload.terminalIncomplete;
+  const operatorMessage = normalizeGdriveUploadOperatorMessage(upload.operatorMessage);
+  if (operatorMessage) normalized.operatorMessage = operatorMessage;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 

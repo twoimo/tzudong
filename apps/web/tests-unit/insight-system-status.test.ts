@@ -832,6 +832,11 @@ describe('admin insight system status API route', () => {
                 pendingBacklogCount: 3,
                 terminalIncomplete: true,
                 completionProof: 'rclone_exit_zero',
+                operatorMessage: {
+                    severity: 'warning',
+                    summary: 'GDrive upload requires backfill (status=backfill_required)',
+                    action: 'Run the GDrive frame backfill workflow or verify remote proof.',
+                },
             },
         }));
 
@@ -867,8 +872,11 @@ describe('admin insight system status API route', () => {
             expect(payload.runDaily?.stepEvents?.map((event) => event.status)).toEqual(['completed', 'failed']);
             expect(payload.runDaily?.gdriveUpload?.status).toBe('backfill_required');
             expect(payload.runDaily?.gdriveUpload?.residualCount).toBe(3);
+            expect(payload.runDaily?.gdriveUpload?.operatorMessage?.severity).toBe('warning');
+            expect(payload.runDaily?.gdriveUpload?.operatorMessage?.action).toContain('backfill workflow');
             expect(payload.checklist.some((item) => item.id === 'run-daily-required-failed')).toBe(true);
-            expect(payload.checklist.some((item) => item.id === 'run-daily-gdrive-upload-incomplete')).toBe(true);
+            const gdriveChecklist = payload.checklist.find((item) => item.id === 'run-daily-gdrive-upload-incomplete');
+            expect(gdriveChecklist?.action).toContain('backfill workflow');
             expect(payload.githubActions?.enabled).toBe(false);
             expect(payload.githubActions?.detail).toBe('disabled');
             expect(payload.supabaseCounters?.enabled).toBe(false);
