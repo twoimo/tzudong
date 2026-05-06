@@ -1837,7 +1837,11 @@ echo "" >> "$SUMMARY_MD"
 
 echo "### 🗺️ 파이프라인 전체 흐름도 (초보자용)" >> "$SUMMARY_MD"
 echo "\`\`\`" >> "$SUMMARY_MD"
-cat <<'EOF' >> "$SUMMARY_MD"
+if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ] && \
+    "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" print-summary-flow-guide >> "$SUMMARY_MD"; then
+    :
+else
+    cat <<'EOF' >> "$SUMMARY_MD"
 +----------------------------------------------------------------------------------------------------------+
 |                                    TZUDONG PIPELINE FLOW (데이터 자동 수집)                                |
 +----------------------------------------------------------------------------------------------------------+
@@ -1858,6 +1862,7 @@ cat <<'EOF' >> "$SUMMARY_MD"
 |                                                                                                          |
 +----------------------------------------------------------------------------------------------------------+
 EOF
+fi
 echo "\`\`\`" >> "$SUMMARY_MD"
 if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
     MANIFEST_ARGS=(

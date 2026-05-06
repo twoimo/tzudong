@@ -872,6 +872,29 @@ def build_summary_manifest(args: argparse.Namespace) -> dict:
     return manifest
 
 
+def render_summary_flow_guide() -> str:
+    """Return the beginner-facing static pipeline flow block for summary.md."""
+    return """+----------------------------------------------------------------------------------------------------------+
+|                                    TZUDONG PIPELINE FLOW (데이터 자동 수집)                                |
++----------------------------------------------------------------------------------------------------------+
+|                                                                                                          |
+|  [Phase 1: 데이터 수집 준비]                                                                             |
+|  1. 최신 영상/누락 영상의 주소를 찾습니다.                                                                 |
+|  2. 제목, 재생시간 등 껍데기(메타데이터) 정보를 채워 넣습니다.                                               |
+|                                                                                                          |
+|  [Phase 2: 영상 본문 뜯어오기]                                                                             |
+|  3. 영상의 자막과 영상 캡처 화면(프레임)을 추출합니다.                                                       |
+|                                                                                                          |
+|  [Phase 3: 인공지능(AI) 식당 탐색 & 검증]                                                                  |
+|  4. Gemini AI에게 자막과 화면을 보여주고 "어떤 식당을 방문했는지" 찾게 시킵니다.                             |
+|  5. AI가 찾은 정보가 맞는지, 이상한 말은 없는지 규칙과 다른 AI(LAAJ 평가)로 두 번, 세 번 검증합니다.             |
+|                                                                                                          |
+|  [Phase 4: 데이터베이스 등록]                                                                              |
+|  6. 최종적으로 합격한 식당 정보들만 모아서 서비스 데이터베이스(Supabase)에 정식으로 올립니다! 🎉             |
+|                                                                                                          |
++----------------------------------------------------------------------------------------------------------+
+"""
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(path.name + ".tmp")
@@ -983,6 +1006,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     policy_parser.add_argument("--policy-mode", default="end_to_end")
     policy_parser.add_argument("--pending-step08-work", type=int, default=0)
 
+    subparsers.add_parser("print-summary-flow-guide")
+
     manifest_parser = subparsers.add_parser("write-summary-manifest")
     _add_manifest_args(manifest_parser)
 
@@ -1017,6 +1042,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 args.pending_step08_work,
             )
         )
+        return 0
+
+    if args.command == "print-summary-flow-guide":
+        print(render_summary_flow_guide(), end="")
         return 0
 
     if args.command == "write-summary-manifest":
