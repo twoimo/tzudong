@@ -813,12 +813,25 @@ describe('admin insight system status API route', () => {
             summaryPath: '/tmp/summary.md',
             noWorkShortCircuit: false,
             policyMode: 'end_to_end',
+            stepEvents: [
+                { name: 'Step 3 (Transcript)', status: 'completed', durationSeconds: 12 },
+                { name: 'Step 13 (Supabase)', status: 'failed', reason: 'exit=23' },
+            ],
             runtime: {
                 githubRunId: '25206693886',
                 githubRunUrl: 'https://github.com/twoimo/tzudong/actions/runs/25206693886',
                 githubWorkflow: 'Daily Data Collection',
                 executionBranch: 'main',
                 targetBranch: 'data',
+            },
+            gdriveUpload: {
+                status: 'backfill_required',
+                exitCode: 124,
+                expectedCount: 10,
+                residualCount: 3,
+                pendingBacklogCount: 3,
+                terminalIncomplete: true,
+                completionProof: 'rclone_exit_zero',
             },
         }));
 
@@ -851,7 +864,11 @@ describe('admin insight system status API route', () => {
             expect(payload.runDaily?.runtime?.githubRunUrl).toBe('https://github.com/twoimo/tzudong/actions/runs/25206693886');
             expect(payload.runDaily?.runtime?.executionBranch).toBe('main');
             expect(payload.runDaily?.runtime?.targetBranch).toBe('data');
+            expect(payload.runDaily?.stepEvents?.map((event) => event.status)).toEqual(['completed', 'failed']);
+            expect(payload.runDaily?.gdriveUpload?.status).toBe('backfill_required');
+            expect(payload.runDaily?.gdriveUpload?.residualCount).toBe(3);
             expect(payload.checklist.some((item) => item.id === 'run-daily-required-failed')).toBe(true);
+            expect(payload.checklist.some((item) => item.id === 'run-daily-gdrive-upload-incomplete')).toBe(true);
             expect(payload.githubActions?.enabled).toBe(false);
             expect(payload.githubActions?.detail).toBe('disabled');
             expect(payload.supabaseCounters?.enabled).toBe(false);
