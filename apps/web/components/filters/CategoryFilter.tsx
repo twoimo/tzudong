@@ -72,6 +72,9 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
             return mergeRestaurants(data || []);
         },
         enabled: isOpen,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+        refetchOnWindowFocus: false,
     });
 
     // 카테고리별 맛집 수 계산 (병합된 데이터 기준)

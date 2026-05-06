@@ -59,7 +59,7 @@ export function DbConflictResolutionPanel({
       // 1. 기존 레스토랑 데이터 가져오기
       const { data: existingRestaurant, error: fetchError } = await supabase
         .from('restaurants')
-        .select('*')
+        .select('updated_at')
         .eq('id', existing.id)
         .single();
 

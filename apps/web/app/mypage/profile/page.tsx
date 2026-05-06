@@ -52,6 +52,8 @@ interface Profile {
   avatar_url?: string;
 }
 
+const PROFILE_SELECT = 'nickname, avatar_url';
+
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -86,7 +88,7 @@ export default function ProfilePage() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(PROFILE_SELECT)
         .eq('user_id', user.id);
 
       if (error) throw error;

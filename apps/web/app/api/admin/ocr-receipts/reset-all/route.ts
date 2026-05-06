@@ -26,7 +26,7 @@ export async function POST() {
         // 1. 영수증 사진이 있는 리뷰 수 조회
         const { count } = await supabase
             .from('reviews')
-            .select('*', { count: 'exact', head: true })
+            .select('id', { count: 'exact', head: true })
             .not('verification_photo', 'is', null);
 
         // 2. 모든 리뷰의 OCR 데이터 초기화

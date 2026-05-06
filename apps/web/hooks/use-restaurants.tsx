@@ -27,6 +27,48 @@ type ReviewCountCandidateRestaurant = Pick<
 
 const REVIEW_COUNT_RELATED_RESTAURANT_SELECT = 'id, name:approved_name, approved_name, road_address, jibun_address, status';
 const SUPABASE_IN_CHUNK_SIZE = 80;
+export const RESTAURANT_MERGE_SELECT = [
+    'id',
+    'name:approved_name',
+    'approved_name',
+    'phone',
+    'categories',
+    'status',
+    'source_type',
+    'youtube_meta',
+    'evaluation_results',
+    'reasoning_basis',
+    'tzuyang_review',
+    'trace_id',
+    'origin_address',
+    'road_address',
+    'jibun_address',
+    'english_address',
+    'address_elements',
+    'geocoding_success',
+    'geocoding_false_stage',
+    'is_missing',
+    'is_not_selected',
+    'lat',
+    'lng',
+    'youtube_link',
+    'review_count',
+    'created_by',
+    'updated_by_admin_id',
+    'db_error_message',
+    'db_error_details',
+    'search_count',
+    'weekly_search_count',
+    'origin_name',
+    'naver_name',
+    'google_name',
+    'trace_id_name_source',
+    'channel_name',
+    'description_map_url',
+    'recollect_version',
+    'created_at',
+    'updated_at',
+].join(', ');
 
 interface UseRestaurantsOptions {
     bounds?: {
@@ -598,7 +640,7 @@ export function useRestaurant(id: string | null) {
             if (!id) return null;
 
             const rows = await fetchSupabaseRows<DBRestaurant>('restaurants', [
-                ['select', '*, name:approved_name'],
+                ['select', RESTAURANT_MERGE_SELECT],
                 ['id', `eq.${id}`],
                 ['limit', 1],
             ]);

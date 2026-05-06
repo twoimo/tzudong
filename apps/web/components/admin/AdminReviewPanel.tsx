@@ -35,6 +35,23 @@ import {
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
 type ReviewStatusRow = Pick<Tables<'reviews'>, 'restaurant_id' | 'is_verified'>;
+const ADMIN_REVIEW_SELECT = [
+    'id',
+    'user_id',
+    'restaurant_id',
+    'title',
+    'content',
+    'visited_at',
+    'verification_photo',
+    'food_photos',
+    'categories',
+    'is_verified',
+    'admin_note',
+    'is_pinned',
+    'is_edited_by_admin',
+    'created_at',
+    'updated_at',
+].join(', ');
 
 interface RestaurantSummaryRow {
     id: string;
@@ -100,7 +117,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
-                .select('*')
+                .select(ADMIN_REVIEW_SELECT)
                 .order('created_at', { ascending: false })
                 .range(pageParam, pageParam + 19);
 
@@ -114,15 +131,16 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-            const { data: profilesData } = await supabase
-                .from('profiles')
-                .select('user_id, nickname')
-                .in('user_id', userIds);
-
-            const { data: restaurantsData } = await supabase
-                .from('restaurants')
-                .select('id, name:approved_name, road_address, jibun_address')
-                .in('id', restaurantIds);
+            const [{ data: profilesData }, { data: restaurantsData }] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select('user_id, nickname')
+                    .in('user_id', userIds),
+                supabase
+                    .from('restaurants')
+                    .select('id, name:approved_name, road_address, jibun_address')
+                    .in('id', restaurantIds),
+            ]);
 
             const typedProfilesData = (profilesData || []) as ProfileRow[];
             const typedRestaurantsData = (restaurantsData || []) as RestaurantSummaryRow[];

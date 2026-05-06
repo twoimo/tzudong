@@ -7,6 +7,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 const AD_BANNERS_QUERY_KEY = ['ad-banners'];
+const AD_BANNER_SELECT = [
+    'id',
+    'title',
+    'description',
+    'image_url',
+    'video_url',
+    'media_type',
+    'link_url',
+    'is_active',
+    'priority',
+    'display_target',
+    'created_at',
+    'updated_at',
+    'created_by',
+].join(', ');
 
 /**
  * 모든 광고 배너 조회 (관리자용)
@@ -19,7 +34,7 @@ export function useAdBannersAdmin() {
         queryFn: async (): Promise<AdBanner[]> => {
             const { data, error } = await supabase
                 .from('ad_banners')
-                .select('*')
+                .select(AD_BANNER_SELECT)
                 .order('priority', { ascending: false });
 
             if (error) {
@@ -47,7 +62,7 @@ export function useActiveAdBanners(
             try {
                 let query = supabase
                     .from('ad_banners')
-                    .select('*')
+                    .select(AD_BANNER_SELECT)
                     .eq('is_active', true)
                     .order('priority', { ascending: false });
 
@@ -123,7 +138,7 @@ export function useCreateAdBanner() {
                     ...data,
                     created_by: user?.id,
                 } as never)
-                .select()
+                .select(AD_BANNER_SELECT)
                 .single();
 
             if (error) {
@@ -162,7 +177,7 @@ export function useUpdateAdBanner() {
                 .from('ad_banners')
                 .update(data as never)
                 .eq('id', id)
-                .select()
+                .select(AD_BANNER_SELECT)
                 .single();
 
             if (error) {
@@ -236,7 +251,7 @@ export function useToggleAdBanner() {
                 .from('ad_banners')
                 .update({ is_active } as never)
                 .eq('id', id)
-                .select()
+                .select(AD_BANNER_SELECT)
                 .single();
 
             if (error) {

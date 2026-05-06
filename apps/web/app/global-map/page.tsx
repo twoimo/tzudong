@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
-import { mergeRestaurants } from "@/hooks/use-restaurants";
+import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { debugLog as logDebug } from "@/lib/debug-log";
 
@@ -146,7 +146,7 @@ export default function GlobalMapPage() {
         queryFn: async () => {
             const { data: allRestaurants, error } = await supabase
                 .from('restaurants')
-                .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
+                .select(RESTAURANT_MERGE_SELECT)
                 .eq('status', 'approved')
                 .returns<Restaurant[]>();
 

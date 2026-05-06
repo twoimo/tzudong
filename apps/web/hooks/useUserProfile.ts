@@ -78,6 +78,7 @@ const DEFAULT_TIER: TierInfo = { name: "🌱 뉴비", color: "text-green-600", b
 /** Query 기본 설정 */
 const QUERY_STALE_TIME = 1000 * 60 * 5; // 5분
 const QUERY_GC_TIME = 1000 * 60 * 10; // 10분
+const USER_PROFILE_RESTAURANT_SELECT = 'id,name:approved_name,approved_name,road_address,jibun_address,english_address,phone,categories,youtube_link,tzuyang_review,youtube_meta,lat,lng,status,review_count,created_at,updated_at';
 
 // ============================================================================
 // Utility Functions
@@ -113,7 +114,7 @@ async function fetchApprovedCanonicalRestaurantCandidates(reviewedRestaurants: R
 
     const { data } = await supabase
         .from('restaurants')
-        .select('*')
+        .select(USER_PROFILE_RESTAURANT_SELECT)
         .eq('status', 'approved')
         .in('approved_name', approvedNames);
 
@@ -151,6 +152,7 @@ interface ProfileRow {
 interface ReviewRow {
     id: string;
     is_verified: boolean;
+    like_count: number | null;
 }
 
 interface UserReviewRow {
@@ -161,6 +163,7 @@ interface UserReviewRow {
     created_at: string;
     visited_at: string | null;
     food_photos: string[] | null;
+    like_count: number | null;
 }
 
 interface StampReviewRow {
@@ -173,7 +176,6 @@ type UserProfileRestaurantRow = Tables<"restaurants">;
 
 interface ReviewLikeRow {
     review_id: string;
-    user_id?: string;
 }
 
 // ============================================================================
@@ -199,7 +201,7 @@ export function useUserProfile(userId: string) {
                     .single(),
                 supabase
                     .from('reviews')
-                    .select('id, is_verified')
+                    .select('id, is_verified, like_count')
                     .eq('user_id', userId),
             ]);
 
@@ -214,18 +216,7 @@ export function useUserProfile(userId: string) {
             // 인증된 리뷰 수 (도장)
             const verifiedReviewCount = reviews.filter(r => r.is_verified).length;
 
-            const reviewIds = reviews.map(r => r.id);
-
-            // 좋아요 수 조회 (있을 경우에만)
-            let totalLikes = 0;
-            if (reviewIds.length > 0) {
-                const { count } = await supabase
-                    .from('review_likes')
-                    .select('*', { count: 'exact', head: true })
-                    .in('review_id', reviewIds);
-
-                totalLikes = count ?? 0;
-            }
+            const totalLikes = reviews.reduce((sum, review) => sum + (review.like_count || 0), 0);
 
             // 품질 점수 계산
             const avgLikesPerReview = verifiedReviewCount > 0
@@ -267,7 +258,7 @@ export function useUserReviews(userId: string, viewerId?: string) {
             // 1. 리뷰 조회
             const { data: reviews, error: reviewsError } = await supabase
                 .from('reviews')
-                .select('id, restaurant_id, content, is_verified, created_at, visited_at, food_photos')
+                .select('id, restaurant_id, content, is_verified, created_at, visited_at, food_photos, like_count')
                 .eq('user_id', userId)
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
@@ -279,13 +270,22 @@ export function useUserReviews(userId: string, viewerId?: string) {
             const reviewIds = typedReviews.map((r) => r.id);
             const restaurantIds = [...new Set(typedReviews.map((r) => r.restaurant_id))];
 
-            // 3. 맛집 정보 조회
-            const { data: restaurants } = await supabase
-                .from('restaurants')
-                .select('*')
-                .in('id', restaurantIds);
+            // 3. 맛집 정보와 뷰어 좋아요 상태를 병렬 조회
+            const [restaurantsResult, viewerLikesResult] = await Promise.all([
+                supabase
+                    .from('restaurants')
+                    .select(USER_PROFILE_RESTAURANT_SELECT)
+                    .in('id', restaurantIds),
+                viewerId
+                    ? supabase
+                        .from('review_likes')
+                        .select('review_id')
+                        .in('review_id', reviewIds)
+                        .eq('user_id', viewerId)
+                    : Promise.resolve({ data: [] }),
+            ]);
 
-            const typedRestaurants = (restaurants ?? []) as UserProfileRestaurantRow[];
+            const typedRestaurants = (restaurantsResult.data ?? []) as UserProfileRestaurantRow[];
             const restaurantMap = new Map(
                 typedRestaurants.map((r) => {
                     return [r.id, r as Restaurant];
@@ -295,24 +295,10 @@ export function useUserReviews(userId: string, viewerId?: string) {
                 typedRestaurants as Restaurant[]
             );
 
-            // 4. 좋아요 정보 조회 (뷰어 기준 + 전체 개수)
-            // 개수는 별도 카운트 쿼리가 필요할 수 있으나, 여기서는 기존 로직대로 likes 테이블 조회
-            const { data: likes } = await supabase
-                .from('review_likes')
-                .select('review_id, user_id')
-                .in('review_id', reviewIds);
-
-            const likesCountMap = new Map<string, number>();
             const userLikedMap = new Map<string, boolean>();
-
-            if (likes) {
-                (likes as ReviewLikeRow[]).forEach(l => {
-                    likesCountMap.set(l.review_id, (likesCountMap.get(l.review_id) || 0) + 1);
-                    if (viewerId && l.user_id === viewerId) {
-                        userLikedMap.set(l.review_id, true);
-                    }
-                });
-            }
+            ((viewerLikesResult.data ?? []) as ReviewLikeRow[]).forEach(l => {
+                userLikedMap.set(l.review_id, true);
+            });
 
             // 5. 데이터 병합
             return typedReviews.map((r) => {
@@ -336,7 +322,7 @@ export function useUserReviews(userId: string, viewerId?: string) {
                     rating: 5,
                     content: r.content,
                     isVerified: r.is_verified,
-                    likeCount: likesCountMap.get(r.id) || 0,
+                    likeCount: r.like_count || 0,
                     isLikedByUser: userLikedMap.get(r.id) || false,
                     createdAt: r.created_at,
                     visitedDate: r.visited_at ?? undefined,
@@ -438,7 +424,7 @@ export function useUserStamps(userId: string) {
             // 3. 맛집 상세 정보 조회
             const { data: restaurants } = await supabase
                 .from('restaurants')
-                .select('*')
+                .select(USER_PROFILE_RESTAURANT_SELECT)
                 .in('id', restaurantIds);
 
             const typedRestaurants = (restaurants ?? []) as UserProfileRestaurantRow[];
@@ -458,7 +444,7 @@ export function useUserStamps(userId: string) {
             const { data: approvedRestaurantRows } = reviewedRestaurantNames.length > 0
                 ? await supabase
                     .from('restaurants')
-                    .select('*')
+                    .select(USER_PROFILE_RESTAURANT_SELECT)
                     .eq('status', 'approved')
                     .in('approved_name', reviewedRestaurantNames)
                 : { data: [] };
