@@ -1,6 +1,13 @@
 import type { FilterState } from '@/components/filters/filter-state';
 import type { Region } from '@/types/restaurant';
 
+type RestaurantQueryBounds = {
+    south: number;
+    west: number;
+    north: number;
+    east: number;
+};
+
 export function buildMapViewRestaurantsQueryOptions({
     bounds,
     filters,
@@ -75,4 +82,14 @@ export function buildNaverRestaurantsQueryOptions({
         includeVerifiedReviewCounts: false,
         enabled: isLoaded,
     };
+}
+
+export function resolveNaverRestaurantQueryBounds({
+    firstLoadViewportBounds,
+    shouldUseFullMapData,
+}: {
+    firstLoadViewportBounds?: RestaurantQueryBounds;
+    shouldUseFullMapData: boolean;
+}): RestaurantQueryBounds | undefined {
+    return shouldUseFullMapData ? undefined : firstLoadViewportBounds;
 }

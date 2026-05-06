@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { parseCategory, getYouTubeThumbnailUrl } from './stamp-utils';
+import { getRestaurantDisplayName } from '@/lib/restaurant-display-name';
 
 type StampCardRestaurant = Restaurant & {
     verified_review_count?: number | null;
@@ -50,6 +51,7 @@ export const StampCard = memo(function StampCard({
     isGuideCard = false,
 }: StampCardProps) {
     const typedRestaurant = restaurant as StampCardRestaurant;
+    const restaurantDisplayName = getRestaurantDisplayName(typedRestaurant);
     const showStamp = isUserStampsReady && isVisited;
     const youtubeLinks = typedRestaurant.mergedYoutubeLinks ?? (typedRestaurant.youtube_link ? [typedRestaurant.youtube_link] : []);
     const currentIndex = currentThumbnailIndex % (youtubeLinks.length || 1);
@@ -93,7 +95,7 @@ export const StampCard = memo(function StampCard({
                     <>
                         <Image
                             src={thumbnailUrl}
-                            alt={`${restaurant.name} 썸네일`}
+                            alt={`${restaurantDisplayName} 썸네일`}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1536px) 25vw, 20vw"
                             className={cn(
@@ -136,9 +138,9 @@ export const StampCard = memo(function StampCard({
                         )}
 
                         {/* 방문 완료 스탬프 */}
-                                {showStamp && (
-                                    <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                                    {guideLabel && (
+                        {showStamp && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
+                                {guideLabel && (
                                     <span
                                         className={cn(
                                             "absolute top-2 left-2 z-10 leading-none rounded-full bg-black/65 text-white font-medium",
@@ -169,21 +171,19 @@ export const StampCard = memo(function StampCard({
                                         <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} />
                                     </button>
                                 )}
-                                <div className={cn("relative", stampSizeClass)}>
-                                    <Image
+                                <div className="relative">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
                                         src="/images/stamp-clear.png"
                                         alt="방문 완료"
-                                        fill
-                                        sizes="208px"
-                                        className="object-contain opacity-90 drop-shadow-lg dark:hidden"
+                                        className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg dark:hidden")}
                                         style={{ transform: 'rotate(-45deg)' }}
                                     />
-                                    <Image
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
                                         src="/images/stamp-clear-dark.png"
                                         alt="방문 완료"
-                                        fill
-                                        sizes="208px"
-                                        className="object-contain opacity-90 drop-shadow-lg hidden dark:block"
+                                        className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg hidden dark:block")}
                                         style={{ transform: 'rotate(-45deg)' }}
                                     />
                                 </div>
@@ -202,9 +202,9 @@ export const StampCard = memo(function StampCard({
                         <div className="flex items-center gap-2 min-w-0">
                             <p
                                 className={cn("font-medium leading-snug text-foreground truncate", isCompact ? "text-xs" : "text-sm")}
-                                title={guideTitle || restaurant.name}
+                                title={guideTitle || restaurantDisplayName}
                             >
-                                {guideTitle || restaurant.name}
+                                {guideTitle || restaurantDisplayName}
                             </p>
                             {category && (
                                 <Badge
@@ -228,8 +228,8 @@ export const StampCard = memo(function StampCard({
                 ) : (
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                        <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurant.name}>
-                            {restaurant.name}
+                        <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurantDisplayName}>
+                            {restaurantDisplayName}
                         </h3>
                         {category && (
                             <Badge
