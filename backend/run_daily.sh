@@ -472,6 +472,18 @@ step_start() {
     STEP_START_TIME=$(date +%s)
 }
 
+STEP_EVENTS=()
+
+record_step_event() {
+    local status="$1"
+    local step_name="$2"
+    local duration_seconds="${3:-}"
+    local reason="${4:-}"
+    local upstream_step="${5:-}"
+
+    STEP_EVENTS+=("${status}"$'\t'"${step_name}"$'\t'"${duration_seconds}"$'\t'"${reason}"$'\t'"${upstream_step}")
+}
+
 step_end() {
     local STEP_NAME="$1"
     local STEP_END_TIME=$(date +%s)
@@ -479,6 +491,7 @@ step_end() {
     local MINUTES=$((DURATION / 60))
     local SECONDS=$((DURATION % 60))
     log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
+    record_step_event "completed" "$STEP_NAME" "$DURATION"
 }
 
 step_duration_from() {
@@ -489,6 +502,7 @@ step_duration_from() {
     local MINUTES=$((DURATION / 60))
     local SECONDS=$((DURATION % 60))
     log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
+    record_step_event "completed" "$STEP_NAME" "$DURATION"
 }
 
 count_frame_files() {
@@ -514,6 +528,7 @@ record_required_failure() {
     fi
 
     FAILED_REQUIRED_STEPS+=("$entry")
+    record_step_event "failed" "$step_name" "" "$reason"
     log "ERROR" "$step_name 실패${reason:+: $reason}"
 }
 
@@ -527,6 +542,7 @@ record_optional_skip() {
     fi
 
     SKIPPED_OPTIONAL_STEPS+=("$entry")
+    record_step_event "optional_skipped" "$step_name" "" "$reason"
     log "WARN" "$step_name 선택 건너뜀${reason:+: $reason}"
 }
 
@@ -545,6 +561,7 @@ record_downstream_skip() {
     fi
 
     SKIPPED_DOWNSTREAM_STEPS+=("$entry")
+    record_step_event "downstream_skipped" "$step_name" "" "$reason" "$upstream_step"
     log "WARN" "$step_name 연쇄 건너뜀${reason:+: $reason}${upstream_step:+ (upstream: $upstream_step)}"
 }
 
@@ -1842,6 +1859,9 @@ if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
     done
     for item in "${SKIPPED_DOWNSTREAM_STEPS[@]}"; do
         MANIFEST_ARGS+=(--downstream-skip "$item")
+    done
+    for item in "${STEP_EVENTS[@]}"; do
+        MANIFEST_ARGS+=(--step-event "$item")
     done
 
     if "$PYTHON_CMD" "${MANIFEST_ARGS[@]}"; then
