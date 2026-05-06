@@ -116,6 +116,7 @@ describe('web quality performance source contracts', () => {
     test('profile/stamp/map regressions stay fixed while preserving deferred map loading', () => {
         const overlayPanelSource = source('components/layout/OverlayPagePanel.tsx');
         const stampCardSource = source('components/stamp/StampCard.tsx');
+        const userProfilePanelSource = source('components/profile/UserProfilePanel.tsx');
         const naverMapSource = source('components/map/NaverMapView.tsx');
 
         const userProfilePanelIndex = overlayPanelSource.indexOf('<UserProfilePanel');
@@ -126,6 +127,16 @@ describe('web quality performance source contracts', () => {
         expect(stampCardSource).toContain('getRestaurantDisplayName(typedRestaurant)');
         expect(stampCardSource).toContain('alt={`${restaurantDisplayName} 썸네일`}');
         expect(stampCardSource).toContain('title={restaurantDisplayName}');
+        expect(stampCardSource).toContain('absolute inset-0 z-10 flex items-center justify-center overflow-hidden');
+        expect(stampCardSource).toContain('<img');
+        expect(stampCardSource).toContain('src="/images/stamp-clear.png"');
+        expect(userProfilePanelSource).toContain('const StampItem = memo(function StampItem');
+        expect(userProfilePanelSource).toContain('const ReviewItem = memo(function ReviewItem');
+        expect(userProfilePanelSource).toContain('<ScrollArea className="h-full">');
+        expect(userProfilePanelSource).toContain('{onClose ? <X className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}');
+        expect(userProfilePanelSource).not.toContain('className="flex-shrink-0 -mr-2 h-10 w-10"');
+        expect(userProfilePanelSource).not.toContain('import { StampCard }');
+        expect(userProfilePanelSource).not.toContain('import { ReviewCard }');
         expect(naverMapSource).toContain('resolveNaverRestaurantQueryBounds');
         expect(naverMapSource).toContain('shouldUseFullMapData: shouldRunNoncriticalMapEffects');
         expect(naverMapSource.match(/activateNoncriticalMapEffects\(\);/g)?.length).toBeGreaterThanOrEqual(3);

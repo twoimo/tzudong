@@ -138,9 +138,9 @@ export const StampCard = memo(function StampCard({
                         )}
 
                         {/* 방문 완료 스탬프 */}
-                                {showStamp && (
-                                    <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                                    {guideLabel && (
+                        {showStamp && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
+                                {guideLabel && (
                                     <span
                                         className={cn(
                                             "absolute top-2 left-2 z-10 leading-none rounded-full bg-black/65 text-white font-medium",
@@ -171,21 +171,19 @@ export const StampCard = memo(function StampCard({
                                         <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} />
                                     </button>
                                 )}
-                                <div className={cn("relative", stampSizeClass)}>
-                                    <Image
+                                <div className="relative">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
                                         src="/images/stamp-clear.png"
                                         alt="방문 완료"
-                                        fill
-                                        sizes="208px"
-                                        className="object-contain opacity-90 drop-shadow-lg dark:hidden"
+                                        className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg dark:hidden")}
                                         style={{ transform: 'rotate(-45deg)' }}
                                     />
-                                    <Image
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
                                         src="/images/stamp-clear-dark.png"
                                         alt="방문 완료"
-                                        fill
-                                        sizes="208px"
-                                        className="object-contain opacity-90 drop-shadow-lg hidden dark:block"
+                                        className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg hidden dark:block")}
                                         style={{ transform: 'rotate(-45deg)' }}
                                     />
                                 </div>
