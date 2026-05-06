@@ -153,6 +153,24 @@ export type RunDailyManifestRuntime = {
   targetBranch?: string;
 };
 
+export type RunDailyManifestStepEvent = {
+  name: string;
+  status: 'completed' | 'failed' | 'optional_skipped' | 'downstream_skipped';
+  durationSeconds?: number;
+  reason?: string;
+  upstreamStep?: string;
+};
+
+export type RunDailyManifestGdriveUpload = {
+  status?: 'skipped' | 'complete' | 'partial' | 'backfill_required' | 'backfill_complete' | 'failed';
+  exitCode?: number;
+  expectedCount?: number;
+  residualCount?: number;
+  pendingBacklogCount?: number;
+  terminalIncomplete?: boolean;
+  completionProof?: 'none' | 'rclone_exit_zero' | 'remote_size_check' | 'remote_manifest_check';
+};
+
 export type RunDailyManifestStatus = {
   manifestPath?: string;
   finalStatus?: 'OK' | 'WARN' | 'ERROR' | 'UNKNOWN';
@@ -160,9 +178,11 @@ export type RunDailyManifestStatus = {
   failedRequiredSteps: string[];
   optionalSkips: string[];
   downstreamSkips: string[];
+  stepEvents?: RunDailyManifestStepEvent[];
   noWorkShortCircuit?: boolean;
   policyMode?: string;
   runtime?: RunDailyManifestRuntime;
+  gdriveUpload?: RunDailyManifestGdriveUpload;
   detail?: string;
 };
 
@@ -199,6 +219,67 @@ function normalizeRunDailyRuntime(value: unknown): RunDailyManifestRuntime | und
       normalized[field] = fieldValue.trim();
     }
   }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+const RUN_DAILY_STEP_EVENT_STATUSES = new Set(['completed', 'failed', 'optional_skipped', 'downstream_skipped']);
+const GDRIVE_UPLOAD_STATUSES = new Set(['skipped', 'complete', 'partial', 'backfill_required', 'backfill_complete', 'failed']);
+const GDRIVE_COMPLETION_PROOFS = new Set(['none', 'rclone_exit_zero', 'remote_size_check', 'remote_manifest_check']);
+
+function normalizeBoundedString(value: unknown, maxLength = 160): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.replace(/[\r\n\t]+/g, ' ').trim();
+  return normalized.length > 0 ? normalized.slice(0, maxLength) : undefined;
+}
+
+function normalizeNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function normalizeRunDailyStepEvents(value: unknown): RunDailyManifestStepEvent[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const events: RunDailyManifestStepEvent[] = [];
+  for (const item of value.slice(-20)) {
+    if (!item || typeof item !== 'object') continue;
+    const event = item as Record<string, unknown>;
+    const name = normalizeBoundedString(event.name);
+    const status = normalizeBoundedString(event.status);
+    if (!name || !status || !RUN_DAILY_STEP_EVENT_STATUSES.has(status)) continue;
+
+    const normalized: RunDailyManifestStepEvent = {
+      name,
+      status: status as RunDailyManifestStepEvent['status'],
+    };
+    const durationSeconds = normalizeNumber(event.durationSeconds);
+    if (durationSeconds !== undefined && durationSeconds >= 0) normalized.durationSeconds = durationSeconds;
+    const reason = normalizeBoundedString(event.reason);
+    if (reason) normalized.reason = reason;
+    const upstreamStep = normalizeBoundedString(event.upstreamStep);
+    if (upstreamStep) normalized.upstreamStep = upstreamStep;
+    events.push(normalized);
+  }
+
+  return events.length > 0 ? events : undefined;
+}
+
+function normalizeGdriveUpload(value: unknown): RunDailyManifestGdriveUpload | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const upload = value as Record<string, unknown>;
+  const normalized: RunDailyManifestGdriveUpload = {};
+  const status = normalizeBoundedString(upload.status);
+  if (status && GDRIVE_UPLOAD_STATUSES.has(status)) {
+    normalized.status = status as RunDailyManifestGdriveUpload['status'];
+  }
+  const completionProof = normalizeBoundedString(upload.completionProof);
+  if (completionProof && GDRIVE_COMPLETION_PROOFS.has(completionProof)) {
+    normalized.completionProof = completionProof as RunDailyManifestGdriveUpload['completionProof'];
+  }
+  for (const key of ['exitCode', 'expectedCount', 'residualCount', 'pendingBacklogCount'] as const) {
+    const numberValue = normalizeNumber(upload[key]);
+    if (numberValue !== undefined) normalized[key] = numberValue;
+  }
+  if (typeof upload.terminalIncomplete === 'boolean') normalized.terminalIncomplete = upload.terminalIncomplete;
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
@@ -239,9 +320,11 @@ export function resolveRunDailyManifestStatus(
       failedRequiredSteps: toStringList(parsed.failedRequiredSteps),
       optionalSkips: toStringList(parsed.optionalSkips),
       downstreamSkips: toStringList(parsed.downstreamSkips),
+      stepEvents: normalizeRunDailyStepEvents(parsed.stepEvents),
       noWorkShortCircuit: typeof parsed.noWorkShortCircuit === 'boolean' ? parsed.noWorkShortCircuit : undefined,
       policyMode: typeof parsed.policyMode === 'string' ? parsed.policyMode : undefined,
       runtime: normalizeRunDailyRuntime(parsed.runtime),
+      gdriveUpload: normalizeGdriveUpload(parsed.gdriveUpload),
     };
   } catch (error) {
     return {
