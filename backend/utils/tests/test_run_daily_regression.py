@@ -292,7 +292,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
         self.assertIn("MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}", workflow)
-        self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}", workflow)
+        self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1000' }}", workflow)
         self.assertIn("concurrency:", workflow)
         self.assertIn("gdrive-frame-backfill", workflow)
         self.assertIn("backfill.lock.json", workflow)
@@ -449,6 +449,63 @@ class GDriveUploadContractTests(unittest.TestCase):
         )
         self.assertEqual("main", summary["runtime"]["executionBranch"])
         self.assertEqual("data", summary["runtime"]["targetBranch"])
+
+    def test_run_daily_summary_manifest_records_structured_step_events(self) -> None:
+        summary_path = self.root / "step-events-summary.json"
+        result = self._helper(
+            "write-summary-manifest",
+            "--output",
+            str(summary_path),
+            "--date",
+            "2026-05-01",
+            "--final-status",
+            "WARN",
+            "--final-exit-code",
+            "0",
+            "--step-event",
+            "completed\tStep 1 (URL Collection)\t12\t\t",
+            "--step-event",
+            "downstream_skipped\tStep 09~13 (Evaluation)\t\tStep 08 quota 초과\tStep 08 (Chunk Multimodal)",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            [
+                {
+                    "durationSeconds": 12,
+                    "name": "Step 1 (URL Collection)",
+                    "status": "completed",
+                },
+                {
+                    "name": "Step 09~13 (Evaluation)",
+                    "reason": "Step 08 quota 초과",
+                    "status": "downstream_skipped",
+                    "upstreamStep": "Step 08 (Chunk Multimodal)",
+                },
+            ],
+            summary["stepEvents"],
+        )
+
+    def test_run_daily_summary_manifest_rejects_unknown_step_event_status(self) -> None:
+        summary_path = self.root / "invalid-step-events-summary.json"
+        result = self._helper(
+            "write-summary-manifest",
+            "--output",
+            str(summary_path),
+            "--date",
+            "2026-05-01",
+            "--final-status",
+            "ERROR",
+            "--final-exit-code",
+            "1",
+            "--step-event",
+            "unknown\tStep 1 (URL Collection)\t0\t\t",
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("invalid step event status: unknown", result.stderr)
+        self.assertFalse(summary_path.exists())
 
     def test_gdrive_upload_status_embeds_in_summary_manifest_when_requested(self) -> None:
         frame = self.frames_dir / "summary.jpg"
@@ -749,6 +806,19 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertEqual([], manifest["downstreamSkips"])
         self.assertTrue(manifest["noWorkShortCircuit"])
         self.assertEqual("end_to_end", manifest["policyMode"])
+        completed_events = {
+            event["name"]: event
+            for event in manifest["stepEvents"]
+            if event["status"] == "completed"
+        }
+        for step_name in (
+            "Step 3 (Transcript)",
+            "Step 3.1 (Context Generation)",
+            "Step 4 (Heatmap & Frames)",
+        ):
+            self.assertIn(step_name, completed_events)
+            self.assertIsInstance(completed_events[step_name]["durationSeconds"], int)
+            self.assertGreaterEqual(completed_events[step_name]["durationSeconds"], 0)
         self.assertIn("[TIMING] Step 3 (Transcript):", result.stdout)
         self.assertIn("[TIMING] Step 3.1 (Context Generation):", result.stdout)
         self.assertIn("[TIMING] Step 4 (Heatmap & Frames):", result.stdout)
@@ -780,6 +850,20 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue(any("Step 08 (Chunk Multimodal)" in item for item in manifest["failedRequiredSteps"]))
         self.assertEqual([], manifest["optionalSkips"])
         self.assertTrue(any("Step 09~13 (Evaluation)" in item for item in manifest["downstreamSkips"]))
+        self.assertTrue(
+            any(
+                event["name"] == "Step 08 (Chunk Multimodal)" and event["status"] == "failed"
+                for event in manifest["stepEvents"]
+            )
+        )
+        self.assertTrue(
+            any(
+                event["name"] == "Step 09~13 (Evaluation)"
+                and event["status"] == "downstream_skipped"
+                and event["upstreamStep"] == "Step 08 (Chunk Multimodal)"
+                for event in manifest["stepEvents"]
+            )
+        )
 
     def test_supabase_key_only_skips_insert_stage_in_local_mode(self) -> None:
         result = self._run_script(
@@ -801,6 +885,12 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue(any("Step 13 (Supabase)" in item for item in manifest["optionalSkips"]))
         self.assertEqual([], manifest["failedRequiredSteps"])
         self.assertEqual([], manifest["downstreamSkips"])
+        self.assertTrue(
+            any(
+                event["name"] == "Step 13 (Supabase)" and event["status"] == "optional_skipped"
+                for event in manifest["stepEvents"]
+            )
+        )
 
     def test_supabase_insert_failure_returns_non_zero_exit(self) -> None:
         result = self._run_script(supabase_insert_exit=23, force_phase3=True)

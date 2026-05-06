@@ -23,6 +23,7 @@ UPLOAD_SCHEMA_VERSION = 2
 STRONG_COMPLETION_PROOFS = {"remote_size_check", "remote_manifest_check"}
 QUEUE_STATES = {"pending_local", "staged", "missing_local", "remote_verified", "failed_permanent"}
 TOP_LEVEL_STATUSES = {"skipped", "complete", "partial", "backfill_required", "backfill_complete", "failed"}
+STEP_EVENT_STATUSES = {"completed", "failed", "optional_skipped", "downstream_skipped"}
 
 
 def count_pending_jsonl(source_dir: Path, target_dir: Path) -> int:
@@ -761,6 +762,43 @@ def _build_runtime_telemetry(args: argparse.Namespace) -> dict:
     return {key: value for key, value in runtime.items() if value is not None}
 
 
+def _parse_step_event(value: str) -> dict:
+    """Parse a tab-delimited step event emitted by run_daily.sh."""
+    parts = value.split("\t")
+    if len(parts) > 5:
+        raise ValueError("step event must have at most five tab-delimited fields")
+    while len(parts) < 5:
+        parts.append("")
+
+    status, name, duration_seconds, reason, upstream_step = parts
+    status = status.strip()
+    name = name.strip()
+    if not status:
+        raise ValueError("step event status is required")
+    if status not in STEP_EVENT_STATUSES:
+        raise ValueError(f"invalid step event status: {status}")
+    if not name:
+        raise ValueError("step event name is required")
+
+    event = {
+        "name": name,
+        "status": status,
+    }
+    normalized_duration = duration_seconds.strip()
+    if normalized_duration:
+        try:
+            event["durationSeconds"] = int(normalized_duration)
+        except ValueError as exc:
+            raise ValueError(f"invalid step event duration: {duration_seconds}") from exc
+    normalized_reason = _optional_string(reason)
+    if normalized_reason:
+        event["reason"] = normalized_reason
+    normalized_upstream = _optional_string(upstream_step)
+    if normalized_upstream:
+        event["upstreamStep"] = normalized_upstream
+    return event
+
+
 def build_summary_manifest(args: argparse.Namespace) -> dict:
     """Build the stable run_daily summary manifest payload."""
     generated_at = args.generated_at or datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -776,6 +814,7 @@ def build_summary_manifest(args: argparse.Namespace) -> dict:
         "summaryPath": _optional_path(args.summary_path),
         "noWorkShortCircuit": _truthy(args.no_work_short_circuit),
         "policyMode": args.policy_mode,
+        "stepEvents": [_parse_step_event(item) for item in (args.step_event or [])],
     }
     runtime = _build_runtime_telemetry(args)
     if runtime:
@@ -812,6 +851,7 @@ def _add_manifest_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--failed-required-step", action="append", default=[])
     parser.add_argument("--optional-skip", action="append", default=[])
     parser.add_argument("--downstream-skip", action="append", default=[])
+    parser.add_argument("--step-event", action="append", default=[])
 
 
 def _add_gdrive_expected_args(parser: argparse.ArgumentParser) -> None:
