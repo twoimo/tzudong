@@ -572,6 +572,56 @@ def create_gdrive_staging_shards(args: argparse.Namespace) -> dict:
     return payload
 
 
+def build_gdrive_upload_operator_message(payload: dict) -> dict:
+    """Build a compact operator-facing status message for GDrive upload payloads."""
+    status = str(payload.get("status") or "unknown")
+    expected = _safe_int(str(payload.get("expectedCount", "0")), 0)
+    verified = _safe_int(str(payload.get("verifiedCount", "0")), 0)
+    residual = _safe_int(str(payload.get("residualCount", "0")), 0)
+    pending = _safe_int(str(payload.get("pendingBacklogCount", "0")), 0)
+    proof = str(payload.get("completionProof") or "none")
+
+    facts = (
+        f"status={status}, expected={expected}, verified={verified}, "
+        f"residual={residual}, pending={pending}, proof={proof}"
+    )
+    if status in {"complete", "backfill_complete"}:
+        return {
+            "severity": "ok",
+            "summary": f"GDrive upload verified ({facts})",
+            "action": "No operator action required.",
+        }
+    if status == "skipped":
+        return {
+            "severity": "info",
+            "summary": f"GDrive upload skipped ({facts})",
+            "action": "No upload candidates were detected for this run.",
+        }
+    if status == "backfill_required":
+        return {
+            "severity": "warning",
+            "summary": f"GDrive upload requires backfill ({facts})",
+            "action": "Run the GDrive frame backfill workflow or verify remote proof before treating upload as complete.",
+        }
+    if status == "partial":
+        return {
+            "severity": "warning",
+            "summary": f"GDrive upload completed partially ({facts})",
+            "action": "Review the residual queue and rerun upload/backfill until remote proof is strong.",
+        }
+    if status == "failed":
+        return {
+            "severity": "error",
+            "summary": f"GDrive upload status failed ({facts})",
+            "action": "Inspect upload logs, residual queue, and accounting invariant notes before retrying.",
+        }
+    return {
+        "severity": "warning",
+        "summary": f"GDrive upload status is unknown ({facts})",
+        "action": "Inspect the upload status artifact before relying on frame availability.",
+    }
+
+
 def _derive_policy(status: str, input_policy: str, missing_local_count: int, failed_permanent_count: int, max_residual_attempts: int, threshold: int) -> str:
     if status == "backfill_required":
         return "backfill_required"
@@ -787,6 +837,7 @@ def build_gdrive_upload_status(args: argparse.Namespace) -> dict:
         payload["status"] = "failed"
         payload["terminalIncomplete"] = True
         payload["notes"].append("terminal status requires strong remote completion proof")
+    payload["operatorMessage"] = build_gdrive_upload_operator_message(payload)
     return payload
 
 

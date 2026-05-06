@@ -674,6 +674,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("complete", summary["gdriveUpload"]["status"])
         self.assertEqual(1, summary["gdriveUpload"]["expectedCount"])
         self.assertEqual(1, summary["gdriveUpload"]["verifiedCount"])
+        self.assertEqual("ok", summary["gdriveUpload"]["operatorMessage"]["severity"])
+        self.assertIn("GDrive upload verified", summary["gdriveUpload"]["operatorMessage"]["summary"])
 
     def test_gdrive_upload_status_preserves_missing_residual_entries_on_skip(self) -> None:
         stale_file = self.frames_dir / "stale.jpg"
@@ -732,6 +734,9 @@ class GDriveUploadContractTests(unittest.TestCase):
         status = json.loads(self.status_path.read_text(encoding="utf-8"))
         self.assertEqual("backfill_required", status["status"])
         self.assertEqual("backfill_required", status["policy"])
+        self.assertEqual("warning", status["operatorMessage"]["severity"])
+        self.assertIn("requires backfill", status["operatorMessage"]["summary"])
+        self.assertIn("backfill workflow", status["operatorMessage"]["action"])
         self.assertEqual(1, status["missingLocalCount"])
         self.assertEqual(1, status["residualCount"])
         queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
