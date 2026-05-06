@@ -1,11 +1,10 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import { useState, memo, useMemo, useCallback } from "react";
+import { useState, memo, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     ChevronLeft,
@@ -14,10 +13,7 @@ import {
     MessageSquare,
     Users,
     User,
-    X,
-    MapPin,
-    Calendar,
-    CheckCircle2
+    X
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -25,17 +21,18 @@ import {
     useUserReviews,
     useUserLikers,
     useUserStamps,
-    Liker,
-    UserReview,
-    UserStamp
+    Liker
 } from "@/hooks/useUserProfile";
 import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
+import { StampCard } from "@/components/stamp/StampCard";
+import { ReviewCard } from "@/components/reviews/ReviewCard";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import type { Restaurant } from "@/types/restaurant";
-import { formatDistanceToNow } from "date-fns";
-import { ko } from "date-fns/locale";
-import { getRestaurantDisplayName } from "@/lib/restaurant-display-name";
 
 // [최적화] 빈 상태 컴포넌트 - memo로 래핑
 interface EmptyStateProps {
@@ -49,95 +46,6 @@ const EmptyState = memo(function EmptyState({ icon, message }: EmptyStateProps) 
             {icon}
             <p>{message}</p>
         </div>
-    );
-});
-
-// [복구] 사용자 프로필 패널은 예전처럼 가벼운 행 리스트 UI를 사용한다.
-interface StampItemProps {
-    stamp: UserStamp;
-    formatDate: (date: string) => string;
-    onRestaurantClick?: (restaurant: Restaurant) => void;
-}
-
-const StampItem = memo(function StampItem({ stamp, formatDate, onRestaurantClick }: StampItemProps) {
-    const restaurantName = getRestaurantDisplayName(stamp.restaurant);
-
-    return (
-        <button
-            type="button"
-            onClick={() => onRestaurantClick?.(stamp.restaurant)}
-            className="w-full p-4 hover:bg-muted/30 transition-colors text-left"
-        >
-            <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{restaurantName}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        {stamp.visitedDate && (
-                            <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                방문: {stamp.visitedDate}
-                            </span>
-                        )}
-                        <span>{formatDate(stamp.createdAt)}</span>
-                    </div>
-                </div>
-                <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-            </div>
-        </button>
-    );
-});
-
-interface ReviewItemProps {
-    review: UserReview;
-    formatDate: (date: string) => string;
-    onRestaurantClick?: (restaurant: Restaurant) => void;
-}
-
-const ReviewItem = memo(function ReviewItem({ review, formatDate, onRestaurantClick }: ReviewItemProps) {
-    const handleClick = () => {
-        if (review.restaurant) {
-            onRestaurantClick?.(review.restaurant);
-        }
-    };
-
-    return (
-        <button
-            type="button"
-            onClick={handleClick}
-            className="w-full p-4 hover:bg-muted/30 transition-colors text-left"
-        >
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold truncate">{review.restaurantName}</span>
-                        {review.isVerified && (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                        )}
-                    </div>
-                    {review.content && (
-                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                            {review.content}
-                        </p>
-                    )}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        {review.visitedDate && (
-                            <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                방문: {review.visitedDate}
-                            </span>
-                        )}
-                        <span>{formatDate(review.createdAt)}</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-red-600">
-                    <Heart className="h-4 w-4" />
-                    <span>{review.likeCount}</span>
-                </div>
-            </div>
-        </button>
     );
 });
 
@@ -203,30 +111,37 @@ interface UserProfilePanelProps {
     onRestaurantClick?: (restaurant: Restaurant) => void;
 }
 
+const USER_PROFILE_PAGE_SIZE = 15;
+
 const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showBackButton = true, onUserClick, onRestaurantClick }: UserProfilePanelProps) {
     const router = useRouter();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
 
     const { data: profile, isLoading: profileLoading } = useUserProfile(userId);
     const { data: stamps = [], isLoading: stampsLoading } = useUserStamps(userId);
-    const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId);
+    const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId, user?.id);
     const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
     const { data: leaderboard = [] } = useLeaderboard();
 
     const [activeTab, setActiveTab] = useState<'stamps' | 'reviews' | 'likers'>('stamps');
+    const [thumbnailIndices, setThumbnailIndices] = useState<Record<string, number>>({});
+    const [visibleStampCount, setVisibleStampCount] = useState(15);
+    const [visibleReviewCount, setVisibleReviewCount] = useState(15);
+    const [visibleLikerCount, setVisibleLikerCount] = useState(15);
+
+    const stampTabRef = useRef<HTMLDivElement | null>(null);
+    const reviewTabRef = useRef<HTMLDivElement | null>(null);
+    const likerTabRef = useRef<HTMLDivElement | null>(null);
+
+    const stampLoadMoreRef = useRef<HTMLDivElement | null>(null);
+    const reviewLoadMoreRef = useRef<HTMLDivElement | null>(null);
+    const likerLoadMoreRef = useRef<HTMLDivElement | null>(null);
 
     // [최적화] useMemo로 랭킹 계산 메모이제이션
     const userRank = useMemo(() => {
         return leaderboard.findIndex((u: LeaderboardUser) => u.id === userId) + 1;
     }, [leaderboard, userId]);
-
-    // [최적화] useCallback으로 날짜 포맷 함수 메모이제이션
-    const formatDate = useCallback((dateStr: string) => {
-        try {
-            return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: ko });
-        } catch {
-            return dateStr;
-        }
-    }, []);
 
     // [최적화] useCallback으로 뒤로가기 핸들러 메모이제이션
     const handleBack = useCallback(() => {
@@ -242,6 +157,17 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
         setActiveTab(value as 'stamps' | 'reviews' | 'likers');
     }, []);
 
+    useEffect(() => {
+        setVisibleStampCount(USER_PROFILE_PAGE_SIZE);
+        setVisibleReviewCount(USER_PROFILE_PAGE_SIZE);
+        setVisibleLikerCount(USER_PROFILE_PAGE_SIZE);
+    }, [userId]);
+
+    // [핸들러] 썸네일 변경
+    const handleThumbnailChange = useCallback((id: string, index: number) => {
+        setThumbnailIndices(prev => ({ ...prev, [id]: index }));
+    }, []);
+
     // [핸들러] 맛집 클릭 - 메인으로 이동
     const handleRestaurantClick = useCallback((restaurant: Restaurant) => {
         if (onRestaurantClick) {
@@ -251,6 +177,104 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
         if (onClose) onClose();
         router.push(`/?restaurant=${restaurant.id}`);
     }, [onClose, router, onRestaurantClick]);
+
+    // [핸들러] 리뷰 좋아요 토글
+    const handleLike = useCallback(async (reviewId: string) => {
+        if (!user) {
+            toast({
+                title: '로그인 필요',
+                description: '좋아요를 누르려면 로그인이 필요합니다.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        // 현재 리뷰 찾기
+        const targetReview = reviews.find(r => r.id === reviewId);
+        if (!targetReview) return;
+
+        const currentIsLiked = targetReview.isLikedByUser;
+
+        try {
+            if (currentIsLiked) {
+                await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
+            } else {
+                await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as never);
+            }
+            // 쿼리 무효화로 UI 업데이트
+            queryClient.invalidateQueries({ queryKey: ['user-reviews', userId] });
+        } catch (error) {
+            console.error('좋아요 토글 실패:', error);
+            toast({
+                title: '오류 발생',
+                description: '좋아요 처리 중 문제가 발생했습니다.',
+                variant: 'destructive',
+            });
+        }
+    }, [user, reviews, queryClient, userId]);
+
+    useEffect(() => {
+        const root = stampTabRef.current;
+        const sentinel = stampLoadMoreRef.current;
+        if (!root || !sentinel || activeTab !== 'stamps' || stamps.length <= visibleStampCount) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                setVisibleStampCount((prev) => Math.min(prev + USER_PROFILE_PAGE_SIZE, stamps.length));
+            },
+            {
+                root,
+                rootMargin: '200px',
+                threshold: 0.1
+            }
+        );
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, stamps.length, visibleStampCount]);
+
+    useEffect(() => {
+        const root = reviewTabRef.current;
+        const sentinel = reviewLoadMoreRef.current;
+        if (!root || !sentinel || activeTab !== 'reviews' || reviews.length <= visibleReviewCount) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                setVisibleReviewCount((prev) => Math.min(prev + USER_PROFILE_PAGE_SIZE, reviews.length));
+            },
+            {
+                root,
+                rootMargin: '200px',
+                threshold: 0.1
+            }
+        );
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, reviews.length, visibleReviewCount]);
+
+    useEffect(() => {
+        const root = likerTabRef.current;
+        const sentinel = likerLoadMoreRef.current;
+        if (!root || !sentinel || activeTab !== 'likers' || likers.length <= visibleLikerCount) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                setVisibleLikerCount((prev) => Math.min(prev + USER_PROFILE_PAGE_SIZE, likers.length));
+            },
+            {
+                root,
+                rootMargin: '200px',
+                threshold: 0.1
+            }
+        );
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [activeTab, likers.length, visibleLikerCount]);
 
 
     if (profileLoading) {
@@ -301,14 +325,14 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
             <div className="border-b border-border bg-background p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
-                        {showBackButton && (
+                        {showBackButton && !onClose && (
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={handleBack}
                                 className="flex-shrink-0 -ml-2"
                             >
-                                {onClose ? <X className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+                                <ChevronLeft className="h-5 w-5" />
                             </Button>
                         )}
                         {/* 프로필 아바타 */}
@@ -337,6 +361,17 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             </div>
                         </div>
                     </div>
+                    {/* ... stats ... */}
+                    {showBackButton && onClose && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleBack}
+                            className="flex-shrink-0 -mr-2 h-10 w-10"
+                        >
+                            <X className="h-5 w-5" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* 통계 카드 */}
@@ -390,79 +425,109 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                     </TabsTrigger>
                 </TabsList>
 
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden bg-muted/10">
                     {/* 도장 탭 */}
-                    <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
-                        <ScrollArea className="h-full">
-                            {stampsLoading ? (
-                                <GlobalLoader message="도장 불러오는 중..." />
-                            ) : stamps.length === 0 ? (
-                                <EmptyState
-                                    icon={<Stamp className="h-8 w-8 mb-2 opacity-50" />}
-                                    message="아직 도장이 없습니다"
-                                />
-                            ) : (
-                                <div className="divide-y divide-border">
-                                    {stamps.map((stamp, index) => (
-                                        <StampItem
-                                            key={`stamp-${stamp.restaurant.id}-${index}`}
-                                            stamp={stamp}
-                                            formatDate={formatDate}
-                                            onRestaurantClick={handleRestaurantClick}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </ScrollArea>
+                    <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
+                        <div ref={stampTabRef} className="h-full overflow-y-auto">
+                        {stampsLoading ? (
+                            <GlobalLoader message="도장 불러오는 중..." />
+                        ) : stamps.length === 0 ? (
+                            <EmptyState
+                                icon={<Stamp className="h-8 w-8 mb-2 opacity-50" />}
+                                message="아직 도장이 없습니다"
+                            />
+                        ) : (
+                            <div className="p-4 flex flex-col gap-3 pb-20">
+                                {stamps.slice(0, visibleStampCount).map((stamp, index) => (
+                                    <StampCard
+                                        key={`stamp-${stamp.restaurant.id}-${index}`}
+                                        restaurant={stamp.restaurant}
+                                        isVisited={true}
+                                        isUserStampsReady={true}
+                                        currentThumbnailIndex={thumbnailIndices[stamp.restaurant.id] || 0}
+                                        onThumbnailChange={handleThumbnailChange}
+                                        onClick={handleRestaurantClick}
+                                        size="default"
+                                    />
+                                ))}
+                                <div ref={stampLoadMoreRef} />
+                            </div>
+                        )}
+                        </div>
                     </TabsContent>
 
                     {/* 리뷰 탭 */}
-                    <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
-                        <ScrollArea className="h-full">
-                            {reviewsLoading ? (
-                                <GlobalLoader message="리뷰 불러오는 중..." />
-                            ) : reviews.length === 0 ? (
-                                <EmptyState
-                                    icon={<MessageSquare className="h-8 w-8 mb-2 opacity-50" />}
-                                    message="작성한 리뷰가 없습니다"
-                                />
-                            ) : (
-                                <div className="divide-y divide-border">
-                                    {reviews.map((review, index) => (
-                                        <ReviewItem
-                                            key={`review-${review.id}-${index}`}
-                                            review={review}
-                                            formatDate={formatDate}
-                                            onRestaurantClick={handleRestaurantClick}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </ScrollArea>
+                    <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden overflow-y-auto [&::-webkit-scrollbar]:hidden" forceMount>
+                        <div ref={reviewTabRef} className="h-full overflow-y-auto">
+                        {reviewsLoading ? (
+                            <GlobalLoader message="리뷰 불러오는 중..." />
+                        ) : reviews.length === 0 ? (
+                            <EmptyState
+                                icon={<MessageSquare className="h-8 w-8 mb-2 opacity-50" />}
+                                message="작성한 리뷰가 없습니다"
+                            />
+                        ) : (
+                            <div className="p-4 space-y-4 pb-20">
+                                {reviews.slice(0, visibleReviewCount).map((review, index) => (
+                                    <ReviewCard
+                                        key={`review-${review.id}-${index}`}
+                                        review={{
+                                            id: review.id,
+                                            userId: profile.userId,
+                                            userName: profile.nickname,
+                                            userAvatarUrl: profile.avatarUrl,
+                                            restaurantId: review.restaurantId,
+                                            restaurantName: review.restaurantName,
+                                            content: review.content,
+                                            photos: review.photos,
+                                            visitedAt: review.visitedDate || review.createdAt,
+                                            submittedAt: review.createdAt,
+                                            likeCount: review.likeCount,
+                                            isLikedByUser: review.isLikedByUser,
+                                            isVerified: review.isVerified,
+                                        }}
+                                        onLike={handleLike}
+                                        currentUserId={user?.id}
+                                        onUserClick={onUserClick}
+                                        onRestaurantClick={() => {
+                                            if (review.restaurant) {
+                                                handleRestaurantClick(review.restaurant);
+                                                return;
+                                            }
+                                            if (onClose) onClose();
+                                            router.push(`/?restaurant=${review.restaurantId}`);
+                                        }}
+                                    />
+                                ))}
+                                <div ref={reviewLoadMoreRef} />
+                            </div>
+                        )}
+                        </div>
                     </TabsContent>
 
                     {/* 좋아요 탭 */}
                     <TabsContent value="likers" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
-                        <ScrollArea className="h-full">
-                            {likersLoading ? (
-                                <GlobalLoader message="좋아요 불러오는 중..." />
-                            ) : likers.length === 0 ? (
-                                <EmptyState
-                                    icon={<Heart className="h-8 w-8 mb-2 opacity-50" />}
-                                    message="아직 좋아요를 받지 않았습니다"
-                                />
-                            ) : (
+                        <div ref={likerTabRef} className="h-full overflow-y-auto">
+                        {likersLoading ? (
+                            <GlobalLoader message="좋아요 불러오는 중..." />
+                        ) : likers.length === 0 ? (
+                            <EmptyState
+                                icon={<Heart className="h-8 w-8 mb-2 opacity-50" />}
+                                message="아직 좋아요를 받지 않았습니다"
+                            />
+                        ) : (
                                 <div className="divide-y divide-border">
-                                    {likers.map((liker, index) => (
+                                    {likers.slice(0, visibleLikerCount).map((liker, index) => (
                                         <LikerItem
                                             key={`liker-${liker.userId || 'unknown'}-${index}`}
                                             liker={liker}
                                             onUserClick={onUserClick}
                                         />
                                     ))}
+                                    <div ref={likerLoadMoreRef} />
                                 </div>
-                            )}
-                        </ScrollArea>
+                        )}
+                        </div>
                     </TabsContent>
                 </div>
             </Tabs>
