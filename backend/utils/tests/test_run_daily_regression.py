@@ -380,6 +380,84 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(1, len(queue_lines))
         self.assertIn("pending.jpg", queue_lines[0])
 
+    def test_observed_daily_run_skipped_upload_status_artifact_contract(self) -> None:
+        """Lock the schema shape observed from a successful main daily run artifact."""
+        observed_status = {
+            "schemaVersion": 2,
+            "runId": "25435432129",
+            "policy": "warn",
+            "inputPolicy": "warn",
+            "uploadMode": "skip",
+            "expectedCount": 0,
+            "attemptedCount": 0,
+            "uploadedCount": 0,
+            "uploadedCountConfidence": "exact",
+            "skippedExistingCount": 0,
+            "verifiedCount": 0,
+            "residualCount": 0,
+            "pendingBacklogCount": 0,
+            "pendingLocalCount": 0,
+            "stagedShardItemCount": 0,
+            "missingLocalCount": 0,
+            "stagedShardCount": 0,
+            "maxResidualAttempts": 0,
+            "backfillThresholdAttempts": 3,
+            "timeout": False,
+            "exitCode": 0,
+            "status": "skipped",
+            "terminalIncomplete": False,
+            "completionProof": "none",
+            "verificationRequired": False,
+            "dedupeKey": "relativePath:size:mtime",
+            "residualQueuePath": None,
+            "notes": [],
+        }
+
+        expected_keys = {
+            "schemaVersion",
+            "runId",
+            "policy",
+            "inputPolicy",
+            "uploadMode",
+            "expectedCount",
+            "attemptedCount",
+            "uploadedCount",
+            "uploadedCountConfidence",
+            "skippedExistingCount",
+            "verifiedCount",
+            "residualCount",
+            "pendingBacklogCount",
+            "pendingLocalCount",
+            "stagedShardItemCount",
+            "missingLocalCount",
+            "stagedShardCount",
+            "maxResidualAttempts",
+            "backfillThresholdAttempts",
+            "timeout",
+            "exitCode",
+            "status",
+            "terminalIncomplete",
+            "completionProof",
+            "verificationRequired",
+            "dedupeKey",
+            "residualQueuePath",
+            "notes",
+        }
+
+        self.assertEqual(expected_keys, set(observed_status))
+        self.assertEqual(2, observed_status["schemaVersion"])
+        self.assertEqual("skipped", observed_status["status"])
+        self.assertEqual(0, observed_status["exitCode"])
+        self.assertFalse(observed_status["terminalIncomplete"])
+        self.assertEqual(
+            observed_status["expectedCount"],
+            observed_status["verifiedCount"]
+            + observed_status["skippedExistingCount"]
+            + observed_status["residualCount"],
+        )
+        self.assertEqual(0, observed_status["pendingBacklogCount"])
+        self.assertEqual("none", observed_status["completionProof"])
+
     def test_gdrive_upload_status_success_requires_remote_proof_and_clears_matching_residual(self) -> None:
         frame = self.frames_dir / "done.jpg"
         frame.write_text("frame\n", encoding="utf-8")
