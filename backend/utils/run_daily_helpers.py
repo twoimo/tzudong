@@ -249,6 +249,43 @@ def _load_staging_manifest(path: Optional[str]) -> Dict[str, dict]:
     return staged
 
 
+
+def resolve_policy_action(
+    step_name: str,
+    issue_kind: str,
+    policy_mode: str = "end_to_end",
+    pending_step08_work: int = 0,
+) -> str:
+    """Resolve run_daily policy actions for known step/issue pairs.
+
+    Unknown pairs intentionally fail closed so the shell runner records them as
+    required failures instead of silently treating new failure modes as optional.
+    """
+    key = (step_name, issue_kind)
+    if key in {
+        ("Step 1 (URL Collection)", "missing_external_dependency"),
+        ("Step 2 (Metadata)", "missing_external_dependency"),
+        ("Step 2.1 (Meta Migration)", "missing_external_dependency"),
+        ("Step 13 (Supabase)", "missing_external_dependency"),
+    }:
+        return "optional_skip"
+
+    if key == ("Step 08 (Chunk Multimodal)", "quota_exhausted"):
+        if policy_mode == "end_to_end" and pending_step08_work > 0:
+            return "required_failure"
+        return "optional_skip"
+
+    if key in {
+        ("Phase 3", "timeout_incomplete"),
+        ("Step 11 (LAAJ Evaluation)", "timeout_incomplete"),
+    }:
+        if policy_mode == "end_to_end":
+            return "required_failure"
+        return "optional_skip"
+
+    return "required_failure:unknown"
+
+
 def build_gdrive_upload_expected(args: argparse.Namespace) -> dict:
     generated_at = args.generated_at or _utc_now_iso()
     frames_dir = Path(args.frames_dir)
@@ -940,6 +977,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     count_frames_parser = subparsers.add_parser("count-frame-files")
     count_frames_parser.add_argument("--frames-dir", required=True)
 
+    policy_parser = subparsers.add_parser("resolve-policy-action")
+    policy_parser.add_argument("--step-name", required=True)
+    policy_parser.add_argument("--issue-kind", required=True)
+    policy_parser.add_argument("--policy-mode", default="end_to_end")
+    policy_parser.add_argument("--pending-step08-work", type=int, default=0)
+
     manifest_parser = subparsers.add_parser("write-summary-manifest")
     _add_manifest_args(manifest_parser)
 
@@ -963,6 +1006,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.command == "count-frame-files":
         print(count_frame_files(Path(args.frames_dir)))
+        return 0
+
+    if args.command == "resolve-policy-action":
+        print(
+            resolve_policy_action(
+                args.step_name,
+                args.issue_kind,
+                args.policy_mode,
+                args.pending_step08_work,
+            )
+        )
         return 0
 
     if args.command == "write-summary-manifest":

@@ -106,6 +106,37 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         self.assertEqual("3", result.stdout.strip())
 
+    def test_resolve_policy_action_keeps_fail_closed_policy_matrix(self) -> None:
+        cases = [
+            ("Step 13 (Supabase)", "missing_external_dependency", "end_to_end", "0", "optional_skip"),
+            ("Step 08 (Chunk Multimodal)", "quota_exhausted", "end_to_end", "1", "required_failure"),
+            ("Step 08 (Chunk Multimodal)", "quota_exhausted", "end_to_end", "0", "optional_skip"),
+            ("Step 11 (LAAJ Evaluation)", "timeout_incomplete", "local", "0", "optional_skip"),
+            ("Step 11 (LAAJ Evaluation)", "timeout_incomplete", "end_to_end", "0", "required_failure"),
+            ("New Step", "new_issue", "end_to_end", "0", "required_failure:unknown"),
+        ]
+
+        for step_name, issue_kind, policy_mode, pending_work, expected in cases:
+            with self.subTest(
+                step_name=step_name,
+                issue_kind=issue_kind,
+                policy_mode=policy_mode,
+                pending_work=pending_work,
+            ):
+                result = self._helper(
+                    "resolve-policy-action",
+                    "--step-name",
+                    step_name,
+                    "--issue-kind",
+                    issue_kind,
+                    "--policy-mode",
+                    policy_mode,
+                    "--pending-step08-work",
+                    pending_work,
+                )
+
+                self.assertEqual(0, result.returncode, self._format_process_output(result))
+                self.assertEqual(expected, result.stdout.strip())
 
     def test_gdrive_expected_manifest_preserves_old_missing_residual(self) -> None:
         missing_item = {
@@ -951,6 +982,25 @@ class RunDailyRegressionTests(unittest.TestCase):
                 event["name"] == "Step 09~13 (Evaluation)"
                 and event["status"] == "downstream_skipped"
                 and event["upstreamStep"] == "Step 08 (Chunk Multimodal)"
+                for event in manifest["stepEvents"]
+            )
+        )
+
+    def test_step08_quota_policy_remains_required_when_pending_work_exists(self) -> None:
+        result = self._run_script(
+            env_overrides={"RUN_DAILY_VERIFY_REQUIRED_SCENARIO": "step08_quota"},
+            force_phase3=True,
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Gemini quota 초과", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertTrue(any("Step 08 (Chunk Multimodal)" in item for item in manifest["failedRequiredSteps"]))
+        self.assertTrue(
+            any(
+                event["name"] == "Step 08 (Chunk Multimodal)" and event["status"] == "failed"
                 for event in manifest["stepEvents"]
             )
         )
