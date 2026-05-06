@@ -71,7 +71,7 @@ import {
     resolveReleasedSearchSelectionResetPlan,
     resolveSearchSelectionReleasePlan,
 } from "@/lib/mobile-home-search-selection";
-import { buildNaverRestaurantsQueryOptions } from "@/lib/map-query-helpers";
+import { buildNaverRestaurantsQueryOptions, resolveNaverRestaurantQueryBounds } from "@/lib/map-query-helpers";
 import {
     getExtendedBounds,
     getPrimaryCategory,
@@ -1219,15 +1219,22 @@ const NaverMapView = memo(({
         () => resolveInitialNaverQueryBounds(selectedRegion),
         [selectedRegion],
     );
+    const restaurantQueryBounds = useMemo(
+        () => resolveNaverRestaurantQueryBounds({
+            firstLoadViewportBounds,
+            shouldUseFullMapData: shouldRunNoncriticalMapEffects,
+        }),
+        [firstLoadViewportBounds, shouldRunNoncriticalMapEffects],
+    );
 
     // useRestaurants 옵션 메모이제이션
     const restaurantQueryOptions = useMemo(() => buildNaverRestaurantsQueryOptions({
-        bounds: firstLoadViewportBounds,
+        bounds: restaurantQueryBounds,
         compact: true,
         filters,
         isLoaded,
         selectedRegion,
-    }), [filters, firstLoadViewportBounds, isLoaded, selectedRegion]);
+    }), [filters, isLoaded, restaurantQueryBounds, selectedRegion]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantQueryOptions);
     const { data: selectedRestaurantDetail } = useRestaurant(selectedRestaurant?.id ?? null);
@@ -1722,6 +1729,7 @@ const NaverMapView = memo(({
                         cluster.categories,
                         cluster.region,
                         () => {
+                            activateNoncriticalMapEffects();
                             const currentZoom = map.getZoom();
                             const targetZoom = getRegionalClusterTargetZoom(currentZoom);
                             morphWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
@@ -1758,6 +1766,7 @@ const NaverMapView = memo(({
                         cluster.categories,
                         cluster.region,
                         () => {
+                            activateNoncriticalMapEffects();
                             const currentZoom = map.getZoom();
                             const targetZoom = getSeoulDistrictTargetZoom(currentZoom);
                             morphWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
@@ -1823,6 +1832,7 @@ const NaverMapView = memo(({
                                 categories,
                                 clusterId,
                                 () => {
+                                    activateNoncriticalMapEffects();
                                     const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
                                     const currentZoom = map.getZoom();
                                     const targetZoom = getSuperclusterTargetZoom(currentZoom, expansionZoom);
@@ -1895,7 +1905,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {

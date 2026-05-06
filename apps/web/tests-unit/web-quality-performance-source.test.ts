@@ -113,6 +113,24 @@ describe('web quality performance source contracts', () => {
         expect(source('components/home/MobileControlOverlay.tsx')).not.toContain("import { supabase } from '@/integrations/supabase/client'");
     });
 
+    test('profile/stamp/map regressions stay fixed while preserving deferred map loading', () => {
+        const overlayPanelSource = source('components/layout/OverlayPagePanel.tsx');
+        const stampCardSource = source('components/stamp/StampCard.tsx');
+        const naverMapSource = source('components/map/NaverMapView.tsx');
+
+        const userProfilePanelIndex = overlayPanelSource.indexOf('<UserProfilePanel');
+
+        expect(userProfilePanelIndex).toBeGreaterThan(0);
+        expect(overlayPanelSource.lastIndexOf('border-l border-border', userProfilePanelIndex)).toBeGreaterThan(0);
+        expect(overlayPanelSource.lastIndexOf('"w-[400px]"', userProfilePanelIndex)).toBeGreaterThan(0);
+        expect(stampCardSource).toContain('getRestaurantDisplayName(typedRestaurant)');
+        expect(stampCardSource).toContain('alt={`${restaurantDisplayName} 썸네일`}');
+        expect(stampCardSource).toContain('title={restaurantDisplayName}');
+        expect(naverMapSource).toContain('resolveNaverRestaurantQueryBounds');
+        expect(naverMapSource).toContain('shouldUseFullMapData: shouldRunNoncriticalMapEffects');
+        expect(naverMapSource.match(/activateNoncriticalMapEffects\(\);/g)?.length).toBeGreaterThanOrEqual(3);
+    });
+
     test('/mypage avoids client-side redirect work and defers desktop-only sidebar cost', () => {
         const myPageSource = source('app/mypage/page.tsx');
         const myPageLayoutSource = source('app/mypage/layout.tsx');

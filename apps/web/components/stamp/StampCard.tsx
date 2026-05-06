@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { parseCategory, getYouTubeThumbnailUrl } from './stamp-utils';
+import { getRestaurantDisplayName } from '@/lib/restaurant-display-name';
 
 type StampCardRestaurant = Restaurant & {
     verified_review_count?: number | null;
@@ -50,6 +51,7 @@ export const StampCard = memo(function StampCard({
     isGuideCard = false,
 }: StampCardProps) {
     const typedRestaurant = restaurant as StampCardRestaurant;
+    const restaurantDisplayName = getRestaurantDisplayName(typedRestaurant);
     const showStamp = isUserStampsReady && isVisited;
     const youtubeLinks = typedRestaurant.mergedYoutubeLinks ?? (typedRestaurant.youtube_link ? [typedRestaurant.youtube_link] : []);
     const currentIndex = currentThumbnailIndex % (youtubeLinks.length || 1);
@@ -93,7 +95,7 @@ export const StampCard = memo(function StampCard({
                     <>
                         <Image
                             src={thumbnailUrl}
-                            alt={`${restaurant.name} 썸네일`}
+                            alt={`${restaurantDisplayName} 썸네일`}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1536px) 25vw, 20vw"
                             className={cn(
@@ -202,9 +204,9 @@ export const StampCard = memo(function StampCard({
                         <div className="flex items-center gap-2 min-w-0">
                             <p
                                 className={cn("font-medium leading-snug text-foreground truncate", isCompact ? "text-xs" : "text-sm")}
-                                title={guideTitle || restaurant.name}
+                                title={guideTitle || restaurantDisplayName}
                             >
-                                {guideTitle || restaurant.name}
+                                {guideTitle || restaurantDisplayName}
                             </p>
                             {category && (
                                 <Badge
@@ -228,8 +230,8 @@ export const StampCard = memo(function StampCard({
                 ) : (
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                        <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurant.name}>
-                            {restaurant.name}
+                        <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurantDisplayName}>
+                            {restaurantDisplayName}
                         </h3>
                         {category && (
                             <Badge
