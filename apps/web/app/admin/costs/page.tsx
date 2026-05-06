@@ -29,6 +29,7 @@ const DUMMY_SERVER_COSTS: ServerCost[] = [
     { id: 'dummy-1', item_name: 'Supabase Pro', monthly_cost: 25, description: 'Database and Authentication', updated_at: new Date().toISOString() },
     { id: 'dummy-2', item_name: 'Vercel Pro', monthly_cost: 20, description: 'Frontend Hosting', updated_at: new Date().toISOString() },
 ];
+const SERVER_COST_SELECT = 'id, item_name, monthly_cost, description, updated_at';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
 
@@ -53,7 +54,7 @@ function CostsManagementPage() {
         queryKey: ['server-costs-admin'],
         queryFn: async () => {
             try {
-                const { data, error } = await supabase.from('server_costs').select('*').order('monthly_cost', { ascending: false });
+                const { data, error } = await supabase.from('server_costs').select(SERVER_COST_SELECT).order('monthly_cost', { ascending: false });
                 if (error) return DUMMY_SERVER_COSTS;
                 const serverCosts = (data || []) as ServerCost[];
                 return serverCosts.length === 0 ? DUMMY_SERVER_COSTS : serverCosts;

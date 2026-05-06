@@ -30,6 +30,8 @@ interface Profile {
     [key: string]: unknown;
 }
 
+const PROFILE_SELECT = 'nickname, avatar_url';
+
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { user } = useAuth();
     const isMobileOrTablet = useImmediateMobileOrTablet();
@@ -56,7 +58,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('*')
+                .select(PROFILE_SELECT)
                 .eq('user_id', user.id);
 
             if (error) throw error;

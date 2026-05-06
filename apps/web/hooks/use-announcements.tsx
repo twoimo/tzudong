@@ -7,6 +7,7 @@ import { Announcement, AnnouncementFormData, DUMMY_ANNOUNCEMENTS } from '@/types
 import { toast } from '@/lib/no-toast';
 
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
+const ANNOUNCEMENT_SELECT = 'id,title,content,is_active,show_on_banner,priority,created_at,updated_at';
 
 interface AnnouncementRow {
     id: string;
@@ -76,7 +77,7 @@ export function useAnnouncementsAdmin() {
         queryFn: async (): Promise<Announcement[]> => {
             const { data, error } = await supabase
                 .from('announcements')
-                .select('*')
+                .select(ANNOUNCEMENT_SELECT)
                 .order('priority', { ascending: false })
                 .order('created_at', { ascending: false });
 
@@ -102,7 +103,7 @@ export function useActiveAnnouncements() {
             try {
                 const { data, error } = await supabase
                     .from('announcements')
-                    .select('*')
+                    .select(ANNOUNCEMENT_SELECT)
                     .eq('is_active', true)
                     .order('priority', { ascending: false })
                     .order('created_at', { ascending: false });
@@ -133,7 +134,7 @@ export function useBannerAnnouncements() {
             try {
                 const { data, error } = await supabase
                     .from('announcements')
-                    .select('*')
+                    .select(ANNOUNCEMENT_SELECT)
                     .eq('is_active', true)
                     .eq('show_on_banner', true)
                     .order('priority', { ascending: false })
@@ -170,7 +171,7 @@ export function useCreateAnnouncement() {
                     ...mapFormDataToPayload(data),
                     created_by: user?.id ?? null,
                 } as never)
-                .select('*')
+                .select(ANNOUNCEMENT_SELECT)
                 .single();
 
             if (error) {
@@ -202,7 +203,7 @@ export function useUpdateAnnouncement() {
                 .from('announcements')
                 .update(mapFormDataToPayload(data) as never)
                 .eq('id', id)
-                .select('*')
+                .select(ANNOUNCEMENT_SELECT)
                 .single();
 
             if (error) {
@@ -262,7 +263,7 @@ export function useToggleAnnouncementActive() {
                 .from('announcements')
                 .update({ is_active: isActive } as never)
                 .eq('id', id)
-                .select('*')
+                .select(ANNOUNCEMENT_SELECT)
                 .single();
 
             if (error) {
@@ -294,7 +295,7 @@ export function useToggleAnnouncementBanner() {
                 .from('announcements')
                 .update({ show_on_banner: showOnBanner } as never)
                 .eq('id', id)
-                .select('*')
+                .select(ANNOUNCEMENT_SELECT)
                 .single();
 
             if (error) {

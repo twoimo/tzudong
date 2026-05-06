@@ -41,7 +41,7 @@ interface AuthModalProps {
 
 const AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME = "max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]";
 const AUTH_MODAL_DESKTOP_CONTENT_STYLE: CSSProperties = {
-  width: "min(calc(100vw - 2rem), 32rem)",
+  width: "min(calc(100vw - 2rem), 28rem)",
   maxWidth: "calc(100vw - 2rem)",
 };
 

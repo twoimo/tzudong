@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
@@ -69,14 +69,120 @@ const isSessionExpired = (currentSession: Session | null) => {
     return currentSession.expires_at * 1000 <= Date.now();
 };
 
+type AuthUserState = {
+    isAdmin: boolean;
+    needsNicknameSetup: boolean;
+};
+
+type AuthUserStateCacheEntry = {
+    userId: string;
+    state: AuthUserState;
+    expiresAt: number;
+};
+
+const AUTH_USER_STATE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let authUserStateCache: AuthUserStateCacheEntry | null = null;
+const authUserStateRequests = new Map<string, Promise<AuthUserState>>();
+
+function invalidateAuthUserStateCache(userId?: string) {
+    if (!userId || authUserStateCache?.userId === userId) {
+        authUserStateCache = null;
+    }
+
+    if (userId) {
+        authUserStateRequests.delete(userId);
+        return;
+    }
+
+    authUserStateRequests.clear();
+}
+
+function getCachedAuthUserState(userId: string) {
+    if (authUserStateCache?.userId !== userId) return null;
+    if (authUserStateCache.expiresAt <= Date.now()) {
+        authUserStateCache = null;
+        return null;
+    }
+
+    return authUserStateCache.state;
+}
+
+async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
+    const supabase = await getSupabaseClient();
+    const [roleResponse, profileResponse] = await Promise.all([
+        supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", userId)
+            .eq("role", "admin")
+            .maybeSingle(),
+        supabase
+            .from("profiles")
+            .select("nickname")
+            .eq("user_id", userId)
+            .maybeSingle(),
+    ]);
+
+    if (roleResponse.error && isAuthSessionInvalidError(roleResponse.error)) {
+        throw roleResponse.error;
+    }
+    if (profileResponse.error && isAuthSessionInvalidError(profileResponse.error)) {
+        throw profileResponse.error;
+    }
+
+    if (profileResponse.error) {
+        console.error("Profile check error:", profileResponse.error);
+    }
+
+    const profileData = profileResponse.data as { nickname?: string } | null;
+    const nickname = profileData?.nickname;
+    const state: AuthUserState = {
+        isAdmin: !roleResponse.error && Boolean(roleResponse.data),
+        needsNicknameSetup: profileResponse.error ? false : !profileData || nickname === "탈퇴한 사용자",
+    };
+
+    authUserStateCache = {
+        userId,
+        state,
+        expiresAt: Date.now() + AUTH_USER_STATE_CACHE_TTL_MS,
+    };
+
+    return state;
+}
+
+function loadAuthUserState(userId: string, options: { force?: boolean } = {}) {
+    if (!options.force) {
+        const cachedState = getCachedAuthUserState(userId);
+        if (cachedState) return Promise.resolve(cachedState);
+
+        const pendingRequest = authUserStateRequests.get(userId);
+        if (pendingRequest) return pendingRequest;
+    } else {
+        invalidateAuthUserStateCache(userId);
+    }
+
+    const request = fetchAuthUserState(userId);
+    authUserStateRequests.set(userId, request);
+    const releaseRequest = () => {
+        if (authUserStateRequests.get(userId) === request) {
+            authUserStateRequests.delete(userId);
+        }
+    };
+    void request.then(releaseRequest, releaseRequest);
+    return request;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
+    const activeAuthUserIdRef = useRef<string | null>(null);
 
     const clearStaleSession = useCallback(async () => {
+        invalidateAuthUserStateCache();
         try {
             const supabase = await getSupabaseClient();
             await supabase.auth.signOut({ scope: 'local' });
@@ -84,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // no-op
         }
 
+        activeAuthUserIdRef.current = null;
         setSession(null);
         setUser(null);
         setIsAdmin(false);
@@ -91,69 +198,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-clear-stale-session' });
     }, []);
 
-    const checkAdminRole = useCallback(async (userId: string) => {
+    const applyAuthUserState = useCallback(async (userId: string, options: { force?: boolean } = {}) => {
         try {
-            const supabase = await getSupabaseClient();
-            const { data, error } = await supabase
-                .from("user_roles")
-                .select("role")
-                .eq("user_id", userId)
-                .eq("role", "admin")
-                .maybeSingle();
-
-            if (error) {
-                if (isAuthSessionInvalidError(error)) {
-                    await clearStaleSession();
-                    return;
-                }
-                setIsAdmin(false);
-                return;
-            }
-
-            setIsAdmin(!!data);
+            const state = await loadAuthUserState(userId, options);
+            if (activeAuthUserIdRef.current !== userId) return;
+            setIsAdmin(state.isAdmin);
+            setNeedsNicknameSetup(state.needsNicknameSetup);
         } catch (error) {
             if (isAuthSessionInvalidError(error)) {
                 await clearStaleSession();
                 return;
             }
-            console.error("Error checking admin role:", error);
+            console.error("Error loading auth user state:", error);
             setIsAdmin(false);
-        }
-    }, [clearStaleSession]);
-
-    const checkProfileStatus = useCallback(async (userId: string) => {
-        try {
-            const supabase = await getSupabaseClient();
-            const { data, error } = await supabase
-                .from("profiles")
-                .select("nickname")
-                .eq("user_id", userId)
-                .maybeSingle();
-
-            const profileData = data as { nickname?: string } | null;
-            const nickname = profileData?.nickname;
-
-            if (error) {
-                if (isAuthSessionInvalidError(error)) {
-                    await clearStaleSession();
-                    return;
-                }
-                console.error("Profile check error:", error);
-                setNeedsNicknameSetup(false);
-                return;
-            }
-
-            if (!profileData || nickname === "탈퇴한 사용자") {
-                setNeedsNicknameSetup(true);
-            } else {
-                setNeedsNicknameSetup(false);
-            }
-        } catch (error) {
-            if (isAuthSessionInvalidError(error)) {
-                await clearStaleSession();
-                return;
-            }
-            console.error("Error checking profile status:", error);
             setNeedsNicknameSetup(false);
         }
     }, [clearStaleSession]);
@@ -192,11 +249,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                     setSession(nextSession);
                     setUser(nextSession?.user ?? null);
+                    activeAuthUserIdRef.current = nextSession?.user?.id ?? null;
                     if (nextSession?.user) {
-                        await Promise.all([
-                            checkAdminRole(nextSession.user.id),
-                            checkProfileStatus(nextSession.user.id)
-                        ]);
+                        await applyAuthUserState(nextSession.user.id);
                     }
                     setIsLoading(false);
                 }).catch(async (error) => {
@@ -211,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // 인증 상태 변경 감지
                 const authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
                     if (isSessionExpired(session)) {
-                        clearStaleSession();
+                        void clearStaleSession();
                         return;
                     }
                     dispatchHomeAuthSessionUpdated({
@@ -220,10 +275,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
                     setSession(session);
                     setUser(session?.user ?? null);
+                    activeAuthUserIdRef.current = session?.user?.id ?? null;
                     if (session?.user) {
-                        checkAdminRole(session.user.id);
-                        checkProfileStatus(session.user.id);
+                        const userId = session.user.id;
+                        window.setTimeout(() => {
+                            if (isCancelled) return;
+                            void applyAuthUserState(userId, { force: _event === 'USER_UPDATED' });
+                        }, 0);
                     } else {
+                        invalidateAuthUserStateCache();
                         setIsAdmin(false);
                         setNeedsNicknameSetup(false);
                     }
@@ -273,14 +333,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             removeBootstrapListeners();
             subscription?.unsubscribe();
         };
-    }, [checkAdminRole, checkProfileStatus, clearStaleSession]);
+    }, [applyAuthUserState, clearStaleSession]);
 
     const completeNicknameSetup = useCallback(() => {
         setNeedsNicknameSetup(false);
         if (user) {
-            checkProfileStatus(user.id);
+            invalidateAuthUserStateCache(user.id);
+            void applyAuthUserState(user.id, { force: true });
         }
-    }, [user, checkProfileStatus]);
+    }, [user, applyAuthUserState]);
 
     const signIn = useCallback(async (email: string, password: string) => {
         const supabase = await getSupabaseClient();
@@ -324,6 +385,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const supabase = await getSupabaseClient();
         const { error } = await supabase.auth.signOut({ scope: 'local' });
         if (!error) {
+            invalidateAuthUserStateCache();
+            activeAuthUserIdRef.current = null;
             setSession(null);
             setUser(null);
             setIsAdmin(false);

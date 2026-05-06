@@ -45,7 +45,7 @@ import {
 
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
-type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id' | 'user_id'>;
+type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
 type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
 
 interface CreateUserNotificationArgs {
@@ -78,6 +78,7 @@ interface RestaurantDetailPanelProps {
 }
 
 const RESTAURANT_DETAIL_SWIPE_HINT_KEY = 'restaurant-detail-swipe-hint-seen-v1';
+const RESTAURANT_DETAIL_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
 
 interface Review {
     id: string;
@@ -199,7 +200,7 @@ export function RestaurantDetailPanel({
         isFetchingNextPage,
         isLoading: reviewsLoading
     } = useInfiniteQuery({
-        queryKey: ['restaurant-reviews', restaurant?.id],
+        queryKey: ['restaurant-reviews', restaurant?.id, user?.id],
         queryFn: async ({ pageParam = 0 }) => {
             try {
                 if (!restaurant) return { reviews: [], nextCursor: null };
@@ -224,7 +225,7 @@ export function RestaurantDetailPanel({
                 // 1. 해당 맛집의 승인된 리뷰 조회 (Paging)
                 const { data: reviewsPageData, error: reviewsError } = await supabase
                     .from('reviews')
-                    .select('*')
+                    .select(RESTAURANT_DETAIL_REVIEW_SELECT)
                     .in('restaurant_id', allIds)
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
@@ -239,40 +240,35 @@ export function RestaurantDetailPanel({
 
                 // 2. 필요한 user_id 수집
                 const userIds = [...new Set(typedReviewsPageData.map((review) => review.user_id))];
+                const reviewIds = typedReviewsPageData.map((review) => review.id);
 
-                // 3. Profiles 가져오기
-                const { data: profilesData } = await supabase
-                    .from('profiles')
-                    .select('user_id, nickname, avatar_url')
-                    .in('user_id', userIds);
-                const typedProfilesData = (profilesData || []) as ProfileRow[];
+                // 3. Profiles / 사용자 좋아요 여부를 병렬 조회
+                const [profilesResult, userLikesResult] = await Promise.all([
+                    supabase
+                        .from('profiles')
+                        .select('user_id, nickname, avatar_url')
+                        .in('user_id', userIds),
+                    user
+                        ? supabase
+                            .from('review_likes')
+                            .select('review_id')
+                            .in('review_id', reviewIds)
+                            .eq('user_id', user.id)
+                        : Promise.resolve({ data: [] }),
+                ]);
+                const typedProfilesData = (profilesResult.data || []) as ProfileRow[];
 
                 // 4. Map으로 변환
                 const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
                     typedProfilesData.map((profile) => [profile.user_id, { nickname: profile.nickname, avatarUrl: profile.avatar_url }])
                 );
 
-                // 6. 리뷰 좋아요 데이터 조회
-                const reviewIds = typedReviewsPageData.map((review) => review.id);
-                const { data: likesData } = await supabase
-                    .from('review_likes')
-                    .select('review_id, user_id')
-                    .in('review_id', reviewIds);
-                const typedLikesData = (likesData || []) as ReviewLikeRow[];
-
-                // 좋아요 수와 사용자 좋아요 상태 계산
-                const likesMap = new Map<string, { count: number; isLiked: boolean }>();
-                reviewIds.forEach((reviewId: string) => {
-                    const likesForReview = typedLikesData.filter((like) => like.review_id === reviewId);
-                    likesMap.set(reviewId, {
-                        count: likesForReview.length,
-                        isLiked: user ? likesForReview.some((like) => like.user_id === user.id) : false
-                    });
-                });
+                const userLikesMap = new Map(
+                    ((userLikesResult.data || []) as ReviewLikeRow[]).map((like) => [like.review_id, true])
+                );
 
                 // 7. 리뷰 데이터 매핑
                 const reviews = typedReviewsPageData.map((review) => {
-                    const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                     const userProfile = profilesMap.get(review.user_id);
 
                     return {
@@ -292,8 +288,8 @@ export function RestaurantDetailPanel({
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
                         category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : '',
                         categories: Array.isArray(review.categories) ? review.categories : [],
-                        likeCount: likesInfo.count,
-                        isLikedByUser: likesInfo.isLiked,
+                        likeCount: review.like_count || 0,
+                        isLikedByUser: userLikesMap.get(review.id) || false,
                     };
                 }) as Review[];
 
