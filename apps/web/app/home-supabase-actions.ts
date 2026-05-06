@@ -1,7 +1,7 @@
 'use client';
 
 import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
-import { mergeRestaurants } from '@/hooks/use-restaurants';
+import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
 
@@ -37,7 +37,7 @@ function getMapModeForRestaurant(restaurant: Restaurant): 'domestic' | 'overseas
 
 async function fetchMergedRestaurantById(restaurantId: string) {
     const [targetRestaurant] = await fetchSupabaseRows<Restaurant>('restaurants', [
-        ['select', '*, name:approved_name'],
+        ['select', RESTAURANT_MERGE_SELECT],
         ['id', `eq.${restaurantId}`],
         ['limit', 1],
     ]);
@@ -48,7 +48,7 @@ async function fetchMergedRestaurantById(restaurantId: string) {
 
     const restaurant = targetRestaurant as Restaurant;
     const sameNameRestaurants = await fetchSupabaseRows<Restaurant>('restaurants', [
-        ['select', '*'],
+        ['select', RESTAURANT_MERGE_SELECT],
         ['approved_name', `eq.${restaurant.name}`],
         ['status', 'eq.approved'],
     ]).catch(() => []);
@@ -84,7 +84,7 @@ export async function resolveHomeRestaurantDeepLink(restaurantId: string) {
 export async function resolveHomeRestaurantByCoordinates(lat: number, lng: number) {
     const tolerance = 0.0001;
     const restaurants = await fetchSupabaseRows<Restaurant>('restaurants', [
-        ['select', '*, name:approved_name'],
+        ['select', RESTAURANT_MERGE_SELECT],
         ['lat', `gte.${lat - tolerance}`],
         ['lat', `lte.${lat + tolerance}`],
         ['lng', `gte.${lng - tolerance}`],

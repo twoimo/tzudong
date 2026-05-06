@@ -55,6 +55,9 @@ interface FeedProfileNicknameRow {
     nickname: string | null;
 }
 
+const FEED_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,like_count';
+const FEED_RESTAURANT_SELECT = 'id,name:approved_name,approved_name,road_address,jibun_address,english_address,phone,categories,review_count,youtube_link,tzuyang_review,youtube_meta,lat,lng,status,created_at,updated_at';
+
 function getFeedRestaurantDisplayName(restaurant: FeedRestaurantRecord | null | undefined): string {
     return String(restaurant?.name || restaurant?.approved_name || '알 수 없음');
 }
@@ -245,7 +248,7 @@ export default function FeedContent({
 
             const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
-                .select('*')
+                .select(FEED_REVIEW_SELECT)
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false })
                 .range(pageParam, pageParam + (REVIEW_PAGE_SIZE - 1));
@@ -257,23 +260,32 @@ export default function FeedContent({
             }
 
             const userIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.user_id))];
-            const { data: profilesDataRaw } = await supabase
-                .from('profiles')
-                .select('user_id, nickname, avatar_url')
-                .in('user_id', userIds);
+            const restaurantIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.restaurant_id))];
+            const reviewIds = typedReviewsData.map((reviewRow) => reviewRow.id);
+            const [profilesResult, restaurantsResult, userLikesResult] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select('user_id, nickname, avatar_url')
+                    .in('user_id', userIds),
+                supabase
+                    .from('restaurants')
+                    .select(FEED_RESTAURANT_SELECT)
+                    .in('id', restaurantIds),
+                user
+                    ? supabase
+                        .from('review_likes')
+                        .select('review_id')
+                        .in('review_id', reviewIds)
+                        .eq('user_id', user.id)
+                    : Promise.resolve({ data: [] }),
+            ]);
 
-            const profilesData = (profilesDataRaw ?? []) as FeedProfileRow[];
+            const profilesData = (profilesResult.data ?? []) as FeedProfileRow[];
             const profilesMap = new Map(profilesData.map((profileRow) =>
                 [profileRow.user_id, { nickname: profileRow.nickname, avatarUrl: profileRow.avatar_url }]
             ));
 
-            const restaurantIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.restaurant_id))];
-            const { data: restaurantsDataRaw } = await supabase
-                .from('restaurants')
-                .select('*')
-                .in('id', restaurantIds);
-
-            const restaurantsData = (restaurantsDataRaw ?? []) as FeedRestaurantRecord[];
+            const restaurantsData = (restaurantsResult.data ?? []) as FeedRestaurantRecord[];
             const restaurantsMap = new Map<string, FeedRestaurantRecord>((restaurantsData || []).map((restaurantRow) => {
                 return [restaurantRow.id, normalizeFeedRestaurantRecord(restaurantRow)];
             }));
@@ -288,7 +300,7 @@ export default function FeedContent({
             const { data: approvedRestaurantRowsRaw } = reviewedRestaurantNames.length > 0
                 ? await supabase
                     .from('restaurants')
-                    .select('*')
+                    .select(FEED_RESTAURANT_SELECT)
                     .eq('status', 'approved')
                     .in('approved_name', reviewedRestaurantNames)
                 : { data: [] };
@@ -306,15 +318,10 @@ export default function FeedContent({
                 }) as FeedRestaurantRecord | null ?? reviewedRestaurant;
             };
 
-            const reviewIds = typedReviewsData.map((reviewRow) => reviewRow.id);
             let userLikesMap = new Map<string, boolean>();
 
             if (user) {
-                const { data: userLikesDataRaw } = await supabase
-                    .from('review_likes')
-                    .select('review_id')
-                    .in('review_id', reviewIds)
-                    .eq('user_id', user.id);
+                const userLikesDataRaw = userLikesResult.data;
                 const userLikesData = (userLikesDataRaw ?? []) as FeedReviewLikeRow[];
 
                 userLikesMap = new Map(
@@ -339,7 +346,7 @@ export default function FeedContent({
                     photos: reviewRow.food_photos || [],
                     categories: (Array.isArray(reviewRow.categories) && reviewRow.categories.length > 0)
                         ? reviewRow.categories
-                        : (reviewRow.category ? [reviewRow.category] : []),
+                        : [],
                     likeCount: reviewRow.like_count || 0,
                     isLikedByUser: userLikesMap.get(reviewRow.id) || false,
                 };

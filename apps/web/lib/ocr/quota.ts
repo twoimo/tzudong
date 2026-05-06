@@ -101,7 +101,7 @@ export async function getOcrQuotaStatus(params: {
   const [{ count, error: countError }, unlimited] = await Promise.all([
     params.logsClient
       .from('ocr_logs')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', params.userId)
       .eq('success', true)
       .gte('created_at', today.toISOString()) as unknown as Promise<{ count: number | null; error: unknown }>,

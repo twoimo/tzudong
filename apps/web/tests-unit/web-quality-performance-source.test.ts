@@ -3,6 +3,18 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
+const sourceFilesUnder = (relativeDir: string): string[] => {
+    const absoluteDir = join(import.meta.dir, '..', relativeDir);
+    return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+        const relativePath = `${relativeDir}/${entry.name}`;
+        if (entry.isDirectory()) {
+            if (entry.name === '.next' || entry.name === 'node_modules') return [];
+            return sourceFilesUnder(relativePath);
+        }
+
+        return /\.(?:ts|tsx|js|jsx)$/.test(entry.name) ? [relativePath] : [];
+    });
+};
 
 describe('web quality performance source contracts', () => {
     test('map marker HTML keeps image markers with WebP delivery and PNG fallback', () => {
@@ -144,8 +156,79 @@ describe('web quality performance source contracts', () => {
         const authModalSource = source('components/auth/AuthModal.tsx');
         expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME');
         expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_STYLE');
-        expect(authModalSource).toContain('min(calc(100vw - 2rem), 32rem)');
+        expect(authModalSource).toContain('min(calc(100vw - 2rem), 28rem)');
         expect(authModalSource).toContain('dispatchHomeAuthSessionUpdated');
+    });
+
+    test('auth user state lookups have Supabase index migration coverage', () => {
+        const migrationDir = join(import.meta.dir, '..', 'supabase/migrations');
+        const migrationFile = readdirSync(migrationDir).find((file) => file.endsWith('_optimize_auth_user_state_indexes.sql'));
+
+        expect(migrationFile).toBeDefined();
+
+        const migrationSource = source(`supabase/migrations/${migrationFile}`);
+        expect(migrationSource).toContain('information_schema.columns');
+        expect(migrationSource).toContain('profiles_user_id_idx');
+        expect(migrationSource).toContain('on public.profiles (user_id)');
+        expect(migrationSource).toContain('user_roles_user_id_role_idx');
+        expect(migrationSource).toContain('on public.user_roles (user_id, role)');
+    });
+
+    test('user-facing Supabase reads avoid wide fanout and redundant stamp fetches', () => {
+        const feedSource = source('components/feed/FeedContent.tsx');
+        const detailSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+        const stampSource = source('app/stamp/page.tsx');
+        const leaderboardSource = source('hooks/useLeaderboard.ts');
+        const userProfileSource = source('hooks/useUserProfile.ts');
+        const myReviewsSource = source('app/mypage/reviews/page.tsx');
+        const appIndexMigration = source('supabase/migrations/20260506085634_optimize_app_query_indexes.sql');
+
+        expect(feedSource).toContain('FEED_REVIEW_SELECT');
+        expect(feedSource).toContain('Promise.all([');
+        expect(feedSource).toContain('likeCount: reviewRow.like_count || 0');
+        expect(feedSource).not.toContain(".from('reviews')\n                .select('*')");
+
+        expect(detailSource).toContain('RESTAURANT_DETAIL_REVIEW_SELECT');
+        expect(detailSource).toContain("queryKey: ['restaurant-reviews', restaurant?.id, user?.id]");
+        expect(detailSource).toContain('likeCount: review.like_count || 0');
+        expect(detailSource).not.toContain(".select('review_id, user_id')");
+
+        expect(stampSource).toContain('STAMP_REVIEW_SELECT');
+        expect(stampSource).toContain('isLoading: isRestaurantsLoading');
+        expect(stampSource).not.toContain("queryKey: ['restaurants-stamp']");
+
+        expect(leaderboardSource).toContain(".select('id, user_id, is_verified, created_at, like_count')");
+        expect(leaderboardSource).not.toContain('const reviewIds = allReviewsData.map');
+        expect(userProfileSource).toContain('USER_PROFILE_RESTAURANT_SELECT');
+        expect(userProfileSource).toContain('viewerLikesResult');
+        expect(userProfileSource).toContain('likeCount: r.like_count || 0');
+        expect(myReviewsSource).toContain('MY_REVIEWS_SELECT');
+        expect(myReviewsSource).not.toContain('.select("*")');
+
+        expect(appIndexMigration).toContain('restaurants_status_review_count_idx');
+        expect(appIndexMigration).toContain('reviews_restaurant_verified_created_idx');
+        expect(appIndexMigration).toContain('review_likes_review_user_idx');
+        expect(appIndexMigration).toContain('announcements_active_banner_priority_created_idx');
+        expect(appIndexMigration).toContain('restaurant_submissions_status_created_idx');
+        expect(appIndexMigration).toContain('notifications_user_created_idx');
+        expect(appIndexMigration).toContain('ad_banners_active_priority_idx');
+        expect(appIndexMigration).toContain('ocr_logs_user_success_created_idx');
+    });
+
+    test('Supabase reads use explicit response shapes instead of broad selects', () => {
+        const broadSelectPattern = /(?:\.select\(\s*(['"])\*\1|\.select\(\s*\)|\['select',\s*['"]\*|['"]\*, name:approved_name)/;
+        const offenders = ['app', 'components', 'contexts', 'hooks', 'lib']
+            .flatMap(sourceFilesUnder)
+            .filter((relativePath) => broadSelectPattern.test(source(relativePath)));
+
+        expect(offenders).toEqual([]);
+
+        const restaurantSource = source('hooks/use-restaurants.tsx');
+        expect(restaurantSource).toContain('RESTAURANT_MERGE_SELECT');
+        expect(restaurantSource).not.toContain("'unique_id'");
+        expect(restaurantSource).not.toContain("'ai_rating'");
+        expect(restaurantSource).not.toContain("'visit_count'");
+        expect(restaurantSource).not.toContain("'description'");
     });
 
     test('global chrome assets stay small and cacheable without changing page UI', () => {
@@ -159,6 +242,7 @@ describe('web quality performance source contracts', () => {
         const mobileBottomNavSource = source('components/layout/MobileBottomNav.tsx');
         const nextConfigSource = source('next.config.mjs');
         const viewportFixSource = source('public/scripts/viewport-height-fix.js');
+        const authContextSource = source('contexts/AuthContext.tsx');
         const faviconPath = join(import.meta.dir, '..', 'public/favicon.ico');
         const faviconPngPath = join(import.meta.dir, '..', 'public/favicon-32x32.png');
         const appleIconPath = join(import.meta.dir, '..', 'public/apple-touch-icon.png');
@@ -199,16 +283,23 @@ describe('web quality performance source contracts', () => {
         expect(source('tailwind.home.deferred.config.ts')).toContain('./components/admin/AdminRestaurantModal.tsx');
         expect(source('app/home-client-sidepanels.tsx')).toContain("import './home-deferred-globals.css'");
         expect(source('app/page.tsx')).toContain('<HomeRuntimeShell>');
-        expect(source('contexts/AuthContext.tsx')).toContain('HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000');
+        expect(authContextSource).toContain('HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000');
         expect(source('components/map/NaverMapView.tsx')).toContain('NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 30000');
-        expect(source('contexts/AuthContext.tsx')).toContain('shouldDelayAuthBootstrap');
-        expect(source('contexts/AuthContext.tsx')).toContain('hasPersistedSupabaseSessionHint');
-        expect(source('contexts/AuthContext.tsx')).toContain('hasSupabaseAuthSessionHint');
-        expect(source('contexts/AuthContext.tsx')).toContain('shouldBootstrapAuthOnGeneralInteraction');
-        expect(source('contexts/AuthContext.tsx')).toContain("signOut({ scope: 'local' })");
-        expect(source('contexts/AuthContext.tsx')).toContain('dispatchHomeAuthSessionUpdated');
-        expect(source('contexts/AuthContext.tsx')).toContain('import("@/integrations/supabase/client")');
-        expect(source('contexts/AuthContext.tsx')).not.toContain('import { supabase }');
+        expect(authContextSource).toContain('shouldDelayAuthBootstrap');
+        expect(authContextSource).toContain('hasPersistedSupabaseSessionHint');
+        expect(authContextSource).toContain('hasSupabaseAuthSessionHint');
+        expect(authContextSource).toContain('shouldBootstrapAuthOnGeneralInteraction');
+        expect(authContextSource).toContain('AUTH_USER_STATE_CACHE_TTL_MS');
+        expect(authContextSource).toContain('authUserStateRequests');
+        expect(authContextSource).toContain('loadAuthUserState');
+        expect(authContextSource).toContain('activeAuthUserIdRef');
+        expect(authContextSource).toContain('window.setTimeout(() =>');
+        expect(authContextSource).toContain("signOut({ scope: 'local' })");
+        expect(authContextSource).toContain('dispatchHomeAuthSessionUpdated');
+        expect(authContextSource).toContain('import("@/integrations/supabase/client")');
+        expect(authContextSource).not.toContain('const checkAdminRole');
+        expect(authContextSource).not.toContain('const checkProfileStatus');
+        expect(authContextSource).not.toContain('import { supabase }');
         expect(source('contexts/NotificationContext.tsx')).toContain("import('@/integrations/supabase/client')");
         expect(source('contexts/NotificationContext.tsx')).not.toContain('import { supabase }');
         expect(source('app/home-client-effects.tsx')).not.toContain('@/integrations/supabase/client');

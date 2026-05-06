@@ -76,18 +76,18 @@ export async function GET() {
 
         const { count: pending } = await supabase
             .from('reviews')
-            .select('*', { count: 'exact', head: true })
+            .select('id', { count: 'exact', head: true })
             .is('ocr_processed_at', null)
             .not('verification_photo', 'is', null);
 
         const { count: duplicate } = await supabase
             .from('reviews')
-            .select('*', { count: 'exact', head: true })
+            .select('id', { count: 'exact', head: true })
             .eq('is_duplicate', true);
 
         const { count: processed } = await supabase
             .from('reviews')
-            .select('*', { count: 'exact', head: true })
+            .select('id', { count: 'exact', head: true })
             .not('ocr_processed_at', 'is', null);
 
         return NextResponse.json({
