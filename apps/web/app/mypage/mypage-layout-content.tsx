@@ -73,6 +73,7 @@ export function MyPageLayoutContent({
               <GlobalLoader
                 message="마이페이지를 확인하는 중..."
                 subMessage="로그인 상태를 확인하고 있습니다"
+                fullScreen
               />
             ) : children}
           </div>

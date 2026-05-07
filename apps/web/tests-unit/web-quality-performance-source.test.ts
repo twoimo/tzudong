@@ -116,6 +116,9 @@ describe('web quality performance source contracts', () => {
     test('profile/stamp/map regressions stay fixed while preserving deferred map loading', () => {
         const overlayPanelSource = source('components/layout/OverlayPagePanel.tsx');
         const stampCardSource = source('components/stamp/StampCard.tsx');
+        const stampPageSource = source('app/stamp/page.tsx');
+        const stampLoadingSource = source('app/stamp/loading.tsx');
+        const skeletonLoadersSource = source('components/ui/skeleton-loaders.tsx');
         const userProfilePanelSource = source('components/profile/UserProfilePanel.tsx');
         const naverMapSource = source('components/map/NaverMapView.tsx');
 
@@ -137,6 +140,10 @@ describe('web quality performance source contracts', () => {
         expect(stampCardSource).toContain('grayscale opacity-60');
         expect(stampCardSource).toContain("filter: 'grayscale(1)'");
         expect(stampCardSource).not.toContain('absolute inset-0 bg-black/');
+        expect(skeletonLoadersSource).toContain('function StampPageSkeletonComponent');
+        expect(skeletonLoadersSource).toContain('data-testid="stamp-page-skeleton"');
+        expect(stampLoadingSource).toContain('return <StampPageSkeleton />');
+        expect(stampPageSource).toContain('if (!isMounted || authLoading) return <StampPageSkeleton />');
         expect(userProfilePanelSource).toContain('import { StampCard }');
         expect(userProfilePanelSource).toContain('import { ReviewCard }');
         expect(userProfilePanelSource).toContain('const USER_PROFILE_PAGE_SIZE = 15');
@@ -177,6 +184,10 @@ describe('web quality performance source contracts', () => {
         const stampPageSource = source('app/stamp/page.tsx');
 
         expect(reviewCardSource).toContain('const [optimisticLike, setOptimisticLike] = useState');
+        expect(reviewCardSource).toContain("import { Avatar, AvatarFallback, AvatarImage }");
+        expect(reviewCardSource).toContain('<Avatar className="h-8 w-8 bg-primary/10">');
+        expect(reviewCardSource).toContain('<AvatarImage');
+        expect(reviewCardSource).toContain('<AvatarFallback className="bg-primary/10">');
         expect(reviewCardSource).toContain('setOptimisticLike({');
         expect(reviewCardSource).toContain('optimisticLike.isLiked ?');
         expect(reviewCardSource).toContain("typeof (result as Promise<void>).catch === 'function'");
@@ -202,6 +213,7 @@ describe('web quality performance source contracts', () => {
         const myPageLayoutSource = source('app/mypage/layout.tsx');
         const myPageLayoutContentSource = source('app/mypage/mypage-layout-content.tsx');
         const myPageSidebarSource = source('components/mypage/MyPageSidebar.tsx');
+        const myPageProfileSource = source('app/mypage/profile/page.tsx');
 
         expect(myPageSource).toContain('redirect("/mypage/submissions/new")');
         expect(myPageSource).not.toContain('"use client"');
@@ -213,6 +225,18 @@ describe('web quality performance source contracts', () => {
         expect(myPageLayoutContentSource).toContain('window.matchMedia("(min-width: 768px)")');
         expect(myPageSidebarSource).toContain("await import('@/lib/image-utils')");
         expect(myPageSidebarSource).not.toContain("import { compressImage } from '@/lib/image-utils'");
+        expect(myPageProfileSource).toContain('htmlFor="profile-avatar-upload"');
+        expect(myPageProfileSource).toContain('id="profile-avatar-upload"');
+        expect(myPageProfileSource).toContain('className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full ring-2');
+        expect(myPageProfileSource).toContain("aspectRatio: '1 / 1'");
+        expect(myPageProfileSource).toContain("borderRadius: '9999px'");
+        expect(myPageProfileSource).toContain('<NextImage');
+        expect(myPageProfileSource).toContain('sizes="96px"');
+        expect(myPageProfileSource).toContain('className="rounded-full object-cover"');
+        expect(myPageProfileSource).toContain('className="flex h-full w-full items-center justify-center rounded-full bg-primary/10"');
+        expect(myPageProfileSource).toContain('className="absolute inset-0 flex items-center justify-center rounded-full');
+        expect(myPageProfileSource).not.toContain('AvatarImage');
+        expect(myPageProfileSource).not.toContain('sm:h-18 sm:w-18');
     });
 
     test('intent-loaded mobile modal shells do not render desktop dialog on the first client paint', () => {

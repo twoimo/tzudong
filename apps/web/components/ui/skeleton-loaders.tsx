@@ -51,6 +51,41 @@ function StampGridSkeletonComponent({
     );
 }
 
+// ========== 도장 페이지 전체 스켈레톤 ==========
+function StampPageSkeletonComponent() {
+    return (
+        <div
+            className="h-full overflow-hidden bg-background"
+            style={CONTAIN_STYLE}
+            data-testid="stamp-page-skeleton"
+            aria-busy="true"
+            aria-label="도장 페이지를 불러오는 중"
+        >
+            <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0 space-y-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="space-y-2 min-w-0 flex-1">
+                            <Skeleton className="h-7 w-32" />
+                            <Skeleton className="h-4 w-52 max-w-full" />
+                        </div>
+                        <Skeleton className="h-9 w-24 rounded-md" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                        <Skeleton className="h-10 rounded-md lg:col-span-2" />
+                        <Skeleton className="h-10 rounded-md" />
+                        <Skeleton className="h-10 rounded-md" />
+                        <Skeleton className="h-10 rounded-md" />
+                        <Skeleton className="h-10 rounded-md" />
+                    </div>
+                </div>
+                <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
+                    <StampGridSkeleton count={16} showHeader={false} className="p-0" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ========== 랭킹 스켈레톤 ==========
 function LeaderboardSkeletonComponent({
     count = 8,
@@ -104,6 +139,9 @@ FeedSkeleton.displayName = "FeedSkeleton";
 
 export const StampGridSkeleton = memo(StampGridSkeletonComponent);
 StampGridSkeleton.displayName = "StampGridSkeleton";
+
+export const StampPageSkeleton = memo(StampPageSkeletonComponent);
+StampPageSkeleton.displayName = "StampPageSkeleton";
 
 export const LeaderboardSkeleton = memo(LeaderboardSkeletonComponent);
 LeaderboardSkeleton.displayName = "LeaderboardSkeleton";
