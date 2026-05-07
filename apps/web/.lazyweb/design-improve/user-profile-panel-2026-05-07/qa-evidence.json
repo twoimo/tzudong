@@ -1,0 +1,32 @@
+{
+  "target": "UserProfilePanel UI improvement",
+  "branch": "ui/user-profile-panel-lazyweb-20260507",
+  "verified_at": "2026-05-07T07:50:00Z",
+  "commands": [
+    {
+      "command": "bun test tests-unit/web-quality-performance-source.test.ts",
+      "result": "pass: 11 tests, 257 expectations"
+    },
+    {
+      "command": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true ./node_modules/.bin/eslint components/profile/UserProfilePanel.tsx tests-unit/web-quality-performance-source.test.ts --max-warnings=0",
+      "result": "pass: 0 warnings"
+    },
+    {
+      "command": "./node_modules/.bin/tsc --noEmit --pretty false",
+      "result": "pass"
+    },
+    {
+      "command": "Playwright Chromium local smoke on http://127.0.0.1:18083/user/75db9686-6a75-49bd-9f64-37082e5414e5",
+      "result": "pass: tab aria-selected toggled for 리뷰 and 좋아요; screenshots saved"
+    },
+    {
+      "command": "Playwright compact stamp screenshot with popup hidden for QA",
+      "result": "pass: stamp overlay remains compact on 430px viewport; screenshot saved"
+    }
+  ],
+  "screenshots": [
+    "references/after.png",
+    "references/after-compact.png",
+    "references/after-compact-stamps.png"
+  ]
+}
