@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, MapPin, Heart, Calendar, CheckCircle, Edit, Share2, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -227,19 +228,18 @@ export const ReviewCard = React.memo(function ReviewCard({
             {/* 헤더 영역 */}
             <div className="flex items-center justify-between p-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                        {review.userAvatarUrl ? (
-                            <Image
+                    <Avatar className="h-8 w-8 bg-primary/10">
+                        {review.userAvatarUrl && (
+                            <AvatarImage
                                 src={review.userAvatarUrl}
                                 alt={review.userName}
-                                width={32}
-                                height={32}
-                                className="w-full h-full object-cover"
+                                className="object-cover"
                             />
-                        ) : (
-                            <User className="w-4 h-4 text-primary" />
                         )}
-                    </div>
+                        <AvatarFallback className="bg-primary/10">
+                            <User className="w-4 h-4 text-primary" />
+                        </AvatarFallback>
+                    </Avatar>
                     <div>
                         <div className="flex items-center gap-2">
                             <Link
