@@ -442,7 +442,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 </div>
 
                 {/* 통계 카드 */}
-                <div className="grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
+                <div className="grid w-full grid-cols-3 gap-2">
                     <StatCard
                         key="stat-stamps"
                         icon={<Stamp className="h-3.5 w-3.5" />}
@@ -476,7 +476,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                     <div
                         role="tablist"
                         aria-label="사용자 프로필 콘텐츠"
-                        className="grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-1 rounded-xl bg-muted/60 p-1"
+                        className="grid w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1"
                     >
                         {PROFILE_TABS.map((tab) => {
                             const Icon = tab.icon;
