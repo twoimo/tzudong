@@ -10,6 +10,7 @@ export default function UserProfileLoading() {
         <GlobalLoader
             message="프로필 불러오는 중..."
             subMessage="사용자 정보를 확인하고 있습니다"
+            fullScreen
         />
     );
 }

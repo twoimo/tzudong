@@ -307,7 +307,7 @@ const getErrorMessage = (error: unknown): string => {
 // Suspense 래퍼 컴포넌트
 export default function AdminEvaluationPageWrapper() {
   return (
-    <Suspense fallback={<GlobalLoader />}>
+    <Suspense fallback={<GlobalLoader fullScreen />}>
       <AdminEvaluationPage />
     </Suspense>
   );
@@ -2234,6 +2234,7 @@ function AdminEvaluationPage() {
       <GlobalLoader
         message="관리자 데이터 검수 로딩 중..."
         subMessage="데이터를 불러오고 있습니다"
+        fullScreen
       />
     );
   }

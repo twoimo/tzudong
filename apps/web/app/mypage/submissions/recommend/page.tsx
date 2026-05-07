@@ -226,6 +226,7 @@ export default function RecommendSubmissionsPage() {
       <GlobalLoader
         message="추천 내역을 불러오는 중..."
         subMessage="잠시만 기다려주세요"
+        fullScreen
       />
     );
   }
