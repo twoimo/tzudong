@@ -585,9 +585,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       .from('restaurants')
       // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update(updateData)
-      .eq('id', record.id) // restaurants 테이블의 ID로 업데이트
-      .select()
-      .single();
+      .eq('id', record.id); // restaurants 테이블의 ID로 업데이트
 
 
 

@@ -56,6 +56,32 @@ interface Submission {
 }
 
 const PAGE_SIZE = 15;
+const SUBMISSION_SELECT = [
+  'id',
+  'user_id',
+  'submission_type',
+  'status',
+  'restaurant_name',
+  'restaurant_address',
+  'restaurant_phone',
+  'restaurant_categories',
+  'admin_notes',
+  'rejection_reason',
+  'resolved_by_admin_id',
+  'reviewed_at',
+  'created_at',
+  'updated_at',
+].join(', ');
+const SUBMISSION_ITEM_SELECT = [
+  'id',
+  'submission_id',
+  'youtube_link',
+  'tzuyang_review',
+  'target_restaurant_id',
+  'item_status',
+  'rejection_reason',
+  'created_at',
+].join(', ');
 
 export default function NewSubmissionsPage() {
   const { user } = useAuth();
@@ -73,7 +99,7 @@ export default function NewSubmissionsPage() {
 
       const { data: submissions, error } = await supabase
         .from("restaurant_submissions")
-        .select("*")
+        .select(SUBMISSION_SELECT)
         .eq("user_id", user.id)
         .eq("submission_type", "new")
         .order("created_at", { ascending: false })
@@ -88,7 +114,7 @@ export default function NewSubmissionsPage() {
 
       const { data: items, error: itemsError } = await supabase
         .from("restaurant_submission_items")
-        .select("*")
+        .select(SUBMISSION_ITEM_SELECT)
         .in("submission_id", submissionIds)
         .order("created_at", { ascending: true });
 

@@ -94,6 +94,128 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("residual_retry", expected["items"][0]["reason"])
         self.assertEqual("old.webp\nrecent.jpg\n", "".join(sorted(self.files_from_path.read_text(encoding="utf-8").splitlines(True))))
 
+    def test_count_frame_files_counts_supported_extensions_recursively(self) -> None:
+        (self.frames_dir / "nested").mkdir()
+        (self.frames_dir / "recent.jpg").write_text("jpg\n", encoding="utf-8")
+        (self.frames_dir / "nested" / "clip.JPEG").write_text("jpeg\n", encoding="utf-8")
+        (self.frames_dir / "nested" / "clip.webp").write_text("webp\n", encoding="utf-8")
+        (self.frames_dir / "ignore.png").write_text("png\n", encoding="utf-8")
+
+        result = self._helper("count-frame-files", "--frames-dir", str(self.frames_dir))
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual("3", result.stdout.strip())
+
+    def test_print_summary_flow_guide_keeps_beginner_flow_block(self) -> None:
+        result = self._helper("print-summary-flow-guide")
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("TZUDONG PIPELINE FLOW", result.stdout)
+        self.assertIn("Phase 4", result.stdout)
+        self.assertTrue(result.stdout.endswith("+----------------------------------------------------------------------------------------------------------+\n"))
+
+    def test_resolve_policy_action_keeps_fail_closed_policy_matrix(self) -> None:
+        cases = [
+            ("Step 13 (Supabase)", "missing_external_dependency", "end_to_end", "0", "optional_skip"),
+            ("Step 08 (Chunk Multimodal)", "quota_exhausted", "end_to_end", "1", "required_failure"),
+            ("Step 08 (Chunk Multimodal)", "quota_exhausted", "end_to_end", "0", "optional_skip"),
+            ("Step 11 (LAAJ Evaluation)", "timeout_incomplete", "local", "0", "optional_skip"),
+            ("Step 11 (LAAJ Evaluation)", "timeout_incomplete", "end_to_end", "0", "required_failure"),
+            ("New Step", "new_issue", "end_to_end", "0", "required_failure:unknown"),
+        ]
+
+        for step_name, issue_kind, policy_mode, pending_work, expected in cases:
+            with self.subTest(
+                step_name=step_name,
+                issue_kind=issue_kind,
+                policy_mode=policy_mode,
+                pending_work=pending_work,
+            ):
+                result = self._helper(
+                    "resolve-policy-action",
+                    "--step-name",
+                    step_name,
+                    "--issue-kind",
+                    issue_kind,
+                    "--policy-mode",
+                    policy_mode,
+                    "--pending-step08-work",
+                    pending_work,
+                )
+
+                self.assertEqual(0, result.returncode, self._format_process_output(result))
+                self.assertEqual(expected, result.stdout.strip())
+
+    def test_policy_message_helpers_keep_timeout_fail_closed_text(self) -> None:
+        timeout_message = self._helper(
+            "render-timeout-guard-message",
+            "--elapsed-minutes",
+            "47",
+            "--max-minutes",
+            "45",
+        )
+        self.assertEqual(0, timeout_message.returncode, self._format_process_output(timeout_message))
+        self.assertEqual(
+            "파이프라인 시간 제한 도달 (47m/45m). 남은 단계 건너뜁니다.",
+            timeout_message.stdout.strip(),
+        )
+
+        unknown_warning = self._helper(
+            "render-policy-unknown-warning",
+            "--step-name",
+            "New Step",
+            "--issue-kind",
+            "new_issue",
+        )
+        self.assertEqual(0, unknown_warning.returncode, self._format_process_output(unknown_warning))
+        self.assertIn("fail-closed", unknown_warning.stdout)
+        self.assertIn("New Step|new_issue", unknown_warning.stdout)
+
+        summary_note = self._helper(
+            "render-policy-summary-note",
+            "--step-name",
+            "Phase 3",
+            "--issue-kind",
+            "timeout_incomplete",
+        )
+        self.assertEqual(0, summary_note.returncode, self._format_process_output(summary_note))
+        self.assertEqual("Phase 3 skipped before entry (timeout_incomplete)", summary_note.stdout.strip())
+
+    def test_step08_message_helper_keeps_prerequisite_quota_and_downstream_text(self) -> None:
+        cases = [
+            (
+                ("node-prerequisite-failure", "@google/genai"),
+                "필수 Node 패키지 누락(@google/genai)으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요.",
+            ),
+            (("node-prerequisite-downstream-reason", ""), "Step 08 Node prerequisite 미충족"),
+            (
+                ("gemini-runtime-prerequisite-failure", ""),
+                "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략",
+            ),
+            (("gemini-runtime-prerequisite-downstream-reason", ""), "Step 08 Gemini runtime prerequisite 미충족"),
+            (
+                ("quota-detected-warning", ""),
+                "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다.",
+            ),
+            (("quota-policy-issue", ""), "Gemini quota 초과 (exit=42)"),
+            (("quota-downstream-reason", ""), "Step 08 quota 초과"),
+            (("login-expired-failure", ""), "Google 로그인 세션 만료 (exit=44)"),
+            (("login-expired-downstream-reason", ""), "Step 08 로그인 prerequisite 미충족"),
+            (("generic-failure-downstream-reason", ""), "Step 08 실패"),
+        ]
+
+        for (message_kind, detail), expected in cases:
+            with self.subTest(message_kind=message_kind):
+                result = self._helper(
+                    "render-step08-message",
+                    "--message-kind",
+                    message_kind,
+                    "--detail",
+                    detail,
+                )
+
+                self.assertEqual(0, result.returncode, self._format_process_output(result))
+                self.assertEqual(expected, result.stdout.strip())
 
     def test_gdrive_expected_manifest_preserves_old_missing_residual(self) -> None:
         missing_item = {
@@ -292,7 +414,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == 'main'", workflow)
         self.assertIn("MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}", workflow)
-        self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}", workflow)
+        self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1000' }}", workflow)
         self.assertIn("concurrency:", workflow)
         self.assertIn("gdrive-frame-backfill", workflow)
         self.assertIn("backfill.lock.json", workflow)
@@ -367,6 +489,84 @@ class GDriveUploadContractTests(unittest.TestCase):
         queue_lines = [line for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
         self.assertEqual(1, len(queue_lines))
         self.assertIn("pending.jpg", queue_lines[0])
+
+    def test_observed_daily_run_skipped_upload_status_artifact_contract(self) -> None:
+        """Lock the schema shape observed from a successful main daily run artifact."""
+        observed_status = {
+            "schemaVersion": 2,
+            "runId": "25435432129",
+            "policy": "warn",
+            "inputPolicy": "warn",
+            "uploadMode": "skip",
+            "expectedCount": 0,
+            "attemptedCount": 0,
+            "uploadedCount": 0,
+            "uploadedCountConfidence": "exact",
+            "skippedExistingCount": 0,
+            "verifiedCount": 0,
+            "residualCount": 0,
+            "pendingBacklogCount": 0,
+            "pendingLocalCount": 0,
+            "stagedShardItemCount": 0,
+            "missingLocalCount": 0,
+            "stagedShardCount": 0,
+            "maxResidualAttempts": 0,
+            "backfillThresholdAttempts": 3,
+            "timeout": False,
+            "exitCode": 0,
+            "status": "skipped",
+            "terminalIncomplete": False,
+            "completionProof": "none",
+            "verificationRequired": False,
+            "dedupeKey": "relativePath:size:mtime",
+            "residualQueuePath": None,
+            "notes": [],
+        }
+
+        expected_keys = {
+            "schemaVersion",
+            "runId",
+            "policy",
+            "inputPolicy",
+            "uploadMode",
+            "expectedCount",
+            "attemptedCount",
+            "uploadedCount",
+            "uploadedCountConfidence",
+            "skippedExistingCount",
+            "verifiedCount",
+            "residualCount",
+            "pendingBacklogCount",
+            "pendingLocalCount",
+            "stagedShardItemCount",
+            "missingLocalCount",
+            "stagedShardCount",
+            "maxResidualAttempts",
+            "backfillThresholdAttempts",
+            "timeout",
+            "exitCode",
+            "status",
+            "terminalIncomplete",
+            "completionProof",
+            "verificationRequired",
+            "dedupeKey",
+            "residualQueuePath",
+            "notes",
+        }
+
+        self.assertEqual(expected_keys, set(observed_status))
+        self.assertEqual(2, observed_status["schemaVersion"])
+        self.assertEqual("skipped", observed_status["status"])
+        self.assertEqual(0, observed_status["exitCode"])
+        self.assertFalse(observed_status["terminalIncomplete"])
+        self.assertEqual(
+            observed_status["expectedCount"],
+            observed_status["verifiedCount"]
+            + observed_status["skippedExistingCount"]
+            + observed_status["residualCount"],
+        )
+        self.assertEqual(0, observed_status["pendingBacklogCount"])
+        self.assertEqual("none", observed_status["completionProof"])
 
     def test_gdrive_upload_status_success_requires_remote_proof_and_clears_matching_residual(self) -> None:
         frame = self.frames_dir / "done.jpg"
@@ -450,6 +650,63 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("main", summary["runtime"]["executionBranch"])
         self.assertEqual("data", summary["runtime"]["targetBranch"])
 
+    def test_run_daily_summary_manifest_records_structured_step_events(self) -> None:
+        summary_path = self.root / "step-events-summary.json"
+        result = self._helper(
+            "write-summary-manifest",
+            "--output",
+            str(summary_path),
+            "--date",
+            "2026-05-01",
+            "--final-status",
+            "WARN",
+            "--final-exit-code",
+            "0",
+            "--step-event",
+            "completed\tStep 1 (URL Collection)\t12\t\t",
+            "--step-event",
+            "downstream_skipped\tStep 09~13 (Evaluation)\t\tStep 08 quota 초과\tStep 08 (Chunk Multimodal)",
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            [
+                {
+                    "durationSeconds": 12,
+                    "name": "Step 1 (URL Collection)",
+                    "status": "completed",
+                },
+                {
+                    "name": "Step 09~13 (Evaluation)",
+                    "reason": "Step 08 quota 초과",
+                    "status": "downstream_skipped",
+                    "upstreamStep": "Step 08 (Chunk Multimodal)",
+                },
+            ],
+            summary["stepEvents"],
+        )
+
+    def test_run_daily_summary_manifest_rejects_unknown_step_event_status(self) -> None:
+        summary_path = self.root / "invalid-step-events-summary.json"
+        result = self._helper(
+            "write-summary-manifest",
+            "--output",
+            str(summary_path),
+            "--date",
+            "2026-05-01",
+            "--final-status",
+            "ERROR",
+            "--final-exit-code",
+            "1",
+            "--step-event",
+            "unknown\tStep 1 (URL Collection)\t0\t\t",
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("invalid step event status: unknown", result.stderr)
+        self.assertFalse(summary_path.exists())
+
     def test_gdrive_upload_status_embeds_in_summary_manifest_when_requested(self) -> None:
         frame = self.frames_dir / "summary.jpg"
         frame.write_text("frame\n", encoding="utf-8")
@@ -488,6 +745,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("complete", summary["gdriveUpload"]["status"])
         self.assertEqual(1, summary["gdriveUpload"]["expectedCount"])
         self.assertEqual(1, summary["gdriveUpload"]["verifiedCount"])
+        self.assertEqual("ok", summary["gdriveUpload"]["operatorMessage"]["severity"])
+        self.assertIn("GDrive upload verified", summary["gdriveUpload"]["operatorMessage"]["summary"])
 
     def test_gdrive_upload_status_preserves_missing_residual_entries_on_skip(self) -> None:
         stale_file = self.frames_dir / "stale.jpg"
@@ -546,6 +805,9 @@ class GDriveUploadContractTests(unittest.TestCase):
         status = json.loads(self.status_path.read_text(encoding="utf-8"))
         self.assertEqual("backfill_required", status["status"])
         self.assertEqual("backfill_required", status["policy"])
+        self.assertEqual("warning", status["operatorMessage"]["severity"])
+        self.assertIn("requires backfill", status["operatorMessage"]["summary"])
+        self.assertIn("backfill workflow", status["operatorMessage"]["action"])
         self.assertEqual(1, status["missingLocalCount"])
         self.assertEqual(1, status["residualCount"])
         queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
@@ -749,6 +1011,19 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertEqual([], manifest["downstreamSkips"])
         self.assertTrue(manifest["noWorkShortCircuit"])
         self.assertEqual("end_to_end", manifest["policyMode"])
+        completed_events = {
+            event["name"]: event
+            for event in manifest["stepEvents"]
+            if event["status"] == "completed"
+        }
+        for step_name in (
+            "Step 3 (Transcript)",
+            "Step 3.1 (Context Generation)",
+            "Step 4 (Heatmap & Frames)",
+        ):
+            self.assertIn(step_name, completed_events)
+            self.assertIsInstance(completed_events[step_name]["durationSeconds"], int)
+            self.assertGreaterEqual(completed_events[step_name]["durationSeconds"], 0)
         self.assertIn("[TIMING] Step 3 (Transcript):", result.stdout)
         self.assertIn("[TIMING] Step 3.1 (Context Generation):", result.stdout)
         self.assertIn("[TIMING] Step 4 (Heatmap & Frames):", result.stdout)
@@ -780,6 +1055,73 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue(any("Step 08 (Chunk Multimodal)" in item for item in manifest["failedRequiredSteps"]))
         self.assertEqual([], manifest["optionalSkips"])
         self.assertTrue(any("Step 09~13 (Evaluation)" in item for item in manifest["downstreamSkips"]))
+        self.assertTrue(
+            any(
+                event["name"] == "Step 08 (Chunk Multimodal)" and event["status"] == "failed"
+                for event in manifest["stepEvents"]
+            )
+        )
+        self.assertTrue(
+            any(
+                event["name"] == "Step 09~13 (Evaluation)"
+                and event["status"] == "downstream_skipped"
+                and event["upstreamStep"] == "Step 08 (Chunk Multimodal)"
+                for event in manifest["stepEvents"]
+            )
+        )
+
+    def test_step08_quota_policy_remains_required_when_pending_work_exists(self) -> None:
+        result = self._run_script(
+            env_overrides={"RUN_DAILY_VERIFY_REQUIRED_SCENARIO": "step08_quota"},
+            force_phase3=True,
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Gemini quota 초과", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertTrue(any("Step 08 (Chunk Multimodal)" in item for item in manifest["failedRequiredSteps"]))
+        self.assertTrue(
+            any(
+                event["name"] == "Step 08 (Chunk Multimodal)" and event["status"] == "failed"
+                for event in manifest["stepEvents"]
+            )
+        )
+
+    def test_step08_login_expired_exit_records_required_failure_and_downstream_skip(self) -> None:
+        result = self._run_script(
+            env_overrides={"RUN_DAILY_TEST_CHUNK_EXIT": "44"},
+            force_phase3=True,
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Google 로그인 세션 만료 (exit=44)", result.stdout)
+        self.assertIn("Step 08 로그인 prerequisite 미충족", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertTrue(
+            any(
+                "Step 08 (Chunk Multimodal)" in item and "Google 로그인 세션 만료 (exit=44)" in item
+                for item in manifest["failedRequiredSteps"]
+            )
+        )
+        self.assertTrue(
+            any(
+                "Step 09~13 (Evaluation)" in item and "Step 08 로그인 prerequisite 미충족" in item
+                for item in manifest["downstreamSkips"]
+            )
+        )
+        self.assertTrue(
+            any(
+                event["name"] == "Step 09~13 (Evaluation)"
+                and event["status"] == "downstream_skipped"
+                and event["reason"] == "Step 08 로그인 prerequisite 미충족"
+                and event["upstreamStep"] == "Step 08 (Chunk Multimodal)"
+                for event in manifest["stepEvents"]
+            )
+        )
 
     def test_supabase_key_only_skips_insert_stage_in_local_mode(self) -> None:
         result = self._run_script(
@@ -801,6 +1143,12 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue(any("Step 13 (Supabase)" in item for item in manifest["optionalSkips"]))
         self.assertEqual([], manifest["failedRequiredSteps"])
         self.assertEqual([], manifest["downstreamSkips"])
+        self.assertTrue(
+            any(
+                event["name"] == "Step 13 (Supabase)" and event["status"] == "optional_skipped"
+                for event in manifest["stepEvents"]
+            )
+        )
 
     def test_supabase_insert_failure_returns_non_zero_exit(self) -> None:
         result = self._run_script(supabase_insert_exit=23, force_phase3=True)
@@ -883,6 +1231,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         summary = (self.root / "project" / "tmp" / "summary.md").read_text(encoding="utf-8")
         self.assertIn("**Execution Branch**: [`main`]", summary)
         self.assertIn("**Data Sync Branch**: [`data`]", summary)
+        self.assertIn("TZUDONG PIPELINE FLOW", summary)
 
         project_data_dir = self.root / "project" / "backend" / "restaurant-crawling" / "data"
         self.assertTrue((project_data_dir / "credentials.json").exists())

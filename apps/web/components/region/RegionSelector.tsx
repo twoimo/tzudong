@@ -40,6 +40,9 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
       return mergeRestaurants(data || []);
     },
     enabled: isOpen,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // 지역별 맛집 수 계산 (병합된 데이터 기준)

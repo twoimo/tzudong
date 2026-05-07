@@ -33,6 +33,7 @@ interface BookmarkWithRestaurant extends Bookmark {
 // [성능 최적화] 북마크 데이터 캐싱 시간 설정
 const BOOKMARK_STALE_TIME = 2 * 60 * 1000; // 2분간 stale 상태가 되지 않음
 const BOOKMARK_GC_TIME = 10 * 60 * 1000; // 10분간 캐시 유지
+const BOOKMARK_RESTAURANT_SELECT = 'id, approved_name, categories, road_address, jibun_address, youtube_link, review_count, lat, lng, status';
 
 interface BookmarkRow {
     id: string;
@@ -78,7 +79,7 @@ async function fetchApprovedCandidatesByRestaurantNames(restaurants: Restaurant[
 
     const { data } = await supabase
         .from('restaurants')
-        .select('*')
+        .select(BOOKMARK_RESTAURANT_SELECT)
         .eq('status', 'approved')
         .in('approved_name', approvedNames);
 
@@ -151,7 +152,7 @@ export function useBookmarks() {
 
             const { data: restaurantsData, error: restaurantsError } = await supabase
                 .from('restaurants')
-                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count, lat, lng, status')
+                .select(BOOKMARK_RESTAURANT_SELECT)
                 .in('id', restaurantIds);
 
             if (restaurantsError) throw restaurantsError;
@@ -217,7 +218,7 @@ export function useBookmarkIds() {
 
             const { data: restaurantsData } = await supabase
                 .from('restaurants')
-                .select('id, approved_name, categories, road_address, jibun_address, youtube_link, review_count, lat, lng, status')
+                .select(BOOKMARK_RESTAURANT_SELECT)
                 .in('id', bookmarkedRestaurantIds);
 
             const bookmarkedRestaurants = ((restaurantsData ?? []) as unknown as RestaurantRow[]).map(toRestaurant);
@@ -359,7 +360,7 @@ export function useBookmarkCount(restaurantId: string) {
             const relatedRestaurantIds = await fetchRelatedBookmarkRestaurantIds(restaurantId);
             const { count, error } = await supabase
                 .from('user_bookmarks')
-                .select('*', { count: 'exact', head: true })
+                .select('restaurant_id', { count: 'exact', head: true })
                 .in('restaurant_id', relatedRestaurantIds);
 
             if (error) throw error;

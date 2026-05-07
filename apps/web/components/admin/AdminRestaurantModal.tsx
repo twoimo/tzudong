@@ -19,6 +19,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
+import { RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import { Loader2, ChevronDown, X } from "lucide-react";
@@ -646,7 +647,7 @@ export function AdminRestaurantModal({
                 // [BUG FIX] 병합된 레스토랑 정보가 손실되지 않도록 전체 그룹 재조회 및 구성
                 const { data: allUpdatedRestaurants } = await supabase
                     .from("restaurants")
-                    .select("*, name:approved_name")
+                    .select(RESTAURANT_MERGE_SELECT)
                     .in("id", existingIds);
 
                 if (allUpdatedRestaurants && allUpdatedRestaurants.length > 0) {

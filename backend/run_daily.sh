@@ -472,6 +472,18 @@ step_start() {
     STEP_START_TIME=$(date +%s)
 }
 
+STEP_EVENTS=()
+
+record_step_event() {
+    local status="$1"
+    local step_name="$2"
+    local duration_seconds="${3:-}"
+    local reason="${4:-}"
+    local upstream_step="${5:-}"
+
+    STEP_EVENTS+=("${status}"$'\t'"${step_name}"$'\t'"${duration_seconds}"$'\t'"${reason}"$'\t'"${upstream_step}")
+}
+
 step_end() {
     local STEP_NAME="$1"
     local STEP_END_TIME=$(date +%s)
@@ -479,6 +491,7 @@ step_end() {
     local MINUTES=$((DURATION / 60))
     local SECONDS=$((DURATION % 60))
     log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
+    record_step_event "completed" "$STEP_NAME" "$DURATION"
 }
 
 step_duration_from() {
@@ -489,10 +502,21 @@ step_duration_from() {
     local MINUTES=$((DURATION / 60))
     local SECONDS=$((DURATION % 60))
     log "INFO" "[TIMING] $STEP_NAME: ${MINUTES}m ${SECONDS}s"
+    record_step_event "completed" "$STEP_NAME" "$DURATION"
 }
 
 count_frame_files() {
     local FRAMES_DIR="$PROJECT_ROOT/backend/restaurant-crawling/data/frames"
+    local HELPER_PATH="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+
+    if [ -f "$HELPER_PATH" ]; then
+        local HELPER_OUTPUT
+        if HELPER_OUTPUT=$("$PYTHON_CMD" "$HELPER_PATH" count-frame-files --frames-dir "$FRAMES_DIR" 2>/dev/null); then
+            echo "$HELPER_OUTPUT"
+            return 0
+        fi
+    fi
+
     if [ ! -d "$FRAMES_DIR" ]; then
         echo 0
         return 0
@@ -514,6 +538,7 @@ record_required_failure() {
     fi
 
     FAILED_REQUIRED_STEPS+=("$entry")
+    record_step_event "failed" "$step_name" "" "$reason"
     log "ERROR" "$step_name 실패${reason:+: $reason}"
 }
 
@@ -527,6 +552,7 @@ record_optional_skip() {
     fi
 
     SKIPPED_OPTIONAL_STEPS+=("$entry")
+    record_step_event "optional_skipped" "$step_name" "" "$reason"
     log "WARN" "$step_name 선택 건너뜀${reason:+: $reason}"
 }
 
@@ -545,6 +571,7 @@ record_downstream_skip() {
     fi
 
     SKIPPED_DOWNSTREAM_STEPS+=("$entry")
+    record_step_event "downstream_skipped" "$step_name" "" "$reason" "$upstream_step"
     log "WARN" "$step_name 연쇄 건너뜀${reason:+: $reason}${upstream_step:+ (upstream: $upstream_step)}"
 }
 
@@ -626,13 +653,33 @@ count_pending_step08_work() {
 resolve_policy_action() {
     local step_name="$1"
     local issue_kind="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local pending_step08_work="0"
+    local helper_output=""
+
+    if [ "$step_name" = "Step 08 (Chunk Multimodal)" ] && [ "$issue_kind" = "quota_exhausted" ]; then
+        pending_step08_work="$(count_pending_step08_work)"
+    fi
+
+    if [ -f "$helper_path" ]; then
+        # Preserve the shell policy matrix below as a fail-safe for early-runner
+        # environments where the helper cannot be executed.
+        if helper_output=$("$PYTHON_CMD" "$helper_path" resolve-policy-action \
+            --step-name "$step_name" \
+            --issue-kind "$issue_kind" \
+            --policy-mode "${RUN_DAILY_POLICY_MODE:-end_to_end}" \
+            --pending-step08-work "${pending_step08_work:-0}" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
 
     case "${step_name}|${issue_kind}" in
         "Step 1 (URL Collection)|missing_external_dependency"|"Step 2 (Metadata)|missing_external_dependency"|"Step 2.1 (Meta Migration)|missing_external_dependency"|"Step 13 (Supabase)|missing_external_dependency")
             echo "optional_skip"
             ;;
         "Step 08 (Chunk Multimodal)|quota_exhausted")
-            if is_end_to_end_mode && [ "$(count_pending_step08_work)" -gt 0 ]; then
+            if is_end_to_end_mode && [ "$pending_step08_work" -gt 0 ]; then
                 echo "required_failure"
             else
                 echo "optional_skip"
@@ -651,6 +698,117 @@ resolve_policy_action() {
     esac
 }
 
+render_timeout_guard_message() {
+    local elapsed_minutes="$1"
+    local max_minutes="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local helper_output=""
+
+    if [ -f "$helper_path" ]; then
+        if helper_output=$("$PYTHON_CMD" "$helper_path" render-timeout-guard-message \
+            --elapsed-minutes "$elapsed_minutes" \
+            --max-minutes "$max_minutes" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
+
+    echo "파이프라인 시간 제한 도달 (${elapsed_minutes}m/${max_minutes}m). 남은 단계 건너뜁니다."
+}
+
+render_policy_unknown_warning() {
+    local step_name="$1"
+    local issue_kind="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local helper_output=""
+
+    if [ -f "$helper_path" ]; then
+        if helper_output=$("$PYTHON_CMD" "$helper_path" render-policy-unknown-warning \
+            --step-name "$step_name" \
+            --issue-kind "$issue_kind" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
+
+    echo "정의되지 않은 정책 키를 감지했습니다. fail-closed로 required_failure 처리합니다. (${step_name}|${issue_kind})"
+}
+
+render_policy_summary_note() {
+    local step_name="$1"
+    local issue_kind="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local helper_output=""
+
+    if [ -f "$helper_path" ]; then
+        if helper_output=$("$PYTHON_CMD" "$helper_path" render-policy-summary-note \
+            --step-name "$step_name" \
+            --issue-kind "$issue_kind" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
+
+    if [ "$step_name" = "Phase 3" ] && [ "$issue_kind" = "timeout_incomplete" ]; then
+        echo "Phase 3 skipped before entry (timeout_incomplete)"
+    else
+        echo "${step_name} ${issue_kind}"
+    fi
+}
+
+render_step08_message() {
+    local message_kind="$1"
+    local detail="${2:-}"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local helper_output=""
+
+    if [ -f "$helper_path" ]; then
+        if helper_output=$("$PYTHON_CMD" "$helper_path" render-step08-message \
+            --message-kind "$message_kind" \
+            --detail "$detail" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
+
+    case "$message_kind" in
+        node-prerequisite-failure)
+            echo "필수 Node 패키지 누락(${detail})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
+            ;;
+        node-prerequisite-downstream-reason)
+            echo "Step 08 Node prerequisite 미충족"
+            ;;
+        gemini-runtime-prerequisite-failure)
+            echo "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
+            ;;
+        gemini-runtime-prerequisite-downstream-reason)
+            echo "Step 08 Gemini runtime prerequisite 미충족"
+            ;;
+        quota-detected-warning)
+            echo "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
+            ;;
+        quota-policy-issue)
+            echo "Gemini quota 초과 (exit=42)"
+            ;;
+        quota-downstream-reason)
+            echo "Step 08 quota 초과"
+            ;;
+        login-expired-failure)
+            echo "Google 로그인 세션 만료 (exit=44)"
+            ;;
+        login-expired-downstream-reason)
+            echo "Step 08 로그인 prerequisite 미충족"
+            ;;
+        generic-failure-downstream-reason)
+            echo "Step 08 실패"
+            ;;
+        *)
+            echo "unknown Step 08 message kind: $message_kind"
+            return 1
+            ;;
+    esac
+}
+
 record_policy_issue() {
     local step_name="$1"
     local issue_kind="$2"
@@ -664,7 +822,7 @@ record_policy_issue() {
             record_optional_skip "$step_name" "$reason"
             ;;
         required_failure:unknown)
-            log "WARN" "정의되지 않은 정책 키를 감지했습니다. fail-closed로 required_failure 처리합니다. (${step_name}|${issue_kind})"
+            log "WARN" "$(render_policy_unknown_warning "$step_name" "$issue_kind")"
             record_required_failure "$step_name" "$reason [policy=${step_name}|${issue_kind}]"
             ;;
         *)
@@ -766,7 +924,7 @@ check_timeout() {
     local ELAPSED=$(( $(date +%s) - PIPELINE_START ))
     local ELAPSED_MIN=$((ELAPSED / 60))
     if [ "$ELAPSED_MIN" -ge "$MAX_MINUTES" ]; then
-        log "WARN" "파이프라인 시간 제한 도달 (${ELAPSED_MIN}m/${MAX_MINUTES}m). 남은 단계 건너뜁니다."
+        log "WARN" "$(render_timeout_guard_message "$ELAPSED_MIN" "$MAX_MINUTES")"
         return 1
     fi
     return 0
@@ -1282,13 +1440,13 @@ step_start
 log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
 STEP08_NODE_MISSING=""
 if STEP08_NODE_MISSING="$(missing_backend_node_packages @google/genai 2>/dev/null)"; then
-    record_required_failure "Step 08 (Chunk Multimodal)" "필수 Node 패키지 누락(${STEP08_NODE_MISSING})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
+    record_required_failure "Step 08 (Chunk Multimodal)" "$(render_step08_message node-prerequisite-failure "$STEP08_NODE_MISSING")"
     SKIP_EVALUATION=true
-    record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 Node prerequisite 미충족" "Step 08 (Chunk Multimodal)"
+    record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message node-prerequisite-downstream-reason)" "Step 08 (Chunk Multimodal)"
 elif ! has_gemini_chunk_runtime; then
-    record_required_failure "Step 08 (Chunk Multimodal)" "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
+    record_required_failure "Step 08 (Chunk Multimodal)" "$(render_step08_message gemini-runtime-prerequisite-failure)"
     SKIP_EVALUATION=true
-    record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 Gemini runtime prerequisite 미충족" "Step 08 (Chunk Multimodal)"
+    record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message gemini-runtime-prerequisite-downstream-reason)" "Step 08 (Chunk Multimodal)"
 else
     if matches_required_verification_scenario "step08_quota"; then
         log "WARN" "[VERIFY] Step 08 quota 초과 시나리오를 강제합니다."
@@ -1300,20 +1458,20 @@ else
         set -o pipefail
     fi
     if [ $CHUNK_EXIT_CODE -eq 42 ]; then
-        log "WARN" "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
+        log "WARN" "$(render_step08_message quota-detected-warning)"
         SKIP_EVALUATION=true
-        record_policy_issue "Step 08 (Chunk Multimodal)" "quota_exhausted" "Gemini quota 초과 (exit=42)"
-        record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 quota 초과" "Step 08 (Chunk Multimodal)"
+        record_policy_issue "Step 08 (Chunk Multimodal)" "quota_exhausted" "$(render_step08_message quota-policy-issue)"
+        record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message quota-downstream-reason)" "Step 08 (Chunk Multimodal)"
     elif [ $CHUNK_EXIT_CODE -eq 44 ]; then
         log "ERROR" "[CRITICAL] 구글 로그인 세션 만료! 웹 폴백을 더 이상 진행할 수 없습니다."
         log "INFO" "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
-        record_required_failure "Step 08 (Chunk Multimodal)" "Google 로그인 세션 만료 (exit=44)"
+        record_required_failure "Step 08 (Chunk Multimodal)" "$(render_step08_message login-expired-failure)"
         SKIP_EVALUATION=true
-        record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 로그인 prerequisite 미충족" "Step 08 (Chunk Multimodal)"
+        record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message login-expired-downstream-reason)" "Step 08 (Chunk Multimodal)"
     elif [ $CHUNK_EXIT_CODE -ne 0 ]; then
         record_required_failure "Step 08 (Chunk Multimodal)" "exit=$CHUNK_EXIT_CODE"
         SKIP_EVALUATION=true
-        record_downstream_skip "Step 09~13 (Evaluation)" "Step 08 실패" "Step 08 (Chunk Multimodal)"
+        record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message generic-failure-downstream-reason)" "Step 08 (Chunk Multimodal)"
     fi
 fi
 step_end "Step 08 (Chunk Multimodal)"
@@ -1509,7 +1667,7 @@ if [ "${NO_WORK_SHORT_CIRCUIT:-false}" = "true" ]; then
     echo "| No-Work Short Circuit | yes |" >> "$SUMMARY_MD"
 fi
 if [ "${PHASE3_TIMEOUT_SKIP:-false}" = "true" ]; then
-    echo "| Note | Phase 3 skipped before entry (timeout_incomplete) |" >> "$SUMMARY_MD"
+    echo "| Note | $(render_policy_summary_note "Phase 3" "timeout_incomplete") |" >> "$SUMMARY_MD"
 fi
 echo "| Optional Skips | ${#SKIPPED_OPTIONAL_STEPS[@]} |" >> "$SUMMARY_MD"
 echo "| Downstream Skips | ${#SKIPPED_DOWNSTREAM_STEPS[@]} |" >> "$SUMMARY_MD"
@@ -1790,7 +1948,11 @@ echo "" >> "$SUMMARY_MD"
 
 echo "### 🗺️ 파이프라인 전체 흐름도 (초보자용)" >> "$SUMMARY_MD"
 echo "\`\`\`" >> "$SUMMARY_MD"
-cat <<'EOF' >> "$SUMMARY_MD"
+if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ] && \
+    "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" print-summary-flow-guide >> "$SUMMARY_MD"; then
+    :
+else
+    cat <<'EOF' >> "$SUMMARY_MD"
 +----------------------------------------------------------------------------------------------------------+
 |                                    TZUDONG PIPELINE FLOW (데이터 자동 수집)                                |
 +----------------------------------------------------------------------------------------------------------+
@@ -1811,6 +1973,7 @@ cat <<'EOF' >> "$SUMMARY_MD"
 |                                                                                                          |
 +----------------------------------------------------------------------------------------------------------+
 EOF
+fi
 echo "\`\`\`" >> "$SUMMARY_MD"
 if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
     MANIFEST_ARGS=(
@@ -1842,6 +2005,9 @@ if [ -f "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" ]; then
     done
     for item in "${SKIPPED_DOWNSTREAM_STEPS[@]}"; do
         MANIFEST_ARGS+=(--downstream-skip "$item")
+    done
+    for item in "${STEP_EVENTS[@]}"; do
+        MANIFEST_ARGS+=(--step-event "$item")
     done
 
     if "$PYTHON_CMD" "${MANIFEST_ARGS[@]}"; then

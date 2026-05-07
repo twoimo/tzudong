@@ -1,0 +1,34 @@
+[
+  {
+    "file": "ref-github-profile.png",
+    "company": "GitHub",
+    "insight": "Profile header with avatar, stats, tabs, contribution/activity hierarchy.",
+    "downloaded": true,
+    "bytes": 84924,
+    "note": "Source image URL omitted because Lazyweb signed URLs are temporary credentials-like references."
+  },
+  {
+    "file": "ref-opensea-profile-tabs.png",
+    "company": "OpenSea",
+    "insight": "Segmented profile tabs and item grid controls make dense profile sections feel navigable.",
+    "downloaded": true,
+    "bytes": 168056,
+    "note": "Source image URL omitted because Lazyweb signed URLs are temporary credentials-like references."
+  },
+  {
+    "file": "ref-scoopz-profile-mobile.png",
+    "company": "Scoopz",
+    "insight": "Compact stats plus activity tabs work well when count labels stay short and touch targets are obvious.",
+    "downloaded": true,
+    "bytes": 735137,
+    "note": "Source image URL omitted because Lazyweb signed URLs are temporary credentials-like references."
+  },
+  {
+    "file": "ref-alltrails-profile-tabs.png",
+    "company": "AllTrails",
+    "insight": "Profile tabs tie reviews/photos/activities to a simple identity header and metric summary.",
+    "downloaded": true,
+    "bytes": 330386,
+    "note": "Source image URL omitted because Lazyweb signed URLs are temporary credentials-like references."
+  }
+]

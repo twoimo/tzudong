@@ -24,10 +24,7 @@ type ReviewRow = {
     user_id: string;
     is_verified: boolean;
     created_at: string;
-};
-
-type ReviewLikeRow = {
-    review_id: string;
+    like_count: number | null;
 };
 
 type LeaderboardComputedUser = Omit<LeaderboardUser, 'rank'>;
@@ -87,7 +84,7 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
 
                 let reviewsQuery = supabase
                     .from('reviews')
-                    .select('id, user_id, is_verified, created_at')
+                    .select('id, user_id, is_verified, created_at, like_count')
                     .in('user_id', userIds);
 
                 // 월간 필터 적용
@@ -103,35 +100,10 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
                 }
                 const allReviewsData = (allReviewsRawData ?? []) as ReviewRow[];
 
-                // [3단계] 모든 리뷰의 좋아요 데이터 조회
-                const reviewIds = allReviewsData.map((review) => review.id);
-
-                // 리뷰가 하나라도 있을 때만 좋아요 조회
-                let likesData: ReviewLikeRow[] = [];
-                if (reviewIds.length > 0) {
-                    const { data: fetchedLikes, error: likesError } = await supabase
-                        .from('review_likes')
-                        .select('review_id')
-                        .in('review_id', reviewIds);
-
-                    if (likesError) {
-                        console.warn('좋아요 데이터 조회 실패:', likesError.message);
-                    } else {
-                        likesData = (fetchedLikes ?? []) as ReviewLikeRow[];
-                    }
-                }
-
                 // 통계용 Map 생성
                 const reviewCountMap = new Map<string, number>();
                 const verifiedReviewCountMap = new Map<string, number>();
                 const totalLikesMap = new Map<string, number>();
-
-                // 각 리뷰별 좋아요 수 Map 생성
-                const reviewLikesMap = new Map<string, number>();
-                likesData.forEach((like) => {
-                    const current = reviewLikesMap.get(like.review_id) || 0;
-                    reviewLikesMap.set(like.review_id, current + 1);
-                });
 
                 // 리뷰 통계 계산
                 allReviewsData.forEach((review) => {
@@ -145,8 +117,8 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
                         verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
                     }
 
-                    // 총 좋아요 수 계산
-                    const reviewLikes = reviewLikesMap.get(review.id) || 0;
+                    // 총 좋아요 수 계산: review_likes 전체를 다시 읽지 않고 reviews.like_count 캐시 사용
+                    const reviewLikes = review.like_count || 0;
                     const currentLikes = totalLikesMap.get(review.user_id) || 0;
                     totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
                 });

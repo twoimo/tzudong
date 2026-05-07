@@ -24,7 +24,7 @@ as GitHub Actions artifacts:
 - `current-upload-batches.json`: batch files-from manifest.
 - `current-upload-verified-files.txt`: paths with strong remote proof.
 - `current-upload-staging-manifest.json`: local/GDrive staging shard manifest.
-- `current-upload-status.json`: canonical status and compatibility fields.
+- `current-upload-status.json`: canonical status, bounded `operatorMessage`, and compatibility fields.
 - `gdrive-upload-residual-queue.jsonl`: durable retry/control-plane queue.
 - `gdrive-upload-staging/**`: tar.gz shards for unverified local residual bytes.
 
@@ -48,8 +48,8 @@ and only then marks paths verified through `write-gdrive-upload-status` with
 ## Operator checklist
 
 - `status=skipped`: safe only when `expectedCount=0` and `pendingBacklogCount=0`.
-- `status=backfill_required`: inspect `missingLocalCount`,
-  `stagedShardItemCount`, and `pendingLocalCount`.
+- `status=backfill_required`: inspect `operatorMessage.action`,
+  `missingLocalCount`, `stagedShardItemCount`, and `pendingLocalCount`.
 - `completionProof=rclone_exit_zero`: delivery evidence exists, but backfill or
   verification must still run before declaring success.
 - Do not delete staging shards until all covered queue items are

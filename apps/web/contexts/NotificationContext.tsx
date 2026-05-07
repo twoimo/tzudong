@@ -34,6 +34,7 @@ type SupabaseRpcClient = {
 type SupabaseClient = typeof import('@/integrations/supabase/client').supabase;
 
 let supabaseClientPromise: Promise<SupabaseClient> | null = null;
+const NOTIFICATION_SELECT = 'id, type, title, message, created_at, is_read, data';
 
 function getSupabaseClient(): Promise<SupabaseClient> {
     supabaseClientPromise ??= import('@/integrations/supabase/client').then((mod) => mod.supabase);
@@ -73,7 +74,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             const supabase = await getSupabaseClient();
             const { data, error } = await supabase
                 .from('notifications')
-                .select('*')
+                .select(NOTIFICATION_SELECT)
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
                 .limit(50); // 최근 50개만 로드
@@ -435,4 +436,3 @@ export const createBatchNewRestaurantsNotification = async (
         console.warn('알림 시스템이 아직 설정되지 않았습니다.');
     }
 };
-

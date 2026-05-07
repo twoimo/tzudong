@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { mergeRestaurants } from "@/hooks/use-restaurants";
+import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { Tables } from "@/integrations/supabase/types";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
@@ -61,11 +61,9 @@ export function useUnvisitedRestaurants() {
     const { data: restaurantsData, isLoading } = useQuery({
         queryKey: ['unvisited-restaurants-all'],
         queryFn: async () => {
-            // 모든 필드를 가져와야 mergeRestaurants가 올바르게 작동하고
-            // AdminRestaurantModal 등에서 필요한 데이터를 사용할 수 있음
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('*, name:approved_name') // [수정] approved_name을 name으로 사용
+                .select(RESTAURANT_MERGE_SELECT)
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
                 .order('created_at', { ascending: false });

@@ -253,6 +253,31 @@ export type AdminInsightSystemRunDailyRuntime = {
   targetBranch?: string;
 };
 
+export type AdminInsightSystemRunDailyStepEvent = {
+  name: string;
+  status: 'completed' | 'failed' | 'optional_skipped' | 'downstream_skipped';
+  durationSeconds?: number;
+  reason?: string;
+  upstreamStep?: string;
+};
+
+export type AdminInsightSystemRunDailyGdriveUploadOperatorMessage = {
+  severity?: 'ok' | 'info' | 'warning' | 'error';
+  summary?: string;
+  action?: string;
+};
+
+export type AdminInsightSystemRunDailyGdriveUpload = {
+  status?: 'skipped' | 'complete' | 'partial' | 'backfill_required' | 'backfill_complete' | 'failed';
+  exitCode?: number;
+  expectedCount?: number;
+  residualCount?: number;
+  pendingBacklogCount?: number;
+  terminalIncomplete?: boolean;
+  completionProof?: 'none' | 'rclone_exit_zero' | 'remote_size_check' | 'remote_manifest_check';
+  operatorMessage?: AdminInsightSystemRunDailyGdriveUploadOperatorMessage;
+};
+
 export type AdminInsightSystemRunDailyStatus = {
   scriptPath?: string;
   executable: boolean;
@@ -264,9 +289,11 @@ export type AdminInsightSystemRunDailyStatus = {
   failedRequiredSteps?: string[];
   optionalSkips?: string[];
   downstreamSkips?: string[];
+  stepEvents?: AdminInsightSystemRunDailyStepEvent[];
   noWorkShortCircuit?: boolean;
   policyMode?: string;
   runtime?: AdminInsightSystemRunDailyRuntime;
+  gdriveUpload?: AdminInsightSystemRunDailyGdriveUpload;
   stale: boolean;
   checkedAt: string;
 };

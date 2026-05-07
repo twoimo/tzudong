@@ -63,7 +63,6 @@ interface ReviewData {
   is_edited_by_admin: boolean;
   food_photos: string[] | null;
   categories: string[] | null;
-  category: string | null;
 }
 
 interface RestaurantData {
@@ -89,6 +88,7 @@ const formatDate = (dateString: string) => {
   });
 };
 const PAGE_SIZE = 15;
+const MY_REVIEWS_SELECT = "id,restaurant_id,title,content,visited_at,created_at,is_verified,admin_note,is_pinned,is_edited_by_admin,food_photos,categories";
 
 // 상태 배지 컴포넌트 (Memoization)
 const ReviewStatusBadge = memo(({ review }: { review: MyReview }) => {
@@ -143,7 +143,7 @@ export default function ReviewsPage() {
         // 1. 현재 사용자의 모든 리뷰 조회
         const { data: reviewsData, error: reviewsError } = await supabase
           .from("reviews")
-          .select("*")
+          .select(MY_REVIEWS_SELECT)
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .range(pageParam, pageParam + PAGE_SIZE - 1) // 페이지당 15개
@@ -212,7 +212,7 @@ export default function ReviewsPage() {
             foodPhotos: review.food_photos || [],
             categories: (Array.isArray(review.categories) && review.categories.length > 0)
               ? review.categories
-              : (review.category ? [review.category] : []),
+              : [],
           };
         });
 

@@ -535,7 +535,14 @@ function countReadyKeys(status: AdminInsightSystemStatusResponse): number {
 
 function isRunDailyReady(status: AdminInsightSystemStatusResponse | null): boolean {
   if (!status?.runDaily) return false;
-  return Boolean(status.runDaily.scriptPath) && status.runDaily.executable && !status.runDaily.stale;
+  const upload = status.runDaily.gdriveUpload;
+  const hasUploadFollowup = Boolean(
+    upload?.terminalIncomplete
+    || upload?.status === 'partial'
+    || upload?.status === 'backfill_required'
+    || upload?.status === 'failed',
+  );
+  return Boolean(status.runDaily.scriptPath) && status.runDaily.executable && !status.runDaily.stale && !hasUploadFollowup;
 }
 
 function isStoryboardReady(status: AdminInsightSystemStatusResponse | null): boolean {
@@ -573,10 +580,26 @@ function isRunDailyChecklistItem(item: NonNullable<AdminInsightSystemStatusRespo
 }
 
 function resolveOpsSnippetTitle(item: NonNullable<AdminInsightSystemStatusResponse['checklist']>[number]): string {
-  if (isRunDailyChecklistItem(item) && item.severity !== 'medium') {
+  if (
+    (item.id === 'run-daily-script-missing' || item.id === 'run-daily-script-not-executable')
+    && item.severity !== 'medium'
+  ) {
     return 'run_daily 실행 권한 미설정';
   }
   return item.title;
+}
+
+function buildRunDailyUploadStatusLine(status: AdminInsightSystemStatusResponse): string | undefined {
+  const upload = status.runDaily?.gdriveUpload;
+  if (!upload?.status) return undefined;
+  const fragments = [
+    `status=${upload.status}`,
+    upload.residualCount !== undefined ? `residual=${upload.residualCount}` : undefined,
+    upload.pendingBacklogCount !== undefined ? `pending=${upload.pendingBacklogCount}` : undefined,
+    upload.completionProof ? `proof=${upload.completionProof}` : undefined,
+    upload.operatorMessage?.summary ? `message=${upload.operatorMessage.summary}` : undefined,
+  ].filter(Boolean);
+  return `- run_daily GDrive upload: ${fragments.join(', ')}`;
 }
 
 function selectOpsStatusActionableItems(
@@ -756,6 +779,7 @@ function buildOpsStatusSummaryContent(status: AdminInsightSystemStatusResponse |
   const runDailyReady = isRunDailyReady(status);
   const storyboardReady = isStoryboardReady(status);
   const bgeReady = isBgeReady(status);
+  const runDailyUploadStatusLine = buildRunDailyUploadStatusLine(status);
   const blockers = status.checklist
     .filter((item) => item.severity === 'critical' || item.severity === 'high')
     .filter((item) => item.source !== 'frame-caption-storage')
@@ -768,6 +792,7 @@ function buildOpsStatusSummaryContent(status: AdminInsightSystemStatusResponse |
     `- Storyboard: ${toOpsStateLabel(storyboardReady)}`,
     `- BGE 임베딩: ${toOpsStateLabel(bgeReady)}`,
     `- 키 준비 상태: ${countReadyKeys(status)}/${Object.keys(status.keys).length}`,
+    ...(runDailyUploadStatusLine ? [runDailyUploadStatusLine] : []),
     '',
     '### Blocker',
     ...(blockers.length > 0

@@ -16,6 +16,7 @@ type AnnouncementRow = {
 };
 
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
+const ANNOUNCEMENT_SELECT = 'id,title,content,is_active,show_on_banner,priority,created_at,updated_at';
 
 const sortAnnouncements = (announcements: Announcement[]): Announcement[] => {
     return [...announcements].sort((a, b) => {
@@ -54,7 +55,7 @@ export function useBannerAnnouncements() {
         queryFn: async (): Promise<Announcement[]> => {
             try {
                 const rows = await fetchSupabaseRows<AnnouncementRow>('announcements', [
-                    ['select', '*'],
+                    ['select', ANNOUNCEMENT_SELECT],
                     ['is_active', 'eq.true'],
                     ['show_on_banner', 'eq.true'],
                     ['order', 'priority.desc,created_at.desc'],
@@ -78,7 +79,7 @@ export function useActiveAnnouncements() {
         queryFn: async (): Promise<Announcement[]> => {
             try {
                 const rows = await fetchSupabaseRows<AnnouncementRow>('announcements', [
-                    ['select', '*'],
+                    ['select', ANNOUNCEMENT_SELECT],
                     ['is_active', 'eq.true'],
                     ['order', 'priority.desc,created_at.desc'],
                 ]);
