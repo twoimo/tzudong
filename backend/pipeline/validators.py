@@ -499,8 +499,29 @@ TRANSFORM_REQUIRED_FIELDS = {
 }
 
 
+def _allows_pending_transform_geocoding(record: dict) -> bool:
+    """Allow explicit pending geocoding failures to keep nullable coords.
+
+    Step 12 can emit target records whose map match is still unresolved. Those
+    records are actionable operational backlog, but they are not malformed as
+    long as the failure is explicit and the record stays pending.
+    """
+    if bool(record.get("is_missing")) or bool(record.get("is_notSelected")):
+        return False
+    return (
+        record.get("source_type") == "geminiCLI"
+        and record.get("status") == "pending"
+        and record.get("geocoding_success") is False
+        and record.get("geocoding_false_stage") in {None, 1, 2}
+    )
+
+
 def _allows_empty_transform_geocoding(record: dict) -> bool:
-    return bool(record.get("is_missing")) or bool(record.get("is_notSelected"))
+    return (
+        bool(record.get("is_missing"))
+        or bool(record.get("is_notSelected"))
+        or _allows_pending_transform_geocoding(record)
+    )
 
 
 def _allows_empty_transform_evaluation_results(record: dict) -> bool:
@@ -552,6 +573,10 @@ def validate_transform_output(video_id: str, records: list[dict]) -> list[dict]:
         # 좌표 검증
         lat = record.get("lat")
         lng = record.get("lng")
+        if (lat is None or lng is None) and _allows_pending_transform_geocoding(record):
+            errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                              "pending_geocoding", "좌표 보류: geocoding_success=false pending record",
+                              restaurant_name=name, field_path=f"{prefix}.lat/lng"))
         if lat is not None and lng is not None:
             try:
                 lat_f, lng_f = float(lat), float(lng)

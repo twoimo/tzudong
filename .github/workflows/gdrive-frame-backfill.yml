@@ -5,7 +5,6 @@ on:
     # Budget-safe catch-up windows after Daily Data Collection (UTC 19:00 / KST 04:00).
     # Do not add more default windows without re-checking the monthly Actions budget.
     - cron: '0 21 * * *'
-    - cron: '0 23 * * *'
   workflow_run:
     workflows: ["Daily Data Collection"]
     types: [completed]
@@ -57,29 +56,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install rclone and jq
-        timeout-minutes: 8
-        run: |
-          set -euo pipefail
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends rclone jq
-          rclone version | head -1
-
-      - name: Setup rclone credentials
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.config/rclone
-          if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
-            echo "${{ secrets.GDRIVE_RCLONE_CONFIG }}" | base64 -d > ~/.config/rclone/rclone.conf
-          fi
-          test -s ~/.config/rclone/rclone.conf
-
-      - name: Validate runtime environment contract
-        env:
-          RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
-        run: python3 backend/bin/check_env_contract.py --profile gdrive-backfill
-
-      - name: Write Actions budget posture ledger
+      - name: Check Actions budget posture before backfill
+        id: budget
         if: always()
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -90,6 +68,8 @@ jobs:
             --workflow daily-crawler.yml \
             --workflow gdrive-frame-backfill.yml \
             --output backend/log/cron/gdrive-backfill/actions-budget-posture.json || true
+          soft_gate=$(python3 -c 'import json; print(json.load(open("backend/log/cron/gdrive-backfill/actions-budget-posture.json", encoding="utf-8")).get("softGate", "unknown"))')
+          echo "soft_gate=$soft_gate" >> "$GITHUB_OUTPUT"
           {
             echo "### GitHub Actions budget posture"
             echo
@@ -98,7 +78,42 @@ jobs:
             echo "\`\`\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Install rclone and jq
+        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends rclone jq
+          rclone version | head -1
+
+      - name: Setup rclone credentials
+        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.config/rclone
+          if [ -n "${{ secrets.GDRIVE_RCLONE_CONFIG }}" ]; then
+            echo "${{ secrets.GDRIVE_RCLONE_CONFIG }}" | base64 -d > ~/.config/rclone/rclone.conf
+          fi
+          test -s ~/.config/rclone/rclone.conf
+
+      - name: Validate runtime environment contract
+        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
+        env:
+          RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+        run: python3 backend/bin/check_env_contract.py --profile gdrive-backfill
+
+      - name: Record budget skip
+        if: github.event_name != 'workflow_dispatch' && steps.budget.outputs.soft_gate == 'critical'
+        run: |
+          {
+            echo "### GDrive frame backfill skipped"
+            echo
+            echo "Actions budget posture is critical, so scheduled/automatic backfill was skipped. Use workflow_dispatch only for an intentional operator override."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Backfill staged frame shards
+        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
         run: |
           set -euo pipefail
           STATUS_SCOPE_SAFE="$(printf '%s' "${STATUS_SCOPE:-main}" | tr '/ :' '---')"

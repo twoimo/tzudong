@@ -174,3 +174,20 @@ GITHUB_TOKEN=... python3 backend/bin/check_actions_budget.py \
 
 기본 운영에서는 non-blocking 관측값으로 남기고, 정책을 강화할 때만
 `--fail-on-soft-gate watch|high|critical`를 사용합니다.
+
+## 2026-05-07 후속 완화: 남은 실제 리스크 처리
+
+### Transform `lat`/`lng` drift 판정
+- `status=pending`, `source_type=geminiCLI`, `geocoding_success=false`인 target record의 `lat`/`lng=null`은 schema 파손이 아니라 **미해결 geocoding backlog**로 판정한다.
+- validator는 이 경우 `pending_geocoding` warning을 남긴다. `approved` 등 ready 상태에서 좌표가 비어 있으면 계속 error로 막는다.
+- fixture drift report가 `warn`이면 operator는 좌표 보정/backfill 후보로 관리하고, `error`이면 transform contract 파손으로 triage한다.
+
+### Actions budget hard stop
+- `daily-crawler.yml`의 default-branch `workflow_dispatch`는 budget posture가 `critical`이면 기본적으로 early-fail한다.
+- 정말 필요한 운영 수동 실행만 `allow_budget_risk=true`로 명시 override한다.
+- `gdrive-frame-backfill.yml`은 scheduled/automatic run에서 `softGate=critical`이면 expensive backfill step을 skip하고 summary/artifact만 남긴다. Manual `workflow_dispatch`는 operator override로 간주한다.
+
+### Gemini quota preflight
+- `Run Daily Pipeline` 전에 `backend/bin/check_gemini_runtime.mjs --require-api-available`를 실행한다.
+- quota/auth/missing-key는 비디오 처리 전에 fail-fast되어, Step 08에서 긴 작업을 시작한 뒤 quota로 실패하는 비용을 줄인다.
+- preflight report는 `backend/log/cron/gemini-runtime-preflight.json` artifact로 남긴다. API key 값은 출력하지 않는다.

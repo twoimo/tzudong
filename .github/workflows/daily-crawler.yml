@@ -31,6 +31,11 @@ on:
         required: false
         default: ''
         type: string
+      allow_budget_risk:
+        description: 'Actions budget posture가 critical이어도 default-branch 수동 실행 허용'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: write
@@ -84,6 +89,39 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.checkout_ref || github.event.repository.default_branch) || github.event.repository.default_branch }}
           fetch-depth: 0
+
+      - name: Guard manual default-branch budget posture
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CHECKOUT_REF: ${{ github.event.inputs.checkout_ref || github.event.repository.default_branch }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ALLOW_BUDGET_RISK: ${{ github.event.inputs.allow_budget_risk || 'false' }}
+        run: |
+          mkdir -p backend/log/cron
+          python3 backend/bin/check_actions_budget.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --workflow daily-crawler.yml \
+            --workflow gdrive-frame-backfill.yml \
+            --output backend/log/cron/actions-budget-posture.json
+          python3 - <<'PY'
+          import json, os, sys
+          with open('backend/log/cron/actions-budget-posture.json', encoding='utf-8') as fh:
+              report = json.load(fh)
+          soft_gate = report.get('softGate')
+          allow = str(os.environ.get('ALLOW_BUDGET_RISK', '')).lower() == 'true'
+          checkout_ref = os.environ.get('CHECKOUT_REF') or os.environ.get('DEFAULT_BRANCH')
+          default_branch = os.environ.get('DEFAULT_BRANCH')
+          if soft_gate == 'critical' and checkout_ref == default_branch and not allow:
+              print('Budget posture is critical; refusing default-branch workflow_dispatch without allow_budget_risk=true.')
+              print(json.dumps({
+                  'softGate': soft_gate,
+                  'estimatedMonthlyPrivateEquivalentMinutes': report.get('estimatedMonthlyPrivateEquivalentMinutes'),
+                  'manualRunCount': report.get('manualRunCount'),
+                  'backfillEstimatedMinutes': report.get('backfillEstimatedMinutes'),
+              }, ensure_ascii=False, sort_keys=True))
+              sys.exit(1)
+          PY
 
       - name: Install System Dependencies (ffmpeg, jq, rclone)
         timeout-minutes: 12
@@ -242,6 +280,23 @@ jobs:
           YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
           OPENAI_API_KEY_BYEON: ${{ secrets.OPENAI_API_KEY_BYEON }}
         run: python3 backend/bin/check_env_contract.py --profile daily
+
+      - name: Preflight Gemini API quota
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          mkdir -p backend/log/cron
+          node backend/bin/check_gemini_runtime.mjs \
+            --output backend/log/cron/gemini-runtime-preflight.json \
+            --require-api-available
+          {
+            echo "### Gemini runtime preflight"
+            echo
+            echo "\`\`\`json"
+            cat backend/log/cron/gemini-runtime-preflight.json
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check production contract fixture drift
         run: |
@@ -614,6 +669,7 @@ jobs:
             backend/log/cron/current-upload-staging-manifest.json
             backend/log/cron/current-upload-rclone.log
             backend/log/cron/production-contract-fixture-status.json
+            backend/log/cron/gemini-runtime-preflight.json
             backend/log/cron/actions-budget-posture.json
             backend/log/cron/gdrive-upload-batches/**
             backend/log/cron/gdrive-upload-staging/**
