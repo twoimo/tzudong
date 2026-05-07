@@ -705,7 +705,7 @@ export default function StampPage() {
     const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean) => {
         if (!user) {
             console.warn('로그인이 필요합니다.');
-            return;
+            throw new Error('LOGIN_REQUIRED');
         }
         try {
             if (currentIsLiked) {
@@ -739,6 +739,7 @@ export default function StampPage() {
             queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
         } catch (error) {
             console.error('좋아요 토글 실패:', error);
+            throw error;
         }
     }, [user, queryClient, selectedRestaurant, restaurantReviews]);
 

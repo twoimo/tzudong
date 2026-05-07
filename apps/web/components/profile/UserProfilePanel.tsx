@@ -250,12 +250,12 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 description: '좋아요를 누르려면 로그인이 필요합니다.',
                 variant: 'destructive',
             });
-            return;
+            throw new Error('LOGIN_REQUIRED');
         }
 
         // 현재 리뷰 찾기
         const targetReview = reviews.find(r => r.id === reviewId);
-        if (!targetReview) return;
+        if (!targetReview) throw new Error('REVIEW_NOT_FOUND');
 
         const currentIsLiked = targetReview.isLikedByUser;
 
@@ -274,6 +274,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 description: '좋아요 처리 중 문제가 발생했습니다.',
                 variant: 'destructive',
             });
+            throw error;
         }
     }, [user, reviews, queryClient, userId]);
 
@@ -442,7 +443,10 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 </div>
 
                 {/* 통계 카드 */}
-                <div className="grid w-full grid-cols-3 gap-2">
+                <div
+                    className="grid w-full grid-cols-3 gap-2"
+                    style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+                >
                     <StatCard
                         key="stat-stamps"
                         icon={<Stamp className="h-3.5 w-3.5" />}
@@ -477,6 +481,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         role="tablist"
                         aria-label="사용자 프로필 콘텐츠"
                         className="grid w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1"
+                        style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
                     >
                         {PROFILE_TABS.map((tab) => {
                             const Icon = tab.icon;
