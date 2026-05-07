@@ -9,6 +9,14 @@ export const NAVER_INTERACTION_REMOVE_OPTIONS: EventListenerOptions = {
 
 type NaverInteractionHandlerKey = 'searchRelease' | 'userInteraction';
 
+export const NAVER_NONCRITICAL_SIDE_EFFECT_ACTIVATION_EVENTS = [
+    'pointerdown',
+    'wheel',
+    'dblclick',
+    'touchstart',
+    'keydown',
+] as const satisfies ReadonlyArray<keyof HTMLElementEventMap>;
+
 export function buildNaverMapInteractionListenerPlan() {
     return {
         domListeners: [
