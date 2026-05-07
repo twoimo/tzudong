@@ -11,6 +11,7 @@ import {
     Heart,
     MessageSquare,
     Users,
+    Trophy,
     User,
     X
 } from "lucide-react";
@@ -88,16 +89,48 @@ interface StatCardProps {
     label: string;
     value: string | number;
     valueClassName?: string;
+    tone?: 'neutral' | 'primary' | 'danger';
 }
 
-const StatCard = memo(function StatCard({ icon, label, value, valueClassName }: StatCardProps) {
+const STAT_TONE_CLASS_NAMES = {
+    neutral: "bg-muted text-muted-foreground",
+    primary: "bg-primary/10 text-primary",
+    danger: "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-300",
+} as const;
+
+const StatCard = memo(function StatCard({ icon, label, value, valueClassName, tone = 'neutral' }: StatCardProps) {
     return (
-        <div className="flex min-w-0 flex-col items-center justify-center rounded-lg bg-muted/50 px-1.5 py-3 text-center">
-            <div className="flex max-w-full items-center gap-1 text-muted-foreground mb-1">
+        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border/60 bg-card/80 px-2.5 py-2.5 text-left shadow-sm transition-colors hover:bg-card">
+            <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", STAT_TONE_CLASS_NAMES[tone])}>
                 {icon}
-                <span className="truncate text-xs leading-none">{label}</span>
             </div>
-            <span className={cn("max-w-full truncate text-base font-bold leading-none", valueClassName)}>{value}</span>
+            <div className="min-w-0 flex-1">
+                <span className="block truncate text-[11px] font-medium leading-none text-muted-foreground">{label}</span>
+                <span className={cn("mt-1 block max-w-full truncate text-base font-bold leading-none", valueClassName)}>{value}</span>
+            </div>
+        </div>
+    );
+});
+
+interface ProfileSectionHeaderProps {
+    title: string;
+    description: string;
+    count: number;
+}
+
+const ProfileSectionHeader = memo(function ProfileSectionHeader({ title, description, count }: ProfileSectionHeaderProps) {
+    return (
+        <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+                <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+            </div>
+            <Badge
+                variant="secondary"
+                className="shrink-0 rounded-full bg-background/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-sm"
+            >
+                {count}개
+            </Badge>
         </div>
     );
 });
@@ -353,7 +386,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b border-border bg-background p-4 flex flex-col gap-4">
+            <div className="border-b border-border/70 bg-gradient-to-br from-background via-background to-muted/35 p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
                         {showBackButton && !onClose && (
@@ -367,7 +400,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             </Button>
                         )}
                         {/* 프로필 아바타 */}
-                        <Avatar className="h-12 w-12 ring-2 ring-muted flex-shrink-0">
+                        <Avatar className="h-12 w-12 ring-2 ring-primary/10 shadow-sm flex-shrink-0">
                             <AvatarImage src={profile.avatarUrl} alt={profile.nickname} className="object-cover" />
                             <AvatarFallback className="bg-primary/10">
                                 <User className="h-6 w-6 text-primary" />
@@ -384,12 +417,15 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                         "text-[10px] px-1.5 h-5 whitespace-nowrap flex-shrink-0",
                                         profile.tier.bgColor,
                                         profile.tier.color,
-                                        "border-current"
+                                        "border-current bg-background/80 shadow-sm"
                                     )}
                                 >
                                     {profile.tier.name}
                                 </Badge>
                             </div>
+                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                                방문 도장과 리뷰 활동
+                            </p>
                         </div>
                     </div>
                     {/* ... stats ... */}
@@ -409,63 +445,69 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 <div className="grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
                     <StatCard
                         key="stat-stamps"
-                        icon={<Stamp className="h-3 w-3" />}
+                        icon={<Stamp className="h-3.5 w-3.5" />}
                         label="도장"
                         value={profile.verifiedReviewCount}
                         valueClassName="text-foreground text-base"
+                        tone="primary"
                     />
                     <StatCard
                         key="stat-likes"
-                        icon={<Heart className="h-3 w-3 text-red-500" />}
+                        icon={<Heart className="h-3.5 w-3.5" />}
                         label="좋아요"
                         value={profile.totalLikes}
                         valueClassName="text-red-600 text-base"
+                        tone="danger"
                     />
                     <StatCard
                         key="stat-rank"
-                        label="🏆 랭킹"
+                        icon={<Trophy className="h-3.5 w-3.5" />}
+                        label="랭킹"
                         value={userRank > 0 ? `#${userRank}` : '-'}
                         valueClassName="text-primary text-base"
+                        tone="primary"
                     />
                 </div>
             </div>
 
             {/* Tabs */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                <div
-                    role="tablist"
-                    aria-label="사용자 프로필 콘텐츠"
-                    className="grid w-full grid-cols-[repeat(3,minmax(0,1fr))] border-b bg-transparent"
-                >
-                    {PROFILE_TABS.map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.value;
+                <div className="border-b border-border/70 bg-background px-3 py-2">
+                    <div
+                        role="tablist"
+                        aria-label="사용자 프로필 콘텐츠"
+                        className="grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-1 rounded-xl bg-muted/60 p-1"
+                    >
+                        {PROFILE_TABS.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.value;
 
-                        return (
-                            <button
-                                key={tab.value}
-                                id={getProfileTabId(tab.value)}
-                                type="button"
-                                role="tab"
-                                aria-selected={isActive}
-                                aria-controls={getProfileTabPanelId(tab.value)}
-                                onClick={() => handleTabChange(tab.value)}
-                                className={cn(
-                                    "flex min-w-0 items-center justify-center gap-1 whitespace-nowrap border-b-2 px-1.5 py-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm",
-                                    isActive
-                                        ? "border-primary text-foreground"
-                                        : "border-transparent text-stone-700 hover:text-foreground"
-                                )}
-                            >
-                                <Icon className="h-3.5 w-3.5 shrink-0" />
-                                <span className="min-w-0 truncate">{tab.label}</span>
-                                <span className="shrink-0">({tabCounts[tab.value]})</span>
-                            </button>
-                        );
-                    })}
+                            return (
+                                <button
+                                    key={tab.value}
+                                    id={getProfileTabId(tab.value)}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    aria-controls={getProfileTabPanelId(tab.value)}
+                                    onClick={() => handleTabChange(tab.value)}
+                                    className={cn(
+                                        "flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-2 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm",
+                                        isActive
+                                            ? "border-border/70 bg-background text-foreground shadow-sm"
+                                            : "border-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground"
+                                    )}
+                                >
+                                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="min-w-0 truncate">{tab.label}</span>
+                                    <span className="shrink-0">({tabCounts[tab.value]})</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-hidden bg-muted/10">
+                <div className="flex-1 overflow-hidden bg-gradient-to-b from-muted/20 to-background">
                     {/* 도장 탭 */}
                     {activeTab === 'stamps' && (
                     <div
@@ -483,21 +525,28 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                 message="아직 도장이 없습니다"
                             />
                         ) : (
-                            <div className="p-4 flex flex-col gap-3 pb-20">
-                                {stamps.slice(0, visibleStampCount).map((stamp, index) => (
-                                    <StampCard
-                                        key={`stamp-${stamp.restaurant.id}-${index}`}
-                                        restaurant={stamp.restaurant}
-                                        isVisited={true}
-                                        isUserStampsReady={true}
-                                        currentThumbnailIndex={thumbnailIndices[stamp.restaurant.id] || 0}
-                                        onThumbnailChange={handleThumbnailChange}
-                                        onClick={handleRestaurantClick}
-                                        size="default"
-                                        stampSize="compact"
-                                    />
-                                ))}
-                                <div ref={stampLoadMoreRef} />
+                            <div className="p-4 pb-20">
+                                <ProfileSectionHeader
+                                    title="방문 도장"
+                                    description="리뷰로 인증한 맛집을 모았어요."
+                                    count={stamps.length}
+                                />
+                                <div className="flex flex-col gap-3">
+                                    {stamps.slice(0, visibleStampCount).map((stamp, index) => (
+                                        <StampCard
+                                            key={`stamp-${stamp.restaurant.id}-${index}`}
+                                            restaurant={stamp.restaurant}
+                                            isVisited={true}
+                                            isUserStampsReady={true}
+                                            currentThumbnailIndex={thumbnailIndices[stamp.restaurant.id] || 0}
+                                            onThumbnailChange={handleThumbnailChange}
+                                            onClick={handleRestaurantClick}
+                                            size="default"
+                                            stampSize="compact"
+                                        />
+                                    ))}
+                                    <div ref={stampLoadMoreRef} />
+                                </div>
                             </div>
                         )}
                         </div>
@@ -521,39 +570,46 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                 message="작성한 리뷰가 없습니다"
                             />
                         ) : (
-                            <div className="p-4 space-y-4 pb-20">
-                                {reviews.slice(0, visibleReviewCount).map((review, index) => (
-                                    <ReviewCard
-                                        key={`review-${review.id}-${index}`}
-                                        review={{
-                                            id: review.id,
-                                            userId: profile.userId,
-                                            userName: profile.nickname,
-                                            userAvatarUrl: profile.avatarUrl,
-                                            restaurantId: review.restaurantId,
-                                            restaurantName: review.restaurantName,
-                                            content: review.content,
-                                            photos: review.photos,
-                                            visitedAt: review.visitedDate || review.createdAt,
-                                            submittedAt: review.createdAt,
-                                            likeCount: review.likeCount,
-                                            isLikedByUser: review.isLikedByUser,
-                                            isVerified: review.isVerified,
-                                        }}
-                                        onLike={handleLike}
-                                        currentUserId={user?.id}
-                                        onUserClick={onUserClick}
-                                        onRestaurantClick={() => {
-                                            if (review.restaurant) {
-                                                handleRestaurantClick(review.restaurant);
-                                                return;
-                                            }
-                                            if (onClose) onClose();
-                                            router.push(`/?restaurant=${review.restaurantId}`);
-                                        }}
-                                    />
-                                ))}
-                                <div ref={reviewLoadMoreRef} />
+                            <div className="p-4 pb-20">
+                                <ProfileSectionHeader
+                                    title="작성 리뷰"
+                                    description="방문 후 남긴 맛집 리뷰예요."
+                                    count={reviews.length}
+                                />
+                                <div className="space-y-4">
+                                    {reviews.slice(0, visibleReviewCount).map((review, index) => (
+                                        <ReviewCard
+                                            key={`review-${review.id}-${index}`}
+                                            review={{
+                                                id: review.id,
+                                                userId: profile.userId,
+                                                userName: profile.nickname,
+                                                userAvatarUrl: profile.avatarUrl,
+                                                restaurantId: review.restaurantId,
+                                                restaurantName: review.restaurantName,
+                                                content: review.content,
+                                                photos: review.photos,
+                                                visitedAt: review.visitedDate || review.createdAt,
+                                                submittedAt: review.createdAt,
+                                                likeCount: review.likeCount,
+                                                isLikedByUser: review.isLikedByUser,
+                                                isVerified: review.isVerified,
+                                            }}
+                                            onLike={handleLike}
+                                            currentUserId={user?.id}
+                                            onUserClick={onUserClick}
+                                            onRestaurantClick={() => {
+                                                if (review.restaurant) {
+                                                    handleRestaurantClick(review.restaurant);
+                                                    return;
+                                                }
+                                                if (onClose) onClose();
+                                                router.push(`/?restaurant=${review.restaurantId}`);
+                                            }}
+                                        />
+                                    ))}
+                                    <div ref={reviewLoadMoreRef} />
+                                </div>
                             </div>
                         )}
                         </div>
@@ -577,15 +633,22 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                 message="아직 좋아요를 받지 않았습니다"
                             />
                         ) : (
-                                <div className="divide-y divide-border">
-                                    {likers.slice(0, visibleLikerCount).map((liker, index) => (
-                                        <LikerItem
-                                            key={`liker-${liker.userId || 'unknown'}-${index}`}
-                                            liker={liker}
-                                            onUserClick={onUserClick}
-                                        />
-                                    ))}
-                                    <div ref={likerLoadMoreRef} />
+                                <div className="p-4 pb-20">
+                                    <ProfileSectionHeader
+                                        title="좋아요를 보낸 사용자"
+                                        description="내 리뷰에 반응한 사용자들이에요."
+                                        count={likers.length}
+                                    />
+                                    <div className="overflow-hidden rounded-xl border bg-card/70 shadow-sm divide-y divide-border">
+                                        {likers.slice(0, visibleLikerCount).map((liker, index) => (
+                                            <LikerItem
+                                                key={`liker-${liker.userId || 'unknown'}-${index}`}
+                                                liker={liker}
+                                                onUserClick={onUserClick}
+                                            />
+                                        ))}
+                                        <div ref={likerLoadMoreRef} />
+                                    </div>
                                 </div>
                         )}
                         </div>
