@@ -132,6 +132,11 @@ describe('web quality performance source contracts', () => {
         expect(stampCardSource).toContain('src="/images/stamp-clear.png"');
         expect(stampCardSource).toContain("stampSize?: 'default' | 'compact'");
         expect(stampCardSource).toContain('const isStampCompact = (stampSize ?? size) === \'compact\'');
+        expect(stampCardSource).toContain('w-36 h-36 md:w-40 md:h-40');
+        expect(stampCardSource).toContain('w-48 h-48 sm:w-56 sm:h-56');
+        expect(stampCardSource).toContain('grayscale opacity-60');
+        expect(stampCardSource).toContain("filter: 'grayscale(1)'");
+        expect(stampCardSource).not.toContain('absolute inset-0 bg-black/');
         expect(userProfilePanelSource).toContain('import { StampCard }');
         expect(userProfilePanelSource).toContain('import { ReviewCard }');
         expect(userProfilePanelSource).toContain('const USER_PROFILE_PAGE_SIZE = 15');
@@ -143,6 +148,7 @@ describe('web quality performance source contracts', () => {
         expect(userProfilePanelSource).toContain('whitespace-nowrap rounded-lg border px-2 py-2.5 text-xs');
         expect(userProfilePanelSource).toContain('border-border/70 bg-background text-foreground shadow-sm');
         expect(userProfilePanelSource).toContain('grid w-full grid-cols-3 gap-2');
+        expect(userProfilePanelSource.split("gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'").length - 1).toBe(2);
         expect(userProfilePanelSource).toContain('border border-border/60 bg-card/80');
         expect(userProfilePanelSource).toContain('const ProfileSectionHeader = memo');
         expect(userProfilePanelSource).toContain('방문 도장과 리뷰 활동');
@@ -161,6 +167,34 @@ describe('web quality performance source contracts', () => {
         expect(naverMapSource).toContain('resolveNaverRestaurantQueryBounds');
         expect(naverMapSource).toContain('shouldUseFullMapData: shouldRunNoncriticalMapEffects');
         expect(naverMapSource.match(/activateNoncriticalMapEffects\(\);/g)?.length).toBeGreaterThanOrEqual(3);
+    });
+
+    test('review like heart keeps the previous feed-style mobile and desktop overlay layout', () => {
+        const reviewCardSource = source('components/reviews/ReviewCard.tsx');
+        const feedContentSource = source('components/feed/FeedContent.tsx');
+        const profilePanelSource = source('components/profile/UserProfilePanel.tsx');
+        const restaurantDetailSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+        const stampPageSource = source('app/stamp/page.tsx');
+
+        expect(reviewCardSource).toContain('const [optimisticLike, setOptimisticLike] = useState');
+        expect(reviewCardSource).toContain('setOptimisticLike({');
+        expect(reviewCardSource).toContain('optimisticLike.isLiked ?');
+        expect(reviewCardSource).toContain("typeof (result as Promise<void>).catch === 'function'");
+        expect(reviewCardSource).not.toContain('if (!currentUserId)');
+        expect(reviewCardSource).toContain('className="flex items-center gap-1 group"');
+        expect(reviewCardSource).toContain("className={`w-5 h-5 transition-all");
+        expect(reviewCardSource).toContain('text-xs font-medium');
+        expect(reviewCardSource).toContain("'text-muted-foreground'");
+        expect(reviewCardSource).toContain("'text-red-500'");
+        expect(reviewCardSource).not.toContain('className="group relative flex h-8 w-8 items-center justify-center rounded-full');
+        expect(reviewCardSource).not.toContain('aria-label={`좋아요 ${review.likeCount}개`}');
+        expect(reviewCardSource).not.toContain('absolute inset-0 flex items-center justify-center text-[9px]');
+        expect(reviewCardSource).not.toContain('text-[10px] font-bold leading-none tabular-nums');
+
+        for (const parentSource of [feedContentSource, profilePanelSource, restaurantDetailSource, stampPageSource]) {
+            expect(parentSource).toContain("throw new Error('LOGIN_REQUIRED')");
+            expect(parentSource).toContain('throw error;');
+        }
     });
 
     test('/mypage avoids client-side redirect work and defers desktop-only sidebar cost', () => {

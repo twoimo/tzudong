@@ -446,7 +446,7 @@ export default function FeedContent({
         if (!user) {
             if (onOpenAuth) {
                 onOpenAuth();
-                return;
+                throw new Error('LOGIN_REQUIRED');
             }
 
             toast({
@@ -454,7 +454,7 @@ export default function FeedContent({
                 description: '좋아요를 누르려면 로그인이 필요합니다.',
                 variant: 'destructive',
             });
-            return;
+            throw new Error('LOGIN_REQUIRED');
         }
 
         setOptimisticLikes(prev => ({
@@ -505,6 +505,7 @@ export default function FeedContent({
                 ...prev,
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }
             }));
+            throw error;
         }
     }, [user, onOpenAuth, queryClient, queryKey]);
 

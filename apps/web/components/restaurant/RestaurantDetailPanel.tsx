@@ -603,7 +603,7 @@ export function RestaurantDetailPanel({
     const handleRequestEditRestaurant = () => {
         if (!user) {
             setIsAuthModalOpen(true);
-            return;
+            throw new Error('LOGIN_REQUIRED');
         }
         onRequestEditRestaurant?.(restaurant);
     };
@@ -697,6 +697,7 @@ export function RestaurantDetailPanel({
 
             // 실패 시 원래 상태로 롤백
             setLikedReviews(previousState);
+            throw error;
         }
     };
 
