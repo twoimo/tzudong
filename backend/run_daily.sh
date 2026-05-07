@@ -698,6 +698,64 @@ resolve_policy_action() {
     esac
 }
 
+render_timeout_guard_message() {
+    local elapsed_minutes="$1"
+    local max_minutes="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local helper_output=""
+
+    if [ -f "$helper_path" ]; then
+        if helper_output=$("$PYTHON_CMD" "$helper_path" render-timeout-guard-message \
+            --elapsed-minutes "$elapsed_minutes" \
+            --max-minutes "$max_minutes" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
+
+    echo "파이프라인 시간 제한 도달 (${elapsed_minutes}m/${max_minutes}m). 남은 단계 건너뜁니다."
+}
+
+render_policy_unknown_warning() {
+    local step_name="$1"
+    local issue_kind="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local helper_output=""
+
+    if [ -f "$helper_path" ]; then
+        if helper_output=$("$PYTHON_CMD" "$helper_path" render-policy-unknown-warning \
+            --step-name "$step_name" \
+            --issue-kind "$issue_kind" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
+
+    echo "정의되지 않은 정책 키를 감지했습니다. fail-closed로 required_failure 처리합니다. (${step_name}|${issue_kind})"
+}
+
+render_policy_summary_note() {
+    local step_name="$1"
+    local issue_kind="$2"
+    local helper_path="$PROJECT_ROOT/backend/utils/run_daily_helpers.py"
+    local helper_output=""
+
+    if [ -f "$helper_path" ]; then
+        if helper_output=$("$PYTHON_CMD" "$helper_path" render-policy-summary-note \
+            --step-name "$step_name" \
+            --issue-kind "$issue_kind" 2>/dev/null); then
+            echo "$helper_output"
+            return 0
+        fi
+    fi
+
+    if [ "$step_name" = "Phase 3" ] && [ "$issue_kind" = "timeout_incomplete" ]; then
+        echo "Phase 3 skipped before entry (timeout_incomplete)"
+    else
+        echo "${step_name} ${issue_kind}"
+    fi
+}
+
 record_policy_issue() {
     local step_name="$1"
     local issue_kind="$2"
@@ -711,7 +769,7 @@ record_policy_issue() {
             record_optional_skip "$step_name" "$reason"
             ;;
         required_failure:unknown)
-            log "WARN" "정의되지 않은 정책 키를 감지했습니다. fail-closed로 required_failure 처리합니다. (${step_name}|${issue_kind})"
+            log "WARN" "$(render_policy_unknown_warning "$step_name" "$issue_kind")"
             record_required_failure "$step_name" "$reason [policy=${step_name}|${issue_kind}]"
             ;;
         *)
@@ -813,7 +871,7 @@ check_timeout() {
     local ELAPSED=$(( $(date +%s) - PIPELINE_START ))
     local ELAPSED_MIN=$((ELAPSED / 60))
     if [ "$ELAPSED_MIN" -ge "$MAX_MINUTES" ]; then
-        log "WARN" "파이프라인 시간 제한 도달 (${ELAPSED_MIN}m/${MAX_MINUTES}m). 남은 단계 건너뜁니다."
+        log "WARN" "$(render_timeout_guard_message "$ELAPSED_MIN" "$MAX_MINUTES")"
         return 1
     fi
     return 0
@@ -1556,7 +1614,7 @@ if [ "${NO_WORK_SHORT_CIRCUIT:-false}" = "true" ]; then
     echo "| No-Work Short Circuit | yes |" >> "$SUMMARY_MD"
 fi
 if [ "${PHASE3_TIMEOUT_SKIP:-false}" = "true" ]; then
-    echo "| Note | Phase 3 skipped before entry (timeout_incomplete) |" >> "$SUMMARY_MD"
+    echo "| Note | $(render_policy_summary_note "Phase 3" "timeout_incomplete") |" >> "$SUMMARY_MD"
 fi
 echo "| Optional Skips | ${#SKIPPED_OPTIONAL_STEPS[@]} |" >> "$SUMMARY_MD"
 echo "| Downstream Skips | ${#SKIPPED_DOWNSTREAM_STEPS[@]} |" >> "$SUMMARY_MD"

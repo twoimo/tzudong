@@ -103,5 +103,9 @@ PY
 - 새로운 파싱/집계 로직은 가능한 한 `backend/utils/run_daily_helpers.py`로
   이동합니다.
 - 실패 정책, skip 정책, manifest schema 변경은 회귀 테스트를 먼저 둡니다.
+- timeout/fail-closed 운영자 문구는 `run_daily_helpers.py`의
+  `render-timeout-guard-message`, `render-policy-unknown-warning`,
+  `render-policy-summary-note`를 우선 갱신하고 shell fallback 문구와
+  동기화합니다.
 - secret 값, 전체 raw log, 민감한 절대 경로를 admin/status 응답이나 Step
   Summary에 노출하지 않습니다.

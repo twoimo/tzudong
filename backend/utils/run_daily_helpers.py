@@ -249,7 +249,6 @@ def _load_staging_manifest(path: Optional[str]) -> Dict[str, dict]:
     return staged
 
 
-
 def resolve_policy_action(
     step_name: str,
     issue_kind: str,
@@ -284,6 +283,30 @@ def resolve_policy_action(
         return "optional_skip"
 
     return "required_failure:unknown"
+
+
+def render_timeout_guard_message(elapsed_minutes: int, max_minutes: int) -> str:
+    """Return the shell-visible timeout guard message.
+
+    Keeping this text in the helper makes timeout/fail-closed operator wording
+    testable without changing the shell's fallback behavior.
+    """
+    return f"파이프라인 시간 제한 도달 ({elapsed_minutes}m/{max_minutes}m). 남은 단계 건너뜁니다."
+
+
+def render_unknown_policy_warning(step_name: str, issue_kind: str) -> str:
+    """Return the fail-closed warning for unexpected policy matrix keys."""
+    return (
+        "정의되지 않은 정책 키를 감지했습니다. fail-closed로 required_failure 처리합니다. "
+        f"({step_name}|{issue_kind})"
+    )
+
+
+def render_policy_summary_note(step_name: str, issue_kind: str) -> str:
+    """Return a compact summary note for known policy issues."""
+    if (step_name, issue_kind) == ("Phase 3", "timeout_incomplete"):
+        return "Phase 3 skipped before entry (timeout_incomplete)"
+    return f"{step_name} {issue_kind}"
 
 
 def build_gdrive_upload_expected(args: argparse.Namespace) -> dict:
@@ -946,6 +969,7 @@ def render_summary_flow_guide() -> str:
 +----------------------------------------------------------------------------------------------------------+
 """
 
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_name(path.name + ".tmp")
@@ -1057,6 +1081,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     policy_parser.add_argument("--policy-mode", default="end_to_end")
     policy_parser.add_argument("--pending-step08-work", type=int, default=0)
 
+    timeout_parser = subparsers.add_parser("render-timeout-guard-message")
+    timeout_parser.add_argument("--elapsed-minutes", required=True, type=int)
+    timeout_parser.add_argument("--max-minutes", required=True, type=int)
+
+    unknown_policy_parser = subparsers.add_parser("render-policy-unknown-warning")
+    unknown_policy_parser.add_argument("--step-name", required=True)
+    unknown_policy_parser.add_argument("--issue-kind", required=True)
+
+    policy_note_parser = subparsers.add_parser("render-policy-summary-note")
+    policy_note_parser.add_argument("--step-name", required=True)
+    policy_note_parser.add_argument("--issue-kind", required=True)
+
     subparsers.add_parser("print-summary-flow-guide")
 
     manifest_parser = subparsers.add_parser("write-summary-manifest")
@@ -1093,6 +1129,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 args.pending_step08_work,
             )
         )
+        return 0
+
+    if args.command == "render-timeout-guard-message":
+        print(render_timeout_guard_message(args.elapsed_minutes, args.max_minutes))
+        return 0
+
+    if args.command == "render-policy-unknown-warning":
+        print(render_unknown_policy_warning(args.step_name, args.issue_kind))
+        return 0
+
+    if args.command == "render-policy-summary-note":
+        print(render_policy_summary_note(args.step_name, args.issue_kind))
         return 0
 
     if args.command == "print-summary-flow-guide":
