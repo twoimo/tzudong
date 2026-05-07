@@ -309,6 +309,31 @@ def render_policy_summary_note(step_name: str, issue_kind: str) -> str:
     return f"{step_name} {issue_kind}"
 
 
+def render_step08_message(message_kind: str, detail: str = "") -> str:
+    """Return Step 08 operator/manifest wording used by run_daily.sh."""
+    messages = {
+        "node-prerequisite-failure": (
+            f"필수 Node 패키지 누락({detail})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
+        ),
+        "node-prerequisite-downstream-reason": "Step 08 Node prerequisite 미충족",
+        "gemini-runtime-prerequisite-failure": (
+            "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
+        ),
+        "gemini-runtime-prerequisite-downstream-reason": "Step 08 Gemini runtime prerequisite 미충족",
+        "quota-detected-warning": (
+            "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
+        ),
+        "quota-policy-issue": "Gemini quota 초과 (exit=42)",
+        "quota-downstream-reason": "Step 08 quota 초과",
+        "login-expired-failure": "Google 로그인 세션 만료 (exit=44)",
+        "login-expired-downstream-reason": "Step 08 로그인 prerequisite 미충족",
+        "generic-failure-downstream-reason": "Step 08 실패",
+    }
+    if message_kind not in messages:
+        raise ValueError(f"unknown Step 08 message kind: {message_kind}")
+    return messages[message_kind]
+
+
 def build_gdrive_upload_expected(args: argparse.Namespace) -> dict:
     generated_at = args.generated_at or _utc_now_iso()
     frames_dir = Path(args.frames_dir)
@@ -1093,6 +1118,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     policy_note_parser.add_argument("--step-name", required=True)
     policy_note_parser.add_argument("--issue-kind", required=True)
 
+    step08_message_parser = subparsers.add_parser("render-step08-message")
+    step08_message_parser.add_argument("--message-kind", required=True)
+    step08_message_parser.add_argument("--detail", default="")
+
     subparsers.add_parser("print-summary-flow-guide")
 
     manifest_parser = subparsers.add_parser("write-summary-manifest")
@@ -1141,6 +1170,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.command == "render-policy-summary-note":
         print(render_policy_summary_note(args.step_name, args.issue_kind))
+        return 0
+
+    if args.command == "render-step08-message":
+        print(render_step08_message(args.message_kind, args.detail))
         return 0
 
     if args.command == "print-summary-flow-guide":

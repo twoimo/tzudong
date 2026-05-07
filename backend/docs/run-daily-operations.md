@@ -107,5 +107,8 @@ PY
   `render-timeout-guard-message`, `render-policy-unknown-warning`,
   `render-policy-summary-note`를 우선 갱신하고 shell fallback 문구와
   동기화합니다.
+- Step 08 prerequisite/quota/downstream skip 문구는
+  `render-step08-message`를 우선 갱신하고 shell fallback 문구와
+  동기화합니다.
 - secret 값, 전체 raw log, 민감한 절대 경로를 admin/status 응답이나 Step
   Summary에 노출하지 않습니다.
