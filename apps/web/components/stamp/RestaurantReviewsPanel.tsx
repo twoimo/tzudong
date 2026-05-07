@@ -36,7 +36,7 @@ interface RestaurantReviewsPanelProps {
     onReviewClick: (review: Review) => void;
     onBackFromDetail: () => void;
     onWriteReview: () => void;
-    onToggleLike: (reviewId: string, isLiked: boolean) => void;
+    onToggleLike: (reviewId: string, isLiked: boolean) => void | Promise<void>;
     onPrevPhoto: () => void;
     onNextPhoto: () => void;
     onPhotoIndexChange: (index: number) => void;
