@@ -85,7 +85,7 @@ const revokeObjectUrlIfNeeded = (url: string | null) => {
 // Suspense 래퍼
 export default function BannerManagementPageWrapper() {
     return (
-        <Suspense fallback={<GlobalLoader />}>
+        <Suspense fallback={<GlobalLoader fullScreen />}>
             <BannerManagementPage />
         </Suspense>
     );
@@ -146,7 +146,7 @@ function BannerManagementPage() {
     }, [banners]);
 
     if (authLoading || !user || !isAdmin) {
-        return <GlobalLoader />;
+        return <GlobalLoader fullScreen />;
     }
 
     // 폼 초기화

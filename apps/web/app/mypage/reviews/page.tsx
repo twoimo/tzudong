@@ -333,6 +333,7 @@ export default function ReviewsPage() {
       <GlobalLoader
         message="리뷰를 불러오는 중..."
         subMessage="작성하신 리뷰 목록을 확인하고 있습니다"
+        fullScreen
       />
     );
   }

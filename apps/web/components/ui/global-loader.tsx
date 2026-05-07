@@ -18,7 +18,7 @@ function GlobalLoaderComponent({
         <div className={cn(
             "flex items-center justify-center bg-background",
             fullScreen
-                ? "fixed inset-0 z-50 h-screen w-screen"
+                ? "fixed inset-0 z-50 h-[var(--full-height,100vh)] w-screen"
                 : "w-full h-full flex-1",
             className
         )}>
