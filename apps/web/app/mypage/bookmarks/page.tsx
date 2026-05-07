@@ -83,6 +83,7 @@ export default function BookmarksPage() {
             <GlobalLoader
                 message="북마크를 불러오는 중..."
                 subMessage="저장한 맛집 목록을 확인하고 있습니다"
+                fullScreen
             />
         );
     }

@@ -225,6 +225,16 @@ describe('web quality performance source contracts', () => {
         expect(myPageLayoutContentSource).toContain('window.matchMedia("(min-width: 768px)")');
         expect(myPageSidebarSource).toContain("await import('@/lib/image-utils')");
         expect(myPageSidebarSource).not.toContain("import { compressImage } from '@/lib/image-utils'");
+        expect(myPageSidebarSource).toContain("import NextImage from 'next/image'");
+        expect(myPageSidebarSource).toContain('htmlFor="mypage-sidebar-avatar-upload"');
+        expect(myPageSidebarSource).toContain('id="mypage-sidebar-avatar-upload"');
+        expect(myPageSidebarSource).toContain('className="relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2');
+        expect(myPageSidebarSource).toContain("aspectRatio: '1 / 1'");
+        expect(myPageSidebarSource).toContain("borderRadius: '9999px'");
+        expect(myPageSidebarSource).toContain('<NextImage');
+        expect(myPageSidebarSource).toContain('sizes="80px"');
+        expect(myPageSidebarSource).toContain('className="rounded-full object-cover"');
+        expect(myPageSidebarSource).not.toContain('AvatarImage');
         expect(myPageProfileSource).toContain('htmlFor="profile-avatar-upload"');
         expect(myPageProfileSource).toContain('id="profile-avatar-upload"');
         expect(myPageProfileSource).toContain('className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full ring-2');
@@ -237,6 +247,31 @@ describe('web quality performance source contracts', () => {
         expect(myPageProfileSource).toContain('className="absolute inset-0 flex items-center justify-center rounded-full');
         expect(myPageProfileSource).not.toContain('AvatarImage');
         expect(myPageProfileSource).not.toContain('sm:h-18 sm:w-18');
+    });
+
+    test('page-level loading spinners stay centered in the viewport', () => {
+        const globalLoaderSource = source('components/ui/global-loader.tsx');
+        const mapSkeletonSource = source('components/skeletons/MapSkeleton.tsx');
+        const adminInsightCssSource = source('app/admin/insight/insight-overhaul.module.css');
+
+        expect(globalLoaderSource).toContain('h-[var(--full-height,100vh)]');
+        expect(mapSkeletonSource).toContain('fullScreen');
+        expect(source('app/auth/reset-password/loading.tsx')).toContain('<GlobalLoader');
+        expect(source('app/home-client-loader.tsx')).toContain('<GlobalLoader');
+        expect(source('app/feed/page.tsx')).toContain('<GlobalLoader');
+        expect(adminInsightCssSource).toContain('min-height: calc(var(--full-height, 100vh) - var(--app-header-height, 56px))');
+
+        const appLoaderTags = sourceFilesUnder('app')
+            .flatMap((relativePath) => {
+                const contents = source(relativePath);
+                return (contents.match(/<GlobalLoader[\s\S]*?(?:\/>|>)/g) ?? [])
+                    .map((tag) => ({ relativePath, tag }));
+            });
+
+        expect(appLoaderTags.length).toBeGreaterThan(0);
+        for (const { relativePath, tag } of appLoaderTags) {
+            expect(`${relativePath}: ${tag}`).toContain('fullScreen');
+        }
     });
 
     test('intent-loaded mobile modal shells do not render desktop dialog on the first client paint', () => {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Bookmark, MessageSquare, PlusCircle, Edit, Tv, Camera, X, User, Loader2 } from 'lucide-react';
@@ -33,7 +34,6 @@ function SidebarItem({ href, icon, label, isActive }: SidebarItemProps) {
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/no-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -178,25 +178,47 @@ export function MyPageSidebar() {
     return (
         <aside className="hidden md:flex flex-col w-64 shrink-0 h-full border-r border-border bg-card">
             <div className="p-6 border-b border-border flex flex-col items-center text-center space-y-4">
-                <div className="relative group">
-                    <Avatar className="w-20 h-20 border-2 border-border shadow-sm group-hover:ring-2 ring-primary/30 transition-all">
-                        <AvatarImage src={profile?.avatarUrl} alt={profile?.nickname} className="object-cover" />
-                        <AvatarFallback className="text-xl bg-muted">
-                            <User className="w-8 h-8 text-muted-foreground" />
-                        </AvatarFallback>
-                    </Avatar>
-
-                    <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity cursor-pointer rounded-full z-10">
-                        {avatarUploading ? (
-                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                <div className="relative group h-20 w-20 shrink-0 rounded-full">
+                    <label
+                        htmlFor="mypage-sidebar-avatar-upload"
+                        aria-label="프로필 사진 변경"
+                        className="relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm transition-all group-hover:ring-2 group-hover:ring-primary/30"
+                        style={{ width: '5rem', height: '5rem', aspectRatio: '1 / 1', borderRadius: '9999px', overflow: 'hidden' }}
+                    >
+                        {profile?.avatarUrl ? (
+                            <NextImage
+                                src={profile.avatarUrl}
+                                alt={profile?.nickname || '사용자'}
+                                fill
+                                sizes="80px"
+                                className="rounded-full object-cover"
+                                style={{ borderRadius: '9999px' }}
+                            />
                         ) : (
-                            <Camera className="w-6 h-6 text-white" />
+                            <div
+                                className="flex h-full w-full items-center justify-center rounded-full bg-muted"
+                                style={{ borderRadius: '9999px' }}
+                            >
+                                <User className="h-8 w-8 text-muted-foreground" />
+                            </div>
                         )}
+
+                        <span
+                            className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 active:opacity-100"
+                            style={{ borderRadius: '9999px' }}
+                        >
+                            {avatarUploading ? (
+                                <Loader2 className="h-6 w-6 animate-spin text-white" />
+                            ) : (
+                                <Camera className="h-6 w-6 text-white" />
+                            )}
+                        </span>
                         <input
+                            id="mypage-sidebar-avatar-upload"
                             type="file"
                             accept="image/*"
                             onChange={handleAvatarUpload}
-                            className="hidden"
+                            className="sr-only"
                             disabled={avatarUploading}
                         />
                     </label>
