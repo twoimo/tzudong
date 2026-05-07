@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import NextImage from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -463,7 +463,6 @@ export default function ProfilePage() {
         <CardContent className="space-y-6">
 
           {/* 프로필 사진 - 반응형 UI */}
-          {/* 프로필 사진 - 반응형 UI */}
           <div className="space-y-4 md:hidden">
             <Label className="flex items-center gap-2">
               <Camera className="h-4 w-4" />
@@ -471,25 +470,47 @@ export default function ProfilePage() {
             </Label>
             {/* 모바일: 중앙 정렬, 태블릿/데스크탑: 가로 배치 */}
             <div className="flex flex-col items-center gap-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:py-0">
-              <div className="relative group shrink-0">
-                <Avatar className="h-20 w-20 sm:h-18 sm:w-18 ring-2 sm:ring-2 ring-muted group-hover:ring-primary/30 transition-all">
-                  <AvatarImage src={avatarUrl} alt={displayName} className="object-cover" />
-                  <AvatarFallback className="bg-primary/10">
-                    <User className="h-8 w-8 sm:h-7 sm:w-7 text-primary" />
-                  </AvatarFallback>
-                </Avatar>
-
-                <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity cursor-pointer rounded-full z-10">
-                  {avatarUploading ? (
-                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+              <div className="group h-24 w-24 shrink-0 rounded-full">
+                <label
+                  htmlFor="profile-avatar-upload"
+                  aria-label="프로필 사진 변경"
+                  className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full ring-2 ring-muted transition-all group-hover:ring-primary/30"
+                  style={{ width: '6rem', height: '6rem', aspectRatio: '1 / 1', borderRadius: '9999px', overflow: 'hidden' }}
+                >
+                  {avatarUrl ? (
+                    <NextImage
+                      src={avatarUrl}
+                      alt={displayName}
+                      fill
+                      sizes="96px"
+                      className="rounded-full object-cover"
+                      style={{ borderRadius: '9999px' }}
+                    />
                   ) : (
-                    <Camera className="h-6 w-6 text-white" />
+                    <div
+                      className="flex h-full w-full items-center justify-center rounded-full bg-primary/10"
+                      style={{ borderRadius: '9999px' }}
+                    >
+                      <User className="h-9 w-9 text-primary" />
+                    </div>
                   )}
+
+                  <span
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 active:opacity-100"
+                    style={{ borderRadius: '9999px' }}
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="h-6 w-6 text-white" />
+                    )}
+                  </span>
                   <input
+                    id="profile-avatar-upload"
                     type="file"
                     accept="image/*"
                     onChange={handleAvatarUpload}
-                    className="hidden"
+                    className="sr-only"
                     disabled={avatarUploading}
                   />
                 </label>

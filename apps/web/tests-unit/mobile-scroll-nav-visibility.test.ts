@@ -50,6 +50,7 @@ describe('mobile mypage scroll frame guards', () => {
         expect(layoutSource).toContain('flex-1 h-full min-h-0 overflow-y-auto');
         expect(layoutSource).toContain('flex h-full min-h-full flex-col');
         expect(layoutSource).toContain('GlobalLoader');
+        expect(layoutSource).toContain('fullScreen');
     });
 
     test('mypage scroll frame avoids snap locking so the top area remains freely scrollable', () => {
