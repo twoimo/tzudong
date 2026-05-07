@@ -917,6 +917,8 @@ describe('admin insight system status API route', () => {
                         status: 'completed',
                         conclusion: 'success',
                         html_url: 'https://github.com/twoimo/tzudong/actions/runs/24834262595?token=hidden',
+                        event: 'workflow_dispatch',
+                        run_attempt: 2,
                         created_at: '2026-04-23T10:00:00Z',
                         updated_at: '2026-04-23T10:05:00Z',
                     }],
@@ -938,7 +940,10 @@ describe('admin insight system status API route', () => {
             expect(payload.githubActions?.reachable).toBe(true);
             expect(payload.githubActions?.latestRunId).toBe(24834262595);
             expect(payload.githubActions?.latestRunConclusion).toBe('success');
+            expect(payload.githubActions?.latestRunEvent).toBe('workflow_dispatch');
+            expect(payload.githubActions?.latestRunAttempt).toBe(2);
             expect(payload.githubActions?.latestRunUrl).toBe('https://github.com/twoimo/tzudong/actions/runs/24834262595');
+            expect(payload.checklist.some((item) => item.id === 'github-actions-budget-posture')).toBe(true);
             expect(payload.supabaseCounters?.enabled).toBe(true);
             expect(payload.supabaseCounters?.configured).toBe(true);
             expect(payload.supabaseCounters?.reachable).toBe(true);

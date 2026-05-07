@@ -327,6 +327,8 @@ def render_step08_message(message_kind: str, detail: str = "") -> str:
         "quota-downstream-reason": "Step 08 quota 초과",
         "login-expired-failure": "Google 로그인 세션 만료 (exit=44)",
         "login-expired-downstream-reason": "Step 08 로그인 prerequisite 미충족",
+        "login-expired-action": "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요.",
+        "generic-failure-required": f"Step 08 실패 (exit={detail})" if detail else "Step 08 실패",
         "generic-failure-downstream-reason": "Step 08 실패",
     }
     if message_kind not in messages:
