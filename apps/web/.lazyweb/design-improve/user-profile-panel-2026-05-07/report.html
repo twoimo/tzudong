@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lazyweb design improve - User profile panel</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 32px; color: #1c1917; background: #fafaf9; }
+    main { max-width: 1040px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 18px 0 28px; }
+    figure { margin: 0; border: 1px solid #e7e5e4; border-radius: 16px; overflow: hidden; background: white; box-shadow: 0 10px 30px rgba(28,25,23,.06); }
+    img { width: 100%; display: block; }
+    figcaption { padding: 10px 12px; font-size: 13px; color: #57534e; }
+    section { background: white; border: 1px solid #e7e5e4; border-radius: 16px; padding: 20px; margin: 16px 0; }
+    li { margin: 8px 0; }
+    code { background: #f5f5f4; padding: 2px 5px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>사용자 프로필 패널 UI 개선</h1>
+  <p>Lazyweb 참고 패턴 기반으로 헤더, 통계 카드, 탭, 콘텐츠 섹션 위계를 개선했습니다.</p>
+  <section>
+    <h2>현재 화면</h2>
+    <figure><img src="references/current.png" alt="현재 사용자 프로필 화면"><figcaption>현재 쯔동 사용자 프로필 화면</figcaption></figure>
+  </section>
+  <section>
+    <h2>참고 패턴</h2>
+    <div class="grid">
+      <figure><img src="references/ref-github-profile.png" alt="GitHub profile reference"><figcaption>GitHub: 프로필 요약 + 탭 + 활동 위계</figcaption></figure>
+      <figure><img src="references/ref-opensea-profile-tabs.png" alt="OpenSea profile reference"><figcaption>OpenSea: 명확한 프로필 콘텐츠 탭</figcaption></figure>
+      <figure><img src="references/ref-scoopz-profile-mobile.png" alt="Scoopz profile reference"><figcaption>Scoopz: 컴팩트 통계와 활동 탭</figcaption></figure>
+      <figure><img src="references/ref-alltrails-profile-tabs.png" alt="AllTrails profile reference"><figcaption>AllTrails: 리뷰/활동 중심 프로필 구조</figcaption></figure>
+    </div>
+  </section>
+  <section>
+    <h2>적용 내용</h2>
+    <ul>
+      <li>통계 영역은 1행 3열을 유지하되 아이콘 칩과 카드 테두리로 가독성을 높임.</li>
+      <li>탭은 underline 대신 segmented control 형태로 바꿔 클릭 가능성을 강조.</li>
+      <li>도장/리뷰/좋아요 콘텐츠에 섹션 헤더와 개수 배지를 추가.</li>
+      <li><code>StampCard size="default" stampSize="compact"</code>는 유지해 카드형 도장 회귀를 방지.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>적용 후 확인</h2>
+    <div class="grid">
+      <figure><img src="references/after.png" alt="개선 후 데스크톱 프로필 화면"><figcaption>개선 후 데스크톱 프로필 화면</figcaption></figure>
+      <figure><img src="references/after-compact.png" alt="개선 후 컴팩트 프로필 화면"><figcaption>개선 후 컴팩트 폭에서 탭 전환 확인</figcaption></figure>
+    <figure><img src="references/after-compact-stamps.png" alt="개선 후 컴팩트 도장 카드"><figcaption>컴팩트 폭 도장 카드: 도장 오버레이 크기 확인</figcaption></figure>
+    </div>
+  </section>
+</main>
+</body>
+</html>
