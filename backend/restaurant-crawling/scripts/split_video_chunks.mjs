@@ -12,6 +12,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { execFile } from 'child_process';
 import util from 'util';
 import ffmpegStatic from 'ffmpeg-static';
@@ -78,11 +79,11 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function computeTimeoutMs(durationSec) {
+export function computeTimeoutMs(durationSec) {
     // 보수적으로 "영상 길이 * 2 + 120초"를 최소로 잡고, 하한은 15분.
     // (기존 180초 고정 타임아웃으로 장시간 인코딩이 중간 종료되는 문제 방지)
     const dynamicTimeout = (durationSec * 2000) + 120000;
-    return Math.max(MIN_TIMEOUT_MS, dynamicTimeout);
+    return Math.ceil(Math.max(MIN_TIMEOUT_MS, dynamicTimeout));
 }
 
 async function removeFileBestEffort(filePath, retries = DELETE_RETRY_COUNT, delayMs = DELETE_RETRY_DELAY_MS) {
@@ -218,4 +219,6 @@ async function main() {
     console.log(`[완료] ${outputDir}에 ${chunks.length}개 세그먼트 생성`);
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    main();
+}
