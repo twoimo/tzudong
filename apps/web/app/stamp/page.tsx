@@ -31,7 +31,7 @@ import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-quer
 import { supabase } from "@/integrations/supabase/client";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
-import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
+import { StampGridSkeleton, StampPageSkeleton } from "@/components/ui/skeleton-loaders";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
@@ -834,7 +834,7 @@ export default function StampPage() {
 
 
     // [Check before render]
-    if (!isMounted) return null;
+    if (!isMounted || authLoading) return <StampPageSkeleton />;
     if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     return (
