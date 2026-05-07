@@ -191,3 +191,21 @@ GITHUB_TOKEN=... python3 backend/bin/check_actions_budget.py \
 - `Run Daily Pipeline` 전에 `backend/bin/check_gemini_runtime.mjs --require-api-available`를 실행한다.
 - quota/auth/missing-key는 비디오 처리 전에 fail-fast되어, Step 08에서 긴 작업을 시작한 뒤 quota로 실패하는 비용을 줄인다.
 - preflight report는 `backend/log/cron/gemini-runtime-preflight.json` artifact로 남긴다. API key 값은 출력하지 않는다.
+
+### Pending geocoding backlog export/correction
+
+Use the dedicated backlog exporter before changing any transform JSONL data:
+
+```bash
+python3 backend/bin/export_pending_geocoding_backlog.py \
+  --output /tmp/tzudong-guardrails/pending-geocoding-backlog.json \
+  --csv /tmp/tzudong-guardrails/pending-geocoding-backlog.csv
+```
+
+Corrections must be reviewed and keyed by `traceId`; the tool writes a new JSONL output and does not overwrite production data in place:
+
+```bash
+python3 backend/bin/export_pending_geocoding_backlog.py \
+  --apply-corrections reviewed-pending-geocoding-corrections.csv \
+  --corrected-output /tmp/tzudong-guardrails/transforms.corrected.jsonl
+```
