@@ -137,12 +137,12 @@ describe('web quality performance source contracts', () => {
         expect(userProfilePanelSource).toContain('const USER_PROFILE_PAGE_SIZE = 15');
         expect(userProfilePanelSource).toContain('const PROFILE_TABS = [');
         expect(userProfilePanelSource).toContain('role="tablist"');
-        expect(userProfilePanelSource).toContain('grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-1 rounded-xl bg-muted/60 p-1');
+        expect(userProfilePanelSource).toContain('grid w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1');
         expect(userProfilePanelSource).toContain('onClick={() => handleTabChange(tab.value)}');
         expect(userProfilePanelSource).toContain('aria-selected={isActive}');
         expect(userProfilePanelSource).toContain('whitespace-nowrap rounded-lg border px-2 py-2.5 text-xs');
         expect(userProfilePanelSource).toContain('border-border/70 bg-background text-foreground shadow-sm');
-        expect(userProfilePanelSource).toContain('grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-2');
+        expect(userProfilePanelSource).toContain('grid w-full grid-cols-3 gap-2');
         expect(userProfilePanelSource).toContain('border border-border/60 bg-card/80');
         expect(userProfilePanelSource).toContain('const ProfileSectionHeader = memo');
         expect(userProfilePanelSource).toContain('방문 도장과 리뷰 활동');
