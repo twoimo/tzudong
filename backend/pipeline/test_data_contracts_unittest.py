@@ -359,6 +359,50 @@ class DataContractBaselineTests(unittest.TestCase):
         self.assertEqual("geminiCLI", record["source_type"])
         self.assertEqual([], validate_transform_output("contract-video-2", transformed))
 
+    def test_transform_validator_treats_pending_geocoding_as_warning_not_error(self) -> None:
+        record = {
+            "trace_id": "trace-pending-geocode",
+            "youtube_link": "https://www.youtube.com/watch?v=contract-video-pending",
+            "channel_name": "tzuyang",
+            "origin_name": "좌표보류식당",
+            "source_type": "geminiCLI",
+            "status": "pending",
+            "lat": None,
+            "lng": None,
+            "geocoding_success": False,
+            "geocoding_false_stage": 2,
+            "is_missing": False,
+            "is_notSelected": False,
+            "evaluation_results": {"location_match_TF": []},
+        }
+
+        errors = validate_transform_output("contract-video-pending", [record])
+
+        self.assertFalse(any(item["severity"] == "error" for item in errors))
+        self.assertTrue(any(item["rule"] == "pending_geocoding" for item in errors))
+
+    def test_transform_validator_still_errors_when_nullable_coords_lack_pending_marker(self) -> None:
+        record = {
+            "trace_id": "trace-broken-geocode",
+            "youtube_link": "https://www.youtube.com/watch?v=contract-video-broken",
+            "channel_name": "tzuyang",
+            "origin_name": "깨진좌표식당",
+            "source_type": "geminiCLI",
+            "status": "approved",
+            "lat": None,
+            "lng": None,
+            "geocoding_success": False,
+            "geocoding_false_stage": 2,
+            "is_missing": False,
+            "is_notSelected": False,
+            "evaluation_results": {"location_match_TF": []},
+        }
+
+        errors = validate_transform_output("contract-video-broken", [record])
+
+        self.assertTrue(any(item["severity"] == "error" for item in errors))
+        self.assertTrue(any(item["rule"] == "required_field" for item in errors))
+
     def test_results_transform_prefers_provider_backed_trace_identity_when_location_match_is_true(self) -> None:
         transform_module = _load_script_module(
             BACKEND_ROOT / "restaurant-evaluation" / "scripts" / "12-transform.py",

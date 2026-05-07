@@ -307,6 +307,8 @@ export type AdminInsightGithubActionsStatus = {
   latestRunId?: number;
   latestRunStatus?: string;
   latestRunConclusion?: string | null;
+  latestRunEvent?: string;
+  latestRunAttempt?: number;
   latestRunUrl?: string;
   latestRunCreatedAt?: string;
   latestRunUpdatedAt?: string;
