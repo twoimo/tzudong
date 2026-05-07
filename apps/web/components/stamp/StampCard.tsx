@@ -77,8 +77,8 @@ export const StampCard = memo(function StampCard({
     const isCompact = size === 'compact';
     const isStampCompact = (stampSize ?? size) === 'compact';
     const stampSizeClass = isStampCompact
-        ? "w-32 h-32 md:w-36 md:h-36"
-        : "w-44 h-44 sm:w-52 sm:h-52";
+        ? "w-36 h-36 md:w-40 md:h-40"
+        : "w-48 h-48 sm:w-56 sm:h-56";
 
     const handleGuideClose = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -106,6 +106,7 @@ export const StampCard = memo(function StampCard({
                                 "w-full h-full object-cover transition-all duration-300",
                                 showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
+                            style={showStamp ? { filter: 'grayscale(1)' } : undefined}
                         />
 
                         {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 */}
