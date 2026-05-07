@@ -146,6 +146,41 @@ class GDriveUploadContractTests(unittest.TestCase):
                 self.assertEqual(0, result.returncode, self._format_process_output(result))
                 self.assertEqual(expected, result.stdout.strip())
 
+    def test_policy_message_helpers_keep_timeout_fail_closed_text(self) -> None:
+        timeout_message = self._helper(
+            "render-timeout-guard-message",
+            "--elapsed-minutes",
+            "47",
+            "--max-minutes",
+            "45",
+        )
+        self.assertEqual(0, timeout_message.returncode, self._format_process_output(timeout_message))
+        self.assertEqual(
+            "파이프라인 시간 제한 도달 (47m/45m). 남은 단계 건너뜁니다.",
+            timeout_message.stdout.strip(),
+        )
+
+        unknown_warning = self._helper(
+            "render-policy-unknown-warning",
+            "--step-name",
+            "New Step",
+            "--issue-kind",
+            "new_issue",
+        )
+        self.assertEqual(0, unknown_warning.returncode, self._format_process_output(unknown_warning))
+        self.assertIn("fail-closed", unknown_warning.stdout)
+        self.assertIn("New Step|new_issue", unknown_warning.stdout)
+
+        summary_note = self._helper(
+            "render-policy-summary-note",
+            "--step-name",
+            "Phase 3",
+            "--issue-kind",
+            "timeout_incomplete",
+        )
+        self.assertEqual(0, summary_note.returncode, self._format_process_output(summary_note))
+        self.assertEqual("Phase 3 skipped before entry (timeout_incomplete)", summary_note.stdout.strip())
+
     def test_gdrive_expected_manifest_preserves_old_missing_residual(self) -> None:
         missing_item = {
             "relativePath": "missing-old.jpg",
