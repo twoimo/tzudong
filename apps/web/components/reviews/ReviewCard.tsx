@@ -25,7 +25,7 @@ export interface ReviewCardProps {
         isVerified?: boolean;
         categories?: string[];
     };
-    onLike: (reviewId: string) => void;
+    onLike: (reviewId: string) => void | Promise<void>;
     onClick?: () => void;
     onRestaurantClick?: () => void;
     currentUserId?: string;
@@ -63,6 +63,10 @@ export const ReviewCard = React.memo(function ReviewCard({
     const [isExpanded, setIsExpanded] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
     const [api, setApi] = useState<CarouselApi>();
+    const [optimisticLike, setOptimisticLike] = useState({
+        isLiked: review.isLikedByUser,
+        count: review.likeCount,
+    });
 
     // [PERFORMANCE] 이미지 URL 미리 생성 - 매 렌더링마다 재계산 방지
     const photoUrls = useMemo(() => {
@@ -89,6 +93,13 @@ export const ReviewCard = React.memo(function ReviewCard({
     }, [currentPhotoIndex, photoUrls]);
 
     useEffect(() => {
+        setOptimisticLike({
+            isLiked: review.isLikedByUser,
+            count: review.likeCount,
+        });
+    }, [review.isLikedByUser, review.likeCount]);
+
+    useEffect(() => {
         if (!api) {
             return;
         }
@@ -100,8 +111,27 @@ export const ReviewCard = React.memo(function ReviewCard({
 
     const handleLike = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        onLike(review.id);
-    }, [onLike, review.id]);
+
+        const previousLike = optimisticLike;
+        const nextIsLiked = !optimisticLike.isLiked;
+        const nextCount = Math.max(0, optimisticLike.count + (nextIsLiked ? 1 : -1));
+
+        setOptimisticLike({
+            isLiked: nextIsLiked,
+            count: nextCount,
+        });
+
+        try {
+            const result = onLike(review.id);
+            if (result && typeof (result as Promise<void>).catch === 'function') {
+                (result as Promise<void>).catch(() => {
+                    setOptimisticLike(previousLike);
+                });
+            }
+        } catch {
+            setOptimisticLike(previousLike);
+        }
+    }, [onLike, optimisticLike, review.id]);
 
     // 맛집 클릭 핸들러 (지도에서 맛집 선택)
     const handleRestaurantClick = useCallback((e: React.MouseEvent) => {
@@ -277,18 +307,16 @@ export const ReviewCard = React.memo(function ReviewCard({
                         </button>
                     )}
                     <button
-                        className="relative flex items-center justify-center group"
+                        className="flex items-center gap-1 group"
                         onClick={handleLike}
-                        title={`좋아요 ${review.likeCount}개`}
+                        title={`좋아요 ${optimisticLike.count}개`}
                     >
                         <Heart
-                            className={`w-6 h-6 transition-all ${review.isLikedByUser ? 'fill-red-500 text-red-500 scale-110' : 'text-muted-foreground group-hover:text-red-500'}`}
+                            className={`w-5 h-5 transition-all ${optimisticLike.isLiked ? 'fill-red-500 text-red-500 scale-110' : 'text-muted-foreground group-hover:text-red-500'}`}
                         />
-                        {review.likeCount > 0 && (
-                            <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold pointer-events-none ${review.isLikedByUser ? 'text-white' : 'text-muted-foreground'}`}>
-                                {review.likeCount > 999 ? '999+' : review.likeCount}
-                            </span>
-                        )}
+                        <span className={`text-xs font-medium ${optimisticLike.isLiked ? 'text-red-500' : 'text-muted-foreground'}`}>
+                            {optimisticLike.count > 999 ? '999+' : optimisticLike.count}
+                        </span>
                     </button>
                 </div>
             </div>

@@ -23,6 +23,7 @@ UPLOAD_SCHEMA_VERSION = 2
 STRONG_COMPLETION_PROOFS = {"remote_size_check", "remote_manifest_check"}
 QUEUE_STATES = {"pending_local", "staged", "missing_local", "remote_verified", "failed_permanent"}
 TOP_LEVEL_STATUSES = {"skipped", "complete", "partial", "backfill_required", "backfill_complete", "failed"}
+STEP_EVENT_STATUSES = {"completed", "failed", "optional_skipped", "downstream_skipped"}
 
 
 def count_pending_jsonl(source_dir: Path, target_dir: Path) -> int:
@@ -39,6 +40,19 @@ def count_pending_jsonl(source_dir: Path, target_dir: Path) -> int:
         target_names = {path.name for path in target_dir.glob("*.jsonl") if path.is_file()}
 
     return len(source_names - target_names)
+
+
+def count_frame_files(frames_dir: Path) -> int:
+    """Count frame image files below ``frames_dir`` for run_daily metrics."""
+    if not frames_dir.is_dir():
+        return 0
+
+    count = 0
+    for _root, _dirs, files in os.walk(str(frames_dir), onerror=lambda _exc: None):
+        for filename in files:
+            if Path(filename).suffix.lower() in FRAME_UPLOAD_EXTENSIONS:
+                count += 1
+    return count
 
 
 def _truthy(value: str) -> bool:
@@ -233,6 +247,91 @@ def _load_staging_manifest(path: Optional[str]) -> Dict[str, dict]:
             if isinstance(relative_path, str) and relative_path:
                 staged[relative_path] = {"stagingShard": remote_shard, "shardId": shard_id}
     return staged
+
+
+def resolve_policy_action(
+    step_name: str,
+    issue_kind: str,
+    policy_mode: str = "end_to_end",
+    pending_step08_work: int = 0,
+) -> str:
+    """Resolve run_daily policy actions for known step/issue pairs.
+
+    Unknown pairs intentionally fail closed so the shell runner records them as
+    required failures instead of silently treating new failure modes as optional.
+    """
+    key = (step_name, issue_kind)
+    if key in {
+        ("Step 1 (URL Collection)", "missing_external_dependency"),
+        ("Step 2 (Metadata)", "missing_external_dependency"),
+        ("Step 2.1 (Meta Migration)", "missing_external_dependency"),
+        ("Step 13 (Supabase)", "missing_external_dependency"),
+    }:
+        return "optional_skip"
+
+    if key == ("Step 08 (Chunk Multimodal)", "quota_exhausted"):
+        if policy_mode == "end_to_end" and pending_step08_work > 0:
+            return "required_failure"
+        return "optional_skip"
+
+    if key in {
+        ("Phase 3", "timeout_incomplete"),
+        ("Step 11 (LAAJ Evaluation)", "timeout_incomplete"),
+    }:
+        if policy_mode == "end_to_end":
+            return "required_failure"
+        return "optional_skip"
+
+    return "required_failure:unknown"
+
+
+def render_timeout_guard_message(elapsed_minutes: int, max_minutes: int) -> str:
+    """Return the shell-visible timeout guard message.
+
+    Keeping this text in the helper makes timeout/fail-closed operator wording
+    testable without changing the shell's fallback behavior.
+    """
+    return f"파이프라인 시간 제한 도달 ({elapsed_minutes}m/{max_minutes}m). 남은 단계 건너뜁니다."
+
+
+def render_unknown_policy_warning(step_name: str, issue_kind: str) -> str:
+    """Return the fail-closed warning for unexpected policy matrix keys."""
+    return (
+        "정의되지 않은 정책 키를 감지했습니다. fail-closed로 required_failure 처리합니다. "
+        f"({step_name}|{issue_kind})"
+    )
+
+
+def render_policy_summary_note(step_name: str, issue_kind: str) -> str:
+    """Return a compact summary note for known policy issues."""
+    if (step_name, issue_kind) == ("Phase 3", "timeout_incomplete"):
+        return "Phase 3 skipped before entry (timeout_incomplete)"
+    return f"{step_name} {issue_kind}"
+
+
+def render_step08_message(message_kind: str, detail: str = "") -> str:
+    """Return Step 08 operator/manifest wording used by run_daily.sh."""
+    messages = {
+        "node-prerequisite-failure": (
+            f"필수 Node 패키지 누락({detail})으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요."
+        ),
+        "node-prerequisite-downstream-reason": "Step 08 Node prerequisite 미충족",
+        "gemini-runtime-prerequisite-failure": (
+            "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
+        ),
+        "gemini-runtime-prerequisite-downstream-reason": "Step 08 Gemini runtime prerequisite 미충족",
+        "quota-detected-warning": (
+            "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다."
+        ),
+        "quota-policy-issue": "Gemini quota 초과 (exit=42)",
+        "quota-downstream-reason": "Step 08 quota 초과",
+        "login-expired-failure": "Google 로그인 세션 만료 (exit=44)",
+        "login-expired-downstream-reason": "Step 08 로그인 prerequisite 미충족",
+        "generic-failure-downstream-reason": "Step 08 실패",
+    }
+    if message_kind not in messages:
+        raise ValueError(f"unknown Step 08 message kind: {message_kind}")
+    return messages[message_kind]
 
 
 def build_gdrive_upload_expected(args: argparse.Namespace) -> dict:
@@ -521,6 +620,56 @@ def create_gdrive_staging_shards(args: argparse.Namespace) -> dict:
     return payload
 
 
+def build_gdrive_upload_operator_message(payload: dict) -> dict:
+    """Build a compact operator-facing status message for GDrive upload payloads."""
+    status = str(payload.get("status") or "unknown")
+    expected = _safe_int(str(payload.get("expectedCount", "0")), 0)
+    verified = _safe_int(str(payload.get("verifiedCount", "0")), 0)
+    residual = _safe_int(str(payload.get("residualCount", "0")), 0)
+    pending = _safe_int(str(payload.get("pendingBacklogCount", "0")), 0)
+    proof = str(payload.get("completionProof") or "none")
+
+    facts = (
+        f"status={status}, expected={expected}, verified={verified}, "
+        f"residual={residual}, pending={pending}, proof={proof}"
+    )
+    if status in {"complete", "backfill_complete"}:
+        return {
+            "severity": "ok",
+            "summary": f"GDrive upload verified ({facts})",
+            "action": "No operator action required.",
+        }
+    if status == "skipped":
+        return {
+            "severity": "info",
+            "summary": f"GDrive upload skipped ({facts})",
+            "action": "No upload candidates were detected for this run.",
+        }
+    if status == "backfill_required":
+        return {
+            "severity": "warning",
+            "summary": f"GDrive upload requires backfill ({facts})",
+            "action": "Run the GDrive frame backfill workflow or verify remote proof before treating upload as complete.",
+        }
+    if status == "partial":
+        return {
+            "severity": "warning",
+            "summary": f"GDrive upload completed partially ({facts})",
+            "action": "Review the residual queue and rerun upload/backfill until remote proof is strong.",
+        }
+    if status == "failed":
+        return {
+            "severity": "error",
+            "summary": f"GDrive upload status failed ({facts})",
+            "action": "Inspect upload logs, residual queue, and accounting invariant notes before retrying.",
+        }
+    return {
+        "severity": "warning",
+        "summary": f"GDrive upload status is unknown ({facts})",
+        "action": "Inspect the upload status artifact before relying on frame availability.",
+    }
+
+
 def _derive_policy(status: str, input_policy: str, missing_local_count: int, failed_permanent_count: int, max_residual_attempts: int, threshold: int) -> str:
     if status == "backfill_required":
         return "backfill_required"
@@ -736,6 +885,7 @@ def build_gdrive_upload_status(args: argparse.Namespace) -> dict:
         payload["status"] = "failed"
         payload["terminalIncomplete"] = True
         payload["notes"].append("terminal status requires strong remote completion proof")
+    payload["operatorMessage"] = build_gdrive_upload_operator_message(payload)
     return payload
 
 
@@ -761,6 +911,43 @@ def _build_runtime_telemetry(args: argparse.Namespace) -> dict:
     return {key: value for key, value in runtime.items() if value is not None}
 
 
+def _parse_step_event(value: str) -> dict:
+    """Parse a tab-delimited step event emitted by run_daily.sh."""
+    parts = value.split("\t")
+    if len(parts) > 5:
+        raise ValueError("step event must have at most five tab-delimited fields")
+    while len(parts) < 5:
+        parts.append("")
+
+    status, name, duration_seconds, reason, upstream_step = parts
+    status = status.strip()
+    name = name.strip()
+    if not status:
+        raise ValueError("step event status is required")
+    if status not in STEP_EVENT_STATUSES:
+        raise ValueError(f"invalid step event status: {status}")
+    if not name:
+        raise ValueError("step event name is required")
+
+    event = {
+        "name": name,
+        "status": status,
+    }
+    normalized_duration = duration_seconds.strip()
+    if normalized_duration:
+        try:
+            event["durationSeconds"] = int(normalized_duration)
+        except ValueError as exc:
+            raise ValueError(f"invalid step event duration: {duration_seconds}") from exc
+    normalized_reason = _optional_string(reason)
+    if normalized_reason:
+        event["reason"] = normalized_reason
+    normalized_upstream = _optional_string(upstream_step)
+    if normalized_upstream:
+        event["upstreamStep"] = normalized_upstream
+    return event
+
+
 def build_summary_manifest(args: argparse.Namespace) -> dict:
     """Build the stable run_daily summary manifest payload."""
     generated_at = args.generated_at or datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -776,11 +963,36 @@ def build_summary_manifest(args: argparse.Namespace) -> dict:
         "summaryPath": _optional_path(args.summary_path),
         "noWorkShortCircuit": _truthy(args.no_work_short_circuit),
         "policyMode": args.policy_mode,
+        "stepEvents": [_parse_step_event(item) for item in (args.step_event or [])],
     }
     runtime = _build_runtime_telemetry(args)
     if runtime:
         manifest["runtime"] = runtime
     return manifest
+
+
+def render_summary_flow_guide() -> str:
+    """Return the beginner-facing static pipeline flow block for summary.md."""
+    return """+----------------------------------------------------------------------------------------------------------+
+|                                    TZUDONG PIPELINE FLOW (데이터 자동 수집)                                |
++----------------------------------------------------------------------------------------------------------+
+|                                                                                                          |
+|  [Phase 1: 데이터 수집 준비]                                                                             |
+|  1. 최신 영상/누락 영상의 주소를 찾습니다.                                                                 |
+|  2. 제목, 재생시간 등 껍데기(메타데이터) 정보를 채워 넣습니다.                                               |
+|                                                                                                          |
+|  [Phase 2: 영상 본문 뜯어오기]                                                                             |
+|  3. 영상의 자막과 영상 캡처 화면(프레임)을 추출합니다.                                                       |
+|                                                                                                          |
+|  [Phase 3: 인공지능(AI) 식당 탐색 & 검증]                                                                  |
+|  4. Gemini AI에게 자막과 화면을 보여주고 "어떤 식당을 방문했는지" 찾게 시킵니다.                             |
+|  5. AI가 찾은 정보가 맞는지, 이상한 말은 없는지 규칙과 다른 AI(LAAJ 평가)로 두 번, 세 번 검증합니다.             |
+|                                                                                                          |
+|  [Phase 4: 데이터베이스 등록]                                                                              |
+|  6. 최종적으로 합격한 식당 정보들만 모아서 서비스 데이터베이스(Supabase)에 정식으로 올립니다! 🎉             |
+|                                                                                                          |
++----------------------------------------------------------------------------------------------------------+
+"""
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -812,6 +1024,7 @@ def _add_manifest_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--failed-required-step", action="append", default=[])
     parser.add_argument("--optional-skip", action="append", default=[])
     parser.add_argument("--downstream-skip", action="append", default=[])
+    parser.add_argument("--step-event", action="append", default=[])
 
 
 def _add_gdrive_expected_args(parser: argparse.ArgumentParser) -> None:
@@ -884,6 +1097,33 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     count_parser.add_argument("--source-dir", required=True)
     count_parser.add_argument("--target-dir", required=True)
 
+    count_frames_parser = subparsers.add_parser("count-frame-files")
+    count_frames_parser.add_argument("--frames-dir", required=True)
+
+    policy_parser = subparsers.add_parser("resolve-policy-action")
+    policy_parser.add_argument("--step-name", required=True)
+    policy_parser.add_argument("--issue-kind", required=True)
+    policy_parser.add_argument("--policy-mode", default="end_to_end")
+    policy_parser.add_argument("--pending-step08-work", type=int, default=0)
+
+    timeout_parser = subparsers.add_parser("render-timeout-guard-message")
+    timeout_parser.add_argument("--elapsed-minutes", required=True, type=int)
+    timeout_parser.add_argument("--max-minutes", required=True, type=int)
+
+    unknown_policy_parser = subparsers.add_parser("render-policy-unknown-warning")
+    unknown_policy_parser.add_argument("--step-name", required=True)
+    unknown_policy_parser.add_argument("--issue-kind", required=True)
+
+    policy_note_parser = subparsers.add_parser("render-policy-summary-note")
+    policy_note_parser.add_argument("--step-name", required=True)
+    policy_note_parser.add_argument("--issue-kind", required=True)
+
+    step08_message_parser = subparsers.add_parser("render-step08-message")
+    step08_message_parser.add_argument("--message-kind", required=True)
+    step08_message_parser.add_argument("--detail", default="")
+
+    subparsers.add_parser("print-summary-flow-guide")
+
     manifest_parser = subparsers.add_parser("write-summary-manifest")
     _add_manifest_args(manifest_parser)
 
@@ -903,6 +1143,41 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.command == "count-pending-jsonl":
         print(count_pending_jsonl(Path(args.source_dir), Path(args.target_dir)))
+        return 0
+
+    if args.command == "count-frame-files":
+        print(count_frame_files(Path(args.frames_dir)))
+        return 0
+
+    if args.command == "resolve-policy-action":
+        print(
+            resolve_policy_action(
+                args.step_name,
+                args.issue_kind,
+                args.policy_mode,
+                args.pending_step08_work,
+            )
+        )
+        return 0
+
+    if args.command == "render-timeout-guard-message":
+        print(render_timeout_guard_message(args.elapsed_minutes, args.max_minutes))
+        return 0
+
+    if args.command == "render-policy-unknown-warning":
+        print(render_unknown_policy_warning(args.step_name, args.issue_kind))
+        return 0
+
+    if args.command == "render-policy-summary-note":
+        print(render_policy_summary_note(args.step_name, args.issue_kind))
+        return 0
+
+    if args.command == "render-step08-message":
+        print(render_step08_message(args.message_kind, args.detail))
+        return 0
+
+    if args.command == "print-summary-flow-guide":
+        print(render_summary_flow_guide(), end="")
         return 0
 
     if args.command == "write-summary-manifest":

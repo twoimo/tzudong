@@ -3,6 +3,18 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
+const sourceFilesUnder = (relativeDir: string): string[] => {
+    const absoluteDir = join(import.meta.dir, '..', relativeDir);
+    return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
+        const relativePath = `${relativeDir}/${entry.name}`;
+        if (entry.isDirectory()) {
+            if (entry.name === '.next' || entry.name === 'node_modules') return [];
+            return sourceFilesUnder(relativePath);
+        }
+
+        return /\.(?:ts|tsx|js|jsx)$/.test(entry.name) ? [relativePath] : [];
+    });
+};
 
 describe('web quality performance source contracts', () => {
     test('map marker HTML keeps image markers with WebP delivery and PNG fallback', () => {
@@ -101,6 +113,90 @@ describe('web quality performance source contracts', () => {
         expect(source('components/home/MobileControlOverlay.tsx')).not.toContain("import { supabase } from '@/integrations/supabase/client'");
     });
 
+    test('profile/stamp/map regressions stay fixed while preserving deferred map loading', () => {
+        const overlayPanelSource = source('components/layout/OverlayPagePanel.tsx');
+        const stampCardSource = source('components/stamp/StampCard.tsx');
+        const userProfilePanelSource = source('components/profile/UserProfilePanel.tsx');
+        const naverMapSource = source('components/map/NaverMapView.tsx');
+
+        const userProfilePanelIndex = overlayPanelSource.indexOf('<UserProfilePanel');
+
+        expect(userProfilePanelIndex).toBeGreaterThan(0);
+        expect(overlayPanelSource.lastIndexOf('"w-[min(400px,calc(100vw-1rem))]"', userProfilePanelIndex)).toBeGreaterThan(0);
+        expect(overlayPanelSource.lastIndexOf('"rounded-2xl border border-border shadow-2xl overflow-hidden"', userProfilePanelIndex)).toBeGreaterThan(0);
+        expect(stampCardSource).toContain('getRestaurantDisplayName(typedRestaurant)');
+        expect(stampCardSource).toContain('alt={`${restaurantDisplayName} 썸네일`}');
+        expect(stampCardSource).toContain('title={restaurantDisplayName}');
+        expect(stampCardSource).toContain('absolute inset-0 z-10 flex items-center justify-center overflow-hidden');
+        expect(stampCardSource).toContain('<img');
+        expect(stampCardSource).toContain('src="/images/stamp-clear.png"');
+        expect(stampCardSource).toContain("stampSize?: 'default' | 'compact'");
+        expect(stampCardSource).toContain('const isStampCompact = (stampSize ?? size) === \'compact\'');
+        expect(stampCardSource).toContain('w-36 h-36 md:w-40 md:h-40');
+        expect(stampCardSource).toContain('w-48 h-48 sm:w-56 sm:h-56');
+        expect(stampCardSource).toContain('grayscale opacity-60');
+        expect(stampCardSource).toContain("filter: 'grayscale(1)'");
+        expect(stampCardSource).not.toContain('absolute inset-0 bg-black/');
+        expect(userProfilePanelSource).toContain('import { StampCard }');
+        expect(userProfilePanelSource).toContain('import { ReviewCard }');
+        expect(userProfilePanelSource).toContain('const USER_PROFILE_PAGE_SIZE = 15');
+        expect(userProfilePanelSource).toContain('const PROFILE_TABS = [');
+        expect(userProfilePanelSource).toContain('role="tablist"');
+        expect(userProfilePanelSource).toContain('grid w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1');
+        expect(userProfilePanelSource).toContain('onClick={() => handleTabChange(tab.value)}');
+        expect(userProfilePanelSource).toContain('aria-selected={isActive}');
+        expect(userProfilePanelSource).toContain('whitespace-nowrap rounded-lg border px-2 py-2.5 text-xs');
+        expect(userProfilePanelSource).toContain('border-border/70 bg-background text-foreground shadow-sm');
+        expect(userProfilePanelSource).toContain('grid w-full grid-cols-3 gap-2');
+        expect(userProfilePanelSource.split("gridTemplateColumns: 'repeat(3, minmax(0, 1fr))'").length - 1).toBe(2);
+        expect(userProfilePanelSource).toContain('border border-border/60 bg-card/80');
+        expect(userProfilePanelSource).toContain('const ProfileSectionHeader = memo');
+        expect(userProfilePanelSource).toContain('방문 도장과 리뷰 활동');
+        expect(userProfilePanelSource).toContain('visibleStampCount');
+        expect(userProfilePanelSource).toContain('stampLoadMoreRef');
+        expect(userProfilePanelSource).toContain('className="flex-shrink-0 -mr-2 h-10 w-10"');
+        expect(userProfilePanelSource).toContain('<StampCard');
+        expect(userProfilePanelSource).toContain('<ReviewCard');
+        expect(userProfilePanelSource).toContain('size="default"');
+        expect(userProfilePanelSource).toContain('stampSize="compact"');
+        expect(userProfilePanelSource).not.toContain('import { Tabs, TabsContent, TabsList, TabsTrigger }');
+        expect(userProfilePanelSource).not.toContain('<TabsTrigger');
+        expect(userProfilePanelSource).not.toContain('const StampItem = memo(function StampItem');
+        expect(userProfilePanelSource).not.toContain('const ReviewItem = memo(function ReviewItem');
+        expect(userProfilePanelSource).not.toContain('<ScrollArea className="h-full">');
+        expect(naverMapSource).toContain('resolveNaverRestaurantQueryBounds');
+        expect(naverMapSource).toContain('shouldUseFullMapData: shouldRunNoncriticalMapEffects');
+        expect(naverMapSource.match(/activateNoncriticalMapEffects\(\);/g)?.length).toBeGreaterThanOrEqual(3);
+    });
+
+    test('review like heart keeps the previous feed-style mobile and desktop overlay layout', () => {
+        const reviewCardSource = source('components/reviews/ReviewCard.tsx');
+        const feedContentSource = source('components/feed/FeedContent.tsx');
+        const profilePanelSource = source('components/profile/UserProfilePanel.tsx');
+        const restaurantDetailSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+        const stampPageSource = source('app/stamp/page.tsx');
+
+        expect(reviewCardSource).toContain('const [optimisticLike, setOptimisticLike] = useState');
+        expect(reviewCardSource).toContain('setOptimisticLike({');
+        expect(reviewCardSource).toContain('optimisticLike.isLiked ?');
+        expect(reviewCardSource).toContain("typeof (result as Promise<void>).catch === 'function'");
+        expect(reviewCardSource).not.toContain('if (!currentUserId)');
+        expect(reviewCardSource).toContain('className="flex items-center gap-1 group"');
+        expect(reviewCardSource).toContain("className={`w-5 h-5 transition-all");
+        expect(reviewCardSource).toContain('text-xs font-medium');
+        expect(reviewCardSource).toContain("'text-muted-foreground'");
+        expect(reviewCardSource).toContain("'text-red-500'");
+        expect(reviewCardSource).not.toContain('className="group relative flex h-8 w-8 items-center justify-center rounded-full');
+        expect(reviewCardSource).not.toContain('aria-label={`좋아요 ${review.likeCount}개`}');
+        expect(reviewCardSource).not.toContain('absolute inset-0 flex items-center justify-center text-[9px]');
+        expect(reviewCardSource).not.toContain('text-[10px] font-bold leading-none tabular-nums');
+
+        for (const parentSource of [feedContentSource, profilePanelSource, restaurantDetailSource, stampPageSource]) {
+            expect(parentSource).toContain("throw new Error('LOGIN_REQUIRED')");
+            expect(parentSource).toContain('throw error;');
+        }
+    });
+
     test('/mypage avoids client-side redirect work and defers desktop-only sidebar cost', () => {
         const myPageSource = source('app/mypage/page.tsx');
         const myPageLayoutSource = source('app/mypage/layout.tsx');
@@ -144,8 +240,79 @@ describe('web quality performance source contracts', () => {
         const authModalSource = source('components/auth/AuthModal.tsx');
         expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME');
         expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_STYLE');
-        expect(authModalSource).toContain('min(calc(100vw - 2rem), 32rem)');
+        expect(authModalSource).toContain('min(calc(100vw - 2rem), 28rem)');
         expect(authModalSource).toContain('dispatchHomeAuthSessionUpdated');
+    });
+
+    test('auth user state lookups have Supabase index migration coverage', () => {
+        const migrationDir = join(import.meta.dir, '..', 'supabase/migrations');
+        const migrationFile = readdirSync(migrationDir).find((file) => file.endsWith('_optimize_auth_user_state_indexes.sql'));
+
+        expect(migrationFile).toBeDefined();
+
+        const migrationSource = source(`supabase/migrations/${migrationFile}`);
+        expect(migrationSource).toContain('information_schema.columns');
+        expect(migrationSource).toContain('profiles_user_id_idx');
+        expect(migrationSource).toContain('on public.profiles (user_id)');
+        expect(migrationSource).toContain('user_roles_user_id_role_idx');
+        expect(migrationSource).toContain('on public.user_roles (user_id, role)');
+    });
+
+    test('user-facing Supabase reads avoid wide fanout and redundant stamp fetches', () => {
+        const feedSource = source('components/feed/FeedContent.tsx');
+        const detailSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+        const stampSource = source('app/stamp/page.tsx');
+        const leaderboardSource = source('hooks/useLeaderboard.ts');
+        const userProfileSource = source('hooks/useUserProfile.ts');
+        const myReviewsSource = source('app/mypage/reviews/page.tsx');
+        const appIndexMigration = source('supabase/migrations/20260506085634_optimize_app_query_indexes.sql');
+
+        expect(feedSource).toContain('FEED_REVIEW_SELECT');
+        expect(feedSource).toContain('Promise.all([');
+        expect(feedSource).toContain('likeCount: reviewRow.like_count || 0');
+        expect(feedSource).not.toContain(".from('reviews')\n                .select('*')");
+
+        expect(detailSource).toContain('RESTAURANT_DETAIL_REVIEW_SELECT');
+        expect(detailSource).toContain("queryKey: ['restaurant-reviews', restaurant?.id, user?.id]");
+        expect(detailSource).toContain('likeCount: review.like_count || 0');
+        expect(detailSource).not.toContain(".select('review_id, user_id')");
+
+        expect(stampSource).toContain('STAMP_REVIEW_SELECT');
+        expect(stampSource).toContain('isLoading: isRestaurantsLoading');
+        expect(stampSource).not.toContain("queryKey: ['restaurants-stamp']");
+
+        expect(leaderboardSource).toContain(".select('id, user_id, is_verified, created_at, like_count')");
+        expect(leaderboardSource).not.toContain('const reviewIds = allReviewsData.map');
+        expect(userProfileSource).toContain('USER_PROFILE_RESTAURANT_SELECT');
+        expect(userProfileSource).toContain('viewerLikesResult');
+        expect(userProfileSource).toContain('likeCount: r.like_count || 0');
+        expect(myReviewsSource).toContain('MY_REVIEWS_SELECT');
+        expect(myReviewsSource).not.toContain('.select("*")');
+
+        expect(appIndexMigration).toContain('restaurants_status_review_count_idx');
+        expect(appIndexMigration).toContain('reviews_restaurant_verified_created_idx');
+        expect(appIndexMigration).toContain('review_likes_review_user_idx');
+        expect(appIndexMigration).toContain('announcements_active_banner_priority_created_idx');
+        expect(appIndexMigration).toContain('restaurant_submissions_status_created_idx');
+        expect(appIndexMigration).toContain('notifications_user_created_idx');
+        expect(appIndexMigration).toContain('ad_banners_active_priority_idx');
+        expect(appIndexMigration).toContain('ocr_logs_user_success_created_idx');
+    });
+
+    test('Supabase reads use explicit response shapes instead of broad selects', () => {
+        const broadSelectPattern = /(?:\.select\(\s*(['"])\*\1|\.select\(\s*\)|\['select',\s*['"]\*|['"]\*, name:approved_name)/;
+        const offenders = ['app', 'components', 'contexts', 'hooks', 'lib']
+            .flatMap(sourceFilesUnder)
+            .filter((relativePath) => broadSelectPattern.test(source(relativePath)));
+
+        expect(offenders).toEqual([]);
+
+        const restaurantSource = source('hooks/use-restaurants.tsx');
+        expect(restaurantSource).toContain('RESTAURANT_MERGE_SELECT');
+        expect(restaurantSource).not.toContain("'unique_id'");
+        expect(restaurantSource).not.toContain("'ai_rating'");
+        expect(restaurantSource).not.toContain("'visit_count'");
+        expect(restaurantSource).not.toContain("'description'");
     });
 
     test('global chrome assets stay small and cacheable without changing page UI', () => {
@@ -159,6 +326,7 @@ describe('web quality performance source contracts', () => {
         const mobileBottomNavSource = source('components/layout/MobileBottomNav.tsx');
         const nextConfigSource = source('next.config.mjs');
         const viewportFixSource = source('public/scripts/viewport-height-fix.js');
+        const authContextSource = source('contexts/AuthContext.tsx');
         const faviconPath = join(import.meta.dir, '..', 'public/favicon.ico');
         const faviconPngPath = join(import.meta.dir, '..', 'public/favicon-32x32.png');
         const appleIconPath = join(import.meta.dir, '..', 'public/apple-touch-icon.png');
@@ -199,16 +367,23 @@ describe('web quality performance source contracts', () => {
         expect(source('tailwind.home.deferred.config.ts')).toContain('./components/admin/AdminRestaurantModal.tsx');
         expect(source('app/home-client-sidepanels.tsx')).toContain("import './home-deferred-globals.css'");
         expect(source('app/page.tsx')).toContain('<HomeRuntimeShell>');
-        expect(source('contexts/AuthContext.tsx')).toContain('HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000');
+        expect(authContextSource).toContain('HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000');
         expect(source('components/map/NaverMapView.tsx')).toContain('NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 30000');
-        expect(source('contexts/AuthContext.tsx')).toContain('shouldDelayAuthBootstrap');
-        expect(source('contexts/AuthContext.tsx')).toContain('hasPersistedSupabaseSessionHint');
-        expect(source('contexts/AuthContext.tsx')).toContain('hasSupabaseAuthSessionHint');
-        expect(source('contexts/AuthContext.tsx')).toContain('shouldBootstrapAuthOnGeneralInteraction');
-        expect(source('contexts/AuthContext.tsx')).toContain("signOut({ scope: 'local' })");
-        expect(source('contexts/AuthContext.tsx')).toContain('dispatchHomeAuthSessionUpdated');
-        expect(source('contexts/AuthContext.tsx')).toContain('import("@/integrations/supabase/client")');
-        expect(source('contexts/AuthContext.tsx')).not.toContain('import { supabase }');
+        expect(authContextSource).toContain('shouldDelayAuthBootstrap');
+        expect(authContextSource).toContain('hasPersistedSupabaseSessionHint');
+        expect(authContextSource).toContain('hasSupabaseAuthSessionHint');
+        expect(authContextSource).toContain('shouldBootstrapAuthOnGeneralInteraction');
+        expect(authContextSource).toContain('AUTH_USER_STATE_CACHE_TTL_MS');
+        expect(authContextSource).toContain('authUserStateRequests');
+        expect(authContextSource).toContain('loadAuthUserState');
+        expect(authContextSource).toContain('activeAuthUserIdRef');
+        expect(authContextSource).toContain('window.setTimeout(() =>');
+        expect(authContextSource).toContain("signOut({ scope: 'local' })");
+        expect(authContextSource).toContain('dispatchHomeAuthSessionUpdated');
+        expect(authContextSource).toContain('import("@/integrations/supabase/client")');
+        expect(authContextSource).not.toContain('const checkAdminRole');
+        expect(authContextSource).not.toContain('const checkProfileStatus');
+        expect(authContextSource).not.toContain('import { supabase }');
         expect(source('contexts/NotificationContext.tsx')).toContain("import('@/integrations/supabase/client')");
         expect(source('contexts/NotificationContext.tsx')).not.toContain('import { supabase }');
         expect(source('app/home-client-effects.tsx')).not.toContain('@/integrations/supabase/client');

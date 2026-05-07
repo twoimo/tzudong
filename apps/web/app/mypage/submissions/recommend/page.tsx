@@ -41,6 +41,23 @@ interface RestaurantRequest {
 }
 
 const PAGE_SIZE = 15;
+const RESTAURANT_REQUEST_SELECT = [
+  'id',
+  'user_id',
+  'restaurant_name',
+  'origin_address',
+  'road_address',
+  'jibun_address',
+  'english_address',
+  'phone',
+  'categories',
+  'recommendation_reason',
+  'youtube_link',
+  'lat',
+  'lng',
+  'geocoding_success',
+  'created_at',
+].join(', ');
 
 export default function RecommendSubmissionsPage() {
   const { user } = useAuth();
@@ -58,7 +75,7 @@ export default function RecommendSubmissionsPage() {
 
       const { data, error } = await supabase
         .from("restaurant_requests")
-        .select("*")
+        .select(RESTAURANT_REQUEST_SELECT)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .range(pageParam, pageParam + PAGE_SIZE - 1);

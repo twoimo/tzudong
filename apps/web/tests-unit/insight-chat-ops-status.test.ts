@@ -298,6 +298,79 @@ describe('admin insight chat ops status summary', () => {
     expect((response.content.match(/```bash/g) || []).length).toBeLessThanOrEqual(3);
   });
 
+  test('surfaces run_daily GDrive upload follow-up in ops status summary', async () => {
+    const asOf = '2026-03-01T00:00:00.000Z';
+    const status: AdminInsightSystemStatusResponse = {
+      asOf,
+      keys: {
+        supabaseUrl: true,
+        supabaseServiceRoleKey: true,
+        geminiServerKey: true,
+        openaiServerKey: true,
+        anthropicServerKey: true,
+        nanoBanana2Key: true,
+      },
+      storyboardAgent: {
+        enabled: false,
+        configured: false,
+        reachable: false,
+        checkedAt: asOf,
+      },
+      bgeEmbedding: {
+        enabled: false,
+        configured: false,
+        reachable: false,
+        checkedAt: asOf,
+      },
+      frameCaption: {
+        configured: true,
+        localPathConfigured: true,
+        localPathAvailable: true,
+        gdrivePathConfigured: true,
+        reachable: true,
+        checkedAt: asOf,
+      },
+      runDaily: {
+        scriptPath: '/opt/app/backend/run_daily.sh',
+        executable: true,
+        stale: false,
+        gdriveUpload: {
+          status: 'backfill_required',
+          residualCount: 3,
+          pendingBacklogCount: 3,
+          terminalIncomplete: true,
+          completionProof: 'rclone_exit_zero',
+        },
+        checkedAt: asOf,
+      },
+      checklist: [
+        {
+          id: 'run-daily-gdrive-upload-incomplete',
+          title: 'run_daily GDrive 업로드 후속 조치 필요',
+          severity: 'high',
+          category: 'environment',
+          action: 'backfill 또는 remote proof를 확인하세요.',
+          source: 'run_daily',
+          commandSnippet: 'RUN_DAILY_MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-/path/to/backend/log/cron/current-summary.json}"',
+        },
+      ],
+    };
+
+    const moduleId = `@/lib/insight/chat?ops-status-gdrive-${Date.now()}-${Math.random()}`;
+    mock.module('@/lib/insight/chat-system-status', () => ({
+      getAdminInsightSystemStatus: async () => status,
+    }));
+
+    const { answerAdminInsightChat: mockedAnswer } = await import(moduleId);
+    const response = await mockedAnswer('/ops-status');
+
+    expect(response.meta?.source).toBe('local');
+    expect(response.content).toContain('- run_daily: 점검 필요');
+    expect(response.content).toContain('- run_daily GDrive upload: status=backfill_required, residual=3, pending=3, proof=rclone_exit_zero');
+    expect(response.content).toContain('run_daily GDrive 업로드 후속 조치 필요');
+    expect(response.content).not.toContain('run_daily 실행 권한 미설정');
+  });
+
   test('returns ops status summary for /system-status and Korean alias', async () => {
     const { answerAdminInsightChat } = await loadInsightChatModule('ops-status-alias');
     const prevEnv = {

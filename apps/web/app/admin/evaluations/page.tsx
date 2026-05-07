@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { debugLog } from '@/lib/debug-log';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import { RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,6 +75,52 @@ const EVALUATION_RECORD_STATUS_SET = new Set<EvaluationRecordStatus>([
   'geocoding_failed',
   'not_selected',
 ]);
+const ADMIN_SUBMISSION_SELECT = [
+  'id',
+  'user_id',
+  'submission_type',
+  'status',
+  'restaurant_name',
+  'restaurant_address',
+  'restaurant_phone',
+  'restaurant_categories',
+  'admin_notes',
+  'rejection_reason',
+  'resolved_by_admin_id',
+  'reviewed_at',
+  'created_at',
+  'updated_at',
+].join(', ');
+const ADMIN_SUBMISSION_ITEM_SELECT = [
+  'id',
+  'submission_id',
+  'youtube_link',
+  'tzuyang_review',
+  'target_restaurant_id',
+  'item_status',
+  'rejection_reason',
+  'created_at',
+].join(', ');
+const ADMIN_REVIEW_SELECT = [
+  'id',
+  'user_id',
+  'restaurant_id',
+  'title',
+  'content',
+  'visited_at',
+  'verification_photo',
+  'food_photos',
+  'categories',
+  'is_verified',
+  'admin_note',
+  'is_pinned',
+  'is_edited_by_admin',
+  'created_at',
+  'updated_at',
+  'is_duplicate',
+  'receipt_data',
+  'ocr_processed_at',
+].join(', ');
 
 type EvalFilterKey = (typeof EVALUATION_FILTER_KEYS)[number];
 type EvalFiltersState = Partial<Record<EvalFilterKey, string>>;
@@ -815,7 +862,7 @@ function AdminEvaluationPage() {
       while (hasMore) {
         const { data: pageData, error: pageError } = await supabase
           .from('restaurants')
-          .select('*')
+          .select(RESTAURANT_MERGE_SELECT)
           .range(from, from + PAGE_LIMIT - 1)
           .order('created_at', { ascending: false })
           .order('id', { ascending: true });
@@ -1222,7 +1269,7 @@ function AdminEvaluationPage() {
         updated_at: updatedAt,
       })
       .eq('id', record.id)
-      .select()
+      .select('status')
       .single();
 
     if (error) {
@@ -1474,7 +1521,7 @@ function AdminEvaluationPage() {
       // 1. submissions 조회 (pending 및 partially_approved)
       const { data: submissionsData, error: submissionsError } = await supabase
         .from('restaurant_submissions')
-        .select('*')
+        .select(ADMIN_SUBMISSION_SELECT)
         .in('status', ['pending', 'partially_approved'])
         .order('created_at', { ascending: false });
 
@@ -1488,18 +1535,18 @@ function AdminEvaluationPage() {
       const submissionIds = typedSubmissions.map(s => s.id);
       const userIds = [...new Set(typedSubmissions.map(s => s.user_id))];
 
-      // 2. items 조회
-      const { data: itemsData } = await supabase
-        .from('restaurant_submission_items')
-        .select('*')
-        .in('submission_id', submissionIds)
-        .order('created_at', { ascending: true });
-
-      // 3. profiles 조회
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, nickname')
-        .in('user_id', userIds);
+      // 2. items / profiles 병렬 조회
+      const [{ data: itemsData }, { data: profilesData }] = await Promise.all([
+        supabase
+          .from('restaurant_submission_items')
+          .select(ADMIN_SUBMISSION_ITEM_SELECT)
+          .in('submission_id', submissionIds)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('profiles')
+          .select('user_id, nickname')
+          .in('user_id', userIds),
+      ]);
 
       const typedProfilesData = (profilesData || []) as ProfileNicknameRow[];
       const typedItemsData = (itemsData || []) as SubmissionItem[];
@@ -1615,7 +1662,7 @@ function AdminEvaluationPage() {
 
       const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
-        .select('*')
+        .select(ADMIN_REVIEW_SELECT)
         .order('created_at', { ascending: false });
 
       if (reviewsError) throw reviewsError;
@@ -1625,15 +1672,16 @@ function AdminEvaluationPage() {
       const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
       const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, nickname')
-        .in('user_id', userIds);
-
-      const { data: restaurantsData } = await supabase
-        .from('restaurants')
-        .select('id, approved_name, road_address, jibun_address')
-        .in('id', restaurantIds);
+      const [{ data: profilesData }, { data: restaurantsData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, nickname')
+          .in('user_id', userIds),
+        supabase
+          .from('restaurants')
+          .select('id, approved_name, road_address, jibun_address')
+          .in('id', restaurantIds),
+      ]);
 
       const typedProfilesData = (profilesData || []) as ProfileNicknameRow[];
       const typedRestaurantsData = (restaurantsData || []) as ReviewRestaurantRow[];

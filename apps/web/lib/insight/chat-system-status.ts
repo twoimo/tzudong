@@ -123,6 +123,21 @@ function buildRunDailyStaleWarningSnippet(): string {
   ].join('\n');
 }
 
+function buildRunDailyGdriveUploadSnippet(): string {
+  return [
+    '# run_daily GDrive upload 상태 확인',
+    'RUN_DAILY_MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-/path/to/backend/log/cron/current-summary.json}"',
+    'python3 - <<\'PY\'',
+    'import json, os',
+    'path = os.environ["RUN_DAILY_MANIFEST_PATH"]',
+    'data = json.load(open(path, encoding="utf-8"))',
+    'upload = data.get("gdriveUpload") or {}',
+    'for key in ("status", "exitCode", "expectedCount", "residualCount", "pendingBacklogCount", "terminalIncomplete", "completionProof"):',
+    '    print(f"{key}={upload.get(key)}")',
+    'PY',
+  ].join('\n');
+}
+
 function sanitizeRunDailyPath(rawPath: string | undefined): string | undefined {
   if (!hasNonEmptyValue(rawPath)) return undefined;
   const trimmed = rawPath!.trim();
@@ -462,6 +477,13 @@ export function buildAdminInsightOpsChecklist(
   const hasRunDailyExecutableIssue = Boolean(runDaily?.scriptPath) && !(runDaily?.executable ?? false);
   const hasRunDailyStaleIssue = Boolean(runDaily && runDaily.stale);
   const hasRunDailyFailureIssue = Boolean(runDaily?.failedRequiredSteps && runDaily.failedRequiredSteps.length > 0);
+  const gdriveUploadStatus = runDaily?.gdriveUpload?.status;
+  const hasRunDailyGdriveUploadIssue = Boolean(
+    runDaily?.gdriveUpload?.terminalIncomplete
+    || gdriveUploadStatus === 'partial'
+    || gdriveUploadStatus === 'backfill_required'
+    || gdriveUploadStatus === 'failed',
+  );
 
   if (!status.keys.supabaseUrl || !status.keys.supabaseServiceRoleKey) {
     checklist.push({
@@ -528,6 +550,27 @@ export function buildAdminInsightOpsChecklist(
         `최근 run_daily 실행에서 필수 단계 실패가 감지되었습니다: ${runDaily?.failedRequiredSteps?.slice(0, 3).join(' / ')}`,
       command: buildRunDailyStaleWarningSnippet(),
       commandSnippet: buildRunDailyStaleWarningSnippet(),
+      source: 'run_daily',
+    });
+  }
+
+  if (hasRunDailyGdriveUploadIssue) {
+    const upload = runDaily?.gdriveUpload;
+    const uploadFacts = [
+      upload?.status ? `status=${upload.status}` : undefined,
+      upload?.residualCount !== undefined ? `residual=${upload.residualCount}` : undefined,
+      upload?.pendingBacklogCount !== undefined ? `pending=${upload.pendingBacklogCount}` : undefined,
+      upload?.completionProof ? `proof=${upload.completionProof}` : undefined,
+    ].filter(Boolean).join(', ');
+    checklist.push({
+      id: 'run-daily-gdrive-upload-incomplete',
+      title: 'run_daily GDrive 업로드 후속 조치 필요',
+      severity: upload?.status === 'failed' ? 'critical' : 'high',
+      category: 'environment',
+      action: upload?.operatorMessage?.action
+        ?? `최근 run_daily GDrive upload 상태가 terminal success가 아닙니다${uploadFacts ? ` (${uploadFacts})` : ''}. backfill 또는 remote proof를 확인하세요.`,
+      command: buildRunDailyGdriveUploadSnippet(),
+      commandSnippet: buildRunDailyGdriveUploadSnippet(),
       source: 'run_daily',
     });
   }
@@ -780,9 +823,11 @@ export async function getAdminInsightSystemStatus(
       failedRequiredSteps: runDailyFailureInfo.failedRequiredSteps,
       optionalSkips: runDailyFailureInfo.optionalSkips,
       downstreamSkips: runDailyFailureInfo.downstreamSkips,
+      ...(runDailyManifestInfo.stepEvents ? { stepEvents: runDailyManifestInfo.stepEvents } : {}),
       ...(runDailyManifestInfo.noWorkShortCircuit !== undefined ? { noWorkShortCircuit: runDailyManifestInfo.noWorkShortCircuit } : {}),
       ...(runDailyManifestInfo.policyMode ? { policyMode: runDailyManifestInfo.policyMode } : {}),
       ...(runDailyManifestInfo.runtime ? { runtime: runDailyManifestInfo.runtime } : {}),
+      ...(runDailyManifestInfo.gdriveUpload ? { gdriveUpload: runDailyManifestInfo.gdriveUpload } : {}),
       stale: runDailyLogInfo.stale,
       checkedAt: asOf,
     },

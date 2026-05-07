@@ -21,6 +21,6 @@ test-results/
 .env.*
 
 # ── 백엔드 / 인프라 (Next.js 빌드에 불필요) ───────────────
-backend/
-supabase/
-docs/
+/backend/
+/supabase/
+/docs/

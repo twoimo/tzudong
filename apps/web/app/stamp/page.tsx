@@ -47,6 +47,7 @@ import {
 } from "@/lib/restaurant-review-lookup";
 import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRestaurantSortDirection } from "@/lib/stamp-restaurant-order";
 import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
+import { withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import type { Json, Tables } from "@/integrations/supabase/types";
 
 type SortColumn = StampRestaurantSortColumn;
@@ -98,6 +99,7 @@ const STAMP_GUIDE_DEMO_RESTAURANT = {
     review_count: 17,
 } as Restaurant;
 const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 도장이 찍혀요.";
+const STAMP_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
 
 // StampFilterState 및 UserReview는 stamp-utils에서 import
 
@@ -281,7 +283,9 @@ export default function StampPage() {
             if (restaurantsError) throw restaurantsError;
 
             const restaurantMap = new Map(
-                ((restaurantRows ?? []) as RestaurantWithVerifiedCount[]).map((restaurant) => [restaurant.id, restaurant])
+                ((restaurantRows ?? []) as RestaurantWithVerifiedCount[])
+                    .map((restaurant) => withRestaurantDisplayName(restaurant))
+                    .map((restaurant) => [restaurant.id, restaurant])
             );
 
             return reviews.map((review) => ({
@@ -321,7 +325,7 @@ export default function StampPage() {
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
-    const { data: allMergedRestaurants = [] } = useRestaurants({ enabled: true });
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading } = useRestaurants({ enabled: true });
     const totalRestaurantCount = allMergedRestaurants.length;
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
@@ -356,45 +360,6 @@ export default function StampPage() {
             }
         },
         enabled: !!searchQuery.trim(),
-    });
-
-    // 기본 맛집 데이터 무한 스크롤 조회 (검색어가 없을 때만)
-    const {
-        isLoading: isRestaurantsLoading,
-    } = useInfiniteQuery({
-        queryKey: ['restaurants-stamp'],
-        queryFn: async ({ pageParam = 0 }) => {
-            const STAMP_PAGE_SIZE = 15;
-
-            try {
-                const { data: restaurants, error } = await supabase
-                    .from('restaurants')
-                    .select('*')
-                    .eq('status', 'approved')
-                    .order('review_count', { ascending: false })
-                    .range(pageParam, pageParam + (STAMP_PAGE_SIZE - 1));
-
-                if (error) throw error;
-                if (!restaurants || restaurants.length === 0) return { restaurants: [], nextCursor: null };
-                const typedRestaurants = restaurants as RestaurantWithVerifiedCount[];
-
-                // 승인된 리뷰 수 조회: approved canonical과 동일 이름/동일 주소 deleted duplicate 리뷰도 합산
-                const verifiedCountMap = await buildRelatedVerifiedReviewCounts(typedRestaurants);
-                const restaurantsWithCount = typedRestaurants.map((restaurant) => ({
-                    ...restaurant,
-                    verified_review_count: verifiedCountMap.get(restaurant.id) || 0
-                }));
-
-                const nextCursor = typedRestaurants.length === STAMP_PAGE_SIZE ? pageParam + STAMP_PAGE_SIZE : null;
-                return { restaurants: restaurantsWithCount, nextCursor };
-            } catch (error) {
-                console.error('맛집 데이터 조회 중 오류:', error);
-                return { restaurants: [], nextCursor: null };
-            }
-        },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
-        initialPageParam: 0,
-        enabled: !searchQuery.trim(),
     });
 
     const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants as Restaurant[]), [allRestaurants]);
@@ -520,7 +485,7 @@ export default function StampPage() {
         isLoading: reviewsLoading,
         isFetchingNextPage: isFetchingNextRestaurantReviewPage,
     } = useInfiniteQuery({
-        queryKey: ['restaurant-reviews', selectedRestaurant?.id],
+        queryKey: ['restaurant-reviews', selectedRestaurant?.id, user?.id],
         queryFn: async ({ pageParam = 0 }) => {
             if (!selectedRestaurant?.id) return { reviews: [], nextCursor: null };
             const REVIEW_PAGE_SIZE = 15;
@@ -547,7 +512,7 @@ export default function StampPage() {
 
                 const { data: reviewsData, error } = await supabase
                     .from('reviews')
-                    .select('*')
+                    .select(STAMP_REVIEW_SELECT)
                     .in('restaurant_id', relatedRestaurantReviewIds)
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
@@ -560,32 +525,30 @@ export default function StampPage() {
 
                 // 사용자 프로필 정보 조회
                 const userIds = [...new Set(typedReviewsData.map((review) => review.user_id))];
-                const { data: profilesData } = await supabase
-                    .from('profiles')
-                    .select('user_id, nickname, avatar_url')
-                    .in('user_id', userIds);
+                const reviewIds = typedReviewsData.map((review) => review.id);
+                const [profilesResult, userLikesResult] = await Promise.all([
+                    supabase
+                        .from('profiles')
+                        .select('user_id, nickname, avatar_url')
+                        .in('user_id', userIds),
+                    user
+                        ? supabase
+                            .from('review_likes')
+                            .select('review_id')
+                            .in('review_id', reviewIds)
+                            .eq('user_id', user.id)
+                        : Promise.resolve({ data: [] }),
+                ]);
                 const profilesMap = new Map(
-                    ((profilesData ?? []) as ProfileRow[]).map((profile) => [
+                    ((profilesResult.data ?? []) as ProfileRow[]).map((profile) => [
                         profile.user_id,
                         { nickname: profile.nickname, avatarUrl: profile.avatar_url },
                     ])
                 );
 
-                // 좋아요 정보 조회 (최적화)
-                const reviewIds = typedReviewsData.map((review) => review.id);
-                let userLikesMap = new Map<string, boolean>();
-
-                if (user) {
-                    const { data: userLikesData } = await supabase
-                        .from('review_likes')
-                        .select('review_id')
-                        .in('review_id', reviewIds)
-                        .eq('user_id', user.id);
-
-                    userLikesMap = new Map(
-                        ((userLikesData ?? []) as ReviewLikeRow[]).map((likeRow) => [likeRow.review_id, true])
-                    );
-                }
+                const userLikesMap = new Map(
+                    ((userLikesResult.data ?? []) as ReviewLikeRow[]).map((likeRow) => [likeRow.review_id, true])
+                );
 
                 const reviews = typedReviewsData.map((review) => {
                     return {
@@ -742,7 +705,7 @@ export default function StampPage() {
     const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean) => {
         if (!user) {
             console.warn('로그인이 필요합니다.');
-            return;
+            throw new Error('LOGIN_REQUIRED');
         }
         try {
             if (currentIsLiked) {
@@ -776,6 +739,7 @@ export default function StampPage() {
             queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
         } catch (error) {
             console.error('좋아요 토글 실패:', error);
+            throw error;
         }
     }, [user, queryClient, selectedRestaurant, restaurantReviews]);
 
