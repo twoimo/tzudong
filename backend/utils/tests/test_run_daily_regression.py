@@ -181,6 +181,42 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(0, summary_note.returncode, self._format_process_output(summary_note))
         self.assertEqual("Phase 3 skipped before entry (timeout_incomplete)", summary_note.stdout.strip())
 
+    def test_step08_message_helper_keeps_prerequisite_quota_and_downstream_text(self) -> None:
+        cases = [
+            (
+                ("node-prerequisite-failure", "@google/genai"),
+                "필수 Node 패키지 누락(@google/genai)으로 실행 생략. 먼저 'cd backend && npm ci' 를 실행하세요.",
+            ),
+            (("node-prerequisite-downstream-reason", ""), "Step 08 Node prerequisite 미충족"),
+            (
+                ("gemini-runtime-prerequisite-failure", ""),
+                "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략",
+            ),
+            (("gemini-runtime-prerequisite-downstream-reason", ""), "Step 08 Gemini runtime prerequisite 미충족"),
+            (
+                ("quota-detected-warning", ""),
+                "할당량 초과(Quota Error) 감지됨. 데이터 일관성을 위해 이후 평가 단계(Step 09~13)를 모두 건너뜁니다.",
+            ),
+            (("quota-policy-issue", ""), "Gemini quota 초과 (exit=42)"),
+            (("quota-downstream-reason", ""), "Step 08 quota 초과"),
+            (("login-expired-failure", ""), "Google 로그인 세션 만료 (exit=44)"),
+            (("login-expired-downstream-reason", ""), "Step 08 로그인 prerequisite 미충족"),
+            (("generic-failure-downstream-reason", ""), "Step 08 실패"),
+        ]
+
+        for (message_kind, detail), expected in cases:
+            with self.subTest(message_kind=message_kind):
+                result = self._helper(
+                    "render-step08-message",
+                    "--message-kind",
+                    message_kind,
+                    "--detail",
+                    detail,
+                )
+
+                self.assertEqual(0, result.returncode, self._format_process_output(result))
+                self.assertEqual(expected, result.stdout.strip())
+
     def test_gdrive_expected_manifest_preserves_old_missing_residual(self) -> None:
         missing_item = {
             "relativePath": "missing-old.jpg",
@@ -1049,6 +1085,40 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue(
             any(
                 event["name"] == "Step 08 (Chunk Multimodal)" and event["status"] == "failed"
+                for event in manifest["stepEvents"]
+            )
+        )
+
+    def test_step08_login_expired_exit_records_required_failure_and_downstream_skip(self) -> None:
+        result = self._run_script(
+            env_overrides={"RUN_DAILY_TEST_CHUNK_EXIT": "44"},
+            force_phase3=True,
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("Google 로그인 세션 만료 (exit=44)", result.stdout)
+        self.assertIn("Step 08 로그인 prerequisite 미충족", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertEqual("ERROR", manifest["finalStatus"])
+        self.assertTrue(
+            any(
+                "Step 08 (Chunk Multimodal)" in item and "Google 로그인 세션 만료 (exit=44)" in item
+                for item in manifest["failedRequiredSteps"]
+            )
+        )
+        self.assertTrue(
+            any(
+                "Step 09~13 (Evaluation)" in item and "Step 08 로그인 prerequisite 미충족" in item
+                for item in manifest["downstreamSkips"]
+            )
+        )
+        self.assertTrue(
+            any(
+                event["name"] == "Step 09~13 (Evaluation)"
+                and event["status"] == "downstream_skipped"
+                and event["reason"] == "Step 08 로그인 prerequisite 미충족"
+                and event["upstreamStep"] == "Step 08 (Chunk Multimodal)"
                 for event in manifest["stepEvents"]
             )
         )
