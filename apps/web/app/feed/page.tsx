@@ -11,6 +11,7 @@ import { ReviewModal } from '@/components/reviews/ReviewModal';
 import type { Restaurant } from '@/types/restaurant';
 import { EditRestaurantModal } from '@/components/modals/EditRestaurantModal';
 import { buildEditRestaurantInitialFormData } from '@/lib/edit-restaurant-request-form';
+import { GlobalLoader } from '@/components/ui/global-loader';
 
 function FeedPageContent() {
     const router = useRouter();
@@ -129,7 +130,13 @@ function FeedPageContent() {
 
 export default function FeedPage() {
     return (
-        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center">Loading...</div>}>
+        <Suspense fallback={(
+            <GlobalLoader
+                message="피드를 불러오는 중..."
+                subMessage="리뷰와 맛집 정보를 준비하고 있습니다"
+                fullScreen
+            />
+        )}>
             <FeedPageContent />
         </Suspense>
     );

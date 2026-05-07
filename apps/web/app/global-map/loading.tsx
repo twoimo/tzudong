@@ -8,6 +8,7 @@ export default function GlobalMapLoading() {
         <GlobalLoader
             message="글로벌 지도를 불러오는 중..."
             subMessage="해외 맛집 데이터를 준비하고 있습니다"
+            fullScreen
         />
     );
 }

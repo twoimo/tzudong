@@ -17,6 +17,7 @@ export default function AdminLoading() {
         <GlobalLoader
             message="관리자 페이지를 불러오는 중..."
             subMessage="데이터를 준비하고 있습니다"
+            fullScreen
         />
     );
 }

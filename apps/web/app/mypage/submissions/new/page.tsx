@@ -297,6 +297,7 @@ export default function NewSubmissionsPage() {
       <GlobalLoader
         message="제보 내역을 불러오는 중..."
         subMessage="잠시만 기다려주세요"
+        fullScreen
       />
     );
   }
