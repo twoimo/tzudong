@@ -112,3 +112,65 @@ PY
   동기화합니다.
 - secret 값, 전체 raw log, 민감한 절대 경로를 admin/status 응답이나 Step
   Summary에 노출하지 않습니다.
+
+## Step 08 Gemini 운영 판정
+
+Step 08은 API quota, Web fallback 로그인, Node 패키지 prerequisite이 모두 같은
+후속 평가 skip으로 이어질 수 있으므로 `stepEvents`와 `failedRequiredSteps`를
+같이 봅니다.
+
+- `Gemini quota 초과 (exit=42)`: pending Step08 work가 있으면 end-to-end
+  정책에서 required failure입니다. quota 상태를 확인하고 다음 실행/키 교체를
+  결정합니다. quota exhaustion을 일부러 소모해 live 재현하지 않습니다.
+- `Google 로그인 세션 만료 (exit=44)`: Web fallback 세션 문제입니다.
+  `python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login`
+  으로 수동 로그인 후 재실행합니다.
+- `Step 08 Node prerequisite 미충족`: `cd backend && npm ci`로
+  `@google/genai` 등 Node runtime을 복구합니다.
+- `Step 09~13 (Evaluation)` downstream skip은 Step 08 fail-closed가 의도대로
+  작동했다는 증거입니다. 선행 실패 뒤 후속 평가가 계속 실행되면 회귀입니다.
+
+로컬에서 API quota live 검증을 시도하기 전에는 secret 값을 출력하지 말고 다음
+사실만 확인합니다.
+
+```bash
+python3 - <<'PY'
+import os, pathlib
+print('GEMINI_API_KEY present=', bool(os.environ.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY_BYEON') or os.environ.get('GOOGLE_API_KEY')))
+print('backend @google/genai installed=', pathlib.Path('backend/node_modules/@google/genai').exists())
+PY
+```
+
+## Production fixture / schema drift guardrail
+
+Actions는 `backend/bin/check_production_contract_fixtures.py`로 repo에 포함된
+production-shaped transform JSONL을 bounded sample로 검증합니다. 결과는
+`backend/log/cron/production-contract-fixture-status.json`에 남습니다.
+
+```bash
+python3 backend/bin/check_production_contract_fixtures.py \
+  --output backend/log/cron/production-contract-fixture-status.json \
+  --max-records 200
+```
+
+Actions 기본값은 기존 production-shaped 데이터의 drift를 관측/기록만 하며 배포를
+차단하지 않습니다. 정책을 강화할 때만 `--fail-on-error`를 추가하여 validator
+`ERROR` 또는 JSONL parse error를 failure로 승격합니다.
+
+## GitHub Actions budget posture guardrail
+
+월 3000분 자체보다 더 위험한 것은 수동 재실행, backfill burst, repository
+visibility 변경을 놓치는 것입니다. `check_actions_budget.py`는 최근 run wall-clock
+기반 private-equivalent minutes를 산출하고, 수동 실행/재실행/Backfill 시간을
+ledger로 남깁니다.
+
+```bash
+GITHUB_TOKEN=... python3 backend/bin/check_actions_budget.py \
+  --repository twoimo/tzudong \
+  --workflow daily-crawler.yml \
+  --workflow gdrive-frame-backfill.yml \
+  --output backend/log/cron/actions-budget-posture.json
+```
+
+기본 운영에서는 non-blocking 관측값으로 남기고, 정책을 강화할 때만
+`--fail-on-soft-gate watch|high|critical`를 사용합니다.

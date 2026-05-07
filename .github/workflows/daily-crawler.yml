@@ -243,6 +243,13 @@ jobs:
           OPENAI_API_KEY_BYEON: ${{ secrets.OPENAI_API_KEY_BYEON }}
         run: python3 backend/bin/check_env_contract.py --profile daily
 
+      - name: Check production contract fixture drift
+        run: |
+          mkdir -p backend/log/cron
+          python3 backend/bin/check_production_contract_fixtures.py \
+            --output backend/log/cron/production-contract-fixture-status.json \
+            --max-records 200
+
       # ============================================================
       # Ollama 설정 (AI Model) - 조건부 실행
       # ============================================================
@@ -338,6 +345,25 @@ jobs:
           if [ -f summary.md ]; then
             cat summary.md >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Write Actions budget posture ledger
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p backend/log/cron
+          python3 backend/bin/check_actions_budget.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --workflow daily-crawler.yml \
+            --workflow gdrive-frame-backfill.yml \
+            --output backend/log/cron/actions-budget-posture.json || true
+          {
+            echo "### GitHub Actions budget posture"
+            echo
+            echo "\`\`\`json"
+            cat backend/log/cron/actions-budget-posture.json
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
           
       - name: Upload Results to GDrive
         if: always()
@@ -587,5 +613,7 @@ jobs:
             backend/log/cron/current-upload-verified-files.txt
             backend/log/cron/current-upload-staging-manifest.json
             backend/log/cron/current-upload-rclone.log
+            backend/log/cron/production-contract-fixture-status.json
+            backend/log/cron/actions-budget-posture.json
             backend/log/cron/gdrive-upload-batches/**
             backend/log/cron/gdrive-upload-staging/**

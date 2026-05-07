@@ -79,6 +79,25 @@ jobs:
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
         run: python3 backend/bin/check_env_contract.py --profile gdrive-backfill
 
+      - name: Write Actions budget posture ledger
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p backend/log/cron/gdrive-backfill
+          python3 backend/bin/check_actions_budget.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --workflow daily-crawler.yml \
+            --workflow gdrive-frame-backfill.yml \
+            --output backend/log/cron/gdrive-backfill/actions-budget-posture.json || true
+          {
+            echo "### GitHub Actions budget posture"
+            echo
+            echo "\`\`\`json"
+            cat backend/log/cron/gdrive-backfill/actions-budget-posture.json
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Backfill staged frame shards
         run: |
           set -euo pipefail

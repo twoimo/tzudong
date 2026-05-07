@@ -799,6 +799,16 @@ render_step08_message() {
         login-expired-downstream-reason)
             echo "Step 08 로그인 prerequisite 미충족"
             ;;
+        login-expired-action)
+            echo "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
+            ;;
+        generic-failure-required)
+            if [ -n "$detail" ]; then
+                echo "Step 08 실패 (exit=$detail)"
+            else
+                echo "Step 08 실패"
+            fi
+            ;;
         generic-failure-downstream-reason)
             echo "Step 08 실패"
             ;;
@@ -1464,12 +1474,12 @@ else
         record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message quota-downstream-reason)" "Step 08 (Chunk Multimodal)"
     elif [ $CHUNK_EXIT_CODE -eq 44 ]; then
         log "ERROR" "[CRITICAL] 구글 로그인 세션 만료! 웹 폴백을 더 이상 진행할 수 없습니다."
-        log "INFO" "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요."
+        log "INFO" "$(render_step08_message login-expired-action)"
         record_required_failure "Step 08 (Chunk Multimodal)" "$(render_step08_message login-expired-failure)"
         SKIP_EVALUATION=true
         record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message login-expired-downstream-reason)" "Step 08 (Chunk Multimodal)"
     elif [ $CHUNK_EXIT_CODE -ne 0 ]; then
-        record_required_failure "Step 08 (Chunk Multimodal)" "exit=$CHUNK_EXIT_CODE"
+        record_required_failure "Step 08 (Chunk Multimodal)" "$(render_step08_message generic-failure-required "$CHUNK_EXIT_CODE")"
         SKIP_EVALUATION=true
         record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message generic-failure-downstream-reason)" "Step 08 (Chunk Multimodal)"
     fi

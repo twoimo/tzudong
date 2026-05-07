@@ -18,6 +18,8 @@ REPO_ROOT = BACKEND_ROOT.parent
 RUN_DAILY_SOURCE = BACKEND_ROOT / "run_daily.sh"
 RUN_DAILY_HELPER_SOURCE = BACKEND_ROOT / "utils" / "run_daily_helpers.py"
 ENV_CONTRACT_SOURCE = BACKEND_ROOT / "bin" / "check_env_contract.py"
+PRODUCTION_FIXTURE_CHECK_SOURCE = BACKEND_ROOT / "bin" / "check_production_contract_fixtures.py"
+ACTIONS_BUDGET_CHECK_SOURCE = BACKEND_ROOT / "bin" / "check_actions_budget.py"
 DAILY_CRAWLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "daily-crawler.yml"
 GDRIVE_BACKFILL_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "gdrive-frame-backfill.yml"
 
@@ -201,6 +203,11 @@ class GDriveUploadContractTests(unittest.TestCase):
             (("quota-downstream-reason", ""), "Step 08 quota 초과"),
             (("login-expired-failure", ""), "Google 로그인 세션 만료 (exit=44)"),
             (("login-expired-downstream-reason", ""), "Step 08 로그인 prerequisite 미충족"),
+            (
+                ("login-expired-action", ""),
+                "해결 방법: 'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login' 을 실행하여 수동 로그인하세요.",
+            ),
+            (("generic-failure-required", "27"), "Step 08 실패 (exit=27)"),
             (("generic-failure-downstream-reason", ""), "Step 08 실패"),
         ]
 
@@ -984,6 +991,107 @@ class GDriveUploadContractTests(unittest.TestCase):
             text=True,
             check=False,
         )
+
+    def _format_process_output(self, result: subprocess.CompletedProcess[str]) -> str:
+        return f"exit={result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+class BackendGuardrailScriptTests(unittest.TestCase):
+    maxDiff = None
+
+    def setUp(self) -> None:
+        self.tmp = TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_production_contract_fixture_checker_reports_transform_drift(self) -> None:
+        transforms = self.root / "transforms.jsonl"
+        output = self.root / "fixture-status.json"
+        transforms.write_text(
+            json.dumps(
+                {
+                    "trace_id": "trace-1",
+                    "youtube_link": "https://www.youtube.com/watch?v=fixture1",
+                    "channel_name": "tzuyang",
+                    "origin_name": "계약식당",
+                    "source_type": "geminiCLI",
+                    "lat": 37.5,
+                    "lng": 127.0,
+                    "evaluation_results": {"location_match_TF": []},
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            + "\n"
+            + json.dumps(
+                {
+                    "trace_id": "trace-1",
+                    "youtube_link": "https://www.youtube.com/watch?v=fixture1",
+                    "channel_name": "tzuyang",
+                    "origin_name": "중복식당",
+                    "source_type": "geminiCLI",
+                    "lat": 37.6,
+                    "lng": 127.1,
+                    "evaluation_results": {"location_match_TF": []},
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                "/usr/bin/python3",
+                str(PRODUCTION_FIXTURE_CHECK_SOURCE),
+                "--transforms-jsonl",
+                str(transforms),
+                "--output",
+                str(output),
+                "--fail-on-error",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(1, result.returncode, self._format_process_output(result))
+        payload = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual("error", payload["status"])
+        self.assertEqual(1, payload["checks"]["transformJsonl"]["errorCount"])
+        self.assertEqual("duplicate_trace_id", payload["checks"]["transformJsonl"]["validationErrors"][0]["rule"])
+
+    def test_actions_budget_checker_writes_unknown_without_token(self) -> None:
+        output = self.root / "actions-budget.json"
+        env = os.environ.copy()
+        env.pop("GITHUB_TOKEN", None)
+        result = subprocess.run(
+            [
+                "/usr/bin/python3",
+                str(ACTIONS_BUDGET_CHECK_SOURCE),
+                "--repository",
+                "twoimo/tzudong",
+                "--workflow",
+                "daily-crawler.yml",
+                "--output",
+                str(output),
+                "--checked-at",
+                "2026-05-07T00:00:00Z",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        payload = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual("unknown", payload["status"])
+        self.assertEqual("repository_or_token_missing", payload["detail"])
+        self.assertEqual("unknown", payload["repositoryVisibility"])
 
     def _format_process_output(self, result: subprocess.CompletedProcess[str]) -> str:
         return f"exit={result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"

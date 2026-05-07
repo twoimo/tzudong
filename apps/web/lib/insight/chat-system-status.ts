@@ -182,6 +182,44 @@ const SUPABASE_ENV_CHECK_SNIPPET = [
   '[ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] || echo "Supabase key missing"',
 ].join('\n');
 
+const RUN_DAILY_STEP08_CHECK_SNIPPET = [
+  '# run_daily Step 08 원인 점검',
+  'RUN_DAILY_MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-/path/to/backend/log/cron/current-summary.json}"',
+  'python3 - <<\'PY\'',
+  'import json, os',
+  'data = json.load(open(os.environ["RUN_DAILY_MANIFEST_PATH"], encoding="utf-8"))',
+  'for event in data.get("stepEvents") or []:',
+  '    if event.get("name") == "Step 08 (Chunk Multimodal)":',
+  '        print(event)',
+  'print("failedRequiredSteps=", data.get("failedRequiredSteps"))',
+  'print("downstreamSkips=", data.get("downstreamSkips"))',
+  'PY',
+  '(cd backend && npm ci)',
+  'python backend/restaurant-crawling/scripts/gemini_scrapling_fallback.py --login  # login 만료일 때만',
+].join('\n');
+
+const RUN_DAILY_STEP11_CHECK_SNIPPET = [
+  '# run_daily Step 11 timeout/skip 점검',
+  'RUN_DAILY_MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-/path/to/backend/log/cron/current-summary.json}"',
+  'python3 - <<\'PY\'',
+  'import json, os',
+  'data = json.load(open(os.environ["RUN_DAILY_MANIFEST_PATH"], encoding="utf-8"))',
+  'for event in data.get("stepEvents") or []:',
+  '    if "Step 11" in event.get("name", "") or event.get("upstreamStep") == "Step 11 (LAAJ Evaluation)":',
+  '        print(event)',
+  'PY',
+].join('\n');
+
+const ACTIONS_BUDGET_POSTURE_SNIPPET = [
+  '# GitHub Actions 예산/재실행 posture 점검',
+  'python3 backend/bin/check_actions_budget.py \\',
+  '  --repository "${GITHUB_REPOSITORY:-twoimo/tzudong}" \\',
+  '  --workflow daily-crawler.yml \\',
+  '  --workflow gdrive-frame-backfill.yml \\',
+  '  --output backend/log/cron/actions-budget-posture.json',
+  'cat backend/log/cron/actions-budget-posture.json',
+].join('\n');
+
 const GEMINI_KEY_CHECK_SNIPPET = [
   '# Gemini 서버 키 점검 (택1)',
   'GEMINI_API_KEY="${GEMINI_API_KEY:-<GEMINI_KEY>}"',
@@ -355,6 +393,8 @@ async function resolveGithubActionsStatus(
       ...(typeof latest?.id === 'number' ? { latestRunId: latest.id } : {}),
       ...(typeof latest?.status === 'string' ? { latestRunStatus: sanitizeTextForDisplay(latest.status) } : {}),
       ...(typeof latest?.conclusion === 'string' || latest?.conclusion === null ? { latestRunConclusion: latest.conclusion as string | null } : {}),
+      ...(typeof latest?.event === 'string' ? { latestRunEvent: sanitizeTextForDisplay(latest.event) } : {}),
+      ...(typeof latest?.run_attempt === 'number' ? { latestRunAttempt: latest.run_attempt } : {}),
       ...(latestRunUrl ? { latestRunUrl } : {}),
       ...(typeof latest?.created_at === 'string' ? { latestRunCreatedAt: latest.created_at } : {}),
       ...(typeof latest?.updated_at === 'string' ? { latestRunUpdatedAt: latest.updated_at } : {}),
@@ -575,6 +615,52 @@ export function buildAdminInsightOpsChecklist(
     });
   }
 
+
+  const step08Event = runDaily?.stepEvents?.find((event) => event.name === 'Step 08 (Chunk Multimodal)');
+  const step08Evidence = [
+    step08Event?.reason,
+    ...(runDaily?.failedRequiredSteps ?? []),
+    ...(runDaily?.downstreamSkips ?? []),
+  ].join(' ');
+  if (step08Event?.status === 'failed' || /Step 08|quota|로그인|Gemini runtime|Node prerequisite/.test(step08Evidence)) {
+    const reason = step08Evidence.includes('quota') || step08Evidence.includes('quota 초과')
+      ? 'Gemini quota 초과가 의심됩니다. pending Step08 work 여부와 API quota 상태를 먼저 확인하세요.'
+      : step08Evidence.includes('로그인') || step08Evidence.includes('login')
+        ? 'Gemini Web fallback 로그인 세션 만료가 의심됩니다. 수동 로그인 후 재시도하세요.'
+        : step08Evidence.includes('Node prerequisite') || step08Evidence.includes('Node 패키지')
+          ? 'Step 08 Node 패키지 prerequisite을 복구하세요.'
+          : 'Step 08 실패 원인을 manifest stepEvents와 로그에서 확인하세요.';
+    checklist.push({
+      id: 'run-daily-step08-attention',
+      title: 'run_daily Step 08 후속 점검 필요',
+      severity: step08Event?.status === 'failed' ? 'critical' : 'high',
+      category: 'environment',
+      action: reason,
+      command: RUN_DAILY_STEP08_CHECK_SNIPPET,
+      commandSnippet: RUN_DAILY_STEP08_CHECK_SNIPPET,
+      source: 'run_daily',
+    });
+  }
+
+  const step11Evidence = [
+    ...(runDaily?.failedRequiredSteps ?? []),
+    ...(runDaily?.optionalSkips ?? []),
+    ...(runDaily?.downstreamSkips ?? []),
+    ...(runDaily?.stepEvents?.map((event) => `${event.name} ${event.status} ${event.reason ?? ''}`) ?? []),
+  ].join(' ');
+  if (/Step 11|LAAJ/.test(step11Evidence) && /timeout|타임아웃|timeout_incomplete/.test(step11Evidence)) {
+    checklist.push({
+      id: 'run-daily-step11-timeout',
+      title: 'run_daily Step 11 timeout 후속 점검 필요',
+      severity: 'high',
+      category: 'environment',
+      action: 'Step 11 LAAJ 진입 전 timeout/skip이 감지되었습니다. 다음 실행에서 이어지는지와 Step 12~13 downstream skip 여부를 확인하세요.',
+      command: RUN_DAILY_STEP11_CHECK_SNIPPET,
+      commandSnippet: RUN_DAILY_STEP11_CHECK_SNIPPET,
+      source: 'run_daily',
+    });
+  }
+
   if (status.storyboardAgent.enabled && !status.storyboardAgent.configured) {
     checklist.push({
       id: 'storyboard-url-missing',
@@ -620,6 +706,31 @@ export function buildAdminInsightOpsChecklist(
       command: BGE_EMBEDDING_HEALTH_CHECK_SNIPPET,
       commandSnippet: BGE_EMBEDDING_HEALTH_CHECK_SNIPPET,
       source: 'bge-embedding',
+    });
+  }
+
+  const githubActions = (status as AdminInsightSystemStatusResponse).githubActions;
+  if (
+    githubActions?.enabled
+    && githubActions.configured
+    && (
+      githubActions.latestRunEvent === 'workflow_dispatch'
+      || (githubActions.latestRunAttempt ?? 1) > 1
+    )
+  ) {
+    const runContext = [
+      githubActions.latestRunEvent ? `event=${githubActions.latestRunEvent}` : undefined,
+      githubActions.latestRunAttempt !== undefined ? `attempt=${githubActions.latestRunAttempt}` : undefined,
+    ].filter(Boolean).join(', ');
+    checklist.push({
+      id: 'github-actions-budget-posture',
+      title: 'GitHub Actions 수동 실행/재실행 예산 확인',
+      severity: 'medium',
+      category: 'environment',
+      action: `최근 Actions 실행이 수동 실행 또는 재실행입니다${runContext ? ` (${runContext})` : ''}. 월간 private-equivalent minutes와 backfill burst를 확인하세요.`,
+      command: ACTIONS_BUDGET_POSTURE_SNIPPET,
+      commandSnippet: ACTIONS_BUDGET_POSTURE_SNIPPET,
+      source: 'run_daily',
     });
   }
 
