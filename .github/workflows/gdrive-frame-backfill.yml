@@ -5,6 +5,7 @@ on:
     # Budget-safe catch-up windows after Daily Data Collection (UTC 19:00 / KST 04:00).
     # Do not add more default windows without re-checking the monthly Actions budget.
     - cron: '0 21 * * *'
+    - cron: '0 23 * * *'
   workflow_run:
     workflows: ["Daily Data Collection"]
     types: [completed]
@@ -23,7 +24,7 @@ on:
       max_items:
         description: 'Maximum frame items to process in this run'
         required: false
-        default: '1000'
+        default: '500'
         type: string
       dry_run:
         description: 'Plan only; do not upload or mutate status'
@@ -50,7 +51,7 @@ jobs:
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
       STATUS_SCOPE: ${{ github.event.inputs.status_scope || 'main' }}
       MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}
-      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '1000' }}
+      MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}
       DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     steps:
       - name: Checkout repository
@@ -79,7 +80,6 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install rclone and jq
-        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
         timeout-minutes: 8
         run: |
           set -euo pipefail
@@ -88,7 +88,6 @@ jobs:
           rclone version | head -1
 
       - name: Setup rclone credentials
-        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
         run: |
           set -euo pipefail
           mkdir -p ~/.config/rclone
@@ -98,22 +97,11 @@ jobs:
           test -s ~/.config/rclone/rclone.conf
 
       - name: Validate runtime environment contract
-        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
         env:
           RCLONE_CONFIG_BASE64: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
         run: python3 backend/bin/check_env_contract.py --profile gdrive-backfill
 
-      - name: Record budget skip
-        if: github.event_name != 'workflow_dispatch' && steps.budget.outputs.soft_gate == 'critical'
-        run: |
-          {
-            echo "### GDrive frame backfill skipped"
-            echo
-            echo "Actions budget posture is critical, so scheduled/automatic backfill was skipped. Use workflow_dispatch only for an intentional operator override."
-          } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Backfill staged frame shards
-        if: github.event_name == 'workflow_dispatch' || steps.budget.outputs.soft_gate != 'critical'
         run: |
           set -euo pipefail
           STATUS_SCOPE_SAFE="$(printf '%s' "${STATUS_SCOPE:-main}" | tr '/ :' '---')"
@@ -288,7 +276,7 @@ jobs:
           from pathlib import Path
           queue_path, plan_path, max_batches_raw, max_items_raw, manifest_dir, staging_manifest_path, expected_path, remote_list_path, verified_path = sys.argv[1:10]
           max_batches = max(1, int(max_batches_raw or '1'))
-          max_items = max(1, int(max_items_raw or '1000'))
+          max_items = max(1, int(max_items_raw or '500'))
           expected = json.load(open(expected_path, encoding='utf-8'))
           remote_entries = json.load(open(remote_list_path, encoding='utf-8'))
           remote_sizes = {str(entry.get('Path', '')): int(entry.get('Size', -1)) for entry in remote_entries if isinstance(entry, dict)}
