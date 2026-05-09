@@ -6,7 +6,7 @@ import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 function isChatOrInsightRoute(pathname: string | null): boolean {
     if (!pathname) return false;
-    return pathname.startsWith('/insights') || pathname.startsWith('/admin/insight');
+    return pathname.startsWith('/insights');
 }
 
 /**

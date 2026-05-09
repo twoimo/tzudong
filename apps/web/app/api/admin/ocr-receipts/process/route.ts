@@ -18,7 +18,7 @@ import * as crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const runtime = 'nodejs';
 

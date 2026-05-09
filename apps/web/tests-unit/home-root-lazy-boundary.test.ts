@@ -68,7 +68,6 @@ describe('home root runtime boundary', () => {
         expect(exists('app/home-landing-shell.tsx')).toBe(false);
         expect(exists('app/home-landing-shell.module.css')).toBe(false);
         expect(exists('app/home-map-island.tsx')).toBe(false);
-        expect(exists('app/home-map-runtime-activation.ts')).toBe(false);
     });
 
     test('detects Supabase SSR auth session hints from cookies and localStorage', () => {

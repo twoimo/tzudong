@@ -3,12 +3,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/insight/treemap';
+import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/public-insights/treemap';
 import { useDeviceType } from '@/hooks/useDeviceType';
 
 
@@ -99,10 +98,6 @@ type LeafRowsData = {
 
 const TREEMAP_TEXT_CACHE_LIMIT = 3_000;
 const treemapTextFitCache = new Map<string, { text: string; fontSize: number }>();
-
-const AdminInsightsClient = dynamic(() => import('@/app/admin/insight/insight-client'), {
-    ssr: false,
-});
 
 
 const TREEMAP_COLORS = ['#414554', '#35764e', '#2f9e4f', '#30cc5a'];
@@ -726,7 +721,7 @@ const TreemapTiles = memo(function TreemapTiles({
 
 export default function InsightsClient() {
     const router = useRouter();
-    const { isLoading: isAuthLoading, isAdmin, user } = useAuth();
+    const { isLoading: isAuthLoading, user } = useAuth();
     const { isMobile, isTablet } = useDeviceType();
 
     useEffect(() => {
@@ -1211,9 +1206,6 @@ export default function InsightsClient() {
         void treemapQuery.refetch();
     }, [treemapQuery]);
 
-    if (!isAuthLoading && isAdmin) {
-        return <AdminInsightsClient />;
-    }
 
     if (isLoading && !canRender) {
         return null;
@@ -1251,9 +1243,6 @@ export default function InsightsClient() {
         );
     }
 
-    if (isAdmin) {
-        return <AdminInsightsClient />;
-    }
 
     return (
         <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">

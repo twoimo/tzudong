@@ -60,9 +60,9 @@ files or remote APIs. They must:
 
 Existing status implementation touchpoints:
 
-- `apps/web/app/api/admin/insight/system-status/route.ts`
-- `apps/web/lib/insight/chat-system-status.ts`
-- `apps/web/lib/insight/chat-system-status-runtime.ts`
+- `apps/web/app/api/admin/system-status/route.ts`
+- `apps/web/lib/admin/system-status/status.ts`
+- `apps/web/lib/admin/system-status/runtime.ts`
 
 ## Change checklist
 

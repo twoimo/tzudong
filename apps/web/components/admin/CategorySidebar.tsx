@@ -39,20 +39,20 @@ export function CategorySidebar({
   );
 
   return (
-    <div className="flex w-full flex-col gap-2 xl:ml-auto xl:w-auto xl:flex-row xl:items-center xl:justify-end xl:gap-2">
+    <div className="flex w-full flex-col gap-2 lg:ml-auto lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-2">
       {children && (
-        <div className="w-full overflow-x-auto py-0.5 xl:w-auto xl:flex-none xl:overflow-visible xl:py-0">
-          <div className="flex min-w-max items-center gap-2 xl:min-w-0 xl:gap-1">{children}</div>
+        <div className="w-full overflow-x-auto py-0.5 lg:w-auto lg:flex-none lg:overflow-visible lg:py-0">
+          <div className="flex min-w-max items-center gap-2 lg:min-w-0 lg:gap-1">{children}</div>
         </div>
       )}
 
-      <div className="hidden xl:flex xl:w-auto xl:items-center xl:justify-end xl:gap-2 xl:overflow-x-auto xl:pb-0">
+      <div className="hidden lg:flex lg:w-auto lg:items-center lg:justify-end lg:gap-2 lg:overflow-x-auto lg:pb-0">
         {statCategoriesDesktop.map((category, index) =>
           renderStatChip(category.label, category.count, `desktop-${index}`)
         )}
       </div>
 
-      <div className="xl:hidden">
+      <div className="lg:hidden">
         <details className="rounded-md border border-border bg-muted/20 p-1.5">
           <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
             <span>통계 펼치기</span>

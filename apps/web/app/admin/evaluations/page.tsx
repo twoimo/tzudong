@@ -814,6 +814,14 @@ function AdminEvaluationPage() {
     setLoadingMore(false);
   }, [filteredRecords]);
 
+  const visibleDisplayedRecords = useMemo(() => {
+    if (displayedRecords.length > 0 || filteredRecords.length === 0) {
+      return displayedRecords;
+    }
+
+    return filteredRecords.slice(0, PAGE_SIZE);
+  }, [displayedRecords, filteredRecords]);
+
   const isListView = !showSubmissionView && !isAlternateView;
 
   // 무한 스크롤 - Scroll Event 방식
@@ -2252,7 +2260,7 @@ function AdminEvaluationPage() {
     >
       {/* Header */}
       <div className="border-b border-border bg-card px-3 py-3 sm:px-5 sm:py-4">
-        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="flex items-center gap-2 bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl">
@@ -2294,17 +2302,17 @@ function AdminEvaluationPage() {
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          <div className="w-full xl:flex xl:flex-1 xl:justify-end">
+          <div className="w-full lg:flex lg:flex-1 lg:justify-end">
             <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
             >
-              <div className="flex items-center gap-1.5 xl:gap-1">
+              <div className="flex items-center gap-1.5 lg:gap-1">
                 <Button
                   variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="sm"
-                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
+                  className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
                   onClick={() => {
                     setIsAlternateView(false);
                     setShowSubmissionView(false);
@@ -2314,12 +2322,12 @@ function AdminEvaluationPage() {
                   title="리스트 뷰"
                 >
                   <LayoutList className="h-4 w-4" />
-                  <span className="xl:hidden">리스트</span>
+                  <span className="lg:hidden">리스트</span>
                 </Button>
                 <Button
                   variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="sm"
-                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
+                  className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
                   onClick={() => {
                     setIsAlternateView(true);
                     setShowSubmissionView(false);
@@ -2329,7 +2337,7 @@ function AdminEvaluationPage() {
                   title="슬라이드 뷰"
                 >
                   <MonitorPlay className="h-4 w-4" />
-                  <span className="xl:hidden">슬라이드</span>
+                  <span className="lg:hidden">슬라이드</span>
                 </Button>
                 {/* 사용자 제보 검수 버튼 */}
                 <Button
@@ -2343,18 +2351,18 @@ function AdminEvaluationPage() {
                   }}
                   variant={showSubmissionView ? 'secondary' : 'ghost'}
                   size="sm"
-                  className="relative h-8 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:gap-1 xl:px-0"
+                  className="relative h-8 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:gap-1 lg:px-0"
                   title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
                   aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
                 >
                   <Send className="h-4 w-4 shrink-0" />
-                  <span className="xl:hidden">제보</span>
+                  <span className="lg:hidden">제보</span>
                   {totalPendingCount > 0 && (
                     <>
-                      <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white xl:hidden">
+                      <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white lg:hidden">
                         {totalPendingCount > 99 ? '99+' : totalPendingCount}
                       </span>
-                      <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white xl:flex">
+                      <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white lg:flex">
                         {totalPendingCount > 9 ? '9+' : totalPendingCount}
                       </span>
                     </>
@@ -2366,7 +2374,7 @@ function AdminEvaluationPage() {
                   disabled={transcriptStatus === 'loading'}
                   variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
                   size="sm"
-                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
+                  className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
                   title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
 	                >
 	                  {transcriptStatus === 'loading' ? (
@@ -2378,10 +2386,10 @@ function AdminEvaluationPage() {
                   ) : (
                     <FileText className="h-4 w-4" />
 	                  )}
-	                  <span className="xl:hidden">자막</span>
+	                  <span className="lg:hidden">자막</span>
 	                </Button>
                   {transcriptMessage && (
-                    <span className="hidden xl:block text-xs text-muted-foreground max-w-[22rem] truncate">
+                    <span className="hidden lg:block text-xs text-muted-foreground max-w-[22rem] truncate">
                       {transcriptMessage}
                     </span>
                   )}
@@ -2413,7 +2421,7 @@ function AdminEvaluationPage() {
           />
         ) : isAlternateView ? (
           <EvaluationSlideView
-            records={displayedRecords}
+            records={visibleDisplayedRecords}
             currentIndex={currentSlideIndex}
             onNavigate={setCurrentSlideIndex}
             onApprove={handleApprove}
@@ -2434,7 +2442,7 @@ function AdminEvaluationPage() {
               ) : (
                 <>
                   <EvaluationTable
-                    records={displayedRecords}
+                    records={visibleDisplayedRecords}
                     onApprove={handleApprove}
                     onDelete={handleDelete}
                     onRestore={handleRestore}
@@ -2468,7 +2476,7 @@ function AdminEvaluationPage() {
                   {/* 모든 데이터 로드 완료 메시지 */}
                   {!hasMore && displayedRecords.length > 0 && (
                     <div className="text-center py-4 text-muted-foreground text-sm">
-                      모든 레코드를 불러왔습니다 ({displayedRecords.length}개 / 전체 {filteredRecords.length}개)
+                      모든 레코드를 불러왔습니다 ({visibleDisplayedRecords.length}개 / 전체 {filteredRecords.length}개)
                     </div>
                   )}
                 </>

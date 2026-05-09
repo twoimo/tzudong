@@ -1,4 +1,4 @@
-import type { OcrAiRuntimeConfigCandidate, OcrCredentialCandidate, OcrRoutingMode, OcrRoutingProvider } from '@/lib/admin/ai-settings-store';
+import type { OcrAiRuntimeConfigCandidate, OcrCredentialCandidate, OcrRoutingMode, OcrRoutingProvider } from '@/lib/ocr/runtime-config';
 import {
   buildReceiptOcrEnvelope,
   flattenReceiptOcrEnvelope,
