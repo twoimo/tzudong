@@ -80,11 +80,6 @@ const nextConfig = {
                 destination: '/mypage',
                 permanent: false,
             },
-            {
-                source: '/costs',
-                destination: '/admin/costs',
-                permanent: false,
-            },
         ];
     },
     // [PERF] 정적 자산에 대한 장기 캐시 헤더 설정
