@@ -1,4 +1,4 @@
-import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const OCR_DAILY_QUOTA = 5;
 

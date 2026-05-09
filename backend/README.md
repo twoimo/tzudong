@@ -65,7 +65,7 @@ web admin ops 상태까지 건드렸다면 repo root에서:
 
 ```bash
 cd apps/web
-bun test tests-unit/insight-system-status.test.ts
+bun test tests-unit/admin-system-status.test.ts
 ```
 
 ## 운영 주의사항

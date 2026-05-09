@@ -22,8 +22,7 @@ import {
     ChevronDown,
     ChevronUp,
     LocateFixed,
-    Navigation,
-    SlidersHorizontal
+    Navigation
 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -705,10 +704,6 @@ function MobileControlOverlayComponent({
         closeUserMenu();
     }, [closeUserMenu, router]);
 
-    const handleAdminAiSettingsClick = useCallback(() => {
-        router.push('/admin/ai-settings');
-        closeUserMenu();
-    }, [closeUserMenu, router]);
 
     const handleAdminRestaurantsClick = useCallback(() => {
         router.push('/admin/evaluations');
@@ -951,10 +946,6 @@ function MobileControlOverlayComponent({
                             <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
                                 <ImageIcon className="mr-2 h-4 w-4" />
                                 배너관리
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleAdminAiSettingsClick} className="text-foreground hover:bg-accent py-1.5">
-                                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                                AI 설정
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
                                 <BarChart2 className="mr-2 h-4 w-4" />
