@@ -8,19 +8,17 @@ const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..'
 const exists = (relativePath: string) => existsSync(join(import.meta.dir, '..', relativePath));
 
 describe('frontend unused route compatibility', () => {
-    test('keeps public submissions and costs as compatibility redirects', () => {
+    test('keeps public submissions as a compatibility redirect and removes costs pages', () => {
         const nextConfigSource = source('next.config.mjs');
         const submissionsPageSource = source('app/submissions/page.tsx');
-        const costsPageSource = source('app/costs/page.tsx');
 
         expect(nextConfigSource).toContain("source: '/submissions'");
         expect(nextConfigSource).toContain("destination: '/mypage'");
-        expect(nextConfigSource).toContain("source: '/costs'");
-        expect(nextConfigSource).toContain("destination: '/admin/costs'");
+        expect(nextConfigSource).not.toContain("source: '/costs'");
+        expect(nextConfigSource).not.toContain("destination: '/admin/costs'");
         expect(submissionsPageSource).toContain("redirect('/mypage')");
-        expect(costsPageSource).toContain("redirect('/admin/costs')");
-        expect(costsPageSource).not.toContain('"use client"');
-        expect(costsPageSource).not.toContain('useQuery');
+        expect(exists('app/costs/page.tsx')).toBe(false);
+        expect(exists('app/admin/costs/page.tsx')).toBe(false);
     });
 
     test('moves admin submissions to the canonical evaluations view', () => {
@@ -44,7 +42,7 @@ describe('frontend unused route compatibility', () => {
         const userRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: false });
 
         expect(adminRoutes).toContain('/admin/evaluations');
-        expect(adminRoutes).toContain('/admin/costs');
+        expect(adminRoutes).not.toContain('/admin/costs');
         expect(adminRoutes).toContain('/admin/ai-settings');
         expect(adminRoutes).not.toContain('/admin/submissions');
         expect(userRoutes).not.toContain('/admin/evaluations');

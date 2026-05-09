@@ -18,7 +18,6 @@ export const AUTH_NAV_ROUTES = [
 export const ADMIN_NAV_ROUTES = [
     '/admin/evaluations',
     '/admin/banners',
-    '/admin/costs',
     '/admin/ai-settings',
 ] as const;
 

@@ -9,7 +9,7 @@ describe('naver map ui helpers', () => {
     test('resets map only when route changes back to home', () => {
         expect(shouldResetNaverMapOnPathChange('/feed', '/')).toBe(true);
         expect(shouldResetNaverMapOnPathChange('/', '/')).toBe(false);
-        expect(shouldResetNaverMapOnPathChange('/feed', '/costs')).toBe(false);
+        expect(shouldResetNaverMapOnPathChange('/feed', '/leaderboard')).toBe(false);
     });
 
     test('resolves restaurant detail panel element by priority', () => {
