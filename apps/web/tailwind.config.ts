@@ -1,5 +1,15 @@
 import type { Config } from "tailwindcss";
 
+const ADMIN_EVALUATION_RESPONSIVE_DISPLAY_CLASSES = [
+  // Admin evaluation table desktop mode depends on these display overrides.
+  // Keep them safelisted so stale/incomplete dev CSS generation cannot leave
+  // `hidden lg:block` / `hidden lg:table-cell` elements permanently hidden.
+  "lg:block",
+  "lg:flex",
+  "lg:hidden",
+  "lg:table-cell",
+] as const;
+
 const config: Config = {
   darkMode: "class",
   content: [
@@ -7,6 +17,7 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [...ADMIN_EVALUATION_RESPONSIVE_DISPLAY_CLASSES],
   theme: {
     extend: {
       screens: {

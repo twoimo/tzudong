@@ -9,7 +9,7 @@ import { GlobalLoader } from '@/components/ui/global-loader';
 export default function AdminLoading() {
     const pathname = usePathname();
 
-    if (!pathname || pathname.startsWith('/admin/insight')) {
+    if (!pathname) {
         return null;
     }
 

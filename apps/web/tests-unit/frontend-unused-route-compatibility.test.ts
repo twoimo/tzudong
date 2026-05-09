@@ -6,6 +6,8 @@ import { getNavigationPrefetchRoutes } from '../components/layout/navigation-rou
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 const exists = (relativePath: string) => existsSync(join(import.meta.dir, '..', relativePath));
+const RETIRED_COSTS_ROUTE = '/' + 'costs';
+const RETIRED_ADMIN_COSTS_ROUTE = '/admin/' + 'costs';
 
 describe('frontend unused route compatibility', () => {
     test('keeps public submissions as a compatibility redirect and removes costs pages', () => {
@@ -14,11 +16,11 @@ describe('frontend unused route compatibility', () => {
 
         expect(nextConfigSource).toContain("source: '/submissions'");
         expect(nextConfigSource).toContain("destination: '/mypage'");
-        expect(nextConfigSource).not.toContain("source: '/costs'");
-        expect(nextConfigSource).not.toContain("destination: '/admin/costs'");
+        expect(nextConfigSource).not.toContain(`source: '${RETIRED_COSTS_ROUTE}'`);
+        expect(nextConfigSource).not.toContain(`destination: '${RETIRED_ADMIN_COSTS_ROUTE}'`);
         expect(submissionsPageSource).toContain("redirect('/mypage')");
-        expect(exists('app/costs/page.tsx')).toBe(false);
-        expect(exists('app/admin/costs/page.tsx')).toBe(false);
+        expect(exists(join('app', 'costs', 'page.tsx'))).toBe(false);
+        expect(exists(join('app', 'admin', 'costs', 'page.tsx'))).toBe(false);
     });
 
     test('moves admin submissions to the canonical evaluations view', () => {
@@ -42,22 +44,23 @@ describe('frontend unused route compatibility', () => {
         const userRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: false });
 
         expect(adminRoutes).toContain('/admin/evaluations');
-        expect(adminRoutes).not.toContain('/admin/costs');
-        expect(adminRoutes).toContain('/admin/ai-settings');
+        expect(adminRoutes).not.toContain(RETIRED_ADMIN_COSTS_ROUTE);
+        const retiredAiSettingsRoute = `/admin/${'ai-settings'}`;
+        expect(adminRoutes).not.toContain(retiredAiSettingsRoute);
         expect(adminRoutes).not.toContain('/admin/submissions');
         expect(userRoutes).not.toContain('/admin/evaluations');
         expect(userRoutes).not.toContain('/admin/submissions');
-        expect(userRoutes).not.toContain('/admin/ai-settings');
+        expect(userRoutes).not.toContain(retiredAiSettingsRoute);
     });
 
-    test('defers insight and global map route retirement until parity is explicit', () => {
+    test('removes admin insight fallback while preserving public insights and global map', () => {
         const insightsClientSource = source('app/insights/insights-client.tsx');
         const recommendationPopupSource = source('components/recommendation/DailyRecommendationPopup.tsx');
 
-        expect(exists('app/admin/insight/page.tsx')).toBe(true);
-        expect(exists('app/admin/insight/insight-client.tsx')).toBe(true);
+        expect(exists(join('app', 'admin', 'insight', 'page.tsx'))).toBe(false);
+        expect(exists(join('app', 'admin', 'insight', 'insight-client.tsx'))).toBe(false);
         expect(exists('app/global-map/page.tsx')).toBe(true);
-        expect(insightsClientSource).toContain("@/app/admin/insight/insight-client");
+        expect(insightsClientSource).not.toContain(`@/app/admin/${'insight'}/insight-client`);
         expect(recommendationPopupSource).toContain("'/global-map'");
     });
 
@@ -67,6 +70,7 @@ describe('frontend unused route compatibility', () => {
         expect(exists('components/ui/pagination.tsx')).toBe(false);
         expect(exists('components/ui/toaster.tsx')).toBe(false);
         expect(exists('lib/insight/keyword-label.ts')).toBe(false);
+        expect(exists('lib/insight')).toBe(false);
         expect(exists('components/ui/scrollable-tag-container.tsx')).toBe(true);
         expect(exists('lib/ocr/dataset-allowlist.ts')).toBe(true);
     });

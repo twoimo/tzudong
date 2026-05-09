@@ -252,14 +252,12 @@ describe('web quality performance source contracts', () => {
     test('page-level loading spinners stay centered in the viewport', () => {
         const globalLoaderSource = source('components/ui/global-loader.tsx');
         const mapSkeletonSource = source('components/skeletons/MapSkeleton.tsx');
-        const adminInsightCssSource = source('app/admin/insight/insight-overhaul.module.css');
 
         expect(globalLoaderSource).toContain('h-[var(--full-height,100vh)]');
         expect(mapSkeletonSource).toContain('fullScreen');
         expect(source('app/auth/reset-password/loading.tsx')).toContain('<GlobalLoader');
         expect(source('app/home-client-loader.tsx')).toContain('<GlobalLoader');
         expect(source('app/feed/page.tsx')).toContain('<GlobalLoader');
-        expect(adminInsightCssSource).toContain('min-height: calc(var(--full-height, 100vh) - var(--app-header-height, 56px))');
 
         const appLoaderTags = sourceFilesUnder('app')
             .flatMap((relativePath) => {
