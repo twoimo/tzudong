@@ -109,10 +109,6 @@ begin
     execute 'create index if not exists ad_banners_display_target_gin_idx on public.ad_banners using gin (display_target)';
   end if;
 
-  if pg_temp.has_public_columns('server_costs', array['monthly_cost']) then
-    execute 'create index if not exists server_costs_monthly_cost_idx on public.server_costs (monthly_cost desc)';
-  end if;
-
   if pg_temp.has_public_columns('ocr_logs', array['user_id', 'success', 'created_at']) then
     execute 'create index if not exists ocr_logs_user_success_created_idx on public.ocr_logs (user_id, success, created_at desc)';
   end if;

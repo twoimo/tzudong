@@ -1,7 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart2 } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Settings, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, Utensils, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
@@ -705,11 +705,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
                     <ImageIcon className="mr-2 h-4 w-4" />
                     배너관리
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-border my-1" />
-                  <DropdownMenuItem onClick={() => router.push('/admin/costs')} className="text-foreground hover:bg-accent py-1.5">
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    서버비용
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminAiSettingsClick} className="text-foreground hover:bg-accent py-1.5">
                     <Settings className="mr-2 h-4 w-4" />
