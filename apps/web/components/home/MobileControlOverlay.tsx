@@ -18,7 +18,6 @@ import {
     ClipboardList,
     MessageSquare,
     Image as ImageIcon,
-    DollarSign,
     LogOut,
     ChevronDown,
     ChevronUp,
@@ -706,11 +705,6 @@ function MobileControlOverlayComponent({
         closeUserMenu();
     }, [closeUserMenu, router]);
 
-    const handleAdminCostClick = useCallback(() => {
-        router.push('/admin/costs');
-        closeUserMenu();
-    }, [closeUserMenu, router]);
-
     const handleAdminAiSettingsClick = useCallback(() => {
         router.push('/admin/ai-settings');
         closeUserMenu();
@@ -957,11 +951,6 @@ function MobileControlOverlayComponent({
                             <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
                                 <ImageIcon className="mr-2 h-4 w-4" />
                                 배너관리
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-border my-1" />
-                            <DropdownMenuItem onClick={handleAdminCostClick} className="text-foreground hover:bg-accent py-1.5">
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                서버비용
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleAdminAiSettingsClick} className="text-foreground hover:bg-accent py-1.5">
                                 <SlidersHorizontal className="mr-2 h-4 w-4" />

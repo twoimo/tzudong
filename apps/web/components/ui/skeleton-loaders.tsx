@@ -111,29 +111,6 @@ function LeaderboardSkeletonComponent({
     );
 }
 
-// ========== 비용 테이블 스켈레톤 ==========
-function CostsSkeletonComponent({
-    count = 5,
-    className,
-}: {
-    count?: number;
-    className?: string;
-}) {
-    return (
-        <div className={cn("w-full max-w-4xl mx-auto p-4 md:p-6 space-y-4", className)} style={CONTAIN_STYLE}>
-            <Skeleton className="h-6 w-36" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-            {Array.from({ length: count }, (_, i) => (
-                <div key={i} className="flex items-center gap-4 py-2">
-                    <Skeleton className="h-4 w-28 flex-1" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-12" />
-                </div>
-            ))}
-        </div>
-    );
-}
-
 export const FeedSkeleton = memo(FeedSkeletonComponent);
 FeedSkeleton.displayName = "FeedSkeleton";
 
@@ -145,6 +122,3 @@ StampPageSkeleton.displayName = "StampPageSkeleton";
 
 export const LeaderboardSkeleton = memo(LeaderboardSkeletonComponent);
 LeaderboardSkeleton.displayName = "LeaderboardSkeleton";
-
-export const CostsSkeleton = memo(CostsSkeletonComponent);
-CostsSkeleton.displayName = "CostsSkeleton";
