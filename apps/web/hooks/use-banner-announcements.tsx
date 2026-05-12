@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import { type Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
@@ -43,33 +44,17 @@ const getFallbackActiveAnnouncements = (): Announcement[] => {
     return sortAnnouncements(DUMMY_ANNOUNCEMENTS.filter((announcement) => announcement.isActive));
 };
 
-const getFallbackBannerAnnouncements = (): Announcement[] => {
-    return sortAnnouncements(
-        DUMMY_ANNOUNCEMENTS.filter((announcement) => announcement.isActive && announcement.showOnBanner)
-    );
-};
-
 export function useBannerAnnouncements() {
-    return useQuery({
-        queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'banner'],
-        queryFn: async (): Promise<Announcement[]> => {
-            try {
-                const rows = await fetchSupabaseRows<AnnouncementRow>('announcements', [
-                    ['select', ANNOUNCEMENT_SELECT],
-                    ['is_active', 'eq.true'],
-                    ['show_on_banner', 'eq.true'],
-                    ['order', 'priority.desc,created_at.desc'],
-                ]);
+    const activeAnnouncementsQuery = useActiveAnnouncements();
+    const bannerAnnouncements = useMemo(
+        () => (activeAnnouncementsQuery.data ?? []).filter((announcement) => announcement.showOnBanner),
+        [activeAnnouncementsQuery.data],
+    );
 
-                return sortAnnouncements(rows.map(mapAnnouncementRow));
-            } catch (error) {
-                console.error('배너 공지사항 조회 중 오류:', error);
-                return getFallbackBannerAnnouncements();
-            }
-        },
-        staleTime: 60 * 1000,
-        gcTime: 5 * 60 * 1000,
-    });
+    return {
+        ...activeAnnouncementsQuery,
+        data: bannerAnnouncements,
+    };
 }
 
 
