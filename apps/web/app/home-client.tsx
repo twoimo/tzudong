@@ -11,6 +11,7 @@ import type { Restaurant } from "@/types/restaurant";
 import {
     resolveDeviceOrientationHeading,
     resolveGeolocationHeading,
+    resolveDeviceLocationStateUpdatePlan,
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
 
@@ -80,6 +81,11 @@ export default function HomeClient() {
     const [mapMountKey] = useState(() => Date.now());
 
     const state = useHomeState(mapMode);
+    const {
+        clearRestaurantDetailSelection,
+        openRestaurantDetailSelection,
+        releaseSearchSelectionOwnership,
+    } = state;
     // Deep-link restaurant params are consumed after the parent-owned
     // selection contract opens the detail panel; using history avoids
     // triggering a home refresh/reset loop while preserving other params.
@@ -104,7 +110,7 @@ export default function HomeClient() {
     const openPanel = useCallback((panel: PanelType) => {
         setIsMapFullscreen(false);
         // 맛집 상세 패널 닫기
-        state.clearRestaurantDetailSelection();
+        clearRestaurantDetailSelection();
         if (panel === 'announcement' && isMobileOrTablet) {
             setActiveRightPanel(null);
             setIsAnnouncementSheetOpen(true);
@@ -115,7 +121,7 @@ export default function HomeClient() {
         setIsAnnouncementSheetOpen(false);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
-    }, [isMobileOrTablet, state]);
+    }, [clearRestaurantDetailSelection, isMobileOrTablet]);
     useEffect(() => {
         openPanelRef.current = openPanel;
     }, [openPanel]);
@@ -124,11 +130,11 @@ export default function HomeClient() {
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const closeAllPanels = useCallback(() => {
         setIsMapFullscreen(false);
-        state.clearRestaurantDetailSelection();
+        clearRestaurantDetailSelection();
         setActiveRightPanel(null);
         setIsAnnouncementSheetOpen(false);
         setIsPanelCollapsed(false);
-    }, [state]);
+    }, [clearRestaurantDetailSelection]);
 
     // 패널 접기/펼치기
     // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -177,7 +183,7 @@ export default function HomeClient() {
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
         // 그 다음 상세 패널 열기
-        state.openRestaurantDetailSelection(restaurant);
+        openRestaurantDetailSelection(restaurant);
 
         // [Fix] 줌 레벨 설정 (북마크 등에서 요청 시)
         if (focusZoom) {
@@ -188,7 +194,7 @@ export default function HomeClient() {
 
         // [Fix] 마커 클릭 시 URL의 restaurant 파라미터 제거하여 스티키 현상 방지
         clearConsumedRestaurantParams();
-    }, [clearConsumedRestaurantParams, state]);
+    }, [clearConsumedRestaurantParams, openRestaurantDetailSelection]);
     useEffect(() => {
         openDetailPanelRef.current = openDetailPanel;
     }, [openDetailPanel]);
@@ -196,13 +202,13 @@ export default function HomeClient() {
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
         if (!restaurant) {
             setIsMapFullscreen(false);
-            state.clearRestaurantDetailSelection();
+            clearRestaurantDetailSelection();
             return;
         }
 
         setIsMapFullscreen(false);
-        state.openRestaurantDetailSelection(restaurant);
-    }, [state]);
+        openRestaurantDetailSelection(restaurant);
+    }, [clearRestaurantDetailSelection, openRestaurantDetailSelection]);
 
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({
@@ -243,7 +249,8 @@ export default function HomeClient() {
             deviceLocationFocusRequestIdRef.current = nextFocusRequestId;
         }
 
-        setDeviceLocation((previous) => ({
+        setDeviceLocation((previous) => {
+            const nextLocation: DeviceMapLocation = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
             accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
@@ -251,7 +258,13 @@ export default function HomeClient() {
             mode,
             focusRequestId: nextFocusRequestId,
             updatedAt: Date.now(),
-        }));
+            };
+
+            return resolveDeviceLocationStateUpdatePlan({
+                previous,
+                next: nextLocation,
+            }).nextLocation;
+        });
     }, []);
 
     const stopDeviceHeadingWatchers = useCallback(() => {
@@ -295,10 +308,21 @@ export default function HomeClient() {
             const heading = resolveDeviceOrientationHeading(event);
             if (heading === null) return;
 
-            setDeviceLocation((previous) => previous
-                ? { ...previous, heading, mode: 'heading', updatedAt: Date.now() }
-                : previous
-            );
+            setDeviceLocation((previous) => {
+                if (!previous) return previous;
+
+                const nextLocation: DeviceMapLocation = {
+                    ...previous,
+                    heading,
+                    mode: 'heading',
+                    updatedAt: Date.now(),
+                };
+
+                return resolveDeviceLocationStateUpdatePlan({
+                    previous,
+                    next: nextLocation,
+                }).nextLocation;
+            });
         };
 
         window.addEventListener('deviceorientationabsolute', handleOrientation);
@@ -406,6 +430,7 @@ export default function HomeClient() {
         <>
             <HomeClientEffects
                 activeRightPanel={activeRightPanel}
+                clearRestaurantDetailSelection={clearRestaurantDetailSelection}
                 isAdmin={isAdmin}
                 isLoggedIn={!!user}
                 isMobileOrTablet={isMobileOrTablet}
@@ -415,7 +440,6 @@ export default function HomeClient() {
                 selectedAnnouncement={selectedAnnouncement}
                 setMapMode={setMapMode}
                 setSelectedAnnouncement={setSelectedAnnouncement}
-                state={state}
                 togglePanelCollapse={togglePanelCollapse}
             />
 
@@ -439,7 +463,7 @@ export default function HomeClient() {
                     isAdmin={isAdmin}
                     onModeChange={(mode) => {
                         setIsMapFullscreen(false);
-                        state.clearRestaurantDetailSelection();
+                        clearRestaurantDetailSelection();
                         setMapMode(mode);
                     }}
                     user={user}
@@ -467,7 +491,6 @@ export default function HomeClient() {
                 onAdminEditRestaurant={onAdminEditRestaurant}
                 onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
                 onRestaurantSelect={handleRestaurantSelectionSync}
-                onReleaseSearchSelectionOwnership={state.releaseSearchSelectionOwnership}
 
                 onMapReady={handlers.handleMapReady}
                 onMarkerClick={openDetailPanel}
@@ -481,6 +504,7 @@ export default function HomeClient() {
                 isMapFullscreen={isMapFullscreen}
                 onMapFullscreenChange={setIsMapFullscreen}
                 deviceLocation={deviceLocation}
+                onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
             />
 
             {isDesktop && (
