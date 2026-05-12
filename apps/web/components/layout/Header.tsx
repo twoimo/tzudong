@@ -28,7 +28,7 @@ import { Announcement } from "@/types/announcement";
 import type { Notification } from "@/types/notification";
 import { useHydration } from "@/hooks/useHydration";
 import { useDeviceType } from "@/hooks/useDeviceType";
-import { useActiveAnnouncements, useBannerAnnouncements } from "@/hooks/use-banner-announcements";
+import { useActiveAnnouncements } from "@/hooks/use-banner-announcements";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
 import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { toast } from "@/lib/no-toast";
@@ -62,8 +62,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const queryClient = useQueryClient();
   const headerRef = useRef<HTMLElement>(null);
 
-  const { data: bannerAnnouncements = [], isLoading: isBannerAnnouncementsLoading } = useBannerAnnouncements();
-  const { data: activeAnnouncements = [] } = useActiveAnnouncements();
+  const { data: activeAnnouncements = [], isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements();
+  const bannerAnnouncements = useMemo(
+    () => activeAnnouncements.filter((announcement) => announcement.showOnBanner),
+    [activeAnnouncements]
+  );
+  const isBannerAnnouncementsLoading = isActiveAnnouncementsLoading;
   const [isAnnouncementMutationPending, setIsAnnouncementMutationPending] = useState(false);
 
   // 공지 배너 상태

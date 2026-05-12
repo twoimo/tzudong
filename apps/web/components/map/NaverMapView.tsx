@@ -263,7 +263,6 @@ const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 const MOBILE_MARKER_CENTER_FINE_TUNE_PX = -6; // 선택 마커 translateY(-5px) 시각 보정
 const ONLINE_USERS_TOAST_INTERVAL_MS = 60000;
 const ANNOUNCEMENT_TOAST_INTERVAL_MS = 70000;
-const NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 30000;
 
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
@@ -308,6 +307,82 @@ interface NaverMapViewProps {
  * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
  */
 const markerContentCache = new LruCache<string, string>(500);
+
+type NaverClusterFeature =
+    | Supercluster.ClusterFeature<ClusterProperties>
+    | Supercluster.PointFeature<ClusterProperties>;
+
+const CLUSTER_SIGNATURE_COORD_PRECISION = 5;
+
+function roundClusterCoord(value: number): number {
+    const factor = 10 ** CLUSTER_SIGNATURE_COORD_PRECISION;
+    return Math.round(value * factor) / factor;
+}
+
+function buildClusterFeatureSignature(feature: NaverClusterFeature): string {
+    const [lng, lat] = feature.geometry.coordinates;
+    if (isCluster(feature)) {
+        return [
+            'cluster',
+            feature.properties.cluster_id,
+            feature.properties.point_count,
+            roundClusterCoord(lat),
+            roundClusterCoord(lng),
+        ].join(':');
+    }
+
+    return [
+        'point',
+        feature.properties.restaurantId,
+        roundClusterCoord(lat),
+        roundClusterCoord(lng),
+    ].join(':');
+}
+
+function areClusterFeaturesEqual(
+    previous: readonly NaverClusterFeature[],
+    next: readonly NaverClusterFeature[],
+): boolean {
+    if (previous.length !== next.length) return false;
+
+    for (let index = 0; index < previous.length; index += 1) {
+        if (buildClusterFeatureSignature(previous[index]) !== buildClusterFeatureSignature(next[index])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function buildRegionalClusterSignature(cluster: RegionalCluster): string {
+    return [
+        cluster.region,
+        cluster.count,
+        roundClusterCoord(cluster.center.lat),
+        roundClusterCoord(cluster.center.lng),
+        cluster.restaurantIds.join(','),
+        cluster.categories.join(','),
+    ].join(':');
+}
+
+function areRegionalClustersEqual(
+    previous: readonly RegionalCluster[],
+    next: readonly RegionalCluster[],
+): boolean {
+    if (previous.length !== next.length) return false;
+
+    for (let index = 0; index < previous.length; index += 1) {
+        if (buildRegionalClusterSignature(previous[index]) !== buildRegionalClusterSignature(next[index])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function areStringArraysEqual(previous: readonly string[], next: readonly string[]): boolean {
+    return previous.length === next.length && previous.every((value, index) => value === next[index]);
+}
 
 const NaverMapView = memo(({
     mapFocusZoom,
@@ -439,17 +514,12 @@ const NaverMapView = memo(({
     }), [searchedRestaurant, selectedRestaurant]);
 
     const activateNoncriticalMapEffects = useCallback(() => {
-        setShouldRunNoncriticalMapEffects(true);
+        setShouldRunNoncriticalMapEffects((previous) => previous ? previous : true);
     }, []);
 
-    useEffect(() => {
-        if (shouldRunNoncriticalMapEffects) return;
-
-        const timeout = setTimeout(activateNoncriticalMapEffects, NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS);
-        return () => clearTimeout(timeout);
-    }, [activateNoncriticalMapEffects, shouldRunNoncriticalMapEffects]);
-
     const releaseSearchSelectionOnUserInteraction = useCallback(() => {
+        activateNoncriticalMapEffects();
+
         const releasePlan = resolveSearchSelectionReleasePlan({
             activeSearchedRestaurant,
             hasReleaseHandler: Boolean(onSearchSelectionRelease),
@@ -461,7 +531,7 @@ const NaverMapView = memo(({
         if (releasePlan.shouldRelease) {
             onSearchSelectionRelease?.();
         }
-    }, [activeSearchedRestaurant, onSearchSelectionRelease]);
+    }, [activateNoncriticalMapEffects, activeSearchedRestaurant, onSearchSelectionRelease]);
 
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !onMapBlankClick) return;
@@ -470,13 +540,14 @@ const NaverMapView = memo(({
         if (!maps?.Event) return;
 
         const listener = maps.Event.addListener(mapInstanceRef.current, 'click', () => {
+            activateNoncriticalMapEffects();
             onMapBlankClick();
         });
 
         return () => {
             maps.Event.removeListener(listener);
         };
-    }, [isMapInitialized, onMapBlankClick]);
+    }, [activateNoncriticalMapEffects, isMapInitialized, onMapBlankClick]);
 
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
@@ -1064,6 +1135,7 @@ const NaverMapView = memo(({
         // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
         const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
             hasUserMovedMapRef,
+            onUserInteraction: activateNoncriticalMapEffects,
             releaseSearchSelectionOnUserInteraction,
         });
         const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
@@ -1122,6 +1194,7 @@ const NaverMapView = memo(({
         isMobileOrTablet,
         mapFocusZoom,
         mobileSheetHeightPercent,
+        activateNoncriticalMapEffects,
         releaseSearchSelectionOnUserInteraction,
     ]);
 
@@ -1461,7 +1534,7 @@ const NaverMapView = memo(({
         if (!ENABLE_CLUSTERING || displayRestaurants.length === 0) {
             if (clusterIndexRef.current) {
 
-                setClusters([]);
+                setClusters((previous) => previous.length === 0 ? previous : []);
                 clusterIndexRef.current = null;
             }
             return;
@@ -1517,21 +1590,29 @@ const NaverMapView = memo(({
             const bbox = resolveNaverClusterBoundsBbox(bounds);
 
             const newClusters = getClusters(index, bbox, zoom);
-            setClusters(newClusters);
+            setClusters((previous) => areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters);
 
             // 17개 행정구역 클러스터도 계산
             const newRegionalClusters = getRegionalClusters(displayRestaurants);
-            setRegionalClusters(newRegionalClusters);
+            setRegionalClusters((previous) => areRegionalClustersEqual(previous, newRegionalClusters) ? previous : newRegionalClusters);
 
             // 서울 25개 자치구 클러스터 계산 (두 가지 모드)
             // 줌 9-10: 모든 구를 클러스터로 (minClusterSize=1)
             const seoulResultAll = getSeoulDistrictClusters(displayRestaurants, 1);
-            setSeoulDistrictClusters(seoulResultAll.clusters);
+            setSeoulDistrictClusters((previous) =>
+                areRegionalClustersEqual(previous, seoulResultAll.clusters) ? previous : seoulResultAll.clusters
+            );
 
             // 줌 11-12: 마커 3개 이상만 클러스터, 2개 이하는 개별 마커 (minClusterSize=3)
             const seoulResultFiltered = getSeoulDistrictClusters(displayRestaurants, 3);
-            setSeoulDistrictClustersFiltered(seoulResultFiltered.clusters);
-            setSeoulIndividualIds(seoulResultFiltered.individualRestaurantIds);
+            setSeoulDistrictClustersFiltered((previous) =>
+                areRegionalClustersEqual(previous, seoulResultFiltered.clusters) ? previous : seoulResultFiltered.clusters
+            );
+            setSeoulIndividualIds((previous) =>
+                areStringArraysEqual(previous, seoulResultFiltered.individualRestaurantIds)
+                    ? previous
+                    : seoulResultFiltered.individualRestaurantIds
+            );
         });
 
         return () => {
@@ -1580,7 +1661,7 @@ const NaverMapView = memo(({
             }
 
             const newClusters = getClusters(clusterIndexRef.current, bboxPlan.bbox, zoom);
-            setClusters(newClusters);
+            setClusters((previous) => areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters);
         };
 
         const map = mapInstanceRef.current;
@@ -2189,6 +2270,9 @@ const NaverMapView = memo(({
             if (wheelPlan.normalizedDirection === 0) {
                 return;
             }
+
+            activateNoncriticalMapEffects();
+
             const { nextZoom, shouldApply } = wheelPlan;
 
             // 3. 적용 (변경이 있을 때만)
@@ -2325,7 +2409,7 @@ const NaverMapView = memo(({
             queuedWheelInput = cleanupState.nextQueuedWheelInput;
             mapElement.removeEventListener('wheel', handleWheel);
         };
-    }, [isMapInitialized]);
+    }, [activateNoncriticalMapEffects, isMapInitialized]);
 
     // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
     // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);

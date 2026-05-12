@@ -72,10 +72,13 @@ describe('web quality performance source contracts', () => {
         const mobileControlSource = source('components/home/MobileControlOverlay.tsx');
         const homeControlPanelSource = source('components/home/home-control-panel.tsx');
         const homeDesktopControlPanelSource = source('components/home/home-desktop-control-panel.tsx');
+        const homeClientEffectsSource = source('app/home-client-effects.tsx');
         const regionSelectorSource = source('components/region/RegionSelector.tsx');
         const categoryFilterSource = source('components/filters/CategoryFilter.tsx');
         const mapQuerySource = source('lib/map-query-helpers.ts');
         const naverMapSource = source('components/map/NaverMapView.tsx');
+        const headerSource = source('components/layout/Header.tsx');
+        const bannerAnnouncementsHookSource = source('hooks/use-banner-announcements.tsx');
 
         expect(pageSource).toContain('<HomeRuntimeShell>');
         expect(pageSource).toContain('<HomeClient />');
@@ -85,9 +88,37 @@ describe('web quality performance source contracts', () => {
         expect(homeClientSource).toContain('<HomeMapContainer');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');
+        expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
         expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeClientSource).not.toContain('home-map-activate-button');
+        expect(homeClientSource).toContain('resolveDeviceLocationStateUpdatePlan');
+        expect(homeClientSource).toContain(`const {
+        clearRestaurantDetailSelection,
+        openRestaurantDetailSelection,
+        releaseSearchSelectionOwnership,
+    } = state;`);
+        expect(homeClientEffectsSource).toContain('clearRestaurantDetailSelection: () => void');
+        expect(homeClientEffectsSource).toContain('lastAnnouncementRequestKeyRef');
+        expect(homeClientEffectsSource).toContain('lastRestaurantDeepLinkRequestKeyRef');
+        expect(homeClientEffectsSource).toContain('lastCoordinateRequestKeyRef');
+        expect(homeClientEffectsSource).toContain('pendingAnnouncementRequestRef');
+        expect(homeClientEffectsSource).toContain('pendingRestaurantDeepLinkRequestRef');
+        expect(homeClientEffectsSource).toContain('pendingCoordinateRequestRef');
+        expect(homeClientEffectsSource).toContain('let isCancelled = false');
+        expect(homeClientEffectsSource).toContain('const clearRegisteredRequestKeys = () =>');
+        expect(homeClientEffectsSource).toContain('clearRegisteredRequestKeys();');
+        expect(homeClientEffectsSource).toContain('window.clearTimeout(timer)');
+        expect(homeClientEffectsSource).not.toContain('type HomeState = ReturnType<typeof useHomeState>');
+        expect(homeClientEffectsSource).not.toContain('state.clearRestaurantDetailSelection()');
+        expect(headerSource).toContain('const { data: activeAnnouncements = [], isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements();');
+        expect(headerSource).toContain('announcement.showOnBanner');
+        expect(headerSource).not.toContain('useBannerAnnouncements');
+        expect(bannerAnnouncementsHookSource).toContain('const activeAnnouncementsQuery = useActiveAnnouncements();');
+        expect(bannerAnnouncementsHookSource).toContain('announcement.showOnBanner');
+        expect(bannerAnnouncementsHookSource).not.toContain("['show_on_banner', 'eq.true']");
         expect(restaurantSearchSource).toContain('enabled: isFocused || isInlineView');
         expect(homeControlPanelSource).toContain('const loadHomeDesktopControlPanel = async () =>');
         expect(homeControlPanelSource).toContain("import('@/components/home/home-desktop-control-panel')");
@@ -105,7 +136,13 @@ describe('web quality performance source contracts', () => {
         expect(mapQuerySource).toContain('includeVerifiedReviewCounts: false');
         expect(naverMapSource).toContain('autoLoad: false');
         expect(naverMapSource).toContain('useBannerAnnouncements } from "@/hooks/use-banner-announcements"');
+        expect(naverMapSource).toContain('setShouldRunNoncriticalMapEffects((previous) => previous ? previous : true)');
+        expect(naverMapSource).toContain('activateNoncriticalMapEffects();');
+        expect(naverMapSource).not.toContain('NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS');
+        expect(naverMapSource).not.toContain('setTimeout(activateNoncriticalMapEffects');
         expect(naverMapSource).toContain("import('@/lib/naver-map-presence-client')");
+        expect(naverMapSource).toContain('areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters');
+        expect(naverMapSource).toContain('areRegionalClustersEqual(previous, newRegionalClusters) ? previous : newRegionalClusters');
         expect(naverMapSource).not.toContain('import { supabase } from "@/integrations/supabase/client"');
         expect(source('hooks/use-restaurants.tsx')).toContain('fetchSupabaseRows');
         expect(source('hooks/use-restaurants.tsx')).not.toContain('import { supabase } from "@/integrations/supabase/client"');
@@ -413,7 +450,9 @@ describe('web quality performance source contracts', () => {
         expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');
         expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeAppGlobalsSource).toContain('@config "../tailwind.home.config.ts"');
         expect(homeTailwindConfigSource).toContain('./components/home/**/*');
@@ -425,7 +464,8 @@ describe('web quality performance source contracts', () => {
         expect(source('app/home-client-sidepanels.tsx')).toContain("import './home-deferred-globals.css'");
         expect(source('app/page.tsx')).toContain('<HomeRuntimeShell>');
         expect(authContextSource).toContain('HOME_AUTH_BOOTSTRAP_DELAY_MS = 30000');
-        expect(source('components/map/NaverMapView.tsx')).toContain('NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 30000');
+        expect(source('components/map/NaverMapView.tsx')).not.toContain('NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS');
+        expect(source('components/map/NaverMapView.tsx')).not.toContain('setTimeout(activateNoncriticalMapEffects');
         expect(authContextSource).toContain('shouldDelayAuthBootstrap');
         expect(authContextSource).toContain('hasPersistedSupabaseSessionHint');
         expect(authContextSource).toContain('hasSupabaseAuthSessionHint');

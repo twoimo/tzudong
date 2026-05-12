@@ -232,27 +232,29 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
     }, []);
 
     if (!hasMounted) {
-        return (
-            <div className="min-h-[var(--full-height,100vh)] bg-background">
-                <a href="#main-content" className="skip-link">
-                    본문 바로가기
-                </a>
-                <main id="main-content" className="h-full w-full">
-                    {children}
-                </main>
-            </div>
-        );
+        return <HomeRuntimePendingShell />;
     }
 
     if (isDesktop) {
         return (
-            <Suspense fallback={<div className="h-full w-full">{children}</div>}>
+            <Suspense fallback={<HomeRuntimePendingShell />}>
                 <OverlayLayout>{children}</OverlayLayout>
             </Suspense>
         );
     }
 
     return <MobileHomeLayout>{children}</MobileHomeLayout>;
+}
+
+function HomeRuntimePendingShell() {
+    return (
+        <div className="min-h-[var(--full-height,100vh)] bg-background">
+            <a href="#main-content" className="skip-link">
+                본문 바로가기
+            </a>
+            <main id="main-content" className="h-full w-full" aria-busy="true" />
+        </div>
+    );
 }
 
 export function HomeRuntimeShell({ children }: { children: ReactNode }) {

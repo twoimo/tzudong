@@ -51,7 +51,10 @@ describe('home root runtime boundary', () => {
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');
+        expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
         expect(homeRuntimeShellSource).toContain('HomeAuthSessionUpdatedDetail');
         expect(homeRuntimeShellSource).toContain('hasSupabaseAuthSessionHint');
         expect(homeRuntimeShellSource).toContain("typeof detail?.hasSession === 'boolean'");

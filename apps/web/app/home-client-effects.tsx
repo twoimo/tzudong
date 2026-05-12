@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { MutableRefObject } from 'react';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
 import { requestAuthUi } from '@/lib/auth-ui-events';
-import type { useHomeState } from './hooks/useHomeState';
 
-type HomeState = ReturnType<typeof useHomeState>;
+type HomeSupabaseActions = typeof import('./home-supabase-actions');
+type HomeRestaurantDeepLinkResult = Awaited<ReturnType<HomeSupabaseActions['resolveHomeRestaurantDeepLink']>>;
+
 type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
 
 type HomeClientEffectsProps = {
     activeRightPanel: PanelType;
+    clearRestaurantDetailSelection: () => void;
     isAdmin: boolean;
     isLoggedIn: boolean;
     isMobileOrTablet: boolean;
@@ -22,12 +24,12 @@ type HomeClientEffectsProps = {
     selectedAnnouncement: Announcement | null;
     setMapMode: (mode: 'domestic' | 'overseas') => void;
     setSelectedAnnouncement: (announcement: Announcement | null) => void;
-    state: HomeState;
     togglePanelCollapse: () => void;
 };
 
 export default function HomeClientEffects({
     activeRightPanel,
+    clearRestaurantDetailSelection,
     isAdmin,
     isLoggedIn,
     isMobileOrTablet,
@@ -37,11 +39,16 @@ export default function HomeClientEffects({
     selectedAnnouncement,
     setMapMode,
     setSelectedAnnouncement,
-    state,
     togglePanelCollapse,
 }: HomeClientEffectsProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const lastAnnouncementRequestKeyRef = useRef<string | null>(null);
+    const lastRestaurantDeepLinkRequestKeyRef = useRef<string | null>(null);
+    const lastCoordinateRequestKeyRef = useRef<string | null>(null);
+    const pendingAnnouncementRequestRef = useRef<{ key: string; promise: Promise<Announcement | null> } | null>(null);
+    const pendingRestaurantDeepLinkRequestRef = useRef<{ key: string; promise: Promise<HomeRestaurantDeepLinkResult | null> } | null>(null);
+    const pendingCoordinateRequestRef = useRef<{ key: string; promise: Promise<Restaurant | null> } | null>(null);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -55,39 +62,94 @@ export default function HomeClientEffects({
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
         const restaurantId = searchParams.get('r') || searchParams.get('restaurant');
+        const timers: number[] = [];
+        let isCancelled = false;
+        let registeredAnnouncementKey: string | null = null;
+        let registeredRestaurantDeepLinkKey: string | null = null;
+        let registeredCoordinateKey: string | null = null;
+
+        const schedule = (callback: () => void, delay: number) => {
+            const timer = window.setTimeout(() => {
+                if (!isCancelled) {
+                    callback();
+                }
+            }, delay);
+            timers.push(timer);
+        };
 
         if (panelParam === 'announcement') {
-            if (announcementId) {
-                (async () => {
-                    try {
-                        const { fetchHomeAnnouncementById } = await import('./home-supabase-actions');
-                        const announcement = await fetchHomeAnnouncementById(announcementId);
-                        if (!announcement) return;
+            const announcementKey = announcementId ? `detail:${announcementId}` : 'list';
+            registeredAnnouncementKey = announcementKey;
 
-                        setTimeout(() => {
+            if (lastAnnouncementRequestKeyRef.current !== announcementKey) {
+                lastAnnouncementRequestKeyRef.current = announcementKey;
+
+                if (announcementId) {
+                    let request = pendingAnnouncementRequestRef.current;
+                    if (request?.key !== announcementKey) {
+                        const promise = import('./home-supabase-actions')
+                            .then(({ fetchHomeAnnouncementById }) => fetchHomeAnnouncementById(announcementId))
+                            .catch(() => null);
+                        request = { key: announcementKey, promise };
+                        pendingAnnouncementRequestRef.current = request;
+                        void promise.finally(() => {
+                            if (pendingAnnouncementRequestRef.current === request) {
+                                pendingAnnouncementRequestRef.current = null;
+                            }
+                        });
+                    }
+
+                    void request.promise.then((announcement) => {
+                        if (isCancelled || lastAnnouncementRequestKeyRef.current !== announcementKey || !announcement) return;
+
+                        schedule(() => {
                             setSelectedAnnouncement(announcement);
                             openPanelRef.current('announcement');
                             router.replace('/', { scroll: false });
                         }, 500);
-                    } catch {
-                        // ignore
-                    }
-                })();
-            } else {
-                setTimeout(() => {
-                    setSelectedAnnouncement(null);
-                    openPanelRef.current('announcement');
-                    router.replace('/', { scroll: false });
-                }, 350);
+                    });
+                } else {
+                    schedule(() => {
+                        setSelectedAnnouncement(null);
+                        openPanelRef.current('announcement');
+                        router.replace('/', { scroll: false });
+                    }, 350);
+                }
             }
+        } else {
+            lastAnnouncementRequestKeyRef.current = null;
         }
 
         if (restaurantId) {
-            (async () => {
-                try {
-                    const { resolveHomeRestaurantDeepLink } = await import('./home-supabase-actions');
-                    const result = await resolveHomeRestaurantDeepLink(restaurantId);
-                    if (!result) return;
+            const restaurantKey = [
+                restaurantId,
+                searchParams.get('z') ?? '',
+                searchParams.get('mode') ?? '',
+            ].join('|');
+            registeredRestaurantDeepLinkKey = restaurantKey;
+
+            if (lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey) {
+                lastRestaurantDeepLinkRequestKeyRef.current = restaurantKey;
+
+                let request = pendingRestaurantDeepLinkRequestRef.current;
+                if (request?.key !== restaurantKey) {
+                    const promise = import('./home-supabase-actions')
+                        .then(({ resolveHomeRestaurantDeepLink }) => resolveHomeRestaurantDeepLink(restaurantId))
+                        .catch((error) => {
+                            console.error('맛집 조회 실패:', error);
+                            return null;
+                        });
+                    request = { key: restaurantKey, promise };
+                    pendingRestaurantDeepLinkRequestRef.current = request;
+                    void promise.finally(() => {
+                        if (pendingRestaurantDeepLinkRequestRef.current === request) {
+                            pendingRestaurantDeepLinkRequestRef.current = null;
+                        }
+                    });
+                }
+
+                void request.promise.then((result) => {
+                    if (isCancelled || lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey || !result) return;
 
                     const zoomParam = searchParams.get('z');
                     const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
@@ -99,16 +161,16 @@ export default function HomeClientEffects({
                         setMapMode(targetMode);
                     }
 
-                    setTimeout(() => {
+                    schedule(() => {
                         openDetailPanelRef.current(
                             result.restaurant,
                             !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined
                         );
                     }, 300);
-                } catch (error) {
-                    console.error('맛집 조회 실패:', error);
-                }
-            })();
+                });
+            }
+        } else {
+            lastRestaurantDeepLinkRequestKeyRef.current = null;
         }
 
         const urlLat = searchParams.get('lat');
@@ -119,24 +181,65 @@ export default function HomeClientEffects({
         if (urlLat && urlLng && urlZoom && !restaurantId && !sharedReviewId) {
             const lat = parseFloat(urlLat);
             const lng = parseFloat(urlLng);
+            const coordinateKey = `${urlLat}|${urlLng}|${urlZoom}`;
 
-            if (!isNaN(lat) && !isNaN(lng)) {
-                (async () => {
-                    try {
-                        const { resolveHomeRestaurantByCoordinates } = await import('./home-supabase-actions');
-                        const restaurant = await resolveHomeRestaurantByCoordinates(lat, lng);
+            if (!isNaN(lat) && !isNaN(lng) && lastCoordinateRequestKeyRef.current !== coordinateKey) {
+                registeredCoordinateKey = coordinateKey;
+                lastCoordinateRequestKeyRef.current = coordinateKey;
 
-                        if (restaurant) {
-                            setTimeout(() => {
-                                openDetailPanelRef.current(restaurant);
-                            }, 500);
+                let request = pendingCoordinateRequestRef.current;
+                if (request?.key !== coordinateKey) {
+                    const promise = import('./home-supabase-actions')
+                        .then(({ resolveHomeRestaurantByCoordinates }) => resolveHomeRestaurantByCoordinates(lat, lng))
+                        .catch((error) => {
+                            console.error('맛집 조회 실패:', error);
+                            return null;
+                        });
+                    request = { key: coordinateKey, promise };
+                    pendingCoordinateRequestRef.current = request;
+                    void promise.finally(() => {
+                        if (pendingCoordinateRequestRef.current === request) {
+                            pendingCoordinateRequestRef.current = null;
                         }
-                    } catch (error) {
-                        console.error('맛집 조회 실패:', error);
-                    }
-                })();
+                    });
+                }
+
+                void request.promise.then((restaurant) => {
+                    if (isCancelled || lastCoordinateRequestKeyRef.current !== coordinateKey || !restaurant) return;
+
+                    schedule(() => {
+                        openDetailPanelRef.current(restaurant);
+                    }, 500);
+                });
+            } else if (isNaN(lat) || isNaN(lng)) {
+                lastCoordinateRequestKeyRef.current = null;
+            } else {
+                registeredCoordinateKey = coordinateKey;
             }
+        } else {
+            lastCoordinateRequestKeyRef.current = null;
         }
+
+        const clearRegisteredRequestKeys = () => {
+            if (
+                registeredAnnouncementKey &&
+                lastAnnouncementRequestKeyRef.current === registeredAnnouncementKey
+            ) {
+                lastAnnouncementRequestKeyRef.current = null;
+            }
+            if (
+                registeredRestaurantDeepLinkKey &&
+                lastRestaurantDeepLinkRequestKeyRef.current === registeredRestaurantDeepLinkKey
+            ) {
+                lastRestaurantDeepLinkRequestKeyRef.current = null;
+            }
+            if (
+                registeredCoordinateKey &&
+                lastCoordinateRequestKeyRef.current === registeredCoordinateKey
+            ) {
+                lastCoordinateRequestKeyRef.current = null;
+            }
+        };
 
         const reviewId = searchParams.get('review');
         if (reviewId) {
@@ -148,18 +251,24 @@ export default function HomeClientEffects({
                 router.replace(`/feed?review=${reviewId}`);
             }
         }
+
+        return () => {
+            isCancelled = true;
+            clearRegisteredRequestKeys();
+            timers.forEach((timer) => window.clearTimeout(timer));
+        };
     }, [openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
 
     useEffect(() => {
         const handleChangeMapMode = (event: Event) => {
             const nextMode = (event as CustomEvent<'domestic' | 'overseas'>).detail;
-            state.clearRestaurantDetailSelection();
+            clearRestaurantDetailSelection();
             setMapMode(nextMode);
         };
 
         window.addEventListener('changeMapMode', handleChangeMapMode);
         return () => window.removeEventListener('changeMapMode', handleChangeMapMode);
-    }, [setMapMode, state]);
+    }, [clearRestaurantDetailSelection, setMapMode]);
 
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('syncMapMode', { detail: mapMode }));
