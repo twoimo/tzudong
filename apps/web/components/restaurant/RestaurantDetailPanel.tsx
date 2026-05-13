@@ -42,6 +42,8 @@ import {
     getRestaurantReviewLookupName,
     selectRelatedRestaurantReviewIds,
 } from "@/lib/restaurant-review-lookup";
+import { collectRestaurantMergedMedia } from "@/lib/restaurant-merged-media";
+import { buildRestaurantDetailMediaCopy } from "@/lib/restaurant-detail-media-copy";
 
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
@@ -152,6 +154,18 @@ export function RestaurantDetailPanel({
         : restaurant?.categories
             ? [restaurant.categories as unknown as string]
             : [];
+    const mergedMedia = useMemo(() => collectRestaurantMergedMedia(restaurant), [restaurant]);
+    const youtubeLinks = mergedMedia.youtubeLinks;
+    const tzuyangReviews = mergedMedia.tzuyangReviews;
+    const youtubeMetas = mergedMedia.youtubeMetas;
+    const youtubeCopy = useMemo(
+        () => buildRestaurantDetailMediaCopy('youtube', youtubeLinks.length, isYoutubeExpanded),
+        [isYoutubeExpanded, youtubeLinks.length],
+    );
+    const reviewCopy = useMemo(
+        () => buildRestaurantDetailMediaCopy('review', tzuyangReviews.length, isReviewExpanded),
+        [isReviewExpanded, tzuyangReviews.length],
+    );
 
     // [최적 레코드 선택] 가장 긴 이름 -> 가장 긴 지번 주소 순으로 우선순위
     const uniqueData = useMemo(() => {
@@ -818,9 +832,7 @@ export function RestaurantDetailPanel({
                                         {/* 광고 태그 - 모든 병합된 영상에서 수집 */}
                                         {(() => {
                                             const allAds: string[] = [];
-                                            const metas: unknown[] = restaurant.mergedYoutubeMetas?.length
-                                                ? restaurant.mergedYoutubeMetas
-                                                : (restaurant.youtube_meta ? [restaurant.youtube_meta] : []);
+                                            const metas: unknown[] = youtubeMetas;
 
                                             metas.forEach((meta) => {
                                                 if (!meta || typeof meta !== 'object') return;
@@ -1012,104 +1024,97 @@ export function RestaurantDetailPanel({
                                 </div>
 
                                 {/* 유튜브 링크 */}
-                                <Separator />
-                                {(restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) || restaurant.youtube_link ? (
+                                {youtubeLinks.length > 0 ? (
+                                    <>
+                                    <Separator />
                                     <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="font-semibold text-sm flex items-center gap-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="min-w-0 flex-1 font-semibold text-sm flex flex-wrap items-center gap-2">
                                                 <Youtube className="h-4 w-4 text-red-500" />
-                                                쯔양 유튜브 영상 ({restaurant.mergedYoutubeLinks?.length || 1})
+                                                {youtubeCopy.title}
+                                                {youtubeLinks.length > 1 && (
+                                                    <Badge variant="outline" className="ml-1 text-xs">
+                                                        {youtubeCopy.countLabel}
+                                                    </Badge>
+                                                )}
                                             </h3>
-                                            {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 1 && (
+                                            {youtubeLinks.length > 1 && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => setIsYoutubeExpanded(!isYoutubeExpanded)}
-                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                                    aria-expanded={isYoutubeExpanded}
+                                                    aria-label={youtubeCopy.toggleAriaLabel}
+                                                    className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
                                                 >
                                                     {isYoutubeExpanded ? (
-                                                        <ChevronUp className="h-4 w-4" />
+                                                        <>
+                                                            {youtubeCopy.expandedToggleLabel} <ChevronUp className="ml-1 h-3.5 w-3.5" />
+                                                        </>
                                                     ) : (
-                                                        <ChevronDown className="h-4 w-4" />
+                                                        <>
+                                                            {youtubeCopy.collapsedToggleLabel} <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                                                        </>
                                                     )}
                                                 </Button>
                                             )}
                                         </div>
 
-                                        {/* 첫 번째 항목은 항상 보임 */}
                                         <div className="space-y-2">
-                                            {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0 ? (
-                                                <button
-                                                    type="button"
-                                                    className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                    onClick={() => {
-                                                        if (restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) {
-                                                            openExternalUrl(restaurant.mergedYoutubeLinks[0]);
-                                                        }
-                                                    }}
-                                                    aria-label="유튜브 영상 1 열기"
-                                                >
-                                                    {getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0]) && (
-                                                        <Image
-                                                            src={getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0])!}
-                                                            alt={`YouTube Thumbnail 1`}
-                                                            fill
-                                                            className="object-cover"
-                                                            sizes="(max-width: 400px) 100vw, 400px"
-                                                            priority
-                                                        />
-                                                    )}
-                                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                        <Youtube className="h-12 w-12 text-white" />
-                                                    </div>
-                                                </button>
-                                            ) : restaurant.youtube_link ? (
-                                                <button
-                                                    type="button"
-                                                    className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                    onClick={() => {
-                                                        if (restaurant.youtube_link) {
-                                                            openExternalUrl(restaurant.youtube_link);
-                                                        }
-                                                    }}
-                                                    aria-label="유튜브 영상 열기"
-                                                >
-                                                    {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
-                                                        <Image
-                                                            src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
-                                                            fill
-                                                            alt="YouTube Thumbnail"
-                                                            className="object-cover"
-                                                            sizes="(max-width: 400px) 100vw, 400px"
-                                                            priority
-                                                        />
-                                                    )}
-                                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                        <Youtube className="h-12 w-12 text-white" />
-                                                    </div>
-                                                </button>
-                                            ) : null}
+                                            <button
+                                                type="button"
+                                                className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                onClick={() => openExternalUrl(youtubeLinks[0])}
+                                                aria-label={youtubeCopy.openAriaLabel(1)}
+                                            >
+                                                {getYouTubeThumbnailUrl(youtubeLinks[0]) && (
+                                                    <Image
+                                                        src={getYouTubeThumbnailUrl(youtubeLinks[0])!}
+                                                        alt=""
+                                                        fill
+                                                        className="object-cover"
+                                                        sizes="(max-width: 400px) 100vw, 400px"
+                                                        priority
+                                                    />
+                                                )}
+                                                {youtubeLinks.length > 1 && (
+                                                    <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
+                                                        {youtubeCopy.itemBadge(1)}
+                                                    </span>
+                                                )}
+                                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                                    <Youtube className="h-12 w-12 text-white" />
+                                                </div>
+                                            </button>
 
-                                            {/* 추가 항목들은 조건부로 표시 */}
-                                            {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 1 && isYoutubeExpanded && (
+                                            {youtubeLinks.length > 1 && !isYoutubeExpanded && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {youtubeCopy.collapsedHint}
+                                                </p>
+                                            )}
+
+                                            {youtubeLinks.length > 1 && isYoutubeExpanded && (
                                                 <div className="space-y-2">
-                                                    {restaurant.mergedYoutubeLinks.slice(1).map((link, index) => (
+                                                    {youtubeLinks.slice(1).map((link, index) => (
                                                         <button
                                                             type="button"
-                                                            key={index + 1}
+                                                            key={link}
                                                             className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                             onClick={() => openExternalUrl(link)}
-                                                            aria-label={`유튜브 영상 ${index + 2} 열기`}
+                                                            aria-label={youtubeCopy.openAriaLabel(index + 2)}
                                                         >
                                                             {getYouTubeThumbnailUrl(link) && (
                                                                 <Image
                                                                     src={getYouTubeThumbnailUrl(link)!}
-                                                                    alt={`YouTube Thumbnail ${index + 2}`}
+                                                                    alt=""
                                                                     fill
                                                                     className="object-cover"
                                                                     sizes="(max-width: 400px) 100vw, 400px"
                                                                 />
                                                             )}
+                                                            <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
+                                                                {youtubeCopy.itemBadge(index + 2)}
+                                                            </span>
                                                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
                                                                 <Youtube className="h-12 w-12 text-white" />
                                                             </div>
@@ -1119,54 +1124,71 @@ export function RestaurantDetailPanel({
                                             )}
                                         </div>
                                     </div>
+                                    </>
                                 ) : null}
 
                                 {/* 쯔양 리뷰 섹션 */}
-                                <Separator />
-                                {(restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 0) || restaurant.tzuyang_review ? (
+                                {tzuyangReviews.length > 0 ? (
+                                    <>
+                                    <Separator />
                                     <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="font-semibold text-sm flex items-center gap-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="min-w-0 flex-1 font-semibold text-sm flex flex-wrap items-center gap-2">
                                                 <Quote className="h-4 w-4 text-muted-foreground" />
-                                                쯔양의 리뷰 ({restaurant.mergedTzuyangReviews?.length || 1})
+                                                {reviewCopy.title}
+                                                {tzuyangReviews.length > 1 && (
+                                                    <Badge variant="outline" className="ml-1 text-xs">
+                                                        {reviewCopy.countLabel}
+                                                    </Badge>
+                                                )}
                                             </h3>
-                                            {restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 1 && (
+                                            {tzuyangReviews.length > 1 && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => setIsReviewExpanded(!isReviewExpanded)}
-                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                                    aria-expanded={isReviewExpanded}
+                                                    aria-label={reviewCopy.toggleAriaLabel}
+                                                    className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:text-foreground"
                                                 >
                                                     {isReviewExpanded ? (
-                                                        <ChevronUp className="h-4 w-4" />
+                                                        <>
+                                                            {reviewCopy.expandedToggleLabel} <ChevronUp className="ml-1 h-3.5 w-3.5" />
+                                                        </>
                                                     ) : (
-                                                        <ChevronDown className="h-4 w-4" />
+                                                        <>
+                                                            {reviewCopy.collapsedToggleLabel} <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                                                        </>
                                                     )}
                                                 </Button>
                                             )}
                                         </div>
 
-                                        {/* 첫 번째 리뷰는 항상 보임 */}
                                         <div className="space-y-2">
-                                            {restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 0 ? (
-                                                <div className="p-4 bg-muted/50 rounded-lg">
-                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                        {restaurant.mergedTzuyangReviews[0]}
-                                                    </p>
-                                                </div>
-                                            ) : restaurant.tzuyang_review ? (
-                                                <div className="p-4 bg-muted/50 rounded-lg">
-                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                        {restaurant.tzuyang_review}
-                                                    </p>
-                                                </div>
-                                            ) : null}
+                                            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                                                {tzuyangReviews.length > 1 && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {reviewCopy.itemBadge(1)}
+                                                    </Badge>
+                                                )}
+                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                    {tzuyangReviews[0]}
+                                                </p>
+                                            </div>
 
-                                            {/* 추가 리뷰들은 조건부로 표시 */}
-                                            {restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 1 && isReviewExpanded && (
+                                            {tzuyangReviews.length > 1 && !isReviewExpanded && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {reviewCopy.collapsedHint}
+                                                </p>
+                                            )}
+
+                                            {tzuyangReviews.length > 1 && isReviewExpanded && (
                                                 <div className="space-y-2">
-                                                    {restaurant.mergedTzuyangReviews.slice(1).map((review, index) => (
-                                                        <div key={index + 1} className="p-4 bg-muted/50 rounded-lg">
+                                                    {tzuyangReviews.slice(1).map((review, index) => (
+                                                        <div key={`${index}-${review}`} className="p-4 bg-muted/50 rounded-lg space-y-2">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {reviewCopy.itemBadge(index + 2)}
+                                                            </Badge>
                                                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                                                                 {review}
                                                             </p>
@@ -1176,6 +1198,7 @@ export function RestaurantDetailPanel({
                                             )}
                                         </div>
                                     </div>
+                                    </>
                                 ) : null}
 
                                 {/* 최근 리뷰 미리보기 */}

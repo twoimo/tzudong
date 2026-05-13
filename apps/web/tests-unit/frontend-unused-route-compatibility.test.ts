@@ -27,30 +27,67 @@ describe('frontend unused route compatibility', () => {
         const adminSubmissionsSource = source('app/admin/submissions/page.tsx');
         const adminEvaluationsSource = source('app/admin/evaluations/page.tsx');
         const headerSource = source('components/layout/Header.tsx');
+        const mobileControlOverlaySource = source('components/home/MobileControlOverlay.tsx');
         const homeEffectsSource = source('app/home-client-effects.tsx');
 
         expect(adminSubmissionsSource).toContain("redirect('/admin/evaluations?view=submissions')");
         expect(adminSubmissionsSource).not.toContain('"use client"');
         expect(adminSubmissionsSource).not.toContain('useInfiniteQuery');
-        expect(adminEvaluationsSource).toContain("searchParams.get('view') === 'submissions'");
+        expect(adminEvaluationsSource).toContain("const routeView = embedded ? null : searchParams.get('view');");
+        expect(adminEvaluationsSource).toContain("routeView === 'submissions'");
         expect(adminEvaluationsSource).toContain("@/components/admin/EvaluationTableNew");
-        expect(headerSource).toContain("/admin/evaluations?view=submissions");
-        expect(headerSource).toContain("/admin/evaluations?view=submissions&tab=reviews");
+        expect(headerSource).toContain("관리자 콘솔");
+        expect(headerSource).toContain("router.push('/admin')");
+        expect(headerSource).not.toContain("/admin/evaluations?view=submissions");
+        expect(headerSource).not.toContain("/admin/evaluations?view=submissions&tab=reviews");
+        expect(mobileControlOverlaySource).toContain("관리자 콘솔");
+        expect(mobileControlOverlaySource).toContain("router.push('/admin')");
+        expect(mobileControlOverlaySource).not.toContain('맛집관리');
+        expect(mobileControlOverlaySource).not.toContain('제보관리');
+        expect(mobileControlOverlaySource).not.toContain('리뷰관리');
+        expect(mobileControlOverlaySource).not.toContain('배너관리');
+        expect(mobileControlOverlaySource).not.toContain("router.push('/admin/banners')");
+        expect(mobileControlOverlaySource).not.toContain("openAdminSubmissions");
+        expect(mobileControlOverlaySource).not.toContain("openAdminReviews");
         expect(homeEffectsSource).toContain("/admin/evaluations?view=submissions");
+        expect(homeEffectsSource).toContain("router.push('/mypage/profile')");
+        expect(homeEffectsSource).not.toContain("router.push('/mypage')");
     });
 
     test('prefetches canonical admin routes instead of retired submissions route', () => {
         const adminRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: true });
         const userRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: false });
 
+        expect(adminRoutes).toContain('/admin');
         expect(adminRoutes).toContain('/admin/evaluations');
+        expect(adminRoutes).toContain('/admin/banners');
         expect(adminRoutes).not.toContain(RETIRED_ADMIN_COSTS_ROUTE);
         const retiredAiSettingsRoute = `/admin/${'ai-settings'}`;
         expect(adminRoutes).not.toContain(retiredAiSettingsRoute);
         expect(adminRoutes).not.toContain('/admin/submissions');
+        expect(userRoutes).not.toContain('/admin');
         expect(userRoutes).not.toContain('/admin/evaluations');
+        expect(userRoutes).not.toContain('/admin/banners');
         expect(userRoutes).not.toContain('/admin/submissions');
         expect(userRoutes).not.toContain(retiredAiSettingsRoute);
+    });
+
+    test('keeps the unified admin console as the canonical embedded module hub', () => {
+        const adminPageSource = source('app/admin/page.tsx');
+        const adminConsoleSource = source('components/admin/AdminConsoleOverview.tsx');
+
+        expect(adminPageSource).toContain('<AdminConsoleOverview />');
+        expect(adminConsoleSource).toContain('getAdminModuleIdFromLocation(window.location)');
+        expect(adminConsoleSource).toContain('url.searchParams.set("module", moduleId)');
+        expect(adminConsoleSource).toContain('url.searchParams.delete("module")');
+        expect(adminConsoleSource).toContain('<AdminEvaluationModule key="restaurants" embedded initialView="evaluations" />');
+        expect(adminConsoleSource).toContain('<AdminEvaluationModule key="submissions" embedded initialView="submissions" initialSubmissionTab="new" />');
+        expect(adminConsoleSource).toContain('<AdminEvaluationModule key="reviews" embedded initialView="submissions" initialSubmissionTab="reviews" />');
+        expect(adminConsoleSource).toContain('<AdminBannerModule key="admin-banners" embedded />');
+        expect(adminConsoleSource).toContain('<InsightsModule key="admin-insights" />');
+        expect(adminConsoleSource).toContain('router.push("/")');
+        expect(adminConsoleSource).not.toContain('router.push("/admin/evaluations")');
+        expect(adminConsoleSource).not.toContain('router.push("/admin/banners")');
     });
 
     test('removes admin insight fallback while preserving public insights and global map', () => {
