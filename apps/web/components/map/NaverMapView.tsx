@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 
 import { useNaverMaps } from "@/hooks/use-naver-maps";
-import { useRestaurant, useRestaurants } from "@/hooks/use-restaurants";
+import { useRestaurantWithMergeContext, useRestaurants } from "@/hooks/use-restaurants";
 import type { FilterState } from "@/components/filters/filter-state";
 import type { Restaurant, Region } from "@/types/restaurant";
 import { REGION_MAP_CONFIG } from "@/config/maps";
@@ -1310,8 +1310,8 @@ const NaverMapView = memo(({
     }), [filters, isLoaded, restaurantQueryBounds, selectedRegion]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantQueryOptions);
-    const { data: selectedRestaurantDetail } = useRestaurant(selectedRestaurant?.id ?? null);
-    const detailRestaurant = selectedRestaurantDetail ?? selectedRestaurant;
+    const { data: hydratedDetailRestaurant } = useRestaurantWithMergeContext(selectedRestaurant);
+    const detailRestaurant = hydratedDetailRestaurant ?? selectedRestaurant ?? null;
 
     const handleReviewSuccess = useMemo(
         () => buildNaverMapReviewSuccessHandler({ refetch, showMapToast }),

@@ -489,7 +489,16 @@ describe('web quality performance source contracts', () => {
         expect(source('app/home-supabase-actions.ts')).not.toContain('@/integrations/supabase/client');
         expect(source('components/map/NaverMapView.tsx')).not.toContain('@/integrations/supabase/client');
         expect(source('components/map/NaverMapView.tsx')).toContain("import('@/lib/naver-map-presence-client')");
-        expect(source('components/layout/Header.tsx')).toContain('fetchSupabaseExactCount');
+        expect(source('components/admin/AdminConsoleOverview.tsx')).toContain('fetchSupabaseExactCount');
+        expect(source('components/layout/Header.tsx')).not.toContain('fetchSupabaseExactCount');
+        expect(source('components/home/MobileControlOverlay.tsx')).not.toContain('fetchSupabaseExactCount');
+        const bottomSheetSource = source('components/ui/bottom-sheet.tsx');
+        expect(bottomSheetSource).toContain('dragHeightRafRef');
+        expect(bottomSheetSource).toContain('pendingDragHeightRef');
+        expect(bottomSheetSource).toContain('scheduleDragHeightRender(nextHeightSafe);');
+        expect(bottomSheetSource).toContain('cancelPendingDragHeightRender();');
+        expect(bottomSheetSource).toContain('one pending RAF');
+        expect(source('components/home/MobileControlOverlay.tsx')).not.toContain('dragTransformRafRef');
         expect(source('components/layout/Header.tsx')).not.toContain('import { supabase }');
         expect(source('components/layout/Header.tsx')).not.toContain('useBookmarks');
         expect(source('components/layout/HeaderBookmarkMenuButton.tsx')).toContain('useBookmarks');

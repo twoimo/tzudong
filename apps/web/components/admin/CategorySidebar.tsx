@@ -25,6 +25,7 @@ export function CategorySidebar({
     { label: 'Missing', count: stats.missing },
     { label: '평가 미대상', count: stats.not_selected },
     { label: '지오코딩 실패', count: stats.geocoding_failed },
+    { label: '지도후보 부족', count: stats.address_review_geocode_recovered },
   ];
   const statCategoriesDesktop = [...statCategoriesGroup1, ...statCategoriesGroup2];
 

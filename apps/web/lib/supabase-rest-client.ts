@@ -56,11 +56,16 @@ export async function fetchSupabaseExactCount(table: string, query: SupabaseRest
     });
 
     if (!response.ok) {
-        return 0;
+        const body = await response.text().catch(() => '');
+        throw new Error(`Supabase REST ${table} count failed: ${response.status} ${body}`.trim());
     }
 
     const range = response.headers.get('content-range');
     const total = range?.split('/').at(1);
-    const count = total ? Number(total) : 0;
-    return Number.isFinite(count) ? count : 0;
+    const count = total ? Number(total) : NaN;
+    if (!Number.isFinite(count)) {
+        throw new Error(`Supabase REST ${table} count missing content-range.`);
+    }
+
+    return count;
 }
