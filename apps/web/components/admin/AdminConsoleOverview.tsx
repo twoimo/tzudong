@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart2,
@@ -12,6 +13,7 @@ import {
   Image as ImageIcon,
   ListChecks,
   MapPin,
+  Megaphone,
   MessageSquareText,
   PanelLeftClose,
   PanelLeftOpen,
@@ -28,17 +30,21 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
+import { useAnnouncementsAdmin } from "@/hooks/use-announcements";
 import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
+import { AUTH_UI_REQUEST_EVENT } from "@/lib/auth-ui-events";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
 
-type AdminModuleId = "overview" | "restaurants" | "submissions" | "reviews" | "banners" | "insights" | "audit" | "llm";
+type AdminModuleId = "overview" | "restaurants" | "submissions" | "reviews" | "banners" | "announcements" | "insights" | "audit" | "llm";
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "llm">;
 
 type ConsoleModule = {
   id: ConsoleModuleId;
   title: string;
   description: string;
+  beginnerTip: string;
+  safetyTip: string;
   href: string;
   icon: typeof Store;
   badge: string;
@@ -62,7 +68,9 @@ const consoleModules: ConsoleModule[] = [
   {
     id: "restaurants",
     title: "맛집 관리",
-    description: "승인된 맛집, 삭제/복구, 지오코딩 실패 후보를 한 흐름에서 점검합니다.",
+    description: "승인된 맛집, 삭제/복구, 지도 좌표 오류 후보를 한 흐름에서 점검합니다.",
+    beginnerTip: "처음이라면 좌표가 없는 맛집과 삭제 후보를 먼저 확인하세요.",
+    safetyTip: "삭제·복구 전에는 상세 내용을 미리 보고 적용 뒤 상태를 다시 확인합니다.",
     href: "/admin/evaluations",
     icon: Store,
     badge: "데이터 검수",
@@ -74,6 +82,8 @@ const consoleModules: ConsoleModule[] = [
     id: "submissions",
     title: "제보 관리",
     description: "사용자 신규/수정 제보를 검토하고 안전 적용 절차로 반영합니다.",
+    beginnerTip: "미처리 건수가 있으면 이 화면에서 가장 먼저 검토를 시작하세요.",
+    safetyTip: "승인 전에는 제보 내용, 기존 맛집 중복, 적용 후 결과를 차례로 확인합니다.",
     href: "/admin/evaluations?view=submissions",
     icon: ClipboardList,
     badge: "승인 대기",
@@ -85,6 +95,8 @@ const consoleModules: ConsoleModule[] = [
     id: "reviews",
     title: "리뷰 관리",
     description: "미승인 리뷰, OCR 증빙, 중복/삭제 후보를 운영 기준에 맞춰 처리합니다.",
+    beginnerTip: "증빙 사진과 리뷰 내용을 함께 보고 승인 여부를 판단하세요.",
+    safetyTip: "반려·삭제는 사용자에게 영향을 주므로 사유와 상태 재확인을 남깁니다.",
     href: "/admin/evaluations?view=submissions&tab=reviews",
     icon: MessageSquareText,
     badge: "검수 큐",
@@ -96,6 +108,8 @@ const consoleModules: ConsoleModule[] = [
     id: "banners",
     title: "배너 관리",
     description: "사이드바/모바일 팝업 배너의 노출 위치, 우선순위, 미디어 상태를 관리합니다.",
+    beginnerTip: "활성 배너와 비활성 배너를 구분하고 공개 위치를 먼저 확인하세요.",
+    safetyTip: "공개 전에는 이미지·영상, 링크, 우선순위를 한 번 더 확인합니다.",
     href: "/admin/banners",
     icon: ImageIcon,
     badge: "공개 노출",
@@ -103,9 +117,23 @@ const consoleModules: ConsoleModule[] = [
     tone: "muted",
   },
   {
+    id: "announcements",
+    title: "공지사항",
+    description: "관리자 운영 콘솔과 홈 배너에 노출되는 공지를 작성·수정·노출 관리합니다.",
+    beginnerTip: "일반 공지인지, 홈 배너에도 보일 공지인지 먼저 고르세요.",
+    safetyTip: "게시 전에는 제목·기간·배너 노출 여부를 미리 확인합니다.",
+    href: "/admin?module=announcements",
+    icon: Megaphone,
+    badge: "사용자 고지",
+    actionLabel: "공지사항 운영",
+    tone: "warning",
+  },
+  {
     id: "insights",
     title: "인사이트",
     description: "조회수/좋아요/댓글/영상 길이 기반 트리맵과 변화 추이를 확인합니다.",
+    beginnerTip: "운영 판단 전에 어떤 맛집과 콘텐츠가 많이 반응을 받는지 확인하세요.",
+    safetyTip: "이 화면은 읽기 전용입니다. 수치를 보고 검수 우선순위를 정하는 데만 사용합니다.",
     href: "/insights",
     icon: BarChart2,
     badge: "분석",
@@ -116,6 +144,8 @@ const consoleModules: ConsoleModule[] = [
     id: "audit",
     title: "감사 로그",
     description: "승인·반려·삭제·복구 이력을 상태 재확인과 함께 추적하는 영역입니다.",
+    beginnerTip: "중요한 변경을 한 뒤에는 어떤 결정이 있었는지 이 기준으로 점검하세요.",
+    safetyTip: "실제 저장 설계가 확정되기 전까지는 안전 적용 기준을 확인하는 안내 화면입니다.",
     href: "/admin/evaluations",
     icon: ScrollText,
     badge: "준비 중",
@@ -124,9 +154,38 @@ const consoleModules: ConsoleModule[] = [
   },
 ];
 
-const statusChips = ["읽기 전용 요약", "안전 적용 원칙", "감사 기록 준비", "기존 라우트 보존"];
+const statusChips = ["초보자 안내 강화", "읽기 전용 요약", "안전 적용 원칙", "공지 운영 통합", "기존 라우트 보존"];
 
 const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
+const beginnerGuideSteps = [
+  {
+    title: "1. 대기 건수부터 보기",
+    description: "미처리 제보와 미승인 리뷰가 있으면 먼저 검수 화면을 여세요.",
+    target: "submissions",
+    actionLabel: "제보 검토 시작",
+    icon: ClipboardList,
+  },
+  {
+    title: "2. 사용자에게 보이는 내용 확인",
+    description: "배너와 공지사항은 공개 전에 제목, 이미지, 노출 위치를 확인하세요.",
+    target: "announcements",
+    actionLabel: "공지 확인하기",
+    icon: Megaphone,
+  },
+  {
+    title: "3. 적용 뒤 다시 확인",
+    description: "변경을 마친 뒤에는 실제 상태와 감사 기록 기준을 한 번 더 봅니다.",
+    target: "audit",
+    actionLabel: "안전 기준 보기",
+    icon: ScrollText,
+  },
+] satisfies Array<{
+  title: string;
+  description: string;
+  target: AdminModuleId;
+  actionLabel: string;
+  icon: typeof Store;
+}>;
 const SIDEBAR_LABEL_REVEAL_DELAY_MS = 180;
 
 const sidebarSections: SidebarSection[] = [
@@ -150,7 +209,7 @@ const sidebarSections: SidebarSection[] = [
   {
     label: "운영",
     items: consoleModules
-      .filter((module) => ["banners", "insights", "audit"].includes(module.id))
+      .filter((module) => ["banners", "announcements", "insights", "audit"].includes(module.id))
       .map(({ id, title, description, icon, badge }) => ({ id, title, description, icon, badge })),
   },
   {
@@ -173,8 +232,8 @@ function isAdminModuleId(value: string | null): value is AdminModuleId {
   return Boolean(value && adminModuleIds.includes(value as AdminModuleId));
 }
 
-function getAdminModuleIdFromLocation(location: Location): AdminModuleId {
-  const moduleId = new URL(location.href).searchParams.get("module");
+function getAdminModuleIdFromSearchParams(searchParams: Pick<URLSearchParams, "get">): AdminModuleId {
+  const moduleId = searchParams.get("module");
   return isAdminModuleId(moduleId) ? moduleId : "overview";
 }
 
@@ -186,6 +245,11 @@ const AdminEvaluationModule = dynamic(() => import("@/app/admin/evaluations/page
 const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {
   ssr: false,
   loading: () => <InlineModuleLoading title="배너 관리 화면 준비 중" variant="banners" />,
+});
+
+const AdminAnnouncementModule = dynamic(() => import("@/components/announcement/AnnouncementPanel"), {
+  ssr: false,
+  loading: () => <InlineModuleLoading title="공지사항 운영 화면 준비 중" variant="announcements" />,
 });
 
 const InsightsModule = dynamic(() => import("@/app/insights/insights-client"), {
@@ -205,7 +269,12 @@ type AdminOverviewStats = {
   withCoordinates: number | null;
   activeBanners: number | null;
   inactiveBanners: number | null;
+  totalAnnouncements: number | null;
+  activeAnnouncements: number | null;
+  bannerAnnouncements: number | null;
+  inactiveAnnouncements: number | null;
   latestRestaurantUpdate: string | null;
+  latestAnnouncementUpdate: string | null;
 };
 
 const toneClassName: Record<ConsoleModule["tone"], string> = {
@@ -228,6 +297,12 @@ const loadingPreviewCopy = {
     chips: ["활성 배너", "우선순위", "공개 전 확인"],
     rows: ["데스크톱 배너", "모바일 팝업", "비활성 배너", "미디어 점검"],
   },
+  announcements: {
+    eyebrow: "사용자 고지 관리",
+    description: "공지사항을 관리자 콘솔 안에서 작성·게시·배너 노출까지 관리하도록 준비하고 있습니다.",
+    chips: ["공지 목록", "게시 상태", "배너 노출", "관리자 콘솔 연결"],
+    rows: ["활성 공지", "비활성 공지", "배너 노출", "최근 수정"],
+  },
   insights: {
     eyebrow: "운영 인사이트",
     description: "조회수, 좋아요, 댓글, 영상 길이 기반 분석 화면을 불러오고 있습니다.",
@@ -235,7 +310,7 @@ const loadingPreviewCopy = {
     rows: ["조회 상위", "반응 변화", "영상 길이", "댓글 신호"],
   },
 } satisfies Record<
-  "moderation" | "banners" | "insights",
+  "moderation" | "banners" | "announcements" | "insights",
   {
     eyebrow: string;
     description: string;
@@ -426,6 +501,8 @@ function useAdminOverviewStats(isAdmin: boolean): {
 
   const bannersQuery = useAdBannersAdmin();
   const banners = bannersQuery.data ?? [];
+  const announcementsQuery = useAnnouncementsAdmin();
+  const announcements = announcementsQuery.data ?? [];
 
   return {
     stats: {
@@ -435,10 +512,20 @@ function useAdminOverviewStats(isAdmin: boolean): {
       withCoordinates: dashboardSummaryQuery.data?.totals.withCoordinates ?? null,
       activeBanners: bannersQuery.isSuccess ? banners.filter((banner) => banner.is_active).length : null,
       inactiveBanners: bannersQuery.isSuccess ? banners.filter((banner) => !banner.is_active).length : null,
+      totalAnnouncements: announcementsQuery.isSuccess ? announcements.length : null,
+      activeAnnouncements: announcementsQuery.isSuccess ? announcements.filter((announcement) => announcement.isActive).length : null,
+      bannerAnnouncements: announcementsQuery.isSuccess ? announcements.filter((announcement) => announcement.isActive && announcement.showOnBanner).length : null,
+      inactiveAnnouncements: announcementsQuery.isSuccess ? announcements.filter((announcement) => !announcement.isActive).length : null,
       latestRestaurantUpdate: dashboardSummaryQuery.data?.asOf ?? null,
+      latestAnnouncementUpdate: announcementsQuery.isSuccess
+        ? announcements.reduce<string | null>((latest, announcement) => {
+          if (!latest) return announcement.updatedAt;
+          return new Date(announcement.updatedAt).getTime() > new Date(latest).getTime() ? announcement.updatedAt : latest;
+        }, null)
+        : null,
     },
-    isLoading: pendingCountsQuery.isLoading || dashboardSummaryQuery.isLoading || bannersQuery.isLoading,
-    hasError: pendingCountsQuery.isError || dashboardSummaryQuery.isError || bannersQuery.isError,
+    isLoading: pendingCountsQuery.isLoading || dashboardSummaryQuery.isLoading || bannersQuery.isLoading || announcementsQuery.isLoading,
+    hasError: pendingCountsQuery.isError || dashboardSummaryQuery.isError || bannersQuery.isError || announcementsQuery.isError,
   };
 }
 
@@ -471,6 +558,14 @@ function AdminSidebar({
         value: formatNumber(stats.pendingReviews),
         label: `대기 ${formatCount(stats.pendingReviews, "건")}`,
         urgent: stats.pendingReviews > 0,
+      };
+    }
+
+    if (moduleId === "announcements" && stats.activeAnnouncements != null) {
+      return {
+        value: formatNumber(stats.activeAnnouncements),
+        label: `활성 ${formatCount(stats.activeAnnouncements, "건")}`,
+        urgent: false,
       };
     }
 
@@ -648,6 +743,52 @@ function GuardedApplyCard() {
   );
 }
 
+function BeginnerGuideCard({ onSelectModule }: { onSelectModule: (moduleId: AdminModuleId) => void }) {
+  return (
+    <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-primary">처음 쓰는 관리자 안내</p>
+            <CardTitle className="mt-1 text-lg tracking-[-0.02em]">
+              무엇부터 보면 되는지 3단계로 정리했어요
+            </CardTitle>
+          </div>
+          <Badge variant="outline" className="w-fit border-primary/30 bg-background/70 text-primary">
+            쉬운 한국어
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-3 lg:grid-cols-3">
+        {beginnerGuideSteps.map((step) => {
+          const Icon = step.icon;
+
+          return (
+            <button
+              key={step.title}
+              type="button"
+              aria-label={`${step.title}: ${step.actionLabel}`}
+              aria-controls="admin-console-canvas"
+              className="group rounded-2xl border border-border bg-background/75 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              onClick={() => onSelectModule(step.target)}
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="mt-3 block text-sm font-bold text-foreground">{step.title}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted-foreground">{step.description}</span>
+              <span className="mt-3 inline-flex items-center text-xs font-semibold text-primary">
+                {step.actionLabel}
+                <span className="ml-1" aria-hidden="true">→</span>
+              </span>
+            </button>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
 function OverviewMetricCard({
   title,
   value,
@@ -699,6 +840,52 @@ function OverviewMetricCard({
   );
 }
 
+function ModuleContextHeader({ module }: { module: ConsoleModule }) {
+  const Icon = module.icon;
+  const eyebrow = module.id === "announcements" ? "사용자 고지 운영" : "이 작업 화면에서 처리";
+
+  return (
+    <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-card via-card to-primary/5 p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-primary">{eyebrow}</p>
+          <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border", toneClassName[module.tone])}>
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-2xl font-bold tracking-[-0.04em] text-foreground md:text-3xl">
+                {module.title}
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {module.description}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex w-fit flex-wrap gap-2">
+          <Badge variant="outline" className="w-fit border-primary/30 bg-background/70 text-primary">
+            {module.badge}
+          </Badge>
+          <Badge variant="secondary" className="w-fit border border-border bg-background/70 text-muted-foreground">
+            {module.href}
+          </Badge>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-background/70 p-3">
+          <p className="text-xs font-semibold text-primary">처음이라면</p>
+          <p className="mt-1 text-sm leading-6 text-foreground/75">{module.beginnerTip}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-background/70 p-3">
+          <p className="text-xs font-semibold text-primary">안전하게 처리하려면</p>
+          <p className="mt-1 text-sm leading-6 text-foreground/75">{module.safetyTip}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OperationalSummary({
   stats,
   isLoading,
@@ -722,6 +909,10 @@ function OperationalSummary({
     stats.inactiveBanners == null
       ? "비활성 배너 확인 필요 · 공개 노출 관리"
       : `비활성 ${formatCount(stats.inactiveBanners, "개")} · 공개 노출 관리`;
+  const announcementDescription =
+    stats.bannerAnnouncements == null || stats.inactiveAnnouncements == null
+      ? "공지와 배너 노출 확인 필요"
+      : `배너 노출 ${formatCount(stats.bannerAnnouncements, "건")} · 비활성 ${formatCount(stats.inactiveAnnouncements, "건")}`;
 
   return (
     <section aria-labelledby="admin-overview-summary" className="space-y-3">
@@ -746,7 +937,7 @@ function OperationalSummary({
         </Badge>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <OverviewMetricCard
           title="미처리 제보"
           value={formatCount(stats.pendingSubmissions, "건")}
@@ -784,10 +975,21 @@ function OperationalSummary({
           icon={ImageIcon}
           isLoading={isLoading}
         />
+        <OverviewMetricCard
+          title="활성 공지"
+          value={formatCount(stats.activeAnnouncements, "건")}
+          description={announcementDescription}
+          onSelect={() => onSelectModule("announcements")}
+          icon={Megaphone}
+          isLoading={isLoading}
+          tone="warning"
+        />
       </div>
 
       <div className="rounded-2xl border border-border bg-muted/25 px-4 py-3 text-xs leading-5 text-muted-foreground">
         맛집/좌표 기준 최신 업데이트: <span className="font-medium text-foreground">{formatDateTime(stats.latestRestaurantUpdate)}</span>
+        {" · "}
+        공지 기준 최신 업데이트: <span className="font-medium text-foreground">{formatDateTime(stats.latestAnnouncementUpdate)}</span>
         {" · "}
         요약 수치가 실패하면 카드 값은 — 로 표시하고 기존 상세 화면 진입은 유지합니다.
       </div>
@@ -824,6 +1026,49 @@ function LlmSessionPanel() {
         자동 운영 보조는 읽기/제안 전용입니다. 실제 승인·삭제·공개 적용은 관리자 확인 버튼과 상태 재확인 이후에만 진행됩니다.
       </p>
     </aside>
+  );
+}
+
+function AdminAccessGate({
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <main className="grid h-full min-h-[calc(100dvh-var(--app-header-height,56px))] place-items-center bg-background p-4 text-foreground">
+      <section
+        aria-labelledby="admin-access-gate-title"
+        className="w-full max-w-xl rounded-2xl border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 p-5 text-center shadow-primary sm:p-6"
+      >
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 text-primary">
+          <PanelLeftOpen className="h-6 w-6" aria-hidden="true" />
+        </div>
+        <h1 id="admin-access-gate-title" className="mt-4 text-2xl font-bold tracking-[-0.04em] text-foreground">
+          {title}
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Button
+            type="button"
+            className="min-h-11 rounded-xl bg-primary text-primary-foreground shadow-primary hover:bg-primary/90"
+            onClick={onAction}
+          >
+            {actionLabel}
+          </Button>
+        </div>
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">
+          관리자 운영 콘솔은 관리자 계정으로 로그인한 뒤에만 열립니다. 로그인 후에도 계속 막히면 계정 권한을 확인해야 합니다.
+        </p>
+      </section>
+    </main>
   );
 }
 
@@ -953,6 +1198,19 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
         return <AdminEvaluationModule key="reviews" embedded initialView="submissions" initialSubmissionTab="reviews" />;
       case "banners":
         return <AdminBannerModule key="admin-banners" embedded />;
+      case "announcements":
+        return (
+          <AnnouncementWorkspace>
+            <AdminAnnouncementModule
+              key="admin-announcements"
+              isOpen
+              isAdmin
+              adminActionsMode="inline"
+              hideCloseButton
+              onClose={() => undefined}
+            />
+          </AnnouncementWorkspace>
+        );
       case "insights":
         return <InsightsModule key="admin-insights" />;
       default: {
@@ -963,11 +1221,12 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
   })();
 
   return (
-    <section aria-label={`${module.title} 작업 화면`} className="flex h-full min-h-0 flex-col">
+    <section aria-label={`${module.title} 작업 화면`} className="flex h-full min-h-0 flex-col gap-3">
+      <ModuleContextHeader module={module} />
       <div
         className={cn(
           "min-h-[560px] flex-1 rounded-2xl border border-border bg-background shadow-sm lg:min-h-0",
-          module.id === "banners" ? "overflow-y-auto" : "overflow-hidden",
+          module.id === "banners" || module.id === "announcements" ? "overflow-y-auto" : "overflow-hidden",
         )}
       >
         {moduleContent}
@@ -976,8 +1235,19 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
   );
 }
 
+function AnnouncementWorkspace({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-[680px] flex-col bg-background">
+      <div className="min-h-0 flex-1">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function AdminConsoleOverview() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
   const { stats, isLoading: statsLoading, hasError: statsHasError } = useAdminOverviewStats(isAdmin);
   const [activeModuleId, setActiveModuleId] = useState<AdminModuleId>("overview");
@@ -990,39 +1260,28 @@ export function AdminConsoleOverview() {
     setActiveModuleId(moduleId);
 
     if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
+      const params = new URLSearchParams(window.location.search);
       if (moduleId === "overview") {
-        url.searchParams.delete("module");
+        params.delete("module");
       } else {
-        url.searchParams.set("module", moduleId);
+        params.set("module", moduleId);
       }
-      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+      const nextQuery = params.toString();
+      router.replace(`${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`, {
+        scroll: false,
+      });
     }
 
     window.requestAnimationFrame(() => {
       canvasRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
       canvasRef.current?.focus({ preventScroll: true });
     });
-  }, []);
+  }, [router]);
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router, user]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const syncModuleFromUrl = () => {
-      setActiveModuleId(getAdminModuleIdFromLocation(window.location));
-    };
-
-    syncModuleFromUrl();
-    window.addEventListener("popstate", syncModuleFromUrl);
-
-    return () => window.removeEventListener("popstate", syncModuleFromUrl);
-  }, []);
+    const nextModuleId = getAdminModuleIdFromSearchParams(searchParams);
+    setActiveModuleId((current) => (current === nextModuleId ? current : nextModuleId));
+  }, [searchParams]);
 
   useEffect(() => {
     if (isSidebarCollapsed) {
@@ -1048,8 +1307,30 @@ export function AdminConsoleOverview() {
     });
   };
 
-  if (authLoading || !user || !isAdmin) {
-    return <GlobalLoader fullScreen message="관리자 콘솔 로딩 중..." />;
+  if (authLoading) {
+    return <GlobalLoader fullScreen message="관리자 콘솔 로딩 중…" />;
+  }
+
+  if (!user) {
+    return (
+      <AdminAccessGate
+        title="관리자 로그인이 필요합니다"
+        description="현재 브라우저 세션에서는 관리자 계정이 확인되지 않았습니다. 홈으로 자동 이동하지 않고, 여기서 바로 로그인할 수 있게 안내합니다."
+        actionLabel="로그인 창 열기"
+        onAction={() => window.dispatchEvent(new Event(AUTH_UI_REQUEST_EVENT))}
+      />
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <AdminAccessGate
+        title="관리자 권한이 필요합니다"
+        description="로그인은 되어 있지만 이 계정에는 관리자 운영 콘솔 권한이 없습니다. 다른 관리자 계정으로 다시 로그인하거나 권한 설정을 확인해 주세요."
+        actionLabel="홈으로 돌아가기"
+        onAction={() => router.push("/")}
+      />
+    );
   }
 
   const heroStatusChips = [
@@ -1163,6 +1444,8 @@ export function AdminConsoleOverview() {
                 </div>
               </div>
 
+              <BeginnerGuideCard onSelectModule={selectModule} />
+
               <OperationalSummary
                 stats={stats}
                 isLoading={statsLoading}
@@ -1202,6 +1485,12 @@ export function AdminConsoleOverview() {
                           </CardHeader>
                           <CardContent className="space-y-4">
                             <p className="min-h-12 text-sm leading-6 text-foreground/70">{module.description}</p>
+                            <div className="space-y-2 rounded-2xl border border-border bg-background/70 p-3">
+                              <p className="text-xs font-semibold text-primary">처음이라면</p>
+                              <p className="text-xs leading-5 text-muted-foreground">{module.beginnerTip}</p>
+                              <p className="pt-1 text-xs font-semibold text-primary">안전하게 처리하려면</p>
+                              <p className="text-xs leading-5 text-muted-foreground">{module.safetyTip}</p>
+                            </div>
                             <Button
                               type="button"
                               variant="outline"

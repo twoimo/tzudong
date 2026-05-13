@@ -46,6 +46,8 @@ describe('repo design contract source', () => {
     expect(adminConsoleSource).toContain('bg-gradient-to-br from-card via-card to-primary/5');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');
     expect(adminConsoleSource).toContain('shadow-primary');
+    expect(adminConsoleSource).toContain('공지 운영 통합');
+    expect(adminConsoleSource).toContain('사용자 고지 운영');
     expect(headerSource).toContain('font-serif');
     expect(headerSource).toContain('bg-red-800 hover:bg-red-900');
   });

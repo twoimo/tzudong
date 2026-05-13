@@ -186,7 +186,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
             <Header
                 onToggleSidebar={() => { }}
                 isLoggedIn={!!user}
-                isAuthLoading={isLoading}
+                isAuthLoading={isLoading && !user}
                 onOpenAuth={handleOpenAuth}
                 onLogout={handleLogout}
                 onProfileClick={handleProfileClick}
