@@ -14,10 +14,7 @@ import {
     User as UserIcon,
     Megaphone,
     BarChart2,
-    Utensils,
-    ClipboardList,
-    MessageSquare,
-    Image as ImageIcon,
+    PanelLeft,
     LogOut,
     ChevronDown,
     ChevronUp,
@@ -43,7 +40,7 @@ import { Region, REGIONS, Restaurant } from '@/types/restaurant';
 import type { Notification } from '@/types/notification';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useQuery } from '@tanstack/react-query';
-import { fetchSupabaseExactCount, fetchSupabaseRows } from '@/lib/supabase-rest-client';
+import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from '@/lib/no-toast';
 import type { User } from '@supabase/supabase-js';
@@ -58,38 +55,9 @@ const CATEGORIES = [
     "족발·보쌈", "돈까스·회", "아시안", "패스트푸드",
     "카페·디저트", "찜·탕", "야식", "도시락"
 ];
-const MIN_DRAG_HEIGHT = 5;
 const MIN_SHEET_HEIGHT = 25;
 const HALF_SHEET_HEIGHT = 50;
 const MAX_SHEET_HEIGHT = 100;
-const CLOSE_THRESHOLD = 15;
-const SWIPE_VELOCITY_THRESHOLD = 0.5;
-const CONTENT_TOP_EPSILON = 2;
-const CONTENT_DRAG_START_THRESHOLD = 16;
-const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
-
-const isVerticallyScrollable = (element: HTMLElement) => {
-    const style = window.getComputedStyle(element);
-    const overflowY = style.overflowY;
-    const allowsScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
-    return allowsScroll && element.scrollHeight > element.clientHeight;
-};
-
-const findScrollableTouchTarget = (
-    target: EventTarget | null,
-    boundary: HTMLElement | null
-): HTMLElement | null => {
-    if (!(target instanceof HTMLElement)) return boundary;
-
-    let node: HTMLElement | null = target;
-    while (node && node !== boundary) {
-        if (isVerticallyScrollable(node)) return node;
-        node = node.parentElement;
-    }
-
-    if (boundary && isVerticallyScrollable(boundary)) return boundary;
-    return null;
-};
 
 
 
@@ -192,16 +160,12 @@ function MobileControlOverlayComponent({
     const { signOut } = useAuth();
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
-    const [sheetHeight, setSheetHeight] = useState(50); // 최종 높이 (스냅 시에만 업데이트)
-    // [OPTIMIZATION] isDragging은 UI 업데이트용으로만 사용, 실제 드래그 로직은 ref 사용
-    const [isDragging, setIsDragging] = useState(false);
     const [quickSelectedCategories, setQuickSelectedCategories] = useState<string[]>(selectedCategories);
     const [searchViewportHeight, setSearchViewportHeight] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
-    const [adminBadgeCounts, setAdminBadgeCounts] = useState({ submissions: 0, reviews: 0 });
     const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
         Boolean(user),
         loadMobileBookmarkMenuButton
@@ -216,36 +180,8 @@ function MobileControlOverlayComponent({
         isPending: isDeviceLocationPending,
     });
 
-    // [OPTIMIZATION] ref로 실시간 드래그 상태 추적 (리렌더링 없이)
-    const sheetRef = useRef<HTMLDivElement>(null);
-    const handleRef = useRef<HTMLDivElement>(null);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const currentHeightRef = useRef(50); // 현재 드래그 중인 높이
-    const startYRef = useRef(0);
-    const startHeightRef = useRef(50);
-    const isDraggingRef = useRef(false); // [OPTIMIZATION] isDragging도 ref로 관리
-    // 드래그 속도 측정용 ref
-    const lastYRef = useRef(0);
-    const lastTimeRef = useRef(0);
-    const velocityRef = useRef(0);
-    const contentTouchStartYRef = useRef(0);
-    const contentTouchStartXRef = useRef(0);
-    const isContentDraggingSheetRef = useRef(false);
-    const contentStartBoundaryRef = useRef<'top' | null>(null);
-    const contentScrollTargetRef = useRef<HTMLElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchSelectionCloseRafRef = useRef<number | null>(null);
-
-    const getContentSnapPoints = useCallback(() => {
-        return [MIN_SHEET_HEIGHT, HALF_SHEET_HEIGHT, MAX_SHEET_HEIGHT];
-    }, []);
-
-    const getNearestSnapHeight = useCallback((currentHeight: number) => {
-        const snapPoints = getContentSnapPoints();
-        return snapPoints.reduce((closest, snap) =>
-            Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
-            , snapPoints[0]);
-    }, [getContentSnapPoints]);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
     const { data: restaurants = [] } = useQuery({
@@ -291,152 +227,7 @@ function MobileControlOverlayComponent({
 
     const toggleSheet = useCallback((sheet: ActiveSheet) => {
         setActiveSheet(prev => prev === sheet ? 'none' : sheet);
-        // 새 시트 열 때 기본 높이로 초기화
-        if (activeSheet !== sheet) {
-            const initialHeight = sheet === 'search' ? 25 : 50;
-            setSheetHeight(initialHeight);
-            currentHeightRef.current = initialHeight;
-        }
-    }, [activeSheet]);
-
-    // [OPTIMIZATION] 드래그 시작 - ref 기반으로 리렌더링 최소화 (터치 + 마우스 통합)
-    const handleDragStart = useCallback((clientY: number) => {
-        isDraggingRef.current = true;
-        setIsDragging(true); // will-change 적용용
-        startYRef.current = clientY;
-        startHeightRef.current = currentHeightRef.current;
-        lastYRef.current = clientY;
-        lastTimeRef.current = Date.now();
-        velocityRef.current = 0;
     }, []);
-
-    const handleTouchStart = useCallback((e: TouchEvent) => {
-        handleDragStart(e.touches[0].clientY);
-    }, [handleDragStart]);
-
-    const handleMouseDown = useCallback((e: MouseEvent) => {
-        e.preventDefault(); // 텍스트 선택 방지
-        handleDragStart(e.clientY);
-    }, [handleDragStart]);
-
-    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음, 터치 + 마우스 통합)
-    const handleDragMove = useCallback((clientY: number) => {
-        if (!isDraggingRef.current) return;
-
-        const currentTime = Date.now();
-
-        // 속도 계산 (양수면 아래로 드래그)
-        const deltaTime = currentTime - lastTimeRef.current;
-        if (deltaTime > 0) {
-            velocityRef.current = (clientY - lastYRef.current) / deltaTime;
-        }
-        lastYRef.current = clientY;
-        lastTimeRef.current = currentTime;
-
-        const deltaY = startYRef.current - clientY;
-        const viewportHeight = window.innerHeight;
-        const deltaVh = (deltaY / viewportHeight) * 100;
-
-        let newHeight = startHeightRef.current + deltaVh;
-        // 최소 5%까지 드래그 가능 (닫기 영역), 최대 100%
-        newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(MAX_SHEET_HEIGHT, newHeight));
-
-        currentHeightRef.current = newHeight;
-
-        // [OPTIMIZATION] requestAnimationFrame으로 DOM 직접 조작
-        requestAnimationFrame(() => {
-            if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(100% - ${newHeight}dvh))`;
-            }
-        });
-    }, []);
-
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-        handleDragMove(e.touches[0].clientY);
-    }, [handleDragMove]);
-
-    const handleMouseMove = useCallback((e: MouseEvent) => {
-        handleDragMove(e.clientY);
-    }, [handleDragMove]);
-
-    // 드래그 종료 - 25 / 50 / full 스냅
-    const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
-        isDraggingRef.current = false;
-        setIsDragging(false);
-
-        const currentHeight = currentHeightRef.current;
-
-        // 빠르게 아래로 스와이프 (velocity > 0.5px/ms) 하면 닫기
-        if (velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
-            handleClose();
-            return;
-        }
-
-        // 닫기 임계값 (15% 이하시 닫기)
-        if (currentHeight <= CLOSE_THRESHOLD) {
-            handleClose();
-            return;
-        }
-
-        const targetHeight = getNearestSnapHeight(currentHeight);
-        setSheetHeight(targetHeight);
-        currentHeightRef.current = targetHeight;
-
-        if (source === 'handle' && sheetRef.current) {
-            sheetRef.current.style.transform = `translateY(calc(100% - ${targetHeight}dvh))`;
-        }
-    }, [handleClose, getNearestSnapHeight]);
-
-    const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (activeSheet === 'search') return;
-        contentTouchStartYRef.current = e.touches[0].clientY;
-        contentTouchStartXRef.current = e.touches[0].clientX;
-        isContentDraggingSheetRef.current = false;
-        const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
-        contentScrollTargetRef.current = scrollTarget;
-        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
-        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
-    }, [activeSheet]);
-
-    const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (activeSheet === 'search') return;
-
-        const currentY = e.touches[0].clientY;
-        const currentX = e.touches[0].clientX;
-        const deltaY = currentY - contentTouchStartYRef.current;
-        const deltaX = currentX - contentTouchStartXRef.current;
-        const absDeltaY = Math.abs(deltaY);
-        const absDeltaX = Math.abs(deltaX);
-        const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
-        if (!contentScrollTargetRef.current) {
-            contentScrollTargetRef.current = scrollTarget;
-        }
-
-        if (!isContentDraggingSheetRef.current) {
-            if (contentStartBoundaryRef.current !== 'top') return;
-            if (absDeltaY <= CONTENT_DRAG_START_THRESHOLD) return;
-            if (absDeltaY <= absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
-            handleDragStart(contentTouchStartYRef.current);
-            isContentDraggingSheetRef.current = true;
-        }
-
-        e.stopPropagation();
-        handleDragMove(currentY);
-    }, [activeSheet, handleDragStart, handleDragMove]);
-
-    const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (!isContentDraggingSheetRef.current) {
-            contentScrollTargetRef.current = null;
-            contentStartBoundaryRef.current = null;
-            return;
-        }
-        e.stopPropagation();
-        isContentDraggingSheetRef.current = false;
-        contentScrollTargetRef.current = null;
-        contentStartBoundaryRef.current = null;
-        handleDragEnd('content');
-    }, [handleDragEnd]);
 
     // [OPTIMIZATION] 지역별 맛집 수 계산 - 단일 패스로 최적화
     const regionCounts = useMemo(() => {
@@ -517,91 +308,10 @@ function MobileControlOverlayComponent({
         };
     }, [activeSheet]);
 
-    // [OPTIMIZATION] 이벤트 리스너 등록 (터치 + 마우스 지원)
-    // Pull-to-Refresh 방지를 위해 touchmove는 passive: false로 설정
-    useEffect(() => {
-        const handleEl = handleRef.current;
-        if (!handleEl || activeSheet === 'none' || activeSheet === 'search') return;
-
-        const preventPullToRefresh = (e: TouchEvent) => {
-            // 드래그 중일 때 Pull-to-Refresh 방지
-            if (isDraggingRef.current) {
-                e.preventDefault();
-            }
-        };
-        const handleTouchEnd = () => {
-            handleDragEnd('handle');
-        };
-        const handleTouchStartListener: EventListener = (event) => {
-            handleTouchStart(event as TouchEvent);
-        };
-        const handleTouchMoveListener: EventListener = (event) => {
-            handleTouchMove(event as TouchEvent);
-        };
-        const handleMouseDownListener: EventListener = (event) => {
-            handleMouseDown(event as MouseEvent);
-        };
-
-        // 터치 이벤트
-        handleEl.addEventListener('touchstart', handleTouchStartListener, { passive: true });
-        handleEl.addEventListener('touchmove', handleTouchMoveListener, { passive: false });
-        handleEl.addEventListener('touchmove', preventPullToRefresh, { passive: false });
-        handleEl.addEventListener('touchend', handleTouchEnd, { passive: true });
-        handleEl.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-
-        // 마우스 이벤트 (핸들에서 시작)
-        handleEl.addEventListener('mousedown', handleMouseDownListener);
-
-        // 마우스 move/up은 window에 등록 (핸들 밖으로 드래그해도 동작)
-        const handleWindowMouseMove = (e: MouseEvent) => {
-            if (isDraggingRef.current) {
-                e.preventDefault();
-                handleMouseMove(e);
-            }
-        };
-
-        const handleWindowMouseUp = () => {
-            if (isDraggingRef.current) {
-                handleDragEnd('handle');
-            }
-        };
-
-        window.addEventListener('mousemove', handleWindowMouseMove);
-        window.addEventListener('mouseup', handleWindowMouseUp);
-
-        return () => {
-            handleEl.removeEventListener('touchstart', handleTouchStartListener);
-            handleEl.removeEventListener('touchmove', handleTouchMoveListener);
-            handleEl.removeEventListener('touchmove', preventPullToRefresh);
-            handleEl.removeEventListener('touchend', handleTouchEnd);
-            handleEl.removeEventListener('touchcancel', handleTouchEnd);
-            handleEl.removeEventListener('mousedown', handleMouseDownListener);
-            window.removeEventListener('mousemove', handleWindowMouseMove);
-            window.removeEventListener('mouseup', handleWindowMouseUp);
-        };
-    }, [activeSheet, handleTouchStart, handleTouchMove, handleMouseDown, handleMouseMove, handleDragEnd]);
-
-    // [CRITICAL] activeSheet 변경 시 초기 높이 설정
-    useEffect(() => {
-        if (activeSheet === 'none' || !sheetRef.current) return;
-
-        const initialHeight = activeSheet === 'search' ? 25 : 50;
-        currentHeightRef.current = initialHeight;
-        setSheetHeight(initialHeight);
-
-        // DOM에 즉시 반영 (애니메이션과 함께) - 검색 시트는 transform 사용 안 함
-        if (activeSheet !== 'search') {
-            sheetRef.current.style.transform = `translateY(calc(100% - ${initialHeight}dvh))`;
-        } else {
-            sheetRef.current.style.transform = 'none';
-        }
-    }, [activeSheet]);
-
     // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
     const regionLabel = useMemo(() =>
         mapMode === 'domestic' ? (selectedRegion || '전체') : (selectedCountry || '국가'),
         [mapMode, selectedRegion, selectedCountry]);
-    const isSheetAtFullHeight = sheetHeight >= MAX_SHEET_HEIGHT - 0.5;
 
     const quickTopCategories = useMemo(() => CATEGORIES.slice(0, 8), []);
 
@@ -651,40 +361,6 @@ function MobileControlOverlayComponent({
         return () => window.clearTimeout(focusTimer);
     }, [activeSheet]);
 
-    useEffect(() => {
-        if (!user || !isAdmin || activeSheet !== 'none') return;
-
-        let isMounted = true;
-        const loadPendingCounts = async () => {
-            try {
-                const [submissionsCount, reviewsCount] = await Promise.all([
-                    fetchSupabaseExactCount('restaurant_submissions', [
-                        ['select', 'id'],
-                        ['status', 'eq.pending'],
-                    ]),
-                    fetchSupabaseExactCount('reviews', [
-                        ['select', 'id'],
-                        ['is_verified', 'eq.false'],
-                    ]),
-                ]);
-
-                if (!isMounted) return;
-                setAdminBadgeCounts({
-                    submissions: submissionsCount,
-                    reviews: reviewsCount,
-                });
-            } catch {
-                if (!isMounted) return;
-                setAdminBadgeCounts({ submissions: 0, reviews: 0 });
-            }
-        };
-
-        loadPendingCounts();
-        return () => {
-            isMounted = false;
-        };
-    }, [activeSheet, isAdmin, user]);
-
     const closeUserMenu = useCallback(() => {
         setIsUserMenuOpen(false);
     }, []);
@@ -699,14 +375,8 @@ function MobileControlOverlayComponent({
         closeUserMenu();
     }, [closeUserMenu, router]);
 
-    const handleAdminBannersClick = useCallback(() => {
-        router.push('/admin/banners');
-        closeUserMenu();
-    }, [closeUserMenu, router]);
-
-
-    const handleAdminRestaurantsClick = useCallback(() => {
-        router.push('/admin/evaluations');
+    const handleAdminConsoleClick = useCallback(() => {
+        router.push('/admin');
         closeUserMenu();
     }, [closeUserMenu, router]);
 
@@ -903,7 +573,7 @@ function MobileControlOverlayComponent({
                         <UserIcon className="h-[18px] w-[18px]" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-32 z-[110]">
+                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-44 z-[110]">
                     <DropdownMenuItem onClick={() => dispatchWindowEvent('openMyPage')} className="text-foreground hover:bg-accent py-1.5">
                         <UserIcon className="mr-2 h-4 w-4" />
                         마이페이지
@@ -921,35 +591,9 @@ function MobileControlOverlayComponent({
                     {isAdmin && (
                         <>
                             <DropdownMenuSeparator className="bg-border my-1" />
-                            <DropdownMenuItem onClick={handleAdminRestaurantsClick} className="text-foreground hover:bg-accent py-1.5">
-                                <Utensils className="mr-2 h-4 w-4" />
-                                맛집관리
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminSubmissions')} className="text-foreground hover:bg-accent py-1.5">
-                                <ClipboardList className="mr-2 h-4 w-4" />
-                                제보관리
-                                {adminBadgeCounts.submissions > 0 && (
-                                    <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
-                                        {adminBadgeCounts.submissions > 99 ? '99+' : adminBadgeCounts.submissions}
-                                    </Badge>
-                                )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminReviews')} className="text-foreground hover:bg-accent py-1.5">
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                리뷰관리
-                                {adminBadgeCounts.reviews > 0 && (
-                                    <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
-                                        {adminBadgeCounts.reviews > 99 ? '99+' : adminBadgeCounts.reviews}
-                                    </Badge>
-                                )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
-                                <ImageIcon className="mr-2 h-4 w-4" />
-                                배너관리
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
-                                <BarChart2 className="mr-2 h-4 w-4" />
-                                인사이트
+                            <DropdownMenuItem onClick={handleAdminConsoleClick} className="text-foreground hover:bg-accent py-1.5">
+                                <PanelLeft className="mr-2 h-4 w-4" />
+                                관리자 콘솔
                             </DropdownMenuItem>
                         </>
                     )}

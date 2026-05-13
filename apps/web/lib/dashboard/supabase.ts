@@ -78,7 +78,7 @@ async function fetchRestaurantPage(
     keyRole: KeyRole,
 ): Promise<DashboardRestaurantRow[]> {
     const supabase = createSupabaseServerClient(keyRole);
-    const { data, error } = await supabase
+    const query = supabase
         .from('restaurants')
         .select(`
             id,
@@ -100,8 +100,15 @@ async function fetchRestaurantPage(
             evaluation_results,
             updated_at,
             created_at
-        `)
-        .range(from, to);
+        `);
+
+    // Public dashboard APIs must match the public home/map visibility contract:
+    // anon reads are approved-only even if project-level RLS/grants are broader.
+    const scopedQuery = keyRole === 'anon'
+        ? query.eq('status', 'approved')
+        : query;
+
+    const { data, error } = await scopedQuery.range(from, to);
 
     if (error) {
         throw new Error(`Failed to fetch restaurants: ${error.message}`);

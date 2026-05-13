@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 import { PRIMARY_STATUS_FILTER_OPTIONS } from './evaluation-status-filter-options';
+import { getAddressConsistencyBadgeClass, getAddressConsistencyLabel, getAddressConsistencyReviewQueueInfo } from '@/lib/admin-address-consistency';
 
 interface EvaluationTableProps {
   records: EvaluationRecord[];
@@ -76,9 +77,9 @@ False: 제시된 근거(Reasoning Basis)를 영상에서 찾을 수 없음`,
   review_faithfulness_score: `0점: 내용 왜곡, 과장, 또는 틀린 정보 포함
 1점: 실제 영상 내용을 충실하고 정확하게 요약함`,
 
-  geocoding_success: `True: 지오코딩 성공
-False: 주소 매칭 실패 (검색은 수행됨)
-Failed: 지오코딩 오류 (시스템 에러 등)`,
+  geocoding_success: `True: 주소 후보와 좌표가 정합 판정됨
+False: 지오코딩은 시도됐지만 단계별 주소 매칭에 실패함
+Failed: 주소 후보/좌표 생성 전 지오코딩 자체가 실패함`,
 
   category_validity_TF: `True: 유효한 카테고리임
 False: 목록에 없는 유효하지 않은 카테고리`,
@@ -112,6 +113,7 @@ const STATUS_VARIANTS: Record<string, { label: string; variant: 'default' | 'sec
   hold: { label: '보류', variant: 'outline' },
   missing: { label: 'Missing', variant: 'destructive' },
   geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
+  address_review_geocode_recovered: { label: '지도후보 부족', variant: 'outline' },
   not_selected: { label: '평가 미대상', variant: 'outline' },
   db_conflict: { label: 'DB 충돌', variant: 'destructive' },
   deleted: { label: '삭제됨', variant: 'destructive' },
@@ -123,6 +125,7 @@ const MOBILE_STATUS_QUICK_FILTERS: { value: string; label: string }[] = [
   { value: 'ready_for_approval', label: '승인대기' },
   { value: 'approved', label: '승인됨' },
   { value: 'geocoding_failed', label: '지오코딩실패' },
+  { value: 'address_review_geocode_recovered', label: '지도후보' },
   { value: 'missing', label: 'Missing' },
   { value: 'deleted', label: '삭제됨' },
 ];
@@ -144,6 +147,8 @@ const getMobileCardTone = (status: string): string => {
     case 'geocoding_failed':
     case 'db_conflict':
       return 'border-l-4 border-l-red-500';
+    case 'address_review_geocode_recovered':
+      return 'border-l-4 border-l-sky-500';
     case 'not_selected':
       return 'border-l-4 border-l-slate-400';
     default:
@@ -154,14 +159,6 @@ const getMobileCardTone = (status: string): string => {
 const getBooleanLabel = (value: boolean | null | undefined): string => {
   if (value === true) return 'True';
   if (value === false) return 'False';
-  return '-';
-};
-
-const getGeocodingLabel = (record: EvaluationRecord): string => {
-  if (record.status === 'not_selected') return '-';
-  if (record.geocoding_success === true) return 'True';
-  if (record.geocoding_success === false && record.geocoding_false_stage === null) return 'Failed';
-  if (record.geocoding_success === false) return 'False';
   return '-';
 };
 
@@ -226,6 +223,8 @@ const FilterDropdown = memo(function FilterDropdown({
           <Button
             variant="ghost"
             size="sm"
+            aria-label={`${label} 필터 열기`}
+            title={`${label} 필터 열기`}
             className={cn(
               "h-5 w-5 p-0",
               isActive && "bg-green-100 hover:bg-green-200"
@@ -288,6 +287,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     ref
   ) {
     const videoId = getYoutubeVideoId(record.youtube_link);
+    const addressReviewQueue = getAddressConsistencyReviewQueueInfo(record);
 
     // 썸네일 로딩 트리거
     useEffect(() => {
@@ -311,6 +311,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
           <Button
             variant="ghost"
             size="sm"
+            aria-label={isExpanded ? "행 접기" : "행 펼치기"}
+            title={isExpanded ? "행 접기" : "행 펼치기"}
             className="h-8 w-8 p-0"
             onClick={(e) => {
               e.stopPropagation();
@@ -409,13 +411,9 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
         <TableCell className="text-center text-sm">
           {record.status === 'not_selected' ? '-' : (
-            record.geocoding_success === true
-              ? <Badge variant="default" className="bg-green-600">True</Badge>
-              : record.geocoding_success === false && record.geocoding_false_stage === null
-                ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
-                : record.geocoding_success === false && record.geocoding_false_stage !== null
-                  ? <Badge variant="destructive">False</Badge>
-                  : '-'
+            getAddressConsistencyLabel(record) === '-'
+              ? '-'
+              : <Badge className={getAddressConsistencyBadgeClass(record)}>{getAddressConsistencyLabel(record)}</Badge>
           )}
         </TableCell>
 
@@ -442,7 +440,14 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
             isExpanded ? "bg-muted" : "bg-background group-hover:bg-muted"
           )}
         >
-          {getStatusBadge(record.status)}
+          <div className="flex flex-col items-center gap-1">
+            {getStatusBadge(record.status)}
+            {addressReviewQueue && (
+              <Badge variant="outline" className="border-sky-200 bg-sky-50 text-[10px] text-sky-800">
+                {addressReviewQueue.label}
+              </Badge>
+            )}
+          </div>
         </TableCell>
 
         {/* 고정 컬럼: 액션 */}
@@ -489,6 +494,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
                 <Button
                   size="sm"
+                  aria-label="레코드 삭제"
+                  title="레코드 삭제"
                   className="h-8 w-8 p-0 lg:h-9 lg:w-9"
                   variant="destructive"
                   onClick={(e) => {
@@ -533,6 +540,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
 
                 <Button
                   size="sm"
+                  aria-label="레코드 삭제"
+                  title="레코드 삭제"
                   className="h-8 w-8 p-0 lg:h-9 lg:w-9"
                   variant="destructive"
                   onClick={(e) => {
@@ -550,7 +559,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
           {!record.geocoding_success && record.status !== 'missing' && (
             <div className="mt-1 hidden items-center justify-center gap-1 text-center text-xs text-destructive lg:flex">
               <AlertCircle className="w-3 h-3" />
-              지오코딩 실패
+              주소정합 {getAddressConsistencyLabel(record)}
             </div>
           )}
         </TableCell>
@@ -1014,6 +1023,7 @@ export function EvaluationTable({
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
+            aria-label="영상 제목 검색"
             placeholder="영상 제목 검색..."
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
@@ -1023,6 +1033,8 @@ export function EvaluationTable({
             <Button
               variant="ghost"
               size="sm"
+              aria-label="검색어 지우기"
+              title="검색어 지우기"
               className="absolute right-0 top-1/2 h-8 w-8 -translate-y-1/2 p-0"
               onClick={() => onSearchChange?.('')}
             >
@@ -1136,9 +1148,9 @@ export function EvaluationTable({
             {renderFilterDropdown(
               "geocoding_success",
               "주소정합",
-              `True = 지오코딩 성공 (geocoding_success = true)
-False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
-Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
+              `True = 주소 후보와 좌표가 정합 판정됨 (geocoding_success = true)
+False = 지오코딩은 시도됐지만 단계별 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 주소 후보/좌표 생성 전 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
               [
                 { value: 'all', label: '전체' },
                 { value: 'true', label: 'True' },
@@ -1193,7 +1205,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
         const reviewValue = record.status === 'not_selected'
           ? '-'
           : getDisplayValue(record.evaluation_results?.review_faithfulness_score?.eval_value);
-        const geocodingText = getGeocodingLabel(record);
+        const geocodingText = getAddressConsistencyLabel(record);
+        const addressReviewQueue = getAddressConsistencyReviewQueueInfo(record);
         const categoryValidity = record.status === 'not_selected'
           ? '-'
           : getBooleanLabel(record.evaluation_results?.category_validity_TF?.eval_value);
@@ -1295,6 +1308,11 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               <Badge variant="outline" className="text-[11px]">추론 {inferenceValue}</Badge>
               <Badge variant="outline" className="text-[11px]">근거 {groundingValue}</Badge>
               <Badge variant="outline" className="text-[11px]">주소 {geocodingText}</Badge>
+              {addressReviewQueue && (
+                <Badge variant="outline" className="border-sky-200 bg-sky-50 text-[11px] text-sky-800">
+                  {addressReviewQueue.label}
+                </Badge>
+              )}
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -1330,6 +1348,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   <Button
                     size="sm"
                     variant="destructive"
+                    aria-label="레코드 삭제"
+                    title="레코드 삭제"
                     className="h-8 w-9 p-0"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1372,6 +1392,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   <Button
                     size="sm"
                     variant="destructive"
+                    aria-label="레코드 삭제"
+                    title="레코드 삭제"
                     className="h-8 w-9 p-0"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1535,6 +1557,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="필터 초기화"
+                      title="필터 초기화"
                       onClick={onResetFilters}
                       disabled={!hasActiveFilters}
                       className={cn(
@@ -1556,6 +1580,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="text"
+                      aria-label="영상 제목 검색"
                       placeholder="영상 제목 검색..."
                       value={searchQuery}
                       onChange={(e) => onSearchChange?.(e.target.value)}
@@ -1565,6 +1590,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label="검색어 지우기"
+                        title="검색어 지우기"
                         className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
                         onClick={() => onSearchChange?.('')}
                       >
@@ -1636,9 +1663,9 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 {renderFilterDropdown(
                   "geocoding_success",
                   "주소정합",
-                  `True = 지오코딩 성공 (geocoding_success = true)
-False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
-Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
+                  `True = 주소 후보와 좌표가 정합 판정됨 (geocoding_success = true)
+False = 지오코딩은 시도됐지만 단계별 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 주소 후보/좌표 생성 전 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
                   [
                     { value: 'all', label: '전체' },
                     { value: 'true', label: 'True' },

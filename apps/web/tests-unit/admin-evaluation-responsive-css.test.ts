@@ -11,7 +11,18 @@ const criticalDisplayUtilities = [
   ['lg:block', 'block'],
   ['lg:flex', 'flex'],
   ['lg:hidden', 'none'],
+  ['lg:inline-flex', 'inline-flex'],
   ['lg:table-cell', 'table-cell'],
+] as const;
+
+const criticalAdminConsoleLayoutUtilities = [
+  'lg:grid',
+  'lg:m-0',
+  'lg:place-items-center',
+  'lg:px-1.5',
+  'lg:w-11',
+  'lg:w-14',
+  'lg:w-60',
 ] as const;
 
 afterAll(() => {
@@ -21,15 +32,15 @@ afterAll(() => {
 });
 
 function escapeCssClass(className: string) {
-  return className.replace(':', String.raw`\:`);
+  return className.replace(/[:.]/g, '\\$&');
 }
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-describe('admin evaluation responsive CSS guard', () => {
-  test('keeps desktop table display utilities in the generated app Tailwind CSS', () => {
+describe('admin responsive CSS guard', () => {
+  test('keeps desktop admin display and sidebar layout utilities in the generated app Tailwind CSS', () => {
     const workDir = mkdtempSync(join(tmpdir(), 'tzudong-admin-css-'));
     tempDirs.push(workDir);
 
@@ -68,5 +79,9 @@ describe('admin evaluation responsive CSS guard', () => {
         new RegExp(`${escapeRegExp(`.${escapedClass}`)}\\s*\\{[^}]*display:\\s*${displayValue}`),
       );
     }
-  });
+
+    for (const utility of criticalAdminConsoleLayoutUtilities) {
+      expect(css, `${utility} should be emitted`).toContain(`.${escapeCssClass(utility)}`);
+    }
+  }, 20_000);
 });

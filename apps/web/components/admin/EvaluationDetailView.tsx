@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 import { openExternalUrl } from '@/lib/open-external-url';
+import { explainAddressConsistency, getAddressConsistencyBadgeClass } from '@/lib/admin-address-consistency';
 
 // 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
 const getYoutubeVideoId = (url: string | undefined): string | null => {
@@ -105,22 +106,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
     }
 
     const locationMatchResult = record.evaluation_results?.location_match_TF as LocationMatchResult | undefined;
-    const evidenceSummary = Array.isArray(locationMatchResult?.evidence_summary)
-        ? locationMatchResult.evidence_summary.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-        : [];
-    const evidenceFamilies = Array.isArray(locationMatchResult?.evidence_families)
-        ? locationMatchResult.evidence_families.filter((item) => item.trim().length > 0)
-        : [];
-    const secondPass = locationMatchResult?.second_pass;
-    const secondPassSummary = secondPass
-        ? [
-            secondPass.attempted ? 'attempted' : 'not-attempted',
-            secondPass.provider || null,
-            secondPass.timed_out ? 'timed_out' : null,
-            secondPass.rate_limited ? 'rate_limited' : null,
-            typeof secondPass.duration_ms === 'number' ? `${secondPass.duration_ms}ms` : null,
-        ].filter((item): item is string => Boolean(item))
-        : [];
+    const addressConsistency = explainAddressConsistency(record);
 
     const RightContent = () => (
         <div className="p-4 space-y-4 text-sm">
@@ -165,52 +151,6 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 </span>
                                 <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
                             </div>
-                            {(locationMatchResult?.matched_provider ||
-                                locationMatchResult?.matched_name ||
-                                evidenceSummary.length > 0 ||
-                                evidenceFamilies.length > 0 ||
-                                locationMatchResult?.pending_reason ||
-                                secondPassSummary.length > 0) && (
-                                <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2 space-y-1.5">
-                                    <div className="flex items-start gap-2">
-                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Matched:</span>
-                                        <span className="font-semibold text-gray-800 break-all">
-                                            {locationMatchResult?.matched_provider || '-'}
-                                            {locationMatchResult?.matched_name ? ` · ${locationMatchResult.matched_name}` : ''}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Evidence:</span>
-                                        <span className="text-gray-700 break-all">
-                                            {evidenceFamilies.length > 0 ? evidenceFamilies.join(', ') : '-'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Pending:</span>
-                                        <span className="text-gray-700 break-all">
-                                            {locationMatchResult?.pending_reason || '-'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">2nd Pass:</span>
-                                        <span className="text-gray-700 break-all">
-                                            {secondPassSummary.length > 0 ? secondPassSummary.join(', ') : '-'}
-                                        </span>
-                                    </div>
-                                    {evidenceSummary.length > 0 && (
-                                        <div className="space-y-1">
-                                            <span className="font-medium text-gray-500">Evidence Summary:</span>
-                                            <ul className="list-disc pl-5 text-gray-700 space-y-0.5">
-                                                {evidenceSummary.map((summary, index) => (
-                                                    <li key={`${record.id}-evidence-${index}`} className="break-all">
-                                                        {summary}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -275,11 +215,22 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-orange-50 text-orange-700 border-orange-200 text-[10px] shrink-0">5</Badge>
                             <span className="font-semibold text-gray-900 text-sm shrink-0">주소 정합성:</span>
-                            <Badge className={cn("text-[10px] h-5 px-1.5", record.geocoding_success ? "bg-green-600" : "bg-red-500")}>
-                                {record.geocoding_success ? "성공" : "실패"}
+                            <Badge className={cn("text-[10px] h-5 px-1.5", getAddressConsistencyBadgeClass(record))}>
+                                {addressConsistency.label}
                             </Badge>
                         </div>
-                        <div className="text-gray-600 text-xs space-y-0.5 mt-0.5">
+                        <div className="text-gray-600 text-xs space-y-1 mt-0.5">
+                            <p className="font-medium text-gray-800 break-keep">{addressConsistency.headline}</p>
+                            <p className="break-all whitespace-pre-wrap">{addressConsistency.reason}</p>
+                            {addressConsistency.evidence.length > 0 && (
+                                <ul className="list-disc pl-4 space-y-0.5 text-gray-600">
+                                    {addressConsistency.evidence.map((item, index) => (
+                                        <li key={`${record.id}-address-consistency-${index}`} className="break-all">
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                             <p className="break-all"><span className="text-gray-500 shrink-0">지번:</span> {record.jibun_address || '-'}</p>
                             <p className="break-all"><span className="text-gray-500 shrink-0">도로명:</span> {record.road_address || '-'}</p>
                         </div>

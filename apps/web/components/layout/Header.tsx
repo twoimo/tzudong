@@ -1,7 +1,7 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Image as ImageIcon, ChevronDown, ChevronUp, Utensils, BarChart2 } from "lucide-react";
+import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, Megaphone, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, ChevronDown, ChevronUp, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
@@ -30,7 +30,6 @@ import { useHydration } from "@/hooks/useHydration";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useActiveAnnouncements } from "@/hooks/use-banner-announcements";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
-import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { toast } from "@/lib/no-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -81,10 +80,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const [announcementPage, setAnnouncementPage] = useState(1);
   const ANNOUNCEMENTS_PER_PAGE = 3;
 
-  // 미처리 제보 건수 상태
-  const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
-  // 미처리 리뷰 건수 상태
-  const [pendingReviewCount, setPendingReviewCount] = useState(0);
   // 사업자 정보 펼치기 상태
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
 
@@ -136,50 +131,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       resizeObserver.disconnect();
     };
   }, []);
-
-  // 미처리 제보 건수 조회
-  useEffect(() => {
-    if (!isAdmin) return;
-
-    const fetchPendingCount = async () => {
-      try {
-        const count = await fetchSupabaseExactCount('restaurant_submissions', [
-          ['select', 'id'],
-          ['status', 'eq.pending'],
-        ]);
-        setPendingSubmissionCount(count);
-      } catch (err) {
-        console.error('Failed to fetch pending submission count:', err);
-      }
-    };
-
-    fetchPendingCount();
-    // 1분마다 갱신
-    const interval = setInterval(fetchPendingCount, 60000);
-    return () => clearInterval(interval);
-  }, [isAdmin]);
-
-  // 미처리 리뷰 건수 조회
-  useEffect(() => {
-    if (!isAdmin) return;
-
-    const fetchPendingReviewCount = async () => {
-      try {
-        const count = await fetchSupabaseExactCount('reviews', [
-          ['select', 'id'],
-          ['is_verified', 'eq.false'],
-        ]);
-        setPendingReviewCount(count);
-      } catch (err) {
-        console.error('Failed to fetch pending review count:', err);
-      }
-    };
-
-    fetchPendingReviewCount();
-    // 1분마다 갱신
-    const interval = setInterval(fetchPendingReviewCount, 60000);
-    return () => clearInterval(interval);
-  }, [isAdmin]);
 
   // 배너 자동 순환
   useEffect(() => {
@@ -325,22 +276,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     // 마이페이지 프로필 페이지로 이동
     router.push('/mypage/profile');
   }, [router]);
-
-  const handleAdminSubmissionsClick = useCallback(() => {
-    // /admin/evaluations 페이지로 이동하며 <제보 관리 탭 활성화
-    router.push('/admin/evaluations?view=submissions');
-  }, [router]);
-
-  const handleAdminReviewsClick = useCallback(() => {
-    // /admin/evaluations 페이지로 이동하며 리뷰 검수 탭 활성화
-    router.push('/admin/evaluations?view=submissions&tab=reviews');
-  }, [router]);
-
-  const handleAdminBannersClick = useCallback(() => {
-    router.push('/admin/banners');
-  }, [router]);
-
-
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -680,35 +615,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-border my-1" />
-                  <DropdownMenuItem onClick={() => router.push('/admin/evaluations')} className="text-foreground hover:bg-accent py-1.5">
-                    <Utensils className="mr-2 h-4 w-4" />
-                    맛집관리
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-foreground hover:bg-accent py-1.5">
-                    <ClipboardList className="mr-2 h-4 w-4" />
-                    제보관리
-                    {pendingSubmissionCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
-                        {pendingSubmissionCount > 99 ? '99+' : pendingSubmissionCount}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-foreground hover:bg-accent py-1.5">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    리뷰관리
-                    {pendingReviewCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
-                        {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    배너관리
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
-                    <BarChart2 className="mr-2 h-4 w-4" />
-                    인사이트
+                  <DropdownMenuItem onClick={() => router.push('/admin')} className="text-foreground hover:bg-accent py-1.5">
+                    <PanelLeft className="mr-2 h-4 w-4" />
+                    관리자 콘솔
                   </DropdownMenuItem>
                 </>
               )}

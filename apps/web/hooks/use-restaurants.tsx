@@ -5,6 +5,7 @@ import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
 import { fetchSupabaseRows, postgrestArrayOverlap, postgrestIn } from "@/lib/supabase-rest-client";
 import { buildRelatedVerifiedReviewCountMap } from "@/lib/restaurant-review-counts";
+import { hydrateRestaurantDetailWithMergeContext } from "@/lib/restaurant-merged-media";
 
 type DBRestaurant = Tables<"restaurants">;
 
@@ -259,6 +260,45 @@ function buildRestaurantQueryKey(
     number | null
 ] {
     return ["restaurants", normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews];
+}
+
+function collectRestaurantMergeContextIds(restaurant: Restaurant | null | undefined): string[] {
+    if (!restaurant?.id) return [];
+
+    // Compact map rows intentionally keep merged child records to id-only shape.
+    // Detail hydration depends on those ids to refetch full media fields on demand.
+    return [...new Set([
+        restaurant.id,
+        ...(restaurant.mergedRestaurants?.map((mergedRestaurant) => mergedRestaurant.id).filter(Boolean) ?? []),
+    ])].sort();
+}
+
+function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
+    return {
+        ...dbData,
+        address: dbData.road_address || dbData.jibun_address || '',
+        category: dbData.categories,
+    } as Restaurant;
+}
+
+export function buildRestaurantDetailFromMergeRows(
+    mergeContextRestaurant: Restaurant,
+    rows: DBRestaurant[],
+): Restaurant | null {
+    if (rows.length === 0) {
+        return hydrateRestaurantDetailWithMergeContext(null, mergeContextRestaurant);
+    }
+
+    const mergeContextIds = collectRestaurantMergeContextIds(mergeContextRestaurant);
+    const hydratedRows = rows.map(hydrateDbRestaurant);
+    const primaryDetail = hydratedRows.find((restaurant) => restaurant.id === mergeContextRestaurant.id) ?? hydratedRows[0] ?? null;
+    const mergedCandidates = mergeRestaurants(rows);
+    const mergedCandidate = mergedCandidates.find((restaurant) =>
+        restaurant.id === mergeContextRestaurant.id ||
+        restaurant.mergedRestaurants?.some((mergedRestaurant) => mergeContextIds.includes(mergedRestaurant.id))
+    ) ?? mergedCandidates[0] ?? null;
+
+    return hydrateRestaurantDetailWithMergeContext(primaryDetail, mergedCandidate ?? mergeContextRestaurant);
 }
 
 
@@ -648,15 +688,27 @@ export function useRestaurant(id: string | null) {
             const dbData = rows[0];
             if (!dbData) return null;
 
-            // 호환성을 위한 데이터 변환
-            const restaurant: Restaurant = {
-                ...dbData,
-                address: dbData.road_address || dbData.jibun_address || '',
-                category: dbData.categories,
-            };
-
-            return restaurant;
+            return hydrateDbRestaurant(dbData);
         },
         enabled: !!id,
+    });
+}
+
+export function useRestaurantWithMergeContext(mergeContextRestaurant: Restaurant | null | undefined) {
+    const mergeContextIds = collectRestaurantMergeContextIds(mergeContextRestaurant);
+
+    return useQuery({
+        queryKey: ["restaurant-merge-detail", mergeContextIds],
+        queryFn: async () => {
+            if (!mergeContextRestaurant || mergeContextIds.length === 0) return null;
+
+            const rows = await fetchSupabaseRows<DBRestaurant>('restaurants', [
+                ['select', RESTAURANT_MERGE_SELECT],
+                ['id', postgrestIn(mergeContextIds)],
+            ]);
+
+            return buildRestaurantDetailFromMergeRows(mergeContextRestaurant, rows);
+        },
+        enabled: !!mergeContextRestaurant?.id,
     });
 }
