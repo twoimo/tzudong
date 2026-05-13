@@ -196,7 +196,20 @@ test.describe('Responsive Overflow Guard', () => {
             'E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD 또는 INSIGHTS_CHAT_ADMIN_COOKIE/tests/.auth/admin.json 관리자 세션이 필요합니다.'
         );
 
-        const adminRoutes = ['/admin', '/admin/evaluations', '/admin/submissions', '/admin/banners', '/insights'];
+        const adminRoutes = [
+            '/admin',
+            '/admin?module=restaurants',
+            '/admin?module=submissions',
+            '/admin?module=reviews',
+            '/admin?module=banners',
+            '/admin?module=announcements',
+            '/admin?module=insights',
+            '/admin?module=audit',
+            '/admin/evaluations',
+            '/admin/submissions',
+            '/admin/banners',
+            '/insights',
+        ];
         for (const route of adminRoutes) {
             await assertNoHorizontalOverflow(page, route);
         }

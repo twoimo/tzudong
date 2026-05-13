@@ -38,6 +38,7 @@ describe('frontend unused route compatibility', () => {
         expect(adminEvaluationsSource).toContain("@/components/admin/EvaluationTableNew");
         expect(headerSource).toContain("관리자 콘솔");
         expect(headerSource).toContain("router.push('/admin')");
+        expect(headerSource).toContain("router.push('/admin?module=announcements')");
         expect(headerSource).not.toContain("/admin/evaluations?view=submissions");
         expect(headerSource).not.toContain("/admin/evaluations?view=submissions&tab=reviews");
         expect(mobileControlOverlaySource).toContain("관리자 콘솔");
@@ -77,13 +78,19 @@ describe('frontend unused route compatibility', () => {
         const adminConsoleSource = source('components/admin/AdminConsoleOverview.tsx');
 
         expect(adminPageSource).toContain('<AdminConsoleOverview />');
-        expect(adminConsoleSource).toContain('getAdminModuleIdFromLocation(window.location)');
-        expect(adminConsoleSource).toContain('url.searchParams.set("module", moduleId)');
-        expect(adminConsoleSource).toContain('url.searchParams.delete("module")');
+        expect(adminConsoleSource).toContain('getAdminModuleIdFromSearchParams(searchParams)');
+        expect(adminConsoleSource).toContain('params.set("module", moduleId)');
+        expect(adminConsoleSource).toContain('params.delete("module")');
+        expect(adminConsoleSource).toContain('router.replace');
+        expect(adminConsoleSource).not.toContain('window.history.replaceState');
         expect(adminConsoleSource).toContain('<AdminEvaluationModule key="restaurants" embedded initialView="evaluations" />');
         expect(adminConsoleSource).toContain('<AdminEvaluationModule key="submissions" embedded initialView="submissions" initialSubmissionTab="new" />');
         expect(adminConsoleSource).toContain('<AdminEvaluationModule key="reviews" embedded initialView="submissions" initialSubmissionTab="reviews" />');
         expect(adminConsoleSource).toContain('<AdminBannerModule key="admin-banners" embedded />');
+        expect(adminConsoleSource).toContain('AdminAnnouncementModule');
+        expect(adminConsoleSource).toContain('adminActionsMode="inline"');
+        expect(adminConsoleSource).toContain('id: "announcements"');
+        expect(adminConsoleSource).toContain('/admin?module=announcements');
         expect(adminConsoleSource).toContain('<InsightsModule key="admin-insights" />');
         expect(adminConsoleSource).toContain('router.push("/")');
         expect(adminConsoleSource).not.toContain('router.push("/admin/evaluations")');

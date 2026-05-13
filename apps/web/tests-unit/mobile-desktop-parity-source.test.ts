@@ -30,6 +30,13 @@ describe('mobile and desktop parity source contracts', () => {
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
     expect(consoleSource).toContain('AdminEvaluationModule');
     expect(consoleSource).toContain('AdminBannerModule');
+    expect(consoleSource).toContain('AdminAnnouncementModule');
+    expect(consoleSource).toContain('id: "announcements"');
+    expect(consoleSource).toContain('/admin?module=announcements');
+    expect(consoleSource).toContain('useSearchParams');
+    expect(consoleSource).toContain('router.replace');
+    expect(consoleSource).toContain('getAdminModuleIdFromSearchParams');
+    expect(consoleSource).not.toContain('window.history.replaceState');
   });
 
   test('admin evaluations keep equivalent mobile-card and desktop-table controls', () => {
@@ -75,6 +82,7 @@ describe('mobile and desktop parity source contracts', () => {
     const navigationRoutesSource = source('components/layout/navigation-routes.ts');
 
     expect(headerSource).toContain("router.push('/admin')");
+    expect(headerSource).toContain("router.push('/admin?module=announcements')");
     expect(mobileOverlaySource).toContain("router.push('/admin')");
     expect(headerSource).toContain('관리자 콘솔');
     expect(mobileOverlaySource).toContain('관리자 콘솔');
