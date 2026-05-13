@@ -16,6 +16,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
       'missing',
       'not_selected',
       'geocoding_failed',
+      'address_review_geocode_recovered',
     ]);
   });
 
@@ -28,6 +29,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(sanitizePrimaryStatusFilterValue('missing')).toBe('missing');
     expect(sanitizePrimaryStatusFilterValue('not_selected')).toBe('not_selected');
     expect(sanitizePrimaryStatusFilterValue('geocoding_failed')).toBe('geocoding_failed');
+    expect(sanitizePrimaryStatusFilterValue('address_review_geocode_recovered')).toBe('address_review_geocode_recovered');
     expect(sanitizePrimaryStatusFilterValue('hold')).toBeUndefined();
     expect(sanitizePrimaryStatusFilterValue('db_conflict')).toBeUndefined();
   });

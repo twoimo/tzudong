@@ -281,7 +281,7 @@ export default function HomeClientEffects({
                 return;
             }
 
-            router.push('/mypage');
+            router.push('/mypage/profile');
         };
 
         const handleAdminSubmissionsOpen = () => {

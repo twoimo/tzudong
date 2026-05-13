@@ -7,6 +7,7 @@ export const PRIMARY_STATUS_FILTER_OPTIONS = [
   { value: 'missing', label: 'Missing' },
   { value: 'not_selected', label: '평가 미대상' },
   { value: 'geocoding_failed', label: '지오코딩 실패' },
+  { value: 'address_review_geocode_recovered', label: '지도후보 부족' },
 ] as const;
 
 const PRIMARY_STATUS_FILTER_OPTION_VALUES = new Set<string>(

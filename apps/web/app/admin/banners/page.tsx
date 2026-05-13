@@ -82,16 +82,50 @@ const revokeObjectUrlIfNeeded = (url: string | null) => {
     }
 };
 
+const isNestedUploadInteractiveTarget = (target: EventTarget | null) => {
+    return target instanceof HTMLElement && Boolean(
+        target.closest('button, a, input, textarea, select, video')
+    );
+};
+
+type BannerManagementPageWrapperProps = {
+    embedded?: boolean;
+};
+
 // Suspense 래퍼
-export default function BannerManagementPageWrapper() {
+export default function BannerManagementPageWrapper({ embedded = false }: BannerManagementPageWrapperProps = {}) {
     return (
-        <Suspense fallback={<GlobalLoader fullScreen />}>
-            <BannerManagementPage />
+        <Suspense fallback={embedded ? <EmbeddedBannerLoading /> : <GlobalLoader fullScreen />}>
+            <BannerManagementPage embedded={embedded} />
         </Suspense>
     );
 }
 
-function BannerManagementPage() {
+
+function EmbeddedBannerLoading() {
+    return (
+        <div
+            className="flex h-full min-h-[420px] flex-col justify-center rounded-2xl border border-border bg-card/95 p-6"
+            aria-busy="true"
+            aria-live="polite"
+        >
+            <div className="mx-auto w-full max-w-3xl space-y-4">
+                <p className="text-sm font-semibold text-primary">배너 관리 준비 중</p>
+                <div className="space-y-3" aria-hidden="true">
+                    <div className="h-10 rounded-2xl bg-muted/70" />
+                    <div className="grid gap-3 md:grid-cols-3">
+                        <div className="h-24 rounded-2xl bg-muted/50" />
+                        <div className="h-24 rounded-2xl bg-muted/50" />
+                        <div className="h-24 rounded-2xl bg-muted/50" />
+                    </div>
+                    <div className="h-48 rounded-2xl bg-muted/40" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapperProps>) {
     const router = useRouter();
     const { user, isAdmin, isLoading: authLoading } = useAuth();
 
@@ -144,9 +178,17 @@ function BannerManagementPage() {
     const sortedBanners = useMemo(() => {
         return [...banners].sort((a, b) => b.priority - a.priority);
     }, [banners]);
+    const activeBannerCount = sortedBanners.filter((banner) => banner.is_active).length;
+    const inactiveBannerCount = sortedBanners.length - activeBannerCount;
+    const sidebarTargetCount = sortedBanners.filter((banner) => banner.display_target.includes('sidebar')).length;
+    const mobileTargetCount = sortedBanners.filter((banner) => banner.display_target.includes('mobile_popup')).length;
 
-    if (authLoading || !user || !isAdmin) {
-        return <GlobalLoader fullScreen />;
+    if (authLoading) {
+        return embedded ? <EmbeddedBannerLoading /> : <GlobalLoader fullScreen />;
+    }
+
+    if (!user || !isAdmin) {
+        return null;
     }
 
     // 폼 초기화
@@ -249,6 +291,19 @@ function BannerManagementPage() {
         if (mediaFile) {
             await handleMediaSelect(mediaFile);
         }
+    };
+
+    const handleUploadSurfaceClick = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (isNestedUploadInteractiveTarget(event.target)) return;
+        fileInputRef.current?.click();
+    };
+
+    const handleUploadSurfaceKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (isNestedUploadInteractiveTarget(event.target)) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+
+        event.preventDefault();
+        fileInputRef.current?.click();
     };
 
     // 미디어 선택 처리 (이미지 또는 영상)
@@ -438,62 +493,85 @@ function BannerManagementPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#fdfbf7] font-serif">
+        <div className={cn("font-serif text-foreground", embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background" : "min-h-screen bg-[#fdfbf7]")}>
             {/* 한지 질감 오버레이 */}
-            <div
-                className="fixed inset-0 opacity-30 pointer-events-none z-0"
-                style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
-                }}
-            />
+            {!embedded && (
+                <div
+                    className="fixed inset-0 opacity-30 pointer-events-none z-0"
+                    style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
+                    }}
+                />
+            )}
 
-            <div className="relative z-10 container mx-auto p-4 md:p-6 max-w-6xl">
+            <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", embedded ? "h-full" : "container mx-auto min-h-screen max-w-6xl p-4 md:p-6")}>
                 {/* 헤더 */}
-                <div className="flex items-center justify-between mb-6 md:mb-8">
-                    <div className="flex items-center gap-3 md:gap-4">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => router.back()}
-                            className="hover:bg-stone-200/50 h-8 w-8 md:h-10 md:w-10"
-                        >
-                            <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
-                        </Button>
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-bold text-stone-900">배너 관리</h1>
-                            <p className="text-sm text-stone-500 hidden md:block">사이드바 및 모바일 팝업 광고 배너를 관리합니다</p>
+                <div className="flex flex-none flex-col gap-3 border-b border-border bg-card px-3 py-3 sm:px-5 sm:py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                        {!embedded && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.back()}
+                                className="h-9 w-9 rounded-xl hover:bg-muted"
+                                aria-label="이전 화면으로 돌아가기"
+                            >
+                                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                        )}
+                        <div className="flex min-w-0 gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
+                                <ImageIcon className="h-5 w-5" aria-hidden="true" />
+                            </div>
+                            <div className="min-w-0">
+                                <h1 className="bg-gradient-primary bg-clip-text text-xl md:text-2xl font-bold tracking-[-0.04em] text-transparent">배너 관리</h1>
+                                <p className="mt-0.5 text-xs leading-5 text-muted-foreground sm:text-sm">
+                                    전체 {sortedBanners.length}개 | 활성 {activeBannerCount}개 | 비활성 {inactiveBannerCount}개
+                                </p>
+                            </div>
                         </div>
                     </div>
-                    <Button onClick={openCreateDialog} size="icon" className="md:px-4 md:py-2 md:w-auto bg-stone-800 hover:bg-stone-700">
-                        <Plus className="h-4 w-4 md:mr-2" />
-                        <span className="hidden md:inline">새 배너 추가</span>
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground">
+                            <Monitor className="h-4 w-4 mr-1" aria-hidden="true" />
+                            사이드바 {sidebarTargetCount}
+                        </Badge>
+                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground">
+                            <Smartphone className="h-4 w-4 mr-1" aria-hidden="true" />
+                            모바일 {mobileTargetCount}
+                        </Badge>
+                        <Button onClick={openCreateDialog} className="h-9 rounded-xl bg-primary px-3 text-primary-foreground shadow-primary hover:bg-primary/90">
+                            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
+                            새 배너 추가
+                        </Button>
+                    </div>
                 </div>
 
                 {/* 배너 목록 */}
+                <div className={cn("min-h-0 flex-1 overflow-y-auto", embedded ? "p-3 sm:p-4" : "pt-4")}>
                 {bannersLoading ? (
-                    <Card className="border-stone-200 p-8 text-center text-stone-500">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                    <Card className="border-border bg-card/95 p-8 text-center text-muted-foreground shadow-sm">
+                        <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" aria-hidden="true" />
                         배너 목록을 불러오는 중...
                     </Card>
                 ) : sortedBanners.length === 0 ? (
-                    <Card className="border-stone-200 p-8 text-center text-stone-500">
-                        <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                    <Card className="border-border bg-card/95 p-8 text-center text-muted-foreground shadow-sm">
+                        <ImageIcon className="mx-auto mb-4 h-12 w-12 text-primary/40" aria-hidden="true" />
                         <p>등록된 배너가 없습니다</p>
-                        <Button onClick={openCreateDialog} variant="link" className="mt-2">
+                        <Button onClick={openCreateDialog} variant="outline" className="mt-4 rounded-xl">
                             첫 번째 배너 추가하기
                         </Button>
                     </Card>
                 ) : (
                     <>
                         {/* 모바일 카드 리스트 (md 미만에서 표시) */}
-                        <div className="md:hidden space-y-3">
+                        <div className="space-y-3 md:hidden">
                             {sortedBanners.map((banner) => (
-                                <Card key={banner.id} className="border-stone-200 p-4">
+                                <Card key={banner.id} className="border-border bg-card/95 p-4 shadow-sm">
                                     <div className="flex gap-3">
                                         {/* 썸네일 */}
                                         {banner.image_url ? (
-                                            <div className="relative w-20 h-16 rounded overflow-hidden border border-stone-200 flex-shrink-0">
+                                            <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-border">
                                                 <Image
                                                     src={banner.image_url}
                                                     alt={banner.title}
@@ -504,18 +582,18 @@ function BannerManagementPage() {
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="w-20 h-16 rounded bg-stone-100 flex items-center justify-center border border-stone-200 flex-shrink-0">
-                                                <Scroll className="h-6 w-6 text-stone-400" />
+                                            <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40">
+                                                <Scroll className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
                                             </div>
                                         )}
 
                                         {/* 정보 */}
-                                        <div className="flex-1 min-w-0">
+                                        <div className="min-w-0 flex-1">
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="min-w-0">
-                                                    <p className="font-medium text-stone-900 truncate">{banner.title}</p>
+                                                    <p className="truncate font-semibold text-foreground">{banner.title}</p>
                                                     {banner.description && (
-                                                        <p className="text-xs text-stone-500 truncate mt-0.5">
+                                                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
                                                             {banner.description}
                                                         </p>
                                                     )}
@@ -523,26 +601,27 @@ function BannerManagementPage() {
                                                 <Switch
                                                     checked={banner.is_active}
                                                     onCheckedChange={() => handleToggle(banner)}
-                                                    className="flex-shrink-0"
+                                                    aria-label={`배너 ${banner.title} 공개 상태 전환`}
+                                                    className="shrink-0"
                                                 />
                                             </div>
 
                                             {/* 배지 및 액션 */}
-                                            <div className="flex items-center justify-between mt-2">
+                                            <div className="mt-3 flex items-center justify-between">
                                                 <div className="flex flex-wrap gap-1">
                                                     {banner.display_target.includes('sidebar') && (
-                                                        <Badge variant="secondary" className="text-xs">
+                                                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
                                                             <Monitor className="h-3 w-3 mr-1" />
                                                             사이드바
                                                         </Badge>
                                                     )}
                                                     {banner.display_target.includes('mobile_popup') && (
-                                                        <Badge variant="secondary" className="text-xs">
+                                                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
                                                             <Smartphone className="h-3 w-3 mr-1" />
                                                             모바일
                                                         </Badge>
                                                     )}
-                                                    <Badge variant="outline" className="text-xs">
+                                                    <Badge variant="outline" className="rounded-full text-xs">
                                                         우선순위 {banner.priority}
                                                     </Badge>
                                                 </div>
@@ -553,26 +632,29 @@ function BannerManagementPage() {
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={() => handleOpenExternalLink(banner.link_url!)}
-                                                            className="h-7 w-7"
+                                                            aria-label={`배너 ${banner.title} 링크 열기`}
+                                                            className="h-8 w-8 rounded-xl"
                                                         >
-                                                            <ExternalLink className="h-3.5 w-3.5" />
+                                                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
                                                         </Button>
                                                     )}
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => openEditDialog(banner)}
-                                                        className="h-7 w-7"
+                                                        aria-label={`배너 ${banner.title} 수정`}
+                                                        className="h-8 w-8 rounded-xl"
                                                     >
-                                                        <Pencil className="h-3.5 w-3.5" />
+                                                        <Pencil className="h-4 w-4" aria-hidden="true" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => confirmDelete(banner)}
-                                                        className="h-7 w-7 text-destructive hover:text-destructive"
+                                                        aria-label={`배너 ${banner.title} 삭제`}
+                                                        className="h-8 w-8 rounded-xl text-destructive hover:text-destructive"
                                                     >
-                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                                                     </Button>
                                                 </div>
                                             </div>
@@ -583,10 +665,10 @@ function BannerManagementPage() {
                         </div>
 
                         {/* 데스크톱 테이블 (md 이상에서 표시) */}
-                        <Card className="border-stone-200 overflow-hidden hidden md:block">
+                        <Card className="hidden overflow-hidden border-border bg-card/95 shadow-sm md:block">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="bg-stone-50">
+                                    <TableRow className="border-border bg-muted/35 hover:bg-muted/35">
                                         <TableHead className="w-20">썸네일</TableHead>
                                         <TableHead>제목</TableHead>
                                         <TableHead className="w-32">표시 위치</TableHead>
@@ -597,10 +679,10 @@ function BannerManagementPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {sortedBanners.map((banner) => (
-                                        <TableRow key={banner.id} className="hover:bg-stone-50">
+                                        <TableRow key={banner.id} className="border-border hover:bg-muted/25">
                                             <TableCell>
                                                 {banner.image_url ? (
-                                                    <div className="relative w-16 h-12 rounded overflow-hidden border border-stone-200">
+                                                    <div className="relative h-12 w-16 overflow-hidden rounded-xl border border-border">
                                                         <Image
                                                             src={banner.image_url}
                                                             alt={banner.title}
@@ -611,16 +693,16 @@ function BannerManagementPage() {
                                                         />
                                                     </div>
                                                 ) : (
-                                                    <div className="w-16 h-12 rounded bg-stone-100 flex items-center justify-center border border-stone-200">
-                                                        <Scroll className="h-5 w-5 text-stone-400" />
+                                                    <div className="flex h-12 w-16 items-center justify-center rounded-xl border border-border bg-muted/40">
+                                                        <Scroll className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                                                     </div>
                                                 )}
                                             </TableCell>
                                             <TableCell>
                                                 <div>
-                                                    <p className="font-medium text-stone-900">{banner.title}</p>
+                                                    <p className="font-semibold text-foreground">{banner.title}</p>
                                                     {banner.description && (
-                                                        <p className="text-xs text-stone-500 truncate max-w-xs">
+                                                        <p className="max-w-xs truncate text-xs text-muted-foreground">
                                                             {banner.description}
                                                         </p>
                                                     )}
@@ -629,13 +711,13 @@ function BannerManagementPage() {
                                             <TableCell>
                                                 <div className="flex flex-col gap-1">
                                                     {banner.display_target.includes('sidebar') && (
-                                                        <Badge variant="secondary" className="text-xs w-fit">
+                                                        <Badge variant="secondary" className="w-fit rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
                                                             <Monitor className="h-3 w-3 mr-1" />
                                                             사이드바
                                                         </Badge>
                                                     )}
                                                     {banner.display_target.includes('mobile_popup') && (
-                                                        <Badge variant="secondary" className="text-xs w-fit">
+                                                        <Badge variant="secondary" className="w-fit rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
                                                             <Smartphone className="h-3 w-3 mr-1" />
                                                             모바일
                                                         </Badge>
@@ -643,12 +725,13 @@ function BannerManagementPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Badge variant="outline">{banner.priority}</Badge>
+                                                <Badge variant="outline" className="rounded-full">{banner.priority}</Badge>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Switch
                                                     checked={banner.is_active}
                                                     onCheckedChange={() => handleToggle(banner)}
+                                                    aria-label={`배너 ${banner.title} 공개 상태 전환`}
                                                 />
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -658,26 +741,29 @@ function BannerManagementPage() {
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={() => handleOpenExternalLink(banner.link_url!)}
-                                                            className="h-8 w-8"
+                                                            aria-label={`배너 ${banner.title} 링크 열기`}
+                                                            className="h-8 w-8 rounded-xl"
                                                         >
-                                                            <ExternalLink className="h-4 w-4" />
+                                                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
                                                         </Button>
                                                     )}
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => openEditDialog(banner)}
-                                                        className="h-8 w-8"
+                                                        aria-label={`배너 ${banner.title} 수정`}
+                                                        className="h-8 w-8 rounded-xl"
                                                     >
-                                                        <Pencil className="h-4 w-4" />
+                                                        <Pencil className="h-4 w-4" aria-hidden="true" />
                                                     </Button>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => confirmDelete(banner)}
-                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                        aria-label={`배너 ${banner.title} 삭제`}
+                                                        className="h-8 w-8 rounded-xl text-destructive hover:text-destructive"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                                                     </Button>
                                                 </div>
                                             </TableCell>
@@ -688,6 +774,7 @@ function BannerManagementPage() {
                         </Card>
                     </>
                 )}
+                </div>
 
                 {/* 생성/수정 다이얼로그 */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -727,8 +814,11 @@ function BannerManagementPage() {
                             <div className="space-y-2">
                                 <Label>배너 이미지</Label>
                                 <Card
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label="배너 이미지 또는 영상 업로드"
                                     className={cn(
-                                        "p-6 border-dashed transition-colors cursor-pointer",
+                                        "p-6 border-dashed transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                                         isDragging ? "border-primary bg-primary/5" : "border-stone-300 hover:border-primary/50",
                                         (imagePreview || videoPreview) && "border-solid border-green-300 bg-green-50/50"
                                     )}
@@ -736,11 +826,12 @@ function BannerManagementPage() {
                                     onDragEnter={handleDragEnter}
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={handleUploadSurfaceClick}
+                                    onKeyDown={handleUploadSurfaceKeyDown}
                                 >
                                     {isUploading ? (
                                         <div className="flex flex-col items-center gap-2 py-4">
-                                            <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
+                                            <Loader2 className="h-8 w-8 animate-spin text-stone-400" aria-hidden="true" />
                                             <p className="text-sm text-stone-500">
                                                 {compressionProgress > 0
                                                     ? `압축 중... ${compressionProgress}%`
@@ -821,6 +912,7 @@ function BannerManagementPage() {
                                     )}
                                     <input
                                         ref={fileInputRef}
+                                        id="banner-media-upload"
                                         type="file"
                                         accept="image/*,video/*"
                                         onChange={handleFileInputChange}
@@ -903,7 +995,7 @@ function BannerManagementPage() {
                                 disabled={isUploading || createBanner.isPending || updateBanner.isPending}
                             >
                                 {(isUploading || createBanner.isPending || updateBanner.isPending) && (
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
                                 )}
                                 {editingBanner ? '수정' : '추가'}
                             </Button>

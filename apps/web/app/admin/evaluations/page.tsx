@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { debugLog } from '@/lib/debug-log';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import { getAddressConsistencyStatus, isGeocodeRecoveredReviewQueue } from '@/lib/admin-address-consistency';
 import { RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import {
   AlertDialog,
@@ -73,6 +74,7 @@ const EVALUATION_RECORD_STATUS_SET = new Set<EvaluationRecordStatus>([
   'missing',
   'db_conflict',
   'geocoding_failed',
+  'address_review_geocode_recovered',
   'not_selected',
 ]);
 const ADMIN_SUBMISSION_SELECT = [
@@ -304,16 +306,195 @@ const getErrorMessage = (error: unknown): string => {
   return '알 수 없는 오류';
 };
 
-// Suspense 래퍼 컴포넌트
-export default function AdminEvaluationPageWrapper() {
+type AdminEvaluationPageWrapperProps = {
+  embedded?: boolean;
+  initialView?: 'evaluations' | 'submissions';
+  initialSubmissionTab?: 'new' | 'edit' | 'reviews';
+};
+
+function getEmbeddedEvaluationLoadingCopy({
+  initialView = 'evaluations',
+  initialSubmissionTab = 'new',
+}: Pick<AdminEvaluationPageWrapperProps, 'initialView' | 'initialSubmissionTab'>) {
+  if (initialView === 'submissions' && initialSubmissionTab === 'reviews') {
+    return {
+      eyebrow: '리뷰 검수 큐 연결 중',
+      title: '리뷰 검수 큐를 여는 중',
+      description: '미승인 리뷰, OCR 증빙, 신고/삭제 후보를 통합 콘솔 작업 화면에 맞춰 정리하고 있습니다.',
+      primary: '미승인 리뷰',
+      secondary: '증빙 확인',
+      previewTitle: '리뷰 상세 미리보기',
+      rows: ['대기 리뷰', '영수증/OCR 증빙', '신고 후보'],
+    };
+  }
+
+  if (initialView === 'submissions') {
+    return {
+      eyebrow: '제보 큐 연결 중',
+      title: '제보 큐를 여는 중',
+      description: '신규 제보와 수정 제보를 통합 콘솔 작업 화면에서 검토할 수 있도록 목록, 필터, 상세 미리보기를 준비하고 있습니다.',
+      primary: '신규 제보',
+      secondary: '수정 제보',
+      previewTitle: '제보 상세 미리보기',
+      rows: ['대기 제보', '주소/좌표 확인', '중복 후보'],
+    };
+  }
+
+  return {
+    eyebrow: '맛집 데이터 검수 연결 중',
+    title: '맛집 검수 화면을 여는 중',
+    description: '승인된 맛집, 삭제/복구 후보, 지오코딩 실패 항목을 작업 화면에 맞춰 준비하고 있습니다.',
+    primary: '맛집 목록',
+    secondary: '좌표 점검',
+    previewTitle: '맛집 상세 미리보기',
+    rows: ['승인 맛집', '지오코딩 실패', '삭제/복구 후보'],
+  };
+}
+
+function EmbeddedEvaluationLoading({
+  initialView = 'evaluations',
+  initialSubmissionTab = 'new',
+}: Pick<AdminEvaluationPageWrapperProps, 'initialView' | 'initialSubmissionTab'>) {
+  const copy = getEmbeddedEvaluationLoadingCopy({ initialView, initialSubmissionTab });
+
   return (
-    <Suspense fallback={<GlobalLoader fullScreen />}>
-      <AdminEvaluationPage />
+    <section
+      role="status"
+      aria-label={`${copy.title} 상태`}
+      className="h-full min-h-[420px] overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-br from-card via-card to-primary/5 p-4 shadow-sm sm:min-h-[520px] sm:p-5"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <div className="flex h-full min-h-0 flex-col gap-4">
+        <div className="rounded-2xl border border-primary/15 bg-background/80 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-primary">{copy.eyebrow}</p>
+              <h2 className="mt-1 text-2xl font-bold tracking-[-0.04em] text-foreground">
+                {copy.title}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {copy.description}
+              </p>
+            </div>
+            <div className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary">
+              <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              통합 콘솔 작업 화면
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2" aria-label="준비 중인 검수 범위">
+            {['권한 확인', '큐 동기화', '검수 화면 구성', '확인 후 적용'].map((chip, index) => (
+              <span
+                key={chip}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  index === 0
+                    ? 'border-primary/25 bg-primary/5 text-primary'
+                    : 'border-border bg-card text-muted-foreground'
+                }`}
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0 rounded-2xl border border-border bg-background/80 p-3">
+            <div className="mb-3 grid gap-2 md:grid-cols-[minmax(0,1.2fr)_120px_120px_88px]">
+              <div className="h-11 rounded-xl bg-muted/70" />
+              <div className="h-11 rounded-xl bg-muted/55" />
+              <div className="h-11 rounded-xl bg-muted/55" />
+              <div className="h-11 rounded-xl bg-muted/45" />
+            </div>
+
+            <div className="space-y-2">
+              {copy.rows.map((row, index) => (
+                <div
+                  key={row}
+                  className="grid items-center gap-3 rounded-xl border border-border bg-card/85 p-3 md:grid-cols-[minmax(0,1fr)_120px_120px_88px]"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/5 text-primary">
+                      {index === 0 ? (
+                        <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <FileText className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="text-xs font-semibold text-foreground">{row}</p>
+                      <div className="h-2.5 w-24 rounded-full bg-muted/50" aria-hidden="true" />
+                    </div>
+                  </div>
+                  <div className="hidden h-8 rounded-full bg-muted/45 md:block" aria-hidden="true" />
+                  <div className="hidden h-8 rounded-full bg-muted/45 md:block" aria-hidden="true" />
+                  <div className="h-8 rounded-full bg-primary/10" aria-hidden="true" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <aside className="rounded-2xl border border-primary/10 bg-background/80 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <LayoutList className="h-4 w-4 text-primary" aria-hidden="true" />
+              {copy.previewTitle}
+            </div>
+            <div className="mt-4 space-y-3" aria-hidden="true">
+              <div className="h-5 w-32 rounded-full bg-muted/70" />
+              <div className="h-24 rounded-2xl bg-muted/45" />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="h-10 rounded-xl bg-muted/45" />
+                <div className="h-10 rounded-xl bg-primary/10" />
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl border border-border bg-card/80 p-3">
+              <p className="text-xs font-semibold text-foreground">안전 적용 순서</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                미리보기 → 확인 → 적용 → 재확인 → 감사 기록 순서로 이어집니다.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Suspense 래퍼 컴포넌트
+export default function AdminEvaluationPageWrapper({
+  embedded = false,
+  initialView = 'evaluations',
+  initialSubmissionTab,
+}: AdminEvaluationPageWrapperProps = {}) {
+  return (
+    <Suspense
+      fallback={
+        embedded ? (
+          <EmbeddedEvaluationLoading initialView={initialView} initialSubmissionTab={initialSubmissionTab} />
+        ) : (
+          <GlobalLoader fullScreen />
+        )
+      }
+    >
+      <AdminEvaluationPage
+        embedded={embedded}
+        initialView={initialView}
+        initialSubmissionTab={initialSubmissionTab}
+      />
     </Suspense>
   );
 }
 
-function AdminEvaluationPage() {
+function AdminEvaluationPage({
+  embedded,
+  initialView,
+  initialSubmissionTab,
+}: {
+  embedded: boolean;
+  initialView: 'evaluations' | 'submissions';
+  initialSubmissionTab?: 'new' | 'edit' | 'reviews';
+}) {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -343,6 +524,7 @@ function AdminEvaluationPage() {
     db_conflict: 0,
     missing: 0,
     geocoding_failed: 0,
+    address_review_geocode_recovered: 0,
     not_selected: 0,
     deleted: 0,
   });
@@ -390,6 +572,8 @@ function AdminEvaluationPage() {
     setDeepLinkFilter(null);
     deepLinkInitializedRef.current = true;
 
+    if (embedded) return;
+
     const params = new URLSearchParams(searchParams.toString());
     params.delete('video_id');
     params.delete('issue');
@@ -397,14 +581,17 @@ function AdminEvaluationPage() {
 
     const query = params.toString();
     router.replace(query ? `/admin/evaluations?${query}` : '/admin/evaluations', { scroll: false });
-  }, [router, searchParams]);
+  }, [embedded, router, searchParams]);
 
   // URL 파라미터에 따라 초기 뷰 설정
   useEffect(() => {
-    if (searchParams.get('view') === 'submissions') {
+    const routeView = embedded ? null : searchParams.get('view');
+    const routeTab = embedded ? null : searchParams.get('tab');
+
+    if (initialView === 'submissions' || routeView === 'submissions') {
       setShowSubmissionView(true);
       // tab 파라미터가 reviews면 리뷰 탭으로 초기화
-      const tab = searchParams.get('tab');
+      const tab = initialSubmissionTab ?? routeTab;
       if (tab === 'reviews') {
         setSubmissionInitialTab('reviews');
       } else if (tab === 'edit') {
@@ -412,12 +599,17 @@ function AdminEvaluationPage() {
       } else {
         setSubmissionInitialTab('new');
       }
+      return;
     }
-  }, [searchParams]);
+
+    setShowSubmissionView(false);
+    setSubmissionInitialTab('new');
+  }, [embedded, initialSubmissionTab, initialView, searchParams]);
 
   // URL 파라미터에 따라 Deep-link 필터 초기화
   useEffect(() => {
     if (deepLinkInitializedRef.current) return;
+    if (embedded) return;
 
     const videoId = searchParams.get('video_id')?.trim() || '';
     const issue = searchParams.get('issue')?.trim() || '';
@@ -431,7 +623,7 @@ function AdminEvaluationPage() {
       ...(issue ? { issue } : {}),
       ...(reason ? { reason } : {}),
     });
-  }, [searchParams]);
+  }, [embedded, searchParams]);
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
   const [editingSubmission, setEditingSubmission] = useState<SubmissionRecord | null>(null);
   const queryClient = useQueryClient();
@@ -623,8 +815,11 @@ function AdminEvaluationPage() {
 
           switch (evalFilters.status) {
             case 'geocoding_failed':
-              // 지오코딩 실패: geocoding_success가 false인 모든 레코드
-              match = !r.geocoding_success;
+              // 주소정합 실패: 상세/테이블 표시와 같은 helper 기준(False/Failed)으로 집계
+              match = r.status !== 'deleted' && ['false', 'failed'].includes(getAddressConsistencyStatus(r));
+              break;
+            case 'address_review_geocode_recovered':
+              match = r.status !== 'deleted' && isGeocodeRecoveredReviewQueue(r);
               break;
             case 'missing':
               // Missing: is_missing이 true인 레코드
@@ -688,17 +883,16 @@ function AdminEvaluationPage() {
       );
     }
 
-    // 5. Geocoding Success 필터 (true/false_match/false_geocode)
+    // 5. 주소 정합 필터 (True/False/Failed) - 상세/테이블 표시와 같은 helper 사용
     if (evalFilters.geocoding_success) {
-      if (evalFilters.geocoding_success === 'true') {
-        // 지오코딩 성공
-        filtered = filtered.filter(r => r.geocoding_success === true);
-      } else if (evalFilters.geocoding_success === 'false_match') {
-        // 지오코딩 성공했으나 주소 매칭 실패
-        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage !== null);
-      } else if (evalFilters.geocoding_success === 'false_geocode') {
-        // 지오코딩 자체 실패
-        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage === null);
+      const targetStatusByFilter: Record<string, ReturnType<typeof getAddressConsistencyStatus>> = {
+        true: 'true',
+        false_match: 'false',
+        false_geocode: 'failed',
+      };
+      const targetStatus = targetStatusByFilter[evalFilters.geocoding_success];
+      if (targetStatus) {
+        filtered = filtered.filter(r => getAddressConsistencyStatus(r) === targetStatus);
       }
     }
 
@@ -913,6 +1107,7 @@ function AdminEvaluationPage() {
           db_conflict: 0,
           missing: 0,
           geocoding_failed: 0,
+          address_review_geocode_recovered: 0,
           not_selected: 0,
           deleted: 0,
         });
@@ -996,7 +1191,10 @@ function AdminEvaluationPage() {
           (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
         ).length,
         geocoding_failed: typedRecords.filter(r =>
-          !r.geocoding_success  // 지오코딩이 실패한 모든 레코드 (deleted 제외)
+          r.status !== 'deleted' && ['false', 'failed'].includes(getAddressConsistencyStatus(r))
+        ).length,
+        address_review_geocode_recovered: typedRecords.filter(r =>
+          r.status !== 'deleted' && isGeocodeRecoveredReviewQueue(r)
         ).length,
         not_selected: typedRecords.filter(r => r.is_not_selected).length,
         deleted: deletedCount,
@@ -1022,6 +1220,7 @@ function AdminEvaluationPage() {
         db_conflict: 0,
         ready_for_approval: 0,
         geocoding_failed: 0,
+        address_review_geocode_recovered: 0,
         not_selected: 0,
         deleted: 0,
       });
@@ -1072,7 +1271,10 @@ function AdminEvaluationPage() {
       ).length,
       missing: allRecords.filter(r => r.is_missing).length,
       geocoding_failed: allRecords.filter(r =>
-        !r.geocoding_success  // 지오코딩이 실패한 모든 레코드
+        r.status !== 'deleted' && ['false', 'failed'].includes(getAddressConsistencyStatus(r))
+      ).length,
+      address_review_geocode_recovered: allRecords.filter(r =>
+        r.status !== 'deleted' && isGeocodeRecoveredReviewQueue(r)
       ).length,
       not_selected: allRecords.filter(r => r.is_not_selected).length,
       deleted: deletedCount,
@@ -2238,6 +2440,10 @@ function AdminEvaluationPage() {
   // 인증 로딩 중이거나 권한 확인 중일 때
 
   if (authLoading || (loading && allRecords.length === 0)) {
+    if (embedded) {
+      return <EmbeddedEvaluationLoading initialView={initialView} initialSubmissionTab={initialSubmissionTab} />;
+    }
+
     return (
       <GlobalLoader
         message="관리자 데이터 검수 로딩 중..."
@@ -2309,65 +2515,69 @@ function AdminEvaluationPage() {
               onSelectStatuses={setSelectedStatuses}
             >
               <div className="flex items-center gap-1.5 lg:gap-1">
-                <Button
-                  variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
-                  onClick={() => {
-                    setIsAlternateView(false);
-                    setShowSubmissionView(false);
-                    // URL에서 view 파라미터 제거
-                    router.replace('/admin/evaluations', { scroll: false });
-                  }}
-                  title="리스트 뷰"
-                >
-                  <LayoutList className="h-4 w-4" />
-                  <span className="lg:hidden">리스트</span>
-                </Button>
-                <Button
-                  variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
-                  onClick={() => {
-                    setIsAlternateView(true);
-                    setShowSubmissionView(false);
-                    // URL에서 view 파라미터 제거
-                    router.replace('/admin/evaluations', { scroll: false });
-                  }}
-                  title="슬라이드 뷰"
-                >
-                  <MonitorPlay className="h-4 w-4" />
-                  <span className="lg:hidden">슬라이드</span>
-                </Button>
-                {/* 사용자 제보 검수 버튼 */}
-                <Button
-                  onClick={() => {
-                    const newShowSubmission = !showSubmissionView;
-                    setShowSubmissionView(newShowSubmission);
-                    if (newShowSubmission) {
-                      setCurrentSubmissionIndex(0);
-                      setIsAlternateView(false); // 슬라이드 뷰 비활성화
-                    }
-                  }}
-                  variant={showSubmissionView ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="relative h-8 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:gap-1 lg:px-0"
-                  title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
-                  aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
-                >
-                  <Send className="h-4 w-4 shrink-0" />
-                  <span className="lg:hidden">제보</span>
-                  {totalPendingCount > 0 && (
-                    <>
-                      <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white lg:hidden">
-                        {totalPendingCount > 99 ? '99+' : totalPendingCount}
-                      </span>
-                      <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white lg:flex">
-                        {totalPendingCount > 9 ? '9+' : totalPendingCount}
-                      </span>
-                    </>
-                  )}
-                </Button>
+                {!embedded && (
+                  <>
+                    <Button
+                      variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
+                      onClick={() => {
+                        setIsAlternateView(false);
+                        setShowSubmissionView(false);
+                        // URL에서 view 파라미터 제거
+                        router.replace('/admin/evaluations', { scroll: false });
+                      }}
+                      title="리스트 뷰"
+                    >
+                      <LayoutList className="h-4 w-4" />
+                      <span className="lg:hidden">리스트</span>
+                    </Button>
+                    <Button
+                      variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
+                      onClick={() => {
+                        setIsAlternateView(true);
+                        setShowSubmissionView(false);
+                        // URL에서 view 파라미터 제거
+                        router.replace('/admin/evaluations', { scroll: false });
+                      }}
+                      title="슬라이드 뷰"
+                    >
+                      <MonitorPlay className="h-4 w-4" />
+                      <span className="lg:hidden">슬라이드</span>
+                    </Button>
+                    {/* 사용자 제보 검수 버튼 */}
+                    <Button
+                      onClick={() => {
+                        const newShowSubmission = !showSubmissionView;
+                        setShowSubmissionView(newShowSubmission);
+                        if (newShowSubmission) {
+                          setCurrentSubmissionIndex(0);
+                          setIsAlternateView(false); // 슬라이드 뷰 비활성화
+                        }
+                      }}
+                      variant={showSubmissionView ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="relative h-8 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:gap-1 lg:px-0"
+                      title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
+                      aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
+                    >
+                      <Send className="h-4 w-4 shrink-0" />
+                      <span className="lg:hidden">제보</span>
+                      {totalPendingCount > 0 && (
+                        <>
+                          <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white lg:hidden">
+                            {totalPendingCount > 99 ? '99+' : totalPendingCount}
+                          </span>
+                          <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white lg:flex">
+                            {totalPendingCount > 9 ? '9+' : totalPendingCount}
+                          </span>
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
                 {/* 자막 수집 버튼 (아이콘 only) */}
                 <Button
                   onClick={handleCollectTranscripts}
