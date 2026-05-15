@@ -250,7 +250,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     <Header
                         onToggleSidebar={handleToggleSidebar}
                         isLoggedIn={!!user}
-                        isAuthLoading={isLoading}
+                        isAuthLoading={isLoading && !user}
                         onOpenAuth={handleOpenAuth}
                         onLogout={handleLogout}
                         onProfileClick={handleProfileClick}

@@ -1,23 +1,10 @@
-'use client';
-
-import { usePathname } from 'next/navigation';
-import { GlobalLoader } from '@/components/ui/global-loader';
-
 /**
- * [PERF] 관리자 페이지 로딩 UI - 즉각적 페이지 전환
+ * 관리자 라우트 로딩 경계.
+ *
+ * /admin은 App Router fallback에서 뷰포트 스켈레톤을 그리지 않습니다.
+ * 인증/코드분할 단계는 비워두고, 실제 데이터가 들어갈 위치의
+ * 모듈별 스켈레톤만 한 번 표시해 중복 로딩 전환을 막습니다.
  */
 export default function AdminLoading() {
-    const pathname = usePathname();
-
-    if (!pathname) {
-        return null;
-    }
-
-    return (
-        <GlobalLoader
-            message="관리자 페이지를 불러오는 중..."
-            subMessage="데이터를 준비하고 있습니다"
-            fullScreen
-        />
-    );
+    return null;
 }

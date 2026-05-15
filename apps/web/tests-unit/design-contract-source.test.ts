@@ -43,9 +43,12 @@ describe('repo design contract source', () => {
     expect(appGlobalsSource).toContain("font-family: 'Noto Serif KR'");
     expect(appGlobalsSource).toContain('--primary: 0 74% 42%');
     expect(appGlobalsSource).toContain('--shadow-primary');
-    expect(adminConsoleSource).toContain('bg-gradient-to-br from-card via-card to-primary/5');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');
     expect(adminConsoleSource).toContain('shadow-primary');
+    expect(adminConsoleSource).toContain('공지사항');
+    expect(adminConsoleSource).toContain('사용자 관리');
+    expect(adminConsoleSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
+    expect(adminConsoleSource).toContain('getNaverIndividualMarkerVisual');
     expect(headerSource).toContain('font-serif');
     expect(headerSource).toContain('bg-red-800 hover:bg-red-900');
   });

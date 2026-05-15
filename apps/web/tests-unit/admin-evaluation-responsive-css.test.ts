@@ -20,9 +20,8 @@ const criticalAdminConsoleLayoutUtilities = [
   'lg:m-0',
   'lg:place-items-center',
   'lg:px-1.5',
-  'lg:w-11',
   'lg:w-14',
-  'lg:w-60',
+  'lg:w-48',
 ] as const;
 
 afterAll(() => {
