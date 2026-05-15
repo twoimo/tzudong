@@ -9,7 +9,6 @@ import {
     useCreateAdBanner,
     useUpdateAdBanner,
     useDeleteAdBanner,
-    useToggleAdBanner,
     useUploadBannerImage,
     useDeleteBannerImage,
 } from '@/hooks/use-ad-banners';
@@ -23,40 +22,12 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { GlobalLoader } from '@/components/ui/global-loader';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
     Plus,
-    Pencil,
     Trash2,
     Image as ImageIcon,
     Upload,
-    X,
     ArrowLeft,
     Monitor,
     Smartphone,
@@ -75,6 +46,49 @@ const IMAGE_COMPRESSION_OPTIONS = {
     fileType: 'image/webp' as const,
     useWebWorker: true,
 };
+
+function InlineCountSkeleton({ className }: { className?: string }) {
+    return <span className={cn("inline-block h-3 w-6 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none", className)} aria-hidden="true" />;
+}
+
+function BannerListItemSkeleton({ index }: { index: number }) {
+    return (
+        <div className="w-full rounded-lg border border-border bg-background/80 p-2 text-left" aria-hidden="true">
+            <div className="flex gap-2">
+                <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border">
+                    <Skeleton className="h-full w-full rounded-none motion-reduce:animate-none" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">
+                            <Skeleton className={cn("h-5 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-32" : "w-24")} />
+                        </p>
+                        <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
+                            <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
+                        </Badge>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                        <Badge variant="secondary" className="rounded-full text-[10px]">
+                            <Skeleton className="h-3 w-14 rounded-full motion-reduce:animate-none" />
+                        </Badge>
+                        <Badge variant="secondary" className="rounded-full text-[10px]">
+                            <Skeleton className="h-3 w-12 rounded-full motion-reduce:animate-none" />
+                        </Badge>
+                        {index % 2 === 0 && (
+                            <span className="inline-flex items-center text-[10px] text-primary">
+                                <ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />
+                                <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 const revokeObjectUrlIfNeeded = (url: string | null) => {
     if (url?.startsWith('blob:')) {
@@ -95,35 +109,12 @@ type BannerManagementPageWrapperProps = {
 // Suspense 래퍼
 export default function BannerManagementPageWrapper({ embedded = false }: BannerManagementPageWrapperProps = {}) {
     return (
-        <Suspense fallback={embedded ? <EmbeddedBannerLoading /> : <GlobalLoader fullScreen />}>
+        <Suspense fallback={null}>
             <BannerManagementPage embedded={embedded} />
         </Suspense>
     );
 }
 
-
-function EmbeddedBannerLoading() {
-    return (
-        <div
-            className="flex h-full min-h-[420px] flex-col justify-center rounded-2xl border border-border bg-card/95 p-6"
-            aria-busy="true"
-            aria-live="polite"
-        >
-            <div className="mx-auto w-full max-w-3xl space-y-4">
-                <p className="text-sm font-semibold text-primary">배너 관리 준비 중</p>
-                <div className="space-y-3" aria-hidden="true">
-                    <div className="h-10 rounded-2xl bg-muted/70" />
-                    <div className="grid gap-3 md:grid-cols-3">
-                        <div className="h-24 rounded-2xl bg-muted/50" />
-                        <div className="h-24 rounded-2xl bg-muted/50" />
-                        <div className="h-24 rounded-2xl bg-muted/50" />
-                    </div>
-                    <div className="h-48 rounded-2xl bg-muted/40" />
-                </div>
-            </div>
-        </div>
-    );
-}
 
 function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapperProps>) {
     const router = useRouter();
@@ -134,12 +125,10 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
     const createBanner = useCreateAdBanner();
     const updateBanner = useUpdateAdBanner();
     const deleteBanner = useDeleteAdBanner();
-    const toggleBanner = useToggleAdBanner();
     const uploadImage = useUploadBannerImage();
     const deleteImage = useDeleteBannerImage();
 
     // 폼 상태
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingBanner, setEditingBanner] = useState<AdBanner | null>(null);
     const [formData, setFormData] = useState<AdBannerFormData>({
         title: '',
@@ -164,8 +153,8 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 삭제 확인 다이얼로그
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [bannerToDelete, setBannerToDelete] = useState<AdBanner | null>(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
     // 권한 체크
     useEffect(() => {
@@ -184,7 +173,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
     const mobileTargetCount = sortedBanners.filter((banner) => banner.display_target.includes('mobile_popup')).length;
 
     if (authLoading) {
-        return embedded ? <EmbeddedBannerLoading /> : <GlobalLoader fullScreen />;
+        return null;
     }
 
     if (!user || !isAdmin) {
@@ -212,6 +201,8 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
         setVideoPreview(null);
         setCompressionProgress(0);
         setEditingBanner(null);
+        setBannerToDelete(null);
+        setDeleteConfirmation('');
     };
 
     const handleOpenExternalLink = (rawUrl: string) => {
@@ -225,14 +216,13 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
         }
     };
 
-    // 다이얼로그 열기 (생성)
-    const openCreateDialog = () => {
+    // 작성 패널 열기 (생성)
+    const openCreatePanel = () => {
         resetForm();
-        setIsDialogOpen(true);
     };
 
-    // 다이얼로그 열기 (수정)
-    const openEditDialog = (banner: AdBanner) => {
+    // 상세 편집 패널 열기 (수정)
+    const openEditPanel = (banner: AdBanner) => {
         setEditingBanner(banner);
         setFormData({
             title: banner.title,
@@ -251,12 +241,12 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
         if (banner.video_url) {
             setVideoPreview(banner.video_url);
         }
-        setIsDialogOpen(true);
+        setBannerToDelete(null);
+        setDeleteConfirmation('');
     };
 
-    // 다이얼로그 닫기
-    const closeDialog = () => {
-        setIsDialogOpen(false);
+    // 편집 패널 초기화
+    const resetEditorPanel = () => {
         resetForm();
     };
 
@@ -452,7 +442,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                 await createBanner.mutateAsync(dataToSubmit);
             }
 
-            closeDialog();
+            resetEditorPanel();
         } catch (error) {
             console.error('배너 저장 실패:', error);
         } finally {
@@ -460,41 +450,32 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
         }
     };
 
-    // 삭제 확인
-    const confirmDelete = (banner: AdBanner) => {
-        setBannerToDelete(banner);
-        setDeleteConfirmOpen(true);
-    };
-
     // 삭제 실행
     const handleDelete = async () => {
         if (!bannerToDelete) return;
 
         try {
-            // 이미지가 있으면 같이 삭제
-            if (bannerToDelete.image_url) {
-                // URL에서 path 추출
-                const urlParts = bannerToDelete.image_url.split('/');
+            await deleteBanner.mutateAsync(bannerToDelete.id);
+
+            const mediaUrls = [bannerToDelete.image_url, bannerToDelete.video_url].filter(Boolean) as string[];
+            await Promise.all(mediaUrls.map(async (mediaUrl) => {
+                const urlParts = mediaUrl.split('/');
                 const path = urlParts.slice(-2).join('/');
                 await deleteImage.mutateAsync(path);
-            }
+            })).catch((mediaDeleteError) => {
+                console.error('배너 DB 삭제 후 미디어 정리 실패:', mediaDeleteError);
+            });
 
-            await deleteBanner.mutateAsync(bannerToDelete.id);
-            setDeleteConfirmOpen(false);
             setBannerToDelete(null);
+            setDeleteConfirmation('');
+            resetForm();
         } catch (error) {
             console.error('배너 삭제 실패:', error);
         }
     };
 
-    // 토글 핸들러
-    const handleToggle = async (banner: AdBanner) => {
-        await toggleBanner.mutateAsync({ id: banner.id, is_active: !banner.is_active });
-    };
-
     return (
         <div className={cn("font-serif text-foreground", embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background" : "min-h-screen bg-[#fdfbf7]")}>
-            {/* 한지 질감 오버레이 */}
             {!embedded && (
                 <div
                     className="fixed inset-0 opacity-30 pointer-events-none z-0"
@@ -504,525 +485,184 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                 />
             )}
 
-            <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", embedded ? "h-full" : "container mx-auto min-h-screen max-w-6xl p-4 md:p-6")}>
-                {/* 헤더 */}
-                <div className="flex flex-none flex-col gap-3 border-b border-border bg-card px-3 py-3 sm:px-5 sm:py-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 items-start gap-3">
+            <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", embedded ? "h-full" : "container mx-auto min-h-screen max-w-7xl p-3 md:p-4")}>
+                <div className={cn("flex flex-none flex-col gap-2 border-b border-border bg-card lg:flex-row lg:items-center lg:justify-between", embedded ? "px-2 py-1.5" : "rounded-t-2xl border px-3 py-2.5 shadow-sm")}>
+                    <div className="flex min-w-0 items-start gap-2">
                         {!embedded && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => router.back()}
-                                className="h-9 w-9 rounded-xl hover:bg-muted"
-                                aria-label="이전 화면으로 돌아가기"
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9 rounded-xl hover:bg-muted" aria-label="이전 화면으로 돌아가기">
                                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                             </Button>
                         )}
-                        <div className="flex min-w-0 gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
-                                <ImageIcon className="h-5 w-5" aria-hidden="true" />
+                        <div className="flex min-w-0 gap-2">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-primary">
+                                <ImageIcon className="h-4 w-4" aria-hidden="true" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="bg-gradient-primary bg-clip-text text-xl md:text-2xl font-bold tracking-[-0.04em] text-transparent">배너 관리</h1>
-                                <p className="mt-0.5 text-xs leading-5 text-muted-foreground sm:text-sm">
-                                    전체 {sortedBanners.length}개 | 활성 {activeBannerCount}개 | 비활성 {inactiveBannerCount}개
+                                <h1 className="truncate text-lg font-bold tracking-[-0.04em] text-foreground md:text-xl">배너 관리</h1>
+                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                                    전체 {bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length}개 · 활성 {bannersLoading ? <InlineCountSkeleton /> : activeBannerCount}개 · 비활성 {bannersLoading ? <InlineCountSkeleton /> : inactiveBannerCount}개
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground">
-                            <Monitor className="h-4 w-4 mr-1" aria-hidden="true" />
-                            사이드바 {sidebarTargetCount}
-                        </Badge>
-                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground">
-                            <Smartphone className="h-4 w-4 mr-1" aria-hidden="true" />
-                            모바일 {mobileTargetCount}
-                        </Badge>
-                        <Button onClick={openCreateDialog} className="h-9 rounded-xl bg-primary px-3 text-primary-foreground shadow-primary hover:bg-primary/90">
-                            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-                            새 배너 추가
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
+                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : mobileTargetCount}</Badge>
+                        <Button onClick={openCreatePanel} className="h-9 rounded-xl bg-primary px-3 text-primary-foreground shadow-primary hover:bg-primary/90">
+                            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />새 배너
                         </Button>
                     </div>
                 </div>
 
-                {/* 배너 목록 */}
-                <div className={cn("min-h-0 flex-1 overflow-y-auto", embedded ? "p-3 sm:p-4" : "pt-4")}>
-                {bannersLoading ? (
-                    <Card className="border-border bg-card/95 p-8 text-center text-muted-foreground shadow-sm">
-                        <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-primary" aria-hidden="true" />
-                        배너 목록을 불러오는 중...
-                    </Card>
-                ) : sortedBanners.length === 0 ? (
-                    <Card className="border-border bg-card/95 p-8 text-center text-muted-foreground shadow-sm">
-                        <ImageIcon className="mx-auto mb-4 h-12 w-12 text-primary/40" aria-hidden="true" />
-                        <p>등록된 배너가 없습니다</p>
-                        <Button onClick={openCreateDialog} variant="outline" className="mt-4 rounded-xl">
-                            첫 번째 배너 추가하기
-                        </Button>
-                    </Card>
-                ) : (
-                    <>
-                        {/* 모바일 카드 리스트 (md 미만에서 표시) */}
-                        <div className="space-y-3 md:hidden">
-                            {sortedBanners.map((banner) => (
-                                <Card key={banner.id} className="border-border bg-card/95 p-4 shadow-sm">
-                                    <div className="flex gap-3">
-                                        {/* 썸네일 */}
-                                        {banner.image_url ? (
-                                            <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-border">
-                                                <Image
-                                                    src={banner.image_url}
-                                                    alt={banner.title}
-                                                    fill
-                                                    unoptimized
-                                                    sizes="80px"
-                                                    className="object-cover"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40">
-                                                <Scroll className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-                                            </div>
-                                        )}
-
-                                        {/* 정보 */}
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="min-w-0">
-                                                    <p className="truncate font-semibold text-foreground">{banner.title}</p>
-                                                    {banner.description && (
-                                                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                                            {banner.description}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <Switch
-                                                    checked={banner.is_active}
-                                                    onCheckedChange={() => handleToggle(banner)}
-                                                    aria-label={`배너 ${banner.title} 공개 상태 전환`}
-                                                    className="shrink-0"
-                                                />
-                                            </div>
-
-                                            {/* 배지 및 액션 */}
-                                            <div className="mt-3 flex items-center justify-between">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {banner.display_target.includes('sidebar') && (
-                                                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
-                                                            <Monitor className="h-3 w-3 mr-1" />
-                                                            사이드바
-                                                        </Badge>
-                                                    )}
-                                                    {banner.display_target.includes('mobile_popup') && (
-                                                        <Badge variant="secondary" className="rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
-                                                            <Smartphone className="h-3 w-3 mr-1" />
-                                                            모바일
-                                                        </Badge>
-                                                    )}
-                                                    <Badge variant="outline" className="rounded-full text-xs">
-                                                        우선순위 {banner.priority}
-                                                    </Badge>
-                                                </div>
-
-                                                <div className="flex gap-1">
-                                                    {banner.link_url && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleOpenExternalLink(banner.link_url!)}
-                                                            aria-label={`배너 ${banner.title} 링크 열기`}
-                                                            className="h-8 w-8 rounded-xl"
-                                                        >
-                                                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => openEditDialog(banner)}
-                                                        aria-label={`배너 ${banner.title} 수정`}
-                                                        className="h-8 w-8 rounded-xl"
-                                                    >
-                                                        <Pencil className="h-4 w-4" aria-hidden="true" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => confirmDelete(banner)}
-                                                        aria-label={`배너 ${banner.title} 삭제`}
-                                                        className="h-8 w-8 rounded-xl text-destructive hover:text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
+                <div className={cn("grid min-h-0 flex-1 gap-2 overflow-y-auto", embedded ? "p-2 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden" : "rounded-b-2xl border border-t-0 bg-background/70 p-3 xl:grid-cols-[minmax(360px,0.95fr)_minmax(460px,1.05fr)] xl:overflow-hidden")}>
+                    <section className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 shadow-sm xl:flex xl:flex-col" aria-labelledby="banner-list-title">
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border p-2.5">
+                            <div>
+                                <h2 id="banner-list-title" className="text-sm font-bold text-foreground">배너 목록</h2>
+                                <p className="text-xs text-muted-foreground">선택하면 오른쪽에서 바로 수정합니다.</p>
+                            </div>
                         </div>
 
-                        {/* 데스크톱 테이블 (md 이상에서 표시) */}
-                        <Card className="hidden overflow-hidden border-border bg-card/95 shadow-sm md:block">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="border-border bg-muted/35 hover:bg-muted/35">
-                                        <TableHead className="w-20">썸네일</TableHead>
-                                        <TableHead>제목</TableHead>
-                                        <TableHead className="w-32">표시 위치</TableHead>
-                                        <TableHead className="w-24 text-center">우선순위</TableHead>
-                                        <TableHead className="w-24 text-center">상태</TableHead>
-                                        <TableHead className="w-32 text-right">액션</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {sortedBanners.map((banner) => (
-                                        <TableRow key={banner.id} className="border-border hover:bg-muted/25">
-                                            <TableCell>
-                                                {banner.image_url ? (
-                                                    <div className="relative h-12 w-16 overflow-hidden rounded-xl border border-border">
-                                                        <Image
-                                                            src={banner.image_url}
-                                                            alt={banner.title}
-                                                            fill
-                                                            unoptimized
-                                                            sizes="64px"
-                                                            className="object-cover"
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex h-12 w-16 items-center justify-center rounded-xl border border-border bg-muted/40">
-                                                        <Scroll className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-                                                    </div>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-semibold text-foreground">{banner.title}</p>
-                                                    {banner.description && (
-                                                        <p className="max-w-xs truncate text-xs text-muted-foreground">
-                                                            {banner.description}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col gap-1">
-                                                    {banner.display_target.includes('sidebar') && (
-                                                        <Badge variant="secondary" className="w-fit rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
-                                                            <Monitor className="h-3 w-3 mr-1" />
-                                                            사이드바
-                                                        </Badge>
-                                                    )}
-                                                    {banner.display_target.includes('mobile_popup') && (
-                                                        <Badge variant="secondary" className="w-fit rounded-full border border-border bg-muted/50 text-xs text-muted-foreground">
-                                                            <Smartphone className="h-3 w-3 mr-1" />
-                                                            모바일
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="outline" className="rounded-full">{banner.priority}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Switch
-                                                    checked={banner.is_active}
-                                                    onCheckedChange={() => handleToggle(banner)}
-                                                    aria-label={`배너 ${banner.title} 공개 상태 전환`}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-1">
-                                                    {banner.link_url && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleOpenExternalLink(banner.link_url!)}
-                                                            aria-label={`배너 ${banner.title} 링크 열기`}
-                                                            className="h-8 w-8 rounded-xl"
-                                                        >
-                                                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => openEditDialog(banner)}
-                                                        aria-label={`배너 ${banner.title} 수정`}
-                                                        className="h-8 w-8 rounded-xl"
-                                                    >
-                                                        <Pencil className="h-4 w-4" aria-hidden="true" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => confirmDelete(banner)}
-                                                        aria-label={`배너 ${banner.title} 삭제`}
-                                                        className="h-8 w-8 rounded-xl text-destructive hover:text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    </>
-                )}
-                </div>
-
-                {/* 생성/수정 다이얼로그 */}
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle>{editingBanner ? '배너 수정' : '새 배너 추가'}</DialogTitle>
-                            <DialogDescription>
-                                광고 배너 정보를 입력해주세요. 이미지는 자동으로 최적화됩니다.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-6 py-4">
-                            {/* 제목 */}
-                            <div className="space-y-2">
-                                <Label htmlFor="title">제목 *</Label>
-                                <Input
-                                    id="title"
-                                    value={formData.title}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                                    placeholder="배너 제목"
-                                />
-                            </div>
-
-                            {/* 설명 */}
-                            <div className="space-y-2">
-                                <Label htmlFor="description">설명</Label>
-                                <Textarea
-                                    id="description"
-                                    value={formData.description || ''}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="배너 설명 (여러 줄 가능)"
-                                    rows={3}
-                                />
-                            </div>
-
-                            {/* 이미지 업로드 */}
-                            <div className="space-y-2">
-                                <Label>배너 이미지</Label>
-                                <Card
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label="배너 이미지 또는 영상 업로드"
-                                    className={cn(
-                                        "p-6 border-dashed transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                                        isDragging ? "border-primary bg-primary/5" : "border-stone-300 hover:border-primary/50",
-                                        (imagePreview || videoPreview) && "border-solid border-green-300 bg-green-50/50"
-                                    )}
-                                    onDragOver={handleDragOver}
-                                    onDragEnter={handleDragEnter}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    onClick={handleUploadSurfaceClick}
-                                    onKeyDown={handleUploadSurfaceKeyDown}
-                                >
-                                    {isUploading ? (
-                                        <div className="flex flex-col items-center gap-2 py-4">
-                                            <Loader2 className="h-8 w-8 animate-spin text-stone-400" aria-hidden="true" />
-                                            <p className="text-sm text-stone-500">
-                                                {compressionProgress > 0
-                                                    ? `압축 중... ${compressionProgress}%`
-                                                    : '미디어 처리 중...'}
-                                            </p>
-                                        </div>
-                                    ) : videoPreview ? (
-                                        <div className="space-y-3">
-                                            <div className="relative aspect-video w-full max-w-md mx-auto rounded overflow-hidden border">
-                                                <video
-                                                    src={videoPreview}
-                                                    controls
-                                                    className="w-full h-full object-cover"
-                                                />
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    className="absolute top-2 right-2 h-8 w-8"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleMediaRemove();
-                                                    }}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                            <p className="text-center text-sm text-stone-500">
-                                                클릭하거나 드래그하여 영상 변경
-                                            </p>
-                                        </div>
-                                    ) : imagePreview ? (
-                                        <div className="space-y-3">
-                                            <div className="relative aspect-video w-full max-w-md mx-auto rounded overflow-hidden border">
-                                                <Image
-                                                    src={imagePreview}
-                                                    alt="미리보기"
-                                                    fill
-                                                    unoptimized
-                                                    sizes="(max-width: 768px) 100vw, 768px"
-                                                    className="object-cover"
-                                                />
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    className="absolute top-2 right-2 h-8 w-8"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleMediaRemove();
-                                                    }}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                            <p className="text-center text-sm text-stone-500">
-                                                클릭하거나 드래그하여 미디어 변경
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-3 py-4">
-                                            <div className={cn(
-                                                "w-16 h-16 rounded-full flex items-center justify-center transition-colors",
-                                                isDragging ? "bg-primary/10" : "bg-stone-100"
-                                            )}>
-                                                <Upload className={cn(
-                                                    "h-8 w-8 transition-colors",
-                                                    isDragging ? "text-primary" : "text-stone-400"
-                                                )} />
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="font-medium">
-                                                    {isDragging ? '여기에 파일을 놓으세요' : '이미지 또는 영상을 업로드해주세요'}
-                                                </p>
-                                                <p className="text-sm text-stone-500">
-                                                    드래그하거나 클릭해서 선택 (영상은 WebM으로 자동 변환, 최대 10MB)
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <input
-                                        ref={fileInputRef}
-                                        id="banner-media-upload"
-                                        type="file"
-                                        accept="image/*,video/*"
-                                        onChange={handleFileInputChange}
-                                        className="hidden"
-                                    />
+                        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2" role="list" aria-label="배너 목록">
+                            {bannersLoading ? (
+                                <div className="space-y-2" role="status" aria-busy="true" aria-label="배너 목록 로딩 중">
+                                    <span className="sr-only">배너 목록 데이터를 불러오는 중입니다.</span>
+                                    {Array.from({ length: 5 }).map((_, index) => <BannerListItemSkeleton key={index} index={index} />)}
+                                </div>
+                            ) : sortedBanners.length === 0 ? (
+                                <Card className="border-dashed border-border bg-background/70 p-4 text-center text-sm text-muted-foreground">
+                                    등록된 배너가 없습니다. 오른쪽 패널에서 첫 배너를 추가하세요.
                                 </Card>
-                            </div>
+                            ) : sortedBanners.map((banner) => {
+                                const isSelected = editingBanner?.id === banner.id;
+                                return (
+                                    <button
+                                        key={banner.id}
+                                        type="button"
+                                        aria-current={isSelected ? "true" : undefined}
+                                        className={cn("w-full rounded-lg border bg-background/80 p-2 text-left transition hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", isSelected ? "border-primary/40 bg-primary/5" : "border-border")}
+                                        onClick={() => openEditPanel(banner)}
+                                    >
+                                        <div className="flex gap-2">
+                                            {banner.image_url ? (
+                                                <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border">
+                                                    <Image src={banner.image_url} alt="" fill unoptimized sizes="64px" className="object-cover" />
+                                                </div>
+                                            ) : (
+                                                <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40">
+                                                    <Scroll className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <p className="truncate text-sm font-bold text-foreground">{banner.title}</p>
+                                                    <Badge variant={banner.is_active ? "default" : "outline"} className="shrink-0 rounded-full text-[10px]">{banner.is_active ? '활성' : '비활성'}</Badge>
+                                                </div>
+                                                <p className="mt-0.5 truncate text-xs text-muted-foreground">{banner.description || '설명 없음'} · 우선순위 {banner.priority}</p>
+                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                    {banner.display_target.includes('sidebar') && <Badge variant="secondary" className="rounded-full text-[10px]">데스크톱 배너</Badge>}
+                                                    {banner.display_target.includes('mobile_popup') && <Badge variant="secondary" className="rounded-full text-[10px]">모바일 팝업</Badge>}
+                                                    {banner.link_url && <span className="inline-flex items-center text-[10px] text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </section>
 
-                            {/* 링크 URL */}
-                            <div className="space-y-2">
-                                <Label htmlFor="link_url">클릭 시 이동 URL (선택)</Label>
-                                <Input
-                                    id="link_url"
-                                    type="url"
-                                    value={formData.link_url || ''}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, link_url: e.target.value }))}
-                                    placeholder="https://example.com"
-                                />
+                    <section className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 shadow-sm xl:flex xl:flex-col" aria-labelledby="banner-editor-title">
+                        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border p-2.5">
+                            <div className="min-w-0">
+                                <h2 id="banner-editor-title" className="text-sm font-bold text-foreground">{editingBanner ? '배너 상세·수정' : '새 배너 작성'}</h2>
+                                <p className="text-xs text-muted-foreground">모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.</p>
                             </div>
+                            {editingBanner && <Button type="button" variant="outline" size="sm" className="rounded-lg" onClick={openCreatePanel}>새로 작성</Button>}
+                        </div>
 
-                            {/* 우선순위 */}
-                            <div className="space-y-2">
-                                <Label htmlFor="priority">우선순위 (높을수록 먼저 표시)</Label>
-                                <Input
-                                    id="priority"
-                                    type="number"
-                                    min={0}
-                                    max={1000}
-                                    value={formData.priority}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))}
-                                />
-                            </div>
-
-                            {/* 표시 위치 */}
-                            <div className="space-y-3">
-                                <Label>표시 위치</Label>
-                                <div className="flex gap-4">
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id="target-sidebar"
-                                            checked={formData.display_target?.includes('sidebar')}
-                                            onCheckedChange={() => toggleDisplayTarget('sidebar')}
-                                        />
-                                        <Label htmlFor="target-sidebar" className="flex items-center gap-1 cursor-pointer">
-                                            <Monitor className="h-4 w-4" />
-                                            사이드바 (데스크톱)
-                                        </Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id="target-mobile"
-                                            checked={formData.display_target?.includes('mobile_popup')}
-                                            onCheckedChange={() => toggleDisplayTarget('mobile_popup')}
-                                        />
-                                        <Label htmlFor="target-mobile" className="flex items-center gap-1 cursor-pointer">
-                                            <Smartphone className="h-4 w-4" />
-                                            팝업 (모바일/태블릿)
-                                        </Label>
+                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2.5">
+                            <div className="grid gap-2 md:grid-cols-2">
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label htmlFor="title">제목 *</Label>
+                                    <Input id="title" value={formData.title} onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))} placeholder="배너 제목" />
+                                </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label htmlFor="description">설명</Label>
+                                    <Textarea id="description" value={formData.description || ''} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="배너 설명" rows={3} />
+                                </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label>배너 이미지/영상</Label>
+                                    <Card
+                                        role="button"
+                                        tabIndex={0}
+                                        aria-label="배너 이미지 또는 영상 업로드"
+                                        className={cn("cursor-pointer border-dashed p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2", isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50", (imagePreview || videoPreview) && "border-solid border-emerald-300 bg-emerald-50/40")}
+                                        onDragOver={handleDragOver}
+                                        onDragEnter={handleDragEnter}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        onClick={handleUploadSurfaceClick}
+                                        onKeyDown={handleUploadSurfaceKeyDown}
+                                    >
+                                        {isUploading ? (
+                                            <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{compressionProgress > 0 ? `압축 중 ${compressionProgress}%` : '미디어 처리 중'}</div>
+                                        ) : videoPreview ? (
+                                            <div className="space-y-2"><video src={videoPreview} controls className="aspect-video w-full rounded-md border object-cover" /><Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>
+                                        ) : imagePreview ? (
+                                            <div className="space-y-2"><div className="relative aspect-video w-full overflow-hidden rounded-md border"><Image src={imagePreview} alt="미리보기" fill unoptimized sizes="(max-width: 768px) 100vw, 768px" className="object-cover" /></div><Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>
+                                        ) : (
+                                            <div className="flex items-center gap-3 py-5 text-sm text-muted-foreground"><Upload className="h-6 w-6" aria-hidden="true" /><span>{isDragging ? '여기에 파일을 놓으세요' : '클릭 또는 드래그로 이미지/영상을 선택하세요'}</span></div>
+                                        )}
+                                        <input ref={fileInputRef} id="banner-media-upload" type="file" accept="image/*,video/*" onChange={handleFileInputChange} className="hidden" />
+                                    </Card>
+                                </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label htmlFor="link_url">클릭 시 이동 URL</Label>
+                                    <Input id="link_url" type="url" value={formData.link_url || ''} onChange={(e) => setFormData(prev => ({ ...prev, link_url: e.target.value }))} placeholder="https://example.com" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="priority">우선순위</Label>
+                                    <Input id="priority" type="number" min={0} max={1000} value={formData.priority} onChange={(e) => setFormData(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))} />
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg border border-border bg-background/70 p-2">
+                                    <Label htmlFor="is_active">활성화</Label>
+                                    <Switch id="is_active" checked={formData.is_active} onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))} />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label>표시 위치</Label>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        <label className="flex items-center gap-2 rounded-lg border border-border bg-background/70 p-2 text-sm"><Checkbox id="target-sidebar" checked={formData.display_target?.includes('sidebar')} onCheckedChange={() => toggleDisplayTarget('sidebar')} /><Monitor className="h-4 w-4" aria-hidden="true" />데스크톱 배너</label>
+                                        <label className="flex items-center gap-2 rounded-lg border border-border bg-background/70 p-2 text-sm"><Checkbox id="target-mobile" checked={formData.display_target?.includes('mobile_popup')} onCheckedChange={() => toggleDisplayTarget('mobile_popup')} /><Smartphone className="h-4 w-4" aria-hidden="true" />모바일 팝업</label>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* 활성화 */}
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="is_active"
-                                    checked={formData.is_active}
-                                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-                                />
-                                <Label htmlFor="is_active">활성화</Label>
+                            <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+                                <Button onClick={handleSubmit} disabled={isUploading || createBanner.isPending || updateBanner.isPending}>
+                                    {(isUploading || createBanner.isPending || updateBanner.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                                    {editingBanner ? '수정 저장' : '배너 추가'}
+                                </Button>
+                                <Button variant="outline" onClick={resetEditorPanel}>초기화</Button>
+                                {formData.link_url && <Button type="button" variant="ghost" onClick={() => handleOpenExternalLink(formData.link_url || '')}><ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />링크 확인</Button>}
                             </div>
+
+                            {editingBanner && (
+                                <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3">
+                                    <h3 className="flex items-center gap-2 text-sm font-bold text-destructive"><Trash2 className="h-4 w-4" aria-hidden="true" />삭제 전 확인</h3>
+                                    <p className="mt-1 text-xs leading-5 text-muted-foreground">삭제는 모달 없이 이 패널에서 처리합니다. 삭제하려면 <strong>배너삭제</strong>를 입력하세요.</p>
+                                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                                        <Input value={deleteConfirmation} onChange={(event) => { setBannerToDelete(editingBanner); setDeleteConfirmation(event.target.value); }} placeholder="배너삭제" className="bg-background" aria-label="배너 삭제 확인 문구" />
+                                        <Button type="button" variant="destructive" disabled={deleteConfirmation !== '배너삭제' || deleteBanner.isPending} onClick={() => { setBannerToDelete(editingBanner); void handleDelete(); }}>
+                                            {deleteBanner.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />}
+                                            삭제
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-
-                        <DialogFooter>
-                            <Button variant="outline" onClick={closeDialog}>
-                                취소
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={isUploading || createBanner.isPending || updateBanner.isPending}
-                            >
-                                {(isUploading || createBanner.isPending || updateBanner.isPending) && (
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
-                                )}
-                                {editingBanner ? '수정' : '추가'}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* 삭제 확인 다이얼로그 */}
-                <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>배너 삭제</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                &quot;{bannerToDelete?.title}&quot; 배너를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>취소</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleDelete}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                                삭제
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                    </section>
+                </div>
             </div>
         </div>
     );

@@ -202,6 +202,11 @@ export interface EvaluationRecord {
       generated_at?: string;
       validation_source?: string;
       geocode_top?: Record<string, unknown> | null;
+      ahp_score?: number;
+      ahp_label?: string;
+      top_failing_criterion?: string;
+      evidence_families?: string[];
+      suggested_action?: string;
     };
     conflicting_restaurant?: {
       id: string;
@@ -231,8 +236,6 @@ export interface CategoryStats {
   hold: number;
   db_conflict: number;
   missing: number;
-  geocoding_failed: number;
-  address_review_geocode_recovered: number;
   not_selected: number;
   deleted: number;
 }

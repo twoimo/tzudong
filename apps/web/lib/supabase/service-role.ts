@@ -1,5 +1,10 @@
+// server-only: this service-role client must never be imported by browser components.
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+if (typeof window !== 'undefined') {
+  throw new Error('Supabase service-role client is server-only.');
+}
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 

@@ -60,10 +60,15 @@ describe('naver map resize plan helpers', () => {
             urlZoom: Number.NaN,
         });
 
-        expect(result).toEqual({
-            skip: false,
-            newCenterLatLng: { ok: true },
-        });
+        expect(result.skip).toBe(false);
+        if (!result.skip) {
+            expect(result.newCenterLatLng).toEqual({ ok: true });
+            expect(result.targetLat).toBeTypeOf('number');
+            expect(result.targetLng).toBeTypeOf('number');
+            expect(result.targetOffsetX).toBe(200);
+            expect(result.targetOffsetY).toBe(0);
+            expect(result.targetZoom).toBe(12);
+        }
         expect(calls).toHaveLength(1);
     });
 });

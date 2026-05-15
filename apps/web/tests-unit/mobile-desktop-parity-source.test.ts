@@ -22,13 +22,19 @@ describe('mobile and desktop parity source contracts', () => {
     expect(adminPageSource).toContain('<AdminConsoleOverview />');
     expect(consoleSource).toContain('aria-label="관리자 콘솔 사이드바"');
     expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
+    expect(consoleSource).toContain('관리자 콘솔');
+    expect(consoleSource).toContain('현재 화면 · {activeSidebarLabel}');
+    expect(consoleSource).not.toContain('관리자 메뉴');
+    expect(consoleSource).not.toContain('Unified admin console');
     expect(consoleSource).toContain('lg:sticky lg:top-0');
-    expect(consoleSource).toContain('lg:w-60');
+    expect(consoleSource).toContain('lg:w-48');
     expect(consoleSource).toContain('lg:w-14');
     expect(consoleSource).toContain('관리자 사이드바 펼치기');
     expect(consoleSource).toContain('관리자 사이드바 접기');
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
-    expect(consoleSource).toContain('AdminEvaluationModule');
+    expect(consoleSource).toContain('AdminRestaurantEvaluationModule');
+    expect(consoleSource).toContain('AdminSubmissionEvaluationModule');
+    expect(consoleSource).toContain('AdminReviewEvaluationModule');
     expect(consoleSource).toContain('AdminBannerModule');
     expect(consoleSource).toContain('AdminAnnouncementModule');
     expect(consoleSource).toContain('id: "announcements"');
@@ -51,21 +57,58 @@ describe('mobile and desktop parity source contracts', () => {
     expect(tableSource).toContain('필터 초기화');
     expect(tableSource).toContain('상세 필터');
     expect(tableSource).toContain('전체 검수 정보');
-    expect(tableSource).toContain('레코드 삭제');
+    expect(tableSource).toContain('getAddressConsistencyDisplayLabel');
+    expect(tableSource).not.toContain('border-sky-200 bg-sky-50');
+    expect(tableSource).toContain('검수 항목 삭제');
     expect(tableSource.match(/되돌리기/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(tableSource.match(/수정/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(tableSource.match(/승인/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(tableSource).toContain('누락 사유:');
+    expect(tableSource).toContain('판정 근거');
+    expect(tableSource).toContain('쯔양 리뷰 요약');
+    expect(tableSource).toContain("{ value: 'true', label: '확인됨' }");
+    expect(tableSource).toContain("{ value: 'false_geocode', label: '실패' }");
+    expect(tableSource).toContain("{ value: 'missing', label: '누락' }");
+    expect(tableSource).not.toContain('Missing 사유:');
+    expect(tableSource).not.toContain('Reasoning Basis');
+    expect(tableSource).not.toContain('Tzuyang Review');
   });
 
-  test('banner admin mobile cards and desktop table expose matching actions with keyboard upload access', () => {
+
+  test('admin evaluation destructive actions use inline typed confirmation across breakpoints', () => {
+    const evaluationsSource = source('app/admin/evaluations/page.tsx');
+
+    expect(evaluationsSource).toContain("const EVALUATION_DELETE_CONFIRMATION = '검수삭제'");
+    expect(evaluationsSource).toContain("const EVALUATION_RESTORE_CONFIRMATION = '검수복원'");
+    expect(evaluationsSource).toContain('role="region"');
+    expect(evaluationsSource).toContain('aria-label="검수 항목 작업 확인"');
+    expect(evaluationsSource).toContain('aria-label="검수 항목 작업 확인 문구"');
+    expect(evaluationsSource).toContain('모바일과 데스크톱 모두 같은 흐름으로 처리합니다.');
+    expect(evaluationsSource).not.toContain('정말 삭제하시겠습니까?');
+    expect(evaluationsSource).not.toContain('복원하시겠습니까?');
+  });
+
+  test('embedded submission and review modules cannot switch into restaurant evaluation view', () => {
+    const evaluationsSource = source('app/admin/evaluations/page.tsx');
+
+    expect(evaluationsSource).toContain("const canSwitchEvaluationView = !embedded || initialView === 'evaluations';");
+    expect(evaluationsSource).toContain('{canSwitchEvaluationView && (');
+    expect(evaluationsSource).toContain('onClick={switchToEvaluationListView}');
+    expect(evaluationsSource).toContain('onClick={switchToEvaluationSlideView}');
+  });
+
+  test('banner admin uses one responsive two-pane editor with keyboard upload access', () => {
     const bannerSource = source('app/admin/banners/page.tsx');
 
-    expect(bannerSource).toContain('space-y-3 md:hidden');
-    expect(bannerSource).toContain('hidden overflow-hidden border-border bg-card/95 shadow-sm md:block');
-    expect(bannerSource.match(/공개 상태 전환/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
-    expect(bannerSource.match(/링크 열기/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
-    expect(bannerSource.match(/수정`}/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
-    expect(bannerSource.match(/삭제`}/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(bannerSource).toContain('xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]');
+    expect(bannerSource).toContain('role="list" aria-label="배너 목록"');
+    expect(bannerSource).toContain('aria-current={isSelected ? "true" : undefined}');
+    expect(bannerSource).toContain('데스크톱 배너');
+    expect(bannerSource).toContain('모바일 팝업');
+    expect(bannerSource).not.toContain('>사이드바</Badge>');
+    expect(bannerSource).toContain('선택하면 오른쪽에서 바로 수정합니다.');
+    expect(bannerSource).toContain('모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.');
+    expect(bannerSource).toContain('삭제는 모달 없이 이 패널에서 처리합니다.');
     expect(bannerSource).toContain('role="button"');
     expect(bannerSource).toContain('tabIndex={0}');
     expect(bannerSource).toContain('aria-label="배너 이미지 또는 영상 업로드"');
@@ -75,6 +118,29 @@ describe('mobile and desktop parity source contracts', () => {
     expect(bannerSource).toContain('id="banner-media-upload"');
   });
 
+
+  test('legacy admin review panel deletion also avoids native confirm drift', () => {
+    const reviewPanelSource = source('components/admin/AdminReviewPanel.tsx');
+
+    expect(reviewPanelSource).toContain("const ADMIN_REVIEW_DELETE_CONFIRMATION = '리뷰삭제'");
+    expect(reviewPanelSource).toContain('role="region"');
+    expect(reviewPanelSource).toContain('aria-label="관리자 리뷰 삭제 확인"');
+    expect(reviewPanelSource).toContain('aria-label="관리자 리뷰 삭제 확인 문구"');
+    expect(reviewPanelSource).toContain('모바일과 데스크톱 모두 같은 인라인 확인 흐름으로 처리합니다.');
+    expect(reviewPanelSource).not.toContain("confirm('정말로 이 리뷰를 삭제하시겠습니까?')");
+  });
+
+  test('my review deletion uses the same inline typed confirmation on mobile and desktop', () => {
+    const reviewsSource = source('app/mypage/reviews/page.tsx');
+
+    expect(reviewsSource).toContain('const REVIEW_DELETE_CONFIRMATION = "리뷰삭제"');
+    expect(reviewsSource).toContain('deleteReviewConfirmation !== REVIEW_DELETE_CONFIRMATION');
+    expect(reviewsSource).toContain('role="region" aria-label="리뷰 삭제 확인"');
+    expect(reviewsSource).toContain('aria-label="리뷰 삭제 확인 문구"');
+    expect(reviewsSource).toContain('.eq("user_id", user.id)');
+    expect(reviewsSource).not.toContain('confirm("정말로 이 리뷰를 삭제하시겠습니까?")');
+  });
+
   test('home navigation parity keeps desktop header routes and mobile overlay routes aligned intentionally', () => {
     const headerSource = source('components/layout/Header.tsx');
     const mobileOverlaySource = source('components/home/MobileControlOverlay.tsx');
@@ -82,7 +148,7 @@ describe('mobile and desktop parity source contracts', () => {
     const navigationRoutesSource = source('components/layout/navigation-routes.ts');
 
     expect(headerSource).toContain("router.push('/admin')");
-    expect(headerSource).toContain("router.push('/admin?module=announcements')");
+    expect(headerSource).not.toContain("router.push('/admin?module=announcements')");
     expect(mobileOverlaySource).toContain("router.push('/admin')");
     expect(headerSource).toContain('관리자 콘솔');
     expect(mobileOverlaySource).toContain('관리자 콘솔');
