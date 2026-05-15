@@ -11,6 +11,8 @@ const noop = () => undefined;
 export const EMPTY_NOTIFICATION_CONTEXT: NotificationContextType = {
     notifications: [],
     unreadCount: 0,
+    isLoading: false,
+    isError: false,
     markAsRead: noop,
     markAllAsRead: noop,
     addNotification: noop,

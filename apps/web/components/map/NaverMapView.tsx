@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 
+import { buildHomeMapActivationPlan } from "@/app/home-map-runtime-activation";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurantWithMergeContext, useRestaurants } from "@/hooks/use-restaurants";
 import type { FilterState } from "@/components/filters/filter-state";
@@ -117,11 +118,14 @@ import {
     buildNaverMapInternalPanelCloseHandler,
     buildNaverMapInternalPanelToggleHandler,
     buildNaverMarkerRestaurantSelectionHandler,
+    applyNaverImmediateMarkerCenter,
     buildNaverMapRestaurantAction,
     buildNaverMapReviewCloseHandler,
     buildNaverMapReviewOpenHandler,
     buildNaverMapReviewSuccessHandler,
     getNaverMapReviewRestaurant,
+    resolveNaverMarkerClickImmediateCenterPlan,
+    shouldSkipNaverDeferredCenterAfterImmediateMarkerClick,
     shouldCloseNaverInternalPanelForExternalState,
     shouldCloseNaverInternalPanelOnEscape,
 } from "@/lib/naver-map-sidepanel-helpers";
@@ -416,6 +420,15 @@ const NaverMapView = memo(({
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
+    const lastImmediateMarkerCenterRef = useRef<{
+        restaurantId: string;
+        targetLat: number;
+        targetLng: number;
+        targetZoom: number;
+        targetOffsetX: number;
+        targetOffsetY: number;
+        centeredAt: number;
+    } | null>(null);
     const [isMapRuntimeActive, setIsMapRuntimeActive] = useState(false);
     const deviceLocationMarkerRef = useRef<{
         setMap: (map: unknown | null) => void;
@@ -462,35 +475,50 @@ const NaverMapView = memo(({
     const { isLoaded, loadError, load } = useNaverMaps({ autoLoad: false, strategy: 'lazyOnload' });
 
     useEffect(() => {
-        setIsMapRuntimeActive(true);
-    }, []);
+        if (isMapRuntimeActive) return;
+
+        const activationPlan = buildHomeMapActivationPlan({
+            search: window.location.search,
+            hash: window.location.hash,
+        });
+
+        if (activationPlan.activateImmediately) {
+            setIsMapRuntimeActive(true);
+            return;
+        }
+
+        let hasActivated = false;
+        let activationTimeoutId: number | null = null;
+        const listenerOptions: AddEventListenerOptions = { once: true, passive: true };
+
+        function cleanupActivation() {
+            activationPlan.events.forEach((eventName) => {
+                window.removeEventListener(eventName, activateMapRuntime, listenerOptions);
+            });
+            if (activationTimeoutId !== null) {
+                window.clearTimeout(activationTimeoutId);
+                activationTimeoutId = null;
+            }
+        }
+
+        function activateMapRuntime() {
+            if (hasActivated) return;
+            hasActivated = true;
+            cleanupActivation();
+            setIsMapRuntimeActive(true);
+        }
+
+        activationPlan.events.forEach((eventName) => {
+            window.addEventListener(eventName, activateMapRuntime, listenerOptions);
+        });
+        activationTimeoutId = window.setTimeout(activateMapRuntime, activationPlan.delayMs);
+
+        return cleanupActivation;
+    }, [isMapRuntimeActive]);
 
     useEffect(() => {
         if (!isMapRuntimeActive || isLoaded || loadError) return;
-
-        let cancelled = false;
-        const idleWindow = window as Window & {
-            requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-            cancelIdleCallback?: (id: number) => void;
-        };
-
-        if (typeof idleWindow.requestIdleCallback === 'function') {
-            const idleId = idleWindow.requestIdleCallback(() => {
-                if (!cancelled) load();
-            }, { timeout: 2000 });
-            return () => {
-                cancelled = true;
-                idleWindow.cancelIdleCallback?.(idleId);
-            };
-        }
-
-        const timeout = window.setTimeout(() => {
-            if (!cancelled) load();
-        }, 2000);
-        return () => {
-            cancelled = true;
-            window.clearTimeout(timeout);
-        };
+        load();
     }, [isLoaded, isMapRuntimeActive, load, loadError]);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
@@ -548,6 +576,56 @@ const NaverMapView = memo(({
             maps.Event.removeListener(listener);
         };
     }, [activateNoncriticalMapEffects, isMapInitialized, onMapBlankClick]);
+
+    useEffect(() => {
+        if (!isMapInitialized || !mapInstanceRef.current) return;
+
+        const maps = window.naver?.maps;
+        const map = mapInstanceRef.current;
+        const mapElement = mapRef.current;
+        if (!maps?.Event || !map) return;
+
+        const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
+            hasUserMovedMapRef,
+            onUserInteraction: activateNoncriticalMapEffects,
+            releaseSearchSelectionOnUserInteraction,
+        });
+        const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
+        const interactionHandlers = {
+            searchRelease: handleSearchReleaseInteraction,
+            userInteraction: handleUserInteraction,
+        };
+
+        if (mapElement) {
+            interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
+                mapElement.addEventListener(
+                    eventName,
+                    interactionHandlers[handlerKey],
+                    NAVER_INTERACTION_LISTENER_OPTIONS,
+                );
+            });
+        }
+
+        const mapEventListeners = interactionListenerPlan.mapEventNames.map((eventName) =>
+            maps.Event.addListener(map, eventName, handleSearchReleaseInteraction)
+        );
+
+        return () => {
+            mapEventListeners.forEach((listener) => {
+                maps.Event.removeListener(listener);
+            });
+
+            if (mapElement) {
+                interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
+                    mapElement.removeEventListener(
+                        eventName,
+                        interactionHandlers[handlerKey],
+                        NAVER_INTERACTION_REMOVE_OPTIONS,
+                    );
+                });
+            }
+        };
+    }, [activateNoncriticalMapEffects, isMapInitialized, releaseSearchSelectionOnUserInteraction]);
 
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
@@ -746,17 +824,6 @@ const NaverMapView = memo(({
 
     // ... (중략) ...
 
-    const handleMarkerRestaurantSelection = useMemo(
-        () => buildNaverMarkerRestaurantSelectionHandler({
-            hasUserMovedMapRef,
-            onMarkerClick,
-            onRestaurantSelect,
-            setInternalPanelOpen,
-        }),
-        [onMarkerClick, onRestaurantSelect]
-    );
-
-
     // [커스텀 토스트] 지도 상단 중앙 알림 상태
     const [mapToast, setMapToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null>(null);
 
@@ -920,6 +987,50 @@ const NaverMapView = memo(({
         });
     }, [isMobileOrTablet, mobileSheetHeightPercent]);
 
+    const centerMarkerSelectionImmediately = useCallback((restaurant: Restaurant) => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.naver) return;
+
+        const currentZoom = map.getZoom();
+        const immediateCenterPlan = resolveNaverMarkerClickImmediateCenterPlan({
+            currentZoom,
+            isGridMode,
+            isMobileOrTablet,
+            isPanelCollapsed,
+            mapFocusZoom: mapFocusZoom ?? null,
+            mobileVerticalOffset: getMobileVerticalOffset(),
+            panelWidth,
+            restaurant,
+            usesExternalPanel: Boolean(onMarkerClick),
+        });
+
+        if (immediateCenterPlan.skip) {
+            return;
+        }
+
+        const immediateCenterResult = applyNaverImmediateMarkerCenter({
+            currentZoom,
+            getAdjustedCenter,
+            map,
+            plan: immediateCenterPlan,
+        });
+
+        if (immediateCenterResult.applied) {
+            lastImmediateMarkerCenterRef.current = immediateCenterResult.markerCenter;
+        }
+    }, [getMobileVerticalOffset, isGridMode, isMobileOrTablet, isPanelCollapsed, mapFocusZoom, onMarkerClick, panelWidth]);
+
+    const handleMarkerRestaurantSelection = useMemo(
+        () => buildNaverMarkerRestaurantSelectionHandler({
+            centerMarkerImmediately: centerMarkerSelectionImmediately,
+            hasUserMovedMapRef,
+            onMarkerClick,
+            onRestaurantSelect,
+            setInternalPanelOpen,
+        }),
+        [centerMarkerSelectionImmediately, onMarkerClick, onRestaurantSelect]
+    );
+
     // [Helper] 패널 오프셋을 고려한 morph (클러스터 클릭 시 사용)
     // 우측 패널이 열려있을 때 클러스터 중심이 "보이는 영역"의 중앙에 위치하도록 조정
     const morphWithPanelOffset = useCallback((
@@ -1041,6 +1152,30 @@ const NaverMapView = memo(({
             mobileVerticalOffset: getMobileVerticalOffset(),
         });
 
+        const immediateMarkerCenter = lastImmediateMarkerCenterRef.current;
+        if (
+            immediateMarkerCenter &&
+            shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+                centeredAt: immediateMarkerCenter.centeredAt,
+                immediateOffsetX: immediateMarkerCenter.targetOffsetX,
+                immediateOffsetY: immediateMarkerCenter.targetOffsetY,
+                immediateTargetLat: immediateMarkerCenter.targetLat,
+                immediateTargetLng: immediateMarkerCenter.targetLng,
+                immediateZoom: immediateMarkerCenter.targetZoom,
+                restaurantId: immediateMarkerCenter.restaurantId,
+                selectedRestaurantId: currentSelectedId,
+                targetLat,
+                targetLng,
+                targetOffsetX,
+                targetOffsetY,
+                targetZoom,
+            })
+        ) {
+            return;
+        } else if (immediateMarkerCenter) {
+            lastImmediateMarkerCenterRef.current = null;
+        }
+
         // **핵심 로직 변경**
         const currentZoom = map.getZoom();
 
@@ -1131,50 +1266,8 @@ const NaverMapView = memo(({
             naver.maps.Event.trigger(map, transitionResizePlan.followupResizeEvent);
         }, transitionResizePlan.followupResizeDelayMs);
 
-        // 사용자 상호작용 감지 리스너 추가
-        // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
-        const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
-            hasUserMovedMapRef,
-            onUserInteraction: activateNoncriticalMapEffects,
-            releaseSearchSelectionOnUserInteraction,
-        });
-        const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
-        const interactionHandlers = {
-            searchRelease: handleSearchReleaseInteraction,
-            userInteraction: handleUserInteraction,
-        };
-
-        const mapElement = mapRef.current;
-        if (mapElement) {
-            // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
-            interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
-                mapElement.addEventListener(
-                    eventName,
-                    interactionHandlers[handlerKey],
-                    NAVER_INTERACTION_LISTENER_OPTIONS,
-                );
-            });
-        }
-
-        const mapEventListeners = interactionListenerPlan.mapEventNames.map((eventName) =>
-            naver.maps.Event.addListener(map, eventName, handleSearchReleaseInteraction)
-        );
-
         return () => {
             clearTimeout(transitionTimer);
-            mapEventListeners.forEach((listener) => {
-                naver.maps.Event.removeListener(listener);
-            });
-
-            if (mapElement) {
-                interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
-                    mapElement.removeEventListener(
-                        eventName,
-                        interactionHandlers[handlerKey],
-                        NAVER_INTERACTION_REMOVE_OPTIONS,
-                    );
-                });
-            }
         };
 
     }, [
@@ -1194,8 +1287,6 @@ const NaverMapView = memo(({
         isMobileOrTablet,
         mapFocusZoom,
         mobileSheetHeightPercent,
-        activateNoncriticalMapEffects,
-        releaseSearchSelectionOnUserInteraction,
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
@@ -1246,6 +1337,32 @@ const NaverMapView = memo(({
 
             if (resizePlan.skip) {
                 return;
+            }
+
+            const immediateMarkerCenter = lastImmediateMarkerCenterRef.current;
+            if (
+                immediateMarkerCenter &&
+                typeof resizePlan.targetLat === 'number' &&
+                typeof resizePlan.targetLng === 'number' &&
+                shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+                    centeredAt: immediateMarkerCenter.centeredAt,
+                    immediateOffsetX: immediateMarkerCenter.targetOffsetX,
+                    immediateOffsetY: immediateMarkerCenter.targetOffsetY,
+                    immediateTargetLat: immediateMarkerCenter.targetLat,
+                    immediateTargetLng: immediateMarkerCenter.targetLng,
+                    immediateZoom: immediateMarkerCenter.targetZoom,
+                    restaurantId: immediateMarkerCenter.restaurantId,
+                    selectedRestaurantId: selectedRestaurant?.id ?? null,
+                    targetLat: resizePlan.targetLat,
+                    targetLng: resizePlan.targetLng,
+                    targetOffsetX: resizePlan.targetOffsetX,
+                    targetOffsetY: resizePlan.targetOffsetY,
+                    targetZoom: resizePlan.targetZoom,
+                })
+            ) {
+                return;
+            } else if (immediateMarkerCenter) {
+                lastImmediateMarkerCenterRef.current = null;
             }
 
             // 애니메이션 없이 즉시 이동 (부드러움 유지)

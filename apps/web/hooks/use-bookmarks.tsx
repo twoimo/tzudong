@@ -59,6 +59,10 @@ interface BookmarkIdRow {
     restaurant_id: string;
 }
 
+interface UseBookmarksOptions {
+    enabled?: boolean;
+}
+
 function toRestaurant(row: RestaurantRow): Restaurant {
     return {
         ...row,
@@ -126,8 +130,9 @@ async function fetchRelatedBookmarkRestaurantIds(restaurantId: string): Promise<
     );
 }
 
-export function useBookmarks() {
+export function useBookmarks(options: UseBookmarksOptions = {}) {
     const { user } = useAuth();
+    const isEnabled = options.enabled ?? true;
 
     return useQuery({
         queryKey: ['user-bookmarks', user?.id],
@@ -192,7 +197,7 @@ export function useBookmarks() {
                 })
                 .filter((item): item is BookmarkWithRestaurant => item !== null);
         },
-        enabled: !!user?.id,
+        enabled: isEnabled && !!user?.id,
         staleTime: BOOKMARK_STALE_TIME,
         gcTime: BOOKMARK_GC_TIME,
     });

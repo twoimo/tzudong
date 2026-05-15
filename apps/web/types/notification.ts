@@ -24,6 +24,8 @@ export type NotificationType =
 export interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
+  isLoading: boolean;
+  isError: boolean;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => void;

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, Megaphone, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, ChevronDown, ChevronUp, BarChart2 } from "lucide-react";
+import { PanelLeft, Bell, Maximize, User, LogOut, X, CheckCheck, Megaphone, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback, memo, useMemo, useRef, Suspense } from "react";
+import { Fragment, useState, useEffect, useCallback, memo, useMemo, useRef, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import {
@@ -30,8 +30,6 @@ import { useHydration } from "@/hooks/useHydration";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useActiveAnnouncements } from "@/hooks/use-banner-announcements";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
-import { toast } from "@/lib/no-toast";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -48,17 +46,29 @@ interface HeaderProps {
   hideToggleSidebar?: boolean;
 }
 
-const HeaderBookmarkMenuButton = dynamic(() => import("@/components/layout/HeaderBookmarkMenuButton"), { ssr: false });
+function HeaderActionSkeleton({ label, className }: { label: string; className?: string }) {
+  return (
+    <Skeleton
+      role="status"
+      aria-label={label}
+      className={cn("h-11 w-11 flex-shrink-0 rounded-xl motion-reduce:animate-none", className)}
+    />
+  );
+}
+
+const HeaderBookmarkMenuButton = dynamic(() => import("@/components/layout/HeaderBookmarkMenuButton"), {
+  ssr: false,
+  loading: () => <HeaderActionSkeleton label="북마크 로딩 중" />,
+});
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
 const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const isHydrated = useHydration();
   const { isMobileOrTablet } = useDeviceType();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
+  const { notifications, unreadCount, isLoading: isNotificationsLoading, isError: isNotificationsError, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const headerRef = useRef<HTMLElement>(null);
 
   const { data: activeAnnouncements = [], isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements();
@@ -67,7 +77,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     [activeAnnouncements]
   );
   const isBannerAnnouncementsLoading = isActiveAnnouncementsLoading;
-  const [isAnnouncementMutationPending, setIsAnnouncementMutationPending] = useState(false);
 
   // 공지 배너 상태
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -88,6 +97,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const shouldShowHeaderIcons = isLoggedIn && shouldShowAuthUI;
   const shouldShowLoginButton = !isLoggedIn && shouldShowAuthUI;
   const shouldShowAuthSkeleton = !shouldShowAuthUI;
+  const shouldShowNotificationSkeleton = shouldShowAuthSkeleton;
+  const shouldShowBookmarkSkeleton = shouldShowAuthSkeleton;
+  const shouldShowFullscreenSkeleton = shouldShowAuthSkeleton;
+  const shouldShowAccountSkeleton = shouldShowAuthSkeleton;
   const shouldShowBannerSkeleton = (!isHydrated || isBannerAnnouncementsLoading) && bannerAnnouncements.length === 0;
   const isMobileBannerOnlyHeader = isMobileOrTablet;
 
@@ -165,113 +178,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     }
   }, [bannerAnnouncements, currentBannerIndex, isMobileOrTablet, onAnnouncementClick]);
 
-  const handleAnnouncementListClick = useCallback(() => {
-    if (isMobileOrTablet) {
-      setAnnouncementPage(1);
-      setAnnouncementViewMode('list');
-      setIsAnnouncementSheetOpen(true);
-    } else {
-      if (pathname === '/') {
-        window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
-      } else {
-        // SPA 이동으로 홈 진입 + 공지 패널 자동 오픈
-        router.push('/?panel=announcement');
-      }
-    }
-  }, [isMobileOrTablet, pathname, router]);
-
-  const invalidateAnnouncementQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['announcements'] });
-  }, [queryClient]);
-
-  const withAnnouncementMutation = useCallback(async (operation: () => Promise<void>, successMessage: string) => {
-    setIsAnnouncementMutationPending(true);
-    try {
-      await operation();
-      invalidateAnnouncementQueries();
-      toast.success(successMessage);
-    } catch (error) {
-      console.error('공지사항 변경 실패:', error);
-      toast.error(error instanceof Error ? error.message : '공지사항 변경에 실패했습니다');
-      throw error;
-    } finally {
-      setIsAnnouncementMutationPending(false);
-    }
-  }, [invalidateAnnouncementQueries]);
-
-  const handleDeleteAnnouncement = useCallback(async (id: string) => {
-    if (!confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
-      return;
-    }
-
-    try {
-      await withAnnouncementMutation(async () => {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { error } = await supabase.from('announcements').delete().eq('id', id);
-        if (error) throw error;
-      }, '공지사항이 삭제되었습니다');
-
-      if (selectedAnnouncement?.id === id) {
-        setSelectedAnnouncement(null);
-      }
-      setAnnouncementViewMode('list');
-    } catch {
-      // 토스트는 공통 mutation 래퍼에서 처리
-    }
-  }, [selectedAnnouncement?.id, withAnnouncementMutation]);
-
-  const handleToggleAnnouncementActive = useCallback(async (id: string) => {
-    const target =
-      (selectedAnnouncement?.id === id ? selectedAnnouncement : null) ||
-      activeAnnouncements.find((announcement) => announcement.id === id);
-    if (!target) return;
-
-    try {
-      await withAnnouncementMutation(async () => {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { error } = await supabase
-          .from('announcements')
-          .update({ is_active: !target.isActive } as never)
-          .eq('id', id);
-        if (error) throw error;
-      }, target.isActive ? '공지사항이 비활성화되었습니다' : '공지사항이 활성화되었습니다');
-
-      if (selectedAnnouncement?.id === id) {
-        setSelectedAnnouncement((prev) =>
-          prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : prev
-        );
-      }
-    } catch {
-      // 토스트는 공통 mutation 래퍼에서 처리
-    }
-  }, [activeAnnouncements, selectedAnnouncement, withAnnouncementMutation]);
-
-  const handleToggleAnnouncementBanner = useCallback(async (id: string) => {
-    const target =
-      (selectedAnnouncement?.id === id ? selectedAnnouncement : null) ||
-      activeAnnouncements.find((announcement) => announcement.id === id);
-    if (!target) return;
-
-    try {
-      await withAnnouncementMutation(async () => {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { error } = await supabase
-          .from('announcements')
-          .update({ show_on_banner: !target.showOnBanner } as never)
-          .eq('id', id);
-        if (error) throw error;
-      }, target.showOnBanner ? '배너 노출이 해제되었습니다' : '배너 노출이 설정되었습니다');
-
-      if (selectedAnnouncement?.id === id) {
-        setSelectedAnnouncement((prev) =>
-          prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : prev
-        );
-      }
-    } catch {
-      // 토스트는 공통 mutation 래퍼에서 처리
-    }
-  }, [activeAnnouncements, selectedAnnouncement, withAnnouncementMutation]);
-
   const handleMyPageClick = useCallback(() => {
     // 마이페이지 프로필 페이지로 이동
     router.push('/mypage/profile');
@@ -329,7 +235,16 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       } else {
         router.push(`/mypage/reviews?status=${status}`);
       }
+      return;
     }
+
+    const restaurantId = typeof notification.data?.restaurantId === 'string' ? notification.data.restaurantId : null;
+    if (restaurantId) {
+      router.push(`/?r=${restaurantId}&z=13`);
+      return;
+    }
+
+    router.push('/?panel=announcement');
   };
 
   return (
@@ -463,6 +378,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
 
         {/* 알림 */}
+        {shouldShowNotificationSkeleton && (
+          <HeaderActionSkeleton label="알림 로딩 중" />
+        )}
         {shouldShowHeaderIcons && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -470,14 +388,15 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 variant="ghost"
                 size="icon"
                 type="button"
-                aria-label="알림"
-                className="h-9 w-9 hover:bg-accent text-foreground relative transition-colors"
+                aria-label={unreadCount > 0 ? `알림, 안 읽은 알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}` : "알림"}
+                className="h-11 w-11 rounded-xl hover:bg-accent text-foreground relative transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
               >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5" aria-hidden="true" />
                 {unreadCount > 0 && (
                   <Badge
                     variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-800"
+                    aria-hidden="true"
+                    className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full px-1 flex items-center justify-center p-0 text-[10px] font-bold tabular-nums bg-red-800"
                   >
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Badge>
@@ -486,10 +405,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-80 bg-card border-border font-serif z-[100]"
+              className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[100] shadow-primary"
             >
-              <DropdownMenuLabel className="flex items-center justify-between text-foreground">
-                <span>알림</span>
+              <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
+                <div className="min-w-0">
+                  <span className="block font-semibold">알림</span>
+                  <span className="block text-xs font-normal text-muted-foreground">최근 알림 {notifications.length}개 · 안 읽음 {unreadCount > 99 ? '99+' : unreadCount}</span>
+                </div>
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"
@@ -497,63 +419,89 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     type="button"
                     aria-label="모든 알림 읽음 처리"
                     onClick={markAllAsRead}
-                    className="h-6 px-2 text-xs hover:bg-accent text-foreground"
+                    className="h-8 shrink-0 rounded-lg px-2 text-xs hover:bg-accent text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                   >
-                    <CheckCheck className="h-3 w-3 mr-1" />
+                    <CheckCheck className="h-3 w-3 mr-1" aria-hidden="true" />
                     모두 읽음
                   </Button>
                 )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border" />
-              <ScrollArea className="h-64">
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    새로운 알림이 없습니다
+              <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
+                {isNotificationsLoading ? (
+                  <div role="status" aria-label="알림 목록 로딩 중" className="space-y-3 p-3">
+                    {[0, 1, 2].map((item) => (
+                      <div key={item} className="space-y-2">
+                        <Skeleton className="h-4 w-3/4 rounded" />
+                        <Skeleton className="h-3 w-full rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : isNotificationsError ? (
+                  <div role="status" className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                    <div>
+                      <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                      <p className="font-medium text-foreground">알림을 불러오지 못했습니다</p>
+                      <p className="mt-1 text-xs leading-5">잠시 후 다시 열어 주세요.</p>
+                    </div>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                    <div>
+                      <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                      <p className="font-medium text-foreground">새로운 알림이 없습니다</p>
+                      <p className="mt-1 text-xs leading-5">리뷰 승인, 제보 처리, 랭킹 소식이 생기면 여기에 표시됩니다.</p>
+                    </div>
                   </div>
                 ) : (
                   <DropdownMenuGroup>
-                    {notifications.map((notification) => (
-                      <DropdownMenuItem
-                        key={notification.id}
-                        className={cn(
-                          "flex items-center gap-2 p-3 cursor-pointer hover:bg-accent",
-                          !notification.isRead && "bg-accent/50"
-                        )}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        {/* 타입별 컬러 인디케이터 */}
-                        <div className={cn(
-                          "w-1 h-10 rounded-full flex-shrink-0",
-                          getNotificationColor(notification.type)
-                        )} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground/70 mt-0.5">
-                            {formatDistanceToNow(notification.createdAt, {
-                              addSuffix: true,
-                              locale: ko
-                            })}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
+                    {notifications.slice(0, 50).map((notification) => (
+                      <Fragment key={notification.id}>
+                        <DropdownMenuItem
+                          aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
+                          className={cn(
+                            "flex items-center gap-3 p-3 cursor-pointer hover:bg-accent focus:bg-accent w-full max-w-full touch-manipulation",
+                            !notification.isRead && "bg-accent/50"
+                          )}
+                          onSelect={() => handleNotificationClick(notification)}
+                        >
+                          {/* 타입별 컬러 인디케이터 */}
+                          <div className={cn(
+                            "w-1.5 h-12 rounded-full flex-shrink-0",
+                            getNotificationColor(notification.type)
+                          )} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                                {notification.title}
+                              </p>
+                              {!notification.isRead && (
+                                <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold text-white">새 알림</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-muted-foreground/70 mt-0.5">
+                              {formatDistanceToNow(notification.createdAt, {
+                                addSuffix: true,
+                                locale: ko
+                              })}
+                            </p>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           aria-label={`${notification.title} 알림 삭제`}
-                          className="h-6 w-6 p-0 opacity-50 hover:opacity-100 flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          className="ml-3 flex cursor-pointer items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive touch-manipulation"
+                          onSelect={(event) => {
+                            event.preventDefault();
                             removeNotification(notification.id);
                           }}
                         >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuItem>
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          알림 삭제
+                        </DropdownMenuItem>
+                      </Fragment>
                     ))}
                   </DropdownMenuGroup>
                 )}
@@ -563,13 +511,19 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         )}
 
         {/* 북마크 - 드롭다운 */}
+        {shouldShowBookmarkSkeleton && (
+          <HeaderActionSkeleton label="북마크 로딩 중" />
+        )}
         {shouldShowHeaderIcons && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<HeaderActionSkeleton label="북마크 로딩 중" />}>
             <HeaderBookmarkMenuButton />
           </Suspense>
         )}
 
         {/* 전체화면 - 데스크탑에서만 표시 */}
+        {shouldShowFullscreenSkeleton && (
+          <HeaderActionSkeleton label="전체화면 로딩 중" className="hidden md:block" />
+        )}
         {shouldShowHeaderIcons && (
           <Button
             variant="ghost"
@@ -577,13 +531,16 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             type="button"
             aria-label="전체화면 토글"
             onClick={toggleFullscreen}
-            className="h-9 w-9 hidden md:flex hover:bg-accent text-foreground transition-colors"
+            className="h-11 w-11 hidden md:flex rounded-xl hover:bg-accent text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
           >
-            <Maximize className="h-5 w-5" />
+            <Maximize className="h-5 w-5" aria-hidden="true" />
           </Button>
         )}
 
         {/* 로그인 상태 */}
+        {shouldShowAccountSkeleton && (
+          <HeaderActionSkeleton label="사용자 메뉴 로딩 중" />
+        )}
         {shouldShowHeaderIcons && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -592,22 +549,18 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 size="icon"
                 type="button"
                 aria-label="내 계정 메뉴"
-                className="h-9 w-9 hover:bg-accent text-foreground transition-colors"
+                className="h-11 w-11 rounded-xl hover:bg-accent text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
               >
-                <User className="h-5 w-5" />
+                <User className="h-5 w-5" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36 z-[100]">
-              <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent py-1.5">
+              <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent focus:bg-accent py-2 touch-manipulation">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-foreground hover:bg-accent py-1.5">
-                <Megaphone className="mr-2 h-4 w-4" />
-                공지사항
-              </DropdownMenuItem>
               {!isAdmin && (
-                <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
+                <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent focus:bg-accent py-2 touch-manipulation">
                   <BarChart2 className="mr-2 h-4 w-4" />
                   인사이트
                 </DropdownMenuItem>
@@ -615,14 +568,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-border my-1" />
-                  <DropdownMenuItem onClick={() => router.push('/admin')} className="text-foreground hover:bg-accent py-1.5">
+                  <DropdownMenuItem onClick={() => router.push('/admin')} className="text-foreground hover:bg-accent focus:bg-accent py-2 touch-manipulation">
                     <PanelLeft className="mr-2 h-4 w-4" />
                     관리자 콘솔
                   </DropdownMenuItem>
                 </>
               )}
               <DropdownMenuSeparator className="bg-border my-1" />
-              <DropdownMenuItem onClick={onLogout} className="text-foreground hover:bg-accent py-1.5">
+              <DropdownMenuItem onClick={onLogout} className="text-foreground hover:bg-accent focus:bg-accent py-2 touch-manipulation">
                 <LogOut className="mr-2 h-4 w-4" />
                 로그아웃
               </DropdownMenuItem>
@@ -652,10 +605,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
-
-        {shouldShowAuthSkeleton && (
-          <Skeleton className="ml-1 h-8 w-[84px] rounded-md md:ml-2 md:h-10 md:w-[96px]" />
         )}
 
         {/* 로그인 버튼 */}
@@ -809,65 +758,20 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     </div>
                   </ScrollArea>
 
-                  {/* 관리자 제어 버튼 */}
+                  {/* 관리자 계정은 헤더에서 읽고, 운영 변경은 관리자 콘솔에서 처리 */}
                   {isAdmin && selectedAnnouncement && (
                     <div className="flex-shrink-0 pt-4 border-t border-border mt-4 pb-[calc(env(safe-area-inset-bottom)+8px)]">
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          aria-label={selectedAnnouncement.isActive ? "공지사항 비활성화" : "공지사항 활성화"}
-                          onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
-                          disabled={isAnnouncementMutationPending}
-                          className="gap-1 text-xs"
-                        >
-                          {selectedAnnouncement.isActive ? (
-                            <>
-                              <EyeOff className="h-3 w-3" />
-                              비활성화
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-3 w-3" />
-                              활성화
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          aria-label={selectedAnnouncement.showOnBanner ? "배너에서 숨기기" : "배너로 노출"}
-                          onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
-                          disabled={isAnnouncementMutationPending}
-                          className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
-                        >
-                          {selectedAnnouncement.showOnBanner ? (
-                            <>
-                              <BellOff className="h-3 w-3" />
-                              배너해제
-                            </>
-                          ) : (
-                            <>
-                              <Bell className="h-3 w-3" />
-                              배너노출
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          aria-label={`${selectedAnnouncement.title ?? ""} 공지사항 삭제`}
-                          onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
-                          disabled={isAnnouncementMutationPending}
-                          className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          삭제
-                        </Button>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        aria-label="관리자 콘솔에서 공지사항 관리"
+                        onClick={() => router.push('/admin')}
+                        className="min-h-10 w-full justify-between rounded-xl text-xs"
+                      >
+                        관리자 콘솔 열기
+                        <span aria-hidden="true">→</span>
+                      </Button>
                     </div>
                   )}
                 </div>

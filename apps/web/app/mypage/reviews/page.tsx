@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,8 @@ import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
+
+const REVIEW_DELETE_CONFIRMATION = "리뷰삭제";
 
 // 리뷰 데이터 타입 정의
 interface MyReview {
@@ -125,6 +128,8 @@ export default function ReviewsPage() {
   const [editingReview, setEditingReview] = useState<MyReview | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(null);
+  const [deleteReviewTarget, setDeleteReviewTarget] = useState<MyReview | null>(null);
+  const [deleteReviewConfirmation, setDeleteReviewConfirmation] = useState("");
 
   // 내 리뷰 조회 - 무한 스크롤
   const {
@@ -305,11 +310,22 @@ export default function ReviewsPage() {
 
   // 리뷰 삭제
   const handleDeleteReview = async (reviewId: string) => {
-    if (!confirm("정말로 이 리뷰를 삭제하시겠습니까?")) {
+    if (!user?.id) return;
+
+    if (deleteReviewConfirmation !== REVIEW_DELETE_CONFIRMATION) {
+      toast({
+        title: "삭제 확인 문구가 일치하지 않습니다",
+        description: `${REVIEW_DELETE_CONFIRMATION}를 입력해야 리뷰를 삭제할 수 있습니다.`,
+        variant: "destructive",
+      });
       return;
     }
 
-    const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
+    const { error } = await supabase
+      .from("reviews")
+      .delete()
+      .eq("id", reviewId)
+      .eq("user_id", user.id);
 
     if (error) {
       toast({
@@ -322,6 +338,8 @@ export default function ReviewsPage() {
         title: "삭제 완료",
         description: "리뷰를 삭제했습니다",
       });
+      setDeleteReviewTarget(null);
+      setDeleteReviewConfirmation("");
       refetch();
       queryClient.invalidateQueries({ queryKey: ["user-reviews"] });
     }
@@ -440,14 +458,18 @@ export default function ReviewsPage() {
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteReview(review.id)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+	                      <Button
+	                        variant="ghost"
+	                        size="sm"
+	                        onClick={() => {
+                            setDeleteReviewTarget(review);
+                            setDeleteReviewConfirmation("");
+                          }}
+	                        className="text-muted-foreground hover:text-destructive"
+                          aria-label={`${review.restaurantName} 리뷰 삭제 확인 열기`}
+	                      >
+	                        <Trash2 className="h-4 w-4" />
+	                      </Button>
                     </div>
                   </div>
 
@@ -502,16 +524,52 @@ export default function ReviewsPage() {
                   )}
 
                   {/* 푸터: 날짜 정보 */}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      방문: {formatDate(review.visitedAt)}
-                    </div>
-                    <div>작성: {formatDate(review.createdAt)}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+	                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
+	                    <div className="flex items-center gap-1">
+	                      <Calendar className="h-3 w-3" />
+	                      방문: {formatDate(review.visitedAt)}
+	                    </div>
+	                    <div>작성: {formatDate(review.createdAt)}</div>
+	                  </div>
+
+                    {deleteReviewTarget?.id === review.id && (
+                      <div className="mt-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3" role="region" aria-label="리뷰 삭제 확인">
+                        <p className="text-sm font-semibold text-destructive">리뷰 삭제 확인</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          모바일과 데스크탑에서 동일하게 확인 문구를 입력한 뒤 삭제합니다. 삭제하려면 <strong>{REVIEW_DELETE_CONFIRMATION}</strong>를 입력하세요.
+                        </p>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                          <Input
+                            value={deleteReviewConfirmation}
+                            onChange={(event) => setDeleteReviewConfirmation(event.target.value)}
+                            placeholder={REVIEW_DELETE_CONFIRMATION}
+                            aria-label="리뷰 삭제 확인 문구"
+                            className="bg-background"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setDeleteReviewTarget(null);
+                              setDeleteReviewConfirmation("");
+                            }}
+                          >
+                            취소
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={deleteReviewConfirmation !== REVIEW_DELETE_CONFIRMATION}
+                            onClick={() => handleDeleteReview(review.id)}
+                          >
+                            삭제
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+	                </CardContent>
+	              </Card>
+	            ))}
 
             {/* 추가 로딩 표시 */}
             {isFetchingNextPage && (

@@ -135,6 +135,9 @@ describe('web quality performance source contracts', () => {
         expect(categoryFilterSource).toContain('enabled: isOpen');
         expect(mapQuerySource).toContain('includeVerifiedReviewCounts: false');
         expect(naverMapSource).toContain('autoLoad: false');
+        expect(naverMapSource).toContain('buildHomeMapActivationPlan');
+        expect(naverMapSource).toContain('window.setTimeout(activateMapRuntime, activationPlan.delayMs)');
+        expect(naverMapSource).not.toContain('{ timeout: 2000 }');
         expect(naverMapSource).toContain('useBannerAnnouncements } from "@/hooks/use-banner-announcements"');
         expect(naverMapSource).toContain('setShouldRunNoncriticalMapEffects((previous) => previous ? previous : true)');
         expect(naverMapSource).toContain('activateNoncriticalMapEffects();');
@@ -148,6 +151,21 @@ describe('web quality performance source contracts', () => {
         expect(source('hooks/use-restaurants.tsx')).not.toContain('import { supabase } from "@/integrations/supabase/client"');
         expect(source('components/home/MobileControlOverlay.tsx')).toContain('fetchSupabaseRows');
         expect(source('components/home/MobileControlOverlay.tsx')).not.toContain("import { supabase } from '@/integrations/supabase/client'");
+    });
+
+    test('naver marker click centering avoids slow duplicate recenter loops', () => {
+        const naverMapSource = source('components/map/NaverMapView.tsx');
+
+        expect(naverMapSource).toContain('applyNaverImmediateMarkerCenter({');
+        expect(naverMapSource).toContain('lastImmediateMarkerCenterRef.current = immediateCenterResult.markerCenter');
+        expect(naverMapSource).toContain('lastImmediateMarkerCenterRef.current = null;');
+
+        const interactionListenerIndex = naverMapSource.indexOf('const mapEventListeners = interactionListenerPlan.mapEventNames.map');
+        const deferredSkipIndex = naverMapSource.indexOf('shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({');
+
+        expect(interactionListenerIndex).toBeGreaterThan(-1);
+        expect(deferredSkipIndex).toBeGreaterThan(-1);
+        expect(interactionListenerIndex).toBeLessThan(deferredSkipIndex);
     });
 
     test('profile/stamp/map regressions stay fixed while preserving deferred map loading', () => {
@@ -393,7 +411,17 @@ describe('web quality performance source contracts', () => {
         expect(appIndexMigration).toContain('ocr_logs_user_success_created_idx');
     });
 
-    test('Supabase reads use explicit response shapes instead of broad selects', () => {
+
+  test('admin review queue avoids fetching approved review history', () => {
+    const evaluationsSource = source('app/admin/evaluations/page.tsx');
+
+    expect(evaluationsSource).toContain("queryKey: ['admin-reviews-inline', user?.id, isAdmin]");
+    expect(evaluationsSource).toContain(".select(ADMIN_REVIEW_SELECT)");
+    expect(evaluationsSource).toContain(".eq('is_verified', false)");
+    expect(evaluationsSource).toContain(".order('created_at', { ascending: false })");
+  });
+
+  test('Supabase reads use explicit response shapes instead of broad selects', () => {
         const broadSelectPattern = /(?:\.select\(\s*(['"])\*\1|\.select\(\s*\)|\['select',\s*['"]\*|['"]\*, name:approved_name)/;
         const offenders = ['app', 'components', 'contexts', 'hooks', 'lib']
             .flatMap(sourceFilesUnder)

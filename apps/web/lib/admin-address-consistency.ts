@@ -15,6 +15,7 @@ interface AddressConsistencyInput {
   jibun_address?: string | null;
   naver_name?: string | null;
   google_name?: string | null;
+  updated_by_admin_id?: string | null;
   evaluation_results?: {
     location_match_TF?: LocationMatchResult | null;
   } | null;
@@ -24,13 +25,13 @@ const PENDING_REASON_LABELS: Record<string, string> = {
   insufficient_evidence: '후보를 확정할 독립 근거가 부족합니다.',
   cross_country_mismatch: '원본 위치와 후보 위치의 국가/지역이 서로 맞지 않습니다.',
   ambiguous_chain: '동일/유사 상호 체인점이 여러 개라 지점을 확정할 수 없습니다.',
-  multi_candidate: '복수 후보가 남아 단일 주소로 확정할 수 없습니다.',
+  multi_candidate: '추가 검토 사유가 남아 단일 주소로 확정할 수 없습니다.',
   timeout: '2차 검증이 제한 시간 안에 완료되지 않았습니다.',
-  rate_limited: '외부 지도/검색 공급자 호출 제한으로 검증이 중단되었습니다.',
+  rate_limited: '외부 주소/검색 공급자 호출 제한으로 검증이 중단되었습니다.',
 };
 
 const EVIDENCE_FAMILY_LABELS: Record<string, string> = {
-  provider_candidate: '지도 후보 검색 결과',
+  provider_candidate: '외부 주소 검색 결과',
   source_geo: '원본 좌표/주소 비교',
   cross_provider: '복수 지도 공급자 교차 확인',
   browser_verification: '브라우저 검증',
@@ -53,6 +54,7 @@ const MATCH_STATUS_LABELS: Record<string, string> = {
 };
 
 export const ADDRESS_REVIEW_GEOCODE_RECOVERED_QUEUE = 'geocode_recovered_review';
+export const ADMIN_DERIVED_STATUS_ADDRESS_REVIEW_GEOCODE_RECOVERED = 'address_review_geocode_recovered';
 
 export interface AddressConsistencyReviewQueueInfo {
   queue: string;
@@ -65,16 +67,20 @@ function getObjectValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
-export function getAddressConsistencyReviewQueueInfo(record: Pick<AddressConsistencyInput, 'db_error_details'>): AddressConsistencyReviewQueueInfo | null {
+function getAddressConsistencyReview(record: Pick<AddressConsistencyInput, 'db_error_details'>): Record<string, unknown> | null {
   const details = getObjectValue(record.db_error_details);
-  const review = getObjectValue(details?.address_consistency_review);
+  return getObjectValue(details?.address_consistency_review);
+}
+
+export function getAddressConsistencyReviewQueueInfo(record: Pick<AddressConsistencyInput, 'db_error_details'>): AddressConsistencyReviewQueueInfo | null {
+  const review = getAddressConsistencyReview(record);
   const queue = typeof review?.queue === 'string' ? review.queue : null;
   if (!queue) return null;
 
   if (queue === ADDRESS_REVIEW_GEOCODE_RECOVERED_QUEUE) {
     return {
       queue,
-      label: '지도후보 부족',
+      label: '추가 확인',
       reason: typeof review?.reason_ko === 'string'
         ? review.reason_ko
         : '주소 지오코딩은 회복됐지만 지도 상호 후보가 부족해 관리자 확인이 필요합니다.',
@@ -83,7 +89,7 @@ export function getAddressConsistencyReviewQueueInfo(record: Pick<AddressConsist
 
   return {
     queue,
-    label: '주소 검토',
+    label: '추가 확인',
     reason: typeof review?.reason_ko === 'string' ? review.reason_ko : '주소 정합성 추가 검토가 필요합니다.',
   };
 }
@@ -126,7 +132,7 @@ export function getAddressConsistencyLabel(record: AddressConsistencyInput): str
   }
 }
 
-function getAddressConsistencyKoreanLabel(record: AddressConsistencyInput): string {
+export function getAddressConsistencyDisplayLabel(record: AddressConsistencyInput): string {
   switch (getAddressConsistencyStatus(record)) {
     case 'true':
       return '정상';
@@ -162,7 +168,7 @@ function toKoreanReadableMessage(value: string | null, fallback: string): string
 
 function stageReason(stage: number | null | undefined): string | null {
   if (stage === 0) return '원본 주소가 없거나 평가 미대상으로 분류되어 주소 후보 검증을 진행할 수 없었습니다.';
-  if (stage === 1) return '1단계 지오코딩 검색에서 원본 상호/주소로 유효한 지도 후보를 찾지 못했습니다.';
+  if (stage === 1) return '1단계 지오코딩 검색에서 원본 상호/주소로 유효한 주소 후보를 찾지 못했습니다.';
   if (stage === 2) return '2단계 후보 검증에서 거리/주소 조건을 통과한 후보가 없어 최종 주소로 확정하지 못했습니다.';
   return null;
 }
@@ -204,9 +210,243 @@ export interface AddressConsistencyExplanation {
   evidence: string[];
 }
 
+export type AddressConsistencyTriageTone = 'success' | 'neutral' | 'warning' | 'danger' | 'info';
+
+export interface AddressConsistencyOperatorGuidance {
+  label: string;
+  tone: AddressConsistencyTriageTone;
+  possibleCause: string;
+  recommendedAction: string;
+  safeguard: string;
+}
+
+export interface AddressConsistencyAhpSummary {
+  score: number | null;
+  label: string;
+  topFailingCriterion: string;
+  evidenceFamilies: string[];
+  suggestedAction: string;
+  hardGate: string;
+}
+
+const AHP_CRITERION_LABELS: Record<string, string> = {
+  place_identity: '장소 동일성',
+  address_coordinate: '주소·좌표 정합',
+  source_video: '영상 근거 적합성',
+  business_state: '영업상태 신호',
+  data_lineage: '데이터 이력 위험',
+  audit_readiness: '감사·복구 준비',
+};
+
+const AHP_EVIDENCE_FAMILY_LABELS: Record<string, string> = {
+  ...EVIDENCE_FAMILY_LABELS,
+  provider_candidate: '주소 후보',
+  source_geo: '원본 주소·좌표',
+};
+
+const AHP_LABELS = new Set([
+  '정정 승인 후보',
+  '주소 후보 검토',
+  '재수집 필요',
+  '영업상태 확인',
+  '원천 품질 문제',
+  'AHP 미산정',
+]);
+
+function getStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : [];
+}
+
+function getAhpBand(score: number): string {
+  if (score >= 98) return '정정 승인 후보';
+  if (score >= 90) return '주소 후보 검토';
+  if (score >= 75) return '재수집 필요';
+  if (score >= 50) return '영업상태 확인';
+  return '원천 품질 문제';
+}
+
+function normalizeAhpScore(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.min(100, Math.max(0, value));
+}
+
+function normalizeAhpLabel(value: unknown, score: number | null): string {
+  if (typeof value === 'string' && AHP_LABELS.has(value.trim())) {
+    return value.trim();
+  }
+
+  return score === null ? 'AHP 미산정' : getAhpBand(score);
+}
+
+function localizeAhpEvidenceFamilies(value: unknown): string[] {
+  return getStringArray(value).map((family) => AHP_EVIDENCE_FAMILY_LABELS[family] ?? '기타 운영 근거');
+}
+
+function getOperatorSafeSuggestedAction(value: unknown, guidance: AddressConsistencyOperatorGuidance): string {
+  if (typeof value !== 'string' || !value.trim() || !isMostlyKorean(value)) {
+    return guidance.recommendedAction;
+  }
+
+  const unsafeActionPattern = /자동|삭제|승인|apply|guarded|pipeline|batch|script|overwrite/i;
+  return unsafeActionPattern.test(value) ? guidance.recommendedAction : value.trim();
+}
+
+function getHardGateLabel(record: AddressConsistencyInput): string {
+  if (record.status === 'deleted') return '삭제된 항목 제외';
+  if (record.is_missing || record.status === 'missing') return 'Missing 항목 제외';
+  if (record.is_not_selected || record.status === 'not_selected') return '평가 미대상 제외';
+  if (record.updated_by_admin_id) return '관리자 수정 이력 우선';
+  return '사람 확인 후 적용';
+}
+
+function getGuidanceForPendingReason(pendingReason: string | null): AddressConsistencyOperatorGuidance | null {
+  if (pendingReason === 'multi_candidate' || pendingReason === 'ambiguous_chain') {
+    return {
+      label: '불일치',
+      tone: 'warning',
+      possibleCause: '같은 이름이거나 비슷한 체인/지점 후보가 여러 개라 자동으로 한 곳을 고르기 어렵습니다.',
+      recommendedAction: '영상 근거, 원본 주소, 주소 후보의 지점명·전화번호·상세주소를 비교해 한 곳만 확정하거나 보류하세요.',
+      safeguard: '확정 전에는 승인하지 말고, 선택 근거를 결정 기록에 남긴 뒤 적용 후 다시 조회합니다.',
+    };
+  }
+
+  if (pendingReason === 'timeout' || pendingReason === 'rate_limited') {
+    return {
+      label: '불일치',
+      tone: 'warning',
+      possibleCause: '주소/검색 공급자 호출이 시간 초과되었거나 제한되어 검증이 끝나지 않았습니다.',
+      recommendedAction: '재시도 또는 공급자 교차 확인 후 같은 결과가 반복되면 수동 검토 큐로 남겨두세요.',
+      safeguard: '자동 승인하지 말고 재조회 시점과 근거를 남겨 같은 항목이 반복 처리되지 않게 합니다.',
+    };
+  }
+
+  if (pendingReason === 'cross_country_mismatch') {
+    return {
+      label: '불일치',
+      tone: 'danger',
+      possibleCause: '원본 위치와 후보 위치의 국가/지역이 달라 같은 가게로 보기 어렵습니다.',
+      recommendedAction: '원본 영상 설명·상호·주소를 다시 확인하고, 실제 이전/폐업/동명이점 여부를 먼저 판별하세요.',
+      safeguard: '지역이 다른 후보를 그대로 승인하지 말고 수정 또는 삭제/보류 결정을 분리해 기록합니다.',
+    };
+  }
+
+  return null;
+}
+
+export function getAddressConsistencyOperatorGuidance(record: AddressConsistencyInput): AddressConsistencyOperatorGuidance {
+  const status = getAddressConsistencyStatus(record);
+  const locationMatch = record.evaluation_results?.location_match_TF ?? null;
+  const pendingReason = locationMatch?.pending_reason ?? null;
+  const reviewQueueInfo = getAddressConsistencyReviewQueueInfo(record);
+
+  if (status === 'true') {
+    return {
+      label: '승인 가능',
+      tone: 'success',
+      possibleCause: '주소 후보와 좌표가 정합 판정되어 주소 문제는 크지 않습니다.',
+      recommendedAction: '다른 평가 항목까지 통과했는지 확인한 뒤 승인하세요.',
+      safeguard: '승인 전 영상 근거와 카테고리 판정도 함께 확인합니다.',
+    };
+  }
+
+  if (status === 'not_applicable' || status === 'unknown') {
+    return {
+      label: '검토 제외',
+      tone: 'neutral',
+      possibleCause: record.is_missing ? 'Missing 항목이라 주소 정합을 평가할 기준 가게가 없습니다.' : '주소 정합 평가값이 아직 없거나 평가 미대상입니다.',
+      recommendedAction: 'Missing 등록 또는 평가 미대상 사유를 먼저 정리한 뒤 필요할 때 보류 상태로 되돌리세요.',
+      safeguard: '검토 제외 항목은 주소 실패 처리량과 분리해 봅니다.',
+    };
+  }
+
+  if (record.updated_by_admin_id) {
+    return {
+      label: '수정됨',
+      tone: 'info',
+      possibleCause: '이미 관리자가 건드린 항목이라 자동 재분류보다 사람이 남긴 맥락이 우선입니다.',
+      recommendedAction: '이전 수정 의도를 확인한 뒤 수동으로 수정·보류·삭제 중 하나를 결정하세요.',
+      safeguard: '자동 재처리로 덮어쓰지 말고 결정 기록과 적용 후 재확인을 남깁니다.',
+    };
+  }
+
+  const pendingReasonGuidance = getGuidanceForPendingReason(pendingReason);
+  if (pendingReasonGuidance) return pendingReasonGuidance;
+
+  if (reviewQueueInfo?.queue === ADDRESS_REVIEW_GEOCODE_RECOVERED_QUEUE) {
+    return {
+      label: '불일치',
+      tone: 'warning',
+      possibleCause: '주소는 어느 정도 회복됐지만 같은 상호의 주소 검색 결과가 부족합니다. 정상 영업 중인데 검색 로직이 못 찾았거나, 상호 변경·이전·폐업 가능성이 모두 남아 있습니다.',
+      recommendedAction: '카카오맵/네이버 지도, 우체국 공식 주소, 최근 블로그·리뷰를 작게 교차 확인한 뒤 수정 또는 보류하세요.',
+      safeguard: '한 출처만으로 확정하지 말고 최소 두 근거를 비교해 결정 기록에 남깁니다.',
+    };
+  }
+
+  if (status === 'failed') {
+    return {
+      label: '실패',
+      tone: 'danger',
+      possibleCause: '주소 후보나 좌표를 만들기 전 단계에서 멈췄습니다. 원본 주소 누락, 공급자 장애, 주소 표기 오류 가능성이 큽니다.',
+      recommendedAction: '원본 주소를 짧은 도로명/지번 단위로 정리해 재지오코딩하고, 후보가 없으면 보류 또는 삭제 판단으로 넘기세요.',
+      safeguard: '좌표가 없는 상태에서는 사용자 지도에 노출하지 않습니다.',
+    };
+  }
+
+  if (record.geocoding_false_stage === 1) {
+    return {
+      label: '불일치',
+      tone: 'warning',
+      possibleCause: '원본 상호/주소 조합으로 유효한 주소 후보를 찾지 못했습니다. 실제 폐업·이전·상호 변경 또는 검색어 정규화 실패가 가능합니다.',
+      recommendedAction: '상호에서 지점/괄호/특수문자를 줄이고 주소의 시군구·건물번호를 기준으로 다시 확인하세요.',
+      safeguard: '후보가 새로 나오면 바로 승인하지 말고 영상 시점과 현재 장소가 같은지 확인합니다.',
+    };
+  }
+
+  if (record.geocoding_false_stage === 2) {
+    return {
+      label: '불일치',
+      tone: 'warning',
+      possibleCause: '주소 후보는 있었지만 거리·주소·상호 조건을 통과하지 못했습니다. 동명이점, 이전 매장, 지점 혼동 가능성이 큽니다.',
+      recommendedAction: '후보 주소와 원본 주소를 나란히 비교하고, 같은 가게로 볼 근거가 부족하면 보류하세요.',
+      safeguard: '거리/주소가 어긋나는 후보는 사용자 노출 전에 반드시 사람이 확정합니다.',
+    };
+  }
+
+  return {
+    label: '불일치',
+    tone: 'warning',
+    possibleCause: '실패 원인이 구조화되어 있지 않아 현재 UI만으로는 자동 판별이 어렵습니다.',
+    recommendedAction: '상세 근거를 확인해 폐업·이전·상호변경·로직 누락 중 하나로 운영 메모를 남기세요.',
+    safeguard: '분류되지 않은 항목은 일괄 승인하지 않습니다.',
+  };
+}
+
+export function getAddressConsistencyAhpSummary(record: AddressConsistencyInput): AddressConsistencyAhpSummary {
+  const review = getAddressConsistencyReview(record);
+  const score = normalizeAhpScore(review?.ahp_score);
+  const label = normalizeAhpLabel(review?.ahp_label, score);
+  const rawCriterion = typeof review?.top_failing_criterion === 'string' ? review.top_failing_criterion : null;
+  const guidance = getAddressConsistencyOperatorGuidance(record);
+
+  return {
+    score,
+    label,
+    topFailingCriterion: rawCriterion ? AHP_CRITERION_LABELS[rawCriterion] ?? '기타 운영 기준' : '장소 동일성·주소·영업상태를 우선 확인',
+    evidenceFamilies: localizeAhpEvidenceFamilies(review?.evidence_families),
+    suggestedAction: getOperatorSafeSuggestedAction(review?.suggested_action, guidance),
+    hardGate: getHardGateLabel(record),
+  };
+}
+
+export function canApproveAddressConsistencyRecord(record: AddressConsistencyInput): boolean {
+  return getAddressConsistencyStatus(record) === 'true' && record.status !== 'approved' && record.status !== 'deleted';
+}
+
 export function explainAddressConsistency(record: AddressConsistencyInput): AddressConsistencyExplanation {
   const locationMatch = record.evaluation_results?.location_match_TF ?? null;
-  const label = getAddressConsistencyKoreanLabel(record);
+  const label = getAddressConsistencyDisplayLabel(record);
   const status = getAddressConsistencyStatus(record);
   const originAddress = getOriginAddressText(record.origin_address);
   const candidateName = record.naver_name || record.google_name || locationMatch?.matched_name || locationMatch?.naver_name || locationMatch?.google_name || null;

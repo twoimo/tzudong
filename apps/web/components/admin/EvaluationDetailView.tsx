@@ -1,13 +1,25 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useId, memo } from 'react';
 import Image from 'next/image';
 import { EvaluationRecord, LocationMatchResult } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 import { openExternalUrl } from '@/lib/open-external-url';
-import { explainAddressConsistency, getAddressConsistencyBadgeClass } from '@/lib/admin-address-consistency';
+import {
+    explainAddressConsistency,
+    getAddressConsistencyAhpSummary,
+    getAddressConsistencyBadgeClass,
+    getAddressConsistencyOperatorGuidance,
+    getAddressConsistencyStatus,
+    type AddressConsistencyTriageTone,
+} from '@/lib/admin-address-consistency';
+import {
+    getEvaluationBasisOrRerunText,
+    getEvaluationCompletenessIssues,
+    hasUsableEvaluationBasis,
+    type EvaluationMetricKey,
+} from '@/lib/admin-evaluation-completeness';
 
 // 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
 const getYoutubeVideoId = (url: string | undefined): string | null => {
@@ -33,7 +45,211 @@ interface EvaluationDetailViewProps {
     autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
 }
 
+type EvaluationTone = 'pink' | 'blue' | 'purple' | 'green' | 'indigo' | 'orange' | 'teal' | 'yellow';
+
+const evaluationToneClasses: Record<EvaluationTone, { rail: string; badge: string; value: string }> = {
+    pink: {
+        rail: 'border-l-pink-500',
+        badge: 'border-pink-200 bg-pink-50 text-pink-700',
+        value: 'text-pink-700',
+    },
+    blue: {
+        rail: 'border-l-blue-500',
+        badge: 'border-blue-200 bg-blue-50 text-blue-700',
+        value: 'text-blue-700',
+    },
+    purple: {
+        rail: 'border-l-purple-500',
+        badge: 'border-purple-200 bg-purple-50 text-purple-700',
+        value: 'text-purple-700',
+    },
+    green: {
+        rail: 'border-l-green-500',
+        badge: 'border-green-200 bg-green-50 text-green-700',
+        value: 'text-green-700',
+    },
+    indigo: {
+        rail: 'border-l-indigo-500',
+        badge: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+        value: 'text-indigo-700',
+    },
+    orange: {
+        rail: 'border-l-orange-500',
+        badge: 'border-orange-200 bg-orange-50 text-orange-700',
+        value: 'text-orange-700',
+    },
+    teal: {
+        rail: 'border-l-teal-500',
+        badge: 'border-teal-200 bg-teal-50 text-teal-700',
+        value: 'text-teal-700',
+    },
+    yellow: {
+        rail: 'border-l-yellow-500',
+        badge: 'border-yellow-200 bg-yellow-50 text-yellow-800',
+        value: 'text-yellow-800',
+    },
+};
+
+function SectionPanel({
+    title,
+    description,
+    children,
+    className,
+}: {
+    title: string;
+    description?: string;
+    children: React.ReactNode;
+    className?: string;
+}) {
+    const titleId = useId();
+
+    return (
+        <section
+            aria-labelledby={titleId}
+            className={cn('rounded-2xl border border-border/80 bg-card/95 p-4 shadow-sm', className)}
+        >
+            <div className="mb-3 min-w-0">
+                <h3 id={titleId} className="text-sm font-bold tracking-[-0.02em] text-foreground sm:text-base">{title}</h3>
+                {description && (
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+                )}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+function NumberBadge({ index, tone }: { index: number; tone: EvaluationTone }) {
+    return (
+        <Badge
+            variant="outline"
+            className={cn(
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg p-0 text-[11px] font-bold',
+                evaluationToneClasses[tone].badge,
+            )}
+        >
+            {index}
+        </Badge>
+    );
+}
+
+function EvalItem({
+    index,
+    title,
+    tone,
+    value,
+    children,
+}: {
+    index: number;
+    title: string;
+    tone: EvaluationTone;
+    value?: React.ReactNode;
+    children?: React.ReactNode;
+}) {
+    return (
+        <article
+            className={cn(
+                'rounded-xl border border-border/80 border-l-4 bg-background/85 p-3 shadow-[0_1px_0_rgba(0,0,0,0.03)]',
+                evaluationToneClasses[tone].rail,
+            )}
+        >
+            <div className="flex flex-wrap items-center gap-2">
+                <NumberBadge index={index} tone={tone} />
+                <h4 className="min-w-0 flex-1 text-sm font-bold text-foreground">{title}</h4>
+                {value && <div className="shrink-0">{value}</div>}
+            </div>
+            {children && <div className="mt-2 text-xs leading-5 text-muted-foreground">{children}</div>}
+        </article>
+    );
+}
+
+function SourceNameRow({
+    label,
+    value,
+    provider,
+    valueClassName,
+}: {
+    label: string;
+    value: React.ReactNode;
+    provider: string;
+    valueClassName?: string;
+}) {
+    return (
+        <div className="grid grid-cols-[86px_minmax(0,1fr)_auto] items-start gap-2 rounded-lg bg-muted/35 px-2 py-1.5">
+            <span className="text-xs font-medium text-muted-foreground">{label}</span>
+            <span className={cn('min-w-0 overflow-wrap-anywhere text-xs font-bold text-foreground', valueClassName)}>{value}</span>
+            <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px] text-muted-foreground">
+                {provider}
+            </Badge>
+        </div>
+    );
+}
+
+function ScoreValue({ value, tone, maxScore, rerunNeeded = false }: { value: number | null | undefined; tone: EvaluationTone; maxScore: number; rerunNeeded?: boolean }) {
+    const hasValue = typeof value === 'number';
+    const isMaxScore = hasValue && value >= maxScore;
+
+    return (
+        <span className={cn('text-sm font-extrabold tabular-nums', isMaxScore ? evaluationToneClasses[tone].value : 'text-foreground')}>
+            {hasValue ? `${value}/${maxScore}` : '-'}
+        </span>
+    );
+}
+
+function BooleanBadge({ value, rerunNeeded = false }: { value: boolean | null | undefined; rerunNeeded?: boolean }) {
+    if (value === undefined || value === null) {
+        if (!rerunNeeded) {
+            return (
+                <Badge variant="outline" className="h-6 px-2 text-[11px] font-bold text-muted-foreground">
+                    -
+                </Badge>
+            );
+        }
+
+        return (
+            <Badge variant="outline" className="h-6 px-2 text-[11px] font-bold text-muted-foreground">
+                -
+            </Badge>
+        );
+    }
+
+    return (
+        <Badge className={cn('h-6 px-2 text-[11px] font-bold', value ? 'bg-emerald-600' : 'bg-destructive')}>
+            {value ? '일치' : '불일치'}
+        </Badge>
+    );
+}
+
+function InfoItem({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+    return (
+        <div className={cn('min-w-0 rounded-xl border border-border/70 bg-background/70 px-3 py-2', className)}>
+            <dt className="text-[11px] font-semibold text-muted-foreground">{label}</dt>
+            <dd className="mt-1 overflow-wrap-anywhere text-sm leading-5 text-foreground">{children}</dd>
+        </div>
+    );
+}
+
+function EvidenceNote({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <div className="rounded-xl border border-border/80 bg-muted/30 p-3">
+            <h4 className="text-xs font-bold tracking-[-0.01em] text-foreground">{title}</h4>
+            <p className="mt-1 whitespace-pre-wrap break-keep text-xs leading-5 text-muted-foreground">
+                {children}
+            </p>
+        </div>
+    );
+}
+
+const addressGuidanceToneClasses: Record<AddressConsistencyTriageTone, string> = {
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    neutral: 'border-slate-200 bg-slate-50 text-slate-700',
+    warning: 'border-amber-200 bg-amber-50 text-amber-800',
+    danger: 'border-rose-200 bg-rose-50 text-rose-700',
+    info: 'border-sky-200 bg-sky-50 text-sky-700',
+};
+
 export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
+    // Operator flow anchor: review -> decision capture -> guarded apply -> readback/recrawl.
 
     const [embedError, setEmbedError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -96,10 +312,16 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
         }
     }, [record?.youtube_link, record?.id, embedError]);
 
+    const openYoutubeLink = useCallback(() => {
+        if (record?.youtube_link) {
+            openExternalUrl(record.youtube_link);
+        }
+    }, [record?.youtube_link]);
+
     if (!record) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-                <span className="text-4xl mb-4">⚠️</span>
+                <span className="text-4xl mb-4" aria-hidden="true">⚠️</span>
                 <p className="text-lg">표시할 데이터가 없습니다.</p>
             </div>
         );
@@ -107,345 +329,367 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
     const locationMatchResult = record.evaluation_results?.location_match_TF as LocationMatchResult | undefined;
     const addressConsistency = explainAddressConsistency(record);
+    const addressAhp = getAddressConsistencyAhpSummary(record);
+    const addressGuidance = getAddressConsistencyOperatorGuidance(record);
+    const addressConsistencyStatus = getAddressConsistencyStatus(record);
+    const evaluationCompletenessIssues = getEvaluationCompletenessIssues(record);
+    const hasMetricIssue = (key: EvaluationMetricKey) => evaluationCompletenessIssues.some((issue) => issue.key === key);
+    const getMetricBasisText = (key: EvaluationMetricKey, value: unknown) => {
+        if (hasMetricIssue(key)) return getEvaluationBasisOrRerunText(value);
+        return hasUsableEvaluationBasis(value) ? String(value) : '-';
+    };
+    const title = record.youtube_meta?.title || '-';
+    const restaurantName = record.restaurant_name || record.name || '-';
+    const formattedPublishedAt = record.youtube_meta?.publishedAt
+        ? new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(record.youtube_meta.publishedAt))
+        : '-';
+    const needsAddressReview = addressConsistencyStatus === 'false' || addressConsistencyStatus === 'failed';
+    const needsCategoryReview = !record.evaluation_results?.category_validity_TF?.eval_value || !record.evaluation_results?.category_TF?.eval_value;
+    const needsMetricRerun = evaluationCompletenessIssues.length > 0;
+    const isDeleted = record.status === 'deleted';
+    const decisionState = isDeleted
+        ? '삭제된 레코드'
+        : needsMetricRerun
+            ? '평가값 확인'
+        : needsAddressReview || needsCategoryReview
+            ? '관리자 확인 필요'
+            : '승인 전 최종 확인';
+    const decisionReasons = [
+        isDeleted ? '삭제된 항목은 복구 전까지 적용 대상에서 제외됩니다.' : null,
+        needsMetricRerun ? '평가값 또는 근거가 비어 있습니다.' : null,
+        needsAddressReview ? addressConsistency.headline : null,
+        needsCategoryReview ? '카테고리 판정에 확인이 필요한 항목이 있습니다.' : null,
+    ].filter(Boolean) as string[];
 
     const RightContent = () => (
-        <div className="p-4 space-y-4 text-sm">
-            {/* 1. 평가 상세 내역 */}
-            <div className="bg-white rounded-lg border p-3 shadow-sm">
-                <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
-                    📊 평가 상세
-                </h3>
-                <div className="space-y-4">
-                    {/* 0. 맛집명 검증 (Name Validation) */}
-                    <div className="pl-3 border-l-4 border-pink-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-pink-50 text-pink-700 border-pink-200 text-[10px] shrink-0">0</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">맛집명 검증:</span>
-                            {record.approved_name && (
-                                <Badge className="bg-green-600 text-[10px] h-5 px-1.5">승인됨: {record.approved_name}</Badge>
-                            )}
+        <div className="space-y-4 p-3 text-sm sm:p-4">
+            <SectionPanel title="판정 요약" description="검토 → 결정 기록 → 안전 적용 → 재확인 순서로 처리합니다." className={cn(needsAddressReview || isDeleted ? 'border-primary/25 bg-primary/5' : 'border-emerald-200 bg-emerald-50/40')}>
+                <div className="space-y-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                            <p className="text-lg font-extrabold tracking-[-0.04em] text-foreground">{restaurantName}</p>
+                            <p className="mt-1 break-keep text-xs leading-5 text-muted-foreground">승인 전에는 영상 근거, 상호·주소 근거, 적용될 주소를 함께 확인하세요.</p>
                         </div>
-                        <div className="text-gray-600 text-xs space-y-1 mt-1">
-                            <div className="flex items-start gap-2">
-                                <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Origin Name:</span>
-                                <span className="font-bold text-gray-800 break-all">{record.origin_name || record.restaurant_name || record.name || '-'}</span>
-                                <Badge variant="outline" className="text-[10px] h-4 px-1">Gemini</Badge>
+                        <Badge className={cn('w-fit px-2.5 py-1 text-xs font-bold', needsAddressReview || isDeleted ? 'bg-primary' : 'bg-emerald-600')}>
+                            {decisionState}
+                        </Badge>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                        <InfoItem label="검토">영상·상호·주소 근거 확인</InfoItem>
+                        <InfoItem label="결정 기록">수정·보류 사유 남기기</InfoItem>
+                        <InfoItem label="안전 적용">적용 후 재확인·감사 기록</InfoItem>
+                    </div>
+                    {decisionReasons.length > 0 && (
+                        <ul className="space-y-1 rounded-xl border border-primary/15 bg-background/75 p-3 text-xs leading-5 text-foreground">
+                            {decisionReasons.slice(0, 3).map((reason, index) => (
+                                <li key={`${record.id}-decision-reason-${index}`} className="flex gap-2 break-keep">
+                                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                                    <span>{reason}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            </SectionPanel>
+
+            <SectionPanel title="검수 결과" description="영상 근거와 상호·주소 근거를 기준으로 승인 전 확인해야 할 항목입니다.">
+                <div className="space-y-3">
+                    <EvalItem index={0} title="맛집명 검증" tone="pink" value={record.approved_name ? <Badge className="bg-emerald-600 text-[11px]">승인됨 · {record.approved_name}</Badge> : null}>
+                        <div className="space-y-1.5">
+                            <SourceNameRow
+                                label="원본 이름"
+                                value={record.origin_name || record.restaurant_name || record.name || '-'}
+                                provider="AI 추출"
+                            />
+                            <SourceNameRow
+                                label="네이버"
+                                value={record.naver_name ||
+                                    locationMatchResult?.matched_name ||
+                                    (locationMatchResult?.name &&
+                                        !['Location Match', '주소 정합성', 'location_match_TF'].includes(locationMatchResult.name)
+                                        ? locationMatchResult.name
+                                        : '-')}
+                                provider="지도 규칙"
+                                valueClassName="text-blue-700"
+                            />
+                            <SourceNameRow
+                                label="구글"
+                                value={record.google_name || locationMatchResult?.google_name || '-'}
+                                provider="지도 규칙"
+                                valueClassName="text-orange-700"
+                            />
+                        </div>
+                    </EvalItem>
+
+                    <EvalItem
+                        index={1}
+                        title="방문 여부 정확성"
+                        tone="blue"
+                        value={<ScoreValue value={record.evaluation_results?.visit_authenticity?.eval_value} tone="blue" maxScore={3} rerunNeeded={hasMetricIssue('visit_authenticity')} />}
+                    >
+                        <p className="whitespace-pre-wrap break-keep">
+                            {getMetricBasisText('visit_authenticity', record.evaluation_results?.visit_authenticity?.eval_basis)}
+                        </p>
+                    </EvalItem>
+
+                    <EvalItem
+                        index={2}
+                        title="추론 합리성"
+                        tone="purple"
+                        value={<ScoreValue value={record.evaluation_results?.rb_inference_score?.eval_value} tone="purple" maxScore={2} rerunNeeded={hasMetricIssue('rb_inference_score')} />}
+                    >
+                        <p className="whitespace-pre-wrap break-keep">
+                            {getMetricBasisText('rb_inference_score', record.evaluation_results?.rb_inference_score?.eval_basis)}
+                        </p>
+                    </EvalItem>
+
+                    <EvalItem
+                        index={3}
+                        title="실제 근거 일치도"
+                        tone="green"
+                        value={<BooleanBadge value={record.evaluation_results?.rb_grounding_TF?.eval_value} rerunNeeded={hasMetricIssue('rb_grounding_TF')} />}
+                    >
+                        <p className="whitespace-pre-wrap break-keep">
+                            {getMetricBasisText('rb_grounding_TF', record.evaluation_results?.rb_grounding_TF?.eval_basis)}
+                        </p>
+                    </EvalItem>
+
+                    <EvalItem
+                        index={4}
+                        title="리뷰 충실도"
+                        tone="indigo"
+                        value={<ScoreValue value={record.evaluation_results?.review_faithfulness_score?.eval_value} tone="indigo" maxScore={1} rerunNeeded={hasMetricIssue('review_faithfulness_score')} />}
+                    >
+                        <p className="whitespace-pre-wrap break-keep">
+                            {getMetricBasisText('review_faithfulness_score', record.evaluation_results?.review_faithfulness_score?.eval_basis)}
+                        </p>
+                    </EvalItem>
+
+                    <EvalItem
+                        index={5}
+                        title="주소 정합성"
+                        tone="orange"
+                        value={<Badge className={cn('h-6 px-2 text-[11px] font-bold', getAddressConsistencyBadgeClass(record))}>{addressConsistency.label}</Badge>}
+                    >
+                        <div className="space-y-2">
+                            <p className="font-semibold text-foreground">{addressConsistency.headline}</p>
+                            <p className="whitespace-pre-wrap break-keep">{addressConsistency.reason}</p>
+                            <div className="rounded-xl border border-orange-200/70 bg-orange-50/40 p-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs font-bold text-orange-950">운영 분류</span>
+                                    <Badge
+                                        variant="outline"
+                                        className={cn('h-6 px-2 text-[11px] font-bold', addressGuidanceToneClasses[addressGuidance.tone])}
+                                    >
+                                        {addressGuidance.label}
+                                    </Badge>
+                                </div>
+                                <dl className="mt-2 grid gap-2 text-xs leading-5 text-orange-950 sm:grid-cols-3">
+                                    <InfoItem label="가능 원인" className="bg-background/75">{addressGuidance.possibleCause}</InfoItem>
+                                    <InfoItem label="권장 처리" className="bg-background/75">{addressGuidance.recommendedAction}</InfoItem>
+                                    <InfoItem label="안전장치" className="bg-background/75">{addressGuidance.safeguard}</InfoItem>
+                                </dl>
                             </div>
-                            <div className="flex items-start gap-2">
-                                <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Naver Name:</span>
-                                <span className="font-bold text-blue-700 break-all">
-                                    {record.naver_name ||
-                                        locationMatchResult?.matched_name ||
-                                        (locationMatchResult?.name &&
-                                            !['Location Match', '주소 정합성', 'location_match_TF'].includes(locationMatchResult.name)
-                                            ? locationMatchResult.name
-                                            : '-')
-                                    }
-                                </span>
-                                <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
+                            <div className="rounded-xl border border-sky-200/70 bg-sky-50/45 p-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs font-bold text-sky-950">AHP 참고 점수</span>
+                                    <Badge
+                                        variant="outline"
+                                        className={cn(
+                                            'h-6 px-2 text-[11px] font-bold',
+                                            addressAhp.score !== null && addressAhp.score >= 98
+                                                ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                                                : 'border-sky-300 bg-background/70 text-sky-700',
+                                        )}
+                                    >
+                                        {addressAhp.score === null ? addressAhp.label : `${addressAhp.score}점 · ${addressAhp.label}`}
+                                    </Badge>
+                                </div>
+                                <dl className="mt-2 grid gap-2 text-xs leading-5 text-sky-950 sm:grid-cols-3">
+                                    <InfoItem label="최우선 확인" className="bg-background/75">{addressAhp.topFailingCriterion}</InfoItem>
+                                    <InfoItem label="권장 액션" className="bg-background/75">{addressAhp.suggestedAction}</InfoItem>
+                                    <InfoItem label="하드 게이트" className="bg-background/75">{addressAhp.hardGate}</InfoItem>
+                                </dl>
+                                {addressAhp.evidenceFamilies.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {addressAhp.evidenceFamilies.map((family) => (
+                                            <Badge key={`${record.id}-ahp-family-${family}`} variant="outline" className="bg-background/70 text-[10px]">
+                                                {family}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex items-start gap-2">
-                                <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Google Name:</span>
-                                <span className="font-bold text-orange-600 break-all">
-                                    {record.google_name || locationMatchResult?.google_name || '-'}
-                                </span>
-                                <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 1. 방문 여부 (Visit Authenticity) */}
-                    <div className="pl-3 border-l-4 border-blue-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-blue-50 text-blue-700 border-blue-200 text-[10px] shrink-0">1</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">방문 여부 정확성:</span>
-                            <span className={cn("font-bold text-sm", record.evaluation_results?.visit_authenticity?.eval_value === 1 ? "text-blue-600" : "text-gray-900")}>
-                                {record.evaluation_results?.visit_authenticity?.eval_value ?? 0}
-                            </span>
-                        </div>
-                        <p className="text-gray-600 leading-relaxed text-xs break-all whitespace-pre-wrap">
-                            {record.evaluation_results?.visit_authenticity?.eval_basis || '근거 내용 없음'}
-                        </p>
-                    </div>
-
-                    {/* 2. 추론 합리성 (Reasoning Basis Inference) */}
-                    <div className="pl-3 border-l-4 border-purple-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-purple-50 text-purple-700 border-purple-200 text-[10px] shrink-0">2</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">추론 합리성:</span>
-                            <span className={cn("font-bold text-sm", record.evaluation_results?.rb_inference_score?.eval_value === 1 ? "text-purple-600" : "text-gray-900")}>
-                                {record.evaluation_results?.rb_inference_score?.eval_value ?? 0}
-                            </span>
-                        </div>
-                        <p className="text-gray-600 leading-relaxed text-xs break-all whitespace-pre-wrap">
-                            {record.evaluation_results?.rb_inference_score?.eval_basis || '근거 내용 없음'}
-                        </p>
-                    </div>
-
-                    {/* 3. 실제 근거 일치 (Reasoning Basis Grounding) */}
-                    <div className="pl-3 border-l-4 border-green-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-green-50 text-green-700 border-green-200 text-[10px] shrink-0">3</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">실제 근거 일치도:</span>
-                            <Badge className={cn("text-[10px] h-5 px-1.5", record.evaluation_results?.rb_grounding_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
-                                {record.evaluation_results?.rb_grounding_TF?.eval_value ? "True" : "False"}
-                            </Badge>
-                        </div>
-                        <p className="text-gray-600 leading-relaxed text-xs break-all whitespace-pre-wrap">
-                            {record.evaluation_results?.rb_grounding_TF?.eval_basis || '근거 내용 없음'}
-                        </p>
-                    </div>
-
-                    {/* 4. 리뷰 충실도 (Review Faithfulness) */}
-                    <div className="pl-3 border-l-4 border-indigo-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] shrink-0">4</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">리뷰 충실도:</span>
-                            <span className={cn("font-bold text-sm", record.evaluation_results?.review_faithfulness_score?.eval_value === 1 ? "text-indigo-600" : "text-gray-900")}>
-                                {record.evaluation_results?.review_faithfulness_score?.eval_value ?? 0}
-                            </span>
-                        </div>
-                        <p className="text-gray-600 leading-relaxed text-xs break-all whitespace-pre-wrap">
-                            {record.evaluation_results?.review_faithfulness_score?.eval_basis || '근거 내용 없음'}
-                        </p>
-                    </div>
-
-                    {/* 5. 주소 정합성 (Geocoding) */}
-                    <div className="pl-3 border-l-4 border-orange-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-orange-50 text-orange-700 border-orange-200 text-[10px] shrink-0">5</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">주소 정합성:</span>
-                            <Badge className={cn("text-[10px] h-5 px-1.5", getAddressConsistencyBadgeClass(record))}>
-                                {addressConsistency.label}
-                            </Badge>
-                        </div>
-                        <div className="text-gray-600 text-xs space-y-1 mt-0.5">
-                            <p className="font-medium text-gray-800 break-keep">{addressConsistency.headline}</p>
-                            <p className="break-all whitespace-pre-wrap">{addressConsistency.reason}</p>
                             {addressConsistency.evidence.length > 0 && (
-                                <ul className="list-disc pl-4 space-y-0.5 text-gray-600">
+                                <ul className="space-y-1 rounded-lg border border-orange-200/70 bg-orange-50/50 p-2 text-orange-950">
                                     {addressConsistency.evidence.map((item, index) => (
-                                        <li key={`${record.id}-address-consistency-${index}`} className="break-all">
-                                            {item}
+                                        <li key={`${record.id}-address-consistency-${index}`} className="flex gap-2 overflow-wrap-anywhere">
+                                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" aria-hidden="true" />
+                                            <span>{item}</span>
                                         </li>
                                     ))}
                                 </ul>
                             )}
-                            <p className="break-all"><span className="text-gray-500 shrink-0">지번:</span> {record.jibun_address || '-'}</p>
-                            <p className="break-all"><span className="text-gray-500 shrink-0">도로명:</span> {record.road_address || '-'}</p>
+                            <dl className="grid gap-1.5 sm:grid-cols-2">
+                                <InfoItem label="지번">{record.jibun_address || '-'}</InfoItem>
+                                <InfoItem label="도로명">{record.road_address || '-'}</InfoItem>
+                            </dl>
                         </div>
-                    </div>
+                    </EvalItem>
 
-                    {/* 6. 카테고리 유효성 (Category Validity) */}
-                    <div className="pl-3 border-l-4 border-teal-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-teal-50 text-teal-700 border-teal-200 text-[10px] shrink-0">6</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">카테고리 유효성:</span>
-                            <Badge className={cn("text-[10px] h-5 px-1.5", record.evaluation_results?.category_validity_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
-                                {record.evaluation_results?.category_validity_TF?.eval_value ? "True" : "False"}
-                            </Badge>
-                        </div>
-                    </div>
-
-                    {/* 7. 카테고리 정합성 (Category Match) */}
-                    <div className="pl-3 border-l-4 border-yellow-500">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] shrink-0">7</Badge>
-                            <span className="font-semibold text-gray-900 text-sm shrink-0">카테고리 정합성:</span>
-                            <Badge className={cn("text-[10px] h-5 px-1.5", record.evaluation_results?.category_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
-                                {record.evaluation_results?.category_TF?.eval_value ? "True" : "False"}
-                            </Badge>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <EvalItem
+                            index={6}
+                            title="카테고리 유효성"
+                            tone="teal"
+                            value={<BooleanBadge value={record.evaluation_results?.category_validity_TF?.eval_value} rerunNeeded={hasMetricIssue('category_validity_TF')} />}
+                        />
+                        <EvalItem
+                            index={7}
+                            title="카테고리 정합성"
+                            tone="yellow"
+                            value={<BooleanBadge value={record.evaluation_results?.category_TF?.eval_value} rerunNeeded={hasMetricIssue('category_TF')} />}
+                        >
                             {record.evaluation_results?.category_TF?.category_revision && (
-                                <span className="ml-2 text-xs text-yellow-700 font-medium">
-                                    (수정: {formatCategoryText(record.evaluation_results?.category_TF.category_revision, '-')})
-                                </span>
+                                <p className="text-yellow-900">
+                                    수정 제안 · {formatCategoryText(record.evaluation_results.category_TF.category_revision, '-')}
+                                </p>
                             )}
-                        </div>
+                        </EvalItem>
                     </div>
                 </div>
-            </div>
+            </SectionPanel>
 
-            {/* 2. 음식점 기본 정보 */}
-            <div className="bg-white rounded-lg border p-3 shadow-sm">
-                <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
-                    🍽️ 음식점 상세 정보
-                </h3>
-                <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-                    {/* Row 1 */}
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium">음식점명</span>
-                        <span className="font-semibold text-gray-900 text-sm break-all">{record.restaurant_name || record.name || '-'}</span>
-                    </div>
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-gray-500 text-xs font-medium">카테고리</span>
-                        <span className="text-gray-900 text-sm break-all">
-                            {formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-')}
-                        </span>
-                    </div>
+            <SectionPanel title="음식점 상세" description="승인 전 최종 적용될 이름, 주소, 좌표 정보를 확인합니다.">
+                <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <InfoItem label="음식점명">{restaurantName}</InfoItem>
+                    <InfoItem label="카테고리">
+                        {formatCategoryText(record.categories, '') || formatCategoryText(record.restaurant_info?.category, '-')}
+                    </InfoItem>
+                    <InfoItem label="원본 주소" className="sm:col-span-2">
+                        {record.restaurant_info?.origin_address || '-'}
+                    </InfoItem>
+                    <InfoItem label="네이버 도로명">
+                        {record.restaurant_info?.naver_address_info?.road_address || '-'}
+                    </InfoItem>
+                    <InfoItem label="네이버 지번">
+                        {record.restaurant_info?.naver_address_info?.jibun_address || '-'}
+                    </InfoItem>
+                    {record.phone && <InfoItem label="전화번호">{record.phone}</InfoItem>}
+                    <InfoItem label="좌표">
+                        <span className="font-mono text-xs text-muted-foreground">{record.lat ?? '-'}, {record.lng ?? '-'}</span>
+                    </InfoItem>
+                </dl>
 
-                    {/* Row 2 */}
-                    <div className="flex flex-col gap-3 min-w-0">
-                        <div className="flex flex-col gap-0.5">
-                            <span className="text-gray-500 text-xs font-medium">원본 주소</span>
-                            <span className="text-gray-900 text-sm break-all">{record.restaurant_info?.origin_address || '-'}</span>
-                        </div>
-                        <div className="flex flex-col gap-1 min-w-0">
-                            <div className="flex items-start gap-1.5 min-w-0">
-                                <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 도로명</Badge>
-                                <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.road_address || '-'}</span>
-                            </div>
-                            <div className="flex items-start gap-1.5 min-w-0">
-                                <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 지번</Badge>
-                                <span className="text-sm text-gray-700 break-all flex-1 min-w-0">{record.restaurant_info?.naver_address_info?.jibun_address || '-'}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-3 min-w-0">
-                        {record.phone && (
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className="text-gray-500 text-xs font-medium">전화번호</span>
-                                <span className="text-gray-900 text-sm">{record.phone}</span>
-                            </div>
-                        )}
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                            <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
-                                좌표 (lat, lng)
-                            </span>
-                            <span className="font-mono text-xs text-gray-600">
-                                {record.lat ?? '-'}, {record.lng ?? '-'}
-                            </span>
-                        </div>
-                    </div>
+                <div className="my-4 h-px bg-border" role="none" />
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                    <EvidenceNote title="추론 근거">
+                        {record.reasoning_basis || '-'}
+                    </EvidenceNote>
+                    <EvidenceNote title="쯔양 리뷰 요약">
+                        {record.restaurant_info?.tzuyang_review || '-'}
+                    </EvidenceNote>
                 </div>
+            </SectionPanel>
 
-                <Separator className="my-3" />
-
-                <div className="space-y-3">
-                    <div>
-                        <h4 className="font-bold text-xs text-gray-500 mb-1.5 uppercase">Reasoning Basis</h4>
-                        <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
-                            <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap break-all">
-                                {record.reasoning_basis || '-'}
-                            </p>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-xs text-gray-500 mb-1.5 uppercase">Tzuyang Review</h4>
-                        <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
-                            <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap break-all">
-                                {record.restaurant_info?.tzuyang_review || '-'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bottom Padding */}
-            <div className="h-16" />
+            <div className="h-8" />
         </div>
     );
 
     return (
-        <div className={cn("flex flex-col lg:flex-row", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
-            {/* 좌측: 비디오 플레이어 */}
-            <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-b lg:border-b-0 lg:border-r", autoHeight ? "w-full lg:w-[40%]" : "w-full lg:w-[50%] overflow-hidden")}>
-                <div className="p-4 pb-0 w-full shrink-0">
-                    <div className="bg-white rounded-lg border p-3 shadow-sm">
-                        <div className="bg-white rounded-lg border p-3 shadow-sm">
-                            {videoUrl && !embedError ? (
-                                <div className="w-full aspect-video z-10 shadow-lg">
-                                    <iframe
-                                        ref={iframeRef}
-                                        width="100%"
-                                        height="100%"
-                                        src={`${videoUrl}&autoplay=0`}
-                                        title="Video player"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
-                                        allowFullScreen
-                                        className="w-full h-full block"
+        <div className={cn('flex flex-col bg-background lg:flex-row', autoHeight ? 'h-auto' : 'h-full overflow-hidden', className)}>
+            {/* 좌측: 영상 근거 */}
+            <aside className={cn('flex w-full flex-col border-b bg-muted/25 lg:border-b-0 lg:border-r', autoHeight ? 'lg:w-[42%]' : 'lg:w-[48%] lg:overflow-hidden')} aria-label="영상 근거와 메타 정보">
+                <div className="p-3 pb-0 sm:p-4 sm:pb-0">
+                    <SectionPanel title="영상 근거" description="썸네일을 눌러 원본 YouTube 영상을 새 탭에서 확인합니다." className="p-3">
+                        {videoUrl && !embedError ? (
+                            <div className="aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
+                                <iframe
+                                    ref={iframeRef}
+                                    width="100%"
+                                    height="100%"
+                                    src={`${videoUrl}&autoplay=0`}
+                                    title={`${title} YouTube 영상`}
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
+                                    allowFullScreen
+                                    className="block h-full w-full"
+                                />
+                            </div>
+                        ) : (
+                            /* Facade Pattern: 썸네일 표시 (클릭 시 새 탭) */
+                            <button
+                                type="button"
+                                className="group relative aspect-video w-full cursor-pointer overflow-hidden rounded-xl border border-border bg-muted text-left shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+                                onClick={openYoutubeLink}
+                                aria-label={`${title} 유튜브 영상 새 탭에서 열기`}
+                            >
+                                {videoId ? (
+                                    <Image
+                                        src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                        alt={`${title} 썸네일`}
+                                        fill
+                                        unoptimized
+                                        sizes="(max-width: 768px) 100vw, 768px"
+                                        className="object-cover transition-opacity duration-200 group-hover:opacity-90 motion-reduce:transition-none"
+                                        onError={(e) => {
+                                            const target = e.currentTarget;
+                                            if (target.src.includes('maxresdefault')) {
+                                                target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                            }
+                                        }}
                                     />
-                                </div>
-                            ) : (
-                                /* Facade Pattern: 썸네일 표시 (클릭 시 새 탭) */
-                                <button
-                                    type="button"
-                                    className="relative w-full aspect-video cursor-pointer group"
-                                    onClick={() => {
-                                        if (record.youtube_link) {
-                                            openExternalUrl(record.youtube_link);
-                                        }
-                                    }}
-                                    aria-label="유튜브 영상 새 탭에서 열기"
-                                >
-                                    {videoId ? (
-                                        <Image
-                                            src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                                            alt="YouTube 썸네일"
-                                            fill
-                                            unoptimized
-                                            sizes="(max-width: 768px) 100vw, 768px"
-                                            className="rounded-lg object-cover shadow-lg transition-opacity duration-200 group-hover:opacity-90"
-                                            onError={(e) => {
-                                                const target = e.currentTarget;
-                                                if (target.src.includes('maxresdefault')) {
-                                                    target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                                                }
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center z-10 w-full h-full bg-gray-100 rounded-lg">
-                                            <p className="text-gray-400 text-sm">썸네일 없음</p>
-                                        </div>
-                                    )}
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                                ) : (
+                                    <div className="flex h-full w-full flex-col items-center justify-center p-6 text-center text-muted-foreground">
+                                        <p className="text-sm">썸네일 없음</p>
+                                    </div>
+                                )}
+                                <span className="absolute bottom-3 left-3 rounded-full bg-background/90 px-3 py-1 text-xs font-bold text-foreground shadow-sm backdrop-blur">
+                                    원본 영상 열기
+                                </span>
+                            </button>
+                        )}
+                    </SectionPanel>
                 </div>
 
-                {/* 좌측 하단: 비디오 메타 정보 */}
-                <div className={cn("w-full bg-accent/5 p-4 pt-4 flex-1 min-h-0", autoHeight ? "" : "overflow-y-auto")}>
-                    <div className="bg-white rounded-lg border p-3 shadow-sm">
-                        <h3 className="flex items-center gap-2 font-semibold text-base mb-2 text-gray-800">
-                            📹 영상 정보
-                        </h3>
-                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-sm">
-                            <span className="text-gray-500 font-medium">제목:</span>
-                            <span className="break-words font-medium text-gray-900 line-clamp-2" title={record.youtube_meta?.title}>{record.youtube_meta?.title || '-'}</span>
-
-                            <span className="text-gray-500 font-medium">게시일:</span>
-                            <span className="text-gray-700">{record.youtube_meta?.publishedAt ? new Date(record.youtube_meta.publishedAt).toLocaleDateString() : '-'}</span>
-
-                            <span className="text-gray-500 font-medium">광고:</span>
-                            <span className="text-gray-700">
-                                {record.youtube_meta?.ads_info?.is_ads
-                                    ? `있음 (${record.youtube_meta.ads_info.what_ads})`
-                                    : '없음'}
-                            </span>
-
-                            <span className="text-gray-500 font-medium">링크:</span>
-                            <div className="flex items-center gap-2 overflow-hidden">
+                <div className={cn('w-full flex-1 min-h-0 p-3 sm:p-4', autoHeight ? '' : 'overflow-y-auto')}>
+                    <SectionPanel title="영상 정보" description="검수 근거가 되는 원본 영상의 기본 정보입니다." className="p-3">
+                        <dl className="grid grid-cols-1 gap-2 text-sm">
+                            <InfoItem label="제목">
+                                <span className="line-clamp-3 font-semibold" title={title}>{title}</span>
+                            </InfoItem>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                                <InfoItem label="게시일">
+                                    {formattedPublishedAt}
+                                </InfoItem>
+                                <InfoItem label="광고">
+                                    {record.youtube_meta?.ads_info?.is_ads
+                                        ? `있음 (${record.youtube_meta.ads_info.what_ads})`
+                                        : '없음'}
+                                </InfoItem>
+                            </div>
+                            <InfoItem label="링크">
                                 <a
                                     href={record.youtube_link}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-blue-600 hover:underline break-all"
+                                    className="overflow-wrap-anywhere text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                                 >
-                                    {record.youtube_link}
+                                    {record.youtube_link || '-'}
                                 </a>
-                            </div>
-                        </div>
-                    </div>
+                            </InfoItem>
+                        </dl>
+                    </SectionPanel>
                 </div>
-            </div>
+            </aside>
 
             {/* 우측: 평가 및 상세 정보 */}
             {autoHeight ? (
-                <div className="h-auto w-full border-t bg-accent/5 lg:w-[60%] lg:border-l lg:border-t-0">
+                <div className="h-auto w-full bg-muted/25 lg:w-[58%]">
                     <RightContent />
                 </div>
             ) : (
-                <ScrollArea className="h-full w-full border-t bg-accent/5 lg:w-[50%] lg:border-l lg:border-t-0">
+                <ScrollArea className="h-full w-full bg-muted/25 lg:w-[52%]">
                     <RightContent />
                 </ScrollArea>
             )}
