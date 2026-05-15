@@ -12,6 +12,10 @@ describe('dashboard public Supabase visibility contracts', () => {
     expect(supabaseSource).toContain("keyRole === 'anon'");
     expect(supabaseSource).toContain(".eq('status', 'approved')");
     expect(supabaseSource).toContain("const { data, error } = await scopedQuery.range(from, to);");
+    expect(supabaseSource).toContain('getDashboardRestaurantRowsPage');
+    expect(supabaseSource).toContain(".select(DASHBOARD_RESTAURANT_SELECT, { count: 'exact' })");
+    expect(supabaseSource).toContain(".not('lat', 'is', null).not('lng', 'is', null)");
+    expect(supabaseSource).toContain(".order('updated_at', { ascending: false })");
     expect(supabaseSource).toContain('Public dashboard APIs must match the public home/map visibility contract');
   });
 
@@ -23,6 +27,9 @@ describe('dashboard public Supabase visibility contracts', () => {
 
     expect(summarySource).toContain("getRestaurantRows(forceRefresh, 'anon')");
     expect(summarySource).toContain("getRestaurantRows(false, 'anon')");
+    expect(summarySource).toContain('canUseDirectRestaurantPageQuery');
+    expect(summarySource).toContain('getDashboardRestaurantRowsPage({');
+    expect(summarySource).toContain("}, 'anon');");
     expect(summaryRouteSource).toContain('getDashboardSummary(false)');
     expect(restaurantsRouteSource).toContain('getDashboardRestaurants({');
     expect(videoRouteSource).toContain('getDashboardVideoDetail(safeVideoId)');

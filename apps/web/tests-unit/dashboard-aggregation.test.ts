@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { DashboardRestaurantRow } from '../lib/dashboard/supabase';
-import { buildDashboardSummaryFromRows } from '../lib/dashboard/summary';
+import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows } from '../lib/dashboard/summary';
 import { buildDashboardFunnelFromRows, buildDashboardFailuresFromRows } from '../lib/dashboard/evaluation';
 import { buildDashboardQualityFromRows } from '../lib/dashboard/quality';
 
@@ -89,6 +89,63 @@ describe('dashboard aggregations', () => {
         expect(topVideo.restaurantCount).toBe(2);
         expect(topVideo.notSelectedCount).toBe(1);
         expect(topVideo.geocodingFailedCount).toBe(1);
+    });
+
+    test('buildDashboardRestaurantsFromRows filters raw rows before paging and normalization', () => {
+        const rows: DashboardRestaurantRow[] = [
+            makeRow({
+                id: 'old-no-coord',
+                name: '좌표없는집',
+                categories: ['한식'],
+                lat: null,
+                lng: null,
+                updated_at: '2026-02-01T00:00:00.000Z',
+            }),
+            makeRow({
+                id: 'latest-match',
+                name: '성능분식',
+                categories: ['분식'],
+                lat: 37.1,
+                lng: 127.1,
+                youtube_link: 'https://youtu.be/perfAAA',
+                updated_at: '2026-02-03T00:00:00.000Z',
+            }),
+            makeRow({
+                id: 'older-match',
+                name: '테스트분식',
+                categories: ['분식'],
+                lat: 37.2,
+                lng: 127.2,
+                youtube_link: 'https://youtu.be/perfBBB',
+                updated_at: '2026-02-02T00:00:00.000Z',
+            }),
+            makeRow({
+                id: 'other-category',
+                name: '성능한식',
+                categories: ['한식'],
+                lat: 37.3,
+                lng: 127.3,
+                updated_at: '2026-02-04T00:00:00.000Z',
+            }),
+        ];
+
+        const result = buildDashboardRestaurantsFromRows(
+            rows,
+            { q: '성능', category: '분식', onlyWithCoordinates: true, limit: 1, offset: 0 },
+            new Date('2026-02-10T00:00:00.000Z'),
+        );
+
+        expect(result.asOf).toBe('2026-02-10T00:00:00.000Z');
+        expect(result.total).toBe(1);
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0]).toMatchObject({
+            id: 'latest-match',
+            name: '성능분식',
+            category: '분식',
+            lat: 37.1,
+            lng: 127.1,
+            videoId: 'perfAAA',
+        });
     });
 
     test('buildDashboardFunnelFromRows computes funnel counts and conversion', () => {

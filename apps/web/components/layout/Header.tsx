@@ -766,10 +766,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         size="sm"
                         type="button"
                         aria-label="관리자 콘솔에서 공지사항 관리"
-                        onClick={() => router.push('/admin?module=announcements')}
+                        onClick={() => router.push('/admin')}
                         className="min-h-10 w-full justify-between rounded-xl text-xs"
                       >
-                        관리자 콘솔에서 공지 관리
+                        관리자 콘솔 열기
                         <span aria-hidden="true">→</span>
                       </Button>
                     </div>

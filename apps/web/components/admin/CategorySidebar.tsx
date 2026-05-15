@@ -19,13 +19,11 @@ export function CategorySidebar({
     { label: '삭제됨', count: stats.deleted || 0 },
   ];
 
-  // 그룹 2: 승인대기, missing, 지오코딩 실패, 평가미대상 (통계만 표시)
+  // 그룹 2: 승인대기, missing, 평가미대상 (통계만 표시)
   const statCategoriesGroup2 = [
     { label: '승인 대기', count: stats.ready_for_approval },
     { label: 'Missing', count: stats.missing },
     { label: '평가 미대상', count: stats.not_selected },
-    { label: '지오코딩 실패', count: stats.geocoding_failed },
-    { label: '지도후보 부족', count: stats.address_review_geocode_recovered },
   ];
   const statCategoriesDesktop = [...statCategoriesGroup1, ...statCategoriesGroup2];
 

@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { EvaluationDetailView } from './EvaluationDetailView';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { canApproveAddressConsistencyRecord } from '@/lib/admin-address-consistency';
+import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { cn } from '@/lib/utils';
 
 interface EvaluationSlideViewProps {
@@ -202,7 +204,8 @@ export function EvaluationSlideView({
     const canMoveNext = currentIndex < records.length - 1;
     const isDeleted = currentRecord.status === 'deleted';
     const isApproved = currentRecord.status === 'approved';
-    const canApproveCurrent = !isDeleted && !isApproved && currentRecord.geocoding_success;
+    const needsMetricRerun = needsEvaluationRerun(currentRecord);
+    const canApproveCurrent = !needsMetricRerun && canApproveAddressConsistencyRecord(currentRecord);
 
     const handleApproveAndMoveNext = () => {
         onApprove(currentRecord);
@@ -281,7 +284,8 @@ export function EvaluationSlideView({
                                     {!isApproved && (
                                         <Button
                                             onClick={handleApproveAndMoveNext}
-                                            disabled={loading || !currentRecord.geocoding_success}
+                                            disabled={loading || !canApproveCurrent}
+                                            title={needsMetricRerun ? '평가값/근거 확인 후 승인하세요' : undefined}
                                             className="bg-green-600 hover:bg-green-700 h-8"
                                             size="sm"
                                         >
@@ -325,6 +329,7 @@ export function EvaluationSlideView({
                                 <Button
                                     onClick={handleApproveAndMoveNext}
                                     disabled={loading || !canApproveCurrent}
+                                    title={needsMetricRerun ? '평가값/근거 확인 후 승인하세요' : undefined}
                                     className="bg-green-600 hover:bg-green-700 h-9"
                                     size="sm"
                                 >
