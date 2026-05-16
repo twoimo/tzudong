@@ -617,7 +617,7 @@ export function RestaurantDetailPanel({
     const handleRequestEditRestaurant = () => {
         if (!user) {
             setIsAuthModalOpen(true);
-            throw new Error('LOGIN_REQUIRED');
+            return;
         }
         onRequestEditRestaurant?.(restaurant);
     };

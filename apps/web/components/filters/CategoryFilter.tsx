@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Region } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
+import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
 
 interface CategoryFilterProps {
     selectedCategories: string[];
@@ -58,8 +59,10 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
                     query = query.or(`road_address.ilike.%${selectedRegion}%,jibun_address.ilike.%${selectedRegion}%`);
                 }
             } else if (selectedCountry) {
-                // 글로벌 국가 필터링 (영어 주소에서 국가명 검색)
-                query = query.ilike('english_address', `%${selectedCountry}%`);
+                const overseasFilter = buildOverseasCountryAddressOrFilter(selectedCountry, '%');
+                if (overseasFilter) {
+                    query = query.or(overseasFilter);
+                }
             }
 
             const { data, error } = await query;
@@ -71,7 +74,7 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
             // 병합 로직 적용하여 중복 제거
             return mergeRestaurants(data || []);
         },
-        enabled: isOpen,
+        enabled: true,
         staleTime: 10 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         refetchOnWindowFocus: false,

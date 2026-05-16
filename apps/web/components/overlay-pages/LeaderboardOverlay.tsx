@@ -87,7 +87,7 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                                     <span className="whitespace-nowrap">쯔동여지도 랭킹</span>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0" title="랭킹 및 티어 산정 기준 보기">
+                                            <Button variant="ghost" size="icon" className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0" title="랭킹 및 티어 산정 기준 보기" aria-label="랭킹 및 티어 산정 기준 보기">
                                                 <Info className="h-4 w-4 text-muted-foreground" />
                                             </Button>
                                         </PopoverTrigger>
@@ -128,7 +128,7 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                             </Tabs>
 
                             {onClose && (
-                                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full">
+                                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="랭킹 패널 닫기">
                                     <X className="h-5 w-5" />
                                 </Button>
                             )}

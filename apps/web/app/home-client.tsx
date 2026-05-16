@@ -136,6 +136,17 @@ export default function HomeClient() {
         setIsPanelCollapsed(false);
     }, [clearRestaurantDetailSelection]);
 
+    useEffect(() => {
+        const handleHomeOverlayPanelOpened = () => {
+            closeAllPanels();
+        };
+
+        window.addEventListener('homeOverlayPanelOpened', handleHomeOverlayPanelOpened);
+        return () => {
+            window.removeEventListener('homeOverlayPanelOpened', handleHomeOverlayPanelOpened);
+        };
+    }, [closeAllPanels]);
+
     // 패널 접기/펼치기
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const togglePanelCollapse = useCallback(() => {

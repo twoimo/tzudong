@@ -39,7 +39,7 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
       // 병합 로직 적용하여 중복 제거
       return mergeRestaurants(data || []);
     },
-    enabled: isOpen,
+    enabled: true,
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
