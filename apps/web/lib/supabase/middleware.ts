@@ -48,8 +48,11 @@ const isAdminPageRequest = (request: NextRequest) => {
     return (method === 'GET' || method === 'HEAD') && (pathname === '/admin' || pathname.startsWith('/admin/'));
 };
 
-const redirectHomeWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
-    const redirectResponse = NextResponse.redirect(new URL('/', request.url));
+const redirectAdminAuthRequiredWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
+    const redirectUrl = new URL('/auth/required', request.url);
+    redirectUrl.searchParams.set('reason', 'admin');
+    redirectUrl.searchParams.set('next', request.nextUrl.pathname);
+    const redirectResponse = NextResponse.redirect(redirectUrl);
 
     for (const cookie of sourceResponse.cookies.getAll()) {
         redirectResponse.cookies.set(cookie);
@@ -109,7 +112,7 @@ export async function updateSession(request: NextRequest) {
 
     if (isAdminPageRequest(request)) {
         if (authFailed || !authUserId) {
-            return redirectHomeWithSessionCookies(request, supabaseResponse);
+            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
         }
 
         const { data: role, error: roleError } = await supabase
@@ -120,7 +123,7 @@ export async function updateSession(request: NextRequest) {
             .maybeSingle();
 
         if (roleError || !role) {
-            return redirectHomeWithSessionCookies(request, supabaseResponse);
+            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
         }
 
         const { data: accountStatus, error: accountStatusError } = await supabase
@@ -130,11 +133,11 @@ export async function updateSession(request: NextRequest) {
             .maybeSingle();
 
         if (accountStatus?.account_status === 'disabled') {
-            return redirectHomeWithSessionCookies(request, supabaseResponse);
+            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
         }
 
         if (accountStatusError && !isMissingOptionalAdminStatusStoreError(accountStatusError)) {
-            return redirectHomeWithSessionCookies(request, supabaseResponse);
+            return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
         }
     }
 

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
@@ -633,6 +634,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     if (conditions.length > 0) {
                         query.push(['or', `(${conditions.join(',')})`]);
                     }
+                } else if (buildOverseasCountryAddressOrFilter(normalizedRegion, '*')) {
+                    query.push(['or', `(${buildOverseasCountryAddressOrFilter(normalizedRegion, '*')})`]);
                 } else {
                     // address_elements의 SIDO에서 지역 필터링
                     // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인

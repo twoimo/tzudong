@@ -79,6 +79,11 @@ interface GoogleMarkerLike {
   content: Element | null;
 }
 
+interface MapMarkerEntry {
+  marker: GoogleMarkerLike;
+  restaurantId: string;
+}
+
 interface MapViewProps {
   filters: FilterState;
   selectedCountry?: string | null;
@@ -106,7 +111,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const memoizedFilters = useMemo(() => filters, [filters]);
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<GoogleMapLike | null>(null);
-  const markersRef = useRef<GoogleMarkerLike[]>([]);
+  const markersRef = useRef<MapMarkerEntry[]>([]);
   const detailPanelRef = useRef<HTMLDivElement>(null);
   const selectedCountryRef = useRef<string | null | undefined>(selectedCountry);
 
@@ -119,6 +124,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const [panelWidth, setPanelWidth] = useState(0);
   const [showRestaurantCount, setShowRestaurantCount] = useState(false);
   const [localIsPanelOpen, setLocalIsPanelOpen] = useState(false);
+  const [hasGoogleRuntimeError, setHasGoogleRuntimeError] = useState(false);
+  const [safeBoundsQuery, setSafeBoundsQuery] = useState<ReturnType<typeof buildMapViewBoundsQuery>>(undefined);
 
   useEffect(() => {
     selectedCountryRef.current = selectedCountry;
@@ -309,13 +316,25 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [selectedRestaurant]);
 
+  useEffect(() => {
+    if (!mapBounds) {
+      setSafeBoundsQuery(undefined);
+      return;
+    }
+    try {
+      setSafeBoundsQuery(buildMapViewBoundsQuery(mapBounds));
+    } catch (error) {
+      console.warn('MapView: keeping previous valid bounds after bounds query failure', error);
+    }
+  }, [mapBounds]);
+
   // useRestaurants 옵션 메모이제이션
   const restaurantsOptions = useMemo(() => buildMapViewRestaurantsQueryOptions({
-    bounds: buildMapViewBoundsQuery(mapBounds),
+    bounds: safeBoundsQuery,
     filters: memoizedFilters,
     isLoaded,
     selectedCountry,
-  }), [mapBounds, memoizedFilters, selectedCountry, isLoaded]);
+  }), [safeBoundsQuery, memoizedFilters, selectedCountry, isLoaded]);
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantsOptions);
   const handleReviewSuccess = useMemo(
@@ -338,6 +357,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const restaurantsToShow = useMemo(() => {
     return mergeSearchedRestaurant(restaurants, searchedRestaurant ?? null);
   }, [restaurants, searchedRestaurant]);
+  const restaurantsById = useMemo(() => {
+    return new Map(restaurantsToShow.map((restaurant) => [restaurant.id, restaurant]));
+  }, [restaurantsToShow]);
 
 
   // [데이터 갱신] refreshTrigger 변경 시 재조회 (리뷰 작성 등)
@@ -346,6 +368,25 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       refetch();
     }
   }, [refreshTrigger, refetch]);
+
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current) return;
+
+    let attempts = 0;
+    const interval = window.setInterval(() => {
+      attempts += 1;
+      const mapText = mapRef.current?.innerText ?? '';
+      if (mapText.includes("This page didn't load Google Maps correctly")) {
+        setHasGoogleRuntimeError(true);
+        window.clearInterval(interval);
+      }
+      if (attempts >= 6) {
+        window.clearInterval(interval);
+      }
+    }, 500);
+
+    return () => window.clearInterval(interval);
+  }, [isLoaded]);
 
 
   // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
@@ -426,13 +467,26 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     if (!googleMapRef.current || !isLoaded) return;
 
     // 기존 마커 제거 (메모리 누수 방지)
-    markersRef.current.forEach(marker => {
+    markersRef.current.forEach(({ marker }) => {
       marker.map = null;
     });
     markersRef.current = [];
 
+    const markerConstructor = google.maps.marker?.AdvancedMarkerElement;
+    if (!markerConstructor) {
+      console.warn('MapView: Advanced marker support unavailable');
+      setHasGoogleRuntimeError(true);
+      return;
+    }
+
     // 새 마커 생성
     restaurantsToShow.forEach((restaurant) => {
+      const position = getRestaurantLatLng(restaurant);
+      if (!position || !Number.isFinite(position.lat) || !Number.isFinite(position.lng)) {
+        console.warn('MapView: marker skipped because restaurant coordinates are invalid', { restaurantId: restaurant.id });
+        return;
+      }
+
       const isSelected = isMapViewMarkerSelected({
         restaurantId: restaurant.id,
         searchedRestaurantId: searchedRestaurant?.id,
@@ -450,12 +504,18 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         name: restaurant.name,
       });
 
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map: googleMapRef.current,
-        position: { lat: Number(restaurant.lat), lng: Number(restaurant.lng) },
-        content: markerElement,
-        title: restaurant.name,
-      });
+      let marker: GoogleMarkerLike;
+      try {
+        marker = new markerConstructor({
+          map: googleMapRef.current,
+          position,
+          content: markerElement,
+          title: restaurant.name,
+        });
+      } catch (error) {
+        console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id, error });
+        return;
+      }
 
       markerElement.addEventListener("click", () => {
 
@@ -473,18 +533,18 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       });
 
-      markersRef.current.push(marker);
+      markersRef.current.push({ marker, restaurantId: restaurant.id });
     });
   }, [isLoaded, moveToRestaurant, onMarkerClick, onRestaurantSelect, restaurantsToShow, searchedRestaurant?.id, selectedRestaurant?.id]);
 
   // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
   useEffect(() => {
-    if (!isLoaded || markersRef.current.length === 0 || !restaurantsToShow) return;
+    if (!isLoaded || markersRef.current.length === 0) return;
 
 
 
-    markersRef.current.forEach((marker, index) => {
-      const restaurant = restaurantsToShow[index];
+    markersRef.current.forEach(({ marker, restaurantId }) => {
+      const restaurant = restaurantsById.get(restaurantId);
       if (!restaurant) {
         return;
       }
@@ -498,7 +558,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       if (!markerElement) return;
       applyMapViewMarkerSelectedState({ isSelected, markerElement });
     });
-  }, [selectedRestaurant?.id, searchedRestaurant?.id, restaurantsToShow, isLoaded]);
+  }, [selectedRestaurant?.id, searchedRestaurant?.id, restaurantsById, isLoaded]);
 
   // 줌 이벤트 시 마커 스타일 유지
   useEffect(() => {
@@ -509,8 +569,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       setTimeout(() => {
         if (!isLoaded || markersRef.current.length === 0) return;
 
-        markersRef.current.forEach((marker, index) => {
-          const restaurant = restaurantsToShow[index];
+        markersRef.current.forEach(({ marker, restaurantId }) => {
+          const restaurant = restaurantsById.get(restaurantId);
           if (!restaurant) return;
 
           const isSelected = isMapViewMarkerSelected({
@@ -533,9 +593,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         google.maps.event.removeListener(zoomListener);
       }
     };
-  }, [isLoaded, selectedRestaurant?.id, searchedRestaurant?.id, restaurantsToShow]);
+  }, [isLoaded, selectedRestaurant?.id, searchedRestaurant?.id, restaurantsById]);
 
-  if (loadError) {
+  if (loadError || hasGoogleRuntimeError) {
     return <MapViewGoogleLoadErrorState />;
   }
 

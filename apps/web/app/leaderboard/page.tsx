@@ -39,7 +39,7 @@ export default function LeaderboardPage() {
 
         const redirectIfDesktop = () => {
             if (window.innerWidth > BREAKPOINTS.tabletMax) {
-                router.replace('/');
+                router.replace('/?panel=leaderboard');
             }
         };
 
@@ -121,6 +121,7 @@ export default function LeaderboardPage() {
                                                 size="icon"
                                                 className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0"
                                                 title="랭킹 및 티어 산정 기준 보기"
+                                                aria-label="랭킹 및 티어 산정 기준 보기"
                                             >
                                                 <Info className="h-4 w-4 text-muted-foreground" />
                                             </Button>
