@@ -27,6 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { debugLog as logDebug } from "@/lib/debug-log";
+import { restaurantMatchesOverseasCountry } from "@/lib/overseas-region-matching";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -164,12 +165,9 @@ export default function GlobalMapPage() {
         const counts: Record<string, number> = {};
 
         globalRestaurants.forEach((restaurant) => {
-            const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
-
             // 각 국가에 대해 확인
             GLOBAL_COUNTRIES.forEach((country) => {
-                // 영문 주소나 한글 주소에 국가명이 포함되어 있는지 확인
-                if (address.includes(country)) {
+                if (restaurantMatchesOverseasCountry(restaurant, country)) {
                     counts[country] = (counts[country] || 0) + 1;
                 }
             });
@@ -211,11 +209,9 @@ export default function GlobalMapPage() {
 
     // 검색된 맛집의 국가를 찾는 헬퍼 함수
     const getRestaurantCountry = useCallback((restaurant: Restaurant): GlobalCountry | null => {
-        const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
-
         // 각 국가에 대해 확인
         for (const country of GLOBAL_COUNTRIES) {
-            if (address.includes(country)) {
+            if (restaurantMatchesOverseasCountry(restaurant, country)) {
                 return country;
             }
         }
@@ -457,6 +453,7 @@ export default function GlobalMapPage() {
                         size="sm"
                         onClick={() => setIsGridMode(!isGridMode)}
                         className="flex items-center justify-center gap-2 w-full sm:col-span-2 lg:col-span-1 lg:w-auto"
+                        aria-label={isGridMode ? "단일 지도 보기" : "국가별 지도 보기"}
                     >
                         {isGridMode ? <Map className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
                     </Button>
@@ -497,7 +494,7 @@ export default function GlobalMapPage() {
                     <MapSkeleton />
                 }>
                     <PanelGroup direction="horizontal" className="w-full h-full">
-                        <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>
+                        <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={100}>
                             <MapView
                                 filters={filters}
                                 selectedCountry={selectedCountry}

@@ -64,6 +64,18 @@ describe('web quality performance source contracts', () => {
         expect(hookSource).toContain('enabled: options.enabled ?? true');
     });
 
+    test('home filter count queries run before dropdown open so triggers do not show stale zero counts', () => {
+        const regionSelectorSource = source('components/region/RegionSelector.tsx');
+        const categoryFilterSource = source('components/filters/CategoryFilter.tsx');
+
+        expect(regionSelectorSource).toContain("queryKey: ['restaurants-count']");
+        expect(regionSelectorSource).toContain('enabled: true,');
+        expect(regionSelectorSource).not.toContain('enabled: isOpen,');
+        expect(categoryFilterSource).toContain("queryKey: ['restaurants-categories', selectedRegion, selectedCountry]");
+        expect(categoryFilterSource).toContain('enabled: true,');
+        expect(categoryFilterSource).not.toContain('enabled: isOpen,');
+    });
+
     test('home map runtime renders directly while supporting queries stay intent-gated', () => {
         const pageSource = source('app/page.tsx');
         const homeClientSource = source('app/home-client.tsx');
@@ -131,8 +143,8 @@ describe('web quality performance source contracts', () => {
         expect(homeDesktopControlPanelSource).toContain('components/region/RegionSelector');
         expect(homeDesktopControlPanelSource).toContain('components/filters/CategoryFilter');
         expect(mobileControlSource).toContain("enabled: activeSheet === 'region' || activeSheet === 'category'");
-        expect(regionSelectorSource).toContain('enabled: isOpen');
-        expect(categoryFilterSource).toContain('enabled: isOpen');
+        expect(regionSelectorSource).toContain('enabled: true,');
+        expect(categoryFilterSource).toContain('enabled: true,');
         expect(mapQuerySource).toContain('includeVerifiedReviewCounts: false');
         expect(naverMapSource).toContain('autoLoad: false');
         expect(naverMapSource).toContain('buildHomeMapActivationPlan');
@@ -253,14 +265,167 @@ describe('web quality performance source contracts', () => {
         expect(reviewCardSource).toContain("'text-muted-foreground'");
         expect(reviewCardSource).toContain("'text-red-500'");
         expect(reviewCardSource).not.toContain('className="group relative flex h-8 w-8 items-center justify-center rounded-full');
+        expect(reviewCardSource).toContain("aria-label={`좋아요 ${optimisticLike.count}개${optimisticLike.isLiked ? ' 취소' : ' 누르기'}`}");
+        expect(reviewCardSource).toContain('aria-pressed={optimisticLike.isLiked}');
+        expect(reviewCardSource).toContain('aria-label={isShareCopied ? "리뷰 링크 복사됨" : "리뷰 공유"}');
+        expect(reviewCardSource).toContain('aria-label={`${review.restaurantName} 맛집 상세 보기`}');
         expect(reviewCardSource).not.toContain('aria-label={`좋아요 ${review.likeCount}개`}');
         expect(reviewCardSource).not.toContain('absolute inset-0 flex items-center justify-center text-[9px]');
         expect(reviewCardSource).not.toContain('text-[10px] font-bold leading-none tabular-nums');
 
         for (const parentSource of [feedContentSource, profilePanelSource, restaurantDetailSource, stampPageSource]) {
-            expect(parentSource).toContain("throw new Error('LOGIN_REQUIRED')");
+            expect(parentSource).not.toContain("throw new Error('LOGIN_REQUIRED')");
             expect(parentSource).toContain('throw error;');
         }
+    });
+
+    test('auth-gated review actions open UI prompts without uncaught LOGIN_REQUIRED throws', () => {
+        const feedContentSource = source('components/feed/FeedContent.tsx');
+        const profilePanelSource = source('components/profile/UserProfilePanel.tsx');
+        const restaurantDetailSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+        const stampPageSource = source('app/stamp/page.tsx');
+
+        expect(feedContentSource).toContain('if (!user) {');
+        expect(feedContentSource).toContain('if (onOpenAuth) {');
+        expect(feedContentSource).toContain('onOpenAuth();');
+        expect(feedContentSource).toContain("return;");
+        expect(profilePanelSource).toContain("title: '로그인 필요'");
+        expect(restaurantDetailSource).toContain('setIsAuthModalOpen(true);');
+        expect(stampPageSource).toContain("console.warn('로그인이 필요합니다.');");
+
+        for (const authGateSource of [feedContentSource, profilePanelSource, restaurantDetailSource, stampPageSource]) {
+            expect(authGateSource).not.toContain("LOGIN_REQUIRED");
+        }
+    });
+
+    test('overlay and review icon buttons expose stable accessible names', () => {
+        const feedContentSource = source('components/feed/FeedContent.tsx');
+        const restaurantReviewsPanelSource = source('components/stamp/RestaurantReviewsPanel.tsx');
+        const stampOverlaySource = source('components/overlay-pages/StampOverlay.tsx');
+        const leaderboardOverlaySource = source('components/overlay-pages/LeaderboardOverlay.tsx');
+        const leaderboardPageSource = source('app/leaderboard/page.tsx');
+
+        expect(feedContentSource).toContain('aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}');
+        expect(feedContentSource).toContain('aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}');
+        expect(feedContentSource).toContain('aria-label="리뷰 패널 닫기"');
+        expect(feedContentSource).toContain('aria-label="리뷰 작성"');
+        expect(restaurantReviewsPanelSource).toContain('aria-label="맛집 리뷰 패널 닫기"');
+        expect(stampOverlaySource).toContain('aria-label={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}');
+        expect(stampOverlaySource).toContain('aria-label={isFilterExpanded ? "도장 필터 접기" : "도장 필터 펼치기"}');
+        expect(stampOverlaySource).toContain('aria-label="도장 패널 닫기"');
+        expect(leaderboardOverlaySource).toContain('aria-label="랭킹 및 티어 산정 기준 보기"');
+        expect(leaderboardOverlaySource).toContain('aria-label="랭킹 패널 닫기"');
+        expect(leaderboardPageSource).toContain('aria-label="랭킹 및 티어 산정 기준 보기"');
+    });
+
+
+
+
+    test('desktop direct feature routes hand off to home overlays and suppress popup blockers', () => {
+        const feedPageSource = source('app/feed/page.tsx');
+        const stampPageSource = source('app/stamp/page.tsx');
+        const leaderboardPageSource = source('app/leaderboard/page.tsx');
+        const overlayLayoutSource = source('components/layout/OverlayLayout.tsx');
+        const mainLayoutSource = source('components/layout/MainLayout.tsx');
+        const combinedPopupSource = source('components/layout/CombinedPopup.tsx');
+        const testHelpersSource = source('tests/helpers.ts');
+
+        expect(feedPageSource).toContain("const target = reviewId ? `/?panel=feed&review=${encodeURIComponent(reviewId)}` : '/?panel=feed';");
+        expect(stampPageSource).toContain("router.replace('/?panel=stamp')");
+        expect(leaderboardPageSource).toContain("router.replace('/?panel=leaderboard')");
+        expect(overlayLayoutSource).toContain('function getDirectOverlayPanel');
+        expect(overlayLayoutSource).toContain('const DIRECT_OVERLAY_PANELS');
+        expect(overlayLayoutSource).toContain('setActiveOverlayPanel(directPanelParam);');
+        expect(overlayLayoutSource).toContain("HOME_OVERLAY_PANEL_OPENED_EVENT = 'homeOverlayPanelOpened'");
+        expect(overlayLayoutSource).toContain('window.dispatchEvent(new CustomEvent(HOME_OVERLAY_PANEL_OPENED_EVENT');
+        expect(source('app/home-client.tsx')).toContain("window.addEventListener('homeOverlayPanelOpened', handleHomeOverlayPanelOpened)");
+        expect(overlayLayoutSource).toContain("router.replace('/', { scroll: false });");
+        expect(overlayLayoutSource).toContain("router.replace(buildDirectOverlayHref('feed', reviewId), { scroll: false });");
+        expect(mainLayoutSource).toContain("pathname?.startsWith('/auth/') || pathname === '/feed' || pathname === '/stamp' || pathname === '/leaderboard'");
+        expect(overlayLayoutSource).toContain("pathname?.startsWith('/auth/') || directPanelParam !== null");
+        expect(combinedPopupSource).toContain('data-popup-overlay="true"');
+        expect(testHelpersSource).toContain('[data-popup-overlay="true"]');
+    });
+
+    test('direct utility routes render clear fallback states instead of blank or invalid panel configs', () => {
+        const resetPasswordSource = source('app/auth/reset-password/page.tsx');
+        const authRequiredSource = source('app/auth/required/page.tsx');
+        const globalMapSource = source('app/global-map/page.tsx');
+        const middlewareSource = source('lib/supabase/middleware.ts');
+
+        expect(resetPasswordSource).not.toContain(`if (!isValidSession) {
+        return null;
+    }`);
+        expect(resetPasswordSource).toContain('비밀번호 재설정 링크를 확인해주세요');
+        expect(resetPasswordSource).toContain('홈으로 돌아가기');
+        expect(authRequiredSource).toContain('로그인이 필요합니다');
+        expect(authRequiredSource).toContain('관리자 콘솔은 관리자 계정으로 로그인한 뒤 사용할 수 있습니다.');
+        expect(middlewareSource).toContain("new URL('/auth/required', request.url)");
+        expect(middlewareSource).toContain("redirectUrl.searchParams.set('reason', 'admin')");
+        expect(globalMapSource).toContain('defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={100}');
+        expect(globalMapSource).toContain('aria-label={isGridMode ? "단일 지도 보기" : "국가별 지도 보기"}');
+        expect(globalMapSource).toContain('restaurantMatchesOverseasCountry');
+        expect(source('lib/overseas-region-matching.ts')).toContain('getOverseasSearchTermsForCountry');
+        expect(source('components/filters/CategoryFilter.tsx')).toContain('buildOverseasCountryAddressOrFilter(selectedCountry,');
+        expect(source('hooks/use-google-maps.tsx')).toContain('window.gm_authFailure');
+        const mapViewSource = source('components/map/MapView.tsx');
+        expect(mapViewSource).toContain('hasGoogleRuntimeError');
+        expect(mapViewSource).toContain("This page didn't load Google Maps correctly");
+        expect(mapViewSource).toContain('markersRef.current.push({ marker, restaurantId: restaurant.id });');
+        expect(mapViewSource).toContain('const restaurant = restaurantsById.get(restaurantId);');
+        expect(mapViewSource).toContain("console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id, error });");
+        expect(mapViewSource).toContain("console.warn('MapView: keeping previous valid bounds after bounds query failure', error);");
+        expect(source('lib/map-view-state-helpers.ts')).toContain("throw new Error('Google Maps bounds contain non-finite coordinates')");
+        expect(globalMapSource).not.toContain('defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}');
+    });
+
+    test('admin utility APIs stay behind admin auth and short URLs cannot become open redirects', () => {
+        const proxySource = source('proxy.ts');
+        const naverSearchSource = source('app/api/naver-search/route.ts');
+        const naverGeocodeSource = source('app/api/naver-geocode/route.ts');
+        const youtubeMetaSource = source('app/api/youtube-meta/route.ts');
+        const shortenSource = source('app/api/shorten/route.ts');
+        const shortRedirectSource = source('app/s/[code]/page.tsx');
+
+        expect(proxySource).not.toContain("'/api/naver-'");
+        expect(proxySource).not.toContain("'/api/youtube-meta'");
+        expect(proxySource).toContain("'/api/shorten'");
+        for (const routeSource of [naverSearchSource, naverGeocodeSource, youtubeMetaSource]) {
+            expect(routeSource).toContain("import { requireAdmin } from '@/lib/auth/require-admin';");
+            expect(routeSource).toContain('const auth = await requireAdmin();');
+            expect(routeSource.indexOf('const auth = await requireAdmin();')).toBeLessThan(routeSource.indexOf('request.json') === -1 ? routeSource.indexOf('new URL(request.url)') : routeSource.indexOf('request.json'));
+        }
+
+        expect(shortenSource).toContain('function getAllowedShortUrlTarget');
+        expect(shortenSource).toContain("trimmedTargetUrl.startsWith('//')");
+        expect(shortenSource).toContain('function isValidReviewId');
+        expect(shortenSource).toContain(".from('reviews')");
+        expect(shortenSource).toContain('.maybeSingle();');
+        expect(shortenSource).toContain('target_url: allowedTarget.canonicalTargetUrl');
+        expect(shortenSource).toContain('restaurant_id: review.restaurant_id');
+        expect(shortenSource).toContain('restaurant_name: null');
+        expect(shortenSource).not.toContain('restaurantId || null');
+        expect(shortenSource).not.toContain('restaurantName || null');
+        expect(shortenSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
+        expect(shortRedirectSource).toContain('function isSafeRedirectTarget');
+        expect(shortRedirectSource).toContain("trimmedTargetUrl.startsWith('//')");
+        expect(shortRedirectSource).toContain('isValidReviewId(target.searchParams.get');
+        expect(shortRedirectSource).toContain("redirect('/');");
+    });
+
+    test('feed direct route defers heavy modals and detail panels until interaction', () => {
+        const feedPageSource = source('app/feed/page.tsx');
+        const feedContentSource = source('components/feed/FeedContent.tsx');
+
+        expect(feedPageSource).toContain("const RestaurantDetailPanel = dynamic(");
+        expect(feedPageSource).toContain("const ReviewModal = dynamic(");
+        expect(feedPageSource).toContain("const EditRestaurantModal = dynamic(");
+        expect(feedPageSource).not.toContain("import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';");
+        expect(feedPageSource).toContain('{isReviewModalOpen && (');
+        expect(feedContentSource).toContain("const ReviewModal = dynamic(");
+        expect(feedContentSource).toContain("const ReviewEditModal = dynamic(");
+        expect(feedContentSource).toContain('{!hideReviewModal && isReviewModalOpen && (');
+        expect(feedContentSource).toContain('{editingReview && (');
     });
 
     test('/mypage avoids client-side redirect work and defers desktop-only sidebar cost', () => {
@@ -534,7 +699,7 @@ describe('web quality performance source contracts', () => {
         expect(mainLayoutSource).toContain('{children}');
         expect(mainLayoutSource).not.toContain('min-h-screen bg-background" aria-hidden="true"');
         expect(mainLayoutSource).toContain('NONCRITICAL_CHROME_DELAY_MS = 30000');
-        expect(mainLayoutSource).toContain('canMountNoncriticalChrome && <CombinedPopup />');
+        expect(mainLayoutSource).toContain('canMountNoncriticalChrome && !shouldSuppressNoncriticalChrome && <CombinedPopup />');
         expect(navigationPrefetcherSource).toContain('HOME_ROUTE_PREFETCH_DELAY_MS = 8000');
         expect(mobileBottomNavSource).toContain('HOME_NAV_PREFETCH_DELAY_MS = 8000');
         expect(viewportFixSource).toContain("if (window.CSS?.supports?.('height', '100dvh'))");

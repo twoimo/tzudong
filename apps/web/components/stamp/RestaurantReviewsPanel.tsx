@@ -103,7 +103,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                             </p>
                         </div>
                         {onClose && (
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0 -mt-1 -mr-2">
+                            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0 -mt-1 -mr-2" aria-label="맛집 리뷰 패널 닫기">
                                 <X className="h-4 w-4" />
                             </Button>
                         )}

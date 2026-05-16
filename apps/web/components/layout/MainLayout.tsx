@@ -85,6 +85,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     }, [pathname]);
 
     const shouldShowCenteredLayoutButton = pathname !== '/' && !isMyPage;
+    const shouldSuppressNoncriticalChrome = pathname?.startsWith('/auth/') || pathname === '/feed' || pathname === '/stamp' || pathname === '/leaderboard';
 
     const handleLogout = useCallback(async () => {
         try {
@@ -145,6 +146,11 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (!hasMounted) return;
 
+        if (shouldSuppressNoncriticalChrome) {
+            setCanMountNoncriticalChrome(false);
+            return;
+        }
+
         if (pathname !== '/') {
             setCanMountNoncriticalChrome(true);
             return;
@@ -167,7 +173,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 window.removeEventListener(eventName, mountNoncriticalChrome);
             }
         };
-    }, [hasMounted, pathname]);
+    }, [hasMounted, pathname, shouldSuppressNoncriticalChrome]);
 
 
     useEffect(() => {
@@ -329,7 +335,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 />
             )}
 
-            {canMountNoncriticalChrome && <CombinedPopup />}
+            {canMountNoncriticalChrome && !shouldSuppressNoncriticalChrome && <CombinedPopup />}
         </div>
     );
 }
