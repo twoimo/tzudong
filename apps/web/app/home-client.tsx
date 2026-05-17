@@ -15,13 +15,27 @@ import {
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
 
+function HomeControlPanelLoadingShell() {
+    return (
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)] min-[1280px]:hidden">
+            <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm">
+                <div className="flex h-10 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground">
+                    쯔동여지도 검색하기
+                </div>
+                <div className="h-9 w-9 rounded-full border border-border bg-background" aria-hidden="true" />
+                <div className="h-9 w-9 rounded-full border border-border bg-background" aria-hidden="true" />
+                <div className="h-9 w-9 rounded-full border border-border bg-background" aria-hidden="true" />
+            </div>
+        </div>
+    );
+}
+
 // [OPTIMIZATION] 동적 임포트
 const HomeControlPanel = dynamic(
     () => import('../components/home/home-control-panel'),
     {
         ssr: false,
-        // 사용자 피드백 반영: 스켈레톤 UI 제거 (로딩 중에는 표시하지 않음)
-        loading: () => null
+        loading: () => <HomeControlPanelLoadingShell />
     }
 );
 

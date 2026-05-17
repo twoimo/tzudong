@@ -1,13 +1,45 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import RegionSelector from '@/components/region/RegionSelector';
-import RestaurantSearch from '@/components/search/RestaurantSearch';
 import CategoryFilter from '@/components/filters/CategoryFilter';
 import { OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 import type { FilterState } from '@/components/filters/filter-state';
 import type { Region, Restaurant } from '@/types/restaurant';
+import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
+import { useDeferredComponent } from '@/hooks/use-deferred-component';
+
+
+type RestaurantSearchComponentProps = {
+    onRestaurantSelect: (restaurant: Restaurant) => void;
+    onRestaurantSearch?: (restaurant: Restaurant) => void;
+    onSearchExecute?: (region?: Region | null) => void;
+    filters?: FilterState;
+    selectedRegion?: string | null;
+    isKoreanOnly?: boolean;
+    maxItems?: number;
+    autoFocusInput?: boolean;
+};
+
+const loadDesktopRestaurantSearch = async () => {
+    const mod = await import('@/components/search/RestaurantSearch');
+    return mod.default as ComponentType<RestaurantSearchComponentProps>;
+};
+
+function DesktopRestaurantSearchLoadingShell({ onActivate }: { onActivate: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onActivate}
+            onFocus={onActivate}
+            className="h-10 w-[clamp(14rem,24vw,20rem)] rounded-md border border-input bg-background px-3 text-left text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="맛집 검색 불러오기"
+        >
+            맛집 검색하기
+        </button>
+    );
+}
 
 interface HomeDesktopControlPanelProps {
     mapMode: 'domestic' | 'overseas';
@@ -15,7 +47,6 @@ interface HomeDesktopControlPanelProps {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
-    countryCounts: Record<string, number>;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -33,7 +64,6 @@ export default function HomeDesktopControlPanel({
     selectedCountry,
     selectedCategories,
     filters,
-    countryCounts,
     onRegionChange,
     onCountryChange,
     onCategoryChange,
@@ -45,7 +75,14 @@ export default function HomeDesktopControlPanel({
     rightPanelWidth = 0,
 }: HomeDesktopControlPanelProps) {
     const [leftPosition, setLeftPosition] = useState<string>('50%');
+    const [shouldLoadSearch, setShouldLoadSearch] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
+    const countryCounts = useOverseasCountryCounts(mapMode);
+    const DeferredRestaurantSearch = useDeferredComponent<RestaurantSearchComponentProps>(
+        shouldLoadSearch,
+        loadDesktopRestaurantSearch
+    );
+    const requestSearch = useCallback(() => setShouldLoadSearch(true), []);
 
     const updateLayout = useCallback(() => {
         const windowWidth = window.innerWidth;
@@ -110,15 +147,20 @@ export default function HomeDesktopControlPanel({
                     className="w-[clamp(9.5rem,18vw,12.5rem)]"
                 />
 
-                <RestaurantSearch
-                    onRestaurantSelect={onRestaurantSelect}
-                    onRestaurantSearch={onRestaurantSearch}
-                    onSearchExecute={onSearchExecute}
-                    filters={filters}
-                    selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
-                    isKoreanOnly={mapMode === 'domestic'}
-                    maxItems={3}
-                />
+                {DeferredRestaurantSearch ? (
+                    <DeferredRestaurantSearch
+                        onRestaurantSelect={onRestaurantSelect}
+                        onRestaurantSearch={onRestaurantSearch}
+                        onSearchExecute={onSearchExecute}
+                        filters={filters}
+                        selectedRegion={mapMode === 'domestic' ? selectedRegion : selectedCountry}
+                        isKoreanOnly={mapMode === 'domestic'}
+                        maxItems={3}
+                        autoFocusInput
+                    />
+                ) : (
+                    <DesktopRestaurantSearchLoadingShell onActivate={requestSearch} />
+                )}
             </div>
         </div>
     );

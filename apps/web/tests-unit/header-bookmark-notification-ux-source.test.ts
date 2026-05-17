@@ -46,26 +46,34 @@ describe('header bookmark and notification UX source contracts', () => {
 
   test('mobile bookmark and notification controls keep the same touch, state, and responsive affordances', () => {
     const mobileBookmarkSource = source('components/home/MobileBookmarkMenuButton.tsx');
+    const mobileNotificationSource = source('components/home/MobileNotificationMenuButton.tsx');
     const mobileOverlaySource = source('components/home/MobileControlOverlay.tsx');
 
     expect(mobileBookmarkSource).toContain('useBookmarks({ enabled: isOpen })');
-    expect(mobileBookmarkSource).toContain('relative h-11 w-11 rounded-full');
+    expect(mobileBookmarkSource).toContain('relative h-9 w-9 rounded-full');
     expect(mobileBookmarkSource).toContain('aria-label="북마크 목록 로딩 중"');
     expect(mobileBookmarkSource).toContain('북마크를 불러오지 못했습니다');
     expect(mobileBookmarkSource).toContain('aria-label="북마크 전체보기 페이지로 이동"');
     expect(mobileBookmarkSource).toContain('MapPin className="h-4 w-4');
 
-    expect(mobileOverlaySource).toContain('h-11 w-11 rounded-full');
+    expect(mobileOverlaySource).toContain('h-9 w-9 rounded-full');
     expect(mobileOverlaySource).toContain('aria-label="북마크 전체보기 로그인 안내"');
-    expect(mobileOverlaySource).toContain('aria-label={unreadCount > 0 ? `알림, 안 읽은 알림');
-    expect(mobileOverlaySource).toContain('aria-label="알림 목록 로딩 중"');
-    expect(mobileOverlaySource).toContain('알림을 불러오지 못했습니다');
-    expect(mobileOverlaySource).toContain('notifications.slice(0, 50)');
-    expect(mobileOverlaySource).toContain('onSelect={() => handleNotificationItemClick(notification)}');
-    expect(mobileOverlaySource).toContain('event.preventDefault();');
-    expect(mobileOverlaySource).toContain('알림 삭제');
-    expect(mobileOverlaySource).toContain('formatDistanceToNow(notification.createdAt');
-    expect(mobileOverlaySource).toContain('removeNotification(notification.id)');
+    expect(mobileOverlaySource).toContain('loadMobileNotificationMenuButton');
+    expect(mobileOverlaySource).toContain('<DeferredMobileNotificationMenuButton user={user} />');
+    expect(mobileOverlaySource).not.toContain('useNotifications()');
+    expect(mobileOverlaySource).not.toContain('formatDistanceToNow(notification.createdAt');
+
+    expect(mobileNotificationSource).toContain('aria-label={');
+    expect(mobileNotificationSource).toContain('알림, 안 읽은 알림');
+    expect(mobileNotificationSource).toContain('aria-label="알림 목록 로딩 중"');
+    expect(mobileNotificationSource).toContain('알림을 불러오지 못했습니다');
+    expect(mobileNotificationSource).toContain('notifications.slice(0, 50)');
+    expect(mobileNotificationSource).toContain('onSelect={() => handleNotificationItemClick(notification)}');
+    expect(mobileNotificationSource).toContain('event.preventDefault();');
+    expect(mobileNotificationSource).toContain('알림 삭제');
+    expect(mobileNotificationSource).toContain('formatDistanceToNow(notification.createdAt');
+    expect(mobileNotificationSource).toContain('removeNotification(notification.id)');
+    expect(mobileNotificationSource).toContain('h-9 w-9 rounded-full');
     expect(mobileOverlaySource).toContain('w-[min(calc(100vw-1rem),22rem)]');
   });
 

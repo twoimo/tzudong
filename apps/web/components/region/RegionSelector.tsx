@@ -9,8 +9,8 @@ import {
 import { REGIONS, Region, Restaurant } from "@/types/restaurant";
 import { MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
+import { fetchSupabaseRows } from "@/lib/supabase-rest-client";
 
 interface RegionSelectorProps {
   selectedRegion: Region | null;
@@ -26,18 +26,18 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
   const { data: restaurants = [] } = useQuery({
     queryKey: ['restaurants-count'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('id, name:approved_name, approved_name, road_address, jibun_address, categories, status, review_count')
-        .eq('status', 'approved')
-        .returns<Restaurant[]>();
+      try {
+        const data = await fetchSupabaseRows<Restaurant>('restaurants', [
+          ['select', 'id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count'],
+          ['status', 'eq.approved'],
+        ]);
 
-      if (error) {
+        // 병합 로직 적용하여 중복 제거
+        return mergeRestaurants(data || []);
+      } catch (error) {
         console.error('맛집 데이터 조회 실패:', error);
         return [];
       }
-      // 병합 로직 적용하여 중복 제거
-      return mergeRestaurants(data || []);
     },
     enabled: true,
     staleTime: 10 * 60 * 1000,

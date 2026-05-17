@@ -4,9 +4,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, ChefHat } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSupabaseRows } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
-import { Region } from "@/types/restaurant";
+import { Region, Restaurant } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
 
@@ -40,39 +40,43 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
     const [isOpen, setIsOpen] = useState(false);
 
     // 선택된 지역/국가에 따른 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
+    const categoryQueryKey = selectedRegion || selectedCountry
+        ? ['restaurants-categories', selectedRegion, selectedCountry]
+        : ['restaurants-count'];
+
     const { data: restaurants = [] } = useQuery({
-        queryKey: ['restaurants-categories', selectedRegion, selectedCountry],
+        queryKey: categoryQueryKey,
         queryFn: async () => {
-            let query = supabase
-                .from('restaurants')
-                .select('id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count')
-                .eq('status', 'approved');
+            const params: Array<[string, string]> = [
+                ['select', 'id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count'],
+                ['status', 'eq.approved'],
+            ];
 
             // 지역 또는 국가 필터링 적용
             if (selectedRegion) {
                 // 국내 지역 필터링
                 if (selectedRegion === "울릉도") {
-                    query = query.or(`road_address.ilike.%울릉%,jibun_address.ilike.%울릉%`);
+                    params.push(['or', 'road_address.ilike.%울릉%,jibun_address.ilike.%울릉%']);
                 } else if (selectedRegion === "욕지도") {
-                    query = query.or(`road_address.ilike.%욕지%,jibun_address.ilike.%욕지%`);
+                    params.push(['or', 'road_address.ilike.%욕지%,jibun_address.ilike.%욕지%']);
                 } else {
-                    query = query.or(`road_address.ilike.%${selectedRegion}%,jibun_address.ilike.%${selectedRegion}%`);
+                    params.push(['or', `road_address.ilike.%${selectedRegion}%,jibun_address.ilike.%${selectedRegion}%`]);
                 }
             } else if (selectedCountry) {
                 const overseasFilter = buildOverseasCountryAddressOrFilter(selectedCountry, '%');
                 if (overseasFilter) {
-                    query = query.or(overseasFilter);
+                    params.push(['or', overseasFilter]);
                 }
             }
 
-            const { data, error } = await query;
-
-            if (error) {
+            try {
+                const data = await fetchSupabaseRows<Restaurant>('restaurants', params);
+                // 병합 로직 적용하여 중복 제거
+                return mergeRestaurants(data || []);
+            } catch (error) {
                 console.error('카테고리 데이터 조회 실패:', error);
                 return [];
             }
-            // 병합 로직 적용하여 중복 제거
-            return mergeRestaurants(data || []);
         },
         enabled: true,
         staleTime: 10 * 60 * 1000,

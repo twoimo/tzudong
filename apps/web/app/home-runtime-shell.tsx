@@ -21,6 +21,7 @@ import {
 
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
 const MobileBottomNav = lazy(() => import('@/components/layout/MobileBottomNav'));
+const MOBILE_BOTTOM_NAV_IDLE_DELAY_MS = 8000;
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
 type ProfileModalProps = AuthModalProps;
@@ -119,11 +120,33 @@ function DeferredUserDataPrefetcher({ enabled }: { enabled: boolean }) {
     return <UserDataPrefetcher />;
 }
 
+function MobileBottomNavLoadingShell({ onActivate }: { onActivate: () => void }) {
+    return (
+        <nav
+            aria-label="주요 탐색 준비 중"
+            className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] shadow-lg shadow-black/5 backdrop-blur-md min-[1280px]:hidden"
+        >
+            {['홈', '리뷰', '도장', '랭킹', 'MY'].map((label) => (
+                <button
+                    key={label}
+                    type="button"
+                    onClick={onActivate}
+                    className="min-h-[60px] px-1 py-2.5 text-[11px] font-medium text-muted-foreground"
+                    aria-label={`${label} 메뉴 불러오기`}
+                >
+                    {label}
+                </button>
+            ))}
+        </nav>
+    );
+}
+
 function MobileHomeLayout({ children }: { children: ReactNode }) {
     const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [shouldLoadMobileBottomNav, setShouldLoadMobileBottomNav] = useState(false);
 
     const openAuth = useCallback(() => setIsAuthModalOpen(true), []);
     const openProfile = useCallback(() => setIsProfileModalOpen(true), []);
@@ -166,6 +189,25 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
         }
     }, [queryClient, user]);
 
+    useEffect(() => {
+        if (shouldLoadMobileBottomNav) return;
+
+        const requestMobileBottomNav = () => setShouldLoadMobileBottomNav(true);
+        const idleTimer = window.setTimeout(requestMobileBottomNav, MOBILE_BOTTOM_NAV_IDLE_DELAY_MS);
+        const eventOptions = { passive: true, once: true } as AddEventListenerOptions;
+
+        window.addEventListener('pointerdown', requestMobileBottomNav, eventOptions);
+        window.addEventListener('keydown', requestMobileBottomNav, { once: true });
+        window.addEventListener('touchstart', requestMobileBottomNav, eventOptions);
+
+        return () => {
+            window.clearTimeout(idleTimer);
+            window.removeEventListener('pointerdown', requestMobileBottomNav);
+            window.removeEventListener('keydown', requestMobileBottomNav);
+            window.removeEventListener('touchstart', requestMobileBottomNav);
+        };
+    }, [shouldLoadMobileBottomNav]);
+
     return (
         <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
             <DeferredUserDataPrefetcher enabled={Boolean(user)} />
@@ -182,15 +224,19 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className={cn('min-[1600px]:hidden transition-transform duration-300')}>
-                <Suspense fallback={null}>
-                    <MobileBottomNav
-                        className="transition-transform duration-300"
-                        style={{
-                            transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
-                            willChange: 'transform',
-                        }}
-                    />
-                </Suspense>
+                {shouldLoadMobileBottomNav ? (
+                    <Suspense fallback={<MobileBottomNavLoadingShell onActivate={() => setShouldLoadMobileBottomNav(true)} />}>
+                        <MobileBottomNav
+                            className="transition-transform duration-300"
+                            style={{
+                                transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
+                                willChange: 'transform',
+                            }}
+                        />
+                    </Suspense>
+                ) : (
+                    <MobileBottomNavLoadingShell onActivate={() => setShouldLoadMobileBottomNav(true)} />
+                )}
             </div>
 
             {isAuthModalOpen && (
@@ -246,13 +292,30 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
     return <MobileHomeLayout>{children}</MobileHomeLayout>;
 }
 
+function MobileTopControlPendingShell() {
+    return (
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)] min-[1280px]:hidden" aria-hidden="true">
+            <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm">
+                <div className="flex h-10 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground">
+                    쯔동여지도 검색하기
+                </div>
+                <div className="h-9 w-9 rounded-full border border-border bg-background" />
+                <div className="h-9 w-9 rounded-full border border-border bg-background" />
+                <div className="h-9 w-9 rounded-full border border-border bg-background" />
+            </div>
+        </div>
+    );
+}
+
 function HomeRuntimePendingShell() {
     return (
         <div className="min-h-[var(--full-height,100vh)] bg-background">
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>
-            <main id="main-content" className="h-full w-full" aria-busy="true" />
+            <main id="main-content" className="h-full w-full" aria-busy="true">
+                <MobileTopControlPendingShell />
+            </main>
         </div>
     );
 }

@@ -32,20 +32,34 @@ class MemoryStorage {
 }
 
 describe('home root runtime boundary', () => {
-    test('renders the real home map runtime directly without the temporary landing gate', () => {
+    test('keeps the root first paint static while preserving the real home runtime frame', () => {
         const pageSource = source('app/page.tsx');
+        const homeFrameSource = source('app/home-frame/page.tsx');
+        const publicStaticSource = source('public/home-static.html');
+        const proxySource = source('proxy.ts');
         const homeClientSource = source('app/home-client.tsx');
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
         const homeCssSource = source('app/home-app-globals.css');
         const homeTailwindConfigSource = source('tailwind.home.config.ts');
 
-        expect(pageSource).toContain("import { HomeRuntimeShell } from './home-runtime-shell'");
-        expect(pageSource).toContain("import HomeClient from './home-client'");
-        expect(pageSource).toContain('<HomeRuntimeShell>');
-        expect(pageSource).toContain('<HomeClient />');
+        expect(pageSource).toContain("import { HomeInitialShell } from './home-initial-shell'");
+        expect(pageSource).toContain('homeFrameBootstrap');
+        expect(pageSource).toContain("frame.src = '/home-frame' + window.location.search + window.location.hash");
+        expect(pageSource).not.toContain("import HomeClient from './home-client'");
+        expect(pageSource).not.toContain('<HomeClient />');
         expect(pageSource).not.toContain('HomeLandingShell');
         expect(pageSource).not.toContain('HomeMapIsland');
         expect(pageSource).not.toContain('지도 준비하기');
+
+        expect(homeFrameSource).toContain("import { HomeRuntimeShell } from '../home-runtime-shell'");
+        expect(homeFrameSource).toContain("import HomeClient from '../home-client'");
+        expect(homeFrameSource).toContain('<HomeRuntimeShell>');
+        expect(homeFrameSource).toContain('<HomeClient />');
+        expect(publicStaticSource).toContain('id="home-initial-shell"');
+        expect(publicStaticSource).toContain("frame.id='home-runtime-frame'");
+        expect(publicStaticSource).toContain("frame.src='/home-frame'+location.search+location.hash");
+        expect(proxySource).toContain("return NextResponse.rewrite(new URL('/home-static.html', request.url))");
+        expect(proxySource).toContain("'/home-frame'");
 
         expect(homeClientSource).toContain('<HomeMapContainer');
         expect(homeClientSource).not.toContain('home-map-activate-button');

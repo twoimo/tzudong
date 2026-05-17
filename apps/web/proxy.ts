@@ -7,7 +7,15 @@ const PUBLIC_API_PREFIXES = [
 
 const PUBLIC_PAGE_PATHS = new Set([
     '/',
+    '/home-frame',
 ])
+
+function isRootPageRequest(request: NextRequest) {
+    const { pathname } = request.nextUrl
+    const method = request.method.toUpperCase()
+
+    return (method === 'GET' || method === 'HEAD') && pathname === '/'
+}
 
 function shouldSkipSession(request: NextRequest) {
     const { pathname } = request.nextUrl
@@ -30,6 +38,10 @@ function shouldSkipSession(request: NextRequest) {
  * - 인증이 필요 없는 공개 라우트도 빠르게 통과
  */
 export async function proxy(request: NextRequest) {
+    if (isRootPageRequest(request)) {
+        return NextResponse.rewrite(new URL('/home-static.html', request.url))
+    }
+
     if (shouldSkipSession(request)) {
         return NextResponse.next()
     }
@@ -40,6 +52,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
+        '/',
         '/((?!$|api/health|api/shorten|_next/static|_next/image|favicon.ico|fonts/|images/|scripts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|otf|ttf|woff|woff2)$).*)',
     ],
 }

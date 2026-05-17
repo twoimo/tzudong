@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BarChart2,
   Bot,
+  Clapperboard,
   ClipboardList,
   FileCheck2,
   Image as ImageIcon,
@@ -43,7 +44,7 @@ import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
 import type { DashboardRestaurantItem, DashboardRestaurantsResponse, DashboardSummaryResponse } from "@/types/dashboard";
 
-type AdminModuleId = "overview" | "restaurants" | "submissions" | "reviews" | "banners" | "announcements" | "users" | "insights" | "audit" | "llm";
+type AdminModuleId = "overview" | "restaurants" | "submissions" | "reviews" | "storyboard" | "banners" | "announcements" | "users" | "insights" | "audit" | "llm";
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "llm">;
 
 type ConsoleModule = {
@@ -107,6 +108,16 @@ const consoleModules: ConsoleModule[] = [
     icon: Megaphone,
     badge: "사용자 고지",
     actionLabel: "공지사항 운영",
+  },
+  {
+    id: "storyboard",
+    title: "스토리보드 생성",
+    description: "쯔양 유튜브 히트맵을 바탕으로 다음 영상 소재와 씬별 촬영안을 생성합니다.",
+    href: "/admin?module=storyboard",
+    icon: Clapperboard,
+    badge: "영상 기획",
+    actionLabel: "스토리보드 만들기",
+    priority: "urgent",
   },
 
   {
@@ -222,7 +233,7 @@ const sidebarSections: SidebarSection[] = [
   {
     label: "운영",
     items: consoleModules
-      .filter((module) => ["announcements", "banners", "users", "insights", "audit"].includes(module.id))
+      .filter((module) => ["announcements", "storyboard", "banners", "users", "insights", "audit"].includes(module.id))
       .map(({ id, title, description, icon, badge }) => ({ id, title, description, icon, badge })),
   },
   {
@@ -365,6 +376,10 @@ const AdminAnnouncementModule = dynamic(() => import("@/components/announcement/
 });
 
 const AdminUsersModule = dynamic(() => import("@/components/admin/AdminUsersPanel"), {
+  ssr: false,
+});
+
+const AdminStoryboardGenerator = dynamic(() => import("@/components/admin/storyboard/AdminStoryboardGenerator").then((module) => module.AdminStoryboardGenerator), {
   ssr: false,
 });
 
@@ -1879,6 +1894,8 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
             />
           </AnnouncementWorkspace>
         );
+      case "storyboard":
+        return <AdminStoryboardGenerator key="admin-storyboard" />;
       case "users":
         return <AdminUsersModule key="admin-users" />;
       case "insights":
