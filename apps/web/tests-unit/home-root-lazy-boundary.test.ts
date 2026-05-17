@@ -56,11 +56,24 @@ describe('home root runtime boundary', () => {
         expect(homeFrameSource).toContain('<HomeRuntimeShell>');
         expect(homeFrameSource).toContain('<HomeClient />');
         expect(publicStaticSource).toContain('id="home-initial-shell"');
+        expect(publicStaticSource).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(publicStaticSource).toContain('class="loader"');
+        expect(publicStaticSource).toContain('홈 지도를 불러오는 중...');
+        expect(publicStaticSource).toContain('맛집 지도 런타임을 준비하고 있습니다');
+        expect(publicStaticSource).toContain('property="og:image"');
+        expect(publicStaticSource).toContain('name="twitter:card"');
+        expect(publicStaticSource).toContain('rel="icon"');
         expect(publicStaticSource).toContain("frame.id='home-runtime-frame'");
         expect(publicStaticSource).toContain("frame.src='/home-frame'+location.search+location.hash");
         expect(proxySource).toContain("return NextResponse.rewrite(new URL('/home-static.html', request.url))");
         expect(proxySource).toContain("'/home-frame'");
+        expect(proxySource).toContain("request.nextUrl.searchParams.has('_rsc')");
+        expect(proxySource).toContain("accept.includes('text/html')");
+        expect(proxySource).toContain("fetchDest === 'document'");
 
+        expect(source('app/home-initial-shell.tsx')).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(source('app/home-initial-shell.tsx')).toContain('홈 지도를 불러오는 중...');
+        expect(source('app/home-initial-shell.tsx')).toContain('맛집 지도 런타임을 준비하고 있습니다');
         expect(homeClientSource).toContain('<HomeMapContainer');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");

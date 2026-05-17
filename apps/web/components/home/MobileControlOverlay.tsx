@@ -79,6 +79,7 @@ type RestaurantSearchComponentProps = {
 
 type MobileBookmarkMenuButtonProps = {
     user: User;
+    defaultOpen?: boolean;
 };
 
 const loadMobileBookmarkMenuButton = async () => {
@@ -88,6 +89,7 @@ const loadMobileBookmarkMenuButton = async () => {
 
 type MobileNotificationMenuButtonProps = {
     user: User;
+    defaultOpen?: boolean;
 };
 
 const loadMobileNotificationMenuButton = async () => {
@@ -129,6 +131,7 @@ interface MobileControlOverlayProps {
     deviceLocation?: DeviceMapLocation | null;
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
+    initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null;
 }
 
 type ActiveSheet = 'none' | 'region' | 'category' | 'search';
@@ -158,6 +161,7 @@ function MobileControlOverlayComponent({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    initialIntent = null,
 }: MobileControlOverlayProps) {
     const pathname = usePathname();
     const router = useRouter();
@@ -169,6 +173,8 @@ function MobileControlOverlayComponent({
     const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
+    const shouldOpenBookmarkOnMount = initialIntent === 'bookmark';
+    const shouldOpenNotificationOnMount = initialIntent === 'notification';
     const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
         Boolean(user),
         loadMobileBookmarkMenuButton
@@ -369,6 +375,23 @@ function MobileControlOverlayComponent({
         return () => window.clearTimeout(focusTimer);
     }, [activeSheet]);
 
+    useEffect(() => {
+        if (!initialIntent) return;
+
+        if (initialIntent === 'search') {
+            setActiveSheet('search');
+            return;
+        }
+
+        if (initialIntent === 'user') {
+            if (user) {
+                setIsUserMenuOpen(true);
+            } else {
+                onTopShellUserIconClick?.();
+            }
+        }
+    }, [initialIntent, onTopShellUserIconClick, user]);
+
     const closeUserMenu = useCallback(() => {
         setIsUserMenuOpen(false);
     }, []);
@@ -402,7 +425,7 @@ function MobileControlOverlayComponent({
     }, [closeUserMenu, router, signOut]);
 
     const renderAnonymousBookmarkMenuButton = () => (
-        <DropdownMenu>
+        <DropdownMenu defaultOpen={shouldOpenBookmarkOnMount}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
@@ -453,11 +476,11 @@ function MobileControlOverlayComponent({
     const renderBookmarkMenuButton = () => {
         if (!user || !DeferredMobileBookmarkMenuButton) return renderAnonymousBookmarkMenuButton();
 
-        return <DeferredMobileBookmarkMenuButton user={user} />;
+        return <DeferredMobileBookmarkMenuButton user={user} defaultOpen={shouldOpenBookmarkOnMount} />;
     };
 
     const renderAnonymousNotificationMenuButton = () => (
-        <DropdownMenu>
+        <DropdownMenu defaultOpen={shouldOpenNotificationOnMount}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
@@ -495,7 +518,7 @@ function MobileControlOverlayComponent({
     const renderNotificationMenuButton = () => {
         if (!user || !DeferredMobileNotificationMenuButton) return renderAnonymousNotificationMenuButton();
 
-        return <DeferredMobileNotificationMenuButton user={user} />;
+        return <DeferredMobileNotificationMenuButton user={user} defaultOpen={shouldOpenNotificationOnMount} />;
     };
     const renderUserMenuButton = () => {
         if (!user) {
