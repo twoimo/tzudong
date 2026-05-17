@@ -58,6 +58,8 @@ describe('home root runtime boundary', () => {
         expect(publicStaticSource).toContain('id="home-initial-shell"');
         expect(publicStaticSource).toContain('aria-label="쯔동여지도 로딩 중"');
         expect(publicStaticSource).toContain('class="loader"');
+        expect(publicStaticSource).toContain('<p class="desc">쯔동여지도 로딩 중...</p>');
+        expect(publicStaticSource).toContain('.card{padding:28px 32px}');
         expect(publicStaticSource).not.toContain('홈 지도를 불러오는 중...');
         expect(publicStaticSource).not.toContain('맛집 지도 런타임을 준비하고 있습니다');
         expect(publicStaticSource).toContain('property="og:image"');
@@ -74,6 +76,9 @@ describe('home root runtime boundary', () => {
         expect(proxySource).toContain("fetchDest === 'document'");
 
         expect(source('app/home-initial-shell.tsx')).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(source('app/home-initial-shell.tsx')).toContain('쯔동여지도 로딩 중...</p>');
+        expect(source('app/home-initial-shell.tsx')).toContain('space-y-4 px-8 py-7');
+        expect(source('app/home-initial-shell.tsx')).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(source('app/home-initial-shell.tsx')).not.toContain('홈 지도를 불러오는 중...');
         expect(source('app/home-initial-shell.tsx')).not.toContain('맛집 지도 런타임을 준비하고 있습니다');
         expect(homeClientSource).toContain('<HomeMapContainer');
@@ -84,6 +89,9 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).toContain('function HomeRuntimeLoadingSpinner');
         expect(homeRuntimeShellSource).toContain('<HomeRuntimeLoadingSpinner />');
         expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(homeRuntimeShellSource).toContain('쯔동여지도 로딩 중...</p>');
+        expect(homeRuntimeShellSource).toContain('space-y-4 px-8 py-7');
+        expect(homeRuntimeShellSource).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(homeRuntimeShellSource).not.toContain('홈 지도를 불러오는 중...');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
         expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');

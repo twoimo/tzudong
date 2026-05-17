@@ -119,6 +119,8 @@ describe('web quality performance source contracts', () => {
         expect(source('public/home-static.html')).toContain('id="home-initial-shell"');
         expect(source('public/home-static.html')).toContain('aria-label="쯔동여지도 로딩 중"');
         expect(source('public/home-static.html')).toContain('class="loader"');
+        expect(source('public/home-static.html')).toContain('<p class="desc">쯔동여지도 로딩 중...</p>');
+        expect(source('public/home-static.html')).toContain('.card{padding:28px 32px}');
         expect(source('public/home-static.html')).not.toContain('홈 지도를 불러오는 중...');
         expect(source('public/home-static.html')).toContain('property="og:image"');
         expect(source('public/home-static.html')).toContain('name="twitter:card"');
@@ -136,6 +138,9 @@ describe('web quality performance source contracts', () => {
         expect(source('proxy.ts')).toContain("fetchDest === 'document'");
         expect(source('app/home-initial-shell.tsx')).toContain('id="home-initial-shell"');
         expect(source('app/home-initial-shell.tsx')).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(source('app/home-initial-shell.tsx')).toContain('쯔동여지도 로딩 중...</p>');
+        expect(source('app/home-initial-shell.tsx')).toContain('space-y-4 px-8 py-7');
+        expect(source('app/home-initial-shell.tsx')).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(source('app/home-initial-shell.tsx')).not.toContain('홈 지도를 불러오는 중...');
         expect(source('app/home-initial-shell.tsx')).toContain('쯔동여지도 검색하기');
         expect(homeClientSource).toContain('<HomeMapContainer');
@@ -155,6 +160,9 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain('function HomeRuntimeLoadingSpinner');
         expect(homeRuntimeShellSource).toContain('<HomeRuntimeLoadingSpinner />');
         expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(homeRuntimeShellSource).toContain('쯔동여지도 로딩 중...</p>');
+        expect(homeRuntimeShellSource).toContain('space-y-4 px-8 py-7');
+        expect(homeRuntimeShellSource).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(homeRuntimeShellSource).not.toContain('홈 지도를 불러오는 중...');
         expect(homeRuntimeShellSource).toContain('MOBILE_BOTTOM_NAV_IDLE_DELAY_MS = 8000');
         expect(homeRuntimeShellSource).toContain('function MobileBottomNavLoadingShell');
