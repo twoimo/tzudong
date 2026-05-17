@@ -19,7 +19,7 @@ export function HomeInitialShell() {
                 </div>
             </div>
             <section className="relative flex h-full items-center justify-center px-6 text-center">
-                <div className="rounded-3xl border border-border bg-background/90 px-8 py-7 shadow-xl backdrop-blur-sm">
+                <div className="space-y-4 px-8 py-7">
                     <div className="relative mx-auto h-16 w-16">
                         <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
                         <div
@@ -27,7 +27,7 @@ export function HomeInitialShell() {
                             style={{ animationDuration: '1.5s' }}
                         />
                     </div>
-                    <span className="sr-only">쯔동여지도 로딩 중...</span>
+                    <p className="text-sm font-medium text-muted-foreground">쯔동여지도 로딩 중...</p>
                 </div>
             </section>
         </main>
