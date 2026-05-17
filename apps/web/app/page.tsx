@@ -70,13 +70,16 @@ try {
     activated = true;
     var shell = document.getElementById('home-initial-shell');
     var preview = document.getElementById('home-deep-link-preview');
-    if (shell) shell.hidden = true;
-    if (preview) preview.hidden = true;
     var frame = document.createElement('iframe');
     frame.id = 'home-runtime-frame';
     frame.title = '쯔동여지도 홈';
     frame.src = '/home-frame' + window.location.search + window.location.hash;
-    frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:80;background:white';
+    frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:80;background:white;visibility:hidden';
+    frame.addEventListener('load', function () {
+      if (shell) shell.hidden = true;
+      if (preview) preview.hidden = true;
+      frame.style.visibility = 'visible';
+    }, { once: true });
     document.body.appendChild(frame);
     events.forEach(function (eventName) { window.removeEventListener(eventName, activate); });
   };
