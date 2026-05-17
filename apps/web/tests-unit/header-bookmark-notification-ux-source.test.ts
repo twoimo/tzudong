@@ -59,7 +59,8 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileOverlaySource).toContain('h-9 w-9 rounded-full');
     expect(mobileOverlaySource).toContain('aria-label="북마크 전체보기 로그인 안내"');
     expect(mobileOverlaySource).toContain('loadMobileNotificationMenuButton');
-    expect(mobileOverlaySource).toContain('<DeferredMobileNotificationMenuButton user={user} />');
+    expect(mobileOverlaySource).toContain('<DeferredMobileNotificationMenuButton user={user} defaultOpen={shouldOpenNotificationOnMount} />');
+    expect(mobileOverlaySource).toContain('<DeferredMobileBookmarkMenuButton user={user} defaultOpen={shouldOpenBookmarkOnMount} />');
     expect(mobileOverlaySource).not.toContain('useNotifications()');
     expect(mobileOverlaySource).not.toContain('formatDistanceToNow(notification.createdAt');
 

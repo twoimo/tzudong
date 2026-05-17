@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback } from "react";
+import { Fragment, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck, X } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
@@ -25,12 +25,15 @@ import type { Notification } from "@/types/notification";
 
 interface MobileNotificationMenuButtonProps {
   user: User;
+  defaultOpen?: boolean;
 }
 
 export default function MobileNotificationMenuButton({
   user: _user,
+  defaultOpen = false,
 }: MobileNotificationMenuButtonProps) {
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const {
     notifications,
     unreadCount,
@@ -75,7 +78,7 @@ export default function MobileNotificationMenuButton({
   );
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"

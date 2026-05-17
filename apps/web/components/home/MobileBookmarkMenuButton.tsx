@@ -22,16 +22,17 @@ import { cn } from '@/lib/utils';
 
 interface MobileBookmarkMenuButtonProps {
     user: User;
+    defaultOpen?: boolean;
 }
 
-export default function MobileBookmarkMenuButton({ user }: MobileBookmarkMenuButtonProps) {
+export default function MobileBookmarkMenuButton({ user, defaultOpen = false }: MobileBookmarkMenuButtonProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(defaultOpen);
     const { data: bookmarksData = [], isLoading: isBookmarksLoading, isError: isBookmarksError } = useBookmarks({ enabled: isOpen });
 
     return (
-        <DropdownMenu onOpenChange={setIsOpen}>
+        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"

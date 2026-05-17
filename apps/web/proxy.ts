@@ -13,8 +13,21 @@ const PUBLIC_PAGE_PATHS = new Set([
 function isRootPageRequest(request: NextRequest) {
     const { pathname } = request.nextUrl
     const method = request.method.toUpperCase()
+    const accept = request.headers.get('accept') ?? ''
+    const fetchDest = request.headers.get('sec-fetch-dest')
+    const isAppRouterDataRequest =
+        request.nextUrl.searchParams.has('_rsc') ||
+        request.headers.get('rsc') === '1' ||
+        request.headers.has('next-router-prefetch') ||
+        request.headers.has('next-router-state-tree')
 
-    return (method === 'GET' || method === 'HEAD') && pathname === '/'
+    return (
+        (method === 'GET' || method === 'HEAD') &&
+        pathname === '/' &&
+        !isAppRouterDataRequest &&
+        accept.includes('text/html') &&
+        (!fetchDest || fetchDest === 'document')
+    )
 }
 
 function shouldSkipSession(request: NextRequest) {

@@ -2,6 +2,7 @@
 
 import './home-app-globals.css';
 import { Suspense, lazy, type ComponentType, type ReactNode, useCallback, useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers';
 import { LayoutProvider } from '@/contexts/LayoutContext';
@@ -9,7 +10,7 @@ import { AnonymousHomeAuthProvider, useAuth } from '@/contexts/AuthContextBase';
 import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
-import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
+import { AUTH_UI_REQUEST_EVENT, requestAuthUi } from '@/lib/auth-ui-events';
 import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
@@ -22,6 +23,13 @@ import {
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
 const MobileBottomNav = lazy(() => import('@/components/layout/MobileBottomNav'));
 const MOBILE_BOTTOM_NAV_IDLE_DELAY_MS = 8000;
+const MOBILE_BOTTOM_NAV_LOADING_ITEMS = [
+    { label: '홈', path: '/' },
+    { label: '리뷰', path: '/feed' },
+    { label: '도장', path: '/stamp' },
+    { label: '랭킹', path: '/leaderboard' },
+    { label: 'MY', path: '/mypage/profile' },
+] as const;
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
 type ProfileModalProps = AuthModalProps;
@@ -120,19 +128,19 @@ function DeferredUserDataPrefetcher({ enabled }: { enabled: boolean }) {
     return <UserDataPrefetcher />;
 }
 
-function MobileBottomNavLoadingShell({ onActivate }: { onActivate: () => void }) {
+function MobileBottomNavLoadingShell({ onActivate }: { onActivate: (path: string) => void }) {
     return (
         <nav
             aria-label="주요 탐색 준비 중"
             className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] shadow-lg shadow-black/5 backdrop-blur-md min-[1280px]:hidden"
         >
-            {['홈', '리뷰', '도장', '랭킹', 'MY'].map((label) => (
+            {MOBILE_BOTTOM_NAV_LOADING_ITEMS.map(({ label, path }) => (
                 <button
-                    key={label}
+                    key={path}
                     type="button"
-                    onClick={onActivate}
+                    onClick={() => onActivate(path)}
                     className="min-h-[60px] px-1 py-2.5 text-[11px] font-medium text-muted-foreground"
-                    aria-label={`${label} 메뉴 불러오기`}
+                    aria-label={`${label} 페이지로 이동`}
                 >
                     {label}
                 </button>
@@ -144,6 +152,8 @@ function MobileBottomNavLoadingShell({ onActivate }: { onActivate: () => void })
 function MobileHomeLayout({ children }: { children: ReactNode }) {
     const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
+    const pathname = usePathname();
+    const router = useRouter();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [shouldLoadMobileBottomNav, setShouldLoadMobileBottomNav] = useState(false);
@@ -208,6 +218,21 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
         };
     }, [shouldLoadMobileBottomNav]);
 
+    const handleBottomNavLoadingIntent = useCallback((path: string) => {
+        setShouldLoadMobileBottomNav(true);
+
+        if (path === '/' || path === pathname) {
+            return;
+        }
+
+        if (path === '/mypage/profile' && !user?.id) {
+            requestAuthUi({ source: 'mobile-bottom-nav-loading-shell-my', route: pathname ?? undefined, reason: 'mypage' });
+            return;
+        }
+
+        router.push(path);
+    }, [pathname, router, user?.id]);
+
     return (
         <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
             <DeferredUserDataPrefetcher enabled={Boolean(user)} />
@@ -225,7 +250,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 
             <div className={cn('min-[1600px]:hidden transition-transform duration-300')}>
                 {shouldLoadMobileBottomNav ? (
-                    <Suspense fallback={<MobileBottomNavLoadingShell onActivate={() => setShouldLoadMobileBottomNav(true)} />}>
+                    <Suspense fallback={<MobileBottomNavLoadingShell onActivate={handleBottomNavLoadingIntent} />}>
                         <MobileBottomNav
                             className="transition-transform duration-300"
                             style={{
@@ -235,7 +260,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                         />
                     </Suspense>
                 ) : (
-                    <MobileBottomNavLoadingShell onActivate={() => setShouldLoadMobileBottomNav(true)} />
+                    <MobileBottomNavLoadingShell onActivate={handleBottomNavLoadingIntent} />
                 )}
             </div>
 
