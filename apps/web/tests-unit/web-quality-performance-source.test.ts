@@ -119,9 +119,10 @@ describe('web quality performance source contracts', () => {
         expect(source('public/home-static.html')).toContain('id="home-initial-shell"');
         expect(source('public/home-static.html')).toContain('aria-label="쯔동여지도 로딩 중..."');
         expect(source('public/home-static.html')).toContain('class="loader"');
-        expect(source('public/home-static.html')).toContain('<h2 class="title">쯔동여지도 로딩 중...</h2>');
+        expect(source('public/home-static.html')).toContain('<p class="title">쯔동여지도 로딩 중...</p>');
         expect(source('public/home-static.html')).toContain('class="loader-wrap"');
         expect(source('public/home-static.html')).not.toContain('.card{padding:28px 32px}');
+        expect(source('public/home-static.html')).not.toContain('background:linear-gradient(90deg');
         expect(source('public/home-static.html')).not.toContain('홈 지도를 불러오는 중...');
         expect(source('public/home-static.html')).toContain('property="og:image"');
         expect(source('public/home-static.html')).toContain('name="twitter:card"');
@@ -140,7 +141,8 @@ describe('web quality performance source contracts', () => {
         expect(source('app/home-initial-shell.tsx')).toContain('id="home-initial-shell"');
         expect(source('app/home-initial-shell.tsx')).toContain('aria-label="쯔동여지도 로딩 중..."');
         expect(source('app/home-initial-shell.tsx')).toContain('쯔동여지도 로딩 중...');
-        expect(source('app/home-initial-shell.tsx')).toContain('text-xl font-bold text-transparent');
+        expect(source('app/home-initial-shell.tsx')).toContain('text-sm font-medium text-muted-foreground');
+        expect(source('app/home-initial-shell.tsx')).not.toContain('bg-gradient-to-r');
         expect(source('app/home-initial-shell.tsx')).toContain('space-y-6 text-center');
         expect(source('app/home-initial-shell.tsx')).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(source('app/home-initial-shell.tsx')).not.toContain('홈 지도를 불러오는 중...');
@@ -162,7 +164,8 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain('<HomeRuntimeLoadingSpinner />');
         expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 로딩 중..."');
         expect(homeRuntimeShellSource).toContain('쯔동여지도 로딩 중...');
-        expect(homeRuntimeShellSource).toContain('text-xl font-bold text-transparent');
+        expect(homeRuntimeShellSource).toContain('text-sm font-medium text-muted-foreground');
+        expect(homeRuntimeShellSource).not.toContain('bg-gradient-to-r');
         expect(homeRuntimeShellSource).toContain('space-y-6');
         expect(homeRuntimeShellSource).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(homeRuntimeShellSource).not.toContain('홈 지도를 불러오는 중...');
