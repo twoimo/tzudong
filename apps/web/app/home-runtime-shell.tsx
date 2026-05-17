@@ -334,9 +334,7 @@ function HomeRuntimeLoadingSpinner() {
                     />
                 </div>
                 <div className="space-y-3">
-                    <h2 className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-xl font-bold text-transparent">
-                        쯔동여지도 로딩 중...
-                    </h2>
+                    <p className="text-sm font-medium text-muted-foreground">쯔동여지도 로딩 중...</p>
                     <div className="flex justify-center space-x-1" aria-hidden="true">
                         <div className="h-2 w-2 animate-bounce rounded-full bg-primary" />
                         <div className="h-2 w-2 animate-bounce rounded-full bg-primary" style={{ animationDelay: '0.1s' }} />
