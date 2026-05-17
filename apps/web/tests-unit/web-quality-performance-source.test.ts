@@ -131,6 +131,12 @@ describe('web quality performance source contracts', () => {
         expect(source('public/home-static.html')).toContain("frame.src='/home-frame'+location.search+location.hash");
         expect(source('public/home-static.html')).toContain("frame.style.visibility='hidden'");
         expect(source('public/home-static.html')).toContain("frame.addEventListener('load'");
+        expect(pageSource).toContain('requestAnimationFrame || function');
+        expect(pageSource).toContain('scheduleFrame(function () { scheduleFrame(activate); });');
+        expect(pageSource).not.toContain('window.setTimeout(activate, 8000)');
+        expect(source('public/home-static.html')).toContain('window.requestAnimationFrame||function');
+        expect(source('public/home-static.html')).toContain('scheduleFrame(function(){scheduleFrame(activate);});');
+        expect(source('public/home-static.html')).not.toContain('setTimeout(activate,8000)');
         expect(source('proxy.ts')).toContain("NextResponse.rewrite(new URL('/home-static.html', request.url))");
         expect(source('proxy.ts')).toContain("'/home-frame'");
         expect(source('proxy.ts')).toContain("request.nextUrl.searchParams.has('_rsc')");

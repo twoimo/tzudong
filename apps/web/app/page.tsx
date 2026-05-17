@@ -83,7 +83,8 @@ try {
     document.body.appendChild(frame);
     events.forEach(function (eventName) { window.removeEventListener(eventName, activate); });
   };
-  window.setTimeout(activate, 8000);
+  var scheduleFrame = window.requestAnimationFrame || function (callback) { window.setTimeout(callback, 0); };
+  scheduleFrame(function () { scheduleFrame(activate); });
   events.forEach(function (eventName) {
     window.addEventListener(eventName, activate, { once: true, passive: true });
   });
