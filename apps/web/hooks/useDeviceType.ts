@@ -96,7 +96,7 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
 }
 
 export function useDeviceType(): DeviceType {
-    const [deviceType, setDeviceType] = useState<DeviceType>(calculateDeviceTypeSnapshot);
+    const [deviceType, setDeviceType] = useState<DeviceType>(getDesktopDeviceType);
 
     const calculateDeviceType = useCallback(() => {
         return calculateDeviceTypeSnapshot();

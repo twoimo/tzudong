@@ -15,6 +15,10 @@ type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
 const MOBILE_RESTAURANT_DEEP_LINK_IDLE_DELAY_MS = 8000;
 const MOBILE_RESTAURANT_DEEP_LINK_ACTIVATION_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
 
+function isEmbeddedHomeRuntime() {
+    return typeof window !== 'undefined' && window.self !== window.top;
+}
+
 type HomeClientEffectsProps = {
     activeRightPanel: PanelType;
     clearRestaurantDetailSelection: () => void;
@@ -82,7 +86,7 @@ export default function HomeClientEffects({
         };
 
         const runOnMobileRestaurantDeepLinkIntent = (callback: () => void) => {
-            if (!isMobileOrTablet) {
+            if (!isMobileOrTablet || isEmbeddedHomeRuntime()) {
                 callback();
                 return;
             }

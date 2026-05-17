@@ -33,19 +33,20 @@ const loadHomeDesktopControlPanel = async () => {
 };
 
 type MobileControlOverlayProps = HomeControlPanelProps;
+type MobileControlOverlayIntent = 'search' | 'bookmark' | 'notification' | 'user';
 
 const loadMobileControlOverlay = async () => {
     const mod = await import('@/components/home/MobileControlOverlay');
     return mod.default as ComponentType<MobileControlOverlayProps>;
 };
 
-function MobileControlOverlayLoadingShell({ onActivate }: { onActivate: () => void }) {
+function MobileControlOverlayLoadingShell({ onActivate }: { onActivate: (intent: MobileControlOverlayIntent) => void }) {
     return (
         <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)] min-[1280px]:hidden">
             <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm">
                 <button
                     type="button"
-                    onClick={onActivate}
+                    onClick={() => onActivate('search')}
                     className="flex h-10 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground"
                     aria-label="쯔동여지도 검색 열기"
                 >
@@ -53,19 +54,19 @@ function MobileControlOverlayLoadingShell({ onActivate }: { onActivate: () => vo
                 </button>
                 <button
                     type="button"
-                    onClick={onActivate}
+                    onClick={() => onActivate('bookmark')}
                     className="h-9 w-9 rounded-full border border-border bg-background"
                     aria-label="북마크 불러오기"
                 />
                 <button
                     type="button"
-                    onClick={onActivate}
+                    onClick={() => onActivate('notification')}
                     className="h-9 w-9 rounded-full border border-border bg-background"
                     aria-label="알림 불러오기"
                 />
                 <button
                     type="button"
-                    onClick={onActivate}
+                    onClick={() => onActivate('user')}
                     className="h-9 w-9 rounded-full border border-border bg-background"
                     aria-label="사용자 메뉴 불러오기"
                 />
@@ -99,6 +100,7 @@ export interface HomeControlPanelProps {
     deviceLocation?: DeviceMapLocation | null;
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
+    initialIntent?: MobileControlOverlayIntent | null;
 }
 
 function HomeControlPanelComponent({
@@ -131,6 +133,7 @@ function HomeControlPanelComponent({
         typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax
     );
     const [shouldLoadMobileOverlay, setShouldLoadMobileOverlay] = useState(false);
+    const [pendingMobileOverlayIntent, setPendingMobileOverlayIntent] = useState<MobileControlOverlayIntent | null>(null);
     const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(false);
     const DeferredMobileControlOverlay = useDeferredComponent<MobileControlOverlayProps>(
         shouldRenderMobile && shouldLoadMobileOverlay,
@@ -173,9 +176,14 @@ function HomeControlPanelComponent({
         };
     }, [shouldLoadMobileOverlay, shouldRenderMobile]);
 
+    const handleMobileOverlayIntent = (intent: MobileControlOverlayIntent) => {
+        setPendingMobileOverlayIntent(intent);
+        setShouldLoadMobileOverlay(true);
+    };
+
     if (shouldRenderMobile) {
         if (!DeferredMobileControlOverlay) {
-            return <MobileControlOverlayLoadingShell onActivate={() => setShouldLoadMobileOverlay(true)} />;
+            return <MobileControlOverlayLoadingShell onActivate={handleMobileOverlayIntent} />;
         }
 
         return (
@@ -200,6 +208,7 @@ function HomeControlPanelComponent({
                 deviceLocation={deviceLocation}
                 isDeviceLocationPending={isDeviceLocationPending}
                 isDeviceHeadingMode={isDeviceHeadingMode}
+                initialIntent={pendingMobileOverlayIntent}
             />
         );
     }
