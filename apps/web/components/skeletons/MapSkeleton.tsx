@@ -4,7 +4,7 @@ function MapSkeletonComponent() {
     return (
         <div
             role="status"
-            aria-label="쯔동여지도 로딩 중"
+            aria-label="쯔동여지도 로딩 중..."
             aria-live="polite"
             className="fixed inset-0 z-50 h-[var(--full-height,100vh)] bg-background"
         >
