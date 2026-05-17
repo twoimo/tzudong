@@ -150,6 +150,10 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
+        expect(homeRuntimeShellSource).toContain('function HomeRuntimeLoadingSpinner');
+        expect(homeRuntimeShellSource).toContain('<HomeRuntimeLoadingSpinner />');
+        expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(homeRuntimeShellSource).toContain('홈 지도를 불러오는 중...');
         expect(homeRuntimeShellSource).toContain('MOBILE_BOTTOM_NAV_IDLE_DELAY_MS = 8000');
         expect(homeRuntimeShellSource).toContain('function MobileBottomNavLoadingShell');
         expect(homeRuntimeShellSource).toContain('MOBILE_BOTTOM_NAV_LOADING_ITEMS');
@@ -774,6 +778,8 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
+        expect(homeRuntimeShellSource).toContain('function HomeRuntimeLoadingSpinner');
+        expect(homeRuntimeShellSource).toContain('<HomeRuntimeLoadingSpinner />');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
         expect(homeRuntimeShellSource).toContain('<QueryProvider>');
         expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');
