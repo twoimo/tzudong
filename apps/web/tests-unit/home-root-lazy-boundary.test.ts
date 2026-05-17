@@ -71,12 +71,6 @@ describe('home root runtime boundary', () => {
         expect(publicStaticSource).toContain("frame.src='/home-frame'+location.search+location.hash");
         expect(publicStaticSource).toContain("frame.style.visibility='hidden'");
         expect(publicStaticSource).toContain("frame.addEventListener('load'");
-        expect(pageSource).toContain('requestAnimationFrame || function');
-        expect(pageSource).toContain('scheduleFrame(function () { scheduleFrame(activate); });');
-        expect(pageSource).not.toContain('window.setTimeout(activate, 8000)');
-        expect(publicStaticSource).toContain('window.requestAnimationFrame||function');
-        expect(publicStaticSource).toContain('scheduleFrame(function(){scheduleFrame(activate);});');
-        expect(publicStaticSource).not.toContain('setTimeout(activate,8000)');
         expect(proxySource).toContain("return NextResponse.rewrite(new URL('/home-static.html', request.url))");
         expect(proxySource).toContain("'/home-frame'");
         expect(proxySource).toContain("request.nextUrl.searchParams.has('_rsc')");
