@@ -117,10 +117,11 @@ describe('web quality performance source contracts', () => {
         expect(source('app/home-frame/page.tsx')).toContain('<HomeRuntimeShell>');
         expect(source('app/home-frame/page.tsx')).toContain('<HomeClient />');
         expect(source('public/home-static.html')).toContain('id="home-initial-shell"');
-        expect(source('public/home-static.html')).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(source('public/home-static.html')).toContain('aria-label="쯔동여지도 로딩 중..."');
         expect(source('public/home-static.html')).toContain('class="loader"');
-        expect(source('public/home-static.html')).toContain('<p class="desc">쯔동여지도 로딩 중...</p>');
-        expect(source('public/home-static.html')).toContain('.card{padding:28px 32px}');
+        expect(source('public/home-static.html')).toContain('<h2 class="title">쯔동여지도 로딩 중...</h2>');
+        expect(source('public/home-static.html')).toContain('class="loader-wrap"');
+        expect(source('public/home-static.html')).not.toContain('.card{padding:28px 32px}');
         expect(source('public/home-static.html')).not.toContain('홈 지도를 불러오는 중...');
         expect(source('public/home-static.html')).toContain('property="og:image"');
         expect(source('public/home-static.html')).toContain('name="twitter:card"');
@@ -137,12 +138,12 @@ describe('web quality performance source contracts', () => {
         expect(source('proxy.ts')).toContain("accept.includes('text/html')");
         expect(source('proxy.ts')).toContain("fetchDest === 'document'");
         expect(source('app/home-initial-shell.tsx')).toContain('id="home-initial-shell"');
-        expect(source('app/home-initial-shell.tsx')).toContain('aria-label="쯔동여지도 로딩 중"');
-        expect(source('app/home-initial-shell.tsx')).toContain('쯔동여지도 로딩 중...</p>');
-        expect(source('app/home-initial-shell.tsx')).toContain('space-y-4 px-8 py-7');
+        expect(source('app/home-initial-shell.tsx')).toContain('aria-label="쯔동여지도 로딩 중..."');
+        expect(source('app/home-initial-shell.tsx')).toContain('쯔동여지도 로딩 중...');
+        expect(source('app/home-initial-shell.tsx')).toContain('text-xl font-bold text-transparent');
+        expect(source('app/home-initial-shell.tsx')).toContain('space-y-6 text-center');
         expect(source('app/home-initial-shell.tsx')).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(source('app/home-initial-shell.tsx')).not.toContain('홈 지도를 불러오는 중...');
-        expect(source('app/home-initial-shell.tsx')).toContain('쯔동여지도 검색하기');
         expect(homeClientSource).toContain('<HomeMapContainer');
         expect(source('components/home/home-map-container.tsx')).not.toContain("import { useRestaurantWithMergeContext }");
         expect(source('components/home/home-map-container.tsx')).toContain('HydratedDetailRestaurant');
@@ -159,9 +160,10 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimeLoadingSpinner');
         expect(homeRuntimeShellSource).toContain('<HomeRuntimeLoadingSpinner />');
-        expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 로딩 중"');
-        expect(homeRuntimeShellSource).toContain('쯔동여지도 로딩 중...</p>');
-        expect(homeRuntimeShellSource).toContain('space-y-4 px-8 py-7');
+        expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 로딩 중..."');
+        expect(homeRuntimeShellSource).toContain('쯔동여지도 로딩 중...');
+        expect(homeRuntimeShellSource).toContain('text-xl font-bold text-transparent');
+        expect(homeRuntimeShellSource).toContain('space-y-6');
         expect(homeRuntimeShellSource).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         expect(homeRuntimeShellSource).not.toContain('홈 지도를 불러오는 중...');
         expect(homeRuntimeShellSource).toContain('MOBILE_BOTTOM_NAV_IDLE_DELAY_MS = 8000');
@@ -170,7 +172,7 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain('handleBottomNavLoadingIntent');
         expect(homeRuntimeShellSource).toContain("requestAuthUi({ source: 'mobile-bottom-nav-loading-shell-my'");
         expect(homeRuntimeShellSource).toContain('router.push(path)');
-        expect(homeRuntimeShellSource).toContain('function MobileTopControlPendingShell');
+        expect(homeRuntimeShellSource).not.toContain('function MobileTopControlPendingShell');
         expect(homeRuntimeShellSource).toContain('shouldLoadMobileBottomNav ? (');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
         expect(homeRuntimeShellSource).toContain('<QueryProvider>');
@@ -605,7 +607,7 @@ describe('web quality performance source contracts', () => {
 
         expect(globalLoaderSource).toContain('h-[var(--full-height,100vh)]');
         expect(mapSkeletonSource).toContain('h-[var(--full-height,100vh)]');
-        expect(mapSkeletonSource).toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(mapSkeletonSource).toContain('aria-label="쯔동여지도 로딩 중..."');
         expect(mapSkeletonSource).toContain('sr-only');
         expect(mapSkeletonSource).not.toContain('GlobalLoader');
         expect(mapSkeletonSource).not.toContain('맛있는 발견을 준비하고 있습니다');
