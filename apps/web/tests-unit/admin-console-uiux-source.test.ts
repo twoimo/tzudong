@@ -55,11 +55,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
   test('uses one active-announcement read model for header and banner surfaces', () => {
     const bannerHookSource = source('hooks/use-banner-announcements.tsx');
 
-    expect(bannerHookSource).toContain("useActiveAnnouncements as useBaseActiveAnnouncements");
-    expect(bannerHookSource).toContain('return useBaseActiveAnnouncements(enabled)');
-    expect(bannerHookSource).not.toContain('fetchSupabaseRows');
-    expect(bannerHookSource).not.toContain('ANNOUNCEMENT_SELECT');
-    expect(bannerHookSource).not.toContain('AnnouncementRow');
+    expect(bannerHookSource).toContain('export function useActiveAnnouncements(enabled = true)');
+    expect(bannerHookSource).toContain('fetchSupabaseRows');
+    expect(bannerHookSource).toContain('ANNOUNCEMENT_SELECT');
+    expect(bannerHookSource).toContain('AnnouncementRow');
+    expect(bannerHookSource).toContain('const activeAnnouncementsQuery = useActiveAnnouncements(enabled);');
+    expect(bannerHookSource).not.toContain('@/hooks/use-announcements');
   });
 
   test('keeps the restaurant evaluation detail panel operator-focused and uncluttered', () => {
@@ -196,7 +197,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(middlewareSource).toContain('isAdminPageRequest');
     expect(middlewareSource).toContain("pathname === '/admin' || pathname.startsWith('/admin/')");
     expect(middlewareSource).toContain("eq('role', 'admin')");
-    expect(middlewareSource).toContain("NextResponse.redirect(new URL('/', request.url))");
+    expect(middlewareSource).toContain("new URL('/auth/required', request.url)");
+    expect(middlewareSource).toContain("redirectUrl.searchParams.set('reason', 'admin')");
   });
 
   test('keeps unified admin console as the single operator shell', () => {
@@ -204,7 +206,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const adminPageSource = source('app/admin/page.tsx');
 
     expect(adminPageSource).toContain('<AdminConsoleOverview />');
-    for (const moduleId of ['"restaurants"', '"submissions"', '"reviews"', '"banners"', '"announcements"', '"users"', '"insights"', '"audit"', '"llm"']) {
+    for (const moduleId of ['"restaurants"', '"submissions"', '"reviews"', '"storyboard"', '"banners"', '"announcements"', '"users"', '"insights"', '"audit"', '"llm"']) {
       expect(consoleSource).toContain(moduleId);
     }
     expect(consoleSource).toContain('sidebarSections');
@@ -229,8 +231,28 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
 
     expect(consoleSource.indexOf('id: "announcements"')).toBeLessThan(consoleSource.indexOf('id: "banners"'));
-    expect(consoleSource).toContain('["announcements", "banners", "users", "insights", "audit"]');
-    expect(source('app/api/admin/preferences/sidebar-order/route.ts')).toContain("운영: ['announcements', 'banners', 'users', 'insights', 'audit']");
+    expect(consoleSource).toContain('["announcements", "storyboard", "banners", "users", "insights", "audit"]');
+    expect(source('app/api/admin/preferences/sidebar-order/route.ts')).toContain("운영: ['announcements', 'storyboard', 'banners', 'users', 'insights', 'audit']");
+  });
+
+
+  test('adds storyboard generation as an operator-controlled admin module', () => {
+    const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
+    const storyboardSource = source('components/admin/storyboard/AdminStoryboardGenerator.tsx');
+    const routeSource = source('app/api/admin/storyboard/route.ts');
+    const generatorSource = source('lib/admin/storyboard/generator.ts');
+
+    expect(consoleSource).toContain('id: "storyboard"');
+    expect(consoleSource).toContain('스토리보드 생성');
+    expect(consoleSource).toContain('AdminStoryboardGenerator');
+    expect(storyboardSource).toContain('/api/admin/storyboard');
+    expect(storyboardSource).toContain('회의용 Markdown 복사');
+    expect(storyboardSource).toContain('위원회 AHP 평가');
+    expect(routeSource).toContain('await requireAdmin()');
+    expect(routeSource.indexOf('await requireAdmin()')).toBeLessThan(routeSource.indexOf('const result = generateLocalStoryboard'));
+    expect(generatorSource).toContain('backend/storyboard-agent');
+    expect(generatorSource).toContain('most_replayed_markers');
+    expect(generatorSource).toContain('TZUYANG_HEATMAP_DIR');
   });
 
   test('lets admins reorder the sidebar without polluting the two-pane map overview', () => {

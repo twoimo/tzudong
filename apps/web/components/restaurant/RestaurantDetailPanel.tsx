@@ -81,6 +81,7 @@ interface RestaurantDetailPanelProps {
 
 const RESTAURANT_DETAIL_SWIPE_HINT_KEY = 'restaurant-detail-swipe-hint-seen-v1';
 const RESTAURANT_DETAIL_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
+const RESTAURANT_DETAIL_REVIEW_IDLE_DELAY_MS = 8000;
 
 interface Review {
     id: string;
@@ -129,6 +130,7 @@ export function RestaurantDetailPanel({
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
+    const [shouldLoadReviewData, setShouldLoadReviewData] = useState(false);
     const [editingReview, setEditingReview] = useState<{
         id: string;
         restaurantId: string;
@@ -140,13 +142,14 @@ export function RestaurantDetailPanel({
         adminNote: string | null;
     } | null>(null);
     const [showSwipeHint, setShowSwipeHint] = useState(false);
+    const restaurantId = restaurant?.id ?? null;
 
     const handleBookmarkRequireAuth = useCallback(() => {
         setIsAuthModalOpen(true);
     }, []);
 
     // [실시간] 좋아요 실시간 반영
-    useReviewLikesRealtime();
+    useReviewLikesRealtime(shouldLoadReviewData);
 
     // [카테고리 처리] categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -166,6 +169,17 @@ export function RestaurantDetailPanel({
         () => buildRestaurantDetailMediaCopy('review', tzuyangReviews.length, isReviewExpanded),
         [isReviewExpanded, tzuyangReviews.length],
     );
+
+    useEffect(() => {
+        setShouldLoadReviewData(false);
+        if (!restaurantId) return;
+
+        const timer = window.setTimeout(() => {
+            setShouldLoadReviewData(true);
+        }, RESTAURANT_DETAIL_REVIEW_IDLE_DELAY_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [restaurantId]);
 
     // [최적 레코드 선택] 가장 긴 이름 -> 가장 긴 지번 주소 순으로 우선순위
     const uniqueData = useMemo(() => {
@@ -316,7 +330,7 @@ export function RestaurantDetailPanel({
         },
         initialPageParam: 0,
         getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
-        enabled: !!restaurant?.id,
+        enabled: !!restaurant?.id && shouldLoadReviewData,
         refetchOnMount: 'always',
         staleTime: 0,
         gcTime: 30 * 1000,
@@ -372,6 +386,7 @@ export function RestaurantDetailPanel({
 
     // [핸들러] 전체 리뷰 보기
     const handleViewAllReviews = useCallback(() => {
+        setShouldLoadReviewData(true);
         setViewMode('reviews');
     }, []);
 
@@ -1221,7 +1236,11 @@ export function RestaurantDetailPanel({
                                         )}
                                     </div>
 
-                                    {reviewsLoading ? (
+                                    {!shouldLoadReviewData && totalReviewCount > 0 ? (
+                                        <div className="text-sm text-muted-foreground text-center py-4">
+                                            리뷰를 잠시 후 불러옵니다
+                                        </div>
+                                    ) : reviewsLoading ? (
                                         <div className="text-sm text-muted-foreground text-center py-4">
                                             리뷰를 불러오는 중...
                                         </div>
@@ -1258,7 +1277,11 @@ export function RestaurantDetailPanel({
                         ) : viewMode === 'reviews' ? (
                             /* Reviews View - 모든 리뷰 표시 (ReviewCard 사용) */
                             <div className="space-y-4">
-                                {reviewsLoading ? (
+                                {!shouldLoadReviewData ? (
+                                    <div className="text-sm text-muted-foreground text-center py-4">
+                                        리뷰를 불러오는 중...
+                                    </div>
+                                ) : reviewsLoading ? (
                                     <div className="text-sm text-muted-foreground text-center py-4">
                                         리뷰를 불러오는 중...
                                     </div>

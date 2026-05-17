@@ -1,10 +1,8 @@
 import Link from "next/link";
 import NextImage from "next/image";
-import { RankingWidget } from "./RankingWidget";
 import { PanelLeft, Bell, Maximize, User, LogOut, X, CheckCheck, Megaphone, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Fragment, useState, useEffect, useCallback, memo, useMemo, useRef, Suspense } from "react";
-import dynamic from "next/dynamic";
+import { Fragment, useState, useEffect, useCallback, memo, useMemo, useRef, Suspense, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import {
   DropdownMenu,
@@ -29,6 +27,7 @@ import type { Notification } from "@/types/notification";
 import { useHydration } from "@/hooks/useHydration";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useActiveAnnouncements } from "@/hooks/use-banner-announcements";
+import { useDeferredComponent } from "@/hooks/use-deferred-component";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
 
 interface HeaderProps {
@@ -56,10 +55,17 @@ function HeaderActionSkeleton({ label, className }: { label: string; className?:
   );
 }
 
-const HeaderBookmarkMenuButton = dynamic(() => import("@/components/layout/HeaderBookmarkMenuButton"), {
-  ssr: false,
-  loading: () => <HeaderActionSkeleton label="북마크 로딩 중" />,
-});
+type HeaderDeferredComponentProps = Record<string, never>;
+
+const loadHeaderBookmarkMenuButton = async () => {
+  const mod = await import("@/components/layout/HeaderBookmarkMenuButton");
+  return mod.default as ComponentType<HeaderDeferredComponentProps>;
+};
+
+const loadRankingWidget = async () => {
+  const mod = await import("./RankingWidget");
+  return mod.RankingWidget as ComponentType<HeaderDeferredComponentProps>;
+};
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
@@ -103,6 +109,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const shouldShowAccountSkeleton = shouldShowAuthSkeleton;
   const shouldShowBannerSkeleton = (!isHydrated || isBannerAnnouncementsLoading) && bannerAnnouncements.length === 0;
   const isMobileBannerOnlyHeader = isMobileOrTablet;
+  const shouldLoadAuthenticatedHeaderWidgets = shouldShowHeaderIcons && !isMobileBannerOnlyHeader;
+  const RankingWidget = useDeferredComponent<HeaderDeferredComponentProps>(shouldLoadAuthenticatedHeaderWidgets, loadRankingWidget);
+  const HeaderBookmarkMenuButton = useDeferredComponent<HeaderDeferredComponentProps>(shouldShowHeaderIcons, loadHeaderBookmarkMenuButton);
 
   const handleInsightMenuClick = useCallback(() => {
     if (isLoggedIn) {
@@ -372,7 +381,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           "hidden md:flex",
           shouldShowHeaderIcons ? (isHydrated ? "opacity-100" : "opacity-0 pointer-events-none") : "hidden"
         )}>
-          <RankingWidget />
+          {RankingWidget ? <RankingWidget /> : null}
         </div>
 
 
@@ -516,7 +525,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         )}
         {shouldShowHeaderIcons && (
           <Suspense fallback={<HeaderActionSkeleton label="북마크 로딩 중" />}>
-            <HeaderBookmarkMenuButton />
+            {HeaderBookmarkMenuButton ? <HeaderBookmarkMenuButton /> : <HeaderActionSkeleton label="북마크 로딩 중" />}
           </Suspense>
         )}
 

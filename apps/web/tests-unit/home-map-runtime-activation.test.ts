@@ -22,9 +22,9 @@ describe('home map runtime activation plan', () => {
         expect(plan.events).toContain('keydown');
     });
 
-    test('activates immediately for deep links and overlay panel routes', () => {
-        expect(shouldActivateHomeMapImmediately({ search: '?r=restaurant-1' })).toBe(true);
-        expect(shouldActivateHomeMapImmediately({ search: '?restaurant=restaurant-1' })).toBe(true);
+    test('keeps restaurant detail links behind the map interaction gate while preserving direct overlays', () => {
+        expect(shouldActivateHomeMapImmediately({ search: '?r=restaurant-1' })).toBe(false);
+        expect(shouldActivateHomeMapImmediately({ search: '?restaurant=restaurant-1' })).toBe(false);
         expect(shouldActivateHomeMapImmediately({ search: '?panel=announcement' })).toBe(true);
         expect(shouldActivateHomeMapImmediately({ search: '', hash: '#map' })).toBe(true);
     });

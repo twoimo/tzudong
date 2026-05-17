@@ -37,7 +37,7 @@ export default function MobileBookmarkMenuButton({ user }: MobileBookmarkMenuBut
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        'relative h-11 w-11 rounded-full border border-border bg-background',
+                        'relative h-9 w-9 rounded-full border border-border bg-background',
                         'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
                     )}
                     aria-label={bookmarksData.length > 0 ? `북마크, 저장한 맛집 ${bookmarksData.length}개` : "북마크"}

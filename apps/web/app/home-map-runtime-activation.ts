@@ -21,8 +21,6 @@ type HomeMapActivationPlan = {
 };
 
 const IMMEDIATE_SEARCH_PARAMS = new Set([
-    'r',
-    'restaurant',
     'panel',
     'announcementId',
     'reviewId',
