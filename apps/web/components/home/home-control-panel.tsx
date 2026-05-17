@@ -6,9 +6,9 @@ import type { FilterState } from '@/components/filters/filter-state';
 import { BREAKPOINTS, useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
-import MobileControlOverlay from '@/components/home/MobileControlOverlay';
-import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
+
+const MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS = 8000;
 
 type HomeDesktopControlPanelProps = {
     mapMode: 'domestic' | 'overseas';
@@ -16,7 +16,6 @@ type HomeDesktopControlPanelProps = {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
-    countryCounts: Record<string, number>;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -33,7 +32,49 @@ const loadHomeDesktopControlPanel = async () => {
     return mod.default as ComponentType<HomeDesktopControlPanelProps>;
 };
 
-interface HomeControlPanelProps {
+type MobileControlOverlayProps = HomeControlPanelProps;
+
+const loadMobileControlOverlay = async () => {
+    const mod = await import('@/components/home/MobileControlOverlay');
+    return mod.default as ComponentType<MobileControlOverlayProps>;
+};
+
+function MobileControlOverlayLoadingShell({ onActivate }: { onActivate: () => void }) {
+    return (
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)] min-[1280px]:hidden">
+            <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm">
+                <button
+                    type="button"
+                    onClick={onActivate}
+                    className="flex h-10 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground"
+                    aria-label="쯔동여지도 검색 열기"
+                >
+                    쯔동여지도 검색하기
+                </button>
+                <button
+                    type="button"
+                    onClick={onActivate}
+                    className="h-9 w-9 rounded-full border border-border bg-background"
+                    aria-label="북마크 불러오기"
+                />
+                <button
+                    type="button"
+                    onClick={onActivate}
+                    className="h-9 w-9 rounded-full border border-border bg-background"
+                    aria-label="알림 불러오기"
+                />
+                <button
+                    type="button"
+                    onClick={onActivate}
+                    className="h-9 w-9 rounded-full border border-border bg-background"
+                    aria-label="사용자 메뉴 불러오기"
+                />
+            </div>
+        </div>
+    );
+}
+
+export interface HomeControlPanelProps {
     mapMode: 'domestic' | 'overseas';
     selectedRegion: Region | null;
     selectedCountry: string | null;
@@ -86,11 +127,15 @@ function HomeControlPanelComponent({
     isDeviceHeadingMode = false,
 }: HomeControlPanelProps) {
     const { isMobileOrTablet } = useDeviceType();
-    const countryCounts = useOverseasCountryCounts(mapMode);
     const shouldRenderMobile = isMobileOrTablet || (
         typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax
     );
+    const [shouldLoadMobileOverlay, setShouldLoadMobileOverlay] = useState(false);
     const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(false);
+    const DeferredMobileControlOverlay = useDeferredComponent<MobileControlOverlayProps>(
+        shouldRenderMobile && shouldLoadMobileOverlay,
+        loadMobileControlOverlay
+    );
     const DeferredHomeDesktopControlPanel = useDeferredComponent<HomeDesktopControlPanelProps>(
         shouldLoadDesktopPanel,
         loadHomeDesktopControlPanel
@@ -109,15 +154,37 @@ function HomeControlPanelComponent({
         };
     }, []);
 
+    useEffect(() => {
+        if (!shouldRenderMobile || shouldLoadMobileOverlay) return;
+
+        const requestMobileOverlay = () => setShouldLoadMobileOverlay(true);
+        const idleTimer = window.setTimeout(requestMobileOverlay, MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS);
+        const eventOptions = { passive: true, once: true } as AddEventListenerOptions;
+
+        window.addEventListener('pointerdown', requestMobileOverlay, eventOptions);
+        window.addEventListener('keydown', requestMobileOverlay, { once: true });
+        window.addEventListener('touchstart', requestMobileOverlay, eventOptions);
+
+        return () => {
+            window.clearTimeout(idleTimer);
+            window.removeEventListener('pointerdown', requestMobileOverlay);
+            window.removeEventListener('keydown', requestMobileOverlay);
+            window.removeEventListener('touchstart', requestMobileOverlay);
+        };
+    }, [shouldLoadMobileOverlay, shouldRenderMobile]);
+
     if (shouldRenderMobile) {
+        if (!DeferredMobileControlOverlay) {
+            return <MobileControlOverlayLoadingShell onActivate={() => setShouldLoadMobileOverlay(true)} />;
+        }
+
         return (
-            <MobileControlOverlay
+            <DeferredMobileControlOverlay
                 mapMode={mapMode}
                 selectedRegion={selectedRegion}
                 selectedCountry={selectedCountry}
                 selectedCategories={selectedCategories}
                 filters={filters}
-                countryCounts={countryCounts}
                 onRegionChange={onRegionChange}
                 onCountryChange={onCountryChange}
                 onCategoryChange={onCategoryChange}
@@ -148,7 +215,6 @@ function HomeControlPanelComponent({
             selectedCountry={selectedCountry}
             selectedCategories={selectedCategories}
             filters={filters}
-            countryCounts={countryCounts}
             onRegionChange={onRegionChange}
             onCountryChange={onCountryChange}
             onCategoryChange={onCategoryChange}

@@ -60,18 +60,18 @@ export default function RootLayout({
             suppressHydrationWarning
         >
             <head>
-                {/* [PERF] 네트워크 최적화: 핵심 외부 도메인 Preconnect (TCP+TLS 핸드쉐이크 선행) */}
+                {/* [PERF] 네트워크 최적화: 초기 렌더에 필요한 도메인만 Preconnect (TCP+TLS 핸드쉐이크 선행) */}
                 {/* Supabase API - 데이터 페칭 핵심 */}
                 {shouldPreconnectSupabase ? (
                     <link rel="preconnect" href={supabasePreconnectUrl} crossOrigin="anonymous" />
                 ) : null}
-                {/* 네이버 지도 - 메인 기능 */}
+                {/* 네이버 지도 - SDK 스크립트 호스트만 선연결하고, 지연 로드되는 보조 지도 도메인은 DNS 조회만 선행 */}
                 <link rel="preconnect" href="https://oapi.map.naver.com" crossOrigin="anonymous" />
-                <link rel="preconnect" href="https://openapi.map.naver.com" crossOrigin="anonymous" />
-                <link rel="preconnect" href="https://ssl.pstatic.net" crossOrigin="anonymous" />
                 {/* YouTube 썸네일 - LCP 개선 */}
-                <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
+                <link rel="dns-prefetch" href="https://img.youtube.com" />
                 {/* DNS Prefetch - 보조 도메인 (preconnect보다 가볍고 빠름) */}
+                <link rel="dns-prefetch" href="https://openapi.map.naver.com" />
+                <link rel="dns-prefetch" href="https://ssl.pstatic.net" />
                 <link rel="dns-prefetch" href="https://nrbe.pstatic.net" />
                 <link rel="dns-prefetch" href="//nrbe.map.naver.net" />
                 <link rel="dns-prefetch" href="//static.naver.net" />
@@ -80,7 +80,6 @@ export default function RootLayout({
             </head>
             <body suppressHydrationWarning>
                 <script src="/scripts/viewport-height-fix.js" defer />
-
                 {children}
                 <RootSpeedInsights />
             </body>

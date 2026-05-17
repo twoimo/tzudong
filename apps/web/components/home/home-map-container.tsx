@@ -19,7 +19,6 @@ import {
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
-import { useRestaurantWithMergeContext } from '@/hooks/use-restaurants';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -29,6 +28,7 @@ const RestaurantDetailPanel = lazy(() =>
         default: mod.RestaurantDetailPanel,
     }))
 );
+const HydratedDetailRestaurant = lazy(() => import("@/components/home/HydratedDetailRestaurant"));
 
 interface HomeMapContainerProps {
     mapMode: 'domestic' | 'overseas';
@@ -173,8 +173,6 @@ function HomeMapContainerComponent({
     deviceLocation = null,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
-    const { data: hydratedDetailPanelRestaurant } = useRestaurantWithMergeContext(panelRestaurant);
-    const detailPanelRestaurant = hydratedDetailPanelRestaurant ?? panelRestaurant ?? null;
 
     // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
     const viewportHeightRef = useRef(typeof window !== 'undefined'
@@ -1178,6 +1176,7 @@ function HomeMapContainerComponent({
     }, [isMapFullscreen, isPanelOpen, isDesktop, sheetHeight]);
     const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
 
+
     return (
         <div className="relative w-full h-full">
             {mapMode === 'domestic' ? (
@@ -1228,8 +1227,11 @@ function HomeMapContainerComponent({
             )}
 
             {/* [CSR] 맛집 상세 패널 - 데스크탑: 사이드 패널, 모바일/태블릿: 바텀시트 */}
-            {detailPanelRestaurant && (
-                <>
+            {panelRestaurant && (
+                <Suspense fallback={null}>
+                    <HydratedDetailRestaurant restaurant={panelRestaurant}>
+                        {(detailPanelRestaurant) => (
+                            <>
                     {/* 데스크탑 오버레이 패널 */}
                     {isDesktop && (
                         <>
@@ -1355,7 +1357,10 @@ function HomeMapContainerComponent({
                             </div>
                         </div>
                     )}
-                </>
+                            </>
+                        )}
+                    </HydratedDetailRestaurant>
+                </Suspense>
             )}
         </div>
     );

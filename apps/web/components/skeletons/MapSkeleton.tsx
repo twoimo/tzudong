@@ -1,13 +1,16 @@
 import { memo } from "react";
-import { GlobalLoader } from "@/components/ui/global-loader";
 
 function MapSkeletonComponent() {
     return (
-        <GlobalLoader
-            message="쯔동여지도 로딩 중..."
-            subMessage="맛있는 발견을 준비하고 있습니다"
-            fullScreen
-        />
+        <div
+            role="status"
+            aria-label="쯔동여지도 로딩 중"
+            aria-live="polite"
+            className="fixed inset-0 z-50 h-[var(--full-height,100vh)] bg-background"
+        >
+            <div className="h-full w-full animate-pulse bg-muted/40" aria-hidden="true" />
+            <span className="sr-only">쯔동여지도 로딩 중...</span>
+        </div>
     );
 }
 
