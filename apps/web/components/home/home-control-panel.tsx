@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useState, type ComponentType } from 'react';
+import { memo, useCallback, useEffect, useState, type ComponentType } from 'react';
 import type { Region, Restaurant } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import { BREAKPOINTS, useDeviceType } from '@/hooks/useDeviceType';
@@ -40,10 +40,22 @@ const loadMobileControlOverlay = async () => {
     return mod.default as ComponentType<MobileControlOverlayProps>;
 };
 
+function DesktopControlPanelLoadingShell() {
+    return (
+        <div className="pointer-events-none fixed bottom-4 left-1/2 z-[50] hidden -translate-x-1/2 min-[1280px]:block">
+            <div className="flex max-w-[calc(100vw-12rem)] flex-wrap items-center justify-center gap-3 rounded-lg border border-border bg-background/95 p-3 shadow-lg backdrop-blur-sm">
+                <div className="h-10 w-[clamp(9.5rem,18vw,12.5rem)] rounded-md border border-input bg-background" aria-hidden="true" />
+                <div className="h-10 w-[clamp(9.5rem,18vw,12.5rem)] rounded-md border border-input bg-background" aria-hidden="true" />
+                <div className="h-10 w-[clamp(14rem,24vw,20rem)] rounded-md border border-input bg-background" aria-hidden="true" />
+            </div>
+        </div>
+    );
+}
+
 function MobileControlOverlayLoadingShell({ onActivate }: { onActivate: (intent: MobileControlOverlayIntent) => void }) {
     return (
         <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)] min-[1280px]:hidden">
-            <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm">
+            <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-background/95 px-2 shadow-lg shadow-black/5 backdrop-blur-sm">
                 <button
                     type="button"
                     onClick={() => onActivate('search')}
@@ -55,19 +67,19 @@ function MobileControlOverlayLoadingShell({ onActivate }: { onActivate: (intent:
                 <button
                     type="button"
                     onClick={() => onActivate('bookmark')}
-                    className="h-9 w-9 rounded-full border border-border bg-background"
+                    className="min-h-11 min-w-11 rounded-full bg-muted/45"
                     aria-label="북마크 불러오기"
                 />
                 <button
                     type="button"
                     onClick={() => onActivate('notification')}
-                    className="h-9 w-9 rounded-full border border-border bg-background"
+                    className="min-h-11 min-w-11 rounded-full bg-muted/45"
                     aria-label="알림 불러오기"
                 />
                 <button
                     type="button"
                     onClick={() => onActivate('user')}
-                    className="h-9 w-9 rounded-full border border-border bg-background"
+                    className="min-h-11 min-w-11 rounded-full bg-muted/45"
                     aria-label="사용자 메뉴 불러오기"
                 />
             </div>
@@ -134,7 +146,9 @@ function HomeControlPanelComponent({
     );
     const [shouldLoadMobileOverlay, setShouldLoadMobileOverlay] = useState(false);
     const [pendingMobileOverlayIntent, setPendingMobileOverlayIntent] = useState<MobileControlOverlayIntent | null>(null);
-    const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(false);
+    const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(() => (
+        typeof window !== 'undefined' ? window.innerWidth > BREAKPOINTS.tabletMax : false
+    ));
     const DeferredMobileControlOverlay = useDeferredComponent<MobileControlOverlayProps>(
         shouldRenderMobile && shouldLoadMobileOverlay,
         loadMobileControlOverlay
@@ -145,8 +159,14 @@ function HomeControlPanelComponent({
     );
 
     useEffect(() => {
+        let resizeRafId = 0;
         const updateShouldLoadDesktopPanel = () => {
-            setShouldLoadDesktopPanel(window.innerWidth > BREAKPOINTS.tabletMax);
+            if (resizeRafId) return;
+
+            resizeRafId = window.requestAnimationFrame(() => {
+                resizeRafId = 0;
+                setShouldLoadDesktopPanel(window.innerWidth > BREAKPOINTS.tabletMax);
+            });
         };
 
         updateShouldLoadDesktopPanel();
@@ -154,6 +174,7 @@ function HomeControlPanelComponent({
 
         return () => {
             window.removeEventListener('resize', updateShouldLoadDesktopPanel);
+            if (resizeRafId) window.cancelAnimationFrame(resizeRafId);
         };
     }, []);
 
@@ -161,7 +182,14 @@ function HomeControlPanelComponent({
         if (!shouldRenderMobile || shouldLoadMobileOverlay) return;
 
         const requestMobileOverlay = () => setShouldLoadMobileOverlay(true);
-        const idleTimer = window.setTimeout(requestMobileOverlay, MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS);
+        const idleWindow = window as Window & {
+            requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+            cancelIdleCallback?: (id: number) => void;
+        };
+        const idleCallbackId = idleWindow.requestIdleCallback
+            ? idleWindow.requestIdleCallback(requestMobileOverlay, { timeout: MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS })
+            : null;
+        const idleTimer = idleCallbackId === null ? window.setTimeout(requestMobileOverlay, MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS) : null;
         const eventOptions = { passive: true, once: true } as AddEventListenerOptions;
 
         window.addEventListener('pointerdown', requestMobileOverlay, eventOptions);
@@ -169,17 +197,18 @@ function HomeControlPanelComponent({
         window.addEventListener('touchstart', requestMobileOverlay, eventOptions);
 
         return () => {
-            window.clearTimeout(idleTimer);
+            if (idleCallbackId !== null) idleWindow.cancelIdleCallback?.(idleCallbackId);
+            if (idleTimer !== null) window.clearTimeout(idleTimer);
             window.removeEventListener('pointerdown', requestMobileOverlay);
             window.removeEventListener('keydown', requestMobileOverlay);
             window.removeEventListener('touchstart', requestMobileOverlay);
         };
     }, [shouldLoadMobileOverlay, shouldRenderMobile]);
 
-    const handleMobileOverlayIntent = (intent: MobileControlOverlayIntent) => {
+    const handleMobileOverlayIntent = useCallback((intent: MobileControlOverlayIntent) => {
         setPendingMobileOverlayIntent(intent);
         setShouldLoadMobileOverlay(true);
-    };
+    }, []);
 
     if (shouldRenderMobile) {
         if (!DeferredMobileControlOverlay) {
@@ -214,7 +243,7 @@ function HomeControlPanelComponent({
     }
 
     if (!DeferredHomeDesktopControlPanel) {
-        return null;
+        return <DesktopControlPanelLoadingShell />;
     }
 
     return (

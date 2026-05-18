@@ -17,18 +17,45 @@ import {
 
 function HomeControlPanelLoadingShell() {
     return (
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)] min-[1280px]:hidden">
-            <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm">
-                <div className="flex h-10 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground">
-                    쯔동여지도 검색하기
+        <>
+            <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-[calc(env(safe-area-inset-top)+10px)] min-[1280px]:hidden">
+                <div className="pointer-events-auto flex h-12 items-center gap-2 rounded-full bg-background/95 px-2 shadow-lg shadow-black/5 backdrop-blur-sm">
+                    <div className="flex h-10 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground">
+                        쯔동여지도 검색하기
+                    </div>
+                    <div className="min-h-11 min-w-11 rounded-full bg-muted/45" aria-hidden="true" />
+                    <div className="min-h-11 min-w-11 rounded-full bg-muted/45" aria-hidden="true" />
+                    <div className="min-h-11 min-w-11 rounded-full bg-muted/45" aria-hidden="true" />
                 </div>
-                <div className="h-9 w-9 rounded-full border border-border bg-background" aria-hidden="true" />
-                <div className="h-9 w-9 rounded-full border border-border bg-background" aria-hidden="true" />
-                <div className="h-9 w-9 rounded-full border border-border bg-background" aria-hidden="true" />
             </div>
-        </div>
+            <div className="pointer-events-none fixed bottom-4 left-1/2 z-[50] hidden -translate-x-1/2 min-[1280px]:block">
+                <div className="flex max-w-[calc(100vw-12rem)] flex-wrap items-center justify-center gap-3 rounded-lg bg-background/95 p-3 shadow-lg shadow-black/5 backdrop-blur-sm">
+                    <div className="h-10 w-[clamp(9.5rem,18vw,12.5rem)] rounded-md bg-muted/45" aria-hidden="true" />
+                    <div className="h-10 w-[clamp(9.5rem,18vw,12.5rem)] rounded-md bg-muted/45" aria-hidden="true" />
+                    <div className="h-10 w-[clamp(14rem,24vw,20rem)] rounded-md bg-muted/45" aria-hidden="true" />
+                </div>
+            </div>
+        </>
     );
 }
+
+function HomeMapContainerLoadingShell() {
+    return (
+        <section
+            role="status"
+            aria-label="홈 지도 화면 준비 중"
+            aria-live="polite"
+            className="relative flex-1 overflow-hidden bg-background"
+        >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(239,68,68,0.08),transparent_32%),linear-gradient(0deg,rgba(248,250,252,0.96),rgba(255,255,255,0.96))]" aria-hidden="true" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.16)_1px,transparent_1px)] bg-[size:44px_44px]" aria-hidden="true" />
+            <p className="absolute bottom-[calc(env(safe-area-inset-bottom)+88px)] left-1/2 w-[min(calc(100vw_-_32px),320px)] -translate-x-1/2 rounded-2xl bg-background/90 px-4 py-3 text-sm text-muted-foreground shadow-lg shadow-black/10 backdrop-blur-sm min-[1280px]:bottom-8 min-[1280px]:left-8 min-[1280px]:translate-x-0">
+                지도를 먼저 그리고 맛집 데이터를 순서대로 연결합니다
+            </p>
+        </section>
+    );
+}
+
 
 // [OPTIMIZATION] 동적 임포트
 const HomeControlPanel = dynamic(
@@ -43,7 +70,7 @@ const HomeMapContainer = dynamic(
     () => import('../components/home/home-map-container'),
     {
         ssr: false,
-        loading: () => <div className="flex-1 bg-muted/50 animate-pulse" aria-hidden="true" />
+        loading: () => <HomeMapContainerLoadingShell />
     }
 );
 const SubmissionFloatingButton = dynamic(

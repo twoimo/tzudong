@@ -1180,7 +1180,7 @@ function HomeMapContainerComponent({
     return (
         <div className="relative w-full h-full">
             {mapMode === 'domestic' ? (
-                <Suspense fallback={<MapSkeleton />}>
+                <Suspense fallback={<MapSkeleton message="지도 화면을 준비하고 있어요" />}>
                     <NaverMapView
                         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}
@@ -1205,7 +1205,7 @@ function HomeMapContainerComponent({
                     />
                 </Suspense>
             ) : (
-                <Suspense fallback={<MapSkeleton />}>
+                <Suspense fallback={<MapSkeleton message="지도 화면을 준비하고 있어요" />}>
                     <OverseasMap
                         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}

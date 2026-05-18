@@ -160,4 +160,31 @@ describe('mobile and desktop parity source contracts', () => {
     expect(mobileBottomNavSource).toContain("path: '/'");
     expect(mobileBottomNavSource).toContain("path: '/stamp'");
   });
+
+  test('home map controls keep mobile touch targets and desktop map landmarks accessible', () => {
+    const mobileOverlaySource = source('components/home/MobileControlOverlay.tsx');
+    const homeControlPanelSource = source('components/home/home-control-panel.tsx');
+    const floatingNavSource = source('components/layout/FloatingNavButtons.tsx');
+    const overlayLayoutSource = source('components/layout/OverlayLayout.tsx');
+    const detailPanelSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+
+    expect(mobileOverlaySource).toContain('min-h-11');
+    expect(mobileOverlaySource).toContain('aria-pressed={isSelected}');
+    expect(mobileOverlaySource).toContain('aria-label="카테고리 더보기"');
+    expect(mobileOverlaySource).toContain('aria-expanded={activeSheet ===');
+    expect(mobileOverlaySource).toContain('role="dialog"');
+    expect(mobileOverlaySource).toContain('handleSearchLayerKeyDown');
+    expect(mobileOverlaySource).toContain('getFocusTrapContainers(searchLayerRef.current');
+    expect(mobileOverlaySource).toContain('searchPreviouslyFocusedElementRef.current?.focus');
+    expect(mobileOverlaySource).toContain('inertSibling.inert = true');
+    expect(homeControlPanelSource).toContain('function DesktopControlPanelLoadingShell()');
+    expect(homeControlPanelSource).toContain('max-w-[calc(100vw-12rem)]');
+    expect(floatingNavSource).toContain('<nav');
+    expect(floatingNavSource).toContain('aria-label="지도 화면 보조 탐색"');
+    expect(floatingNavSource).toContain('aria-pressed={mapMode ===');
+    expect(overlayLayoutSource).toContain('지도 본문으로 건너뛰기');
+    expect(overlayLayoutSource).toContain('aria-label="쯔동여지도 지도 본문"');
+    expect(detailPanelSource).toContain('lg:[scrollbar-width:thin]');
+    expect(detailPanelSource).toContain('aria-label={isShareCopied ?');
+  });
 });

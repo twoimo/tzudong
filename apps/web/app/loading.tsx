@@ -16,7 +16,7 @@ export default function RootLoading() {
                 min-[1025px]:pt-16 min-[1025px]:pb-0"
             aria-label="페이지 로딩 중"
         >
-            <MapSkeleton />
+            <MapSkeleton variant="fullscreen" />
         </div>
     );
 }

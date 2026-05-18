@@ -237,6 +237,13 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
 
     return (
         <div className="flex flex-col overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
+            <a
+                href="#tzudong-map-main"
+                className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:shadow-lg focus:ring-2 focus:ring-primary"
+            >
+                지도 본문으로 건너뛰기
+            </a>
+
             {/* Supabase 사용자 데이터 프리페처 */}
             {user && <UserDataPrefetcher />}
 
@@ -254,7 +261,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
             />
 
             {/* 메인 콘텐츠 - 지도 100% 너비 */}
-            <main className="flex-1 relative overflow-hidden">
+            <main id="tzudong-map-main" className="flex-1 relative overflow-hidden" tabIndex={-1} aria-label="쯔동여지도 지도 본문">
                 <div className="h-full w-full">
                     {children}
                 </div>
