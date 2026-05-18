@@ -49,9 +49,7 @@ function HomeMapContainerLoadingShell() {
         >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(239,68,68,0.08),transparent_32%),linear-gradient(0deg,rgba(248,250,252,0.96),rgba(255,255,255,0.96))]" aria-hidden="true" />
             <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.16)_1px,transparent_1px)] bg-[size:44px_44px]" aria-hidden="true" />
-            <p className="absolute bottom-[calc(env(safe-area-inset-bottom)+88px)] left-1/2 w-[min(calc(100vw_-_32px),320px)] -translate-x-1/2 rounded-2xl bg-background/90 px-4 py-3 text-sm text-muted-foreground shadow-lg shadow-black/10 backdrop-blur-sm min-[1280px]:bottom-8 min-[1280px]:left-8 min-[1280px]:translate-x-0">
-                지도를 먼저 그리고 맛집 데이터를 순서대로 연결합니다
-            </p>
+            <p className="sr-only">홈 지도 화면 준비 중</p>
         </section>
     );
 }
@@ -92,6 +90,14 @@ import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
 
 import type { Announcement } from '@/types/announcement';
 
+type HomeInitialShellIntent = 'search' | 'bookmark' | 'notification' | 'user';
+
+const HOME_INITIAL_SHELL_INTENT_KEY = 'tzudong:home-initial-intent';
+
+const isHomeInitialShellIntent = (value: string | null): value is HomeInitialShellIntent => (
+    value === 'search' || value === 'bookmark' || value === 'notification' || value === 'user'
+);
+
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
@@ -110,6 +116,7 @@ export default function HomeClient() {
     const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     const [deviceLocation, setDeviceLocation] = useState<DeviceMapLocation | null>(null);
+    const [initialMobileOverlayIntent, setInitialMobileOverlayIntent] = useState<HomeInitialShellIntent | null>(null);
     const [isDeviceLocationPending, setIsDeviceLocationPending] = useState(false);
     const [isDeviceHeadingMode, setIsDeviceHeadingMode] = useState(false);
     const deviceLocationFocusRequestIdRef = useRef(0);
@@ -250,6 +257,24 @@ export default function HomeClient() {
     useEffect(() => {
         openDetailPanelRef.current = openDetailPanel;
     }, [openDetailPanel]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const intent = window.sessionStorage.getItem(HOME_INITIAL_SHELL_INTENT_KEY);
+            window.sessionStorage.removeItem(HOME_INITIAL_SHELL_INTENT_KEY);
+
+            if (!isHomeInitialShellIntent(intent)) return;
+
+            setInitialMobileOverlayIntent(intent);
+            if (intent === 'search') {
+                setActivePanel('control');
+            }
+        } catch (_) {
+            // Session storage may be unavailable in restrictive browser modes; fall back to normal home load.
+        }
+    }, []);
 
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
         if (!restaurant) {
@@ -525,6 +550,7 @@ export default function HomeClient() {
                     deviceLocation={deviceLocation}
                     isDeviceLocationPending={isDeviceLocationPending}
                     isDeviceHeadingMode={isDeviceHeadingMode}
+                    initialIntent={initialMobileOverlayIntent}
                 />
             )}
 
