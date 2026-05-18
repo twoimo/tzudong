@@ -2426,7 +2426,7 @@ const NaverMapView = memo(({
 
     // 로딩 중
     if (!isLoaded) {
-        return <MapSkeleton />;
+        return <MapSkeleton message="네이버 지도 화면을 준비하고 있어요" />;
     }
 
     // 그리드 모드에서는 기존 레이아웃 유지

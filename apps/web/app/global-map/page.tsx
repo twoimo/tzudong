@@ -33,7 +33,7 @@ import { restaurantMatchesOverseasCountry } from "@/lib/overseas-region-matching
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
 const MapView = dynamic(() => import("@/components/map/MapView"), {
     ssr: false,
-    loading: () => <MapSkeleton />,
+    loading: () => <MapSkeleton variant="fullscreen" />,
 });
 const AdminRestaurantModal = dynamic(
     () => import("@/components/admin/AdminRestaurantModal").then((mod) => ({ default: mod.AdminRestaurantModal })),
@@ -491,7 +491,7 @@ export default function GlobalMapPage() {
             ) : (
                 // 단일 지도 모드
                 <Suspense fallback={
-                    <MapSkeleton />
+                    <MapSkeleton variant="fullscreen" />
                 }>
                     <PanelGroup direction="horizontal" className="w-full h-full">
                         <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={100}>

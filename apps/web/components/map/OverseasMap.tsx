@@ -351,8 +351,8 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             />
 
             {(!isMapLoaded || isLoadingRestaurants) && (
-                <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm">
-                    <MapSkeleton />
+                <div className="absolute inset-0 z-10">
+                    <MapSkeleton message={!isMapLoaded ? '해외 지도 화면을 준비하고 있어요' : '맛집 핀을 배치하고 있어요'} />
                 </div>
             )}
 
