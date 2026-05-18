@@ -63,7 +63,7 @@ try {
 
 const homeFrameBootstrap = `
 try {
-  var autoActivationDelayMs = 8000;
+  var autoActivationDelayMs = 0;
   var activated = false;
   var events = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
   var captureIntent = function (event) {

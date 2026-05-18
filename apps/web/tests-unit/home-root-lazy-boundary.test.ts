@@ -94,7 +94,7 @@ describe('home root runtime boundary', () => {
         expect(publicStaticSource).toContain("frame.src='/home-frame'+location.search+location.hash");
         expect(publicStaticSource).toContain("frame.style.visibility='hidden'");
         expect(publicStaticSource).toContain("frame.addEventListener('load'");
-        expect(publicStaticSource).toContain('autoActivationDelayMs=8000');
+        expect(publicStaticSource).toContain('autoActivationDelayMs=0');
         expect(publicStaticSource).not.toContain('window.requestIdleCallback(activate');
         expect(publicStaticSource).toContain('handleActivationEvent');
         expect(publicStaticSource).toContain('removeEventListener(e,handleActivationEvent)');
