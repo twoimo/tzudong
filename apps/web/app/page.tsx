@@ -40,8 +40,8 @@ function HomeDeepLinkPreview() {
             <div className="h-[50vh] rounded-t-2xl border border-border bg-background px-4 py-5 shadow-xl min-[1024px]:h-full min-[1024px]:rounded-none min-[1024px]:border-l">
                 <div className="mx-auto mb-3 h-1 w-8 rounded-full bg-muted-foreground/40 min-[1024px]:hidden" />
                 <p className="text-xs font-medium text-muted-foreground">맛집 상세</p>
-                <h2 className="mt-2 truncate text-xl font-bold">맛집 정보를 준비 중입니다</h2>
-                <p className="mt-2 text-sm text-muted-foreground">잠시 후 상세 정보와 지도가 표시됩니다</p>
+                <h2 className="mt-2 truncate text-xl font-bold">맛집 상세로 이동합니다</h2>
+                <p className="mt-2 text-sm text-muted-foreground">선택한 맛집의 상세 화면을 곧바로 이어서 보여드립니다</p>
                 <div className="mt-5 space-y-2">
                     <div className="h-3 w-3/4 rounded bg-muted" />
                     <div className="h-3 w-1/2 rounded bg-muted" />
@@ -63,8 +63,14 @@ try {
 
 const homeFrameBootstrap = `
 try {
+  var autoActivationDelayMs = 8000;
   var activated = false;
   var events = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
+  var captureIntent = function (event) {
+    var target = event && event.target && event.target.closest ? event.target.closest('[data-home-intent]') : null;
+    if (!target) return;
+    try { window.sessionStorage.setItem('tzudong:home-initial-intent', target.getAttribute('data-home-intent') || 'search'); } catch (_) {}
+  };
   var activate = function () {
     if (activated) return;
     activated = true;
@@ -81,11 +87,15 @@ try {
       frame.style.visibility = 'visible';
     }, { once: true });
     document.body.appendChild(frame);
-    events.forEach(function (eventName) { window.removeEventListener(eventName, activate); });
+    events.forEach(function (eventName) { window.removeEventListener(eventName, handleActivationEvent); });
   };
-  window.setTimeout(activate, 8000);
+  window.setTimeout(activate, autoActivationDelayMs);
+  var handleActivationEvent = function (event) {
+    captureIntent(event);
+    activate();
+  };
   events.forEach(function (eventName) {
-    window.addEventListener(eventName, activate, { once: true, passive: true });
+    window.addEventListener(eventName, handleActivationEvent, { once: true, passive: true });
   });
 } catch (_) {}
 `;

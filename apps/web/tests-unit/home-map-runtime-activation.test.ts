@@ -6,6 +6,7 @@ import {
     HOME_MAP_ACTIVATION_EVENTS,
     HOME_MAP_AUTO_ACTIVATION_DELAY_MS,
     buildHomeMapActivationPlan,
+    isEmbeddedHomeRuntimeWindow,
     shouldActivateHomeMapImmediately,
 } from '../app/home-map-runtime-activation';
 
@@ -29,6 +30,13 @@ describe('home map runtime activation plan', () => {
         expect(shouldActivateHomeMapImmediately({ search: '', hash: '#map' })).toBe(true);
     });
 
+    test('activates immediately inside the embedded home frame after the outer gate already ran', () => {
+        const plan = buildHomeMapActivationPlan({ search: '', isEmbeddedHomeRuntime: true });
+
+        expect(plan.activateImmediately).toBe(true);
+        expect(isEmbeddedHomeRuntimeWindow).toBeTypeOf('function');
+    });
+
     test('does not treat unrelated query params as immediate map work', () => {
         expect(shouldActivateHomeMapImmediately({ search: '?utm_source=test' })).toBe(false);
         expect(shouldActivateHomeMapImmediately({ search: '', hash: '#intro' })).toBe(false);
@@ -38,8 +46,10 @@ describe('home map runtime activation plan', () => {
         const naverMapSource = source('components/map/NaverMapView.tsx');
 
         expect(naverMapSource).toContain('buildHomeMapActivationPlan');
+        expect(naverMapSource).toContain('isEmbeddedHomeRuntimeWindow');
         expect(naverMapSource).toContain('window.location.search');
         expect(naverMapSource).toContain('window.location.hash');
+        expect(naverMapSource).toContain('isEmbeddedHomeRuntime: isEmbeddedHomeRuntimeWindow()');
         expect(naverMapSource).toContain('activationPlan.events.forEach');
         expect(naverMapSource).toContain('window.setTimeout(activateMapRuntime, activationPlan.delayMs)');
         expect(naverMapSource).not.toContain('{ timeout: 2000 }');

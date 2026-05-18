@@ -4,7 +4,7 @@ import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback
 import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 
-import { buildHomeMapActivationPlan } from "@/app/home-map-runtime-activation";
+import { buildHomeMapActivationPlan, isEmbeddedHomeRuntimeWindow } from "@/app/home-map-runtime-activation";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import type { FilterState } from "@/components/filters/filter-state";
@@ -474,6 +474,7 @@ const NaverMapView = memo(({
         const activationPlan = buildHomeMapActivationPlan({
             search: window.location.search,
             hash: window.location.hash,
+            isEmbeddedHomeRuntime: isEmbeddedHomeRuntimeWindow(),
         });
 
         if (activationPlan.activateImmediately) {
