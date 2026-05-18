@@ -159,7 +159,7 @@ describe('web quality performance source contracts', () => {
         expect(staticHomeSource).toContain("frame.src='/home-frame'+location.search+location.hash");
         expect(staticHomeSource).toContain("frame.style.visibility='hidden'");
         expect(staticHomeSource).toContain("frame.addEventListener('load'");
-        expect(staticHomeSource).toContain('autoActivationDelayMs=8000');
+        expect(staticHomeSource).toContain('autoActivationDelayMs=0');
         expect(staticHomeSource).not.toContain('window.requestIdleCallback(activate');
         expect(staticHomeSource).toContain('handleActivationEvent');
         expect(staticHomeSource).toContain('removeEventListener(e,handleActivationEvent)');
