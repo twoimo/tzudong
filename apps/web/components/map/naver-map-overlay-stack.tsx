@@ -42,6 +42,7 @@ export function NaverMapOverlayStack({
             {(isLoadingRestaurants || !isLoaded) && (
                 <MapLoadingIndicator
                     isLoaded={isLoaded}
+                    isBusy={isLoadingRestaurants || !isLoaded}
                     style={centerOffsetStyle}
                     className={badgePositionClass}
                 />
@@ -81,7 +82,9 @@ export function NaverMapOverlayStack({
             {mapToast && mapToast.isVisible && (
                 <div
                     style={centerOffsetStyle}
-                    className={`${floatingToastPositionClass} bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 animate-in fade-in zoom-in duration-300`}
+                    className={`${floatingToastPositionClass} bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 animate-in fade-in zoom-in duration-300 motion-reduce:animate-none`}
+                    role={mapToast.type === 'error' ? 'alert' : 'status'}
+                    aria-live={mapToast.type === 'error' ? 'assertive' : 'polite'}
                 >
                     <span className="text-sm font-medium">
                         {mapToast.message}

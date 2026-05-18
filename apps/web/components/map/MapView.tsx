@@ -600,7 +600,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }
 
   if (!isLoaded) {
-    return <MapSkeleton />;
+    return <MapSkeleton message="지도 화면을 준비하고 있어요" />;
   }
 
   if (!apiKey) {

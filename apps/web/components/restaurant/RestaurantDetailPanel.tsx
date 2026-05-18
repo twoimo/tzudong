@@ -816,8 +816,9 @@ export function RestaurantDetailPanel({
                                         size="icon"
                                         onClick={handleBackToDetail}
                                         className="mr-2 shrink-0"
+                                        aria-label="상세 정보로 돌아가기"
                                     >
-                                        <ArrowLeft className="h-4 w-4" />
+                                        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                                     </Button>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
@@ -909,6 +910,7 @@ export function RestaurantDetailPanel({
                                     size="icon"
                                     onClick={handleShareUrl}
                                     title={isShareCopied ? "복사됨!" : "공유하기"}
+                                    aria-label={isShareCopied ? "공유 링크 복사됨" : "맛집 공유 링크 복사"}
                                     className={isShareCopied ? "bg-green-50 border-green-300 text-green-600" : ""}
                                 >
                                     {isShareCopied ? (
@@ -931,8 +933,9 @@ export function RestaurantDetailPanel({
                                     size="icon"
                                     onClick={onEditRestaurant}
                                     className="text-primary hover:text-primary"
+                                    aria-label="맛집 정보 관리자 편집"
                                 >
-                                    <Settings className="h-4 w-4" />
+                                    <Settings className="h-4 w-4" aria-hidden="true" />
                                 </Button>
                             )}
                             {isMobile && (
@@ -955,7 +958,7 @@ export function RestaurantDetailPanel({
                 {/* 내용 */}
 	                <div
 	                        data-restaurant-detail-swipe-area="content"
-	                        className="relative flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+	                        className="relative flex-1 min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] [&::-webkit-scrollbar]:hidden lg:[-ms-overflow-style:auto] lg:[scrollbar-width:thin] lg:[&::-webkit-scrollbar]:block lg:[&::-webkit-scrollbar]:w-1.5 lg:[&::-webkit-scrollbar-thumb]:rounded-full lg:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30"
 	                        style={{ touchAction: 'pan-y' }}
 	                        onTouchStart={handleContentSwipeStart}
 	                        onTouchMove={handleContentSwipeMove}
@@ -1352,8 +1355,9 @@ export function RestaurantDetailPanel({
                                         size="icon"
                                         onClick={() => setIsDirectionSheetOpen(false)}
                                         className="h-8 w-8"
+                                        aria-label="길찾기 앱 선택 닫기"
                                     >
-                                        <X className="h-4 w-4" />
+                                        <X className="h-4 w-4" aria-hidden="true" />
                                     </Button>
                                 </div>
 
