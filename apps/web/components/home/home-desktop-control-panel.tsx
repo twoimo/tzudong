@@ -92,9 +92,22 @@ export default function HomeDesktopControlPanel({
     }, [leftSidebarWidth, rightPanelWidth]);
 
     useEffect(() => {
-        updateLayout();
-        window.addEventListener('resize', updateLayout, { passive: true });
-        return () => window.removeEventListener('resize', updateLayout);
+        let resizeRafId = 0;
+        const scheduleLayoutUpdate = () => {
+            if (resizeRafId) return;
+
+            resizeRafId = window.requestAnimationFrame(() => {
+                resizeRafId = 0;
+                updateLayout();
+            });
+        };
+
+        scheduleLayoutUpdate();
+        window.addEventListener('resize', scheduleLayoutUpdate, { passive: true });
+        return () => {
+            window.removeEventListener('resize', scheduleLayoutUpdate);
+            if (resizeRafId) window.cancelAnimationFrame(resizeRafId);
+        };
     }, [updateLayout]);
 
     const handlePanelMouseDownCapture = useCallback((e: React.MouseEvent) => {
@@ -109,7 +122,7 @@ export default function HomeDesktopControlPanel({
     return (
         <div
             ref={panelRef}
-            className="fixed bottom-4 z-[50] hover:z-[60]"
+            className="fixed bottom-4 z-[50] max-w-[calc(100vw-12rem)] hover:z-[60]"
             style={{
                 left: leftPosition,
                 transform: 'translateX(-50%)',
@@ -117,7 +130,7 @@ export default function HomeDesktopControlPanel({
             onMouseDownCapture={handlePanelMouseDownCapture}
             onFocusCapture={handlePanelFocusCapture}
         >
-            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border shadow-lg p-3 hover:shadow-xl hover:border-primary/50 transition-all duration-300">
+            <div className="flex max-w-full flex-wrap items-center justify-center gap-3 rounded-lg border border-border bg-background/95 p-3 shadow-lg backdrop-blur-sm transition-all duration-300 hover:border-primary/50 hover:shadow-xl motion-reduce:transition-none">
                 {mapMode === 'domestic' ? (
                     <RegionSelector
                         selectedRegion={selectedRegion}
