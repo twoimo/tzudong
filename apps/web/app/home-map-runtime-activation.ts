@@ -12,6 +12,7 @@ type HomeMapActivationEvent = typeof HOME_MAP_ACTIVATION_EVENTS[number];
 type HomeMapActivationInput = {
     search: string;
     hash?: string;
+    isEmbeddedHomeRuntime?: boolean;
 };
 
 type HomeMapActivationPlan = {
@@ -42,9 +43,19 @@ export function shouldActivateHomeMapImmediately({ search, hash = '' }: HomeMapA
     return IMMEDIATE_HASHES.has(hash);
 }
 
+export function isEmbeddedHomeRuntimeWindow() {
+    if (typeof window === 'undefined') return false;
+
+    try {
+        return window.self !== window.top;
+    } catch (_) {
+        return true;
+    }
+}
+
 export function buildHomeMapActivationPlan(input: HomeMapActivationInput): HomeMapActivationPlan {
     return {
-        activateImmediately: shouldActivateHomeMapImmediately(input),
+        activateImmediately: Boolean(input.isEmbeddedHomeRuntime) || shouldActivateHomeMapImmediately(input),
         delayMs: HOME_MAP_AUTO_ACTIVATION_DELAY_MS,
         events: HOME_MAP_ACTIVATION_EVENTS,
     };

@@ -56,6 +56,7 @@ interface HomeDesktopControlPanelProps {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     leftSidebarWidth?: number;
     rightPanelWidth?: number;
+    initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null;
 }
 
 export default function HomeDesktopControlPanel({
@@ -73,6 +74,7 @@ export default function HomeDesktopControlPanel({
     onPanelClick,
     leftSidebarWidth = 64,
     rightPanelWidth = 0,
+    initialIntent = null,
 }: HomeDesktopControlPanelProps) {
     const [leftPosition, setLeftPosition] = useState<string>('50%');
     const [shouldLoadSearch, setShouldLoadSearch] = useState(false);
@@ -83,6 +85,13 @@ export default function HomeDesktopControlPanel({
         loadDesktopRestaurantSearch
     );
     const requestSearch = useCallback(() => setShouldLoadSearch(true), []);
+
+    useEffect(() => {
+        if (initialIntent !== 'search') return;
+
+        setShouldLoadSearch(true);
+        onPanelClick?.('control');
+    }, [initialIntent, onPanelClick]);
 
     const updateLayout = useCallback(() => {
         const windowWidth = window.innerWidth;

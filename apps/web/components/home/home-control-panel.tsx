@@ -10,6 +10,8 @@ import { useDeferredComponent } from '@/hooks/use-deferred-component';
 
 const MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS = 8000;
 
+type MobileControlOverlayIntent = 'search' | 'bookmark' | 'notification' | 'user';
+
 type HomeDesktopControlPanelProps = {
     mapMode: 'domestic' | 'overseas';
     selectedRegion: Region | null;
@@ -25,6 +27,7 @@ type HomeDesktopControlPanelProps = {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     leftSidebarWidth?: number;
     rightPanelWidth?: number;
+    initialIntent?: MobileControlOverlayIntent | null;
 };
 
 const loadHomeDesktopControlPanel = async () => {
@@ -33,7 +36,6 @@ const loadHomeDesktopControlPanel = async () => {
 };
 
 type MobileControlOverlayProps = HomeControlPanelProps;
-type MobileControlOverlayIntent = 'search' | 'bookmark' | 'notification' | 'user';
 
 const loadMobileControlOverlay = async () => {
     const mod = await import('@/components/home/MobileControlOverlay');
@@ -59,7 +61,7 @@ function MobileControlOverlayLoadingShell({ onActivate }: { onActivate: (intent:
                 <button
                     type="button"
                     onClick={() => onActivate('search')}
-                    className="flex h-10 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground"
+                    className="flex min-h-11 flex-1 items-center rounded-full px-2.5 text-left text-[15px] text-muted-foreground"
                     aria-label="쯔동여지도 검색 열기"
                 >
                     쯔동여지도 검색하기
@@ -139,13 +141,14 @@ function HomeControlPanelComponent({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    initialIntent = null,
 }: HomeControlPanelProps) {
     const { isMobileOrTablet } = useDeviceType();
     const shouldRenderMobile = isMobileOrTablet || (
         typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax
     );
-    const [shouldLoadMobileOverlay, setShouldLoadMobileOverlay] = useState(false);
-    const [pendingMobileOverlayIntent, setPendingMobileOverlayIntent] = useState<MobileControlOverlayIntent | null>(null);
+    const [shouldLoadMobileOverlay, setShouldLoadMobileOverlay] = useState(Boolean(initialIntent));
+    const [pendingMobileOverlayIntent, setPendingMobileOverlayIntent] = useState<MobileControlOverlayIntent | null>(initialIntent);
     const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(() => (
         typeof window !== 'undefined' ? window.innerWidth > BREAKPOINTS.tabletMax : false
     ));
@@ -153,6 +156,13 @@ function HomeControlPanelComponent({
         shouldRenderMobile && shouldLoadMobileOverlay,
         loadMobileControlOverlay
     );
+
+    useEffect(() => {
+        if (!initialIntent) return;
+
+        setPendingMobileOverlayIntent(initialIntent);
+        setShouldLoadMobileOverlay(true);
+    }, [initialIntent]);
     const DeferredHomeDesktopControlPanel = useDeferredComponent<HomeDesktopControlPanelProps>(
         shouldLoadDesktopPanel,
         loadHomeDesktopControlPanel
@@ -262,6 +272,7 @@ function HomeControlPanelComponent({
             onPanelClick={onPanelClick}
             leftSidebarWidth={leftSidebarWidth}
             rightPanelWidth={rightPanelWidth}
+            initialIntent={initialIntent}
         />
     );
 }
