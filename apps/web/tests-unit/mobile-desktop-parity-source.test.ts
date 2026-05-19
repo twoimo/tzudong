@@ -164,6 +164,7 @@ describe('mobile and desktop parity source contracts', () => {
   test('home map controls keep mobile touch targets and desktop map landmarks accessible', () => {
     const mobileOverlaySource = source('components/home/MobileControlOverlay.tsx');
     const homeControlPanelSource = source('components/home/home-control-panel.tsx');
+    const homeDesktopControlPanelSource = source('components/home/home-desktop-control-panel.tsx');
     const floatingNavSource = source('components/layout/FloatingNavButtons.tsx');
     const overlayLayoutSource = source('components/layout/OverlayLayout.tsx');
     const detailPanelSource = source('components/restaurant/RestaurantDetailPanel.tsx');
@@ -181,8 +182,8 @@ describe('mobile and desktop parity source contracts', () => {
     expect(mobileOverlaySource).toContain('getFocusTrapContainers(searchLayerRef.current');
     expect(mobileOverlaySource).toContain('searchPreviouslyFocusedElementRef.current?.focus');
     expect(mobileOverlaySource).toContain('inertSibling.inert = true');
-    expect(homeControlPanelSource).toContain('function DesktopControlPanelLoadingShell()');
-    expect(homeControlPanelSource).toContain('max-w-[calc(100vw-12rem)]');
+    expect(homeControlPanelSource).not.toContain('function DesktopControlPanelLoadingShell()');
+    expect(homeDesktopControlPanelSource).toContain('max-w-[calc(100vw-12rem)]');
     expect(floatingNavSource).toContain('<nav');
     expect(floatingNavSource).toContain('aria-label="지도 화면 보조 탐색"');
     expect(floatingNavSource).toContain('aria-pressed={mapMode ===');

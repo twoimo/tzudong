@@ -24,7 +24,23 @@ const NAV_ITEMS: NavItem[] = [
     { icon: User, label: 'MY', path: '/mypage/profile' },
 ];
 const MYPAGE_SUB_ROUTES = AUTH_NAV_ROUTES.filter((route) => route !== '/mypage/profile');
-const HOME_NAV_PREFETCH_DELAY_MS = 8000;
+type IdleCallbackHandle = number;
+const HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS = 2500;
+
+function runHomeNavPrefetchWhenIdle(callback: () => void): () => void {
+    const idleWindow = window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => IdleCallbackHandle;
+        cancelIdleCallback?: (id: IdleCallbackHandle) => void;
+    };
+
+    if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+        const handle = idleWindow.requestIdleCallback(callback, { timeout: HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS });
+        return () => idleWindow.cancelIdleCallback?.(handle);
+    }
+
+    const timer = window.setTimeout(callback, HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+}
 
 interface MobileBottomNavProps {
     className?: string;
@@ -65,8 +81,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
         };
 
         if (pathname === '/') {
-            const timer = window.setTimeout(prefetchNavigationTargets, HOME_NAV_PREFETCH_DELAY_MS);
-            return () => window.clearTimeout(timer);
+            return runHomeNavPrefetchWhenIdle(prefetchNavigationTargets);
         }
 
         prefetchNavigationTargets();
