@@ -10,26 +10,6 @@ const PUBLIC_PAGE_PATHS = new Set([
     '/home-frame',
 ])
 
-function isRootPageRequest(request: NextRequest) {
-    const { pathname } = request.nextUrl
-    const method = request.method.toUpperCase()
-    const accept = request.headers.get('accept') ?? ''
-    const fetchDest = request.headers.get('sec-fetch-dest')
-    const isAppRouterDataRequest =
-        request.nextUrl.searchParams.has('_rsc') ||
-        request.headers.get('rsc') === '1' ||
-        request.headers.has('next-router-prefetch') ||
-        request.headers.has('next-router-state-tree')
-
-    return (
-        (method === 'GET' || method === 'HEAD') &&
-        pathname === '/' &&
-        !isAppRouterDataRequest &&
-        accept.includes('text/html') &&
-        (!fetchDest || fetchDest === 'document')
-    )
-}
-
 function shouldSkipSession(request: NextRequest) {
     const { pathname } = request.nextUrl
     const method = request.method.toUpperCase()
@@ -51,9 +31,6 @@ function shouldSkipSession(request: NextRequest) {
  * - 인증이 필요 없는 공개 라우트도 빠르게 통과
  */
 export async function proxy(request: NextRequest) {
-    if (isRootPageRequest(request)) {
-        return NextResponse.rewrite(new URL('/home-static.html', request.url))
-    }
 
     if (shouldSkipSession(request)) {
         return NextResponse.next()

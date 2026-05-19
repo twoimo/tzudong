@@ -90,11 +90,11 @@ import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
 
 import type { Announcement } from '@/types/announcement';
 
-type HomeInitialShellIntent = 'search' | 'bookmark' | 'notification' | 'user';
+type HomeStartupIntent = 'search' | 'bookmark' | 'notification' | 'user';
 
 const HOME_INITIAL_SHELL_INTENT_KEY = 'tzudong:home-initial-intent';
 
-const isHomeInitialShellIntent = (value: string | null): value is HomeInitialShellIntent => (
+const isHomeStartupIntent = (value: string | null): value is HomeStartupIntent => (
     value === 'search' || value === 'bookmark' || value === 'notification' || value === 'user'
 );
 
@@ -116,7 +116,7 @@ export default function HomeClient() {
     const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     const [deviceLocation, setDeviceLocation] = useState<DeviceMapLocation | null>(null);
-    const [initialMobileOverlayIntent, setInitialMobileOverlayIntent] = useState<HomeInitialShellIntent | null>(null);
+    const [initialMobileOverlayIntent, setInitialMobileOverlayIntent] = useState<HomeStartupIntent | null>(null);
     const [isDeviceLocationPending, setIsDeviceLocationPending] = useState(false);
     const [isDeviceHeadingMode, setIsDeviceHeadingMode] = useState(false);
     const deviceLocationFocusRequestIdRef = useRef(0);
@@ -265,7 +265,7 @@ export default function HomeClient() {
             const intent = window.sessionStorage.getItem(HOME_INITIAL_SHELL_INTENT_KEY);
             window.sessionStorage.removeItem(HOME_INITIAL_SHELL_INTENT_KEY);
 
-            if (!isHomeInitialShellIntent(intent)) return;
+            if (!isHomeStartupIntent(intent)) return;
 
             setInitialMobileOverlayIntent(intent);
             if (intent === 'search') {
@@ -520,6 +520,37 @@ export default function HomeClient() {
                 togglePanelCollapse={togglePanelCollapse}
             />
 
+            <HomeMapContainer
+                key={mapMountKey}
+                mapMode={mapMode}
+                mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
+                filters={state.filters}
+                selectedRegion={state.selectedRegion}
+                selectedCountry={state.selectedCountry}
+                searchedRestaurant={state.searchedRestaurant}
+                selectedRestaurant={state.selectedRestaurant}
+                refreshTrigger={state.refreshTrigger}
+                panelRestaurant={state.panelRestaurant}
+                isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
+                onAdminEditRestaurant={onAdminEditRestaurant}
+                onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
+                onRestaurantSelect={handleRestaurantSelectionSync}
+
+                onMapReady={handlers.handleMapReady}
+                onMarkerClick={openDetailPanel}
+                onPanelClose={closeAllPanels}
+                onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
+                onTogglePanelCollapse={togglePanelCollapse}
+                activePanel={activePanel}
+                onPanelClick={setActivePanel}
+                externalPanelOpen={activeRightPanel === null}
+                isPanelCollapsed={isPanelCollapsed}
+                isMapFullscreen={isMapFullscreen}
+                onMapFullscreenChange={setIsMapFullscreen}
+                deviceLocation={deviceLocation}
+                onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
+            />
+
             {!(isMobileOrTablet && isMapFullscreen) && (
                 <HomeControlPanel
                     mapMode={mapMode}
@@ -553,37 +584,6 @@ export default function HomeClient() {
                     initialIntent={initialMobileOverlayIntent}
                 />
             )}
-
-            <HomeMapContainer
-                key={mapMountKey}
-                mapMode={mapMode}
-                mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
-                filters={state.filters}
-                selectedRegion={state.selectedRegion}
-                selectedCountry={state.selectedCountry}
-                searchedRestaurant={state.searchedRestaurant}
-                selectedRestaurant={state.selectedRestaurant}
-                refreshTrigger={state.refreshTrigger}
-                panelRestaurant={state.panelRestaurant}
-                isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
-                onAdminEditRestaurant={onAdminEditRestaurant}
-                onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
-                onRestaurantSelect={handleRestaurantSelectionSync}
-
-                onMapReady={handlers.handleMapReady}
-                onMarkerClick={openDetailPanel}
-                onPanelClose={closeAllPanels}
-                onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
-                onTogglePanelCollapse={togglePanelCollapse}
-                activePanel={activePanel}
-                onPanelClick={setActivePanel}
-                externalPanelOpen={activeRightPanel === null}
-                isPanelCollapsed={isPanelCollapsed}
-                isMapFullscreen={isMapFullscreen}
-                onMapFullscreenChange={setIsMapFullscreen}
-                deviceLocation={deviceLocation}
-                onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
-            />
 
             {isDesktop && (
                 <SubmissionFloatingButton

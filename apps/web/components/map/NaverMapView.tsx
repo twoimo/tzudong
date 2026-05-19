@@ -465,8 +465,8 @@ const NaverMapView = memo(({
         return getAdjustedZoomForDevice(baseZoom, isMobileOrTablet, isNational);
     }, [isMobileOrTablet]);
 
-    // 네이버 지도 API 로드 - HomeClientLoader가 지도 런타임을 마운트한 뒤에만 수동 활성화
-    const { isLoaded, loadError, load } = useNaverMaps({ autoLoad: false, strategy: 'lazyOnload' });
+    // 네이버 지도 API 로드 - / 첫 진입에서 지도 SDK를 즉시 비동기로 붙이고 부가 런타임만 점진 활성화
+    const { isLoaded, loadError, load } = useNaverMaps({ autoLoad: false, strategy: 'afterInteractive' });
 
     useEffect(() => {
         if (isMapRuntimeActive) return;
@@ -479,36 +479,7 @@ const NaverMapView = memo(({
 
         if (activationPlan.activateImmediately) {
             setIsMapRuntimeActive(true);
-            return;
         }
-
-        let hasActivated = false;
-        let activationTimeoutId: number | null = null;
-        const listenerOptions: AddEventListenerOptions = { once: true, passive: true };
-
-        function cleanupActivation() {
-            activationPlan.events.forEach((eventName) => {
-                window.removeEventListener(eventName, activateMapRuntime, listenerOptions);
-            });
-            if (activationTimeoutId !== null) {
-                window.clearTimeout(activationTimeoutId);
-                activationTimeoutId = null;
-            }
-        }
-
-        function activateMapRuntime() {
-            if (hasActivated) return;
-            hasActivated = true;
-            cleanupActivation();
-            setIsMapRuntimeActive(true);
-        }
-
-        activationPlan.events.forEach((eventName) => {
-            window.addEventListener(eventName, activateMapRuntime, listenerOptions);
-        });
-        activationTimeoutId = window.setTimeout(activateMapRuntime, activationPlan.delayMs);
-
-        return cleanupActivation;
     }, [isMapRuntimeActive]);
 
     useEffect(() => {
