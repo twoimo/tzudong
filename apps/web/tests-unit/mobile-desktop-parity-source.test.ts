@@ -170,10 +170,10 @@ describe('mobile and desktop parity source contracts', () => {
 
     expect(mobileOverlaySource).toContain('min-h-11');
     expect(mobileOverlaySource).toContain('aria-pressed={isSelected}');
-    expect(mobileOverlaySource).toContain('pointer-events-auto h-8 shrink-0 rounded-full');
-    expect(mobileOverlaySource).toContain('text-[11px] font-medium');
-    expect(mobileOverlaySource).toContain('rounded-full h-8 px-2 text-[11px] font-medium');
-    expect(mobileOverlaySource).toContain('w-[clamp(84px,28vw,105px)] h-8 px-2');
+    expect(mobileOverlaySource).toContain('pointer-events-auto h-9 shrink-0 rounded-full');
+    expect(mobileOverlaySource).toContain('text-xs font-medium');
+    expect(mobileOverlaySource).toContain('rounded-full h-9 px-2 text-xs font-medium');
+    expect(mobileOverlaySource).toContain('w-[clamp(84px,28vw,105px)] h-9 px-2');
     expect(mobileOverlaySource).toContain('aria-label="카테고리 더보기"');
     expect(mobileOverlaySource).toContain('aria-expanded={activeSheet ===');
     expect(mobileOverlaySource).toContain('role="dialog"');
