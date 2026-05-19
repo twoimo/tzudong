@@ -269,11 +269,13 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('moveAdminSidebarItem');
     expect(consoleSource).toContain('buildOrderedSidebarSections');
     expect(consoleSource).toContain('aria-controls="admin-sidebar-order-editor"');
-    expect(consoleSource).toContain('flex w-full shrink-0 flex-col');
+    expect(consoleSource).toContain('sticky top-0 z-30 flex w-full shrink-0 flex-col');
     expect(consoleSource).toContain('isCollapsed && "lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1"');
     expect(consoleSource).toContain('isCollapsed && "lg:hidden"');
-    expect(consoleSource).toContain('space-y-1.5 lg:min-h-0 lg:flex-1');
-    expect(consoleSource).toContain('mt-auto pt-2');
+    expect(consoleSource).toContain('flex gap-2 overflow-x-auto overscroll-x-contain');
+    expect(consoleSource).toContain('lg:block lg:min-h-0 lg:flex-1 lg:space-y-1.5');
+    expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
+    expect(consoleSource).toContain('mt-2 shrink-0 pt-0 lg:mt-auto lg:pt-2');
     expect(consoleSource).toContain('메뉴 순서');
     expect(consoleSource).toContain('초기화');
     expect(consoleSource).toContain('aria-label={`${item.title} 메뉴 앞으로`}');
@@ -371,10 +373,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const announcementSource = source('components/announcement/AnnouncementPanel.tsx');
 
     expect(consoleSource).toContain('lg:w-48');
-    expect(consoleSource).toContain('cn("space-y-1.5 lg:min-h-0 lg:flex-1"');
-    expect(consoleSource).toContain('min-h-9 w-full');
+    expect(consoleSource).toContain('cn("flex gap-2 overflow-x-auto overscroll-x-contain');
+    expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
     expect(consoleSource).toContain('p-2 sm:p-2 lg:border-y-0 lg:p-2 xl:p-2');
     expect(consoleSource).toContain('min-h-[420px] flex-1');
+    expect(consoleSource).toContain('overflow-visible lg:overflow-hidden');
+    expect(consoleSource).toContain('overflow-visible xl:h-full xl:min-h-0');
     expect(consoleSource).toContain('flex h-full min-h-0 flex-col bg-background');
     expect(usersSource).toContain('flex h-full min-h-0 flex-col bg-background');
     expect(usersSource).toContain('gap-2 overflow-y-auto p-2');

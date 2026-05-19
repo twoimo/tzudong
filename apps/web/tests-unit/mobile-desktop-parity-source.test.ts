@@ -26,7 +26,10 @@ describe('mobile and desktop parity source contracts', () => {
     expect(consoleSource).toContain('현재 화면 · {activeSidebarLabel}');
     expect(consoleSource).not.toContain('관리자 메뉴');
     expect(consoleSource).not.toContain('Unified admin console');
-    expect(consoleSource).toContain('lg:sticky lg:top-0');
+    expect(consoleSource).toContain('sticky top-0 z-30');
+    expect(consoleSource).toContain('flex gap-2 overflow-x-auto overscroll-x-contain');
+    expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
+    expect(consoleSource).toContain('lg:block lg:min-h-0 lg:flex-1');
     expect(consoleSource).toContain('lg:w-48');
     expect(consoleSource).toContain('lg:w-14');
     expect(consoleSource).toContain('관리자 사이드바 펼치기');
@@ -154,6 +157,9 @@ describe('mobile and desktop parity source contracts', () => {
     expect(mobileOverlaySource).toContain('관리자 콘솔');
     expect(headerSource).toContain('인사이트');
     expect(mobileOverlaySource).toContain('인사이트');
+    expect(mobileOverlaySource).not.toContain('openAdminAnnouncements');
+    expect(mobileOverlaySource).not.toContain('공지사항');
+    expect(mobileOverlaySource).not.toContain('Megaphone');
     expect(navigationRoutesSource).toContain("'/admin'");
     expect(navigationRoutesSource).toContain("'/admin/evaluations'");
     expect(navigationRoutesSource).toContain("'/admin/banners'");

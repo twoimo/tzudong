@@ -721,14 +721,14 @@ function AdminSidebar({
   return (
     <aside
       className={cn(
-        "flex w-full shrink-0 flex-col overflow-x-hidden border-y border-border bg-gradient-to-b from-card via-card to-background/95 p-1.5 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none lg:sticky lg:top-0 lg:h-[calc(100dvh-var(--app-header-height,56px))] lg:w-48 lg:overflow-y-auto lg:border-y-0 lg:border-r",
+        "sticky top-0 z-30 flex w-full shrink-0 flex-col overflow-x-hidden border-y border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none lg:top-0 lg:h-[calc(100dvh-var(--app-header-height,56px))] lg:w-48 lg:overflow-y-auto lg:border-y-0 lg:border-r lg:p-1.5",
         isCollapsed && "lg:w-14 lg:items-center lg:px-1.5",
       )}
       aria-label="관리자 콘솔 사이드바"
     >
       <div
         className={cn(
-          "mb-1.5 flex min-h-9 items-center gap-2 border-b border-border/70 px-1 pb-1.5 transition-[border-color] duration-200 motion-reduce:transition-none",
+          "mb-2 flex min-h-10 items-center gap-2 border-b border-border/70 px-1 pb-2 transition-[border-color] duration-200 motion-reduce:transition-none lg:mb-1.5 lg:min-h-9 lg:pb-1.5",
           isCollapsed && "lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1",
         )}
       >
@@ -776,12 +776,12 @@ function AdminSidebar({
         </Button>
       </div>
 
-      <nav id="admin-console-menu" aria-label="관리자 통합 메뉴" className={cn("space-y-1.5 lg:min-h-0 lg:flex-1", isCollapsed && "lg:flex lg:w-full lg:flex-col lg:items-center")}>
+      <nav id="admin-console-menu" aria-label="관리자 통합 메뉴" className={cn("flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:block lg:min-h-0 lg:flex-1 lg:space-y-1.5 lg:overflow-x-visible lg:pb-0", isCollapsed && "lg:flex lg:w-full lg:flex-col lg:items-center")}>
         {orderedSidebarSections.map((section) => (
-          <div key={section.label} className={cn("space-y-1", isCollapsed && "lg:flex lg:w-full lg:flex-col lg:items-center")}>
+          <div key={section.label} className={cn("flex shrink-0 gap-2 lg:block lg:space-y-1", isCollapsed && "lg:flex lg:w-full lg:flex-col lg:items-center")}>
             <p
               className={cn(
-                "px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
+                "sr-only px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none lg:not-sr-only",
                 (!showLabels || isCollapsed) && "lg:h-px lg:px-0 lg:opacity-0",
               )}
             >
@@ -801,7 +801,7 @@ function AdminSidebar({
                   aria-current={isActive ? "page" : undefined}
                   aria-controls="admin-console-canvas"
                   className={cn(
-                    "group relative flex min-h-9 w-full items-center gap-2 overflow-hidden whitespace-nowrap rounded-lg border px-2 py-1 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+                    "group relative flex min-h-11 min-w-[8.25rem] shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-xl border px-3 py-2 text-left text-sm transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none lg:min-h-9 lg:min-w-0 lg:w-full lg:shrink lg:rounded-lg lg:px-2 lg:py-1",
                     isCollapsed && "lg:mx-auto lg:h-9 lg:min-h-9 lg:w-9 lg:justify-center lg:gap-0 lg:px-0",
                     isActive
                       ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
@@ -811,14 +811,14 @@ function AdminSidebar({
                 >
                   <span
                     className={cn(
-                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors motion-reduce:transition-none",
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none lg:h-6 lg:w-6 lg:rounded-md",
                       isActive
                         ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
                         : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
                     )}
                     aria-hidden="true"
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                   </span>
                   <span
                     className={cn(
@@ -864,14 +864,14 @@ function AdminSidebar({
       </nav>
 
       <Popover open={isOrderEditorOpen} onOpenChange={setIsOrderEditorOpen}>
-        <div className={cn("mt-auto pt-2", isCollapsed && "lg:flex lg:w-full lg:justify-center")}>
+        <div className={cn("mt-2 shrink-0 pt-0 lg:mt-auto lg:pt-2", isCollapsed && "lg:flex lg:w-full lg:justify-center")}>
           <PopoverTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               className={cn(
-                "min-h-8 rounded-xl border border-border/80 bg-background/75 px-2 text-xs font-bold text-muted-foreground shadow-sm hover:border-primary/20 hover:bg-background hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
+                "min-h-10 rounded-xl border border-border/80 bg-background/75 px-3 text-xs font-bold text-muted-foreground shadow-sm touch-manipulation hover:border-primary/20 hover:bg-background hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background lg:min-h-8 lg:px-2",
                 isCollapsed ? "lg:h-9 lg:w-9 lg:px-0" : "w-full justify-start gap-2",
               )}
               aria-label="사이드바 메뉴 순서 설정"
@@ -1461,7 +1461,7 @@ function AdminMapInfoPanel({
     : `${selectedRestaurant.lat.toFixed(5)}, ${selectedRestaurant.lng.toFixed(5)}`;
 
   return (
-    <aside className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+    <aside className="flex min-h-0 flex-col gap-3 lg:h-full lg:overflow-hidden">
       <section className="shrink-0 rounded-xl border border-border bg-card p-2.5 shadow-sm" aria-labelledby="admin-map-selected-title">
         {selectedRestaurant ? (
           <>
@@ -1579,7 +1579,7 @@ function AdminMapInfoPanel({
 
       <AdminCreatorLayerControls tzuyangCount={restaurants.length} />
 
-      <section className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border bg-card p-2.5 shadow-sm" aria-labelledby="admin-map-info-title">
+      <section className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto" aria-labelledby="admin-map-info-title">
         <div className="flex items-center justify-between gap-3">
           <h2 id="admin-map-info-title" className="text-sm font-bold text-foreground">
             운영 정보
@@ -1697,7 +1697,7 @@ function AdminOverviewDashboard({
     <div
       role="region"
       aria-label="관리자 지도 운영 개요 2분할"
-      className="grid h-full min-h-0 grid-cols-1 gap-2 overflow-hidden xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]"
+      className="grid min-h-full grid-cols-1 gap-2 overflow-visible xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] xl:overflow-hidden"
     >
       <div className="min-h-[390px] min-w-0 xl:min-h-0">
         <AdminMapOverviewCanvas
@@ -1709,7 +1709,7 @@ function AdminOverviewDashboard({
           onSelectModule={onSelectModule}
         />
       </div>
-      <div className="min-h-0 min-w-0">
+      <div className="min-h-[420px] min-w-0 xl:min-h-0">
         <AdminMapInfoPanel
           stats={stats}
           restaurants={restaurants}
@@ -1908,11 +1908,11 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
   })();
 
   return (
-    <section aria-label={`${module.title} 작업 화면`} className="flex h-full min-h-0 flex-col">
+    <section aria-label={`${module.title} 작업 화면`} className="flex min-h-full flex-col lg:h-full lg:min-h-0">
       <div
         className={cn(
           "min-h-[420px] flex-1 rounded-xl border border-border bg-background shadow-sm lg:min-h-0",
-          "overflow-hidden",
+          "overflow-visible lg:overflow-hidden",
         )}
       >
         {moduleContent}

@@ -12,7 +12,6 @@ import {
     Check,
     Send,
     User as UserIcon,
-    Megaphone,
     BarChart2,
     PanelLeft,
     LogOut,
@@ -695,10 +694,6 @@ function MobileControlOverlayComponent({
                     <DropdownMenuItem onClick={() => dispatchWindowEvent('openMyPage')} className="text-foreground hover:bg-accent py-1.5">
                         <UserIcon className="mr-2 h-4 w-4" />
                         마이페이지
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminAnnouncements')} className="text-foreground hover:bg-accent py-1.5">
-                        <Megaphone className="mr-2 h-4 w-4" />
-                        공지사항
                     </DropdownMenuItem>
                     {!isAdmin && (
                         <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
