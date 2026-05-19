@@ -757,10 +757,17 @@ describe('web quality performance source contracts', () => {
         }
 
         const authModalSource = source('components/auth/AuthModal.tsx');
+        const reviewModalSource = source('components/reviews/ReviewModal.tsx');
         expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME');
         expect(authModalSource).toContain('AUTH_MODAL_DESKTOP_CONTENT_STYLE');
         expect(authModalSource).toContain('min(calc(100vw - 2rem), 28rem)');
         expect(authModalSource).toContain('dispatchHomeAuthSessionUpdated');
+        expect(reviewModalSource).toContain('<BottomSheet');
+        expect(reviewModalSource).toContain('MOBILE_FULL_FORM_SHEET');
+        expect(reviewModalSource).toContain('layoutSource="review-modal"');
+        expect(reviewModalSource).toContain('aria-label="리뷰 작성 단계 진행률"');
+        expect(reviewModalSource).toContain('영수증 인증부터 후기 등록까지 3단계로 쉽게 작성해주세요.');
+        expect(reviewModalSource).not.toContain('className="fixed inset-0 z-[110] h-[100dvh] bg-background"');
     });
 
     test('auth user state lookups have Supabase index migration coverage', () => {
