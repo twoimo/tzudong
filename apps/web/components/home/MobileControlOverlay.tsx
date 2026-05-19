@@ -897,8 +897,7 @@ function MobileControlOverlayComponent({
                     aria-label={deviceLocationButtonLabel}
                     className={cn(
                         'h-12 w-12 rounded-full shadow-lg',
-                        'transition-all duration-300 ease-in-out motion-reduce:transition-none',
-                        'hover:scale-110 active:scale-95',
+                        'transition-colors duration-150 ease-out motion-reduce:transition-none',
                         'flex items-center justify-center',
                         'border-2',
                         isDeviceHeadingMode
@@ -906,7 +905,7 @@ function MobileControlOverlayComponent({
                             : deviceLocation
                                 ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
                                 : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
-                        isDeviceLocationPending && 'animate-pulse opacity-80'
+                        isDeviceLocationPending && 'opacity-80'
                     )}
                     title={deviceLocationButtonLabel}
                 >
