@@ -7,7 +7,7 @@ import { QueryProvider } from './providers';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { AnonymousHomeAuthProvider, useAuth } from '@/contexts/AuthContextBase';
 import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
-import { useDeviceType } from '@/hooks/useDeviceType';
+import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
 import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
 import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
@@ -224,9 +224,13 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 }
 
 function HomeLayoutContent({ children }: { children: ReactNode }) {
-    const { isDesktop } = useDeviceType();
+    const viewportMode = useHomeViewportMode();
 
-    if (isDesktop) {
+    if (viewportMode === 'pending') {
+        return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;
+    }
+
+    if (viewportMode === 'desktop') {
         return (
             <Suspense fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}>
                 <OverlayLayout>{children}</OverlayLayout>
