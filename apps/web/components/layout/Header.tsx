@@ -25,8 +25,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { Announcement } from "@/types/announcement";
 import type { Notification } from "@/types/notification";
 import { useHydration } from "@/hooks/useHydration";
-import { useDeviceType } from "@/hooks/useDeviceType";
-import { useActiveAnnouncements } from "@/hooks/use-banner-announcements";
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
+import { useActiveAnnouncements, useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
 
@@ -68,21 +68,15 @@ const loadRankingWidget = async () => {
 };
 
 const BANNER_ROTATION_INTERVAL = 5000;
+const HEADER_BANNER_FRAME_CLASS = "flex items-center gap-2 px-2 py-0.5 md:px-3 md:py-1 rounded-md transition-all duration-300 relative z-10 flex-1 min-w-0";
 
 const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const isHydrated = useHydration();
-  const { isMobileOrTablet } = useDeviceType();
+  const isMobileOrTablet = useImmediateMobileOrTablet();
   const { notifications, unreadCount, isLoading: isNotificationsLoading, isError: isNotificationsError, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
   const headerRef = useRef<HTMLElement>(null);
-
-  const { data: activeAnnouncements = [], isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements();
-  const bannerAnnouncements = useMemo(
-    () => activeAnnouncements.filter((announcement) => announcement.showOnBanner),
-    [activeAnnouncements]
-  );
-  const isBannerAnnouncementsLoading = isActiveAnnouncementsLoading;
 
   // 공지 배너 상태
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -94,6 +88,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const [announcementViewMode, setAnnouncementViewMode] = useState<'list' | 'detail'>('list');
   const [announcementPage, setAnnouncementPage] = useState(1);
   const ANNOUNCEMENTS_PER_PAGE = 3;
+
+  const { data: bannerAnnouncements = [], isLoading: isBannerAnnouncementsLoading } = useBannerAnnouncements();
+  const { data: activeAnnouncementsData, isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements(isAnnouncementSheetOpen);
+  const activeAnnouncements = activeAnnouncementsData ?? bannerAnnouncements;
 
   // 사업자 정보 펼치기 상태
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
@@ -311,9 +309,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
       {/* 중앙: 공지 배너 - 로딩 중 스켈레톤으로 레이아웃 고정 */}
       {shouldShowBannerSkeleton ? (
-        <div className="flex-1 min-w-0 relative z-10">
-          <Skeleton className="h-7 w-full rounded-md md:h-8" />
-        </div>
+        <div className={cn(HEADER_BANNER_FRAME_CLASS, "h-7 bg-secondary/30 md:h-8")} aria-hidden />
       ) : currentBanner ? (
         <div
           aria-live="polite"
@@ -321,9 +317,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           tabIndex={0}
           aria-label={currentBanner?.title ? `공지: ${currentBanner.title}` : "공지사항 배너"}
           className={cn(
-            "flex items-center gap-2 px-2 py-0.5 md:px-3 md:py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
-            // 모바일/데스크탑 모두 flex-1로 남은 공간 활용
-            "flex-1 min-w-0",
+            HEADER_BANNER_FRAME_CLASS,
+            "bg-secondary/50 hover:bg-secondary cursor-pointer group",
             isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
           )}
           onClick={handleBannerClick}

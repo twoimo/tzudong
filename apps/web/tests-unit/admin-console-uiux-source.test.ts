@@ -52,14 +52,16 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(panelSource).not.toContain('저장 중...');
   });
 
-  test('uses one active-announcement read model for header and banner surfaces', () => {
+  test('keeps announcement read models shared while narrowing banner fetches', () => {
     const bannerHookSource = source('hooks/use-banner-announcements.tsx');
 
     expect(bannerHookSource).toContain('export function useActiveAnnouncements(enabled = true)');
+    expect(bannerHookSource).toContain('export function useBannerAnnouncements(enabled = true)');
     expect(bannerHookSource).toContain('fetchSupabaseRows');
     expect(bannerHookSource).toContain('ANNOUNCEMENT_SELECT');
     expect(bannerHookSource).toContain('AnnouncementRow');
-    expect(bannerHookSource).toContain('const activeAnnouncementsQuery = useActiveAnnouncements(enabled);');
+    expect(bannerHookSource).toContain("['show_on_banner', 'eq.true']");
+    expect(bannerHookSource).toContain('BANNER_ANNOUNCEMENTS_STALE_TIME_MS');
     expect(bannerHookSource).not.toContain('@/hooks/use-announcements');
   });
 
