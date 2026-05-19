@@ -26,6 +26,13 @@ const NAV_ITEMS: NavItem[] = [
 const MYPAGE_SUB_ROUTES = AUTH_NAV_ROUTES.filter((route) => route !== '/mypage/profile');
 type IdleCallbackHandle = number;
 const HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS = 2500;
+const MOBILE_BOTTOM_NAV_BUTTON_STYLE: CSSProperties = {
+    minHeight: 60,
+    paddingTop: 10,
+    paddingRight: 4,
+    paddingBottom: 10,
+    paddingLeft: 4,
+};
 
 function runHomeNavPrefetchWhenIdle(callback: () => void): () => void {
     const idleWindow = window as Window & {
@@ -152,6 +159,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
             style={{ gridTemplateColumns: `repeat(${NAV_ITEMS.length}, minmax(0, 1fr))`, ...style }}
             className={cn(
                 // 기본 스타일 및 고정 위치
+                'mobile-bottom-nav',
                 'fixed bottom-0 left-0 right-0 z-50',
                 // 배경 및 테두리
                 'bg-background/95 backdrop-blur-md border-t border-border',
@@ -181,6 +189,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                         onTouchStart={() => handleNavIntent(item.path, isActive)}
                         onMouseEnter={() => handleNavIntent(item.path, isActive)}
                         onFocus={() => handleNavIntent(item.path, isActive)}
+                        style={MOBILE_BOTTOM_NAV_BUTTON_STYLE}
                         className={cn(
                             'flex flex-col items-center justify-center py-2.5 px-1',
                             'min-h-[60px]',
