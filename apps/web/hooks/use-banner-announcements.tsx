@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import type { Announcement } from '@/types/announcement';
 
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
 const ANNOUNCEMENT_SELECT = 'id,title,content,is_active,show_on_banner,priority,created_at,updated_at';
+const ACTIVE_ANNOUNCEMENTS_STALE_TIME_MS = 5 * 60 * 1000;
+const BANNER_ANNOUNCEMENTS_STALE_TIME_MS = 10 * 60 * 1000;
+const ANNOUNCEMENTS_GC_TIME_MS = 30 * 60 * 1000;
 
 interface AnnouncementRow {
     id: string;
@@ -66,20 +68,32 @@ export function useActiveAnnouncements(enabled = true) {
             }
         },
         enabled,
-        staleTime: 60 * 1000,
-        gcTime: 5 * 60 * 1000,
+        staleTime: ACTIVE_ANNOUNCEMENTS_STALE_TIME_MS,
+        gcTime: ANNOUNCEMENTS_GC_TIME_MS,
     });
 }
 
 export function useBannerAnnouncements(enabled = true) {
-    const activeAnnouncementsQuery = useActiveAnnouncements(enabled);
-    const bannerAnnouncements = useMemo(
-        () => (activeAnnouncementsQuery.data ?? []).filter((announcement) => announcement.showOnBanner),
-        [activeAnnouncementsQuery.data],
-    );
+    return useQuery({
+        queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'banner'],
+        queryFn: async (): Promise<Announcement[]> => {
+            try {
+                const rows = await fetchSupabaseRows<AnnouncementRow>('announcements', [
+                    ['select', ANNOUNCEMENT_SELECT],
+                    ['is_active', 'eq.true'],
+                    ['show_on_banner', 'eq.true'],
+                    ['order', 'priority.desc,created_at.desc'],
+                ]);
 
-    return {
-        ...activeAnnouncementsQuery,
-        data: bannerAnnouncements,
-    };
+                return parseAnnouncements(rows);
+            } catch (error) {
+                console.error('배너 공지사항 조회 중 오류:', error);
+                const fallbackAnnouncements = await getFallbackActiveAnnouncements();
+                return fallbackAnnouncements.filter((announcement) => announcement.showOnBanner);
+            }
+        },
+        enabled,
+        staleTime: BANNER_ANNOUNCEMENTS_STALE_TIME_MS,
+        gcTime: ANNOUNCEMENTS_GC_TIME_MS,
+    });
 }
