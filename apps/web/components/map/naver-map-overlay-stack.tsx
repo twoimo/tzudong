@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 
+import { MapOverlayNotice } from '@/components/map/map-overlay-notice';
 import {
     AnnouncementToastBadge,
     EmptyStateIndicator,
@@ -80,16 +81,14 @@ export function NaverMapOverlayStack({
             )}
 
             {mapToast && mapToast.isVisible && (
-                <div
+                <MapOverlayNotice
                     style={centerOffsetStyle}
-                    className={`${floatingToastPositionClass} bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 animate-in fade-in zoom-in duration-300 motion-reduce:animate-none`}
+                    className={`${floatingToastPositionClass} rounded-lg border border-border shadow-lg animate-in fade-in zoom-in duration-300 motion-reduce:animate-none`}
                     role={mapToast.type === 'error' ? 'alert' : 'status'}
-                    aria-live={mapToast.type === 'error' ? 'assertive' : 'polite'}
+                    ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}
                 >
-                    <span className="text-sm font-medium">
-                        {mapToast.message}
-                    </span>
-                </div>
+                    {mapToast.message}
+                </MapOverlayNotice>
             )}
         </>
     );
