@@ -858,6 +858,7 @@ describe('web quality performance source contracts', () => {
         const appToasterSource = source('components/ui/app-toaster.tsx');
         const toastSource = source('components/ui/toast.tsx');
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
+        const noToastSource = source('lib/no-toast.ts');
         const homeAppGlobalsSource = source('app/home-app-globals.css');
         const homeTailwindConfigSource = source('tailwind.home.config.ts');
         const mainLayoutSource = source('components/layout/MainLayout.tsx');
@@ -906,6 +907,11 @@ describe('web quality performance source contracts', () => {
         expect(appRuntimeShellSource).toContain('<AppProviders>');
         expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
         expect(appProvidersSource).toContain('<AppToaster />');
+        expect(homeRuntimeShellSource).toContain("import { AppToaster } from '@/components/ui/app-toaster';");
+        expect(homeRuntimeShellSource).toContain('<AppToaster />');
+        expect(noToastSource).toContain("import { toast as appToast } from \"@/hooks/use-toast\";");
+        expect(noToastSource).toContain('createElement(AppToaster)');
+        expect(noToastSource).not.toContain('toast-disabled');
         expect(appToasterSource).toContain('<ToastProvider swipeDirection="right">');
         expect(appToasterSource).toContain('<ToastViewport />');
         expect(toastSource).toContain('top-[calc(env(safe-area-inset-top)+7.25rem)]');
@@ -920,6 +926,8 @@ describe('web quality performance source contracts', () => {
         expect(toastSource).not.toContain('sm:w-[min(340px,calc(100vw-2rem))]');
         expect(toastSource).not.toContain('sm:w-[min(360px,calc(100vw-2rem))]');
         expect(toastSource).not.toContain('sm:w-[min(420px,calc(100vw-2rem))]');
+        expect(toastSource).toContain('data-[state=open]:fade-in-0');
+        expect(toastSource).not.toContain('data-[state=open]:slide-in-from-top-full');
         expect(toastSource).toContain('opacity-100');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
