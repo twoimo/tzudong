@@ -19,11 +19,11 @@ function HomeMapContainerLoadingShell() {
     return (
         <section
             role="status"
-            aria-label="홈 지도 화면 준비 중"
+            aria-label="쯔동여지도 로딩 중"
             aria-live="polite"
             className="relative flex-1 overflow-hidden bg-background"
         >
-            <p className="sr-only">홈 지도 화면 준비 중</p>
+            <p className="sr-only">쯔동여지도 로딩 중</p>
         </section>
     );
 }
@@ -484,7 +484,6 @@ export default function HomeClient() {
                 clearRestaurantDetailSelection={clearRestaurantDetailSelection}
                 isAdmin={isAdmin}
                 isLoggedIn={!!user}
-                isMobileOrTablet={isMobileOrTablet}
                 mapMode={mapMode}
                 openDetailPanelRef={openDetailPanelRef}
                 openPanelRef={openPanelRef}
