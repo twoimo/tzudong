@@ -224,20 +224,11 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 }
 
 function HomeLayoutContent({ children }: { children: ReactNode }) {
-    const [hasMounted, setHasMounted] = useState(false);
     const { isDesktop } = useDeviceType();
-
-    useEffect(() => {
-        setHasMounted(true);
-    }, []);
-
-    if (!hasMounted) {
-        return <HomeRuntimePendingShell />;
-    }
 
     if (isDesktop) {
         return (
-            <Suspense fallback={<HomeRuntimePendingShell />}>
+            <Suspense fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}>
                 <OverlayLayout>{children}</OverlayLayout>
             </Suspense>
         );
@@ -246,23 +237,14 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
     return <MobileHomeLayout>{children}</MobileHomeLayout>;
 }
 
-function HomeRuntimeLoadingSpinner() {
-    return (
-        <div className="flex h-full min-h-[var(--full-height,100vh)] w-full items-center justify-center bg-background" role="status" aria-live="polite" aria-label="쯔동여지도 로딩 중">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary motion-reduce:animate-none" aria-hidden="true" />
-            <span className="sr-only">쯔동여지도 로딩 중</span>
-        </div>
-    );
-}
-
-function HomeRuntimePendingShell() {
+function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
     return (
         <div className="min-h-[var(--full-height,100vh)] bg-background text-foreground">
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>
-            <main id="main-content" className="h-full w-full bg-background" aria-busy="true">
-                <HomeRuntimeLoadingSpinner />
+            <main id="main-content" className="h-full w-full bg-background">
+                {children}
             </main>
         </div>
     );

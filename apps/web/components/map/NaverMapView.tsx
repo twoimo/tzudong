@@ -429,11 +429,6 @@ const NaverMapView = memo(({
         setPosition: (position: unknown) => void;
         setIcon: (icon: unknown) => void;
     } | null>(null);
-    const deviceLocationAccuracyCircleRef = useRef<{
-        setMap: (map: unknown | null) => void;
-        setCenter: (center: unknown) => void;
-        setRadius: (radius: number) => void;
-    } | null>(null);
     const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
     const isInitialLoadFromUrlRef = useRef<boolean>(false); // URL 파라미터로 초기화되었는지 추적 (공유 URL 지원)
 
@@ -599,8 +594,6 @@ const NaverMapView = memo(({
         if (!deviceLocation) {
             deviceLocationMarkerRef.current?.setMap(null);
             deviceLocationMarkerRef.current = null;
-            deviceLocationAccuracyCircleRef.current?.setMap(null);
-            deviceLocationAccuracyCircleRef.current = null;
             lastFocusedDeviceLocationRequestRef.current = null;
             return;
         }
@@ -629,30 +622,6 @@ const NaverMapView = memo(({
             deviceLocationMarkerRef.current.setMap(map);
         }
 
-        if (deviceLocationRenderPlan.accuracyRadius !== null) {
-            const radius = deviceLocationRenderPlan.accuracyRadius;
-            if (!deviceLocationAccuracyCircleRef.current) {
-                deviceLocationAccuracyCircleRef.current = new naver.maps.Circle({
-                    map,
-                    center: position,
-                    radius,
-                    strokeColor: '#2563eb',
-                    strokeOpacity: 0.22,
-                    strokeWeight: 1,
-                    fillColor: '#2563eb',
-                    fillOpacity: 0.10,
-                    zIndex: 9998,
-                });
-            } else {
-                deviceLocationAccuracyCircleRef.current.setCenter(position);
-                deviceLocationAccuracyCircleRef.current.setRadius(radius);
-                deviceLocationAccuracyCircleRef.current.setMap(map);
-            }
-        } else {
-            deviceLocationAccuracyCircleRef.current?.setMap(null);
-            deviceLocationAccuracyCircleRef.current = null;
-        }
-
         if (deviceLocationRenderPlan.shouldFocus) {
             lastFocusedDeviceLocationRequestRef.current = deviceLocationRenderPlan.nextFocusedRequestId;
             map.morph(position, deviceLocationRenderPlan.focusZoom, { duration: 450, easing: 'easeOutCubic' });
@@ -661,7 +630,6 @@ const NaverMapView = memo(({
 
     useEffect(() => () => {
         deviceLocationMarkerRef.current?.setMap(null);
-        deviceLocationAccuracyCircleRef.current?.setMap(null);
     }, []);
 
     const handleDetailPanelMouseDownCapture = useMemo(
