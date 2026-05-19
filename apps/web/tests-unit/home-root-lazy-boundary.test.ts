@@ -38,6 +38,7 @@ describe('home root runtime boundary', () => {
         const proxySource = source('proxy.ts');
         const homeClientSource = source('app/home-client.tsx');
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
+        const homeViewportModeSource = source('hooks/useHomeViewportMode.ts');
         const homeCssSource = source('app/home-app-globals.css');
         const homeTailwindConfigSource = source('tailwind.home.config.ts');
 
@@ -62,7 +63,7 @@ describe('home root runtime boundary', () => {
         expect(proxySource).toContain("'/'");
         expect(proxySource).toContain("'/home-frame'");
 
-        expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {!(isMobileOrTablet && isMapFullscreen)'));
+        expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {isViewportResolved && !(isMobileOrTablet && isMapFullscreen)'));
         expect(homeClientSource).toContain('loading: () => null');
         expect(homeClientSource).toContain('tzudong:home-initial-intent');
         expect(homeClientSource).toContain('initialIntent={initialMobileOverlayIntent}');
@@ -99,6 +100,13 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
         expect(homeRuntimeShellSource).not.toContain('if (!hasMounted)');
         expect(homeRuntimeShellSource).not.toContain('setHasMounted');
+        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'pending')");
+        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'desktop')");
+        expect(homeRuntimeShellSource).not.toContain("from '@/hooks/useDeviceType'");
+        expect(homeViewportModeSource).toContain("export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop'");
+        expect(homeViewportModeSource).toContain("const [mode, setMode] = useState<HomeViewportMode>('pending')");
+        expect(homeViewportModeSource).toContain('window.innerWidth <= BREAKPOINTS.tabletMax');
+        expect(homeViewportModeSource).toContain("previousMode === nextMode ? previousMode : nextMode");
         expect(homeRuntimeShellSource).toContain('HomeAuthSessionUpdatedDetail');
         expect(homeRuntimeShellSource).toContain('hasSupabaseAuthSessionHint');
         expect(homeRuntimeShellSource).toContain("typeof detail?.hasSession === 'boolean'");
