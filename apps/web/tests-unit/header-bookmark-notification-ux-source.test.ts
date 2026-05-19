@@ -57,6 +57,11 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileBookmarkSource).toContain('MapPin className="h-4 w-4');
 
     expect(mobileOverlaySource).toContain('h-9 w-9 rounded-full');
+    expect(mobileOverlaySource).toContain('const mobileTopIconButtonClass = cn(');
+    expect(mobileOverlaySource).toContain("const mobileTopIconGlyphClass = 'h-[18px] w-[18px]'");
+    expect(mobileOverlaySource).toContain("const mobileTopUserIconGlyphClass = 'h-5 w-5'");
+    expect(mobileOverlaySource).toContain('className={mobileTopIconButtonClass}');
+    expect(mobileOverlaySource).toContain('className={mobileTopUserIconGlyphClass}');
     expect(mobileOverlaySource).toContain('aria-label="북마크 전체보기 로그인 안내"');
     expect(mobileOverlaySource).toContain('loadMobileNotificationMenuButton');
     expect(mobileOverlaySource).toContain('<DeferredMobileNotificationMenuButton user={user} defaultOpen={shouldOpenNotificationOnMount} />');

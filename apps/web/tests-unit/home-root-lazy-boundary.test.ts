@@ -32,23 +32,23 @@ class MemoryStorage {
 }
 
 describe('home root runtime boundary', () => {
-    test('keeps the root first paint static while preserving the real home runtime frame', () => {
+    test('starts the real home map runtime directly on root and layers controls progressively', () => {
         const pageSource = source('app/page.tsx');
         const homeFrameSource = source('app/home-frame/page.tsx');
-        const publicStaticSource = source('public/home-static.html');
         const proxySource = source('proxy.ts');
         const homeClientSource = source('app/home-client.tsx');
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
         const homeCssSource = source('app/home-app-globals.css');
         const homeTailwindConfigSource = source('tailwind.home.config.ts');
 
-        expect(pageSource).toContain("import { HomeInitialShell } from './home-initial-shell'");
-        expect(pageSource).toContain('homeFrameBootstrap');
-        expect(pageSource).toContain("frame.src = '/home-frame' + window.location.search + window.location.hash");
-        expect(pageSource).toContain('맛집 상세로 이동합니다');
-        expect(pageSource).not.toContain('맛집 정보를 준비 중입니다');
-        expect(pageSource).not.toContain("import HomeClient from './home-client'");
-        expect(pageSource).not.toContain('<HomeClient />');
+        expect(pageSource).toContain("import { HomeRuntimeShell } from './home-runtime-shell'");
+        expect(pageSource).toContain("import HomeClient from './home-client'");
+        expect(pageSource).toContain('<HomeRuntimeShell>');
+        expect(pageSource).toContain('<HomeClient />');
+        expect(pageSource).not.toContain('HomeInitialShell');
+        expect(pageSource).not.toContain('homeFrameBootstrap');
+        expect(pageSource).not.toContain('homeDeepLinkPreviewBootstrap');
+        expect(pageSource).not.toContain('home-runtime-frame');
         expect(pageSource).not.toContain('HomeLandingShell');
         expect(pageSource).not.toContain('HomeMapIsland');
         expect(pageSource).not.toContain('지도 준비하기');
@@ -57,71 +57,17 @@ describe('home root runtime boundary', () => {
         expect(homeFrameSource).toContain("import HomeClient from '../home-client'");
         expect(homeFrameSource).toContain('<HomeRuntimeShell>');
         expect(homeFrameSource).toContain('<HomeClient />');
-        expect(publicStaticSource).toContain('id="home-initial-shell"');
-        expect(publicStaticSource).toContain('role="status" aria-live="polite"');
-        expect(publicStaticSource).toContain('aria-label="쯔동여지도 홈 미리보기"');
-        expect(publicStaticSource).toContain('aria-live="polite"');
-        expect(publicStaticSource).toContain('class="sr"');
-        expect(publicStaticSource).toContain('.sr{position:absolute;width:1px;height:1px');
-        expect(publicStaticSource).toContain('clip:rect(0,0,0,0)');
-        expect(publicStaticSource).toContain('white-space:nowrap');
-        expect(publicStaticSource).toContain('class="map-surface"');
-        expect(publicStaticSource).not.toContain('class="loader"');
-        expect(publicStaticSource).not.toContain('지도를 준비하고 있어요');
-        expect(publicStaticSource).not.toContain('class="status-card"');
-        expect(publicStaticSource).not.toContain('class="loader-wrap"');
-        expect(publicStaticSource).not.toContain('.card{padding:28px 32px}');
-        expect(publicStaticSource).toContain('class="search-shell"');
-        expect(publicStaticSource).toContain('data-home-intent="search"');
-        expect(publicStaticSource).toContain('data-home-intent="bookmark"');
-        expect(publicStaticSource).toContain('min-height:44px');
-        expect(publicStaticSource).toContain('쯔동여지도 검색 열기');
-        expect(publicStaticSource).toContain('tzudong:home-initial-intent');
-        expect(publicStaticSource).not.toContain('background:linear-gradient(90deg');
-        expect(publicStaticSource).not.toContain('지도를 준비하고 있어요');
-        expect(publicStaticSource).not.toContain('지도 화면을 먼저 준비하고 맛집 정보를 순서대로 불러옵니다');
-        expect(publicStaticSource).toContain('맛집 상세로 이동합니다');
-        expect(publicStaticSource).not.toContain('맛집 정보를 준비 중입니다');
-        expect(publicStaticSource).toContain('property="og:image"');
-        expect(publicStaticSource).toContain('name="twitter:card"');
-        expect(publicStaticSource).toContain('rel="icon"');
-        expect(publicStaticSource).toContain('rel="preconnect" href="https://oapi.map.naver.com"');
-        expect(publicStaticSource).toContain('rel="dns-prefetch" href="https://img.youtube.com"');
-        expect(publicStaticSource).not.toContain('@media (prefers-reduced-motion:reduce)');
-        expect(publicStaticSource).not.toContain('.step-dot.active');
-        expect(publicStaticSource).not.toContain('.spin.secondary');
-        expect(publicStaticSource).toContain("frame.id='home-runtime-frame'");
-        expect(publicStaticSource).toContain("frame.src='/home-frame'+location.search+location.hash");
-        expect(publicStaticSource).toContain("frame.style.visibility='hidden'");
-        expect(publicStaticSource).toContain("frame.addEventListener('load'");
-        expect(publicStaticSource).toContain('autoActivationDelayMs=0');
-        expect(publicStaticSource).not.toContain('window.requestIdleCallback(activate');
-        expect(publicStaticSource).toContain('handleActivationEvent');
-        expect(publicStaticSource).toContain('removeEventListener(e,handleActivationEvent)');
-        expect(proxySource).toContain("return NextResponse.rewrite(new URL('/home-static.html', request.url))");
+        expect(proxySource).not.toContain("NextResponse.rewrite(new URL('/home-static.html', request.url))");
+        expect(proxySource).not.toContain('isRootPageRequest');
+        expect(proxySource).toContain("'/'");
         expect(proxySource).toContain("'/home-frame'");
-        expect(proxySource).toContain("request.nextUrl.searchParams.has('_rsc')");
-        expect(proxySource).toContain("accept.includes('text/html')");
-        expect(proxySource).toContain("fetchDest === 'document'");
 
-        expect(source('app/home-initial-shell.tsx')).toContain('role="status"');
-        expect(source('app/home-initial-shell.tsx')).toContain('aria-label="쯔동여지도 홈 미리보기"');
-        expect(source('app/home-initial-shell.tsx')).toContain('role="status" aria-live="polite"');
-        expect(source('app/home-initial-shell.tsx')).toContain('sr-only');
-        expect(source('app/home-initial-shell.tsx')).toContain('data-home-intent="search"');
-        expect(source('app/home-initial-shell.tsx')).toContain('data-home-intent="bookmark"');
-        expect(source('app/home-initial-shell.tsx')).toContain('min-h-11 min-w-11');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('지도를 준비하고 있어요');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('지도 화면을 먼저 준비하고 맛집 정보를 순서대로 불러옵니다');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('bg-gradient-to-r');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('motion-reduce:animate-none');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('motion-reduce:hidden');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('홈 지도 준비 단계');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('지도를 준비하고 있어요');
-        expect(source('app/home-initial-shell.tsx')).not.toContain('지도 화면을 먼저 준비하고 맛집 정보를 순서대로 불러옵니다');
-        expect(homeClientSource).toContain('<HomeMapContainer');
+        expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {!(isMobileOrTablet && isMapFullscreen)'));
+        expect(homeClientSource).toContain('loading: () => <HomeControlPanelLoadingShell />');
+        expect(homeClientSource).toContain('tzudong:home-initial-intent');
+        expect(homeClientSource).toContain('initialIntent={initialMobileOverlayIntent}');
         expect(homeClientSource).not.toContain('home-map-activate-button');
+
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
@@ -142,8 +88,6 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).not.toContain('홈 지도 준비 단계');
         expect(homeRuntimeShellSource).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
         const firstPaintShellSources = [
-            publicStaticSource,
-            source('app/home-initial-shell.tsx'),
             homeRuntimeShellSource,
         ];
         for (const firstPaintShellSource of firstPaintShellSources) {
@@ -166,6 +110,8 @@ describe('home root runtime boundary', () => {
         expect(source('tailwind.home.deferred.config.ts')).toContain('./components/admin/AdminRestaurantModal.tsx');
         expect(source('app/home-client-sidepanels.tsx')).toContain("import './home-deferred-globals.css'");
 
+        expect(exists('app/home-initial-shell.tsx')).toBe(false);
+        expect(exists('public/home-static.html')).toBe(false);
         expect(exists('app/home-landing-shell.tsx')).toBe(false);
         expect(exists('app/home-landing-shell.module.css')).toBe(false);
         expect(exists('app/home-map-island.tsx')).toBe(false);
