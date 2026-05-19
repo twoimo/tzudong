@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { useLayout } from "@/contexts/LayoutContext";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useHomeViewportMode } from "@/hooks/useHomeViewportMode";
 import { toast } from "@/lib/no-toast";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import type { Restaurant } from "@/types/restaurant";
@@ -71,7 +71,10 @@ const isHomeStartupIntent = (value: string | null): value is HomeStartupIntent =
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
-    const { isDesktop, isMobileOrTablet } = useDeviceType();
+    const viewportMode = useHomeViewportMode();
+    const isViewportResolved = viewportMode !== 'pending';
+    const isDesktop = viewportMode === 'desktop';
+    const isMobileOrTablet = viewportMode === 'mobileOrTablet';
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
     const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
@@ -520,7 +523,7 @@ export default function HomeClient() {
                 onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
             />
 
-            {!(isMobileOrTablet && isMapFullscreen) && (
+            {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
                 <HomeControlPanel
                     mapMode={mapMode}
                     selectedRegion={state.selectedRegion}
@@ -561,7 +564,7 @@ export default function HomeClient() {
                 />
             )}
 
-            {shouldRenderSidePanels && (
+            {isViewportResolved && shouldRenderSidePanels && (
                 <HomeClientSidePanels
                     activeRightPanel={activeRightPanel}
                     closeAllPanels={closeAllPanels}
