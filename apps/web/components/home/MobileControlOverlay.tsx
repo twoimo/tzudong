@@ -106,6 +106,15 @@ const loadMobileNotificationMenuButton = async () => {
     return mod.default as ComponentType<MobileNotificationMenuButtonProps>;
 };
 
+const mobileTopIconButtonClass = cn(
+    'h-9 w-9 rounded-full border border-border bg-background',
+    'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
+);
+
+const mobileTopIconButtonWithBadgeClass = cn(mobileTopIconButtonClass, 'relative');
+const mobileTopIconGlyphClass = 'h-[18px] w-[18px]';
+const mobileTopUserIconGlyphClass = 'h-5 w-5';
+
 const loadRestaurantSearch = async () => {
     const mod = await import('@/components/search/RestaurantSearch');
     return mod.default as ComponentType<RestaurantSearchComponentProps>;
@@ -568,13 +577,10 @@ function MobileControlOverlayComponent({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn(
-                        'h-9 min-h-11 w-9 min-w-11 rounded-full border border-border bg-background',
-                        'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
-                    )}
+                    className={mobileTopIconButtonClass}
                     aria-label="북마크"
                 >
-                    <Bookmark className="h-[18px] w-[18px]" aria-hidden="true" />
+                    <Bookmark className={mobileTopIconGlyphClass} aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">
@@ -623,13 +629,10 @@ function MobileControlOverlayComponent({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn(
-                        'h-9 min-h-11 w-9 min-w-11 rounded-full border border-border bg-background',
-                        'hover:bg-secondary/80 relative focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
-                    )}
+                    className={mobileTopIconButtonWithBadgeClass}
                     aria-label="알림"
                 >
-                    <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
+                    <Bell className={mobileTopIconGlyphClass} aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">
@@ -668,13 +671,10 @@ function MobileControlOverlayComponent({
                         event.stopPropagation();
                         onTopShellUserIconClick?.();
                     }}
-                    className={cn(
-                        'h-9 min-h-11 w-9 min-w-11 rounded-full border border-border bg-background',
-                        'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
-                    )}
+                    className={mobileTopIconButtonClass}
                     aria-label="사용자 메뉴"
                 >
-                    <UserIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                    <UserIcon className={mobileTopUserIconGlyphClass} aria-hidden="true" />
                 </Button>
             );
         }
@@ -685,13 +685,10 @@ function MobileControlOverlayComponent({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={cn(
-                            'h-9 min-h-11 w-9 min-w-11 rounded-full border border-border bg-background',
-                            'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
-                        )}
+                        className={mobileTopIconButtonClass}
                         aria-label="사용자 메뉴"
                     >
-                        <UserIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                        <UserIcon className={mobileTopUserIconGlyphClass} aria-hidden="true" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-border font-serif w-44 z-[110]">
@@ -790,7 +787,7 @@ function MobileControlOverlayComponent({
                     {renderUserMenuButton()}
                 </div>
 
-                <div className="pointer-events-auto mt-2.5 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] pt-[2px] pb-[2px] scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="pointer-events-auto mt-1.5 -mx-3 flex gap-1.5 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {quickTopCategories.map((category) => {
                         const isSelected = quickSelectedCategories.includes(category);
                         return (
@@ -802,8 +799,8 @@ function MobileControlOverlayComponent({
                             aria-pressed={isSelected}
                             aria-label={`${category} 카테고리 ${isSelected ? '선택 해제' : '선택'}`}
                             className={cn(
-                                'pointer-events-auto min-h-11 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                'px-3.5 text-[13px] font-medium transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                'pointer-events-auto h-8 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                'px-2.5 text-[11px] font-medium transition-colors motion-reduce:transition-none hover:bg-secondary/80',
                                 isSelected
                                     ? 'bg-red-700 text-white border-red-700 hover:bg-red-800'
                                     : 'text-foreground'
@@ -820,19 +817,19 @@ function MobileControlOverlayComponent({
                         aria-expanded={activeSheet === 'category'}
                         aria-label="카테고리 더보기"
                         className={cn(
-                            'pointer-events-auto min-h-11 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                            'hover:bg-secondary/80 px-3.5 text-[13px] font-medium transition-colors motion-reduce:transition-none',
+                            'pointer-events-auto h-8 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                            'hover:bg-secondary/80 px-2.5 text-[11px] font-medium transition-colors motion-reduce:transition-none',
                             activeSheet === 'category' && 'ring-2 ring-primary'
                         )}
                     >
-                        <Filter className="mr-1 h-4 w-4" aria-hidden="true" />
+                        <Filter className="mr-0.5 h-3 w-3" aria-hidden="true" />
                         더보기
                     </Button>
                 </div>
             </div>
 
             {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
-            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex flex-col gap-2">
+            <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] left-4 z-40 flex flex-col gap-1.5">
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
                     <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,28vw,105px)]">
@@ -842,7 +839,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full min-h-11 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-8 px-2 text-[11px] font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -855,7 +852,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full min-h-11 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-8 px-2 text-[11px] font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -874,16 +871,16 @@ function MobileControlOverlayComponent({
                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] px-2 min-h-11',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-8 px-2',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
-                            <MapPin className="h-4 w-4" aria-hidden="true" />
+                            <MapPin className="h-3 w-3" aria-hidden="true" />
                         </div>
                         <div className="flex-1 flex items-center justify-center min-w-0">
-                            <span className="text-xs truncate">{regionLabel}</span>
+                            <span className="text-[11px] truncate">{regionLabel}</span>
                         </div>
                     </div>
                 </Button>

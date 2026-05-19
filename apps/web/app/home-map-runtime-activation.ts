@@ -1,4 +1,4 @@
-export const HOME_MAP_AUTO_ACTIVATION_DELAY_MS = 8000;
+export const HOME_MAP_AUTO_ACTIVATION_DELAY_MS = 0;
 
 export const HOME_MAP_ACTIVATION_EVENTS = [
     'pointerdown',
@@ -53,10 +53,10 @@ export function isEmbeddedHomeRuntimeWindow() {
     }
 }
 
-export function buildHomeMapActivationPlan(input: HomeMapActivationInput): HomeMapActivationPlan {
+export function buildHomeMapActivationPlan(_input: HomeMapActivationInput): HomeMapActivationPlan {
     return {
-        activateImmediately: Boolean(input.isEmbeddedHomeRuntime) || shouldActivateHomeMapImmediately(input),
+        activateImmediately: true,
         delayMs: HOME_MAP_AUTO_ACTIVATION_DELAY_MS,
-        events: HOME_MAP_ACTIVATION_EVENTS,
+        events: [],
     };
 }
