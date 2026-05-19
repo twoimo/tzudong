@@ -13,21 +13,23 @@ import {
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('home map runtime activation plan', () => {
-    test('keeps ordinary home visits behind an interaction or idle gate', () => {
+    test('activates ordinary home visits immediately so the Naver map is the first runtime surface', () => {
         const plan = buildHomeMapActivationPlan({ search: '' });
 
-        expect(plan.activateImmediately).toBe(false);
+        expect(plan.activateImmediately).toBe(true);
         expect(plan.delayMs).toBe(HOME_MAP_AUTO_ACTIVATION_DELAY_MS);
-        expect(plan.events).toEqual(HOME_MAP_ACTIVATION_EVENTS);
-        expect(plan.events).toContain('pointerdown');
-        expect(plan.events).toContain('keydown');
+        expect(plan.delayMs).toBe(0);
+        expect(plan.events).toEqual([]);
+        expect(HOME_MAP_ACTIVATION_EVENTS).toContain('pointerdown');
+        expect(HOME_MAP_ACTIVATION_EVENTS).toContain('keydown');
     });
 
-    test('keeps restaurant detail links behind the map interaction gate while preserving direct overlays', () => {
+    test('keeps deep-link detection available while the runtime itself is no longer gated', () => {
         expect(shouldActivateHomeMapImmediately({ search: '?r=restaurant-1' })).toBe(false);
         expect(shouldActivateHomeMapImmediately({ search: '?restaurant=restaurant-1' })).toBe(false);
         expect(shouldActivateHomeMapImmediately({ search: '?panel=announcement' })).toBe(true);
         expect(shouldActivateHomeMapImmediately({ search: '', hash: '#map' })).toBe(true);
+        expect(buildHomeMapActivationPlan({ search: '?r=restaurant-1' }).activateImmediately).toBe(true);
     });
 
     test('activates immediately inside the embedded home frame after the outer gate already ran', () => {
@@ -50,8 +52,11 @@ describe('home map runtime activation plan', () => {
         expect(naverMapSource).toContain('window.location.search');
         expect(naverMapSource).toContain('window.location.hash');
         expect(naverMapSource).toContain('isEmbeddedHomeRuntime: isEmbeddedHomeRuntimeWindow()');
-        expect(naverMapSource).toContain('activationPlan.events.forEach');
-        expect(naverMapSource).toContain('window.setTimeout(activateMapRuntime, activationPlan.delayMs)');
+        expect(naverMapSource).toContain('activationPlan.activateImmediately');
+        expect(naverMapSource).not.toContain('window.setTimeout(activateMapRuntime, activationPlan.delayMs)');
+        expect(naverMapSource).not.toContain('activationPlan.events.forEach');
+        expect(naverMapSource).toContain("strategy: 'afterInteractive'");
+        expect(naverMapSource).not.toContain("strategy: 'lazyOnload'");
         expect(naverMapSource).not.toContain('{ timeout: 2000 }');
         expect(naverMapSource).not.toContain('requestIdleCallback(() =>');
     });
