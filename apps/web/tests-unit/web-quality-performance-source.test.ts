@@ -847,6 +847,9 @@ describe('web quality performance source contracts', () => {
     test('global chrome assets stay small and cacheable without changing page UI', () => {
         const layoutSource = source('app/layout.tsx');
         const appRuntimeShellSource = source('app/app-runtime-shell.tsx');
+        const appProvidersSource = source('app/app-providers.tsx');
+        const appToasterSource = source('components/ui/app-toaster.tsx');
+        const toastSource = source('components/ui/toast.tsx');
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
         const homeAppGlobalsSource = source('app/home-app-globals.css');
         const homeTailwindConfigSource = source('tailwind.home.config.ts');
@@ -895,6 +898,13 @@ describe('web quality performance source contracts', () => {
         expect(appRuntimeShellSource).toContain('<QueryProvider>');
         expect(appRuntimeShellSource).toContain('<AppProviders>');
         expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
+        expect(appProvidersSource).toContain('<AppToaster />');
+        expect(appToasterSource).toContain('<ToastProvider swipeDirection="right">');
+        expect(appToasterSource).toContain('<ToastViewport />');
+        expect(toastSource).toContain('var(--mobile-bottom-nav-effective-height');
+        expect(toastSource).toContain('sm:w-[min(360px,calc(100vw-2rem))]');
+        expect(toastSource).not.toContain('sm:w-[min(420px,calc(100vw-2rem))]');
+        expect(toastSource).toContain('opacity-100');
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
