@@ -63,7 +63,7 @@ describe('home root runtime boundary', () => {
         expect(proxySource).toContain("'/home-frame'");
 
         expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {!(isMobileOrTablet && isMapFullscreen)'));
-        expect(homeClientSource).toContain('loading: () => <HomeControlPanelLoadingShell />');
+        expect(homeClientSource).toContain('loading: () => null');
         expect(homeClientSource).toContain('tzudong:home-initial-intent');
         expect(homeClientSource).toContain('initialIntent={initialMobileOverlayIntent}');
         expect(homeClientSource).not.toContain('home-map-activate-button');
@@ -71,14 +71,14 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
-        expect(homeRuntimeShellSource).toContain('function HomeRuntimeProgressiveShell');
+        expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeProgressiveShell');
         expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeLoadingSpinner');
-        expect(homeRuntimeShellSource).toContain('<HomeRuntimeProgressiveShell />');
+        expect(homeRuntimeShellSource).not.toContain('<HomeRuntimeProgressiveShell />');
         expect(homeRuntimeShellSource).toContain('role="status"');
-        expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 홈 미리보기"');
+        expect(homeRuntimeShellSource).not.toContain('aria-label="쯔동여지도 홈 미리보기"');
         expect(homeRuntimeShellSource).toContain('role="status" aria-live="polite"');
         expect(homeRuntimeShellSource).toContain('sr-only');
-        expect(homeRuntimeShellSource).toContain('aria-hidden="true"');
+        expect(homeRuntimeShellSource).not.toContain('aria-hidden="true"');
         expect(homeRuntimeShellSource).not.toContain('data-home-intent="search"');
         expect(homeRuntimeShellSource).not.toContain('지도를 준비하고 있어요');
         expect(homeRuntimeShellSource).not.toContain('지도 화면을 먼저 준비하고 맛집 정보를 순서대로 불러옵니다');
@@ -94,6 +94,9 @@ describe('home root runtime boundary', () => {
             expect(firstPaintShellSource).not.toMatch(/animate-|animation\s*:|@keyframes/);
         }
         expect(homeRuntimeShellSource).not.toContain('지도를 준비하고 있어요');
+        expect(homeRuntimeShellSource).not.toContain('쯔동여지도 검색하기');
+        expect(homeRuntimeShellSource).not.toContain('bg-[radial-gradient');
+        expect(homeRuntimeShellSource).not.toContain('bg-[linear-gradient');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
         expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');
         expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
