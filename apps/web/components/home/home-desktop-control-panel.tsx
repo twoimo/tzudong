@@ -27,20 +27,6 @@ const loadDesktopRestaurantSearch = async () => {
     return mod.default as ComponentType<RestaurantSearchComponentProps>;
 };
 
-function DesktopRestaurantSearchLoadingShell({ onActivate }: { onActivate: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onActivate}
-            onFocus={onActivate}
-            className="h-10 w-[clamp(14rem,24vw,20rem)] rounded-md border border-input bg-background px-3 text-left text-sm text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="맛집 검색 불러오기"
-        >
-            맛집 검색하기
-        </button>
-    );
-}
-
 interface HomeDesktopControlPanelProps {
     mapMode: 'domestic' | 'overseas';
     selectedRegion: Region | null;
@@ -77,19 +63,15 @@ export default function HomeDesktopControlPanel({
     initialIntent = null,
 }: HomeDesktopControlPanelProps) {
     const [leftPosition, setLeftPosition] = useState<string>('50%');
-    const [shouldLoadSearch, setShouldLoadSearch] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const countryCounts = useOverseasCountryCounts(mapMode);
     const DeferredRestaurantSearch = useDeferredComponent<RestaurantSearchComponentProps>(
-        shouldLoadSearch,
+        true,
         loadDesktopRestaurantSearch
     );
-    const requestSearch = useCallback(() => setShouldLoadSearch(true), []);
-
     useEffect(() => {
         if (initialIntent !== 'search') return;
 
-        setShouldLoadSearch(true);
         onPanelClick?.('control');
     }, [initialIntent, onPanelClick]);
 
@@ -180,9 +162,7 @@ export default function HomeDesktopControlPanel({
                         maxItems={3}
                         autoFocusInput
                     />
-                ) : (
-                    <DesktopRestaurantSearchLoadingShell onActivate={requestSearch} />
-                )}
+                ) : null}
             </div>
         </div>
     );
