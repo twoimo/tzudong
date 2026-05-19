@@ -15,16 +15,12 @@ import {
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
 
-function HomeMapContainerLoadingShell() {
+function HomeMapContainerPendingShell() {
     return (
         <section
-            role="status"
-            aria-label="쯔동여지도 로딩 중"
-            aria-live="polite"
+            aria-hidden="true"
             className="relative flex-1 overflow-hidden bg-background"
-        >
-            <p className="sr-only">쯔동여지도 로딩 중</p>
-        </section>
+        />
     );
 }
 
@@ -42,7 +38,7 @@ const HomeMapContainer = dynamic(
     () => import('../components/home/home-map-container'),
     {
         ssr: false,
-        loading: () => <HomeMapContainerLoadingShell />
+        loading: () => <HomeMapContainerPendingShell />
     }
 );
 const SubmissionFloatingButton = dynamic(
