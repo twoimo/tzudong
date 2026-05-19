@@ -974,6 +974,10 @@ describe('web quality performance source contracts', () => {
         expect(mobileBottomNavSource).not.toContain('HOME_NAV_PREFETCH_DELAY_MS = 8000');
         expect(mobileBottomNavSource).toContain('HOME_NAV_PREFETCH_IDLE_TIMEOUT_MS = 2500');
         expect(mobileBottomNavSource).toContain('runHomeNavPrefetchWhenIdle(prefetchNavigationTargets)');
+        expect(mobileBottomNavSource).toContain('MOBILE_BOTTOM_NAV_BUTTON_STYLE');
+        expect(mobileBottomNavSource).toContain('minHeight: 60');
+        expect(mobileBottomNavSource).toContain('style={MOBILE_BOTTOM_NAV_BUTTON_STYLE}');
+        expect(mobileBottomNavSource).toContain("'mobile-bottom-nav'");
         expect(viewportFixSource).toContain("if (window.CSS?.supports?.('height', '100dvh'))");
         expect(viewportFixSource).toContain('window.requestAnimationFrame(updateViewportHeight)');
         expect(nextConfigSource).toContain("source: '/favicon.ico'");
