@@ -20,6 +20,7 @@ import {
 } from '@/lib/mobile-sheet-layout';
 
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
+import { AppToaster } from '@/components/ui/app-toaster';
 
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
 
@@ -259,6 +260,7 @@ export function HomeRuntimeShell({ children }: { children: ReactNode }) {
             <HomeSessionProviders>
                 <LayoutProvider>
                     <HomeLayoutContent>{children}</HomeLayoutContent>
+                    <AppToaster />
                 </LayoutProvider>
             </HomeSessionProviders>
         </QueryProvider>
