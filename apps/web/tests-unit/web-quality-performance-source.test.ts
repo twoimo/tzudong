@@ -910,9 +910,13 @@ describe('web quality performance source contracts', () => {
         expect(appToasterSource).toContain('<ToastViewport />');
         expect(toastSource).toContain('top-[calc(env(safe-area-inset-top)+5rem)]');
         expect(toastSource).toContain('z-[250]');
-        expect(toastSource).toContain('w-[min(320px,calc(100vw-2rem))]');
-        expect(toastSource).toContain('sm:w-[min(340px,calc(100vw-2rem))]');
+        expect(toastSource).toContain('w-[min(300px,calc(100vw-1.5rem))]');
+        expect(toastSource).toContain('sm:w-[min(300px,calc(100vw-1.5rem))]');
         expect(toastSource).not.toContain('var(--mobile-bottom-nav-effective-height');
+        expect(toastSource).toContain('sm:right-3');
+        expect(toastSource).not.toContain('pr-7');
+        expect(toastSource).not.toContain('absolute right-2 top-2');
+        expect(toastSource).not.toContain('sm:w-[min(340px,calc(100vw-2rem))]');
         expect(toastSource).not.toContain('sm:w-[min(360px,calc(100vw-2rem))]');
         expect(toastSource).not.toContain('sm:w-[min(420px,calc(100vw-2rem))]');
         expect(toastSource).toContain('opacity-100');
