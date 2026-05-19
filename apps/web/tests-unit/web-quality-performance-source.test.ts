@@ -862,6 +862,8 @@ describe('web quality performance source contracts', () => {
         const homeAppGlobalsSource = source('app/home-app-globals.css');
         const homeTailwindConfigSource = source('tailwind.home.config.ts');
         const mainLayoutSource = source('components/layout/MainLayout.tsx');
+        const headerSource = source('components/layout/Header.tsx');
+        const mobileControlSource = source('components/home/MobileControlOverlay.tsx');
         const navigationPrefetcherSource = source('components/layout/NavigationPrefetcher.tsx');
         const mobileBottomNavSource = source('components/layout/MobileBottomNav.tsx');
         const nextConfigSource = source('next.config.mjs');
@@ -906,6 +908,12 @@ describe('web quality performance source contracts', () => {
         expect(appRuntimeShellSource).toContain('<QueryProvider>');
         expect(appRuntimeShellSource).toContain('<AppProviders>');
         expect(appRuntimeShellSource).toContain('<MainLayout>{children}</MainLayout>');
+        expect(headerSource).toContain('v2.0.0 © 타이니번');
+        expect(mobileControlSource).toContain('v2.0.0 © 타이니번');
+        expect(headerSource).not.toContain('v1.0.0 © 타이니번');
+        expect(mobileControlSource).not.toContain('v1.0.0 © 타이니번');
+        expect(headerSource).not.toContain('v2.0.0 @ 타이니번');
+        expect(mobileControlSource).not.toContain('v2.0.0 @ 타이니번');
         expect(appProvidersSource).toContain('<AppToaster />');
         expect(homeRuntimeShellSource).toContain("import { AppToaster } from '@/components/ui/app-toaster';");
         expect(homeRuntimeShellSource).toContain('<AppToaster />');

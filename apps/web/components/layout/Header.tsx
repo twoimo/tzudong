@@ -591,7 +591,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
                   className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
                 >
-                  <span className="text-[10px] text-muted-foreground">v1.0.0 © 타이니번</span>
+                  <span className="text-[10px] text-muted-foreground">v2.0.0 © 타이니번</span>
                   {isBusinessInfoExpanded ? (
                     <ChevronUp className="h-3 w-3 text-muted-foreground ml-1" />
                   ) : (
