@@ -29,7 +29,7 @@ export function useMobileBottomNavAutoHide<T extends HTMLElement>({
         if (hidden) {
             setMobileSheetLayoutState({
                 hideBottomNav: true,
-                headerHideProgress: 0,
+                headerHideProgress: 1,
                 source,
             });
             return;
