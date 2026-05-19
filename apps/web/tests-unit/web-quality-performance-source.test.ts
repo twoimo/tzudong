@@ -140,7 +140,7 @@ describe('web quality performance source contracts', () => {
         expect(source('hooks/use-restaurants.tsx')).not.toContain('useRestaurantWithMergeContext');
         expect(homeClientSource).not.toContain('지도를 먼저 그리고 맛집 데이터를 순서대로 연결합니다');
         expect(homeClientSource).not.toContain('홈 지도 화면 준비 중');
-        expect(homeClientSource).toContain('쯔동여지도 로딩 중');
+        expect(homeClientSource).not.toContain('쯔동여지도 로딩 중');
         expect(homeClientSource).toContain('tzudong:home-initial-intent');
         expect(homeClientSource).toContain('initialIntent={initialMobileOverlayIntent}');
         expect(homeClientSource).toContain("setActivePanel('control')");
@@ -161,20 +161,19 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
         expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeProgressiveShell');
-        expect(homeRuntimeShellSource).toContain('function HomeRuntimeLoadingSpinner');
+        expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeLoadingSpinner');
         expect(homeRuntimeShellSource).not.toContain('<HomeRuntimeProgressiveShell />');
-        expect(homeRuntimeShellSource).toContain('role="status"');
-        expect(homeRuntimeShellSource).toContain('aria-label="쯔동여지도 로딩 중"');
-        expect(homeRuntimeShellSource).toContain('animate-spin rounded-full');
+        expect(homeRuntimeShellSource).not.toContain('role="status"');
+        expect(homeRuntimeShellSource).not.toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(homeRuntimeShellSource).not.toContain('animate-spin rounded-full');
         expect(homeRuntimeShellSource).not.toContain('aria-label="쯔동여지도 홈 미리보기"');
-        expect(homeRuntimeShellSource).toContain('role="status" aria-live="polite"');
-        expect(homeRuntimeShellSource).toContain('sr-only');
-        expect(homeRuntimeShellSource).toContain('aria-hidden="true"');
+        expect(homeRuntimeShellSource).not.toContain('role="status" aria-live="polite"');
+        expect(homeRuntimeShellSource).not.toContain('aria-busy="true"');
         expect(homeRuntimeShellSource).not.toContain('data-home-intent="search"');
         expect(homeRuntimeShellSource).not.toContain('지도를 준비하고 있어요');
         expect(homeRuntimeShellSource).not.toContain('지도 화면을 먼저 준비하고 맛집 정보를 순서대로 불러옵니다');
         expect(homeRuntimeShellSource).not.toContain('bg-gradient-to-r');
-        expect(homeRuntimeShellSource).toContain('motion-reduce:animate-none');
+        expect(homeRuntimeShellSource).not.toContain('motion-reduce:animate-none');
         expect(homeRuntimeShellSource).not.toContain('motion-reduce:hidden');
         expect(homeRuntimeShellSource).not.toContain('홈 지도 준비 단계');
         expect(homeRuntimeShellSource).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
@@ -196,8 +195,10 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).not.toContain('shouldLoadMobileBottomNav');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
         expect(homeRuntimeShellSource).toContain('<QueryProvider>');
-        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');
+        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}');
         expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
+        expect(homeRuntimeShellSource).not.toContain('if (!hasMounted)');
+        expect(homeRuntimeShellSource).not.toContain('setHasMounted');
         expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(homeClientSource).toContain('resolveDeviceLocationStateUpdatePlan');
@@ -378,6 +379,15 @@ describe('web quality performance source contracts', () => {
         expect(interactionListenerIndex).toBeGreaterThan(-1);
         expect(deferredSkipIndex).toBeGreaterThan(-1);
         expect(interactionListenerIndex).toBeLessThan(deferredSkipIndex);
+    });
+
+    test('device location floating action does not show expanding circle animations', () => {
+        const mobileControlSource = source('components/home/MobileControlOverlay.tsx');
+        const naverMapSource = source('components/map/NaverMapView.tsx');
+
+        expect(mobileControlSource).not.toContain("isDeviceLocationPending && 'animate-pulse opacity-80'");
+        expect(naverMapSource).not.toContain('new naver.maps.Circle');
+        expect(naverMapSource).not.toContain('deviceLocationAccuracyCircleRef');
     });
 
     test('profile/stamp/map regressions stay fixed while preserving deferred map loading', () => {
@@ -869,11 +879,11 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
         expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
         expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeProgressiveShell');
-        expect(homeRuntimeShellSource).toContain('function HomeRuntimeLoadingSpinner');
+        expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeLoadingSpinner');
         expect(homeRuntimeShellSource).not.toContain('<HomeRuntimeProgressiveShell />');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
         expect(homeRuntimeShellSource).toContain('<QueryProvider>');
-        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell />}');
+        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}');
         expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeAppGlobalsSource).toContain('@config "../tailwind.home.config.ts"');
         expect(homeTailwindConfigSource).toContain('./components/home/**/*');
