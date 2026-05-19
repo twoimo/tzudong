@@ -89,6 +89,7 @@ describe('web quality performance source contracts', () => {
         const homeControlPanelSource = source('components/home/home-control-panel.tsx');
         const homeDesktopControlPanelSource = source('components/home/home-desktop-control-panel.tsx');
         const homeClientEffectsSource = source('app/home-client-effects.tsx');
+        const homeViewportModeSource = source('hooks/useHomeViewportMode.ts');
         const regionSelectorSource = source('components/region/RegionSelector.tsx');
         const categoryFilterSource = source('components/filters/CategoryFilter.tsx');
         const mapQuerySource = source('lib/map-query-helpers.ts');
@@ -129,7 +130,7 @@ describe('web quality performance source contracts', () => {
         expect(exists('public/home-static.html')).toBe(false);
         expect(homeClientSource).toContain('<HomeMapContainer');
         expect(homeClientSource).toContain('<HomeControlPanel');
-        expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {!(isMobileOrTablet && isMapFullscreen)'));
+        expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {isViewportResolved && !(isMobileOrTablet && isMapFullscreen)'));
         expect(source('components/home/home-map-container.tsx')).not.toContain("import { useRestaurantWithMergeContext }");
         expect(source('components/home/home-map-container.tsx')).toContain('HydratedDetailRestaurant');
         const hydratedDetailSource = source('components/home/HydratedDetailRestaurant.tsx');
@@ -199,6 +200,18 @@ describe('web quality performance source contracts', () => {
         expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
         expect(homeRuntimeShellSource).not.toContain('if (!hasMounted)');
         expect(homeRuntimeShellSource).not.toContain('setHasMounted');
+        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'pending')");
+        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'desktop')");
+        expect(homeRuntimeShellSource).not.toContain("from '@/hooks/useDeviceType'");
+        expect(homeClientSource).toContain("const viewportMode = useHomeViewportMode()");
+        expect(homeClientSource).toContain("const isViewportResolved = viewportMode !== 'pending'");
+        expect(homeClientSource).toContain('isViewportResolved && !(isMobileOrTablet && isMapFullscreen)');
+        expect(homeClientSource).toContain('isViewportResolved && shouldRenderSidePanels');
+        expect(homeClientSource).not.toContain('const { isDesktop, isMobileOrTablet } = useDeviceType()');
+        expect(homeViewportModeSource).toContain("export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop'");
+        expect(homeViewportModeSource).toContain("const [mode, setMode] = useState<HomeViewportMode>('pending')");
+        expect(homeViewportModeSource).toContain('window.innerWidth <= BREAKPOINTS.tabletMax');
+        expect(homeViewportModeSource).toContain("previousMode === nextMode ? previousMode : nextMode");
         expect(homeRuntimeShellSource).not.toContain('<MainLayout>{children}</MainLayout>');
         expect(homeClientSource).not.toContain('home-map-activate-button');
         expect(homeClientSource).toContain('resolveDeviceLocationStateUpdatePlan');
