@@ -78,7 +78,7 @@ export const StampCard = memo(function StampCard({
     const resolvedStampSize = stampSize ?? size;
     const isStampCompact = resolvedStampSize === 'compact';
     const stampSizeClass = resolvedStampSize === 'mobile'
-        ? "h-[72%] max-h-44 w-auto max-w-[72%]"
+        ? "h-[78%] max-h-64 w-auto max-w-[82%]"
         : isStampCompact
             ? "w-36 h-36 md:w-40 md:h-40"
             : "w-48 h-48 sm:w-56 sm:h-56";
@@ -179,7 +179,7 @@ export const StampCard = memo(function StampCard({
                                         <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} />
                                     </button>
                                 )}
-                                <div className="relative">
+                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src="/images/stamp-clear.png"
