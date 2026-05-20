@@ -633,13 +633,13 @@ export function RestaurantDetailPanel({
         onWriteReview?.();
     };
 
-    const handleLikeReview = async (reviewId: string) => {
+    const handleLikeReview = async (reviewId: string, currentIsLiked?: boolean) => {
         if (!user) {
             setIsAuthModalOpen(true);
             return;
         }
 
-        const isCurrentlyLiked = likedReviews.has(reviewId);
+        const isCurrentlyLiked = currentIsLiked ?? likedReviews.has(reviewId);
         const previousState = new Set(likedReviews);
 
         // 낙관적 업데이트: 즉시 UI 업데이트
