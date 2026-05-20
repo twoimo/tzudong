@@ -64,12 +64,12 @@ describe('OCR extract route normalization/cache contract', () => {
     const rawCache = {
       cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
       provider: 'gemini',
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       prompt_version: 'receipt-extraction-v2',
       preprocess_version: 'receipt-image-1600w-q90-original-first-v3',
       extraction_schema_version: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
       routing_mode: 'automatic',
-      model_attempts: [{ model: 'gemini-3-flash-preview', ok: true, elapsedMs: 12 }],
+      model_attempts: [{ model: 'gemini-3.5-flash', ok: true, elapsedMs: 12 }],
       raw_ocr_result: { store_name: '데일리픽스', date: '2026-04-25', time: '19:10', total_amount: 11500 },
       ocr_result: { store_name: '스테일 과거 보정값' },
     } as const;
@@ -106,11 +106,11 @@ describe('OCR extract route normalization/cache contract', () => {
     const response = await buildOcrResponseFromRawCache({
       metadata: {
         provider: 'gemini',
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.5-flash',
         prompt_version: 'legacy-prompt',
         preprocess_version: 'legacy-preprocess',
         routing_mode: 'automatic',
-        model_attempts: [{ model: 'gemini-3-flash-preview', ok: true, elapsedMs: 10 }],
+        model_attempts: [{ model: 'gemini-3.5-flash', ok: true, elapsedMs: 10 }],
         raw_ocr_result: { store_name: '스시런', date: '2025-12-15', time: '12:09', total_amount: 48000 },
         ocr_result: { store_name: '과거 보정값' },
       },
@@ -129,7 +129,7 @@ describe('OCR extract route normalization/cache contract', () => {
     const response = await buildOcrResponseFromRawCache({
       metadata: {
         provider: 'gemini',
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.5-flash',
         prompt_version: 'receipt-extraction-v2',
         preprocess_version: 'receipt-image-1600w-q90-original-first-v3',
         routing_mode: 'automatic',

@@ -4,8 +4,8 @@ import { getRunnableCredentials, parseSelectedRestaurantContext } from '@/lib/oc
 describe('OCR route helper contracts', () => {
   const candidate = {
     provider: 'gemini' as const,
-    model: 'gemini-3-flash-preview',
-    models: ['gemini-3-flash-preview'],
+    model: 'gemini-3.5-flash',
+    models: ['gemini-3.5-flash'],
     apiKey: 'invalid-first',
     source: 'environment' as const,
     credentialCandidates: [
