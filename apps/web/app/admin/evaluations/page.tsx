@@ -25,13 +25,16 @@ import {
   createReviewApprovedNotification,
   createReviewRejectedNotification
 } from '@/contexts/NotificationContext';
-import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, LayoutList, MonitorPlay, Send } from 'lucide-react';
+import { ClipboardCheck, Loader2, LayoutList, MonitorPlay, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { debugLog } from '@/lib/debug-log';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
+import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import {
   AlertDialog,
@@ -52,8 +55,6 @@ import {
 
 const PAGE_SIZE = 10; // 한 번에 로드할 레코드 수
 const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
-const FALLBACK_TRANSCRIPT_API_BASE_URL = 'http://localhost:8000';
-const SAFE_TRANSCRIPT_API_PROTOCOLS = new Set(['http:', 'https:']);
 const EVALUATION_FILTER_KEYS = [
   'visit_authenticity',
   'rb_inference_score',
@@ -75,6 +76,12 @@ const EVALUATION_RECORD_STATUS_SET = new Set<EvaluationRecordStatus>([
   'geocoding_failed',
   'not_selected',
 ]);
+const EVALUATION_DELETE_CONFIRMATION = '검수삭제';
+const EVALUATION_RESTORE_CONFIRMATION = '검수복원';
+type PendingRecordAction = {
+  kind: 'delete' | 'restore';
+  record: EvaluationRecord;
+};
 const ADMIN_SUBMISSION_SELECT = [
   'id',
   'user_id',
@@ -130,39 +137,6 @@ interface StoredEvaluationPageState {
   searchQuery?: string;
   evalFilters?: EvalFiltersState;
   isAlternateView?: boolean;
-}
-
-function resolveTranscriptApiBaseUrl(rawBaseUrl?: string): string {
-  const candidate = rawBaseUrl?.trim();
-
-  if (!candidate) {
-    return FALLBACK_TRANSCRIPT_API_BASE_URL;
-  }
-
-  if (candidate.startsWith('/')) {
-    return candidate.replace(/\/+$/, '');
-  }
-
-  try {
-    const parsedUrl = new URL(candidate);
-    if (!SAFE_TRANSCRIPT_API_PROTOCOLS.has(parsedUrl.protocol)) {
-      throw new Error(`Unsupported protocol: ${parsedUrl.protocol}`);
-    }
-
-    parsedUrl.hash = '';
-    parsedUrl.search = '';
-    return parsedUrl.toString().replace(/\/+$/, '');
-  } catch (error) {
-    console.warn('[AdminEvaluations] Invalid NEXT_PUBLIC_TRANSCRIPT_API_BASE_URL, using fallback:', error);
-    return FALLBACK_TRANSCRIPT_API_BASE_URL;
-  }
-}
-
-const TRANSCRIPT_API_BASE_URL = resolveTranscriptApiBaseUrl(process.env.NEXT_PUBLIC_TRANSCRIPT_API_BASE_URL);
-
-function buildTranscriptApiUrl(pathname: string): string {
-  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
-  return `${TRANSCRIPT_API_BASE_URL}${normalizedPath}`;
 }
 
 function isEvaluationRecordStatus(value: unknown): value is EvaluationRecordStatus {
@@ -304,16 +278,100 @@ const getErrorMessage = (error: unknown): string => {
   return '알 수 없는 오류';
 };
 
+type AdminEvaluationPageWrapperProps = {
+  embedded?: boolean;
+  initialView?: 'evaluations' | 'submissions';
+  initialSubmissionTab?: 'new' | 'edit' | 'reviews';
+};
+
 // Suspense 래퍼 컴포넌트
-export default function AdminEvaluationPageWrapper() {
+export default function AdminEvaluationPageWrapper({
+  embedded = false,
+  initialView = 'evaluations',
+  initialSubmissionTab,
+}: AdminEvaluationPageWrapperProps = {}) {
   return (
-    <Suspense fallback={<GlobalLoader fullScreen />}>
-      <AdminEvaluationPage />
+    <Suspense fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}>
+      <AdminEvaluationPage
+        embedded={embedded}
+        initialView={initialView}
+        initialSubmissionTab={initialSubmissionTab}
+      />
     </Suspense>
   );
 }
 
-function AdminEvaluationPage() {
+function AdminEvaluationRouteSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="관리자 데이터 검수 화면 로딩 중"
+      className="flex h-full min-h-0 flex-col overflow-hidden"
+    >
+      <span className="sr-only">관리자 데이터 검수 화면의 필터, 테이블 행, 액션 영역을 불러오는 중입니다.</span>
+      <div className="border-b border-border bg-card px-2 py-1.5">
+        <div className="flex min-h-9 items-center gap-2">
+          <ClipboardCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <h1 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">관리자 데이터 검수</h1>
+          <div className="hidden items-center gap-1.5 sm:flex" aria-hidden="true">
+            <Skeleton className="h-5 w-16 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-5 w-16 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
+          </div>
+          <Skeleton className="h-7 w-20 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col p-2">
+        <div className="min-h-0 overflow-hidden rounded-lg border bg-background">
+          <div className="hidden border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
+            {Array.from({ length: 9 }).map((_, index) => (
+              <div key={index} className="px-2 py-2">
+                <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
+              </div>
+            ))}
+          </div>
+          <div className="divide-y divide-border">
+            {Array.from({ length: 6 }).map((_, rowIndex) => (
+              <div
+                key={rowIndex}
+                className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
+              >
+                <div className="hidden lg:block">
+                  <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+                </div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+                    <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+                  </div>
+                </div>
+                {Array.from({ length: 6 }).map((__, cellIndex) => (
+                  <div key={cellIndex} className="hidden lg:block">
+                    <Skeleton className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+                  </div>
+                ))}
+                <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminEvaluationPage({
+  embedded,
+  initialView,
+  initialSubmissionTab,
+}: {
+  embedded: boolean;
+  initialView: 'evaluations' | 'submissions';
+  initialSubmissionTab?: 'new' | 'edit' | 'reviews';
+}) {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -342,7 +400,6 @@ function AdminEvaluationPage() {
     hold: 0,
     db_conflict: 0,
     missing: 0,
-    geocoding_failed: 0,
     not_selected: 0,
     deleted: 0,
   });
@@ -365,14 +422,17 @@ function AdminEvaluationPage() {
     name: string;
     address: string;
   } | null>(null);
+  const [pendingRecordAction, setPendingRecordAction] = useState<PendingRecordAction | null>(null);
+  const [recordActionConfirmation, setRecordActionConfirmation] = useState('');
+
+  const clearPendingRecordAction = () => {
+    setPendingRecordAction(null);
+    setRecordActionConfirmation('');
+  };
 
   // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-
-  // 자막 수집 상태
-  const [transcriptStatus, setTranscriptStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [transcriptMessage, setTranscriptMessage] = useState<string>('');
 
   // 사용자 제보 검수 상태 (URL 쿼리 파라미터로 초기화)
   const [showSubmissionView, setShowSubmissionView] = useState(false);
@@ -390,6 +450,8 @@ function AdminEvaluationPage() {
     setDeepLinkFilter(null);
     deepLinkInitializedRef.current = true;
 
+    if (embedded) return;
+
     const params = new URLSearchParams(searchParams.toString());
     params.delete('video_id');
     params.delete('issue');
@@ -397,14 +459,17 @@ function AdminEvaluationPage() {
 
     const query = params.toString();
     router.replace(query ? `/admin/evaluations?${query}` : '/admin/evaluations', { scroll: false });
-  }, [router, searchParams]);
+  }, [embedded, router, searchParams]);
 
   // URL 파라미터에 따라 초기 뷰 설정
   useEffect(() => {
-    if (searchParams.get('view') === 'submissions') {
+    const routeView = embedded ? null : searchParams.get('view');
+    const routeTab = embedded ? null : searchParams.get('tab');
+
+    if (initialView === 'submissions' || routeView === 'submissions') {
       setShowSubmissionView(true);
       // tab 파라미터가 reviews면 리뷰 탭으로 초기화
-      const tab = searchParams.get('tab');
+      const tab = initialSubmissionTab ?? routeTab;
       if (tab === 'reviews') {
         setSubmissionInitialTab('reviews');
       } else if (tab === 'edit') {
@@ -412,12 +477,17 @@ function AdminEvaluationPage() {
       } else {
         setSubmissionInitialTab('new');
       }
+      return;
     }
-  }, [searchParams]);
+
+    setShowSubmissionView(false);
+    setSubmissionInitialTab('new');
+  }, [embedded, initialSubmissionTab, initialView, searchParams]);
 
   // URL 파라미터에 따라 Deep-link 필터 초기화
   useEffect(() => {
     if (deepLinkInitializedRef.current) return;
+    if (embedded) return;
 
     const videoId = searchParams.get('video_id')?.trim() || '';
     const issue = searchParams.get('issue')?.trim() || '';
@@ -431,7 +501,7 @@ function AdminEvaluationPage() {
       ...(issue ? { issue } : {}),
       ...(reason ? { reason } : {}),
     });
-  }, [searchParams]);
+  }, [embedded, searchParams]);
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
   const [editingSubmission, setEditingSubmission] = useState<SubmissionRecord | null>(null);
   const queryClient = useQueryClient();
@@ -622,10 +692,6 @@ function AdminEvaluationPage() {
           let match = false;
 
           switch (evalFilters.status) {
-            case 'geocoding_failed':
-              // 지오코딩 실패: geocoding_success가 false인 모든 레코드
-              match = !r.geocoding_success;
-              break;
             case 'missing':
               // Missing: is_missing이 true인 레코드
               match = r.is_missing === true;
@@ -688,17 +754,16 @@ function AdminEvaluationPage() {
       );
     }
 
-    // 5. Geocoding Success 필터 (true/false_match/false_geocode)
+    // 5. 주소 정합 필터 (True/False/Failed) - 상세/테이블 표시와 같은 helper 사용
     if (evalFilters.geocoding_success) {
-      if (evalFilters.geocoding_success === 'true') {
-        // 지오코딩 성공
-        filtered = filtered.filter(r => r.geocoding_success === true);
-      } else if (evalFilters.geocoding_success === 'false_match') {
-        // 지오코딩 성공했으나 주소 매칭 실패
-        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage !== null);
-      } else if (evalFilters.geocoding_success === 'false_geocode') {
-        // 지오코딩 자체 실패
-        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage === null);
+      const targetStatusByFilter: Record<string, ReturnType<typeof getAddressConsistencyStatus>> = {
+        true: 'true',
+        false_match: 'false',
+        false_geocode: 'failed',
+      };
+      const targetStatus = targetStatusByFilter[evalFilters.geocoding_success];
+      if (targetStatus) {
+        filtered = filtered.filter(r => getAddressConsistencyStatus(r) === targetStatus);
       }
     }
 
@@ -814,7 +879,34 @@ function AdminEvaluationPage() {
     setLoadingMore(false);
   }, [filteredRecords]);
 
+  const visibleDisplayedRecords = useMemo(() => {
+    if (displayedRecords.length > 0 || filteredRecords.length === 0) {
+      return displayedRecords;
+    }
+
+    return filteredRecords.slice(0, PAGE_SIZE);
+  }, [displayedRecords, filteredRecords]);
+
   const isListView = !showSubmissionView && !isAlternateView;
+  const canSwitchEvaluationView = !embedded || initialView === 'evaluations';
+
+  const switchToEvaluationListView = useCallback(() => {
+    setIsAlternateView(false);
+    setShowSubmissionView(false);
+
+    if (!embedded) {
+      router.replace('/admin/evaluations', { scroll: false });
+    }
+  }, [embedded, router]);
+
+  const switchToEvaluationSlideView = useCallback(() => {
+    setIsAlternateView(true);
+    setShowSubmissionView(false);
+
+    if (!embedded) {
+      router.replace('/admin/evaluations', { scroll: false });
+    }
+  }, [embedded, router]);
 
   // 무한 스크롤 - Scroll Event 방식
   useEffect(() => {
@@ -901,10 +993,9 @@ function AdminEvaluationPage() {
           pending: 0,
           approved: 0,
           ready_for_approval: 0,
-          hold: 0,
+                hold: 0,
           db_conflict: 0,
           missing: 0,
-          geocoding_failed: 0,
           not_selected: 0,
           deleted: 0,
         });
@@ -987,9 +1078,6 @@ function AdminEvaluationPage() {
           r.evaluation_results?.category_TF?.eval_value === true &&
           (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
         ).length,
-        geocoding_failed: typedRecords.filter(r =>
-          !r.geocoding_success  // 지오코딩이 실패한 모든 레코드 (deleted 제외)
-        ).length,
         not_selected: typedRecords.filter(r => r.is_not_selected).length,
         deleted: deletedCount,
       };
@@ -1013,7 +1101,6 @@ function AdminEvaluationPage() {
         missing: 0,
         db_conflict: 0,
         ready_for_approval: 0,
-        geocoding_failed: 0,
         not_selected: 0,
         deleted: 0,
       });
@@ -1063,9 +1150,6 @@ function AdminEvaluationPage() {
         (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
       ).length,
       missing: allRecords.filter(r => r.is_missing).length,
-      geocoding_failed: allRecords.filter(r =>
-        !r.geocoding_success  // 지오코딩이 실패한 모든 레코드
-      ).length,
       not_selected: allRecords.filter(r => r.is_not_selected).length,
       deleted: deletedCount,
     };
@@ -1082,6 +1166,15 @@ function AdminEvaluationPage() {
 
   // 승인 핸들러 (오류 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {
+    if (needsEvaluationRerun(record)) {
+      toast({
+        variant: 'destructive',
+        title: '승인 불가',
+        description: '평가값 또는 근거가 비어 있어 승인할 수 없습니다.',
+      });
+      return;
+    }
+
     // 지오코딩 실패 체크
     if (!record.geocoding_success) {
       toast({
@@ -1312,7 +1405,18 @@ function AdminEvaluationPage() {
 
   // 삭제 핸들러 (Soft Delete)
   const handleDelete = async (record: EvaluationRecord) => {
-    if (!confirm(`"${record.restaurant_name || record.name}"을(를) 정말 삭제하시겠습니까?\n\n⚠️ 삭제된 레코드는 화면에서 숨겨지며, 데이터 재로드 시에도 복구되지 않습니다.`)) {
+    if (pendingRecordAction?.kind !== 'delete' || pendingRecordAction.record.id !== record.id) {
+      setPendingRecordAction({ kind: 'delete', record });
+      setRecordActionConfirmation('');
+      return;
+    }
+
+    if (recordActionConfirmation !== EVALUATION_DELETE_CONFIRMATION) {
+      toast({
+        variant: 'destructive',
+        title: '확인 문구가 필요합니다',
+        description: `"${EVALUATION_DELETE_CONFIRMATION}"를 입력한 뒤 삭제를 적용하세요.`,
+      });
       return;
     }
 
@@ -1344,6 +1448,7 @@ function AdminEvaluationPage() {
         title: '삭제 완료',
         description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다`,
       });
+      clearPendingRecordAction();
     } catch (error: unknown) {
       toast({
         variant: 'destructive',
@@ -1370,7 +1475,18 @@ function AdminEvaluationPage() {
 
   // 삭제된 레코드 복원 (pending 상태로 되돌리기)
   const handleRestore = async (record: EvaluationRecord) => {
-    if (!confirm(`"${record.restaurant_name || record.name}"을(를) 복원하시겠습니까?\n\n복원하면 미처리(pending) 상태로 돌아갑니다.`)) {
+    if (pendingRecordAction?.kind !== 'restore' || pendingRecordAction.record.id !== record.id) {
+      setPendingRecordAction({ kind: 'restore', record });
+      setRecordActionConfirmation('');
+      return;
+    }
+
+    if (recordActionConfirmation !== EVALUATION_RESTORE_CONFIRMATION) {
+      toast({
+        variant: 'destructive',
+        title: '확인 문구가 필요합니다',
+        description: `"${EVALUATION_RESTORE_CONFIRMATION}"를 입력한 뒤 복원을 적용하세요.`,
+      });
       return;
     }
 
@@ -1403,6 +1519,7 @@ function AdminEvaluationPage() {
         title: '복원 완료',
         description: `"${record.restaurant_name || record.name}"이(가) 미처리 상태로 복원되었습니다`,
       });
+      clearPendingRecordAction();
     } catch (error: unknown) {
       console.error('복원 실패:', error);
       toast({
@@ -1415,105 +1532,8 @@ function AdminEvaluationPage() {
     }
   };
 
-  // 자막 수집 핸들러 (로컬 FastAPI 서버 호출)
-  const handleCollectTranscripts = async () => {
-    setTranscriptStatus('loading');
-    setTranscriptMessage('자막 수집 중...');
-
-    try {
-      // 1. 먼저 상태 확인
-      const statusResponse = await fetch(buildTranscriptApiUrl('/status'));
-      if (!statusResponse.ok) {
-        throw new Error('FastAPI 서버에 연결할 수 없습니다. uvicorn main:app --reload 명령으로 서버를 시작하세요.');
-      }
-
-      const statusData = await statusResponse.json();
-
-      if (statusData.pending_urls === 0) {
-        setTranscriptStatus('success');
-        setTranscriptMessage(`수집할 새로운 URL이 없습니다. (기존 ${statusData.existing_transcripts}개)`);
-        toast({
-          title: '수집 완료',
-          description: `수집할 새로운 URL이 없습니다. 기존 ${statusData.existing_transcripts}개의 자막이 있습니다.`,
-        });
-        return;
-      }
-
-      setTranscriptMessage(`${statusData.pending_urls}개 URL 자막 수집 중...`);
-
-      // 2. 자막 수집 및 GitHub 커밋 실행
-      const collectResponse = await fetch(buildTranscriptApiUrl('/collect'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          auto_commit: true,  // 수집 후 자동 커밋
-        }),
-      });
-
-      if (!collectResponse.ok) {
-        const errorData = await collectResponse.json();
-        throw new Error(errorData.detail || '자막 수집 실패');
-      }
-
-      const result = await collectResponse.json();
-
-      if (result.success) {
-        setTranscriptStatus('success');
-        const commitInfo = result.committed ? ' → GitHub 커밋 완료!' : '';
-        setTranscriptMessage(`✅ ${result.success_count}개 수집 성공${commitInfo}`);
-
-        toast({
-          title: '🎬 자막 수집 완료',
-          description: (
-            <div className="space-y-1">
-              <p>성공: {result.success_count}개, 실패: {result.failed_count}개</p>
-              {result.committed && (
-                <p className="text-green-600 font-medium">
-                  ✅ GitHub 커밋 완료! 파이프라인이 자동 실행됩니다.
-                </p>
-              )}
-            </div>
-          ),
-        });
-      } else {
-        throw new Error(result.message || '수집 실패');
-      }
-    } catch (error: unknown) {
-      console.error('자막 수집 실패:', error);
-      setTranscriptStatus('error');
-
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-      setTranscriptMessage(`❌ ${errorMessage}`);
-
-      // 연결 오류인 경우 상세 안내
-      if (errorMessage.includes('연결할 수 없습니다') || errorMessage.includes('Failed to fetch')) {
-        toast({
-          variant: 'destructive',
-          title: '서버 연결 실패',
-          description: (
-            <div className="space-y-2">
-              <p>로컬 FastAPI 서버가 실행 중이 아닙니다.</p>
-              <code className="block text-xs bg-muted p-2 rounded">
-                cd backend/transcript-api<br />
-                uvicorn main:app --reload
-              </code>
-            </div>
-          ),
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '자막 수집 실패',
-          description: errorMessage,
-        });
-      }
-    }
-  };
-
   // 사용자 제보 데이터 쿼리 (새 테이블 구조)
-  const { data: submissionsData = [] } = useQuery({
+  const { data: submissionsData = [], isLoading: submissionsLoading } = useQuery({
     queryKey: ['admin-submissions-inline', user?.id, isAdmin],
     queryFn: async () => {
       if (!user || !isAdmin) return [];
@@ -1663,6 +1683,7 @@ function AdminEvaluationPage() {
       const { data: reviewsData, error: reviewsError } = await supabase
         .from('reviews')
         .select(ADMIN_REVIEW_SELECT)
+        .eq('is_verified', false)
         .order('created_at', { ascending: false });
 
       if (reviewsError) throw reviewsError;
@@ -2227,36 +2248,37 @@ function AdminEvaluationPage() {
 	    },
 	  });
 
-  // 인증 로딩 중이거나 권한 확인 중일 때
-
-  if (authLoading || (loading && allRecords.length === 0)) {
-    return (
-      <GlobalLoader
-        message="관리자 데이터 검수 로딩 중..."
-        subMessage="데이터를 불러오고 있습니다"
-        fullScreen
-      />
-    );
+  // 인증 게이트는 전체 화면으로 막되, 데이터 로딩은 아래 실제 화면 요소별 스켈레톤으로 처리합니다.
+  if (!embedded && authLoading) {
+    return <AdminEvaluationRouteSkeleton />;
   }
 
   // 로그인하지 않았거나 관리자가 아닌 경우 (리다이렉트 전 화면 방지)
-  if (!user || !isAdmin) {
+  if (!authLoading && (!user || !isAdmin)) {
     return null;
   }
+
+  const pendingRecordActionRequiredPhrase = pendingRecordAction?.kind === 'delete'
+    ? EVALUATION_DELETE_CONFIRMATION
+    : EVALUATION_RESTORE_CONFIRMATION;
+  const pendingRecordActionVerb = pendingRecordAction?.kind === 'delete' ? '삭제' : '복원';
+  const pendingRecordActionName = pendingRecordAction
+    ? (pendingRecordAction.record.restaurant_name || pendingRecordAction.record.name || '선택한 검수 항목')
+    : '';
 
   return (
     <div
       ref={scrollContainerRef}
-      className="flex h-full flex-col overflow-auto"
+      className="flex h-full min-h-0 flex-col overflow-auto"
       id="scroll-container"
     >
       {/* Header */}
-      <div className="border-b border-border bg-card px-3 py-3 sm:px-5 sm:py-4">
-        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+      <div className={embedded ? "border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}>
+        <div className={embedded ? "flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between" : "flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between"}>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="flex items-center gap-2 bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl">
-                <ClipboardCheck className="h-6 w-6 text-primary" />
+              <h1 className={embedded ? "flex items-center gap-1.5 bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "flex items-center gap-2 bg-gradient-primary bg-clip-text text-lg font-bold text-transparent sm:text-2xl"}>
+                <ClipboardCheck className={embedded ? "h-5 w-5 text-primary" : "h-6 w-6 text-primary"} />
                 관리자 데이터 검수
               </h1>
             </div>
@@ -2288,104 +2310,77 @@ function AdminEvaluationPage() {
                 </Button>
               </div>
             )}
-            <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+            <p className={embedded ? "mt-0.5 text-xs text-muted-foreground" : "mt-0.5 text-xs text-muted-foreground sm:text-sm"}>
               필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
             </p>
           </div>
 
           {/* 우측: 카테고리 필터 */}
-          <div className="w-full xl:flex xl:flex-1 xl:justify-end">
+          <div className="w-full lg:flex lg:flex-1 lg:justify-end">
             <CategorySidebar
               stats={stats}
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
             >
-              <div className="flex items-center gap-1.5 xl:gap-1">
-                <Button
-                  variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
-                  onClick={() => {
-                    setIsAlternateView(false);
-                    setShowSubmissionView(false);
-                    // URL에서 view 파라미터 제거
-                    router.replace('/admin/evaluations', { scroll: false });
-                  }}
-                  title="리스트 뷰"
-                >
-                  <LayoutList className="h-4 w-4" />
-                  <span className="xl:hidden">리스트</span>
-                </Button>
-                <Button
-                  variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
-                  onClick={() => {
-                    setIsAlternateView(true);
-                    setShowSubmissionView(false);
-                    // URL에서 view 파라미터 제거
-                    router.replace('/admin/evaluations', { scroll: false });
-                  }}
-                  title="슬라이드 뷰"
-                >
-                  <MonitorPlay className="h-4 w-4" />
-                  <span className="xl:hidden">슬라이드</span>
-                </Button>
-                {/* 사용자 제보 검수 버튼 */}
-                <Button
-                  onClick={() => {
-                    const newShowSubmission = !showSubmissionView;
-                    setShowSubmissionView(newShowSubmission);
-                    if (newShowSubmission) {
-                      setCurrentSubmissionIndex(0);
-                      setIsAlternateView(false); // 슬라이드 뷰 비활성화
-                    }
-                  }}
-                  variant={showSubmissionView ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="relative h-8 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:gap-1 xl:px-0"
-                  title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
-                  aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
-                >
-                  <Send className="h-4 w-4 shrink-0" />
-                  <span className="xl:hidden">제보</span>
-                  {totalPendingCount > 0 && (
-                    <>
-                      <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white xl:hidden">
-                        {totalPendingCount > 99 ? '99+' : totalPendingCount}
-                      </span>
-                      <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white xl:flex">
-                        {totalPendingCount > 9 ? '9+' : totalPendingCount}
-                      </span>
-                    </>
-                  )}
-                </Button>
-                {/* 자막 수집 버튼 (아이콘 only) */}
-                <Button
-                  onClick={handleCollectTranscripts}
-                  disabled={transcriptStatus === 'loading'}
-                  variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
-                  size="sm"
-                  className="h-7 gap-1 px-2 text-xs xl:h-8 xl:w-8 xl:px-0"
-                  title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
-	                >
-	                  {transcriptStatus === 'loading' ? (
-	                    <Loader2 className="h-4 w-4 animate-spin" />
-	                  ) : transcriptStatus === 'success' ? (
-	                    <CheckCircle2 className="h-4 w-4" />
-                  ) : transcriptStatus === 'error' ? (
-                    <XCircle className="h-4 w-4" />
-                  ) : (
-                    <FileText className="h-4 w-4" />
-	                  )}
-	                  <span className="xl:hidden">자막</span>
-	                </Button>
-                  {transcriptMessage && (
-                    <span className="hidden xl:block text-xs text-muted-foreground max-w-[22rem] truncate">
-                      {transcriptMessage}
-                    </span>
-                  )}
-	              </div>
+              <div className="flex items-center gap-1.5 lg:gap-1">
+                {canSwitchEvaluationView && (
+                  <>
+                    <Button
+                      variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
+                      onClick={switchToEvaluationListView}
+                      title="리스트 뷰"
+                    >
+                      <LayoutList className="h-4 w-4" />
+                      <span className="lg:hidden">리스트</span>
+                    </Button>
+                    <Button
+                      variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:px-0"
+                      onClick={switchToEvaluationSlideView}
+                      title="슬라이드 뷰"
+                    >
+                      <MonitorPlay className="h-4 w-4" />
+                      <span className="lg:hidden">슬라이드</span>
+                    </Button>
+                  </>
+                )}
+                {!embedded && (
+                  <>
+                    {/* 사용자 제보 검수 버튼 */}
+                    <Button
+                      onClick={() => {
+                        const newShowSubmission = !showSubmissionView;
+                        setShowSubmissionView(newShowSubmission);
+                        if (newShowSubmission) {
+                          setCurrentSubmissionIndex(0);
+                          setIsAlternateView(false); // 슬라이드 뷰 비활성화
+                        }
+                      }}
+                      variant={showSubmissionView ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="relative h-8 gap-1 px-2 text-xs lg:h-8 lg:w-8 lg:gap-1 lg:px-0"
+                      title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
+                      aria-label={`사용자 제보/리뷰 검수, 대기 ${totalPendingCount}건`}
+                    >
+                      <Send className="h-4 w-4 shrink-0" />
+                      <span className="lg:hidden">제보</span>
+                      {totalPendingCount > 0 && (
+                        <>
+                          <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white lg:hidden">
+                            {totalPendingCount > 99 ? '99+' : totalPendingCount}
+                          </span>
+                          <span className="absolute -right-1 top-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white lg:flex">
+                            {totalPendingCount > 9 ? '9+' : totalPendingCount}
+                          </span>
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+              </div>
 
               {/* 구분선 */}
               <div className="hidden h-6 w-px bg-border sm:block" />
@@ -2395,6 +2390,59 @@ function AdminEvaluationPage() {
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col">
+        {pendingRecordAction && (
+          <section
+            role="region"
+            aria-label="검수 항목 작업 확인"
+            className="mx-2 mt-2 rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-sm shadow-sm sm:mx-3"
+          >
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">
+                  {pendingRecordActionName} {pendingRecordActionVerb} 확인
+                </p>
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                  모바일과 데스크톱 모두 같은 흐름으로 처리합니다. 아래 문구를 입력한 뒤 적용하세요.
+                </p>
+              </div>
+              <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+                <Input
+                  aria-label="검수 항목 작업 확인 문구"
+                  value={recordActionConfirmation}
+                  onChange={(event) => setRecordActionConfirmation(event.target.value)}
+                  placeholder={`${pendingRecordActionRequiredPhrase} 입력`}
+                  className="h-9 min-w-0 sm:w-44"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={clearPendingRecordAction}
+                  disabled={loading}
+                >
+                  취소
+                </Button>
+                <Button
+                  type="button"
+                  variant={pendingRecordAction.kind === 'delete' ? 'destructive' : 'default'}
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    if (pendingRecordAction.kind === 'delete') {
+                      void handleDelete(pendingRecordAction.record);
+                    } else {
+                      void handleRestore(pendingRecordAction.record);
+                    }
+                  }}
+                  disabled={loading || recordActionConfirmation !== pendingRecordActionRequiredPhrase}
+                >
+                  {pendingRecordActionVerb} 적용
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
         {showSubmissionView ? (
           /* 사용자 제보 목록 검수 뷰 */
           <SubmissionListView
@@ -2403,7 +2451,7 @@ function AdminEvaluationPage() {
             onReject={handleRejectSubmission}
             onDelete={handleDeleteSubmission}
             onRefresh={() => queryClient.invalidateQueries({ queryKey: ['admin-submissions'] })}
-            loading={approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
+            loading={submissionsLoading || approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
             reviews={reviewsData as Review[]}
             onApproveReview={handleApproveReview}
             onRejectReview={handleRejectReview}
@@ -2413,7 +2461,7 @@ function AdminEvaluationPage() {
           />
         ) : isAlternateView ? (
           <EvaluationSlideView
-            records={displayedRecords}
+            records={visibleDisplayedRecords}
             currentIndex={currentSlideIndex}
             onNavigate={setCurrentSlideIndex}
             onApprove={handleApprove}
@@ -2426,53 +2474,45 @@ function AdminEvaluationPage() {
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
-          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-4">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-8 h-8 animate-spin" />
-                </div>
-              ) : (
-                <>
-                  <EvaluationTable
-                    records={displayedRecords}
-                    onApprove={handleApprove}
-                    onDelete={handleDelete}
-                    onRestore={handleRestore}
-                    onRegisterMissing={handleRegisterMissing}
-                    onResolveConflict={handleResolveConflict}
-                    onEdit={handleEdit}
-                    loading={loading || isSearching}
-                    evalFilters={evalFilters}
-                    isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    onFilterChange={(key, value) => {
-                      setEvalFilters(prev => sanitizeEvalFilters({
-                        ...prev,
-                        [key]: value === '' ? undefined : value,
-                      }));
-                    }}
-                    onResetFilters={() => setEvalFilters({})}
-                    onLoadMore={loadMoreRecords}
-                    hasMore={hasMore}
-                    isLoadingMore={loadingMore}
-                  />
+          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-2">
+            <EvaluationTable
+              records={visibleDisplayedRecords}
+              onApprove={handleApprove}
+              onDelete={handleDelete}
+              onRestore={handleRestore}
+              onRegisterMissing={handleRegisterMissing}
+              onResolveConflict={handleResolveConflict}
+              onEdit={handleEdit}
+              loading={loading || isSearching}
+              evalFilters={evalFilters}
+              isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onFilterChange={(key, value) => {
+                setEvalFilters(prev => sanitizeEvalFilters({
+                  ...prev,
+                  [key]: value === '' ? undefined : value,
+                }));
+              }}
+              onResetFilters={() => setEvalFilters({})}
+              onLoadMore={loadMoreRecords}
+              hasMore={hasMore}
+              isLoadingMore={loadingMore}
+            />
 
-                  {/* 로딩 인디케이터 */}
-                  {loadingMore && (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                    </div>
-                  )}
+            {/* 로딩 인디케이터 */}
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground motion-reduce:animate-none" />
+              </div>
+            )}
 
-                  {/* 모든 데이터 로드 완료 메시지 */}
-                  {!hasMore && displayedRecords.length > 0 && (
-                    <div className="text-center py-4 text-muted-foreground text-sm">
-                      모든 레코드를 불러왔습니다 ({displayedRecords.length}개 / 전체 {filteredRecords.length}개)
-                    </div>
-                  )}
-                </>
-              )}
+            {/* 모든 데이터 로드 완료 메시지 */}
+            {!hasMore && displayedRecords.length > 0 && (
+              <div className="text-center py-4 text-muted-foreground text-sm">
+                모든 레코드를 불러왔습니다 ({visibleDisplayedRecords.length}개 / 전체 {filteredRecords.length}개)
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2569,7 +2609,7 @@ function AdminEvaluationPage() {
               disabled={loading}
               className={ADMIN_MODAL_ACTION}
             >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />}
               승인
             </AlertDialogAction>
           </AlertDialogFooter>

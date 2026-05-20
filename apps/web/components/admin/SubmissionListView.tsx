@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/lib/no-toast';
 import {
     CheckCircle2,
@@ -29,14 +30,6 @@ import {
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter,
-} from '@/components/ui/dialog';
-import {
     SubmissionDetailView,
     SubmissionRecord,
     ApprovalData,
@@ -50,17 +43,12 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-    ADMIN_MODAL_ACTION,
-    ADMIN_MODAL_CONTENT_MD_FLEX,
-    ADMIN_MODAL_CONTENT_SM,
-    ADMIN_MODAL_FOOTER,
-    ADMIN_MODAL_FOOTER_DIVIDER,
-    ADMIN_MODAL_SCROLL_BODY,
-    ADMIN_MODAL_SCROLL_BODY_COMPACT,
-} from './admin-modal-styles';
 
 const SUBMISSION_TAB_ORDER: Array<'new' | 'edit' | 'reviews'> = ['new', 'edit', 'reviews'];
+const SUBMISSION_DELETE_CONFIRMATION = '제보삭제';
+const REVIEW_DELETE_CONFIRMATION = '리뷰삭제';
+const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화';
+const OVERRIDE_APPROVAL_CONFIRMATION = '무시승인';
 
 // Supabase Storage에서 리뷰 사진 public URL 생성
 function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
@@ -154,7 +142,7 @@ const ReviewPhotoItem = memo(function ReviewPhotoItem({
         >
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground motion-reduce:animate-none" />
                 </div>
             )}
             <Image
@@ -239,7 +227,6 @@ export function SubmissionListView({
 
     // 선택된 제보
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionRecord | null>(null);
-    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     // 지오코딩 관련 상태
     const [approvalData, setApprovalData] = useState<ApprovalData>({
@@ -256,6 +243,7 @@ export function SubmissionListView({
     // 항목별 결정 상태
     const [itemDecisions, setItemDecisions] = useState<Record<string, ItemDecision>>({});
     const [forceApprove, setForceApprove] = useState(false);
+    const [overrideApprovalConfirmation, setOverrideApprovalConfirmation] = useState('');
 
     // 수정 가능한 데이터
     const [editableData, setEditableData] = useState({
@@ -279,7 +267,11 @@ export function SubmissionListView({
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
     const [reviewAdminNote, setReviewAdminNote] = useState('');
-    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [submissionDeleteTarget, setSubmissionDeleteTarget] = useState<SubmissionRecord | null>(null);
+    const [submissionDeleteConfirmation, setSubmissionDeleteConfirmation] = useState('');
+    const [reviewDeleteTarget, setReviewDeleteTarget] = useState<Review | null>(null);
+    const [reviewDeleteConfirmation, setReviewDeleteConfirmation] = useState('');
+    const [ocrResetConfirmation, setOcrResetConfirmation] = useState('');
 
     // OCR 관련 상태
     const [ocrStatus, setOcrStatus] = useState<{ pending: number; duplicate: number; processed: number } | null>(null);
@@ -504,16 +496,22 @@ export function SubmissionListView({
 
     // OCR 전체 리셋 및 재실행
     const handleResetAllOcr = useCallback(async () => {
-        if (!confirm('모든 리뷰의 OCR을 초기화하고 다시 실행합니다. 계속하시겠습니까?')) {
+        if (ocrResetConfirmation !== OCR_RESET_ALL_CONFIRMATION) {
+            toast.error('OCR 전체 재실행 확인 문구가 일치하지 않습니다.');
             return;
         }
 
         setIsOcrRunning(true);
         try {
-            const response = await fetch('/api/admin/ocr-receipts/reset-all', { method: 'POST' });
+            const response = await fetch('/api/admin/ocr-receipts/reset-all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirmation: OCR_RESET_ALL_CONFIRMATION }),
+            });
             const data = await response.json();
             if (response.ok && data.success) {
                 toast.success(data.message || 'OCR 전체 재실행이 시작되었습니다.');
+                setOcrResetConfirmation('');
                 setTimeout(() => fetchOcrStatus(), 3000);
             } else {
                 toast.error(`OCR 전체 재실행 실패: ${data.error || '알 수 없는 오류'}`);
@@ -523,7 +521,7 @@ export function SubmissionListView({
         } finally {
             setIsOcrRunning(false);
         }
-    }, [fetchOcrStatus]);
+    }, [fetchOcrStatus, ocrResetConfirmation]);
 
     // 리뷰 탭 활성화 시 OCR 상태 조회 + 주기적 갱신
     useEffect(() => {
@@ -625,10 +623,10 @@ export function SubmissionListView({
         }
     }, [selectedReview]);
 
-    // 리뷰 모달 열릴 때 Supabase Realtime 구독 + 폴링 시작
+    // 리뷰 상세 패널이 열릴 때 Supabase Realtime 구독 + 폴링 시작
     useEffect(() => {
-        if (!showReviewModal || !selectedReview?.id) {
-            // 모달 닫힐 때 정리
+        if (activeTab !== 'reviews' || !selectedReview?.id) {
+            // 상세 패널 해제 시 정리
             if (ocrPollingRef.current) {
                 clearInterval(ocrPollingRef.current);
                 ocrPollingRef.current = null;
@@ -764,7 +762,7 @@ export function SubmissionListView({
             }
             supabase.removeChannel(channel);
         };
-    }, [showReviewModal, selectedReview?.id, selectedReview?.ocr_processed_at, ocrRerunningIds]);
+    }, [activeTab, selectedReview?.id, selectedReview?.ocr_processed_at, ocrRerunningIds]);
 
     // 필터링 (제보)
     const filteredSubmissions = useMemo(() => {
@@ -890,9 +888,9 @@ export function SubmissionListView({
         "h-8 gap-1.5 px-2 text-[11px] xl:h-9 xl:min-w-[128px] xl:justify-center xl:px-3 xl:text-sm",
         isMobile && "justify-center gap-1"
     );
-    const listContainerClassName = "mx-2 rounded-lg border sm:mx-4";
+    const listContainerClassName = "h-full min-h-0 overflow-hidden rounded-lg border bg-card";
     const listBodyClassName = cn(
-        "space-y-2 p-2 xl:space-y-3 xl:p-3",
+        "h-full space-y-2 overflow-y-auto p-2 xl:space-y-3 xl:p-3",
         isMobile
             ? "pb-[calc(var(--mobile-bottom-nav-height,76px)+env(safe-area-inset-bottom)+12px)]"
             : "pb-6"
@@ -915,6 +913,24 @@ export function SubmissionListView({
             count > 0 ? "bg-yellow-100 text-yellow-700" : "border-border bg-muted text-muted-foreground",
             isMobile && "ml-0 min-w-[18px] px-1"
         );
+    const renderListSkeletonCards = (label: string) => (
+        <div className={listBodyClassName} role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}>
+            <Skeleton className="h-8 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+            {Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} className="rounded-lg border p-2">
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px] sm:items-center">
+                        <div className="min-w-0 space-y-1.5">
+                            <Skeleton className="h-3.5 w-3/4 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+                            <Skeleton className="h-2.5 w-5/6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+                        </div>
+                        <Skeleton className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
+                        <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
+                    </div>
+                </Card>
+            ))}
+            <div className="h-4" />
+        </div>
+    );
 
     const orderedReviews = useMemo(
         () => [...pendingReviews, ...approvedReviews, ...rejectedReviews],
@@ -1108,9 +1124,11 @@ export function SubmissionListView({
         return null;
     };
 
-    // 모달 열기
-    const openDetailModal = useCallback((submission: SubmissionRecord) => {
+    // 상세 패널 열기
+    const openSubmissionDetail = useCallback((submission: SubmissionRecord) => {
         setSelectedSubmission(submission);
+        setSubmissionDeleteTarget(null);
+        setSubmissionDeleteConfirmation('');
         setApprovalData({
             lat: '',
             lng: '',
@@ -1123,6 +1141,7 @@ export function SubmissionListView({
         setNaverSearchResults([]);
         setVerificationDone(false);
         setShowWarningModal(false);
+        setOverrideApprovalConfirmation('');
         setSelectedGeocodingIndex(null);
         setForceApprove(false);
         setRejectionReason('');
@@ -1146,13 +1165,16 @@ export function SubmissionListView({
                 };
             });
         setItemDecisions(initialDecisions);
-        setIsDetailModalOpen(true);
     }, []);
 
-    // 모달 닫기
-    const closeDetailModal = useCallback(() => {
-        setIsDetailModalOpen(false);
+    // 상세 패널 닫기
+    const closeSubmissionDetail = useCallback(() => {
         setSelectedSubmission(null);
+        setShowWarningModal(false);
+        setShowRejectModal(false);
+        setOverrideApprovalConfirmation('');
+        setSubmissionDeleteTarget(null);
+        setSubmissionDeleteConfirmation('');
     }, []);
 
     // 네이버 검색 API 호출 함수
@@ -1365,10 +1387,16 @@ export function SubmissionListView({
             return;
         }
 
-        // 이미 검증했거나 강제 승인인 경우 바로 승인
-        if (verificationDone || forceApprove) {
-            onApprove(selectedSubmission, approvalData, itemDecisions, forceApprove, editableData);
-            closeDetailModal();
+        if (forceApprove) {
+            setOverrideApprovalConfirmation('');
+            setShowWarningModal(true);
+            return;
+        }
+
+        // 이미 검증한 경우 바로 승인
+        if (verificationDone) {
+            onApprove(selectedSubmission, approvalData, itemDecisions, false, editableData);
+            closeSubmissionDetail();
             return;
         }
 
@@ -1386,48 +1414,623 @@ export function SubmissionListView({
         onReject(selectedSubmission, rejectionReason.trim());
         setShowRejectModal(false);
         setRejectionReason('');
-        closeDetailModal();
-    }, [selectedSubmission, onReject, rejectionReason, closeDetailModal]);
+        closeSubmissionDetail();
+    }, [selectedSubmission, onReject, rejectionReason, closeSubmissionDetail]);
 
     // 삭제 핸들러
     const handleDelete = useCallback((submission: SubmissionRecord, e?: React.MouseEvent) => {
         e?.stopPropagation();
-        if (confirm('정말 이 제보를 삭제하시겠습니까?')) {
-            onDelete(submission);
+        openSubmissionDetail(submission);
+        setSubmissionDeleteTarget(submission);
+        setSubmissionDeleteConfirmation('');
+    }, [openSubmissionDetail]);
+
+    const handleConfirmDeleteSubmission = useCallback(() => {
+        if (!submissionDeleteTarget) return;
+        if (submissionDeleteConfirmation !== SUBMISSION_DELETE_CONFIRMATION) {
+            toast.error('제보 삭제 확인 문구가 일치하지 않습니다.');
+            return;
         }
-    }, [onDelete]);
+        onDelete(submissionDeleteTarget);
+        setSubmissionDeleteTarget(null);
+        setSubmissionDeleteConfirmation('');
+        if (selectedSubmission?.id === submissionDeleteTarget.id) {
+            closeSubmissionDetail();
+        }
+    }, [closeSubmissionDetail, onDelete, selectedSubmission?.id, submissionDeleteConfirmation, submissionDeleteTarget]);
 
     // 리뷰 액션 핸들러
     const handleReviewAction = useCallback((action: 'approve' | 'reject', review: Review) => {
         setSelectedReview(review);
+        setReviewDeleteTarget(null);
+        setReviewDeleteConfirmation('');
+        setPreviewImage(null);
         setReviewAction(action);
         setReviewAdminNote(review.admin_note || '');
-        setShowReviewModal(true);
     }, []);
 
-    const handleConfirmReviewAction = useCallback(() => {
-        if (!selectedReview || !reviewAction) return;
+    const handleConfirmReviewAction = useCallback((nextAction = reviewAction) => {
+        if (!selectedReview || !nextAction) return;
 
-        if (reviewAction === 'approve' && onApproveReview) {
+        if (nextAction === 'reject' && !reviewAdminNote.trim()) {
+            toast.error('거부 시 관리자 메모를 입력해주세요');
+            return;
+        }
+
+        if (nextAction === 'approve' && onApproveReview) {
             onApproveReview(selectedReview, reviewAdminNote.trim());
-        } else if (reviewAction === 'reject' && onRejectReview) {
+        } else if (nextAction === 'reject' && onRejectReview) {
             onRejectReview(selectedReview, reviewAdminNote.trim());
         }
 
-        setShowReviewModal(false);
         setSelectedReview(null);
+        setReviewAction(null);
         setReviewAdminNote('');
     }, [selectedReview, reviewAction, reviewAdminNote, onApproveReview, onRejectReview]);
 
     const handleDeleteReview = useCallback((review: Review) => {
-        if (confirm('정말 이 리뷰를 삭제하시겠습니까?')) {
-            onDeleteReview?.(review);
+        setSelectedReview(review);
+        setReviewAction(null);
+        setReviewAdminNote(review.admin_note || '');
+        setReviewDeleteTarget(review);
+        setReviewDeleteConfirmation('');
+        setPreviewImage(null);
+    }, []);
+
+    const handleConfirmDeleteReview = useCallback(() => {
+        if (!reviewDeleteTarget) return;
+        if (reviewDeleteConfirmation !== REVIEW_DELETE_CONFIRMATION) {
+            toast.error('리뷰 삭제 확인 문구가 일치하지 않습니다.');
+            return;
         }
-    }, [onDeleteReview]);
+        onDeleteReview?.(reviewDeleteTarget);
+        setReviewDeleteTarget(null);
+        setReviewDeleteConfirmation('');
+        if (selectedReview?.id === reviewDeleteTarget.id) {
+            setSelectedReview(null);
+            setReviewAction(null);
+            setReviewAdminNote('');
+            setPreviewImage(null);
+        }
+    }, [onDeleteReview, reviewDeleteConfirmation, reviewDeleteTarget, selectedReview?.id]);
+
+    const renderOverrideApprovalPanel = () => {
+        if (!showWarningModal || !selectedSubmission) return null;
+
+        return (
+            <Card className="border-amber-200 bg-amber-50/90 p-3 shadow-none dark:border-amber-900/60 dark:bg-amber-950/30">
+                <div className="flex items-start gap-2">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
+                    <div className="min-w-0 flex-1 space-y-3">
+                        <div>
+                            <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">주소 검증 경고</p>
+                            <p className="mt-1 text-xs leading-5 text-amber-900/80 dark:text-amber-100/80">
+                                네이버 검색 결과와 입력 주소가 일치하지 않습니다. 결과를 다시 확인하거나 확인 문구 입력 후 승인하세요.
+                            </p>
+                        </div>
+                        <div className="rounded-md border border-amber-200 bg-white/80 p-2 text-xs dark:border-amber-900/50 dark:bg-background/60">
+                            <p className="font-semibold">입력 정보</p>
+                            <p className="mt-1 break-all">이름: {editableData.name || '-'}</p>
+                            <p className="break-all">주소: {editableData.address || '-'}</p>
+                        </div>
+                        {naverSearchResults.length > 0 && (
+                            <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border border-amber-200 bg-white/70 p-2 dark:border-amber-900/50 dark:bg-background/50">
+                                {naverSearchResults.map((result, idx) => (
+                                    <div key={idx} className="rounded border bg-background p-2 text-xs">
+                                        <p className="font-medium">{result.title.replace(/<[^>]+>/g, '')}</p>
+                                        <p className="text-muted-foreground">{result.address}</p>
+                                        {result.roadAddress && <p className="text-muted-foreground">{result.roadAddress}</p>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="override-approval-confirmation" className="text-xs font-semibold text-amber-950 dark:text-amber-100">
+                                검증 경고 확인 후 승인
+                            </Label>
+                            <Input
+                                id="override-approval-confirmation"
+                                value={overrideApprovalConfirmation}
+                                onChange={(event) => setOverrideApprovalConfirmation(event.target.value)}
+                                placeholder={OVERRIDE_APPROVAL_CONFIRMATION}
+                                className="h-9 bg-background"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setOverrideApprovalConfirmation('');
+                                    setShowWarningModal(false);
+                                }}
+                            >
+                                수정하기
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                disabled={overrideApprovalConfirmation !== OVERRIDE_APPROVAL_CONFIRMATION}
+                                className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
+                                onClick={() => {
+                                    if (overrideApprovalConfirmation !== OVERRIDE_APPROVAL_CONFIRMATION) {
+                                        toast.error('무시 승인 확인 문구가 일치하지 않습니다.');
+                                        return;
+                                    }
+                                    setShowWarningModal(false);
+                                    setOverrideApprovalConfirmation('');
+                                    setVerificationDone(true);
+                                    onApprove(selectedSubmission, approvalData, itemDecisions, forceApprove, editableData);
+                                    closeSubmissionDetail();
+                                }}
+                            >
+                                확인 후 승인
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+        );
+    };
+
+    const renderSubmissionDetailPanel = () => (
+        <section
+            aria-label="제보 상세 작업 패널"
+            className="min-h-[520px] overflow-hidden rounded-lg border bg-card shadow-sm xl:flex xl:min-h-0 xl:flex-col"
+        >
+            <div className="flex min-h-12 items-center justify-between gap-2 border-b px-3 py-2">
+                <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-primary">제보 상세 작업</p>
+                    <h3 className="truncate text-sm font-bold">{selectedSubmission?.restaurant_name || '왼쪽 목록에서 제보를 선택하세요'}</h3>
+                </div>
+                {selectedSubmission && (
+                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={closeSubmissionDetail}>
+                        선택 해제
+                    </Button>
+                )}
+            </div>
+
+            {!selectedSubmission ? (
+                <div className="flex min-h-[360px] flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
+                    <Edit className="h-8 w-8" />
+                    <p>제보 카드의 “상세 검수”를 누르면 상세, 주소 검증, 승인/거부를 이 패널에서 처리합니다.</p>
+                </div>
+            ) : (
+                <>
+                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+                        <Card className="p-3 shadow-none">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold">{selectedSubmission.restaurant_name}</p>
+                                    <p className="mt-1 break-all text-xs text-muted-foreground">{selectedSubmission.restaurant_address || '주소 없음'}</p>
+                                </div>
+                                {getStatusBadge(selectedSubmission.status)}
+                            </div>
+                        </Card>
+                        <SubmissionDetailView
+                            submission={selectedSubmission}
+                            approvalData={approvalData}
+                            onApprovalDataChange={setApprovalData}
+                            geocodingResults={geocodingResults}
+                            onGeocodingResultsChange={setGeocodingResults}
+                            selectedGeocodingIndex={selectedGeocodingIndex}
+                            onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
+                            itemDecisions={itemDecisions}
+                            onItemDecisionsChange={setItemDecisions}
+                            forceApprove={forceApprove}
+                            onForceApproveChange={setForceApprove}
+                            editableData={editableData}
+                            onEditableDataChange={handleEditableDataChange}
+                            naverSearchResults={naverSearchResults}
+                            naverSearchLoading={naverSearchLoading}
+                            onVerifyNaverSearch={handleNaverSearchAndVerify}
+                            onGeocodingSelect={handleGeocodingSelect}
+                        />
+                        {renderOverrideApprovalPanel()}
+                        {showRejectModal && (
+                            <Card className="border-destructive/30 bg-destructive/5 p-3 shadow-none">
+                                <div className="space-y-2">
+                                    <Label htmlFor="rejection-reason">제보 전체 거부 사유</Label>
+                                    <Textarea
+                                        id="rejection-reason"
+                                        value={rejectionReason}
+                                        onChange={(e) => setRejectionReason(e.target.value)}
+                                        placeholder="예: 이미 등록된 맛집입니다 / 정보가 정확하지 않습니다"
+                                        rows={4}
+                                    />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setShowRejectModal(false)}>
+                                            취소
+                                        </Button>
+                                        <Button variant="destructive" size="sm" onClick={handleReject} disabled={!rejectionReason.trim() || loading}>
+                                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />}
+                                            전체 거부
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
+                        {submissionDeleteTarget && (
+                            <Card className="border-red-200 bg-red-50/80 p-3 shadow-none dark:border-red-900/60 dark:bg-red-950/30">
+                                <div className="space-y-2">
+                                    <p className="text-sm font-semibold text-red-900 dark:text-red-100">제보 삭제 확인</p>
+                                    <p className="text-xs leading-5 text-red-800 dark:text-red-100/80">
+                                        “{submissionDeleteTarget.restaurant_name}” 제보를 삭제하려면 {SUBMISSION_DELETE_CONFIRMATION}를 입력하세요.
+                                    </p>
+                                    <Input
+                                        value={submissionDeleteConfirmation}
+                                        onChange={(e) => setSubmissionDeleteConfirmation(e.target.value)}
+                                        placeholder={SUBMISSION_DELETE_CONFIRMATION}
+                                        className="h-9 bg-background"
+                                    />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSubmissionDeleteTarget(null);
+                                                setSubmissionDeleteConfirmation('');
+                                            }}
+                                        >
+                                            취소
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={handleConfirmDeleteSubmission}
+                                            disabled={submissionDeleteConfirmation !== SUBMISSION_DELETE_CONFIRMATION}
+                                        >
+                                            삭제
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
+                    </div>
+                    {(selectedSubmission.status === 'pending' || selectedSubmission.status === 'partially_approved') && (
+                        <div className="grid shrink-0 grid-cols-2 gap-2 border-t bg-background p-3 sm:grid-cols-[1fr_1fr_1.4fr]">
+                            <Button type="button" variant="outline" size="sm" onClick={closeSubmissionDetail} disabled={loading}>
+                                닫기
+                            </Button>
+                            <Button type="button" size="sm" variant="destructive" onClick={() => setShowRejectModal(true)} disabled={loading}>
+                                <XCircle className="mr-1 h-4 w-4" />
+                                전체 거부
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handleApprove}
+                                disabled={loading || !canApprove}
+                                title={!canApprove ? '지오코딩 완료 및 선택된 항목의 메타데이터를 가져와주세요' : '승인'}
+                            >
+                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />}
+                                승인
+                            </Button>
+                        </div>
+                    )}
+                </>
+            )}
+        </section>
+    );
+
+    const renderReviewOcrResult = (review: Review) => (
+        <div className="space-y-2">
+            <Label className="flex items-center gap-1 text-sm font-medium">
+                <ScanSearch className="h-4 w-4" /> OCR 분석 결과
+                {review.ocr_processed_at && (
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        {new Date(review.ocr_processed_at).toLocaleDateString('ko-KR')}
+                    </span>
+                )}
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRerunOcr(review.id)}
+                    disabled={ocrRerunningIds.has(review.id)}
+                    className="ml-auto h-7 gap-1 px-2 text-xs"
+                >
+                    {ocrRerunningIds.has(review.id) ? (
+                        <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" />
+                    ) : (
+                        <RefreshCw className="h-3 w-3" />
+                    )}
+                    {ocrRerunningIds.has(review.id) ? `${ocrCountdowns[review.id] || 0}초` : 'OCR 다시 실행'}
+                </Button>
+            </Label>
+            {ocrRerunningIds.has(review.id) && !review.ocr_processed_at && (
+                <Card className="border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 shadow-none dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                    <Loader2 className="mr-2 inline h-4 w-4 animate-spin motion-reduce:animate-none" />
+                    OCR 처리 중... {ocrCountdowns[review.id] || 0}초 후 완료 예정
+                </Card>
+            )}
+            {!ocrRerunningIds.has(review.id) && !review.ocr_processed_at && (
+                <Card className="bg-muted/50 p-3 text-sm text-muted-foreground shadow-none">OCR 미처리</Card>
+            )}
+            {review.ocr_processed_at && (
+                review.receipt_data ? (
+                    review.receipt_data.error ? (
+                        <Card className="border-red-200 bg-red-50 p-3 text-sm text-red-600 shadow-none dark:border-red-800 dark:bg-red-950/30">
+                            <AlertCircle className="mr-2 inline h-4 w-4" />
+                            OCR 오류: {review.receipt_data.error}
+                        </Card>
+                    ) : (
+                        <Card className="border-blue-200 bg-blue-50 p-3 shadow-none dark:border-blue-800 dark:bg-blue-950/30">
+                            <div className="space-y-2 text-sm">
+                                {review.receipt_data.store_name && (
+                                    <div className="flex justify-between gap-3">
+                                        <span className="text-muted-foreground">가게명</span>
+                                        <span className="font-medium">{review.receipt_data.store_name}</span>
+                                    </div>
+                                )}
+                                {review.receipt_data.date && (
+                                    <div className="flex justify-between gap-3">
+                                        <span className="text-muted-foreground">날짜</span>
+                                        <span>{review.receipt_data.date}</span>
+                                    </div>
+                                )}
+                                {review.receipt_data.total_amount && (
+                                    <div className="flex justify-between gap-3">
+                                        <span className="text-muted-foreground">결제 금액</span>
+                                        <span className="font-medium text-green-600">{review.receipt_data.total_amount.toLocaleString()}원</span>
+                                    </div>
+                                )}
+                                {review.receipt_data.confidence !== undefined && (
+                                    <div className="flex justify-between gap-3 border-t pt-2">
+                                        <span className="text-muted-foreground">OCR 신뢰도</span>
+                                        <Badge variant={review.receipt_data.confidence >= 0.8 ? 'default' : 'secondary'} className="text-xs">
+                                            {(review.receipt_data.confidence * 100).toFixed(0)}%
+                                        </Badge>
+                                    </div>
+                                )}
+                                {review.is_duplicate && review.receipt_data.duplicate_of && (
+                                    <div className="border-t pt-2 text-red-600 dark:text-red-400">
+                                        <AlertTriangle className="mr-1 inline h-4 w-4" />
+                                        중복 영수증 · 원본 {review.receipt_data.duplicate_of.slice(0, 8)}...
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    )
+                ) : (
+                    <Card className="bg-muted/50 p-3 text-sm text-muted-foreground shadow-none">OCR 데이터 없음</Card>
+                )
+            )}
+        </div>
+    );
+
+    const renderReviewDetailPanel = () => (
+        <section
+            aria-label="리뷰 상세 작업 패널"
+            className="min-h-[520px] overflow-hidden rounded-lg border bg-card shadow-sm xl:flex xl:min-h-0 xl:flex-col"
+        >
+            <div className="flex min-h-12 items-center justify-between gap-2 border-b px-3 py-2">
+                <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-primary">리뷰 상세 작업</p>
+                    <h3 className="truncate text-sm font-bold">{selectedReview?.restaurants?.name || '왼쪽 목록에서 리뷰를 선택하세요'}</h3>
+                </div>
+                {selectedReview && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => {
+                            setSelectedReview(null);
+                            setReviewAction(null);
+                            setReviewAdminNote('');
+                            setPreviewImage(null);
+                        }}
+                    >
+                        선택 해제
+                    </Button>
+                )}
+            </div>
+
+            {!selectedReview ? (
+                <div className="flex min-h-[360px] flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
+                    <MessageSquare className="h-8 w-8" />
+                    <p>리뷰를 선택하면 본문, 사진, OCR, 승인/거부/삭제를 이 패널에서 처리합니다.</p>
+                </div>
+            ) : (
+                <>
+                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+                        <Card className="bg-muted/40 p-3 shadow-none">
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-start justify-between gap-2">
+                                    <h3 className="font-semibold">{selectedReview.title}</h3>
+                                    <div className="flex shrink-0 items-center gap-1">
+                                        {selectedReview.is_duplicate && (
+                                            <Badge variant="destructive" className="gap-0.5 text-xs">
+                                                <AlertTriangle className="h-3 w-3" /> 중복
+                                            </Badge>
+                                        )}
+                                        {renderReviewStatusBadge(selectedReview)}
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                        <Avatar className="h-4 w-4">
+                                            <AvatarFallback className="text-[10px]">
+                                                {selectedReview.profiles?.nickname?.[0] || '?'}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        {selectedReview.profiles?.nickname || '익명'}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {new Date(selectedReview.visited_at).toLocaleDateString('ko-KR')}
+                                    </span>
+                                </div>
+                                <p className="whitespace-pre-wrap text-muted-foreground">{selectedReview.content}</p>
+                            </div>
+                        </Card>
+
+                        {previewImage && (
+                            <Card className="p-2 shadow-none">
+                                <div className="relative">
+                                    <Image
+                                        src={previewImage.url}
+                                        alt={previewImage.alt}
+                                        width={1400}
+                                        height={1000}
+                                        unoptimized
+                                        className="max-h-[46dvh] w-full rounded-lg object-contain"
+                                    />
+                                    <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="absolute right-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+                                        onClick={() => setPreviewImage(null)}
+                                    >
+                                        <X className="h-4 w-4 text-gray-700" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        )}
+
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium">제출된 사진</Label>
+                            {(!selectedReview.verification_photo && (!selectedReview.food_photos || selectedReview.food_photos.length === 0)) ? (
+                                <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">제출된 사진이 없습니다</div>
+                            ) : (
+                                <div className="flex gap-2 overflow-x-auto pb-2">
+                                    {selectedReview.verification_photo && (
+                                        <ReviewPhotoItem
+                                            src={getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at)}
+                                            alt="영수증"
+                                            label="영수증"
+                                            labelVariant="receipt"
+                                            onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at), alt: '영수증' })}
+                                        />
+                                    )}
+                                    {selectedReview.food_photos?.map((photo, idx) => (
+                                        <ReviewPhotoItem
+                                            key={idx}
+                                            src={getReviewPhotoUrl(photo)}
+                                            alt={`음식 ${idx + 1}`}
+                                            label={`음식 ${idx + 1}`}
+                                            labelVariant="food"
+                                            onClick={() => setPreviewImage({ url: getReviewPhotoUrl(photo), alt: `음식 ${idx + 1}` })}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {selectedReview.verification_photo && renderReviewOcrResult(selectedReview)}
+
+                        <Card className="border-orange-200 bg-orange-50/70 p-3 shadow-none dark:border-orange-900/50 dark:bg-orange-950/20">
+                            <div className="space-y-2">
+                                <p className="text-sm font-semibold text-orange-900 dark:text-orange-100">OCR 전체 다시 실행</p>
+                                <p className="text-xs leading-5 text-orange-800 dark:text-orange-100/80">
+                                    모든 리뷰의 OCR을 초기화하려면 {OCR_RESET_ALL_CONFIRMATION}를 입력한 뒤 상단/아래 버튼을 누르세요.
+                                </p>
+                                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                    <Input
+                                        value={ocrResetConfirmation}
+                                        onChange={(e) => setOcrResetConfirmation(e.target.value)}
+                                        placeholder={OCR_RESET_ALL_CONFIRMATION}
+                                        className="h-9 bg-background"
+                                    />
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleResetAllOcr}
+                                        disabled={isOcrRunning || ocrResetConfirmation !== OCR_RESET_ALL_CONFIRMATION}
+                                        className="h-9 text-orange-700 dark:text-orange-300"
+                                    >
+                                        전체 다시 실행
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+
+                        <div className="space-y-2">
+                            <Label>관리자 메모{reviewAction === 'reject' && ' (필수)'}</Label>
+                            <Textarea
+                                value={reviewAdminNote}
+                                onChange={(e) => setReviewAdminNote(e.target.value)}
+                                placeholder={reviewAction === 'approve' ? '승인 사유 (선택)' : '거부 사유를 입력해주세요'}
+                                rows={3}
+                            />
+                        </div>
+
+                        {reviewDeleteTarget && (
+                            <Card className="border-red-200 bg-red-50/80 p-3 shadow-none dark:border-red-900/60 dark:bg-red-950/30">
+                                <div className="space-y-2">
+                                    <p className="text-sm font-semibold text-red-900 dark:text-red-100">리뷰 삭제 확인</p>
+                                    <p className="text-xs leading-5 text-red-800 dark:text-red-100/80">
+                                        리뷰 삭제는 사용자 노출 상태를 바꿉니다. 계속하려면 {REVIEW_DELETE_CONFIRMATION}를 입력하세요.
+                                    </p>
+                                    <Input
+                                        value={reviewDeleteConfirmation}
+                                        onChange={(e) => setReviewDeleteConfirmation(e.target.value)}
+                                        placeholder={REVIEW_DELETE_CONFIRMATION}
+                                        className="h-9 bg-background"
+                                    />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setReviewDeleteTarget(null);
+                                                setReviewDeleteConfirmation('');
+                                            }}
+                                        >
+                                            취소
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={handleConfirmDeleteReview}
+                                            disabled={reviewDeleteConfirmation !== REVIEW_DELETE_CONFIRMATION}
+                                        >
+                                            삭제
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
+                    </div>
+                    <div className="grid shrink-0 grid-cols-3 gap-2 border-t bg-background p-3">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteReview(selectedReview)}
+                        >
+                            <Trash2 className="mr-1 h-4 w-4" />
+                            삭제
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                                setReviewAction('reject');
+                                handleConfirmReviewAction('reject');
+                            }}
+                            disabled={!reviewAdminNote.trim()}
+                        >
+                            거부
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                setReviewAction('approve');
+                                handleConfirmReviewAction('approve');
+                            }}
+                            disabled={selectedReview.is_duplicate}
+                            className="bg-green-500 hover:bg-green-600 disabled:opacity-50"
+                        >
+                            {selectedReview.is_duplicate ? '승인불가' : '승인'}
+                        </Button>
+                    </div>
+                </>
+            )}
+        </section>
+    );
 
     return (
         <TooltipProvider>
-            <div className="flex flex-col">
+            <div className="flex h-full min-h-0 flex-col">
                 {/* 탭 헤더 */}
                 <div className="mx-2 mb-3 shrink-0 border-b pb-3 sm:mx-4">
                     <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -1486,7 +2089,7 @@ export function SubmissionListView({
                                                 className="h-8 gap-1 text-xs xl:h-9 xl:px-3 xl:text-sm"
                                             >
                                                 {isOcrRunning ? (
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" />
                                                 ) : (
                                                     <ScanSearch className="h-3 w-3" />
                                                 )}
@@ -1579,7 +2182,7 @@ export function SubmissionListView({
                                     className="h-8 justify-center gap-1 text-[11px]"
                                 >
                                     {isOcrRunning ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" />
                                     ) : (
                                         <ScanSearch className="h-3 w-3" />
                                     )}
@@ -1603,6 +2206,8 @@ export function SubmissionListView({
                 </div>
 
                 {/* 테이블 또는 리뷰 목록 */}
+                <div className="mx-2 grid min-h-0 flex-1 gap-2 pb-2 sm:mx-4 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden">
+                    <div className="min-h-0 overflow-hidden">
                 {activeTab === 'reviews' ? (
                     <div
                         className={listContainerClassName}
@@ -1617,9 +2222,7 @@ export function SubmissionListView({
                         onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
                     >
                         {reviewsLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="w-8 h-8 animate-spin" />
-                            </div>
+                            renderListSkeletonCards('리뷰')
                         ) : filteredReviews.length === 0 && !reviewSearchQuery ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <MessageSquare className="w-10 h-10 mb-3" />
@@ -1761,7 +2364,9 @@ export function SubmissionListView({
                         onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
                         onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
                     >
-                        {filteredSubmissions.length === 0 && !searchQuery ? (
+                        {loading && filteredSubmissions.length === 0 ? (
+                            renderListSkeletonCards(activeTab === 'new' ? '신규 제보' : '수정 제보')
+                        ) : filteredSubmissions.length === 0 && !searchQuery ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <AlertCircle className="w-10 h-10 mb-3" />
                                 <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
@@ -1801,7 +2406,7 @@ export function SubmissionListView({
                                             <Card
                                                 key={submission.id}
                                                 className={listCardBaseClassName}
-                                                onClick={() => openDetailModal(submission)}
+                                                onClick={() => openSubmissionDetail(submission)}
                                             >
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
@@ -1852,7 +2457,7 @@ export function SubmissionListView({
                                                             size="sm"
                                                             variant="outline"
                                                             className={listActionButtonClassName}
-                                                            onClick={() => openDetailModal(submission)}
+                                                            onClick={() => openSubmissionDetail(submission)}
                                                         >
                                                             <Edit className="mr-1 h-3 w-3" />
                                                             상세 검수
@@ -1876,521 +2481,9 @@ export function SubmissionListView({
                         )}
                     </div>
                 )}
-                {/* 상세/승인 모달 */}
-                <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-                    <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`}>
-                        {selectedSubmission && (
-                            <>
-                                <DialogHeader className="border-b pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <DialogTitle className="text-lg font-semibold">
-                                            {selectedSubmission.restaurant_name}
-                                        </DialogTitle>
-                                        <Badge variant="outline" className="text-xs">
-                                            {selectedSubmission.submission_type === 'new' ? '신규' : '수정'}
-                                        </Badge>
-                                        {getStatusBadge(selectedSubmission.status)}
-                                    </div>
-                                    <DialogDescription className="text-sm text-muted-foreground">
-                                        제보 내용을 검토하고 승인 또는 거부를 결정하세요.
-                                    </DialogDescription>
-                                </DialogHeader>
-
-                                <div className="min-h-0 flex-1 overflow-y-auto pt-4 pr-1">
-                                    <div className="space-y-3 pb-2">
-                                        <Card className="bg-muted/40 p-3">
-                                            <div className="grid grid-cols-1 gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                                                <p className="truncate">
-                                                    <span className="font-medium text-foreground">주소:</span> {selectedSubmission.restaurant_address || '-'}
-                                                </p>
-                                                <p className="truncate">
-                                                    <span className="font-medium text-foreground">제보자:</span> {selectedSubmission.profiles?.nickname || '익명'}
-                                                </p>
-                                                <p className="truncate">
-                                                    <span className="font-medium text-foreground">연락처:</span> {selectedSubmission.restaurant_phone || '-'}
-                                                </p>
-                                                <p className="truncate">
-                                                    <span className="font-medium text-foreground">등록일:</span> {new Date(selectedSubmission.created_at).toLocaleDateString('ko-KR')}
-                                                </p>
-                                            </div>
-                                        </Card>
-
-                                        <div className="rounded-lg border bg-muted/20 p-2 sm:p-3">
-                                            <SubmissionDetailView
-                                                submission={selectedSubmission}
-                                                approvalData={approvalData}
-                                                onApprovalDataChange={setApprovalData}
-                                                geocodingResults={geocodingResults}
-                                                onGeocodingResultsChange={setGeocodingResults}
-                                                selectedGeocodingIndex={selectedGeocodingIndex}
-                                                onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
-                                                itemDecisions={itemDecisions}
-                                                onItemDecisionsChange={setItemDecisions}
-                                                forceApprove={forceApprove}
-                                                onForceApproveChange={setForceApprove}
-                                                editableData={editableData}
-                                                onEditableDataChange={handleEditableDataChange}
-                                                naverSearchResults={naverSearchResults}
-                                                naverSearchLoading={naverSearchLoading}
-                                                onVerifyNaverSearch={handleNaverSearchAndVerify}
-                                                onGeocodingSelect={handleGeocodingSelect}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* 푸터 */}
-                                {(selectedSubmission.status === 'pending' || selectedSubmission.status === 'partially_approved') && (
-                                    <DialogFooter className={`${ADMIN_MODAL_FOOTER_DIVIDER} shrink-0 bg-background`}>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setIsDetailModalOpen(false)}
-                                            disabled={loading}
-                                            className={ADMIN_MODAL_ACTION}
-                                        >
-                                            취소
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() => setShowRejectModal(true)}
-                                            disabled={loading}
-                                            className={ADMIN_MODAL_ACTION}
-                                        >
-                                            <XCircle className="w-4 h-4 mr-2" />
-                                            전체 거부
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            onClick={handleApprove}
-                                            disabled={loading || !canApprove}
-                                            title={!canApprove ? '지오코딩 완료 및 선택된 항목의 메타데이터를 가져와주세요' : '승인'}
-                                            className={ADMIN_MODAL_ACTION}
-                                        >
-                                            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                            승인
-                                        </Button>
-                                    </DialogFooter>
-                                )}
-                            </>
-                        )}
-                    </DialogContent>
-                </Dialog>
-
-                {/* 검증 실패 경고 모달 */}
-                <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
-                    <DialogContent className={ADMIN_MODAL_CONTENT_SM}>
-                        <DialogHeader>
-                            <DialogTitle className="text-amber-600 flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5" />
-                                주소 검증 경고
-                            </DialogTitle>
-                            <DialogDescription>
-                                네이버 검색 결과와 입력된 주소가 일치하지 않습니다.
-                                <br />
-                                그래도 승인하시겠습니까?
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className={`py-4 space-y-4 ${ADMIN_MODAL_SCROLL_BODY}`}>
-                            <div className="bg-slate-50 p-3 rounded-md border text-sm">
-                                <p className="font-semibold mb-1">입력된 정보:</p>
-                                <p>이름: {editableData.name}</p>
-                                <p>주소: {editableData.address}</p>
-                            </div>
-
-                            {naverSearchResults.length > 0 ? (
-                                <div className="space-y-2">
-                                    <p className="text-sm font-semibold">검색된 유사 결과:</p>
-                                    <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
-                                        {naverSearchResults.map((result, idx) => (
-                                            <div key={idx} className="text-xs p-2 bg-white border rounded">
-                                                <p className="font-medium">{result.title.replace(/<[^>]+>/g, '')}</p>
-                                                <p className="text-muted-foreground">{result.address}</p>
-                                                {result.roadAddress && <p className="text-muted-foreground">{result.roadAddress}</p>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-sm text-muted-foreground p-2 border rounded bg-slate-50">
-                                    검색된 결과가 없습니다.
-                                </div>
-                            )}
-                        </div>
-
-                        <DialogFooter className={ADMIN_MODAL_FOOTER}>
-                            <Button variant="outline" onClick={() => setShowWarningModal(false)} className={ADMIN_MODAL_ACTION}>
-                                취소 (수정하기)
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    setShowWarningModal(false);
-                                    setVerificationDone(true); // 강제 승인 처리
-                                    onApprove(selectedSubmission!, approvalData, itemDecisions, forceApprove, editableData);
-                                    closeDetailModal();
-                                }}
-                                className={`${ADMIN_MODAL_ACTION} bg-amber-600 hover:bg-amber-700`}
-                            >
-                                무시하고 승인
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* 거부 모달 */}
-                <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
-                    <DialogContent className={ADMIN_MODAL_CONTENT_SM}>
-                        <DialogHeader>
-                            <DialogTitle>제보 전체 거부</DialogTitle>
-                            <DialogDescription>
-                                거부 사유를 입력해주세요. 모든 항목이 거부됩니다.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className={`space-y-4 py-4 ${ADMIN_MODAL_SCROLL_BODY_COMPACT}`}>
-                            <div className="space-y-2">
-                                <Label htmlFor="rejection-reason">거부 사유</Label>
-                                <Textarea
-                                    id="rejection-reason"
-                                    value={rejectionReason}
-                                    onChange={(e) => setRejectionReason(e.target.value)}
-                                    placeholder="예: 이미 등록된 맛집입니다 / 정보가 정확하지 않습니다"
-                                    rows={4}
-                                />
-                            </div>
-                        </div>
-                        <DialogFooter className={ADMIN_MODAL_FOOTER}>
-                            <Button variant="outline" onClick={() => setShowRejectModal(false)} className={ADMIN_MODAL_ACTION}>
-                                취소
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={handleReject}
-                                disabled={!rejectionReason.trim() || loading}
-                                className={ADMIN_MODAL_ACTION}
-                            >
-                                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                전체 거부
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* 리뷰 승인/거부 모달 */}
-                <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
-                    <DialogContent className={`${ADMIN_MODAL_CONTENT_MD_FLEX} !overflow-hidden`}>
-                        <DialogHeader className="shrink-0">
-                            <DialogTitle>
-                                {reviewAction === 'approve' ? '리뷰 승인' : '리뷰 거부'}
-                            </DialogTitle>
-                            <DialogDescription>
-                                리뷰를 {reviewAction === 'approve' ? '승인' : '거부'}합니다
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        {selectedReview && (
-                            <>
-                            <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-                            <div className="space-y-4 pb-2">
-                                {/* 리뷰 기본 정보 */}
-                                <Card className="p-3 bg-muted/50">
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="font-semibold">{selectedReview.title}</h3>
-                                            <div className="flex items-center gap-1">
-                                                {selectedReview.is_duplicate && (
-                                                    <Badge variant="destructive" className="text-xs gap-0.5">
-                                                        <AlertTriangle className="h-3 w-3" /> 중복
-                                                    </Badge>
-                                                )}
-                                                <Badge variant={selectedReview.is_verified ? 'default' : 'secondary'} className="text-xs">
-                                                    {selectedReview.is_verified ? '승인' : '대기'}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <Avatar className="h-4 w-4">
-                                                    <AvatarFallback className="text-[10px]">
-                                                        {selectedReview.profiles?.nickname?.[0] || '?'}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                {selectedReview.profiles?.nickname || '익명'}
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <MapPin className="h-3 w-3" />
-                                                {selectedReview.restaurants?.name || '알 수 없음'}
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" />
-                                                {new Date(selectedReview.visited_at).toLocaleDateString('ko-KR')}
-                                            </span>
-                                        </div>
-                                        <p className="text-muted-foreground">{selectedReview.content}</p>
-                                    </div>
-                                </Card>
-
-                                {/* 사진 (영수증 + 음식 사진 통합) */}
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">제출된 사진</Label>
-                                    {(!selectedReview.verification_photo && (!selectedReview.food_photos || selectedReview.food_photos.length === 0)) ? (
-                                        <div className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
-                                            제출된 사진이 없습니다
-                                        </div>
-                                    ) : (
-                                        <div className="flex gap-2 overflow-x-auto pb-2">
-                                            {/* 영수증 사진 */}
-                                            {selectedReview.verification_photo && (
-                                                <ReviewPhotoItem
-                                                    src={getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at)}
-                                                    alt="영수증"
-                                                    label="영수증"
-                                                    labelVariant="receipt"
-                                                    onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at), alt: '영수증' })}
-                                                />
-                                            )}
-                                            {/* 음식 사진들 */}
-                                            {selectedReview.food_photos?.map((photo, idx) => (
-                                                <ReviewPhotoItem
-                                                    key={idx}
-                                                    src={getReviewPhotoUrl(photo)}
-                                                    alt={`음식 ${idx + 1}`}
-                                                    label={`음식 ${idx + 1}`}
-                                                    labelVariant="food"
-                                                    onClick={() => setPreviewImage({ url: getReviewPhotoUrl(photo), alt: `음식 ${idx + 1}` })}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* OCR 결과 */}
-                                {selectedReview.verification_photo && (
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium flex items-center gap-1">
-                                            <ScanSearch className="h-4 w-4" /> OCR 분석 결과
-                                            {selectedReview.ocr_processed_at && (
-                                                <span className="text-xs text-muted-foreground font-normal ml-1">
-                                                    {new Date(selectedReview.ocr_processed_at).toLocaleDateString('ko-KR')}
-                                                </span>
-                                            )}
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => handleRerunOcr(selectedReview.id)}
-                                                disabled={ocrRerunningIds.has(selectedReview.id)}
-                                                className="ml-auto gap-1 h-6 text-xs"
-                                            >
-                                                {ocrRerunningIds.has(selectedReview.id) ? (
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                ) : (
-                                                    <RefreshCw className="h-3 w-3" />
-                                                )}
-                                                {ocrRerunningIds.has(selectedReview.id)
-                                                    ? `처리중... ${ocrCountdowns[selectedReview.id] || 0}초`
-                                                    : 'OCR 다시 실행'}
-                                            </Button>
-                                        </Label>
-
-                                        {/* OCR 재실행 중 상태 표시 */}
-                                        {ocrRerunningIds.has(selectedReview.id) && !selectedReview.ocr_processed_at && (
-                                            <Card className="p-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-                                                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    <span>
-                                                        OCR 처리 중...
-                                                        <span className="font-semibold ml-1">
-                                                            {ocrCountdowns[selectedReview.id] || 0}초
-                                                        </span>
-                                                        후 완료 예정
-                                                    </span>
-                                                </div>
-                                            </Card>
-                                        )}
-
-                                        {/* OCR 미처리 상태 */}
-                                        {!ocrRerunningIds.has(selectedReview.id) && !selectedReview.ocr_processed_at && (
-                                            <Card className="p-3 bg-muted/50">
-                                                <span className="text-sm text-muted-foreground">OCR 미처리 - 위 버튼을 눌러 OCR을 실행하세요</span>
-                                            </Card>
-                                        )}
-
-                                        {/* OCR 처리 완료 상태 */}
-                                        {selectedReview.ocr_processed_at && (
-                                            <>
-                                                {selectedReview.receipt_data ? (
-                                                    selectedReview.receipt_data.error ? (
-                                                        <Card className="p-3 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
-                                                            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                                                                <AlertCircle className="h-4 w-4" />
-                                                                <span>OCR 오류: {selectedReview.receipt_data.error}</span>
-                                                            </div>
-                                                        </Card>
-                                                    ) : (
-                                                        <Card className="p-3 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                                                            <div className="space-y-2 text-sm">
-                                                                {selectedReview.receipt_data.store_name && (
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="text-muted-foreground">가게명</span>
-                                                                        <span className="font-medium">{selectedReview.receipt_data.store_name}</span>
-                                                                    </div>
-                                                                )}
-                                                                {selectedReview.receipt_data.date && (
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="text-muted-foreground">날짜</span>
-                                                                        <span>{selectedReview.receipt_data.date}</span>
-                                                                    </div>
-                                                                )}
-                                                                {selectedReview.receipt_data.time && (
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="text-muted-foreground">시간</span>
-                                                                        <span>{selectedReview.receipt_data.time}</span>
-                                                                    </div>
-                                                                )}
-                                                                {selectedReview.receipt_data.total_amount && (
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="text-muted-foreground">결제 금액</span>
-                                                                        <span className="font-medium text-green-600">
-                                                                            {selectedReview.receipt_data.total_amount.toLocaleString()}원
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                                {selectedReview.receipt_data.items && selectedReview.receipt_data.items.length > 0 && (
-                                                                    <div className="pt-2 border-t">
-                                                                        <span className="text-muted-foreground text-xs">주문 항목</span>
-                                                                        <ul className="mt-1 text-xs space-y-0.5">
-                                                                            {selectedReview.receipt_data.items.map((item, idx) => {
-                                                                                // 문자열 또는 객체 형식 모두 지원
-                                                                                const isObject = typeof item === 'object' && item !== null;
-                                                                                const name = isObject ? item.name : item;
-                                                                                const price = isObject ? item.price : null;
-                                                                                return (
-                                                                                    <li key={idx} className="text-muted-foreground flex justify-between">
-                                                                                        <span>• {name}</span>
-                                                                                        {price !== null && price !== undefined && (
-                                                                                            <span className="text-primary">{price.toLocaleString()}원</span>
-                                                                                        )}
-                                                                                    </li>
-                                                                                );
-                                                                            })}
-                                                                        </ul>
-                                                                    </div>
-                                                                )}
-                                                                {selectedReview.receipt_data.confidence !== undefined && (
-                                                                    <div className="flex items-center justify-between pt-2 border-t">
-                                                                        <span className="text-muted-foreground text-xs">OCR 신뢰도</span>
-                                                                        <Badge
-                                                                            variant={selectedReview.receipt_data.confidence >= 0.8 ? 'default' : 'secondary'}
-                                                                            className="text-xs"
-                                                                        >
-                                                                            {(selectedReview.receipt_data.confidence * 100).toFixed(0)}%
-                                                                        </Badge>
-                                                                    </div>
-                                                                )}
-                                                                {/* 중복 영수증 경고 */}
-                                                                {selectedReview.is_duplicate && selectedReview.receipt_data.duplicate_of && (
-                                                                    <div className="pt-2 border-t">
-                                                                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                                                                            <AlertTriangle className="h-4 w-4" />
-                                                                            <span className="text-sm font-medium">중복 영수증 감지!</span>
-                                                                        </div>
-                                                                        <p className="mt-1 text-xs text-muted-foreground">
-                                                                            원본 리뷰 ID: <code className="bg-muted px-1 rounded">{selectedReview.receipt_data.duplicate_of.slice(0, 8)}...</code>
-                                                                        </p>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </Card>
-                                                    )
-                                                ) : (
-                                                    <Card className="p-3 bg-muted/50">
-                                                        <span className="text-sm text-muted-foreground">OCR 데이터 없음</span>
-                                                    </Card>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="space-y-2">
-                                    <Label>관리자 메모{reviewAction === 'reject' && ' (필수)'}</Label>
-                                    <Textarea
-                                        value={reviewAdminNote}
-                                        onChange={(e) => setReviewAdminNote(e.target.value)}
-                                        placeholder={reviewAction === 'approve' ? '승인 사유 (선택)' : '거부 사유를 입력해주세요'}
-                                        rows={3}
-                                    />
-                                </div>
-
-                            </div>
-                            </div>
-
-                            <DialogFooter className={`${ADMIN_MODAL_FOOTER_DIVIDER} sticky bottom-0 z-10 shrink-0 bg-background`}>
-                                    <Button variant="outline" onClick={() => setShowReviewModal(false)} className={ADMIN_MODAL_ACTION}>
-                                        취소
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={() => {
-                                            setReviewAction('reject');
-                                            if (reviewAdminNote.trim()) {
-                                                handleConfirmReviewAction();
-                                            } else {
-                                                toast.error('거부 시 관리자 메모를 입력해주세요');
-                                            }
-                                        }}
-                                        disabled={!reviewAdminNote.trim()}
-                                        className={ADMIN_MODAL_ACTION}
-                                    >
-                                        거부
-                                    </Button>
-                                    <Button
-                                        onClick={() => {
-                                            setReviewAction('approve');
-                                            setTimeout(() => handleConfirmReviewAction(), 0);
-                                        }}
-                                        disabled={selectedReview?.is_duplicate}
-                                        className={`${ADMIN_MODAL_ACTION} bg-green-500 hover:bg-green-600 disabled:opacity-50`}
-                                    >
-                                        {selectedReview?.is_duplicate ? '중복 - 승인불가' : '승인'}
-                                    </Button>
-                            </DialogFooter>
-                            </>
-                        )}
-                    </DialogContent>
-                </Dialog>
-
-                {/* 이미지 확대 모달 */}
-                <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-                    <DialogContent className="w-[calc(100vw-2rem)] sm:w-auto max-w-[min(92vw,960px)] max-h-[90dvh] rounded-xl p-2 sm:p-3 [&>button]:hidden">
-                        <DialogHeader className="sr-only">
-                            <DialogTitle>{previewImage?.alt}</DialogTitle>
-                        </DialogHeader>
-                        {previewImage && (
-                            <div className="relative">
-                                <Image
-                                    src={previewImage.url}
-                                    alt={previewImage.alt}
-                                    width={1600}
-                                    height={1200}
-                                    unoptimized
-                                    className="w-full max-h-[80dvh] h-auto object-contain rounded-lg"
-                                />
-                                <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-md"
-                                    onClick={() => setPreviewImage(null)}
-                                >
-                                    <X className="h-4 w-4 text-gray-700" />
-                                </Button>
-                            </div>
-                        )}
-                    </DialogContent>
-                </Dialog>
+                    </div>
+                    {activeTab === 'reviews' ? renderReviewDetailPanel() : renderSubmissionDetailPanel()}
+                </div>
             </div>
         </TooltipProvider>
     );

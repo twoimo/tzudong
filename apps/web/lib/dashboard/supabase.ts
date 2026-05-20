@@ -4,7 +4,42 @@ import type { Database, Json } from '@/integrations/supabase/types';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 1000;
 
+const DASHBOARD_RESTAURANT_SELECT = `
+            id,
+            name:approved_name,
+            categories,
+            road_address,
+            jibun_address,
+            origin_address,
+            lat,
+            lng,
+            youtube_link,
+            youtube_meta,
+            source_type,
+            status,
+            is_not_selected,
+            is_missing,
+            geocoding_success,
+            geocoding_false_stage,
+            evaluation_results,
+            updated_at,
+            created_at
+        `;
+
 type KeyRole = 'anon' | 'service';
+
+export interface DashboardRestaurantPageFilter {
+    limit: number;
+    offset: number;
+    onlyWithCoordinates: boolean;
+    status?: string;
+    sourceType?: string;
+}
+
+export interface DashboardRestaurantPageResult {
+    rows: DashboardRestaurantRow[];
+    total: number;
+}
 
 interface DashboardRestaurantRow {
     id: string;
@@ -78,30 +113,17 @@ async function fetchRestaurantPage(
     keyRole: KeyRole,
 ): Promise<DashboardRestaurantRow[]> {
     const supabase = createSupabaseServerClient(keyRole);
-    const { data, error } = await supabase
+    const query = supabase
         .from('restaurants')
-        .select(`
-            id,
-            name:approved_name,
-            categories,
-            road_address,
-            jibun_address,
-            origin_address,
-            lat,
-            lng,
-            youtube_link,
-            youtube_meta,
-            source_type,
-            status,
-            is_not_selected,
-            is_missing,
-            geocoding_success,
-            geocoding_false_stage,
-            evaluation_results,
-            updated_at,
-            created_at
-        `)
-        .range(from, to);
+        .select(DASHBOARD_RESTAURANT_SELECT);
+
+    // Public dashboard APIs must match the public home/map visibility contract:
+    // anon reads are approved-only even if project-level RLS/grants are broader.
+    const scopedQuery = keyRole === 'anon'
+        ? query.eq('status', 'approved')
+        : query;
+
+    const { data, error } = await scopedQuery.range(from, to);
 
     if (error) {
         throw new Error(`Failed to fetch restaurants: ${error.message}`);
@@ -111,6 +133,51 @@ async function fetchRestaurantPage(
         ...row,
         name: typeof row.name === 'string' && row.name.trim().length > 0 ? row.name : null,
     }));
+}
+
+
+export async function getDashboardRestaurantRowsPage(
+    filter: DashboardRestaurantPageFilter,
+    keyRole: KeyRole = 'anon',
+): Promise<DashboardRestaurantPageResult> {
+    const supabase = createSupabaseServerClient(keyRole);
+    const limit = Math.min(Math.max(filter.limit, 1), 500);
+    const offset = Math.max(filter.offset, 0);
+    let query = supabase
+        .from('restaurants')
+        .select(DASHBOARD_RESTAURANT_SELECT, { count: 'exact' })
+        .order('updated_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+    // Public dashboard APIs must match the public home/map visibility contract:
+    // anon reads are approved-only even when the page query can be served directly by PostgREST.
+    if (keyRole === 'anon') {
+        query = query.eq('status', 'approved');
+    } else if (filter.status) {
+        query = query.eq('status', filter.status);
+    }
+
+    if (filter.onlyWithCoordinates) {
+        query = query.not('lat', 'is', null).not('lng', 'is', null);
+    }
+
+    if (filter.sourceType) {
+        query = query.eq('source_type', filter.sourceType);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+        throw new Error(`Failed to fetch dashboard restaurant page: ${error.message}`);
+    }
+
+    return {
+        rows: ((data as DashboardRestaurantRow[]) || []).map((row) => ({
+            ...row,
+            name: typeof row.name === 'string' && row.name.trim().length > 0 ? row.name : null,
+        })),
+        total: count ?? 0,
+    };
 }
 
 export async function getRestaurantRows(

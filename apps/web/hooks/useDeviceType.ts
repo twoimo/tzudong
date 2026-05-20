@@ -25,6 +25,68 @@ function isBrowserMobileOrTabletViewport(): boolean {
     return window.innerWidth <= BREAKPOINTS.tabletMax;
 }
 
+function getDesktopDeviceType(): DeviceType {
+    return {
+        isMobile: false,
+        isTablet: false,
+        isDesktop: true,
+        isMobileOrTablet: false,
+        isLandscape: false,
+        viewportClass: 'desktop',
+        isTouch: false,
+    };
+}
+
+function calculateDeviceTypeSnapshot(): DeviceType {
+    if (typeof window === 'undefined') {
+        return getDesktopDeviceType();
+    }
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const isLandscape = width > height;
+
+    const isTouch =
+        window.matchMedia('(pointer: coarse)').matches ||
+        navigator.maxTouchPoints > 0;
+
+    const isMobile = width <= BREAKPOINTS.mobileMax;
+    const isTablet = width > BREAKPOINTS.mobileMax && width <= BREAKPOINTS.tabletMax;
+    const isDesktop = width > BREAKPOINTS.tabletMax;
+
+    const viewportClass: DeviceType['viewportClass'] = isMobile
+        ? 'mobile'
+        : isTablet
+            ? 'tablet'
+            : 'desktop';
+
+    return {
+        isMobile,
+        isTablet,
+        isDesktop,
+        isMobileOrTablet: isMobile || isTablet,
+        isLandscape,
+        viewportClass,
+        isTouch,
+    };
+}
+
+function areDeviceTypesEqual(a: DeviceType, b: DeviceType): boolean {
+    return (
+        a.isMobile === b.isMobile &&
+        a.isTablet === b.isTablet &&
+        a.isDesktop === b.isDesktop &&
+        a.isMobileOrTablet === b.isMobileOrTablet &&
+        a.isLandscape === b.isLandscape &&
+        a.viewportClass === b.viewportClass &&
+        a.isTouch === b.isTouch
+    );
+}
+
+function resolveDeviceTypeState(previous: DeviceType, next: DeviceType): DeviceType {
+    return areDeviceTypesEqual(previous, next) ? previous : next;
+}
+
 function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T {
     let timeoutId: ReturnType<typeof setTimeout>;
     return ((...args: Parameters<T>) => {
@@ -34,51 +96,17 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number):
 }
 
 export function useDeviceType(): DeviceType {
-    const [deviceType, setDeviceType] = useState<DeviceType>({
-        isMobile: false,
-        isTablet: false,
-        isDesktop: true,
-        isMobileOrTablet: false,
-        isLandscape: false,
-        viewportClass: 'desktop',
-        isTouch: false,
-    });
+    const [deviceType, setDeviceType] = useState<DeviceType>(getDesktopDeviceType);
 
     const calculateDeviceType = useCallback(() => {
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        const isLandscape = width > height;
-
-        const isTouch =
-            window.matchMedia('(pointer: coarse)').matches ||
-            navigator.maxTouchPoints > 0;
-
-        const isMobile = width <= BREAKPOINTS.mobileMax;
-        const isTablet = width > BREAKPOINTS.mobileMax && width <= BREAKPOINTS.tabletMax;
-        const isDesktop = width > BREAKPOINTS.tabletMax;
-
-        const viewportClass: DeviceType['viewportClass'] = isMobile
-            ? 'mobile'
-            : isTablet
-                ? 'tablet'
-                : 'desktop';
-
-        return {
-            isMobile,
-            isTablet,
-            isDesktop,
-            isMobileOrTablet: isMobile || isTablet,
-            isLandscape,
-            viewportClass,
-            isTouch,
-        };
+        return calculateDeviceTypeSnapshot();
     }, []);
 
     useEffect(() => {
-        setDeviceType(calculateDeviceType());
+        setDeviceType((previous) => resolveDeviceTypeState(previous, calculateDeviceType()));
 
         const debouncedUpdate = debounce(() => {
-            setDeviceType(calculateDeviceType());
+            setDeviceType((previous) => resolveDeviceTypeState(previous, calculateDeviceType()));
         }, 50);
 
         window.addEventListener('resize', debouncedUpdate, { passive: true });

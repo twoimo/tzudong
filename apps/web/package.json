@@ -18,8 +18,6 @@
     "supabase:gen-types": "node scripts/supabase-gen-types.mjs",
     "test:unit": "bun test tests-unit",
     "test:responsive": "node scripts/run-responsive-tests.mjs",
-    "qa:insights-chat": "bun run scripts/insight-chat-qa.mjs",
-    "qa:insights-chat:db": "bun run scripts/insight-chat-db-ops.mjs",
     "dev:webpack": "node scripts/clean-next.mjs --skip-clean -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
     "dev:webpack:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
     "bench:dev": "node scripts/measure-dev-compile.mjs",

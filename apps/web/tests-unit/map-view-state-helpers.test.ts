@@ -33,6 +33,20 @@ describe('map view state helpers', () => {
         expect(buildMapViewBoundsQuery(null)).toBeUndefined();
     });
 
+    test('rejects invalid google map bounds instead of silently dropping query limits', () => {
+        const missingCornerBounds = {
+            getNorthEast: () => null,
+            getSouthWest: () => ({ lat: () => 37, lng: () => 126 }),
+        };
+        const nonFiniteBounds = {
+            getNorthEast: () => ({ lat: () => Number.NaN, lng: () => 128 }),
+            getSouthWest: () => ({ lat: () => 37, lng: () => 126 }),
+        };
+
+        expect(() => buildMapViewBoundsQuery(missingCornerBounds as never)).toThrow('missing corners');
+        expect(() => buildMapViewBoundsQuery(nonFiniteBounds)).toThrow('non-finite coordinates');
+    });
+
     test('finds updated selected restaurant by id', () => {
         const updated = findUpdatedSelectedRestaurant(
             [makeRestaurant({ id: 'a', name: 'updated' }), makeRestaurant({ id: 'b' })],

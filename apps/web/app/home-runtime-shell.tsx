@@ -7,7 +7,7 @@ import { QueryProvider } from './providers';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { AnonymousHomeAuthProvider, useAuth } from '@/contexts/AuthContextBase';
 import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
-import { useDeviceType } from '@/hooks/useDeviceType';
+import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
 import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
 import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
@@ -19,8 +19,10 @@ import {
     MOBILE_SHEET_HEADER_PROGRESS_VAR,
 } from '@/lib/mobile-sheet-layout';
 
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
+import { AppToaster } from '@/components/ui/app-toaster';
+
 const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
-const MobileBottomNav = lazy(() => import('@/components/layout/MobileBottomNav'));
 
 type AuthModalProps = { isOpen: boolean; onClose: () => void };
 type ProfileModalProps = AuthModalProps;
@@ -166,6 +168,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
         }
     }, [queryClient, user]);
 
+
     return (
         <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
             <DeferredUserDataPrefetcher enabled={Boolean(user)} />
@@ -182,15 +185,13 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
             </div>
 
             <div className={cn('min-[1600px]:hidden transition-transform duration-300')}>
-                <Suspense fallback={null}>
-                    <MobileBottomNav
-                        className="transition-transform duration-300"
-                        style={{
-                            transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
-                            willChange: 'transform',
-                        }}
-                    />
-                </Suspense>
+                <MobileBottomNav
+                    className="transition-transform duration-300"
+                    style={{
+                        transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
+                        willChange: 'transform',
+                    }}
+                />
             </div>
 
             {isAuthModalOpen && (
@@ -224,29 +225,15 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 }
 
 function HomeLayoutContent({ children }: { children: ReactNode }) {
-    const [hasMounted, setHasMounted] = useState(false);
-    const { isDesktop } = useDeviceType();
+    const viewportMode = useHomeViewportMode();
 
-    useEffect(() => {
-        setHasMounted(true);
-    }, []);
-
-    if (!hasMounted) {
-        return (
-            <div className="min-h-[var(--full-height,100vh)] bg-background">
-                <a href="#main-content" className="skip-link">
-                    본문 바로가기
-                </a>
-                <main id="main-content" className="h-full w-full">
-                    {children}
-                </main>
-            </div>
-        );
+    if (viewportMode === 'pending') {
+        return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;
     }
 
-    if (isDesktop) {
+    if (viewportMode === 'desktop') {
         return (
-            <Suspense fallback={<div className="h-full w-full">{children}</div>}>
+            <Suspense fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}>
                 <OverlayLayout>{children}</OverlayLayout>
             </Suspense>
         );
@@ -255,12 +242,25 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
     return <MobileHomeLayout>{children}</MobileHomeLayout>;
 }
 
+function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
+    return (
+        <div className="min-h-[var(--full-height,100vh)] bg-background text-foreground">
+            <a href="#main-content" className="skip-link">
+                본문 바로가기
+            </a>
+            <main id="main-content" className="h-full w-full bg-background">
+                {children}
+            </main>
+        </div>
+    );
+}
 export function HomeRuntimeShell({ children }: { children: ReactNode }) {
     return (
         <QueryProvider>
             <HomeSessionProviders>
                 <LayoutProvider>
                     <HomeLayoutContent>{children}</HomeLayoutContent>
+                    <AppToaster />
                 </LayoutProvider>
             </HomeSessionProviders>
         </QueryProvider>

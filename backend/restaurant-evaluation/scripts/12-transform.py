@@ -23,6 +23,7 @@ import os
 import hashlib
 import sys
 import argparse
+import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
@@ -86,10 +87,46 @@ def generate_trace_id(youtube_link: str, name: str, review: str) -> str:
     return hashlib.sha256(key_string.encode("utf-8")).hexdigest()
 
 
-def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict]:
+def normalize_evaluation_name(name: Any) -> str:
+    if not isinstance(name, str):
+        return ""
+    compact = re.sub(r"[\s\-_.·ㆍ()\[\]{}]+", "", name.strip().lower())
+    if compact.endswith("본점"):
+        compact = compact[:-2]
+    return compact
+
+
+def build_evaluation_name_candidates(
+    rest_name: str, loc_match_item: Optional[dict] = None
+) -> List[str]:
+    candidates = [rest_name]
+    if loc_match_item:
+        candidates.extend(
+            [
+                loc_match_item.get("naver_name"),
+                loc_match_item.get("google_name"),
+                loc_match_item.get("matched_name"),
+            ]
+        )
+
+    deduped: List[str] = []
+    seen = set()
+    for candidate in candidates:
+        if not isinstance(candidate, str) or not candidate.strip():
+            continue
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        deduped.append(candidate)
+    return deduped
+
+
+def get_eval_item(
+    eval_results: dict, rest_name: str, key: str, name_candidates: Optional[List[str]] = None
+) -> Optional[dict]:
     """evaluation_results에서 항목 찾기
-    - Rule 평가 항목 (category_validity_TF): origin_name으로 매칭
-    - LAAJ 평가 항목: name으로 매칭
+    - Rule/LAAJ 평가 항목은 평가 시점의 canonical name으로 저장될 수 있음
+    - origin_name 외에 location_match_TF의 naver/google/matched name alias도 함께 매칭
     """
     if not eval_results:
         return None
@@ -106,10 +143,25 @@ def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict
 
     # 모든 평가 항목이 이제 name으로 매칭됨 (location_match_TF는 별도 처리)
     match_key = "name"
+    candidates = name_candidates or [rest_name]
+    normalized_candidates = {
+        normalize_evaluation_name(candidate)
+        for candidate in candidates
+        if normalize_evaluation_name(candidate)
+    }
 
     found_item = next(
-        (item for item in item_list if item.get(match_key) == rest_name), None
+        (item for item in item_list if item.get(match_key) in candidates), None
     )
+    if not found_item and normalized_candidates:
+        found_item = next(
+            (
+                item
+                for item in item_list
+                if normalize_evaluation_name(item.get(match_key)) in normalized_candidates
+            ),
+            None,
+        )
 
     if found_item:
         new_item = found_item.copy()
@@ -272,30 +324,28 @@ def transform_json_object(
                 )
                 if loc_match_item:
                     new_eval_results["location_match_TF"] = loc_match_item
+                eval_name_candidates = build_evaluation_name_candidates(
+                    restaurant_name, loc_match_item
+                )
 
                 for key in original_eval_results:
                     if key == "location_match_TF":
                         continue
                     if key == "visit_authenticity":
-                        visit_auth_values = original_eval_results.get(
-                            "visit_authenticity", {}
-                        ).get("values", [])
-                        visit_auth_item = next(
-                            (
-                                item
-                                for item in visit_auth_values
-                                if item.get("name") == restaurant_name
-                            ),
-                            None,
+                        visit_auth_item = get_eval_item(
+                            original_eval_results,
+                            restaurant_name,
+                            key,
+                            eval_name_candidates,
                         )
                         if visit_auth_item:
-                            new_visit_item = visit_auth_item.copy()
-                            if "name" in new_visit_item:
-                                del new_visit_item["name"]
-                            new_eval_results["visit_authenticity"] = new_visit_item
+                            new_eval_results["visit_authenticity"] = visit_auth_item
                     else:
                         eval_item = get_eval_item(
-                            original_eval_results, restaurant_name, key
+                            original_eval_results,
+                            restaurant_name,
+                            key,
+                            eval_name_candidates,
                         )
                         if eval_item:
                             new_eval_results[key] = eval_item

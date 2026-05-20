@@ -2,9 +2,15 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
-import { type Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
+import type { Announcement } from '@/types/announcement';
 
-type AnnouncementRow = {
+const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
+const ANNOUNCEMENT_SELECT = 'id,title,content,is_active,show_on_banner,priority,created_at,updated_at';
+const ACTIVE_ANNOUNCEMENTS_STALE_TIME_MS = 5 * 60 * 1000;
+const BANNER_ANNOUNCEMENTS_STALE_TIME_MS = 10 * 60 * 1000;
+const ANNOUNCEMENTS_GC_TIME_MS = 30 * 60 * 1000;
+
+interface AnnouncementRow {
     id: string;
     title: string;
     content: string;
@@ -13,10 +19,7 @@ type AnnouncementRow = {
     priority: number;
     created_at: string;
     updated_at: string;
-};
-
-const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
-const ANNOUNCEMENT_SELECT = 'id,title,content,is_active,show_on_banner,priority,created_at,updated_at';
+}
 
 const sortAnnouncements = (announcements: Announcement[]): Announcement[] => {
     return [...announcements].sort((a, b) => {
@@ -38,18 +41,39 @@ const mapAnnouncementRow = (row: AnnouncementRow): Announcement => ({
     updatedAt: row.updated_at,
 });
 
+const parseAnnouncements = (rows: AnnouncementRow[] | null | undefined): Announcement[] => {
+    return sortAnnouncements((rows || []).map(mapAnnouncementRow));
+};
 
-const getFallbackActiveAnnouncements = (): Announcement[] => {
+const getFallbackActiveAnnouncements = async (): Promise<Announcement[]> => {
+    const { DUMMY_ANNOUNCEMENTS } = await import('@/types/announcement');
     return sortAnnouncements(DUMMY_ANNOUNCEMENTS.filter((announcement) => announcement.isActive));
 };
 
-const getFallbackBannerAnnouncements = (): Announcement[] => {
-    return sortAnnouncements(
-        DUMMY_ANNOUNCEMENTS.filter((announcement) => announcement.isActive && announcement.showOnBanner)
-    );
-};
+export function useActiveAnnouncements(enabled = true) {
+    return useQuery({
+        queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'active'],
+        queryFn: async (): Promise<Announcement[]> => {
+            try {
+                const rows = await fetchSupabaseRows<AnnouncementRow>('announcements', [
+                    ['select', ANNOUNCEMENT_SELECT],
+                    ['is_active', 'eq.true'],
+                    ['order', 'priority.desc,created_at.desc'],
+                ]);
 
-export function useBannerAnnouncements() {
+                return parseAnnouncements(rows);
+            } catch (error) {
+                console.error('활성 공지사항 조회 중 오류:', error);
+                return getFallbackActiveAnnouncements();
+            }
+        },
+        enabled,
+        staleTime: ACTIVE_ANNOUNCEMENTS_STALE_TIME_MS,
+        gcTime: ANNOUNCEMENTS_GC_TIME_MS,
+    });
+}
+
+export function useBannerAnnouncements(enabled = true) {
     return useQuery({
         queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'banner'],
         queryFn: async (): Promise<Announcement[]> => {
@@ -61,36 +85,15 @@ export function useBannerAnnouncements() {
                     ['order', 'priority.desc,created_at.desc'],
                 ]);
 
-                return sortAnnouncements(rows.map(mapAnnouncementRow));
+                return parseAnnouncements(rows);
             } catch (error) {
                 console.error('배너 공지사항 조회 중 오류:', error);
-                return getFallbackBannerAnnouncements();
+                const fallbackAnnouncements = await getFallbackActiveAnnouncements();
+                return fallbackAnnouncements.filter((announcement) => announcement.showOnBanner);
             }
         },
-        staleTime: 60 * 1000,
-        gcTime: 5 * 60 * 1000,
-    });
-}
-
-
-export function useActiveAnnouncements() {
-    return useQuery({
-        queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'active'],
-        queryFn: async (): Promise<Announcement[]> => {
-            try {
-                const rows = await fetchSupabaseRows<AnnouncementRow>('announcements', [
-                    ['select', ANNOUNCEMENT_SELECT],
-                    ['is_active', 'eq.true'],
-                    ['order', 'priority.desc,created_at.desc'],
-                ]);
-
-                return sortAnnouncements(rows.map(mapAnnouncementRow));
-            } catch (error) {
-                console.error('활성 공지사항 조회 중 오류:', error);
-                return getFallbackActiveAnnouncements();
-            }
-        },
-        staleTime: 60 * 1000,
-        gcTime: 5 * 60 * 1000,
+        enabled,
+        staleTime: BANNER_ANNOUNCEMENTS_STALE_TIME_MS,
+        gcTime: ANNOUNCEMENTS_GC_TIME_MS,
     });
 }

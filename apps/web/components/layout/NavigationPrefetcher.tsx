@@ -7,9 +7,9 @@ import { getNavigationPrefetchRoutes } from '@/components/layout/navigation-rout
 
 type IdleCallbackHandle = number;
 
-const HOME_ROUTE_PREFETCH_DELAY_MS = 8000;
+const HOME_ROUTE_PREFETCH_IDLE_TIMEOUT_MS = 2500;
 
-function runWhenIdle(callback: () => void): () => void {
+function runWhenIdle(callback: () => void, timeoutMs = 2000): () => void {
     if (typeof window === 'undefined') {
         return () => undefined;
     }
@@ -20,11 +20,11 @@ function runWhenIdle(callback: () => void): () => void {
     };
 
     if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
-        const handle = idleWindow.requestIdleCallback(callback, { timeout: 2000 });
+        const handle = idleWindow.requestIdleCallback(callback, { timeout: timeoutMs });
         return () => idleWindow.cancelIdleCallback?.(handle);
     }
 
-    const timer = window.setTimeout(callback, 200);
+    const timer = window.setTimeout(callback, timeoutMs);
     return () => window.clearTimeout(timer);
 }
 
@@ -96,22 +96,12 @@ export default function NavigationPrefetcher() {
             });
         };
 
-        let cancel: () => void = () => undefined;
-        let homeDelayTimer: number | null = null;
-
-        if (pathname === '/') {
-            homeDelayTimer = window.setTimeout(() => {
-                cancel = runWhenIdle(runPrefetch);
-            }, HOME_ROUTE_PREFETCH_DELAY_MS);
-        } else {
-            cancel = runWhenIdle(runPrefetch);
-        }
+        const cancel = pathname === '/'
+            ? runWhenIdle(runPrefetch, HOME_ROUTE_PREFETCH_IDLE_TIMEOUT_MS)
+            : runWhenIdle(runPrefetch);
 
         return () => {
             cancelled = true;
-            if (homeDelayTimer !== null) {
-                window.clearTimeout(homeDelayTimer);
-            }
             cancel();
         };
     }, [pathname, router, routesToPrefetch]);

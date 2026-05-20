@@ -33,6 +33,24 @@ export interface DeviceLocationMapRenderPlan {
     shouldFocus: boolean;
 }
 
+export interface DeviceLocationStateUpdateInput {
+    previous: DeviceMapLocation | null;
+    next: DeviceMapLocation;
+    headingThresholdDegrees?: number;
+    positionThresholdMeters?: number;
+    accuracyThresholdMeters?: number;
+}
+
+export interface DeviceLocationStateUpdatePlan {
+    nextLocation: DeviceMapLocation;
+    shouldUpdate: boolean;
+}
+
+const DEFAULT_HEADING_UPDATE_THRESHOLD_DEGREES = 3;
+const DEFAULT_POSITION_UPDATE_THRESHOLD_METERS = 3;
+const DEFAULT_ACCURACY_UPDATE_THRESHOLD_METERS = 5;
+const EARTH_RADIUS_METERS = 6_371_000;
+
 export function normalizeCompassHeading(value: number | null | undefined): number | null {
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
     return ((value % 360) + 360) % 360;
@@ -87,6 +105,86 @@ export function resolveDeviceLocationAccuracyRadius(
 export function resolveDeviceLocationFocusZoom(currentZoom: number, minimumFocusZoom = 15): number {
     if (typeof currentZoom !== 'number' || !Number.isFinite(currentZoom)) return minimumFocusZoom;
     return Math.max(currentZoom, minimumFocusZoom);
+}
+
+function toRadians(value: number): number {
+    return value * Math.PI / 180;
+}
+
+export function getDeviceLocationDistanceMeters(
+    first: Pick<DeviceMapLocation, 'lat' | 'lng'>,
+    second: Pick<DeviceMapLocation, 'lat' | 'lng'>,
+): number {
+    const firstLat = toRadians(first.lat);
+    const secondLat = toRadians(second.lat);
+    const deltaLat = toRadians(second.lat - first.lat);
+    const deltaLng = toRadians(second.lng - first.lng);
+    const haversine =
+        Math.sin(deltaLat / 2) ** 2 +
+        Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(deltaLng / 2) ** 2;
+
+    return 2 * EARTH_RADIUS_METERS * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+export function getCompassHeadingDeltaDegrees(
+    previousHeading: number | null | undefined,
+    nextHeading: number | null | undefined,
+): number {
+    const previous = normalizeCompassHeading(previousHeading);
+    const next = normalizeCompassHeading(nextHeading);
+    if (previous === null || next === null) return previous === next ? 0 : Number.POSITIVE_INFINITY;
+
+    const directDelta = Math.abs(next - previous);
+    return Math.min(directDelta, 360 - directDelta);
+}
+
+function getAccuracyDeltaMeters(
+    previousAccuracy: number | null | undefined,
+    nextAccuracy: number | null | undefined,
+): number {
+    if (
+        typeof previousAccuracy !== 'number' ||
+        !Number.isFinite(previousAccuracy) ||
+        typeof nextAccuracy !== 'number' ||
+        !Number.isFinite(nextAccuracy)
+    ) {
+        return previousAccuracy === nextAccuracy ? 0 : Number.POSITIVE_INFINITY;
+    }
+
+    return Math.abs(nextAccuracy - previousAccuracy);
+}
+
+export function resolveDeviceLocationStateUpdatePlan({
+    accuracyThresholdMeters = DEFAULT_ACCURACY_UPDATE_THRESHOLD_METERS,
+    headingThresholdDegrees = DEFAULT_HEADING_UPDATE_THRESHOLD_DEGREES,
+    next,
+    positionThresholdMeters = DEFAULT_POSITION_UPDATE_THRESHOLD_METERS,
+    previous,
+}: DeviceLocationStateUpdateInput): DeviceLocationStateUpdatePlan {
+    if (!previous) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    if (previous.focusRequestId !== next.focusRequestId || previous.mode !== next.mode) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    const distanceMeters = getDeviceLocationDistanceMeters(previous, next);
+    if (distanceMeters >= positionThresholdMeters) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    const headingDelta = getCompassHeadingDeltaDegrees(previous.heading, next.heading);
+    if (headingDelta >= headingThresholdDegrees) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    const accuracyDelta = getAccuracyDeltaMeters(previous.accuracy, next.accuracy);
+    if (accuracyDelta >= accuracyThresholdMeters) {
+        return { nextLocation: next, shouldUpdate: true };
+    }
+
+    return { nextLocation: previous, shouldUpdate: false };
 }
 
 export function resolveDeviceLocationMapRenderPlan({

@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, useRef, useEffect, type ComponentType } from 'react';
+import { memo, useState, useCallback, useMemo, useRef, useEffect, type ComponentType, type KeyboardEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
     Filter,
@@ -12,18 +12,13 @@ import {
     Check,
     Send,
     User as UserIcon,
-    Megaphone,
     BarChart2,
-    Utensils,
-    ClipboardList,
-    MessageSquare,
-    Image as ImageIcon,
+    PanelLeft,
     LogOut,
     ChevronDown,
     ChevronUp,
     LocateFixed,
-    Navigation,
-    SlidersHorizontal
+    Navigation
 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -37,21 +32,20 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS, getFocusTrapContainers, shouldHideModalSibling } from '@/components/ui/bottom-sheet';
 import { Region, REGIONS, Restaurant } from '@/types/restaurant';
-import type { Notification } from '@/types/notification';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useQuery } from '@tanstack/react-query';
-import { fetchSupabaseExactCount, fetchSupabaseRows } from '@/lib/supabase-rest-client';
+import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { toast } from '@/lib/no-toast';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContextBase';
-import { useNotifications } from '@/contexts/NotificationContextBase';
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
+import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -59,40 +53,17 @@ const CATEGORIES = [
     "족발·보쌈", "돈까스·회", "아시안", "패스트푸드",
     "카페·디저트", "찜·탕", "야식", "도시락"
 ];
-const MIN_DRAG_HEIGHT = 5;
 const MIN_SHEET_HEIGHT = 25;
 const HALF_SHEET_HEIGHT = 50;
 const MAX_SHEET_HEIGHT = 100;
-const CLOSE_THRESHOLD = 15;
-const SWIPE_VELOCITY_THRESHOLD = 0.5;
-const CONTENT_TOP_EPSILON = 2;
-const CONTENT_DRAG_START_THRESHOLD = 16;
-const CONTENT_VERTICAL_INTENT_RATIO = 1.2;
-
-const isVerticallyScrollable = (element: HTMLElement) => {
-    const style = window.getComputedStyle(element);
-    const overflowY = style.overflowY;
-    const allowsScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
-    return allowsScroll && element.scrollHeight > element.clientHeight;
-};
-
-const findScrollableTouchTarget = (
-    target: EventTarget | null,
-    boundary: HTMLElement | null
-): HTMLElement | null => {
-    if (!(target instanceof HTMLElement)) return boundary;
-
-    let node: HTMLElement | null = target;
-    while (node && node !== boundary) {
-        if (isVerticallyScrollable(node)) return node;
-        node = node.parentElement;
-    }
-
-    if (boundary && isVerticallyScrollable(boundary)) return boundary;
-    return null;
-};
-
-
+const MOBILE_SEARCH_FOCUSABLE_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'textarea:not([disabled])',
+    'select:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+].join(', ');
 
 type SearchType = 'name' | 'youtube';
 
@@ -116,6 +87,7 @@ type RestaurantSearchComponentProps = {
 
 type MobileBookmarkMenuButtonProps = {
     user: User;
+    defaultOpen?: boolean;
 };
 
 const loadMobileBookmarkMenuButton = async () => {
@@ -123,15 +95,44 @@ const loadMobileBookmarkMenuButton = async () => {
     return mod.default as ComponentType<MobileBookmarkMenuButtonProps>;
 };
 
+type MobileNotificationMenuButtonProps = {
+    user: User;
+    defaultOpen?: boolean;
+};
+
+const loadMobileNotificationMenuButton = async () => {
+    const mod = await import('@/components/home/MobileNotificationMenuButton');
+    return mod.default as ComponentType<MobileNotificationMenuButtonProps>;
+};
+
+const mobileTopIconButtonClass = cn(
+    'h-9 w-9 rounded-full border border-border bg-background',
+    'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
+);
+
+const mobileTopIconButtonWithBadgeClass = cn(mobileTopIconButtonClass, 'relative');
+const mobileTopIconGlyphClass = 'h-[18px] w-[18px]';
+const mobileTopUserIconGlyphClass = 'h-5 w-5';
+
 const loadRestaurantSearch = async () => {
     const mod = await import('@/components/search/RestaurantSearch');
     return mod.default as ComponentType<RestaurantSearchComponentProps>;
 };
 
+
 // [OPTIMIZATION] 로딩 스켈레톤
 const SheetLoading = () => (
-    <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    <div
+        className="flex items-center justify-center py-8"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+    >
+        <div
+            className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+        />
+        <span className="sr-only">목록을 불러오는 중입니다</span>
     </div>
 );
 
@@ -141,7 +142,6 @@ interface MobileControlOverlayProps {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
-    countryCounts: Record<string, number>;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -157,9 +157,27 @@ interface MobileControlOverlayProps {
     deviceLocation?: DeviceMapLocation | null;
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
+    initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null;
 }
 
 type ActiveSheet = 'none' | 'region' | 'category' | 'search';
+type InertableHTMLElement = HTMLElement & { inert: boolean };
+
+type HiddenSearchLayerSiblingState = {
+    element: InertableHTMLElement;
+    ariaHidden: string | null;
+    inert: boolean;
+};
+
+const getMobileSearchFocusableElements = (container: HTMLElement | null) => {
+    if (!container) return [];
+
+    return Array.from(container.querySelectorAll<HTMLElement>(MOBILE_SEARCH_FOCUSABLE_SELECTOR))
+        .filter((element) => {
+            if (element.getAttribute('aria-hidden') === 'true') return false;
+            return element.offsetParent !== null || element === document.activeElement;
+        });
+};
 
 /**
  * 모바일용 컨트롤 오버레이 컴포넌트
@@ -171,7 +189,6 @@ function MobileControlOverlayComponent({
     selectedCountry,
     selectedCategories,
     filters,
-    countryCounts,
     onRegionChange,
     onCountryChange,
     onCategoryChange,
@@ -187,66 +204,44 @@ function MobileControlOverlayComponent({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    initialIntent = null,
 }: MobileControlOverlayProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { signOut } = useAuth();
-    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
-    const [sheetHeight, setSheetHeight] = useState(50); // 최종 높이 (스냅 시에만 업데이트)
-    // [OPTIMIZATION] isDragging은 UI 업데이트용으로만 사용, 실제 드래그 로직은 ref 사용
-    const [isDragging, setIsDragging] = useState(false);
     const [quickSelectedCategories, setQuickSelectedCategories] = useState<string[]>(selectedCategories);
     const [searchViewportHeight, setSearchViewportHeight] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
-    const [adminBadgeCounts, setAdminBadgeCounts] = useState({ submissions: 0, reviews: 0 });
+    const shouldOpenBookmarkOnMount = initialIntent === 'bookmark';
+    const shouldOpenNotificationOnMount = initialIntent === 'notification';
     const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
         Boolean(user),
         loadMobileBookmarkMenuButton
+    );
+    const DeferredMobileNotificationMenuButton = useDeferredComponent<MobileNotificationMenuButtonProps>(
+        Boolean(user),
+        loadMobileNotificationMenuButton
     );
     const DeferredRestaurantSearch = useDeferredComponent<RestaurantSearchComponentProps>(
         activeSheet === 'search',
         loadRestaurantSearch
     );
+    const countryCounts = useOverseasCountryCounts(mapMode);
     const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
         hasLocation: Boolean(deviceLocation),
         isHeadingMode: isDeviceHeadingMode,
         isPending: isDeviceLocationPending,
     });
 
-    // [OPTIMIZATION] ref로 실시간 드래그 상태 추적 (리렌더링 없이)
-    const sheetRef = useRef<HTMLDivElement>(null);
-    const handleRef = useRef<HTMLDivElement>(null);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const currentHeightRef = useRef(50); // 현재 드래그 중인 높이
-    const startYRef = useRef(0);
-    const startHeightRef = useRef(50);
-    const isDraggingRef = useRef(false); // [OPTIMIZATION] isDragging도 ref로 관리
-    // 드래그 속도 측정용 ref
-    const lastYRef = useRef(0);
-    const lastTimeRef = useRef(0);
-    const velocityRef = useRef(0);
-    const contentTouchStartYRef = useRef(0);
-    const contentTouchStartXRef = useRef(0);
-    const isContentDraggingSheetRef = useRef(false);
-    const contentStartBoundaryRef = useRef<'top' | null>(null);
-    const contentScrollTargetRef = useRef<HTMLElement | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchLayerRef = useRef<HTMLDivElement>(null);
     const searchSelectionCloseRafRef = useRef<number | null>(null);
-
-    const getContentSnapPoints = useCallback(() => {
-        return [MIN_SHEET_HEIGHT, HALF_SHEET_HEIGHT, MAX_SHEET_HEIGHT];
-    }, []);
-
-    const getNearestSnapHeight = useCallback((currentHeight: number) => {
-        const snapPoints = getContentSnapPoints();
-        return snapPoints.reduce((closest, snap) =>
-            Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
-            , snapPoints[0]);
-    }, [getContentSnapPoints]);
+    const searchPreviouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+    const hiddenSearchLayerSiblingStatesRef = useRef<HiddenSearchLayerSiblingState[]>([]);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
     const { data: restaurants = [] } = useQuery({
@@ -272,6 +267,47 @@ function MobileControlOverlayComponent({
         setActiveSheet('none');
     }, []);
 
+    const handleSearchLayerKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            handleClose();
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusableElements = getFocusTrapContainers(searchLayerRef.current, DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS)
+            .flatMap((container) => getMobileSearchFocusableElements(container as HTMLElement));
+
+        if (focusableElements.length === 0) {
+            event.preventDefault();
+            searchLayerRef.current?.focus({ preventScroll: true });
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+
+        if (activeElement === searchLayerRef.current) {
+            event.preventDefault();
+            (event.shiftKey ? lastElement : firstElement).focus({ preventScroll: true });
+            return;
+        }
+
+        if (event.shiftKey && activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus({ preventScroll: true });
+            return;
+        }
+
+        if (!event.shiftKey && activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus({ preventScroll: true });
+        }
+    }, [handleClose]);
+
     const cancelPendingSearchSelectionClose = useCallback(() => {
         if (searchSelectionCloseRafRef.current === null) return;
         window.cancelAnimationFrame(searchSelectionCloseRafRef.current);
@@ -292,152 +328,7 @@ function MobileControlOverlayComponent({
 
     const toggleSheet = useCallback((sheet: ActiveSheet) => {
         setActiveSheet(prev => prev === sheet ? 'none' : sheet);
-        // 새 시트 열 때 기본 높이로 초기화
-        if (activeSheet !== sheet) {
-            const initialHeight = sheet === 'search' ? 25 : 50;
-            setSheetHeight(initialHeight);
-            currentHeightRef.current = initialHeight;
-        }
-    }, [activeSheet]);
-
-    // [OPTIMIZATION] 드래그 시작 - ref 기반으로 리렌더링 최소화 (터치 + 마우스 통합)
-    const handleDragStart = useCallback((clientY: number) => {
-        isDraggingRef.current = true;
-        setIsDragging(true); // will-change 적용용
-        startYRef.current = clientY;
-        startHeightRef.current = currentHeightRef.current;
-        lastYRef.current = clientY;
-        lastTimeRef.current = Date.now();
-        velocityRef.current = 0;
     }, []);
-
-    const handleTouchStart = useCallback((e: TouchEvent) => {
-        handleDragStart(e.touches[0].clientY);
-    }, [handleDragStart]);
-
-    const handleMouseDown = useCallback((e: MouseEvent) => {
-        e.preventDefault(); // 텍스트 선택 방지
-        handleDragStart(e.clientY);
-    }, [handleDragStart]);
-
-    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음, 터치 + 마우스 통합)
-    const handleDragMove = useCallback((clientY: number) => {
-        if (!isDraggingRef.current) return;
-
-        const currentTime = Date.now();
-
-        // 속도 계산 (양수면 아래로 드래그)
-        const deltaTime = currentTime - lastTimeRef.current;
-        if (deltaTime > 0) {
-            velocityRef.current = (clientY - lastYRef.current) / deltaTime;
-        }
-        lastYRef.current = clientY;
-        lastTimeRef.current = currentTime;
-
-        const deltaY = startYRef.current - clientY;
-        const viewportHeight = window.innerHeight;
-        const deltaVh = (deltaY / viewportHeight) * 100;
-
-        let newHeight = startHeightRef.current + deltaVh;
-        // 최소 5%까지 드래그 가능 (닫기 영역), 최대 100%
-        newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(MAX_SHEET_HEIGHT, newHeight));
-
-        currentHeightRef.current = newHeight;
-
-        // [OPTIMIZATION] requestAnimationFrame으로 DOM 직접 조작
-        requestAnimationFrame(() => {
-            if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(100% - ${newHeight}dvh))`;
-            }
-        });
-    }, []);
-
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-        handleDragMove(e.touches[0].clientY);
-    }, [handleDragMove]);
-
-    const handleMouseMove = useCallback((e: MouseEvent) => {
-        handleDragMove(e.clientY);
-    }, [handleDragMove]);
-
-    // 드래그 종료 - 25 / 50 / full 스냅
-    const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
-        isDraggingRef.current = false;
-        setIsDragging(false);
-
-        const currentHeight = currentHeightRef.current;
-
-        // 빠르게 아래로 스와이프 (velocity > 0.5px/ms) 하면 닫기
-        if (velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
-            handleClose();
-            return;
-        }
-
-        // 닫기 임계값 (15% 이하시 닫기)
-        if (currentHeight <= CLOSE_THRESHOLD) {
-            handleClose();
-            return;
-        }
-
-        const targetHeight = getNearestSnapHeight(currentHeight);
-        setSheetHeight(targetHeight);
-        currentHeightRef.current = targetHeight;
-
-        if (source === 'handle' && sheetRef.current) {
-            sheetRef.current.style.transform = `translateY(calc(100% - ${targetHeight}dvh))`;
-        }
-    }, [handleClose, getNearestSnapHeight]);
-
-    const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (activeSheet === 'search') return;
-        contentTouchStartYRef.current = e.touches[0].clientY;
-        contentTouchStartXRef.current = e.touches[0].clientX;
-        isContentDraggingSheetRef.current = false;
-        const scrollTarget = findScrollableTouchTarget(e.target, e.currentTarget);
-        contentScrollTargetRef.current = scrollTarget;
-        const scrollTop = scrollTarget ? scrollTarget.scrollTop : e.currentTarget.scrollTop;
-        const isAtTop = scrollTop <= CONTENT_TOP_EPSILON;
-        contentStartBoundaryRef.current = isAtTop ? 'top' : null;
-    }, [activeSheet]);
-
-    const handleContentTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (activeSheet === 'search') return;
-
-        const currentY = e.touches[0].clientY;
-        const currentX = e.touches[0].clientX;
-        const deltaY = currentY - contentTouchStartYRef.current;
-        const deltaX = currentX - contentTouchStartXRef.current;
-        const absDeltaY = Math.abs(deltaY);
-        const absDeltaX = Math.abs(deltaX);
-        const scrollTarget = contentScrollTargetRef.current ?? findScrollableTouchTarget(e.target, e.currentTarget);
-        if (!contentScrollTargetRef.current) {
-            contentScrollTargetRef.current = scrollTarget;
-        }
-
-        if (!isContentDraggingSheetRef.current) {
-            if (contentStartBoundaryRef.current !== 'top') return;
-            if (absDeltaY <= CONTENT_DRAG_START_THRESHOLD) return;
-            if (absDeltaY <= absDeltaX * CONTENT_VERTICAL_INTENT_RATIO) return;
-            handleDragStart(contentTouchStartYRef.current);
-            isContentDraggingSheetRef.current = true;
-        }
-
-        e.stopPropagation();
-        handleDragMove(currentY);
-    }, [activeSheet, handleDragStart, handleDragMove]);
-
-    const handleContentTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-        if (!isContentDraggingSheetRef.current) {
-            contentScrollTargetRef.current = null;
-            contentStartBoundaryRef.current = null;
-            return;
-        }
-        e.stopPropagation();
-        isContentDraggingSheetRef.current = false;
-        contentScrollTargetRef.current = null;
-        contentStartBoundaryRef.current = null;
-        handleDragEnd('content');
-    }, [handleDragEnd]);
 
     // [OPTIMIZATION] 지역별 맛집 수 계산 - 단일 패스로 최적화
     const regionCounts = useMemo(() => {
@@ -518,91 +409,10 @@ function MobileControlOverlayComponent({
         };
     }, [activeSheet]);
 
-    // [OPTIMIZATION] 이벤트 리스너 등록 (터치 + 마우스 지원)
-    // Pull-to-Refresh 방지를 위해 touchmove는 passive: false로 설정
-    useEffect(() => {
-        const handleEl = handleRef.current;
-        if (!handleEl || activeSheet === 'none' || activeSheet === 'search') return;
-
-        const preventPullToRefresh = (e: TouchEvent) => {
-            // 드래그 중일 때 Pull-to-Refresh 방지
-            if (isDraggingRef.current) {
-                e.preventDefault();
-            }
-        };
-        const handleTouchEnd = () => {
-            handleDragEnd('handle');
-        };
-        const handleTouchStartListener: EventListener = (event) => {
-            handleTouchStart(event as TouchEvent);
-        };
-        const handleTouchMoveListener: EventListener = (event) => {
-            handleTouchMove(event as TouchEvent);
-        };
-        const handleMouseDownListener: EventListener = (event) => {
-            handleMouseDown(event as MouseEvent);
-        };
-
-        // 터치 이벤트
-        handleEl.addEventListener('touchstart', handleTouchStartListener, { passive: true });
-        handleEl.addEventListener('touchmove', handleTouchMoveListener, { passive: false });
-        handleEl.addEventListener('touchmove', preventPullToRefresh, { passive: false });
-        handleEl.addEventListener('touchend', handleTouchEnd, { passive: true });
-        handleEl.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-
-        // 마우스 이벤트 (핸들에서 시작)
-        handleEl.addEventListener('mousedown', handleMouseDownListener);
-
-        // 마우스 move/up은 window에 등록 (핸들 밖으로 드래그해도 동작)
-        const handleWindowMouseMove = (e: MouseEvent) => {
-            if (isDraggingRef.current) {
-                e.preventDefault();
-                handleMouseMove(e);
-            }
-        };
-
-        const handleWindowMouseUp = () => {
-            if (isDraggingRef.current) {
-                handleDragEnd('handle');
-            }
-        };
-
-        window.addEventListener('mousemove', handleWindowMouseMove);
-        window.addEventListener('mouseup', handleWindowMouseUp);
-
-        return () => {
-            handleEl.removeEventListener('touchstart', handleTouchStartListener);
-            handleEl.removeEventListener('touchmove', handleTouchMoveListener);
-            handleEl.removeEventListener('touchmove', preventPullToRefresh);
-            handleEl.removeEventListener('touchend', handleTouchEnd);
-            handleEl.removeEventListener('touchcancel', handleTouchEnd);
-            handleEl.removeEventListener('mousedown', handleMouseDownListener);
-            window.removeEventListener('mousemove', handleWindowMouseMove);
-            window.removeEventListener('mouseup', handleWindowMouseUp);
-        };
-    }, [activeSheet, handleTouchStart, handleTouchMove, handleMouseDown, handleMouseMove, handleDragEnd]);
-
-    // [CRITICAL] activeSheet 변경 시 초기 높이 설정
-    useEffect(() => {
-        if (activeSheet === 'none' || !sheetRef.current) return;
-
-        const initialHeight = activeSheet === 'search' ? 25 : 50;
-        currentHeightRef.current = initialHeight;
-        setSheetHeight(initialHeight);
-
-        // DOM에 즉시 반영 (애니메이션과 함께) - 검색 시트는 transform 사용 안 함
-        if (activeSheet !== 'search') {
-            sheetRef.current.style.transform = `translateY(calc(100% - ${initialHeight}dvh))`;
-        } else {
-            sheetRef.current.style.transform = 'none';
-        }
-    }, [activeSheet]);
-
     // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
     const regionLabel = useMemo(() =>
         mapMode === 'domestic' ? (selectedRegion || '전체') : (selectedCountry || '국가'),
         [mapMode, selectedRegion, selectedCountry]);
-    const isSheetAtFullHeight = sheetHeight >= MAX_SHEET_HEIGHT - 0.5;
 
     const quickTopCategories = useMemo(() => CATEGORIES.slice(0, 8), []);
 
@@ -653,38 +463,80 @@ function MobileControlOverlayComponent({
     }, [activeSheet]);
 
     useEffect(() => {
-        if (!user || !isAdmin || activeSheet !== 'none') return;
+        if (activeSheet === 'search') {
+            searchPreviouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+            return;
+        }
 
-        let isMounted = true;
-        const loadPendingCounts = async () => {
-            try {
-                const [submissionsCount, reviewsCount] = await Promise.all([
-                    fetchSupabaseExactCount('restaurant_submissions', [
-                        ['select', 'id'],
-                        ['status', 'eq.pending'],
-                    ]),
-                    fetchSupabaseExactCount('reviews', [
-                        ['select', 'id'],
-                        ['is_verified', 'eq.false'],
-                    ]),
-                ]);
+        searchPreviouslyFocusedElementRef.current?.focus({ preventScroll: true });
+        searchPreviouslyFocusedElementRef.current = null;
+    }, [activeSheet]);
 
-                if (!isMounted) return;
-                setAdminBadgeCounts({
-                    submissions: submissionsCount,
-                    reviews: reviewsCount,
+    useEffect(() => {
+        if (activeSheet !== 'search') return;
+
+        const layer = searchLayerRef.current;
+        if (!layer) return;
+        const seen = new Set<HTMLElement>();
+        const hiddenStates: HiddenSearchLayerSiblingState[] = [];
+        let current: HTMLElement | null = layer;
+
+        while (current && current !== document.body) {
+            const parent: HTMLElement | null = current.parentElement;
+            if (!parent) break;
+
+            Array.from(parent.children).forEach((sibling) => {
+                if (!(sibling instanceof HTMLElement)) return;
+                if (seen.has(sibling)) return;
+                if (!shouldHideModalSibling(sibling, current, layer)) return;
+
+                const inertSibling = sibling as InertableHTMLElement;
+                seen.add(sibling);
+                hiddenStates.push({
+                    element: inertSibling,
+                    ariaHidden: sibling.getAttribute('aria-hidden'),
+                    inert: Boolean(inertSibling.inert),
                 });
-            } catch {
-                if (!isMounted) return;
-                setAdminBadgeCounts({ submissions: 0, reviews: 0 });
-            }
-        };
+                sibling.setAttribute('aria-hidden', 'true');
+                inertSibling.inert = true;
+            });
 
-        loadPendingCounts();
+            current = parent;
+        }
+
+        hiddenSearchLayerSiblingStatesRef.current = hiddenStates;
+
         return () => {
-            isMounted = false;
+            hiddenSearchLayerSiblingStatesRef.current.forEach(({ element, ariaHidden, inert }) => {
+                if (ariaHidden === null) {
+                    element.removeAttribute('aria-hidden');
+                } else {
+                    element.setAttribute('aria-hidden', ariaHidden);
+                }
+                element.inert = inert;
+            });
+            hiddenSearchLayerSiblingStatesRef.current = [];
         };
-    }, [activeSheet, isAdmin, user]);
+    }, [activeSheet]);
+
+    useEffect(() => {
+        if (!initialIntent) return;
+
+        if (initialIntent === 'search') {
+            setActiveSheet('search');
+            return;
+        }
+
+        if (initialIntent === 'user') {
+            if (user) {
+                setIsUserMenuOpen(true);
+            } else {
+                onTopShellUserIconClick?.();
+            }
+        }
+    }, [initialIntent, onTopShellUserIconClick, user]);
 
     const closeUserMenu = useCallback(() => {
         setIsUserMenuOpen(false);
@@ -700,18 +552,8 @@ function MobileControlOverlayComponent({
         closeUserMenu();
     }, [closeUserMenu, router]);
 
-    const handleAdminBannersClick = useCallback(() => {
-        router.push('/admin/banners');
-        closeUserMenu();
-    }, [closeUserMenu, router]);
-
-    const handleAdminAiSettingsClick = useCallback(() => {
-        router.push('/admin/ai-settings');
-        closeUserMenu();
-    }, [closeUserMenu, router]);
-
-    const handleAdminRestaurantsClick = useCallback(() => {
-        router.push('/admin/evaluations');
+    const handleAdminConsoleClick = useCallback(() => {
+        router.push('/admin');
         closeUserMenu();
     }, [closeUserMenu, router]);
 
@@ -728,58 +570,46 @@ function MobileControlOverlayComponent({
         }
     }, [closeUserMenu, router, signOut]);
 
-    const handleNotificationItemClick = useCallback((notification: Notification) => {
-        markAsRead(notification.id);
-
-        if (notification.type === 'review_approved' || notification.type === 'review_rejected') {
-            const reviewId = notification.data?.reviewId;
-            const status = notification.type === 'review_approved' ? 'approved' : 'rejected';
-            if (reviewId) {
-                router.push(`/mypage/reviews?reviewId=${reviewId}&status=${status}`);
-            } else {
-                router.push(`/mypage/reviews?status=${status}`);
-            }
-            return;
-        }
-
-        router.push('/?panel=announcement');
-    }, [markAsRead, router]);
-
     const renderAnonymousBookmarkMenuButton = () => (
-        <DropdownMenu>
+        <DropdownMenu defaultOpen={shouldOpenBookmarkOnMount}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn(
-                        'h-9 w-9 rounded-full border border-border bg-background',
-                        'hover:bg-secondary/80'
-                    )}
+                    className={mobileTopIconButtonClass}
                     aria-label="북마크"
                 >
-                    <Bookmark className="h-[18px] w-[18px]" />
+                    <Bookmark className={mobileTopIconGlyphClass} aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 bg-card border-border font-serif z-[110]">
-                <DropdownMenuLabel className="flex items-center justify-between text-foreground">
-                    <span>북마크</span>
+            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">
+                <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
+                    <div className="min-w-0">
+                        <span className="block font-semibold">북마크</span>
+                        <span className="block text-xs font-normal text-muted-foreground">로그인하면 저장한 맛집을 바로 볼 수 있어요</span>
+                    </div>
                     <Button
                         variant="ghost"
                         size="sm"
                         type="button"
+                        aria-label="북마크 전체보기 로그인 안내"
                         onClick={() => {
                             toast.error('로그인 후 북마크를 확인할 수 있어요');
                             onTopShellUserIconClick?.();
                         }}
-                        className="h-6 px-2 text-xs"
+                        className="h-8 shrink-0 rounded-lg px-2 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                     >
                         전체보기
                     </Button>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
-                <ScrollArea className="h-64">
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                        로그인 후 북마크를 확인할 수 있어요
+                <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
+                    <div className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                        <div>
+                            <Bookmark className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                            <p className="font-medium text-foreground">로그인 후 북마크를 확인할 수 있어요</p>
+                            <p className="mt-1 text-xs leading-5">맛집을 저장하고 다시 찾아오는 데 사용합니다.</p>
+                        </div>
                     </div>
                 </ScrollArea>
             </DropdownMenuContent>
@@ -789,89 +619,47 @@ function MobileControlOverlayComponent({
     const renderBookmarkMenuButton = () => {
         if (!user || !DeferredMobileBookmarkMenuButton) return renderAnonymousBookmarkMenuButton();
 
-        return <DeferredMobileBookmarkMenuButton user={user} />;
+        return <DeferredMobileBookmarkMenuButton user={user} defaultOpen={shouldOpenBookmarkOnMount} />;
     };
 
-    const renderNotificationMenuButton = () => (
-        <DropdownMenu>
+    const renderAnonymousNotificationMenuButton = () => (
+        <DropdownMenu defaultOpen={shouldOpenNotificationOnMount}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn(
-                        'h-9 w-9 rounded-full border border-border bg-background',
-                        'hover:bg-secondary/80 relative'
-                    )}
+                    className={mobileTopIconButtonWithBadgeClass}
                     aria-label="알림"
                 >
-                    <Bell className="h-[18px] w-[18px]" />
-                    {unreadCount > 0 && (
-                        <Badge
-                            variant="destructive"
-                            className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 text-[10px] bg-red-800"
-                        >
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                        </Badge>
-                    )}
+                    <Bell className={mobileTopIconGlyphClass} aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 bg-card border-border font-serif z-[110]">
-                <DropdownMenuLabel className="flex items-center justify-between text-foreground">
-                    <span>알림</span>
-                    {unreadCount > 0 && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            onClick={markAllAsRead}
-                            className="h-6 px-2 text-xs"
-                        >
-                            모두 읽음
-                        </Button>
-                    )}
+            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">
+                <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
+                    <div className="min-w-0">
+                        <span className="block font-semibold">알림</span>
+                        <span className="block text-xs font-normal text-muted-foreground">로그인하면 알림을 바로 볼 수 있어요</span>
+                    </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-border" />
-                <ScrollArea className="h-64">
-                    {!user ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                            로그인 후 알림을 확인할 수 있어요
+                <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
+                    <div className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                        <div>
+                            <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                            <p className="font-medium text-foreground">로그인 후 알림을 확인할 수 있어요</p>
+                            <p className="mt-1 text-xs leading-5">제보 처리, 리뷰 승인, 랭킹 소식을 놓치지 않게 알려드립니다.</p>
                         </div>
-                    ) : notifications.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                            새로운 알림이 없습니다
-                        </div>
-                    ) : (
-                        <DropdownMenuGroup>
-                            {notifications.map((notification) => (
-                                <DropdownMenuItem
-                                    key={notification.id}
-                                    className={cn(
-                                        "flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full",
-                                        !notification.isRead && "bg-accent/50"
-                                    )}
-                                    onClick={() => handleNotificationItemClick(notification)}
-                                >
-                                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                        <div className="flex items-center justify-between gap-2 w-full">
-                                            <p className="text-sm font-medium text-foreground truncate">{notification.title}</p>
-                                            {!notification.isRead && (
-                                                <span className="h-2 w-2 rounded-full bg-red-700 shrink-0" aria-hidden />
-                                            )}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
-                                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                                            {notification.createdAt.toLocaleString('ko-KR')}
-                                        </p>
-                                    </div>
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuGroup>
-                    )}
+                    </div>
                 </ScrollArea>
             </DropdownMenuContent>
         </DropdownMenu>
     );
 
+    const renderNotificationMenuButton = () => {
+        if (!user || !DeferredMobileNotificationMenuButton) return renderAnonymousNotificationMenuButton();
+
+        return <DeferredMobileNotificationMenuButton user={user} defaultOpen={shouldOpenNotificationOnMount} />;
+    };
     const renderUserMenuButton = () => {
         if (!user) {
             return (
@@ -882,13 +670,10 @@ function MobileControlOverlayComponent({
                         event.stopPropagation();
                         onTopShellUserIconClick?.();
                     }}
-                    className={cn(
-                        'h-9 w-9 rounded-full border border-border bg-background',
-                        'hover:bg-secondary/80'
-                    )}
+                    className={mobileTopIconButtonClass}
                     aria-label="사용자 메뉴"
                 >
-                    <UserIcon className="h-[18px] w-[18px]" />
+                    <UserIcon className={mobileTopUserIconGlyphClass} aria-hidden="true" />
                 </Button>
             );
         }
@@ -899,23 +684,16 @@ function MobileControlOverlayComponent({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={cn(
-                            'h-9 w-9 rounded-full border border-border bg-background',
-                            'hover:bg-secondary/80'
-                        )}
+                        className={mobileTopIconButtonClass}
                         aria-label="사용자 메뉴"
                     >
-                        <UserIcon className="h-[18px] w-[18px]" />
+                        <UserIcon className={mobileTopUserIconGlyphClass} aria-hidden="true" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-32 z-[110]">
+                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-44 z-[110]">
                     <DropdownMenuItem onClick={() => dispatchWindowEvent('openMyPage')} className="text-foreground hover:bg-accent py-1.5">
                         <UserIcon className="mr-2 h-4 w-4" />
                         마이페이지
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminAnnouncements')} className="text-foreground hover:bg-accent py-1.5">
-                        <Megaphone className="mr-2 h-4 w-4" />
-                        공지사항
                     </DropdownMenuItem>
                     {!isAdmin && (
                         <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
@@ -926,39 +704,9 @@ function MobileControlOverlayComponent({
                     {isAdmin && (
                         <>
                             <DropdownMenuSeparator className="bg-border my-1" />
-                            <DropdownMenuItem onClick={handleAdminRestaurantsClick} className="text-foreground hover:bg-accent py-1.5">
-                                <Utensils className="mr-2 h-4 w-4" />
-                                맛집관리
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminSubmissions')} className="text-foreground hover:bg-accent py-1.5">
-                                <ClipboardList className="mr-2 h-4 w-4" />
-                                제보관리
-                                {adminBadgeCounts.submissions > 0 && (
-                                    <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
-                                        {adminBadgeCounts.submissions > 99 ? '99+' : adminBadgeCounts.submissions}
-                                    </Badge>
-                                )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => dispatchWindowEvent('openAdminReviews')} className="text-foreground hover:bg-accent py-1.5">
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                리뷰관리
-                                {adminBadgeCounts.reviews > 0 && (
-                                    <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
-                                        {adminBadgeCounts.reviews > 99 ? '99+' : adminBadgeCounts.reviews}
-                                    </Badge>
-                                )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
-                                <ImageIcon className="mr-2 h-4 w-4" />
-                                배너관리
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleAdminAiSettingsClick} className="text-foreground hover:bg-accent py-1.5">
-                                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                                AI 설정
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
-                                <BarChart2 className="mr-2 h-4 w-4" />
-                                인사이트
+                            <DropdownMenuItem onClick={handleAdminConsoleClick} className="text-foreground hover:bg-accent py-1.5">
+                                <PanelLeft className="mr-2 h-4 w-4" />
+                                관리자 콘솔
                             </DropdownMenuItem>
                         </>
                     )}
@@ -975,7 +723,7 @@ function MobileControlOverlayComponent({
                             onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
                             className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
                         >
-                            <span className="text-[10px] text-muted-foreground">v1.0.0 © 타이니번</span>
+                            <span className="text-[10px] text-muted-foreground">v2.0.0 © 타이니번</span>
                             {isBusinessInfoExpanded ? (
                                 <ChevronUp className="h-3 w-3 text-muted-foreground ml-1" />
                             ) : (
@@ -1009,7 +757,7 @@ function MobileControlOverlayComponent({
                     <Button
                         variant="ghost"
                         onClick={() => toggleSheet('search')}
-                        className="flex-1 h-10 rounded-full justify-start gap-2 px-2.5 hover:bg-secondary/80"
+                        className="flex-1 h-10 min-h-11 rounded-full justify-start gap-2 px-2.5 hover:bg-secondary/80"
                         aria-label={searchQuery.trim() ? `${searchQuery.trim()} 검색 열기` : '쯔동여지도 검색하기'}
                     >
                         <Image
@@ -1034,35 +782,42 @@ function MobileControlOverlayComponent({
                     {renderUserMenuButton()}
                 </div>
 
-                <div className="pointer-events-auto mt-2.5 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] pt-[2px] pb-[2px] scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {quickTopCategories.map((category) => (
+                <div className="pointer-events-auto mt-2 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {quickTopCategories.map((category) => {
+                        const isSelected = quickSelectedCategories.includes(category);
+                        return (
                         <Button
                             key={category}
                             variant="secondary"
                             size="sm"
                             onClick={() => handleQuickCategoryToggle(category)}
+                            aria-pressed={isSelected}
+                            aria-label={`${category} 카테고리 ${isSelected ? '선택 해제' : '선택'}`}
                             className={cn(
-                                'pointer-events-auto h-[35px] shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                'px-3.5 text-[13px] font-medium transition-colors hover:bg-secondary/80',
-                                quickSelectedCategories.includes(category)
+                                'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                                'px-3 text-xs font-medium transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                isSelected
                                     ? 'bg-red-700 text-white border-red-700 hover:bg-red-800'
                                     : 'text-foreground'
                             )}
                         >
                             {category}
                         </Button>
-                    ))}
+                        );
+                    })}
                     <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => toggleSheet('category')}
+                        aria-expanded={activeSheet === 'category'}
+                        aria-label="카테고리 더보기"
                         className={cn(
-                            'pointer-events-auto h-[35px] shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                            'hover:bg-secondary/80 px-3.5 text-[13px] font-medium',
+                            'pointer-events-auto h-9 shrink-0 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
+                            'hover:bg-secondary/80 px-3 text-xs font-medium transition-colors motion-reduce:transition-none',
                             activeSheet === 'category' && 'ring-2 ring-primary'
                         )}
                     >
-                        <Filter className="mr-1 h-4 w-4" />
+                        <Filter className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                         더보기
                     </Button>
                 </div>
@@ -1077,7 +832,9 @@ function MobileControlOverlayComponent({
                             variant="ghost"
                             size="sm"
                             onClick={() => onModeChange('domestic')}
-                            className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'domestic'
+                            aria-pressed={mapMode === 'domestic'}
+                            aria-label="국내 맛집 지도 보기"
+                            className={`rounded-full h-9 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1088,7 +845,9 @@ function MobileControlOverlayComponent({
                             variant="ghost"
                             size="sm"
                             onClick={() => onModeChange('overseas')}
-                            className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'overseas'
+                            aria-pressed={mapMode === 'overseas'}
+                            aria-label="해외 맛집 지도 보기"
+                            className={`rounded-full h-9 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1103,15 +862,17 @@ function MobileControlOverlayComponent({
                     variant="secondary"
                     size="sm"
                     onClick={() => toggleSheet('region')}
+                    aria-expanded={activeSheet === 'region'}
+                    aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] px-2 h-8',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
-                            <MapPin className="h-4 w-4" />
+                            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                         </div>
                         <div className="flex-1 flex items-center justify-center min-w-0">
                             <span className="text-xs truncate">{regionLabel}</span>
@@ -1131,8 +892,7 @@ function MobileControlOverlayComponent({
                     aria-label={deviceLocationButtonLabel}
                     className={cn(
                         'h-12 w-12 rounded-full shadow-lg',
-                        'transition-all duration-300 ease-in-out',
-                        'hover:scale-110 active:scale-95',
+                        'transition-colors duration-150 ease-out motion-reduce:transition-none',
                         'flex items-center justify-center',
                         'border-2',
                         isDeviceHeadingMode
@@ -1140,14 +900,14 @@ function MobileControlOverlayComponent({
                             : deviceLocation
                                 ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
                                 : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
-                        isDeviceLocationPending && 'animate-pulse opacity-80'
+                        isDeviceLocationPending && 'opacity-80'
                     )}
                     title={deviceLocationButtonLabel}
                 >
                     {isDeviceHeadingMode ? (
-                        <Navigation className="h-5 w-5" />
+                        <Navigation className="h-5 w-5" aria-hidden="true" />
                     ) : (
-                        <LocateFixed className="h-5 w-5" />
+                        <LocateFixed className="h-5 w-5" aria-hidden="true" />
                     )}
                 </Button>
 
@@ -1159,22 +919,31 @@ function MobileControlOverlayComponent({
                     className={cn(
                         'h-12 w-12 rounded-full shadow-lg',
                         'bg-red-800 hover:bg-red-900 text-white',
-                        'transition-all duration-300 ease-in-out',
+                        'transition-all duration-300 ease-in-out motion-reduce:transition-none',
                         'hover:scale-110 active:scale-95',
                         'flex items-center justify-center',
                         'border-2 border-border/20'
                     )}
                     title="맛집 제보하기"
+                    aria-label="맛집 제보하기"
                 >
-                    <Send className="h-5 w-5" />
+                    <Send className="h-5 w-5" aria-hidden="true" />
                 </Button>
             </div>
 
             {/* 전체 화면 검색 레이어 */}
             {activeSheet === 'search' && (
-                <div className="fixed inset-0 z-[75] bg-background/95 backdrop-blur-sm pointer-events-auto animate-in fade-in-0 duration-200">
+                <div
+                    ref={searchLayerRef}
+                    className="fixed inset-0 z-[75] bg-background/95 backdrop-blur-sm pointer-events-auto animate-in fade-in-0 duration-200 motion-reduce:animate-none"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="mobile-map-search-title"
+                    onKeyDown={handleSearchLayerKeyDown}
+                    tabIndex={-1}
+                >
                     <div
-                        className="flex flex-col overflow-hidden animate-in slide-in-from-top-3 duration-300"
+                        className="flex flex-col overflow-hidden animate-in slide-in-from-top-3 duration-300 motion-reduce:animate-none"
                         style={{
                             height: searchViewportHeight ? `${searchViewportHeight}px` : '100dvh',
                             paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
@@ -1182,7 +951,8 @@ function MobileControlOverlayComponent({
                         }}
                     >
                         <div className="px-3 pb-3">
-                            <div className="flex items-center gap-1.5 h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5">
+                            <h2 id="mobile-map-search-title" className="sr-only">쯔동여지도 검색</h2>
+                            <div className="flex items-center gap-1.5 min-h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5">
                                 <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40">
                                     <Image
                                         src="/logo.png"
@@ -1206,10 +976,10 @@ function MobileControlOverlayComponent({
                                         <button
                                             type="button"
                                             onClick={() => setSearchQuery('')}
-                                            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+                                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
                                             aria-label="검색어 지우기"
                                         >
-                                            <X className="h-3.5 w-3.5" />
+                                            <X className="h-3.5 w-3.5" aria-hidden="true" />
                                         </button>
                                     )}
                                 </div>
@@ -1218,12 +988,14 @@ function MobileControlOverlayComponent({
                                     size="icon"
                                     onClick={() => setSearchType((prev) => prev === 'name' ? 'youtube' : 'name')}
                                     title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
-                                    className="h-8 w-8 rounded-full border border-border bg-background hover:bg-secondary/80"
+                                    aria-label={searchType === 'name' ? "유튜브 제목 검색으로 전환" : "맛집 이름 검색으로 전환"}
+                                    aria-pressed={searchType === 'youtube'}
+                                    className="min-h-11 min-w-11 rounded-full border border-border bg-background hover:bg-secondary/80"
                                 >
                                     {searchType === 'name' ? (
-                                        <MapPin className="h-4 w-4" />
+                                        <MapPin className="h-4 w-4" aria-hidden="true" />
                                     ) : (
-                                        <Video className="h-4 w-4" />
+                                        <Video className="h-4 w-4" aria-hidden="true" />
                                     )}
                                 </Button>
                                 <Button
@@ -1231,9 +1003,9 @@ function MobileControlOverlayComponent({
                                     size="icon"
                                     onClick={handleClose}
                                     aria-label="검색 닫기"
-                                    className="h-8 w-8 rounded-full border border-border bg-background hover:bg-secondary/80"
+                                    className="min-h-11 min-w-11 rounded-full border border-border bg-background hover:bg-secondary/80"
                                 >
-                                    <X className="h-5 w-5" />
+                                    <X className="h-5 w-5" aria-hidden="true" />
                                 </Button>
                             </div>
                         </div>
@@ -1294,8 +1066,14 @@ function MobileControlOverlayComponent({
                             {activeSheet === 'region' && (mapMode === 'domestic' ? '지역 선택' : '국가 선택')}
                             {activeSheet === 'category' && '카테고리 필터'}
                         </h3>
-                        <Button variant="ghost" size="icon" onClick={handleClose}>
-                            <X className="h-5 w-5" />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleClose}
+                            aria-label={`${activeSheet === 'region' ? (mapMode === 'domestic' ? '지역 선택' : '국가 선택') : '카테고리 필터'} 닫기`}
+                            className="min-h-11 min-w-11"
+                        >
+                            <X className="h-5 w-5" aria-hidden="true" />
                         </Button>
                     </div>
 
@@ -1306,7 +1084,7 @@ function MobileControlOverlayComponent({
                                     <>
                                         <Button
                                             variant={selectedRegion === null ? "default" : "outline"}
-                                            className="w-full justify-between h-auto py-3"
+                                            className="w-full justify-between h-auto min-h-11 py-3"
                                             onClick={() => {
                                                 onRegionChange(null);
                                                 onSearchExecute(null);
@@ -1325,7 +1103,7 @@ function MobileControlOverlayComponent({
                                                     <Button
                                                         key={region}
                                                         variant={isSelected ? "default" : "outline"}
-                                                        className="justify-between h-auto py-3"
+                                                        className="justify-between h-auto min-h-11 py-3"
                                                         onClick={() => {
                                                             onRegionChange(region);
                                                             onSearchExecute(region);
@@ -1348,7 +1126,7 @@ function MobileControlOverlayComponent({
                                                 <Button
                                                     key={country}
                                                     variant={isSelected ? "default" : "outline"}
-                                                    className="justify-between h-auto py-3"
+                                                    className="justify-between h-auto min-h-11 py-3"
                                                     onClick={() => {
                                                         onCountryChange(country);
                                                         handleClose();
@@ -1369,7 +1147,7 @@ function MobileControlOverlayComponent({
                                 {selectedCategories.length > 0 && (
                                     <Button
                                         variant="outline"
-                                        className="w-full"
+                                        className="w-full min-h-11"
                                         onClick={() => {
                                             setQuickSelectedCategories([]);
                                             onCategoryChange([]);
@@ -1387,7 +1165,7 @@ function MobileControlOverlayComponent({
                                             <Button
                                                 key={category}
                                                 variant={isSelected ? "default" : "outline"}
-                                                className="justify-between h-auto py-3"
+                                                className="justify-between h-auto min-h-11 py-3"
                                                 onClick={() => {
                                                     const newCategories = isSelected
                                                         ? selectedCategories.filter(cat => cat !== category)
@@ -1397,7 +1175,7 @@ function MobileControlOverlayComponent({
                                                 }}
                                             >
                                                 <span className="font-medium flex items-center gap-1.5">
-                                                    {isSelected && <Check className="h-4 w-4" />}
+                                                    {isSelected && <Check className="h-4 w-4" aria-hidden="true" />}
                                                     {category}
                                                 </span>
                                                 <span className="text-xs opacity-75">({count})</span>
@@ -1406,10 +1184,7 @@ function MobileControlOverlayComponent({
                                     })}
                                 </div>
 
-                                <Button
-                                    className="w-full"
-                                    onClick={handleClose}
-                                >
+                                <Button className="w-full min-h-11" onClick={handleClose}>
                                     적용하기
                                 </Button>
                             </div>

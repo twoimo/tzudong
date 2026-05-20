@@ -292,6 +292,8 @@ function BottomSheetComponent({
     const sheetTouchSourceRef = useRef<'handle' | 'content' | null>(null);
     const isCarouselTouchRef = useRef(false);
     const sheetHeightRef = useRef(defaultHeight);
+    const dragHeightRafRef = useRef<number | null>(null);
+    const pendingDragHeightRef = useRef(defaultHeight);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return headerOffset > 0
@@ -404,6 +406,26 @@ function BottomSheetComponent({
         progressiveHeaderHide,
     ]);
 
+    const cancelPendingDragHeightRender = useCallback(() => {
+        if (dragHeightRafRef.current === null) return;
+        window.cancelAnimationFrame(dragHeightRafRef.current);
+        dragHeightRafRef.current = null;
+    }, []);
+
+    const scheduleDragHeightRender = useCallback((nextHeight: number) => {
+        pendingDragHeightRef.current = nextHeight;
+
+        // Drag move events can arrive faster than paint; keep one pending RAF for
+        // the actual rendered BottomSheet path instead of one React state update
+        // per touch/mouse event.
+        if (dragHeightRafRef.current !== null) return;
+
+        dragHeightRafRef.current = window.requestAnimationFrame(() => {
+            dragHeightRafRef.current = null;
+            setSheetHeight(pendingDragHeightRef.current);
+        });
+    }, []);
+
     const setSheetHeightSafe = useCallback((nextHeight: number, forceRender = false) => {
         const currentMaxHeight = getCurrentMaxHeight();
         const nextHeightSafe = Math.max(minHeight, Math.min(currentMaxHeight, nextHeight));
@@ -416,12 +438,15 @@ function BottomSheetComponent({
         sheetHeightRef.current = nextHeightSafe;
         syncMobileLayout(nextHeightSafe);
 
-        if (!forceRender && isDraggingRef.current) {
+        if (isDraggingRef.current) {
+            if (forceRender) {
+                scheduleDragHeightRender(nextHeightSafe);
+            }
             return;
         }
 
         setSheetHeight(nextHeightSafe);
-    }, [getCurrentMaxHeight, minHeight, syncMobileLayout]);
+    }, [getCurrentMaxHeight, minHeight, scheduleDragHeightRender, syncMobileLayout]);
 
     const heightRequestKey = heightRequest?.key;
     const heightRequestHeight = heightRequest?.height;
@@ -593,6 +618,7 @@ function BottomSheetComponent({
 
     // [PERFORMANCE] 드래그 시작 공통 로직
     const handleDragStartCore = useCallback((clientY: number) => {
+        cancelPendingDragHeightRender();
         isDraggingRef.current = true;
         startYRef.current = clientY;
         startHeightRef.current = sheetHeightRef.current;
@@ -612,7 +638,7 @@ function BottomSheetComponent({
         }
         lockContentScrollDuringDrag();
         setIsDragging(true);
-    }, [lockContentScrollDuringDrag]);
+    }, [cancelPendingDragHeightRender, lockContentScrollDuringDrag]);
 
     // [PERFORMANCE] 드래그 중 공통 로직 - 즉시 반응 우선
     const handleDragMoveCore = useCallback((currentY: number) => {
@@ -643,6 +669,7 @@ function BottomSheetComponent({
     const handleDragEnd = useCallback((source: 'handle' | 'content' = 'handle') => {
         isDraggingRef.current = false;
         setIsDragging(false);
+        cancelPendingDragHeightRender();
         unlockContentScrollDuringDrag();
 
         const currentHeight = sheetHeightRef.current;
@@ -760,6 +787,7 @@ function BottomSheetComponent({
         }
     }, [
         applySnapTransition,
+        cancelPendingDragHeightRender,
         defaultHeight,
         enablePeek,
         closeThreshold,
@@ -1189,9 +1217,10 @@ function BottomSheetComponent({
     useEffect(() => {
         if (!isOpen) return;
         return () => {
+            cancelPendingDragHeightRender();
             resetSheetInteractionState();
         };
-    }, [isOpen, resetSheetInteractionState]);
+    }, [cancelPendingDragHeightRender, isOpen, resetSheetInteractionState]);
 
     useEffect(() => {
         if (!isOpen || showBackdrop || !closeOnOutsidePointerDown) return;
