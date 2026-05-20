@@ -17,6 +17,7 @@ export function NaverMapOverlayStack({
     floatingToastPositionClass,
     isLoaded,
     isLoadingRestaurants,
+    isMobileOverlayReady = true,
     mapToast,
     onAnnouncementToastClick,
     restaurantsLength,
@@ -31,6 +32,7 @@ export function NaverMapOverlayStack({
     floatingToastPositionClass: string;
     isLoaded: boolean;
     isLoadingRestaurants: boolean;
+    isMobileOverlayReady?: boolean;
     mapToast: { message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null;
     onAnnouncementToastClick?: () => void;
     restaurantsLength: number;
@@ -38,6 +40,10 @@ export function NaverMapOverlayStack({
     showOnlineUsers: boolean;
     showRestaurantCount: boolean;
 }) {
+    if (!isMobileOverlayReady) {
+        return null;
+    }
+
     return (
         <>
             {(isLoadingRestaurants || !isLoaded) && (
@@ -74,7 +80,7 @@ export function NaverMapOverlayStack({
                 />
             )}
 
-            {!isLoadingRestaurants && isLoaded && restaurantsLength === 0 && (
+            {isMobileOverlayReady && !isLoadingRestaurants && isLoaded && restaurantsLength === 0 && (
                 <div style={centerOffsetStyle} className={badgePositionClass}>
                     <EmptyStateIndicator />
                 </div>
