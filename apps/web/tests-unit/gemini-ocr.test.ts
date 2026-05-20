@@ -15,9 +15,9 @@ import {
 } from '@/lib/ocr/cache-version';
 
 describe('gemini receipt ocr helper', () => {
-  test('defaults to gemini-3-flash-preview as the authoritative OCR baseline', () => {
-    expect(GEMINI_OCR_DEFAULT_MODEL).toBe('gemini-3-flash-preview');
-    expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3-flash-preview']);
+  test('defaults to gemini-3.5-flash as the authoritative OCR baseline', () => {
+    expect(GEMINI_OCR_DEFAULT_MODEL).toBe('gemini-3.5-flash');
+    expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3.5-flash']);
     expect(getGeminiOcrModels({ GEMINI_OCR_MODEL: ' a, b ,, c ' } as NodeJS.ProcessEnv)).toEqual(['a', 'b', 'c']);
   });
 
@@ -42,15 +42,15 @@ describe('gemini receipt ocr helper', () => {
       imageBase64: 'abc123',
       mimeType: 'image/jpeg',
       prompt: 'read',
-      env: { GEMINI_OCR_MODEL: 'gemini-3-flash-preview' } as NodeJS.ProcessEnv,
+      env: { GEMINI_OCR_MODEL: 'gemini-3.5-flash' } as NodeJS.ProcessEnv,
       generateContentImpl: async ({ model }) => {
         seenModels.push(model);
         return '{"store_name":"데일리픽스 강남본점","date":"2026-04-25","time":"12:30","total_amount":"11,500원","items":[{"name":"아메리카노","price":"4,500"}],"confidence":0.94}';
       },
     });
 
-    expect(seenModels).toEqual(['gemini-3-flash-preview']);
-    expect(result.model).toBe('gemini-3-flash-preview');
+    expect(seenModels).toEqual(['gemini-3.5-flash']);
+    expect(result.model).toBe('gemini-3.5-flash');
     expect(result.data).toMatchObject({
       store_name: '데일리픽스 강남본점',
       date: '2026-04-25',
@@ -108,18 +108,18 @@ describe('ocr cache versioning', () => {
     const version = buildOcrCacheVersion({
       cacheKind: RECEIPT_OCR_RAW_CACHE_KIND,
       provider: 'gemini',
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       promptVersion: 'receipt-extraction-v1',
       preprocessVersion: 'receipt-image-1600w-q85-v2',
       extractionSchemaVersion: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
       routingMode: 'manual',
     });
 
-    expect(serializeOcrCacheVersion(version)).toBe('receipt_ocr_raw_v1|gemini|gemini-3-flash-preview|receipt-extraction-v1|receipt-image-1600w-q85-v2|receipt-ocr-schema-v1|manual');
+    expect(serializeOcrCacheVersion(version)).toBe('receipt_ocr_raw_v1|gemini|gemini-3.5-flash|receipt-extraction-v1|receipt-image-1600w-q85-v2|receipt-ocr-schema-v1|manual');
     expect(doesOcrCacheMetadataMatch({
       cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
       provider: 'gemini',
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       prompt_version: 'receipt-extraction-v1',
       preprocess_version: 'receipt-image-1600w-q85-v2',
       extraction_schema_version: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
@@ -131,7 +131,7 @@ describe('ocr cache versioning', () => {
     expect(doesOcrCacheMetadataMatch({
       cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
       provider: 'gemini',
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       prompt_version: 'receipt-extraction-v1',
       preprocess_version: 'receipt-image-1600w-q85-v2',
       extraction_schema_version: 'stale-schema',
@@ -142,7 +142,7 @@ describe('ocr cache versioning', () => {
     expect(doesOcrCacheMetadataMatch({
       cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
       provider: 'nvidia_nim',
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       prompt_version: 'receipt-extraction-v1',
       preprocess_version: 'receipt-image-1600w-q85-v2',
       extraction_schema_version: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,

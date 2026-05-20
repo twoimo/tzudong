@@ -7,7 +7,7 @@ import {
   type NvidiaNimReceiptOcrResult,
 } from '@/lib/ocr/nvidia-nim';
 
-export const GEMINI_OCR_DEFAULT_MODEL = 'gemini-3-flash-preview';
+export const GEMINI_OCR_DEFAULT_MODEL = 'gemini-3.5-flash';
 
 export class GeminiOcrError extends Error {
   attempts: NvidiaNimReceiptOcrAttempt[];
