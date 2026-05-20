@@ -26,14 +26,20 @@ import type { Notification } from "@/types/notification";
 interface MobileNotificationMenuButtonProps {
   user: User;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export default function MobileNotificationMenuButton({
   user: _user,
   defaultOpen = false,
+  open,
+  onOpenChange,
 }: MobileNotificationMenuButtonProps) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const isOpen = open ?? uncontrolledOpen;
+  const handleOpenChange = onOpenChange ?? setUncontrolledOpen;
   const {
     notifications,
     unreadCount,
@@ -78,7 +84,7 @@ export default function MobileNotificationMenuButton({
   );
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -98,7 +104,7 @@ export default function MobileNotificationMenuButton({
             <Badge
               variant="destructive"
               aria-hidden="true"
-              className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full px-1 text-[10px] font-bold tabular-nums bg-red-800"
+              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-white"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
@@ -107,9 +113,9 @@ export default function MobileNotificationMenuButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary"
+        className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[110]"
       >
-        <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
+        <DropdownMenuLabel className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2.5 text-foreground">
           <div className="min-w-0">
             <span className="block font-semibold">알림</span>
             <span className="block text-xs font-normal text-muted-foreground">
@@ -124,20 +130,20 @@ export default function MobileNotificationMenuButton({
               type="button"
               aria-label="모든 알림 읽음 처리"
               onClick={markAllAsRead}
-              className="h-8 shrink-0 rounded-lg px-2 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+              className="h-8 shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
             >
               <CheckCheck className="mr-1 h-3 w-3" aria-hidden="true" />
               모두 읽음
             </Button>
           )}
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-border" />
-        <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
+        <DropdownMenuSeparator className="my-2 bg-border" />
+        <ScrollArea className="h-72 max-h-[min(70vh,28rem)] pr-1">
           {isNotificationsLoading ? (
             <div
               role="status"
               aria-label="알림 목록 로딩 중"
-              className="space-y-3 p-3"
+              className="space-y-3 rounded-xl bg-background/70 p-3"
             >
               {[0, 1, 2].map((item) => (
                 <div key={item} className="space-y-2">
@@ -149,11 +155,11 @@ export default function MobileNotificationMenuButton({
           ) : isNotificationsError ? (
             <div
               role="status"
-              className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground"
+              className="grid min-h-40 place-items-center rounded-xl bg-background/70 p-4 text-center text-sm text-muted-foreground"
             >
               <div>
                 <Bell
-                  className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50"
+                  className="mx-auto mb-2 h-9 w-9 rounded-full bg-primary/10 p-2 text-primary/70"
                   aria-hidden="true"
                 />
                 <p className="font-medium text-foreground">
@@ -165,10 +171,10 @@ export default function MobileNotificationMenuButton({
               </div>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+            <div className="grid min-h-40 place-items-center rounded-xl bg-background/70 p-4 text-center text-sm text-muted-foreground">
               <div>
                 <Bell
-                  className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50"
+                  className="mx-auto mb-2 h-9 w-9 rounded-full bg-primary/10 p-2 text-primary/70"
                   aria-hidden="true"
                 />
                 <p className="font-medium text-foreground">
@@ -186,8 +192,8 @@ export default function MobileNotificationMenuButton({
                   <DropdownMenuItem
                     aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
                     className={cn(
-                      "flex items-center gap-3 p-3 cursor-pointer hover:bg-accent focus:bg-accent w-full max-w-full touch-manipulation",
-                      !notification.isRead && "bg-accent/50",
+                      "flex w-full max-w-full cursor-pointer items-center gap-3 rounded-xl p-2.5 touch-manipulation hover:bg-accent focus:bg-accent",
+                      !notification.isRead && "bg-primary/5",
                     )}
                     onSelect={() => handleNotificationItemClick(notification)}
                   >
@@ -216,7 +222,7 @@ export default function MobileNotificationMenuButton({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     aria-label={`${notification.title} 알림 삭제`}
-                    className="ml-3 flex cursor-pointer items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive touch-manipulation"
+                    className="ml-1 mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground touch-manipulation hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"
                     onSelect={(event) => {
                       event.preventDefault();
                       removeNotification(notification.id);

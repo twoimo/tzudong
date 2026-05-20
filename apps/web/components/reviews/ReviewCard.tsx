@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { User, MapPin, Heart, Calendar, CheckCircle, Edit, Share2, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 export interface ReviewCardProps {
     review: {
@@ -26,7 +27,7 @@ export interface ReviewCardProps {
         isVerified?: boolean;
         categories?: string[];
     };
-    onLike: (reviewId: string) => void | Promise<void>;
+    onLike: (reviewId: string, currentIsLiked: boolean, currentCount: number) => void | Promise<void>;
     onClick?: () => void;
     onRestaurantClick?: () => void;
     currentUserId?: string;
@@ -93,12 +94,38 @@ export const ReviewCard = React.memo(function ReviewCard({
         });
     }, [currentPhotoIndex, photoUrls]);
 
+    const pendingLikeRef = useRef<{ reviewId: string; isLiked: boolean; count: number } | null>(null);
+    const previousReviewIdRef = useRef(review.id);
+
     useEffect(() => {
+        if (previousReviewIdRef.current !== review.id) {
+            previousReviewIdRef.current = review.id;
+            pendingLikeRef.current = null;
+            setOptimisticLike({
+                isLiked: review.isLikedByUser,
+                count: review.likeCount,
+            });
+            return;
+        }
+
+        const pendingLike = pendingLikeRef.current;
+
+        if (pendingLike?.reviewId === review.id) {
+            if (review.isLikedByUser === pendingLike.isLiked) {
+                pendingLikeRef.current = null;
+                setOptimisticLike({
+                    isLiked: review.isLikedByUser,
+                    count: review.likeCount,
+                });
+            }
+            return;
+        }
+
         setOptimisticLike({
             isLiked: review.isLikedByUser,
             count: review.likeCount,
         });
-    }, [review.isLikedByUser, review.likeCount]);
+    }, [review.id, review.isLikedByUser, review.likeCount]);
 
     useEffect(() => {
         if (!api) {
@@ -117,19 +144,28 @@ export const ReviewCard = React.memo(function ReviewCard({
         const nextIsLiked = !optimisticLike.isLiked;
         const nextCount = Math.max(0, optimisticLike.count + (nextIsLiked ? 1 : -1));
 
-        setOptimisticLike({
+        const nextLike = {
             isLiked: nextIsLiked,
             count: nextCount,
-        });
+        };
+
+        pendingLikeRef.current = {
+            reviewId: review.id,
+            ...nextLike,
+        };
+
+        setOptimisticLike(nextLike);
 
         try {
-            const result = onLike(review.id);
+            const result = onLike(review.id, optimisticLike.isLiked, optimisticLike.count);
             if (result && typeof (result as Promise<void>).catch === 'function') {
                 (result as Promise<void>).catch(() => {
+                    pendingLikeRef.current = null;
                     setOptimisticLike(previousLike);
                 });
             }
         } catch {
+            pendingLikeRef.current = null;
             setOptimisticLike(previousLike);
         }
     }, [onLike, optimisticLike, review.id]);
@@ -310,16 +346,31 @@ export const ReviewCard = React.memo(function ReviewCard({
                         </button>
                     )}
                     <button
-                        className="flex items-center gap-1 group"
+                        className={cn(
+                            "group -m-1.5 flex items-center gap-1 rounded-full px-1.5 py-1 text-muted-foreground transition-colors touch-manipulation hover:text-red-500 active:text-red-500",
+                            optimisticLike.isLiked && "text-red-500"
+                        )}
                         onClick={handleLike}
                         title={`좋아요 ${optimisticLike.count}개`}
                         aria-label={`좋아요 ${optimisticLike.count}개${optimisticLike.isLiked ? ' 취소' : ' 누르기'}`}
                         aria-pressed={optimisticLike.isLiked}
+                        data-liked={optimisticLike.isLiked}
                     >
                         <Heart
-                            className={`w-5 h-5 transition-all ${optimisticLike.isLiked ? 'fill-red-500 text-red-500 scale-110' : 'text-muted-foreground group-hover:text-red-500'}`}
+                            fill={optimisticLike.isLiked ? "currentColor" : "none"}
+                            className={cn(
+                                "h-5 w-5 transition-all group-active:fill-red-500 group-active:text-red-500 group-active:[&_path]:fill-red-500 group-active:[&_path]:stroke-red-500",
+                                optimisticLike.isLiked
+                                    ? "fill-red-500 text-red-500 scale-110 [&_path]:fill-red-500 [&_path]:stroke-red-500"
+                                    : "text-muted-foreground group-hover:text-red-500 group-hover:[&_path]:stroke-red-500"
+                            )}
                         />
-                        <span className={`text-xs font-medium ${optimisticLike.isLiked ? 'text-red-500' : 'text-muted-foreground'}`}>
+                        <span
+                            className={cn(
+                                "text-xs font-medium transition-colors group-active:text-red-500",
+                                optimisticLike.isLiked ? "text-red-500" : "text-muted-foreground group-hover:text-red-500"
+                            )}
+                        >
                             {optimisticLike.count > 999 ? '999+' : optimisticLike.count}
                         </span>
                     </button>

@@ -25,7 +25,7 @@ export interface StampCardProps {
     /** 카드 크기 variant */
     size?: 'default' | 'compact';
     /** 방문 완료 도장 이미지 크기 variant */
-    stampSize?: 'default' | 'compact';
+    stampSize?: 'default' | 'compact' | 'mobile';
     guideLabel?: string;
     guideTitle?: string;
     guideDescription?: string;
@@ -75,10 +75,13 @@ export const StampCard = memo(function StampCard({
     };
 
     const isCompact = size === 'compact';
-    const isStampCompact = (stampSize ?? size) === 'compact';
-    const stampSizeClass = isStampCompact
-        ? "w-36 h-36 md:w-40 md:h-40"
-        : "w-48 h-48 sm:w-56 sm:h-56";
+    const resolvedStampSize = stampSize ?? size;
+    const isStampCompact = resolvedStampSize === 'compact';
+    const stampSizeClass = resolvedStampSize === 'mobile'
+        ? "h-[72%] max-h-44 w-auto max-w-[72%]"
+        : isStampCompact
+            ? "w-36 h-36 md:w-40 md:h-40"
+            : "w-48 h-48 sm:w-56 sm:h-56";
 
     const handleGuideClose = (e: React.MouseEvent) => {
         e.stopPropagation();
