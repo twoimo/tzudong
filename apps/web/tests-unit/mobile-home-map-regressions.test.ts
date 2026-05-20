@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import type { Restaurant } from '../types/restaurant';
 import { getAdjacentRestaurantByStep } from '../lib/home-map-keyboard-navigation';
@@ -6,6 +8,8 @@ import { shouldDismissSheetFromPeek } from '../lib/mobile-sheet-dismiss-gesture'
 import { buildPostSearchSwipeCandidates, releaseSearchSelectionOwnership } from '../lib/mobile-home-search-selection';
 import { buildMarkerRenderSignature, shouldSkipMarkerUpdate } from '../lib/map-render-guard';
 import { resolveMobileMapBlankTapAction } from '../lib/mobile-map-fullscreen-toggle';
+
+const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 const makeRestaurant = (id: string, name: string): Restaurant =>
     ({
@@ -219,5 +223,16 @@ describe('mobile home map regression guards', () => {
             sheetHeight: 50,
             peekHeight: 25,
         })).toBe('none');
+    });
+
+    test('cluster marker zoom jumps immediately without Naver morph animation', () => {
+        const mapSource = source('components/map/NaverMapView.tsx');
+
+        expect(mapSource).toContain('const jumpWithPanelOffset = useCallback');
+        expect(mapSource).toContain('map.setZoom(targetZoom, false)');
+        expect(mapSource).toContain('map.setCenter(adjustedCenter)');
+        expect(mapSource).toContain('jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom)');
+        expect(mapSource).toContain('jumpWithPanelOffset(lat, lng, targetZoom)');
+        expect(mapSource).not.toContain('morphWithPanelOffset');
     });
 });
