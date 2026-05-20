@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const runtime = 'nodejs';
 

@@ -1,0 +1,64 @@
+{
+  "createdAt": "20260512T133359Z",
+  "name": "tzudong unified admin console design brief",
+  "canvasTargets": [
+    "01 Unified Admin Overview",
+    "02 Management Table Pattern",
+    "03 Banner Management",
+    "04 Insights and LLM Session"
+  ],
+  "tokens": {
+    "background": "hsl(38 30% 98%)",
+    "foreground": "hsl(24 10% 10%)",
+    "primary": "hsl(0 74% 42%)",
+    "muted": "hsl(24 6% 90%)",
+    "border": "hsl(24 5% 83%)",
+    "radius": "0.5rem",
+    "fontFamily": "Noto Serif KR, Apple SD Gothic Neo, Malgun Gothic, ui-serif, Georgia, serif",
+    "shadowPrimary": "0 4px 14px rgba(185, 28, 28, 0.2)",
+    "shadowGlow": "0 0 20px rgba(185, 28, 28, 0.15)"
+  },
+  "layout": {
+    "desktopFrame": {
+      "width": 1440,
+      "height": 1024
+    },
+    "sidebarWidth": 248,
+    "rightPanelWidth": 360,
+    "cardRadiusPx": 8,
+    "spacingScale": [
+      4,
+      8,
+      12,
+      16,
+      24,
+      32
+    ]
+  },
+  "navigation": [
+    "Overview",
+    "맛집 관리",
+    "데이터 검수",
+    "제보 관리",
+    "리뷰 관리",
+    "배너 관리",
+    "인사이트",
+    "감사 로그",
+    "LLM 운영 세션"
+  ],
+  "mustMatchRepoAnchors": [
+    "apps/web/app/globals.css",
+    "apps/web/tailwind.config.ts",
+    "apps/web/components/layout/Header.tsx",
+    "apps/web/components/admin/CategorySidebar.tsx",
+    "apps/web/components/admin/admin-modal-styles.ts"
+  ],
+  "qualityGate": [
+    "No generic blue/gray SaaS dashboard look",
+    "Warm ivory page and card surfaces",
+    "Red primary only for project primary actions",
+    "Destructive actions separated from safe primary actions",
+    "LLM panel remains advisory/read-only in first wave",
+    "Guarded apply shown as preview -> confirm -> apply -> readback -> audit"
+  ]
+}

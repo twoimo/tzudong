@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { debugLog } from '@/lib/debug-log';
+import { requireAdmin } from '@/lib/auth/require-admin';
 
 const NAVER_CLIENT_ID = process.env.NEXT_NAVER_CLIENT_ID_BYEON || process.env.NEXT_NAVER_CLIENT_ID || process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
 const NAVER_CLIENT_SECRET = process.env.NEXT_NAVER_CLIENT_SECRET_BYEON || process.env.NEXT_NAVER_CLIENT_SECRET;
 
 export async function GET(request: Request) {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
     const display = searchParams.get('display') || '5';

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { MessageSquareText, Plus, Eye, EyeOff, Filter, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,10 +15,17 @@ import { cn } from '@/lib/utils';
 import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
-import { ReviewModal } from '@/components/reviews/ReviewModal';
-import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
 import { findCanonicalVisitedRestaurant } from '@/lib/restaurant-visit-matching';
+
+const ReviewModal = dynamic(
+    () => import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
+    { ssr: false }
+);
+const ReviewEditModal = dynamic(
+    () => import('@/components/reviews/ReviewEditModal').then((mod) => ({ default: mod.ReviewEditModal })),
+    { ssr: false }
+);
 
 export type FeedRestaurantRecord = Record<string, unknown> & {
     id: string;
@@ -446,7 +454,7 @@ export default function FeedContent({
         if (!user) {
             if (onOpenAuth) {
                 onOpenAuth();
-                throw new Error('LOGIN_REQUIRED');
+                return;
             }
 
             toast({
@@ -454,7 +462,7 @@ export default function FeedContent({
                 description: '좋아요를 누르려면 로그인이 필요합니다.',
                 variant: 'destructive',
             });
-            throw new Error('LOGIN_REQUIRED');
+            return;
         }
 
         setOptimisticLikes(prev => ({
@@ -565,6 +573,7 @@ export default function FeedContent({
                                     className="h-8 w-8 rounded-full hover:bg-muted"
                                     onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
                                     title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                    aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
                                 >
                                     {showMyReviewsOnly ? (
                                         <EyeOff className="h-5 w-5 text-primary" />
@@ -578,11 +587,12 @@ export default function FeedContent({
                                 size="icon"
                                 onClick={() => setIsFilterExpanded(!isFilterExpanded)}
                                 title="검색 필터"
+                                aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}
                             >
                                 <Filter className="h-4 w-4" />
                             </Button>
                             {isOverlay && onClose && (
-                                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full">
+                                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="리뷰 패널 닫기">
                                     <X className="h-5 w-5" />
                                 </Button>
                             )}
@@ -680,6 +690,7 @@ export default function FeedContent({
                                     : "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
                             )}
                             size="icon"
+                            aria-label="리뷰 작성"
                         >
                             <Plus className="h-6 w-6" />
                         </Button>
@@ -691,7 +702,7 @@ export default function FeedContent({
                 })()}
 
                 {/* 리뷰 작성 모달 */}
-                {!hideReviewModal && (
+                {!hideReviewModal && isReviewModalOpen && (
                     <ReviewModal
                         isOpen={isReviewModalOpen}
                         onClose={() => setIsReviewModalOpen(false)}
@@ -704,15 +715,17 @@ export default function FeedContent({
                 )}
 
                 {/* 리뷰 수정 모달 */}
-                <ReviewEditModal
-                    isOpen={!!editingReview}
-                    onClose={() => setEditingReview(null)}
-                    review={editingReview}
-                    onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: [queryKey] });
-                        setEditingReview(null);
-                    }}
-                />
+                {editingReview && (
+                    <ReviewEditModal
+                        isOpen={!!editingReview}
+                        onClose={() => setEditingReview(null)}
+                        review={editingReview}
+                        onSuccess={() => {
+                            queryClient.invalidateQueries({ queryKey: [queryKey] });
+                            setEditingReview(null);
+                        }}
+                    />
+                )}
             </div>
         </div>
     );

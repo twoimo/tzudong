@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 
+import { buildHomeMapActivationPlan, isEmbeddedHomeRuntimeWindow } from "@/app/home-map-runtime-activation";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
-import { useRestaurant, useRestaurants } from "@/hooks/use-restaurants";
+import { useRestaurants } from "@/hooks/use-restaurants";
 import type { FilterState } from "@/components/filters/filter-state";
 import type { Restaurant, Region } from "@/types/restaurant";
+import type { Announcement } from "@/types/announcement";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
@@ -54,7 +56,6 @@ import {
 import { perfMonitor } from "@/lib/performance-monitor";
 import { useMapOptimization } from "@/hooks/useMapOptimization";
 import { calculateHoverAnchoredCenter } from "@/lib/map-hover-anchor";
-import { useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import {
     buildMarkerRenderSignature,
     shouldSkipMarkerUpdate,
@@ -117,21 +118,19 @@ import {
     buildNaverMapInternalPanelCloseHandler,
     buildNaverMapInternalPanelToggleHandler,
     buildNaverMarkerRestaurantSelectionHandler,
+    applyNaverImmediateMarkerCenter,
     buildNaverMapRestaurantAction,
     buildNaverMapReviewCloseHandler,
     buildNaverMapReviewOpenHandler,
     buildNaverMapReviewSuccessHandler,
     getNaverMapReviewRestaurant,
+    resolveNaverMarkerClickImmediateCenterPlan,
+    shouldSkipNaverDeferredCenterAfterImmediateMarkerClick,
     shouldCloseNaverInternalPanelForExternalState,
     shouldCloseNaverInternalPanelOnEscape,
 } from "@/lib/naver-map-sidepanel-helpers";
 import {
     buildNaverMapToastTrigger,
-    resolveNaverAnnouncementToastClickPlan,
-    resolveNaverAnnouncementToastCleanupPlan,
-    resolveNaverAnnouncementToastInactivePlan,
-    resolveNaverAnnouncementToastPlan,
-    resolveNaverAnnouncementToastSchedulePlan,
 } from "@/lib/naver-map-toast-helpers";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
@@ -174,10 +173,6 @@ import {
     getNaverCurrentPanelOffset,
     resolveNaverRestaurantCountUpdatePlan,
 } from "@/lib/naver-map-current-state-helpers";
-import {
-    resolveNaverInitialOnlineToastPlan,
-    resolveNaverOnlineToastDisplayPlan,
-} from "@/lib/naver-map-presence-helpers";
 import { resolveNaverResizePlan } from "@/lib/naver-map-resize-plan-helpers";
 import {
     buildNaverWheelAnchorAdjustmentPlan,
@@ -239,6 +234,10 @@ const NAVER_FIRST_LOAD_VIEWPORT_DEGREES_BY_ZOOM = [
     { minZoom: 0, lat: 4.20, lng: 5.20 },
 ] as const;
 
+const NaverMapAnnouncementRuntime = lazy(() => import("@/components/map/NaverMapAnnouncementRuntime"));
+const NaverMapPresenceRuntime = lazy(() => import("@/components/map/NaverMapPresenceRuntime"));
+const HydratedDetailRestaurant = lazy(() => import("@/components/home/HydratedDetailRestaurant"));
+
 function resolveInitialNaverQueryBounds(selectedRegion: Region | null): NaverQueryBounds | undefined {
     const regionKey = selectedRegion ?? '전국';
     const config = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
@@ -261,9 +260,6 @@ const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
 const ZOOM_DIFF_THRESHOLD = 4; // 즉시 로드할 줌 차이 임계값
 const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 const MOBILE_MARKER_CENTER_FINE_TUNE_PX = -6; // 선택 마커 translateY(-5px) 시각 보정
-const ONLINE_USERS_TOAST_INTERVAL_MS = 60000;
-const ANNOUNCEMENT_TOAST_INTERVAL_MS = 70000;
-const NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS = 30000;
 
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
@@ -309,6 +305,83 @@ interface NaverMapViewProps {
  */
 const markerContentCache = new LruCache<string, string>(500);
 
+type NaverClusterFeature =
+    | Supercluster.ClusterFeature<ClusterProperties>
+    | Supercluster.PointFeature<ClusterProperties>;
+
+
+const CLUSTER_SIGNATURE_COORD_PRECISION = 5;
+
+function roundClusterCoord(value: number): number {
+    const factor = 10 ** CLUSTER_SIGNATURE_COORD_PRECISION;
+    return Math.round(value * factor) / factor;
+}
+
+function buildClusterFeatureSignature(feature: NaverClusterFeature): string {
+    const [lng, lat] = feature.geometry.coordinates;
+    if (isCluster(feature)) {
+        return [
+            'cluster',
+            feature.properties.cluster_id,
+            feature.properties.point_count,
+            roundClusterCoord(lat),
+            roundClusterCoord(lng),
+        ].join(':');
+    }
+
+    return [
+        'point',
+        feature.properties.restaurantId,
+        roundClusterCoord(lat),
+        roundClusterCoord(lng),
+    ].join(':');
+}
+
+function areClusterFeaturesEqual(
+    previous: readonly NaverClusterFeature[],
+    next: readonly NaverClusterFeature[],
+): boolean {
+    if (previous.length !== next.length) return false;
+
+    for (let index = 0; index < previous.length; index += 1) {
+        if (buildClusterFeatureSignature(previous[index]) !== buildClusterFeatureSignature(next[index])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function buildRegionalClusterSignature(cluster: RegionalCluster): string {
+    return [
+        cluster.region,
+        cluster.count,
+        roundClusterCoord(cluster.center.lat),
+        roundClusterCoord(cluster.center.lng),
+        cluster.restaurantIds.join(','),
+        cluster.categories.join(','),
+    ].join(':');
+}
+
+function areRegionalClustersEqual(
+    previous: readonly RegionalCluster[],
+    next: readonly RegionalCluster[],
+): boolean {
+    if (previous.length !== next.length) return false;
+
+    for (let index = 0; index < previous.length; index += 1) {
+        if (buildRegionalClusterSignature(previous[index]) !== buildRegionalClusterSignature(next[index])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function areStringArraysEqual(previous: readonly string[], next: readonly string[]): boolean {
+    return previous.length === next.length && previous.every((value, index) => value === next[index]);
+}
+
 const NaverMapView = memo(({
     mapFocusZoom,
     filters,
@@ -341,16 +414,20 @@ const NaverMapView = memo(({
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
+    const lastImmediateMarkerCenterRef = useRef<{
+        restaurantId: string;
+        targetLat: number;
+        targetLng: number;
+        targetZoom: number;
+        targetOffsetX: number;
+        targetOffsetY: number;
+        centeredAt: number;
+    } | null>(null);
     const [isMapRuntimeActive, setIsMapRuntimeActive] = useState(false);
     const deviceLocationMarkerRef = useRef<{
         setMap: (map: unknown | null) => void;
         setPosition: (position: unknown) => void;
         setIcon: (icon: unknown) => void;
-    } | null>(null);
-    const deviceLocationAccuracyCircleRef = useRef<{
-        setMap: (map: unknown | null) => void;
-        setCenter: (center: unknown) => void;
-        setRadius: (radius: number) => void;
     } | null>(null);
     const lastFocusedDeviceLocationRequestRef = useRef<number | null>(null);
     const isInitialLoadFromUrlRef = useRef<boolean>(false); // URL 파라미터로 초기화되었는지 추적 (공유 URL 지원)
@@ -383,39 +460,26 @@ const NaverMapView = memo(({
         return getAdjustedZoomForDevice(baseZoom, isMobileOrTablet, isNational);
     }, [isMobileOrTablet]);
 
-    // 네이버 지도 API 로드 - HomeClientLoader가 지도 런타임을 마운트한 뒤에만 수동 활성화
-    const { isLoaded, loadError, load } = useNaverMaps({ autoLoad: false, strategy: 'lazyOnload' });
+    // 네이버 지도 API 로드 - / 첫 진입에서 지도 SDK를 즉시 비동기로 붙이고 부가 런타임만 점진 활성화
+    const { isLoaded, loadError, load } = useNaverMaps({ autoLoad: false, strategy: 'afterInteractive' });
 
     useEffect(() => {
-        setIsMapRuntimeActive(true);
-    }, []);
+        if (isMapRuntimeActive) return;
+
+        const activationPlan = buildHomeMapActivationPlan({
+            search: window.location.search,
+            hash: window.location.hash,
+            isEmbeddedHomeRuntime: isEmbeddedHomeRuntimeWindow(),
+        });
+
+        if (activationPlan.activateImmediately) {
+            setIsMapRuntimeActive(true);
+        }
+    }, [isMapRuntimeActive]);
 
     useEffect(() => {
         if (!isMapRuntimeActive || isLoaded || loadError) return;
-
-        let cancelled = false;
-        const idleWindow = window as Window & {
-            requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-            cancelIdleCallback?: (id: number) => void;
-        };
-
-        if (typeof idleWindow.requestIdleCallback === 'function') {
-            const idleId = idleWindow.requestIdleCallback(() => {
-                if (!cancelled) load();
-            }, { timeout: 2000 });
-            return () => {
-                cancelled = true;
-                idleWindow.cancelIdleCallback?.(idleId);
-            };
-        }
-
-        const timeout = window.setTimeout(() => {
-            if (!cancelled) load();
-        }, 2000);
-        return () => {
-            cancelled = true;
-            window.clearTimeout(timeout);
-        };
+        load();
     }, [isLoaded, isMapRuntimeActive, load, loadError]);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
@@ -425,11 +489,7 @@ const NaverMapView = memo(({
     const [showAnnouncementToast, setShowAnnouncementToast] = useState(false);
     const [shouldRunNoncriticalMapEffects, setShouldRunNoncriticalMapEffects] = useState(false);
     const [announcementToastTitle, setAnnouncementToastTitle] = useState('');
-    const [announcementToastId, setAnnouncementToastId] = useState<string | null>(null);
-    const announcementToastIndexRef = useRef(0);
-    const announcementToastHideTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const announcementToastInitialTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const { data: bannerAnnouncements = [] } = useBannerAnnouncements();
+    const [announcementToastPayload, setAnnouncementToastPayload] = useState<Announcement | null>(null);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
     const [mapInitError, setMapInitError] = useState<string | null>(null);
 
@@ -439,17 +499,12 @@ const NaverMapView = memo(({
     }), [searchedRestaurant, selectedRestaurant]);
 
     const activateNoncriticalMapEffects = useCallback(() => {
-        setShouldRunNoncriticalMapEffects(true);
+        setShouldRunNoncriticalMapEffects((previous) => previous ? previous : true);
     }, []);
 
-    useEffect(() => {
-        if (shouldRunNoncriticalMapEffects) return;
-
-        const timeout = setTimeout(activateNoncriticalMapEffects, NONCRITICAL_MAP_SIDE_EFFECT_DELAY_MS);
-        return () => clearTimeout(timeout);
-    }, [activateNoncriticalMapEffects, shouldRunNoncriticalMapEffects]);
-
     const releaseSearchSelectionOnUserInteraction = useCallback(() => {
+        activateNoncriticalMapEffects();
+
         const releasePlan = resolveSearchSelectionReleasePlan({
             activeSearchedRestaurant,
             hasReleaseHandler: Boolean(onSearchSelectionRelease),
@@ -461,7 +516,7 @@ const NaverMapView = memo(({
         if (releasePlan.shouldRelease) {
             onSearchSelectionRelease?.();
         }
-    }, [activeSearchedRestaurant, onSearchSelectionRelease]);
+    }, [activateNoncriticalMapEffects, activeSearchedRestaurant, onSearchSelectionRelease]);
 
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !onMapBlankClick) return;
@@ -470,13 +525,64 @@ const NaverMapView = memo(({
         if (!maps?.Event) return;
 
         const listener = maps.Event.addListener(mapInstanceRef.current, 'click', () => {
+            activateNoncriticalMapEffects();
             onMapBlankClick();
         });
 
         return () => {
             maps.Event.removeListener(listener);
         };
-    }, [isMapInitialized, onMapBlankClick]);
+    }, [activateNoncriticalMapEffects, isMapInitialized, onMapBlankClick]);
+
+    useEffect(() => {
+        if (!isMapInitialized || !mapInstanceRef.current) return;
+
+        const maps = window.naver?.maps;
+        const map = mapInstanceRef.current;
+        const mapElement = mapRef.current;
+        if (!maps?.Event || !map) return;
+
+        const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
+            hasUserMovedMapRef,
+            onUserInteraction: activateNoncriticalMapEffects,
+            releaseSearchSelectionOnUserInteraction,
+        });
+        const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
+        const interactionHandlers = {
+            searchRelease: handleSearchReleaseInteraction,
+            userInteraction: handleUserInteraction,
+        };
+
+        if (mapElement) {
+            interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
+                mapElement.addEventListener(
+                    eventName,
+                    interactionHandlers[handlerKey],
+                    NAVER_INTERACTION_LISTENER_OPTIONS,
+                );
+            });
+        }
+
+        const mapEventListeners = interactionListenerPlan.mapEventNames.map((eventName) =>
+            maps.Event.addListener(map, eventName, handleSearchReleaseInteraction)
+        );
+
+        return () => {
+            mapEventListeners.forEach((listener) => {
+                maps.Event.removeListener(listener);
+            });
+
+            if (mapElement) {
+                interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
+                    mapElement.removeEventListener(
+                        eventName,
+                        interactionHandlers[handlerKey],
+                        NAVER_INTERACTION_REMOVE_OPTIONS,
+                    );
+                });
+            }
+        };
+    }, [activateNoncriticalMapEffects, isMapInitialized, releaseSearchSelectionOnUserInteraction]);
 
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
@@ -488,8 +594,6 @@ const NaverMapView = memo(({
         if (!deviceLocation) {
             deviceLocationMarkerRef.current?.setMap(null);
             deviceLocationMarkerRef.current = null;
-            deviceLocationAccuracyCircleRef.current?.setMap(null);
-            deviceLocationAccuracyCircleRef.current = null;
             lastFocusedDeviceLocationRequestRef.current = null;
             return;
         }
@@ -518,30 +622,6 @@ const NaverMapView = memo(({
             deviceLocationMarkerRef.current.setMap(map);
         }
 
-        if (deviceLocationRenderPlan.accuracyRadius !== null) {
-            const radius = deviceLocationRenderPlan.accuracyRadius;
-            if (!deviceLocationAccuracyCircleRef.current) {
-                deviceLocationAccuracyCircleRef.current = new naver.maps.Circle({
-                    map,
-                    center: position,
-                    radius,
-                    strokeColor: '#2563eb',
-                    strokeOpacity: 0.22,
-                    strokeWeight: 1,
-                    fillColor: '#2563eb',
-                    fillOpacity: 0.10,
-                    zIndex: 9998,
-                });
-            } else {
-                deviceLocationAccuracyCircleRef.current.setCenter(position);
-                deviceLocationAccuracyCircleRef.current.setRadius(radius);
-                deviceLocationAccuracyCircleRef.current.setMap(map);
-            }
-        } else {
-            deviceLocationAccuracyCircleRef.current?.setMap(null);
-            deviceLocationAccuracyCircleRef.current = null;
-        }
-
         if (deviceLocationRenderPlan.shouldFocus) {
             lastFocusedDeviceLocationRequestRef.current = deviceLocationRenderPlan.nextFocusedRequestId;
             map.morph(position, deviceLocationRenderPlan.focusZoom, { duration: 450, easing: 'easeOutCubic' });
@@ -550,7 +630,6 @@ const NaverMapView = memo(({
 
     useEffect(() => () => {
         deviceLocationMarkerRef.current?.setMap(null);
-        deviceLocationAccuracyCircleRef.current?.setMap(null);
     }, []);
 
     const handleDetailPanelMouseDownCapture = useMemo(
@@ -674,17 +753,6 @@ const NaverMapView = memo(({
     }, [mapOptimization.clusterAnimationEnabled, mapOptimization.clusterAnimationInterval]);
 
     // ... (중략) ...
-
-    const handleMarkerRestaurantSelection = useMemo(
-        () => buildNaverMarkerRestaurantSelectionHandler({
-            hasUserMovedMapRef,
-            onMarkerClick,
-            onRestaurantSelect,
-            setInternalPanelOpen,
-        }),
-        [onMarkerClick, onRestaurantSelect]
-    );
-
 
     // [커스텀 토스트] 지도 상단 중앙 알림 상태
     const [mapToast, setMapToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null>(null);
@@ -849,6 +917,50 @@ const NaverMapView = memo(({
         });
     }, [isMobileOrTablet, mobileSheetHeightPercent]);
 
+    const centerMarkerSelectionImmediately = useCallback((restaurant: Restaurant) => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.naver) return;
+
+        const currentZoom = map.getZoom();
+        const immediateCenterPlan = resolveNaverMarkerClickImmediateCenterPlan({
+            currentZoom,
+            isGridMode,
+            isMobileOrTablet,
+            isPanelCollapsed,
+            mapFocusZoom: mapFocusZoom ?? null,
+            mobileVerticalOffset: getMobileVerticalOffset(),
+            panelWidth,
+            restaurant,
+            usesExternalPanel: Boolean(onMarkerClick),
+        });
+
+        if (immediateCenterPlan.skip) {
+            return;
+        }
+
+        const immediateCenterResult = applyNaverImmediateMarkerCenter({
+            currentZoom,
+            getAdjustedCenter,
+            map,
+            plan: immediateCenterPlan,
+        });
+
+        if (immediateCenterResult.applied) {
+            lastImmediateMarkerCenterRef.current = immediateCenterResult.markerCenter;
+        }
+    }, [getMobileVerticalOffset, isGridMode, isMobileOrTablet, isPanelCollapsed, mapFocusZoom, onMarkerClick, panelWidth]);
+
+    const handleMarkerRestaurantSelection = useMemo(
+        () => buildNaverMarkerRestaurantSelectionHandler({
+            centerMarkerImmediately: centerMarkerSelectionImmediately,
+            hasUserMovedMapRef,
+            onMarkerClick,
+            onRestaurantSelect,
+            setInternalPanelOpen,
+        }),
+        [centerMarkerSelectionImmediately, onMarkerClick, onRestaurantSelect]
+    );
+
     // [Helper] 패널 오프셋을 고려한 morph (클러스터 클릭 시 사용)
     // 우측 패널이 열려있을 때 클러스터 중심이 "보이는 영역"의 중앙에 위치하도록 조정
     const morphWithPanelOffset = useCallback((
@@ -970,6 +1082,30 @@ const NaverMapView = memo(({
             mobileVerticalOffset: getMobileVerticalOffset(),
         });
 
+        const immediateMarkerCenter = lastImmediateMarkerCenterRef.current;
+        if (
+            immediateMarkerCenter &&
+            shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+                centeredAt: immediateMarkerCenter.centeredAt,
+                immediateOffsetX: immediateMarkerCenter.targetOffsetX,
+                immediateOffsetY: immediateMarkerCenter.targetOffsetY,
+                immediateTargetLat: immediateMarkerCenter.targetLat,
+                immediateTargetLng: immediateMarkerCenter.targetLng,
+                immediateZoom: immediateMarkerCenter.targetZoom,
+                restaurantId: immediateMarkerCenter.restaurantId,
+                selectedRestaurantId: currentSelectedId,
+                targetLat,
+                targetLng,
+                targetOffsetX,
+                targetOffsetY,
+                targetZoom,
+            })
+        ) {
+            return;
+        } else if (immediateMarkerCenter) {
+            lastImmediateMarkerCenterRef.current = null;
+        }
+
         // **핵심 로직 변경**
         const currentZoom = map.getZoom();
 
@@ -1060,49 +1196,8 @@ const NaverMapView = memo(({
             naver.maps.Event.trigger(map, transitionResizePlan.followupResizeEvent);
         }, transitionResizePlan.followupResizeDelayMs);
 
-        // 사용자 상호작용 감지 리스너 추가
-        // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
-        const { handleSearchReleaseInteraction, handleUserInteraction } = buildNaverMapInteractionHandlers({
-            hasUserMovedMapRef,
-            releaseSearchSelectionOnUserInteraction,
-        });
-        const interactionListenerPlan = buildNaverMapInteractionListenerPlan();
-        const interactionHandlers = {
-            searchRelease: handleSearchReleaseInteraction,
-            userInteraction: handleUserInteraction,
-        };
-
-        const mapElement = mapRef.current;
-        if (mapElement) {
-            // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
-            interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
-                mapElement.addEventListener(
-                    eventName,
-                    interactionHandlers[handlerKey],
-                    NAVER_INTERACTION_LISTENER_OPTIONS,
-                );
-            });
-        }
-
-        const mapEventListeners = interactionListenerPlan.mapEventNames.map((eventName) =>
-            naver.maps.Event.addListener(map, eventName, handleSearchReleaseInteraction)
-        );
-
         return () => {
             clearTimeout(transitionTimer);
-            mapEventListeners.forEach((listener) => {
-                naver.maps.Event.removeListener(listener);
-            });
-
-            if (mapElement) {
-                interactionListenerPlan.domListeners.forEach(({ eventName, handlerKey }) => {
-                    mapElement.removeEventListener(
-                        eventName,
-                        interactionHandlers[handlerKey],
-                        NAVER_INTERACTION_REMOVE_OPTIONS,
-                    );
-                });
-            }
         };
 
     }, [
@@ -1122,7 +1217,6 @@ const NaverMapView = memo(({
         isMobileOrTablet,
         mapFocusZoom,
         mobileSheetHeightPercent,
-        releaseSearchSelectionOnUserInteraction,
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
@@ -1173,6 +1267,32 @@ const NaverMapView = memo(({
 
             if (resizePlan.skip) {
                 return;
+            }
+
+            const immediateMarkerCenter = lastImmediateMarkerCenterRef.current;
+            if (
+                immediateMarkerCenter &&
+                typeof resizePlan.targetLat === 'number' &&
+                typeof resizePlan.targetLng === 'number' &&
+                shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+                    centeredAt: immediateMarkerCenter.centeredAt,
+                    immediateOffsetX: immediateMarkerCenter.targetOffsetX,
+                    immediateOffsetY: immediateMarkerCenter.targetOffsetY,
+                    immediateTargetLat: immediateMarkerCenter.targetLat,
+                    immediateTargetLng: immediateMarkerCenter.targetLng,
+                    immediateZoom: immediateMarkerCenter.targetZoom,
+                    restaurantId: immediateMarkerCenter.restaurantId,
+                    selectedRestaurantId: selectedRestaurant?.id ?? null,
+                    targetLat: resizePlan.targetLat,
+                    targetLng: resizePlan.targetLng,
+                    targetOffsetX: resizePlan.targetOffsetX,
+                    targetOffsetY: resizePlan.targetOffsetY,
+                    targetZoom: resizePlan.targetZoom,
+                })
+            ) {
+                return;
+            } else if (immediateMarkerCenter) {
+                lastImmediateMarkerCenterRef.current = null;
             }
 
             // 애니메이션 없이 즉시 이동 (부드러움 유지)
@@ -1237,8 +1357,6 @@ const NaverMapView = memo(({
     }), [filters, isLoaded, restaurantQueryBounds, selectedRegion]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantQueryOptions);
-    const { data: selectedRestaurantDetail } = useRestaurant(selectedRestaurant?.id ?? null);
-    const detailRestaurant = selectedRestaurantDetail ?? selectedRestaurant;
 
     const handleReviewSuccess = useMemo(
         () => buildNaverMapReviewSuccessHandler({ refetch, showMapToast }),
@@ -1269,168 +1387,15 @@ const NaverMapView = memo(({
         }
     }, [restaurants, isLoadingRestaurants]);
 
-    // 동시 접속자 추적을 위한 ref (useEffect 의존성 문제 방지)
-    const onlineUsersCountRef = useRef(onlineUsersCount);
     const showRestaurantCountRef = useRef(showRestaurantCount);
-    const hasShownInitialToastRef = useRef(false);
-    const initialTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    useEffect(() => { onlineUsersCountRef.current = onlineUsersCount; }, [onlineUsersCount]);
     useEffect(() => { showRestaurantCountRef.current = showRestaurantCount; }, [showRestaurantCount]);
 
-    // 동시 접속자 추적 (Supabase Presence) 및 주기적 토스트 표시
-    useEffect(() => {
-        if (!isLoaded || !shouldRunNoncriticalMapEffects) {
-            setShowOnlineUsers(false);
-            if (initialTimerRef.current) {
-                clearTimeout(initialTimerRef.current);
-                initialTimerRef.current = null;
-            }
-            if (hideTimerRef.current) {
-                clearTimeout(hideTimerRef.current);
-                hideTimerRef.current = null;
-            }
-            return;
-        }
-
-        // [중요] Strict Mode에서 재마운트 시 ref 초기화
-        hasShownInitialToastRef.current = false;
-
-        // 토스트 표시 함수
-        const showOnlineToast = () => {
-            const toastDisplayPlan = resolveNaverOnlineToastDisplayPlan({
-                hasExistingHideTimer: hideTimerRef.current !== null,
-            });
-            if (toastDisplayPlan.shouldClearExistingHideTimer && hideTimerRef.current) {
-                clearTimeout(hideTimerRef.current);
-            }
-            setShowOnlineUsers(toastDisplayPlan.shouldShowOnlineUsers);
-            hideTimerRef.current = setTimeout(() => setShowOnlineUsers(false), toastDisplayPlan.hideDelayMs);
-        };
-
-        let cleanupPresence: (() => void) | null = null;
-        let isCancelled = false;
-
-        void import('@/lib/naver-map-presence-client').then(({ startNaverMapPresence }) => {
-            if (isCancelled) return;
-
-            // Supabase Presence 채널 구독은 비핵심 지도 효과가 시작된 뒤에만 별도 청크로 로드합니다.
-            cleanupPresence = startNaverMapPresence({
-                intervalMs: ONLINE_USERS_TOAST_INTERVAL_MS,
-                onInterval: showOnlineToast,
-                onSync: (count) => {
-                    setOnlineUsersCount(count);
-                    onlineUsersCountRef.current = count;
-
-                    // 첫 번째 sync 후 5초 뒤에 토스트 표시
-                    const initialToastPlan = resolveNaverInitialOnlineToastPlan({
-                        hasExistingInitialTimer: initialTimerRef.current !== null,
-                        hasShownInitialToast: hasShownInitialToastRef.current,
-                    });
-                    if (initialToastPlan.shouldScheduleInitialToast) {
-                        hasShownInitialToastRef.current = initialToastPlan.nextHasShownInitialToast;
-                        if (initialToastPlan.shouldClearExistingInitialTimer && initialTimerRef.current) {
-                            clearTimeout(initialTimerRef.current);
-                        }
-                        initialTimerRef.current = setTimeout(showOnlineToast, initialToastPlan.initialDelayMs);
-                    }
-                },
-            });
-        });
-
-        return () => {
-            isCancelled = true;
-            cleanupPresence?.();
-            if (initialTimerRef.current) {
-                clearTimeout(initialTimerRef.current);
-                initialTimerRef.current = null;
-            }
-            if (hideTimerRef.current) {
-                clearTimeout(hideTimerRef.current);
-                hideTimerRef.current = null;
-            }
-        };
-    }, [isLoaded, shouldRunNoncriticalMapEffects]);
-
-    // 공지사항 배너 내용 주기 노출
-    useEffect(() => {
-        if (!isLoaded || !shouldRunNoncriticalMapEffects || bannerAnnouncements.length === 0) {
-            const inactivePlan = resolveNaverAnnouncementToastInactivePlan({
-                hasHideTimer: announcementToastHideTimerRef.current !== null,
-                hasInitialTimer: announcementToastInitialTimerRef.current !== null,
-            });
-            setShowAnnouncementToast(inactivePlan.shouldShowAnnouncementToast);
-            setAnnouncementToastTitle(inactivePlan.nextTitle);
-            if (inactivePlan.shouldClearInitialTimer && announcementToastInitialTimerRef.current) {
-                clearTimeout(announcementToastInitialTimerRef.current);
-                announcementToastInitialTimerRef.current = null;
-            }
-            if (inactivePlan.shouldClearHideTimer && announcementToastHideTimerRef.current) {
-                clearTimeout(announcementToastHideTimerRef.current);
-                announcementToastHideTimerRef.current = null;
-            }
-            return;
-        }
-
-        const showAnnouncementBadge = () => {
-            const announcementPlan = resolveNaverAnnouncementToastPlan({
-                announcements: bannerAnnouncements,
-                currentIndex: announcementToastIndexRef.current,
-            });
-            if (!announcementPlan.shouldShow || !announcementPlan.announcement) return;
-
-            setAnnouncementToastTitle(announcementPlan.announcement.title);
-            setAnnouncementToastId(announcementPlan.announcement.id);
-            setShowAnnouncementToast(true);
-
-            announcementToastIndexRef.current = announcementPlan.nextIndex;
-
-            if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
-            announcementToastHideTimerRef.current = setTimeout(() => {
-                setShowAnnouncementToast(false);
-            }, announcementPlan.hideDelayMs);
-        };
-
-        const schedulePlan = resolveNaverAnnouncementToastSchedulePlan({
-            hasExistingInitialTimer: announcementToastInitialTimerRef.current !== null,
-            intervalMs: ANNOUNCEMENT_TOAST_INTERVAL_MS,
-        });
-        if (schedulePlan.shouldClearExistingInitialTimer && announcementToastInitialTimerRef.current) {
-            clearTimeout(announcementToastInitialTimerRef.current);
-        }
-        announcementToastInitialTimerRef.current = setTimeout(showAnnouncementBadge, schedulePlan.initialDelayMs);
-
-        const interval = setInterval(showAnnouncementBadge, schedulePlan.intervalMs);
-
-        return () => {
-            const cleanupPlan = resolveNaverAnnouncementToastCleanupPlan({
-                hasHideTimer: announcementToastHideTimerRef.current !== null,
-                hasInitialTimer: announcementToastInitialTimerRef.current !== null,
-            });
-            if (cleanupPlan.shouldClearInterval) {
-                clearInterval(interval);
-            }
-            if (cleanupPlan.shouldClearInitialTimer && announcementToastInitialTimerRef.current) {
-                clearTimeout(announcementToastInitialTimerRef.current);
-                announcementToastInitialTimerRef.current = null;
-            }
-            if (cleanupPlan.shouldClearHideTimer && announcementToastHideTimerRef.current) {
-                clearTimeout(announcementToastHideTimerRef.current);
-                announcementToastHideTimerRef.current = null;
-            }
-        };
-    }, [bannerAnnouncements, isLoaded, shouldRunNoncriticalMapEffects]);
-
     const handleAnnouncementToastClick = useCallback(() => {
-        const clickPlan = resolveNaverAnnouncementToastClickPlan({
-            announcementToastId,
-            announcements: bannerAnnouncements,
-        });
-        if (!clickPlan.shouldDispatch || !clickPlan.targetAnnouncement) return;
+        if (!announcementToastPayload) return;
 
-        window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: clickPlan.targetAnnouncement }));
-    }, [announcementToastId, bannerAnnouncements]);
+        window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcementToastPayload }));
+    }, [announcementToastPayload]);
 
     // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
     const displayRestaurants = useMemo(() => {
@@ -1461,7 +1426,7 @@ const NaverMapView = memo(({
         if (!ENABLE_CLUSTERING || displayRestaurants.length === 0) {
             if (clusterIndexRef.current) {
 
-                setClusters([]);
+                setClusters((previous) => previous.length === 0 ? previous : []);
                 clusterIndexRef.current = null;
             }
             return;
@@ -1517,21 +1482,29 @@ const NaverMapView = memo(({
             const bbox = resolveNaverClusterBoundsBbox(bounds);
 
             const newClusters = getClusters(index, bbox, zoom);
-            setClusters(newClusters);
+            setClusters((previous) => areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters);
 
             // 17개 행정구역 클러스터도 계산
             const newRegionalClusters = getRegionalClusters(displayRestaurants);
-            setRegionalClusters(newRegionalClusters);
+            setRegionalClusters((previous) => areRegionalClustersEqual(previous, newRegionalClusters) ? previous : newRegionalClusters);
 
             // 서울 25개 자치구 클러스터 계산 (두 가지 모드)
             // 줌 9-10: 모든 구를 클러스터로 (minClusterSize=1)
             const seoulResultAll = getSeoulDistrictClusters(displayRestaurants, 1);
-            setSeoulDistrictClusters(seoulResultAll.clusters);
+            setSeoulDistrictClusters((previous) =>
+                areRegionalClustersEqual(previous, seoulResultAll.clusters) ? previous : seoulResultAll.clusters
+            );
 
             // 줌 11-12: 마커 3개 이상만 클러스터, 2개 이하는 개별 마커 (minClusterSize=3)
             const seoulResultFiltered = getSeoulDistrictClusters(displayRestaurants, 3);
-            setSeoulDistrictClustersFiltered(seoulResultFiltered.clusters);
-            setSeoulIndividualIds(seoulResultFiltered.individualRestaurantIds);
+            setSeoulDistrictClustersFiltered((previous) =>
+                areRegionalClustersEqual(previous, seoulResultFiltered.clusters) ? previous : seoulResultFiltered.clusters
+            );
+            setSeoulIndividualIds((previous) =>
+                areStringArraysEqual(previous, seoulResultFiltered.individualRestaurantIds)
+                    ? previous
+                    : seoulResultFiltered.individualRestaurantIds
+            );
         });
 
         return () => {
@@ -1580,7 +1553,7 @@ const NaverMapView = memo(({
             }
 
             const newClusters = getClusters(clusterIndexRef.current, bboxPlan.bbox, zoom);
-            setClusters(newClusters);
+            setClusters((previous) => areClusterFeaturesEqual(previous, newClusters) ? previous : newClusters);
         };
 
         const map = mapInstanceRef.current;
@@ -2189,6 +2162,9 @@ const NaverMapView = memo(({
             if (wheelPlan.normalizedDirection === 0) {
                 return;
             }
+
+            activateNoncriticalMapEffects();
+
             const { nextZoom, shouldApply } = wheelPlan;
 
             // 3. 적용 (변경이 있을 때만)
@@ -2325,7 +2301,7 @@ const NaverMapView = memo(({
             queuedWheelInput = cleanupState.nextQueuedWheelInput;
             mapElement.removeEventListener('wheel', handleWheel);
         };
-    }, [isMapInitialized]);
+    }, [activateNoncriticalMapEffects, isMapInitialized]);
 
     // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
     // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);
@@ -2368,6 +2344,20 @@ const NaverMapView = memo(({
         });
     }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
+    // 로딩 에러 처리
+    const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects ? (
+        <Suspense fallback={null}>
+            <NaverMapAnnouncementRuntime
+                onAnnouncementToastPayloadChange={setAnnouncementToastPayload}
+                onAnnouncementToastTitleChange={setAnnouncementToastTitle}
+                onShowAnnouncementToastChange={setShowAnnouncementToast}
+            />
+            <NaverMapPresenceRuntime
+                onOnlineUsersCountChange={setOnlineUsersCount}
+                onShowOnlineUsersChange={setShowOnlineUsers}
+            />
+        </Suspense>
+    ) : null;
 
     // 로딩 에러 처리
     if (loadError || mapInitError) {
@@ -2376,13 +2366,14 @@ const NaverMapView = memo(({
 
     // 로딩 중
     if (!isLoaded) {
-        return <MapSkeleton />;
+        return <MapSkeleton message="네이버 지도 화면을 준비하고 있어요" />;
     }
 
     // 그리드 모드에서는 기존 레이아웃 유지
     if (isGridMode) {
         return (
             <div className="relative h-full">
+                {auxiliaryRuntimes}
                 <NaverMapSurface
                     announcementToastTitle={announcementToastTitle}
                     badgePositionClass={floatingBadgePositionClass}
@@ -2407,6 +2398,7 @@ const NaverMapView = memo(({
     // 단일 지도 모드에서는 Flexbox 레이아웃 적용 (고정 너비 패널)
     return (
         <div className="h-full flex relative overflow-hidden">
+            {auxiliaryRuntimes}
             {/* 지도 영역 */}
             <NaverMapSurface
                 announcementToastTitle={announcementToastTitle}
@@ -2428,30 +2420,35 @@ const NaverMapView = memo(({
             />
 
             {/* 레스토랑 상세 패널 - 외부 onMarkerClick이 없을 때만 렌더링 (외부 패널 관리가 아닌 경우에만) */}
-            {detailRestaurant && !onMarkerClick && (
-                <NaverMapDetailPanelShell
-                    activePanel={activePanel}
-                    detailPanelRef={detailPanelRef}
-                    internalPanelOpen={internalPanelOpen}
-                    onClose={handleCloseInternalPanel}
-                    onEditRestaurant={handleEditSelectedRestaurant}
-                    onFocusCapture={handleDetailPanelFocusCapture}
-                    onMouseDownCapture={handleDetailPanelMouseDownCapture}
-                    onRequestEditRestaurant={handleRequestEditSelectedRestaurant}
-                    onToggleCollapse={handleToggleInternalPanel}
-                    onWriteReview={handleOpenReviewModal}
-                    restaurant={detailRestaurant}
-                />
+            {selectedRestaurant && !onMarkerClick && (
+                <Suspense fallback={null}>
+                    <HydratedDetailRestaurant restaurant={selectedRestaurant}>
+                        {(detailRestaurant) => (
+                            <>
+                                <NaverMapDetailPanelShell
+                                    activePanel={activePanel}
+                                    detailPanelRef={detailPanelRef}
+                                    internalPanelOpen={internalPanelOpen}
+                                    onClose={handleCloseInternalPanel}
+                                    onEditRestaurant={handleEditSelectedRestaurant}
+                                    onFocusCapture={handleDetailPanelFocusCapture}
+                                    onMouseDownCapture={handleDetailPanelMouseDownCapture}
+                                    onRequestEditRestaurant={handleRequestEditSelectedRestaurant}
+                                    onToggleCollapse={handleToggleInternalPanel}
+                                    onWriteReview={handleOpenReviewModal}
+                                    restaurant={detailRestaurant}
+                                />
+                                <NaverMapReviewModal
+                                    isOpen={isReviewModalOpen}
+                                    onClose={handleCloseReviewModal}
+                                    restaurant={getNaverMapReviewRestaurant(detailRestaurant)}
+                                    onSuccess={handleReviewSuccess}
+                                />
+                            </>
+                        )}
+                    </HydratedDetailRestaurant>
+                </Suspense>
             )}
-
-
-            {/* 리뷰 작성 모달 */}
-            <NaverMapReviewModal
-                isOpen={isReviewModalOpen}
-                onClose={handleCloseReviewModal}
-                restaurant={getNaverMapReviewRestaurant(detailRestaurant)}
-                onSuccess={handleReviewSuccess}
-            />
         </div>
     );
 });

@@ -11,6 +11,9 @@ import {
     buildNaverMapReviewOpenHandler,
     buildNaverMapReviewSuccessHandler,
     getNaverMapReviewRestaurant,
+    applyNaverImmediateMarkerCenter,
+    resolveNaverMarkerClickImmediateCenterPlan,
+    shouldSkipNaverDeferredCenterAfterImmediateMarkerClick,
     shouldCloseNaverInternalPanelForExternalState,
     shouldCloseNaverInternalPanelOnEscape,
 } from '../lib/naver-map-sidepanel-helpers';
@@ -91,9 +94,11 @@ describe('naver map sidepanel helpers', () => {
         const restaurant = { id: 'r1', name: '식당' } as any;
         const internalCalls: string[] = [];
         const externalCalls: string[] = [];
+        const centerCalls: string[] = [];
         const movedRef = { current: true };
 
         const internalHandler = buildNaverMarkerRestaurantSelectionHandler({
+            centerMarkerImmediately: (value) => centerCalls.push(`center:${value.id}`),
             hasUserMovedMapRef: movedRef,
             onRestaurantSelect: (value) => internalCalls.push(value.id),
             setInternalPanelOpen: (value) => internalCalls.push(`panel:${value}`),
@@ -101,10 +106,13 @@ describe('naver map sidepanel helpers', () => {
         internalHandler(restaurant);
 
         expect(movedRef.current).toBe(false);
+        expect(centerCalls).toEqual(['center:r1']);
         expect(internalCalls).toEqual(['r1', 'panel:true']);
 
         movedRef.current = true;
+        centerCalls.length = 0;
         const externalHandler = buildNaverMarkerRestaurantSelectionHandler({
+            centerMarkerImmediately: (value) => externalCalls.push(`center:${value.id}`),
             hasUserMovedMapRef: movedRef,
             onMarkerClick: (value) => externalCalls.push(value.id),
             onRestaurantSelect: (value) => externalCalls.push(`select:${value.id}`),
@@ -113,7 +121,179 @@ describe('naver map sidepanel helpers', () => {
         externalHandler(restaurant);
 
         expect(movedRef.current).toBe(false);
-        expect(externalCalls).toEqual(['r1']);
+        expect(centerCalls).toEqual([]);
+        expect(externalCalls).toEqual(['center:r1', 'r1']);
+    });
+
+    test('plans immediate marker centering before React panel state catches up', () => {
+        const restaurant = { id: 'r1', lat: 37.5, lng: 127.1 } as any;
+
+        expect(resolveNaverMarkerClickImmediateCenterPlan({
+            currentZoom: 11,
+            isGridMode: false,
+            isMobileOrTablet: false,
+            isPanelCollapsed: false,
+            mapFocusZoom: 15,
+            mobileVerticalOffset: 0,
+            panelWidth: 420,
+            restaurant,
+            usesExternalPanel: true,
+        })).toEqual({
+            skip: false,
+            restaurantId: 'r1',
+            targetLat: 37.5,
+            targetLng: 127.1,
+            targetZoom: 15,
+            targetOffsetX: 210,
+            targetOffsetY: 0,
+        });
+
+        expect(resolveNaverMarkerClickImmediateCenterPlan({
+            currentZoom: 11,
+            isGridMode: true,
+            isMobileOrTablet: false,
+            isPanelCollapsed: false,
+            mapFocusZoom: null,
+            mobileVerticalOffset: 0,
+            panelWidth: 420,
+            restaurant,
+            usesExternalPanel: true,
+        })).toEqual({ skip: true });
+
+        expect(resolveNaverMarkerClickImmediateCenterPlan({
+            currentZoom: 11,
+            isGridMode: false,
+            isMobileOrTablet: true,
+            isPanelCollapsed: false,
+            mapFocusZoom: null,
+            mobileVerticalOffset: 96,
+            panelWidth: 420,
+            restaurant,
+            usesExternalPanel: true,
+        })).toEqual({
+            skip: false,
+            restaurantId: 'r1',
+            targetLat: 37.5,
+            targetLng: 127.1,
+            targetZoom: 11,
+            targetOffsetX: 0,
+            targetOffsetY: 96,
+        });
+    });
+
+    test('applies immediate marker centering through a single map mutation transaction', () => {
+        const calls: string[] = [];
+        const plan = resolveNaverMarkerClickImmediateCenterPlan({
+            currentZoom: 11,
+            isGridMode: false,
+            isMobileOrTablet: false,
+            isPanelCollapsed: false,
+            mapFocusZoom: 15,
+            mobileVerticalOffset: 0,
+            panelWidth: 420,
+            restaurant: { id: 'r1', lat: 37.5, lng: 127.1 } as any,
+            usesExternalPanel: true,
+        });
+
+        const result = applyNaverImmediateMarkerCenter({
+            currentZoom: 11,
+            getAdjustedCenter: (...args) => {
+                calls.push(`adjust:${args.join(',')}`);
+                return { center: true };
+            },
+            map: {
+                setCenter: (center) => calls.push(`center:${JSON.stringify(center)}`),
+                setZoom: (zoom) => calls.push(`zoom:${zoom}`),
+            },
+            now: 123,
+            plan,
+        });
+
+        expect(calls).toEqual([
+            'adjust:37.5,127.1,15,210,0',
+            'zoom:15',
+            'center:{"center":true}',
+        ]);
+        expect(result).toEqual({
+            applied: true,
+            markerCenter: {
+                restaurantId: 'r1',
+                targetLat: 37.5,
+                targetLng: 127.1,
+                targetZoom: 15,
+                targetOffsetX: 210,
+                targetOffsetY: 0,
+                centeredAt: 123,
+            },
+        });
+    });
+
+    test('skips deferred recenter only when immediate marker center already matches target layout', () => {
+        const centeredAt = Date.now();
+
+        expect(shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+            centeredAt,
+            immediateOffsetX: 210,
+            immediateOffsetY: 0,
+            immediateTargetLat: 37.5,
+            immediateTargetLng: 127.1,
+            immediateZoom: 15,
+            restaurantId: 'r1',
+            selectedRestaurantId: 'r1',
+            targetLat: 37.5,
+            targetLng: 127.1,
+            targetOffsetX: 210,
+            targetOffsetY: 0,
+            targetZoom: 15,
+        })).toBe(true);
+
+        expect(shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+            centeredAt,
+            immediateOffsetX: 0,
+            immediateOffsetY: 0,
+            immediateTargetLat: 37.5,
+            immediateTargetLng: 127.1,
+            immediateZoom: 15,
+            restaurantId: 'r1',
+            selectedRestaurantId: 'r1',
+            targetLat: 37.5,
+            targetLng: 127.1,
+            targetOffsetX: 210,
+            targetOffsetY: 0,
+            targetZoom: 15,
+        })).toBe(false);
+
+        expect(shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+            centeredAt: centeredAt - 1200,
+            immediateOffsetX: 210,
+            immediateOffsetY: 0,
+            immediateTargetLat: 37.5,
+            immediateTargetLng: 127.1,
+            immediateZoom: 15,
+            restaurantId: 'r1',
+            selectedRestaurantId: 'r1',
+            targetLat: 37.5,
+            targetLng: 127.1,
+            targetOffsetX: 210,
+            targetOffsetY: 0,
+            targetZoom: 15,
+        })).toBe(false);
+
+        expect(shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+            centeredAt,
+            immediateOffsetX: 210,
+            immediateOffsetY: 0,
+            immediateTargetLat: 37.5,
+            immediateTargetLng: 127.1,
+            immediateZoom: 15,
+            restaurantId: 'r1',
+            selectedRestaurantId: 'r1',
+            targetLat: 37.50001,
+            targetLng: 127.1,
+            targetOffsetX: 210,
+            targetOffsetY: 0,
+            targetZoom: 15,
+        })).toBe(false);
     });
 
     test('decides when external state should close internal panel', () => {

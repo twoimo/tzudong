@@ -110,15 +110,6 @@ export const STORYBOARD_TARGETS = [
     viewports: ['desktop'],
   },
   {
-    id: 'admin-insight',
-    flow: 'insights-admin',
-    route: '/admin/insight',
-    label: 'Admin insight',
-    sourcePaths: ['app/admin/insight/page.tsx', 'app/admin/insight/insight-client.tsx'],
-    fixtureAuthState: 'admin',
-    viewports: ['desktop'],
-  },
-  {
     id: 'admin-evaluations',
     flow: 'insights-admin',
     route: '/admin/evaluations',

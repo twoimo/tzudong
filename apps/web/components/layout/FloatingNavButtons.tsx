@@ -87,7 +87,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
     if (pathname !== '/') return null;
 
     return (
-        <div className={cn("fixed z-[92] flex flex-col items-start gap-2", className)}>
+        <nav className={cn("fixed z-[92] flex flex-col items-start gap-2", className)} aria-label="지도 화면 보조 탐색">
             {/* 국내/해외 토글 - 모바일/태블릿과 동일한 디자인 */}
             <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,22vw,120px)]">
                 <Button
@@ -95,8 +95,9 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                     size="sm"
                     type="button"
                     aria-label="국내 지도 모드로 전환"
+                    aria-pressed={mapMode === 'domestic'}
                     onClick={() => handleModeChange('domestic')}
-                    className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'domestic'
+                    className={`rounded-full min-h-11 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                         }`}
@@ -108,8 +109,9 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                     size="sm"
                     type="button"
                     aria-label="해외 지도 모드로 전환"
+                    aria-pressed={mapMode === 'overseas'}
                     onClick={() => handleModeChange('overseas')}
-                    className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'overseas'
+                    className={`rounded-full min-h-11 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                         }`}
@@ -131,14 +133,14 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                         onClick={() => handlePanelClick(item.id)}
                         className={cn(
                             'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                            'hover:bg-secondary/80 w-[clamp(84px,22vw,120px)] px-2',
+                            'hover:bg-secondary/80 w-[clamp(84px,22vw,120px)] min-h-11 px-2',
                             isActive && 'ring-2 ring-primary bg-primary/10',
                             item.adminOnly && 'border-orange-500/50'
                         )}
                     >
                         <div className="flex items-center w-full gap-1">
                             <div className="flex items-center justify-center w-4 shrink-0">
-                                <item.icon className="h-4 w-4" />
+                                <item.icon className="h-4 w-4" aria-hidden="true" />
                             </div>
                             <div className="flex-1 flex items-center justify-center min-w-0">
                                 <span className="text-sm truncate">{item.label}</span>
@@ -147,7 +149,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                     </Button>
                 );
             })}
-        </div>
+        </nav>
     );
 }
 

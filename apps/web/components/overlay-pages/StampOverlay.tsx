@@ -268,6 +268,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                                 className="h-8 w-8 rounded-full hover:bg-muted"
                                 onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
                                 title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
+                                aria-label={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
                             >
                                 {filters.showUnvisitedOnly ? <EyeOff className="h-5 w-5 text-primary" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
                             </Button>
@@ -278,6 +279,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
                             className="relative"
                             title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
+                            aria-label={isFilterExpanded ? "도장 필터 접기" : "도장 필터 펼치기"}
                         >
                             <Filter className="h-4 w-4" />
                             {activeFilterCount > 0 && (
@@ -287,7 +289,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                             )}
                         </Button>
                         {onClose && (
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full">
+                            <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="도장 패널 닫기">
                                 <X className="h-5 w-5" />
                             </Button>
                         )}

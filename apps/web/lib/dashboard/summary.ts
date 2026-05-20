@@ -6,7 +6,11 @@ import type {
     DashboardVideoSummary,
 } from '@/types/dashboard';
 import { extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
-import { getRestaurantRows, type DashboardRestaurantRow } from '@/lib/dashboard/supabase';
+import {
+    getDashboardRestaurantRowsPage,
+    getRestaurantRows,
+    type DashboardRestaurantRow,
+} from '@/lib/dashboard/supabase';
 
 type RestaurantsFilter = {
     q?: string;
@@ -48,6 +52,63 @@ function sortByUpdatedDesc<T extends { updatedAt: string | null }>(items: T[]): 
         const bMs = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
         return bMs - aMs;
     });
+}
+
+function sortRowsByUpdatedDesc(rows: DashboardRestaurantRow[]): DashboardRestaurantRow[] {
+    return [...rows].sort((a, b) => {
+        const aMs = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const bMs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return bMs - aMs;
+    });
+}
+
+function normalizeRestaurantsFilter(filter: RestaurantsFilter) {
+    const q = filter.q?.trim();
+    return {
+        q,
+        queryText: q?.toLowerCase(),
+        category: filter.category?.trim(),
+        sourceType: filter.sourceType?.trim(),
+        status: filter.status?.trim(),
+        onlyWithCoordinates: filter.onlyWithCoordinates ?? true,
+        limit: Math.min(Math.max(filter.limit ?? 100, 1), 500),
+        offset: Math.max(filter.offset ?? 0, 0),
+    };
+}
+
+function canUseDirectRestaurantPageQuery(filter: ReturnType<typeof normalizeRestaurantsFilter>): boolean {
+    return !filter.queryText && !filter.category && (!filter.status || filter.status === 'approved');
+}
+
+function getSearchableRestaurantName(row: DashboardRestaurantRow): string {
+    return row.name?.trim() || extractVideoIdFromYoutubeLink(row.youtube_link) || '미승인 맛집';
+}
+
+function matchesDashboardRestaurantFilter(row: DashboardRestaurantRow, filter: ReturnType<typeof normalizeRestaurantsFilter>): boolean {
+    if (filter.onlyWithCoordinates && (row.lat == null || row.lng == null)) return false;
+    if (filter.sourceType && row.source_type !== filter.sourceType) return false;
+    if (filter.status && row.status !== filter.status) return false;
+
+    const needsCategory = Boolean(filter.category || filter.queryText);
+    const rowCategory = needsCategory ? toFirstCategory(row.categories) : null;
+    if (filter.category && rowCategory !== filter.category) return false;
+
+    const queryText = filter.queryText;
+    if (queryText) {
+        const videoId = extractVideoIdFromYoutubeLink(row.youtube_link);
+        const haystacks = [
+            getSearchableRestaurantName(row),
+            rowCategory || '',
+            toDisplayAddress(row.road_address, row.jibun_address, row.origin_address) || '',
+            videoId || '',
+        ].map((value) => value.toLowerCase());
+
+        if (!haystacks.some((value) => value.includes(queryText))) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 function makeVideoList(rows: DashboardRestaurantRow[]): DashboardVideoSummary[] {
@@ -163,55 +224,59 @@ export async function getDashboardSummary(forceRefresh = false): Promise<Dashboa
 export async function getDashboardRestaurants(
     filter: RestaurantsFilter,
 ): Promise<DashboardRestaurantsResponse> {
+    const normalizedFilter = normalizeRestaurantsFilter(filter);
+
+    if (normalizedFilter.status && normalizedFilter.status !== 'approved') {
+        return buildDashboardRestaurantsPageFromRows([], 0, normalizedFilter);
+    }
+
+    if (canUseDirectRestaurantPageQuery(normalizedFilter)) {
+        const page = await getDashboardRestaurantRowsPage({
+            limit: normalizedFilter.limit,
+            offset: normalizedFilter.offset,
+            onlyWithCoordinates: normalizedFilter.onlyWithCoordinates,
+            sourceType: normalizedFilter.sourceType,
+        }, 'anon');
+        return buildDashboardRestaurantsPageFromRows(page.rows, page.total, normalizedFilter);
+    }
+
     const rows = await getRestaurantRows(false, 'anon');
-    const q = filter.q?.trim().toLowerCase();
-    const category = filter.category?.trim();
-    const sourceType = filter.sourceType?.trim();
-    const status = filter.status?.trim();
-    const onlyWithCoordinates = filter.onlyWithCoordinates ?? true;
-    const limit = Math.min(Math.max(filter.limit ?? 100, 1), 500);
-    const offset = Math.max(filter.offset ?? 0, 0);
+    return buildDashboardRestaurantsFromRows(rows, filter);
+}
 
-    const normalized = rows.map(normalizeRestaurantItem);
-    const filtered = normalized.filter((item) => {
-        if (category && item.category !== category) return false;
-        if (sourceType && item.sourceType !== sourceType) return false;
-        if (status && item.status !== status) return false;
-        if (onlyWithCoordinates && (item.lat == null || item.lng == null)) return false;
-
-        if (q) {
-            const haystacks = [
-                item.name,
-                item.category || '',
-                item.address || '',
-                item.videoId || '',
-            ].map((value) => value.toLowerCase());
-
-            if (!haystacks.some((value) => value.includes(q))) {
-                return false;
-            }
-        }
-
-        return true;
-    });
-
-    const sorted = sortByUpdatedDesc(filtered);
-    const paged = sorted.slice(offset, offset + limit);
-
+export function buildDashboardRestaurantsPageFromRows(
+    rows: DashboardRestaurantRow[],
+    total: number,
+    normalizedFilter: ReturnType<typeof normalizeRestaurantsFilter>,
+    now: Date = new Date(),
+): DashboardRestaurantsResponse {
     return {
-        asOf: new Date().toISOString(),
-        total: sorted.length,
-        limit,
-        offset,
+        asOf: now.toISOString(),
+        total,
+        limit: normalizedFilter.limit,
+        offset: normalizedFilter.offset,
         filters: {
-            q: filter.q,
-            category: filter.category,
-            sourceType: filter.sourceType,
-            status: filter.status,
-            onlyWithCoordinates,
+            q: normalizedFilter.q,
+            category: normalizedFilter.category,
+            sourceType: normalizedFilter.sourceType,
+            status: normalizedFilter.status,
+            onlyWithCoordinates: normalizedFilter.onlyWithCoordinates,
         },
-        items: paged,
+        items: rows.map(normalizeRestaurantItem),
     };
+}
+
+export function buildDashboardRestaurantsFromRows(
+    rows: DashboardRestaurantRow[],
+    filter: RestaurantsFilter,
+    now: Date = new Date(),
+): DashboardRestaurantsResponse {
+    const normalizedFilter = normalizeRestaurantsFilter(filter);
+    const filteredRows = rows.filter((row) => matchesDashboardRestaurantFilter(row, normalizedFilter));
+    const sortedRows = sortRowsByUpdatedDesc(filteredRows);
+    const paged = sortedRows.slice(normalizedFilter.offset, normalizedFilter.offset + normalizedFilter.limit);
+
+    return buildDashboardRestaurantsPageFromRows(paged, sortedRows.length, normalizedFilter, now);
 }
 
 export async function getDashboardVideoDetail(

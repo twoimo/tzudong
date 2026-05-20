@@ -1,4 +1,4 @@
-// [SSR] 서버 컴포넌트 - SEO 메타데이터와 홈 앱 런타임
+// [SSR] 서버 컴포넌트 - SEO 메타데이터와 홈 지도 런타임
 import type { Metadata } from 'next';
 import { HomeRuntimeShell } from './home-runtime-shell';
 import HomeClient from './home-client';
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     },
 };
 
-// [SSR] 서버 컴포넌트 홈 페이지 - 별도 랜딩 게이트 없이 실제 지도 홈 UI를 바로 렌더합니다.
+// [SSR] 서버 컴포넌트 홈 페이지 - / 진입 즉시 실제 홈 지도 런타임을 시작합니다.
 export default function HomePage() {
     return (
         <HomeRuntimeShell>

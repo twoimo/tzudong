@@ -1,4 +1,4 @@
-export const HOME_MAP_AUTO_ACTIVATION_DELAY_MS = 8000;
+export const HOME_MAP_AUTO_ACTIVATION_DELAY_MS = 0;
 
 export const HOME_MAP_ACTIVATION_EVENTS = [
     'pointerdown',
@@ -12,6 +12,7 @@ type HomeMapActivationEvent = typeof HOME_MAP_ACTIVATION_EVENTS[number];
 type HomeMapActivationInput = {
     search: string;
     hash?: string;
+    isEmbeddedHomeRuntime?: boolean;
 };
 
 type HomeMapActivationPlan = {
@@ -21,8 +22,6 @@ type HomeMapActivationPlan = {
 };
 
 const IMMEDIATE_SEARCH_PARAMS = new Set([
-    'r',
-    'restaurant',
     'panel',
     'announcementId',
     'reviewId',
@@ -44,10 +43,20 @@ export function shouldActivateHomeMapImmediately({ search, hash = '' }: HomeMapA
     return IMMEDIATE_HASHES.has(hash);
 }
 
-export function buildHomeMapActivationPlan(input: HomeMapActivationInput): HomeMapActivationPlan {
+export function isEmbeddedHomeRuntimeWindow() {
+    if (typeof window === 'undefined') return false;
+
+    try {
+        return window.self !== window.top;
+    } catch (_) {
+        return true;
+    }
+}
+
+export function buildHomeMapActivationPlan(_input: HomeMapActivationInput): HomeMapActivationPlan {
     return {
-        activateImmediately: shouldActivateHomeMapImmediately(input),
+        activateImmediately: true,
         delayMs: HOME_MAP_AUTO_ACTIVATION_DELAY_MS,
-        events: HOME_MAP_ACTIVATION_EVENTS,
+        events: [],
     };
 }

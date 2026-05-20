@@ -6,7 +6,6 @@ export const PRIMARY_STATUS_FILTER_OPTIONS = [
   { value: 'ready_for_approval', label: '승인 대기' },
   { value: 'missing', label: 'Missing' },
   { value: 'not_selected', label: '평가 미대상' },
-  { value: 'geocoding_failed', label: '지오코딩 실패' },
 ] as const;
 
 const PRIMARY_STATUS_FILTER_OPTION_VALUES = new Set<string>(

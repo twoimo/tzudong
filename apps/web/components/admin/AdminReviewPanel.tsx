@@ -7,6 +7,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { createUserNotification } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,6 +90,8 @@ interface Review {
     } | null;
 }
 
+const ADMIN_REVIEW_DELETE_CONFIRMATION = '리뷰삭제';
+
 interface AdminReviewPanelProps {
     isOpen: boolean;
     onClose: () => void;
@@ -103,6 +106,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
     const [adminNote, setAdminNote] = useState("");
+    const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+    const [deleteReviewConfirmation, setDeleteReviewConfirmation] = useState('');
 
     const {
         data: reviewsPages,
@@ -374,6 +379,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
         },
         onSuccess: () => {
             toast.success('리뷰가 삭제되었습니다');
+            setReviewToDelete(null);
+            setDeleteReviewConfirmation('');
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
         },
         onError: (error: Error) => {
@@ -398,10 +405,19 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
         }
     };
 
-    const handleDelete = (reviewId: string) => {
-        if (confirm('정말로 이 리뷰를 삭제하시겠습니까?')) {
-            deleteMutation.mutate(reviewId);
+    const handleDelete = (review: Review) => {
+        if (reviewToDelete?.id !== review.id) {
+            setReviewToDelete(review);
+            setDeleteReviewConfirmation('');
+            return;
         }
+
+        if (deleteReviewConfirmation !== ADMIN_REVIEW_DELETE_CONFIRMATION) {
+            toast.error(`"${ADMIN_REVIEW_DELETE_CONFIRMATION}"를 입력한 뒤 삭제를 적용하세요.`);
+            return;
+        }
+
+        deleteMutation.mutate(review.id);
     };
 
     const getStatusBadge = (isVerified: boolean) => {
@@ -483,6 +499,50 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
 
             {/* 대기 중인 리뷰 목록 */}
             <div className="flex-1 overflow-auto p-3 space-y-2">
+                {reviewToDelete && (
+                    <section
+                        role="region"
+                        aria-label="관리자 리뷰 삭제 확인"
+                        className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-sm"
+                    >
+                        <p className="font-semibold text-foreground">리뷰 삭제 확인</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            모바일과 데스크톱 모두 같은 인라인 확인 흐름으로 처리합니다. 아래 문구를 입력한 뒤 적용하세요.
+                        </p>
+                        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                            <Input
+                                aria-label="관리자 리뷰 삭제 확인 문구"
+                                value={deleteReviewConfirmation}
+                                onChange={(event) => setDeleteReviewConfirmation(event.target.value)}
+                                placeholder={`${ADMIN_REVIEW_DELETE_CONFIRMATION} 입력`}
+                                className="h-9"
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-9"
+                                onClick={() => {
+                                    setReviewToDelete(null);
+                                    setDeleteReviewConfirmation('');
+                                }}
+                                disabled={deleteMutation.isPending}
+                            >
+                                취소
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="h-9"
+                                onClick={() => handleDelete(reviewToDelete)}
+                                disabled={deleteMutation.isPending || deleteReviewConfirmation !== ADMIN_REVIEW_DELETE_CONFIRMATION}
+                            >
+                                삭제 적용
+                            </Button>
+                        </div>
+                    </section>
+                )}
                 {isLoading ? (
                     <div className="space-y-2">
                         {[1, 2, 3].map(i => (
@@ -505,7 +565,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                                 review={review}
                                 onApprove={() => handleReviewAction('approve', review)}
                                 onReject={() => handleReviewAction('reject', review)}
-                                onDelete={() => handleDelete(review.id)}
+                                onDelete={() => handleDelete(review)}
                             />
                         ))}
                         {isFetchingNextPage && (

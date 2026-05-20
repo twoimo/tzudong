@@ -1,11 +1,51 @@
 import type { Config } from "tailwindcss";
 
+const ADMIN_EVALUATION_RESPONSIVE_DISPLAY_CLASSES = [
+  // Admin evaluation table desktop mode depends on these display overrides.
+  // Keep them safelisted so stale/incomplete dev CSS generation cannot leave
+  // `hidden lg:block` / `hidden lg:table-cell` elements permanently hidden.
+  "lg:block",
+  "lg:flex",
+  "lg:hidden",
+  "lg:inline-flex",
+  "lg:table-cell",
+] as const;
+
+const ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES = [
+  // The unified admin console is desktop-shell heavy. Safelist the shell
+  // utilities that make the sidebar collapsible and keep icon-only mode
+  // centered even when dev CSS is regenerated incrementally.
+  "lg:border-r",
+  "lg:border-y-0",
+  "lg:grid",
+  "lg:gap-0",
+  "lg:h-11",
+  "lg:h-[calc(100dvh-var(--app-header-height,56px))]",
+  "lg:inline-flex",
+  "lg:m-0",
+  "lg:min-h-11",
+  "lg:overflow-y-auto",
+  "lg:px-0",
+  "lg:px-1.5",
+  "lg:place-items-center",
+  "lg:sticky",
+  "lg:top-0",
+  "lg:w-0",
+  "lg:w-11",
+  "lg:w-14",
+  "lg:w-60",
+] as const;
+
 const config: Config = {
   darkMode: "class",
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  safelist: [
+    ...ADMIN_EVALUATION_RESPONSIVE_DISPLAY_CLASSES,
+    ...ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES,
   ],
   theme: {
     extend: {

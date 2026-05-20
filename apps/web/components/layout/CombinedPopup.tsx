@@ -386,7 +386,7 @@ const CombinedPopupComponent = () => {
 
     return (
         <div
-            data-popup-overlay
+            data-popup-overlay="true"
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 animate-in fade-in duration-300"
         >
             <div
