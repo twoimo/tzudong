@@ -363,7 +363,12 @@ describe('web quality performance source contracts', () => {
         expect(source('components/home/MobileControlOverlay.tsx')).toContain('fetchSupabaseRows');
         expect(source('components/home/MobileControlOverlay.tsx')).not.toContain("import { supabase } from '@/integrations/supabase/client'");
         expect(mapOverlayNoticeSource).toContain('max-w-[calc(100vw-2rem)]');
+        expect(mapOverlayNoticeSource).toContain('w-[calc(100vw-2rem)]');
+        expect(mapOverlayNoticeSource).toContain('sm:w-fit');
         expect(mapOverlayNoticeSource).toContain('grid-cols-[1.25rem_minmax(0,1fr)]');
+        expect(mapOverlayNoticeSource).toContain('whitespace-normal');
+        expect(mapOverlayNoticeSource).toContain('[overflow-wrap:anywhere]');
+        expect(mapOverlayNoticeSource).not.toContain('truncate break-keep');
         expect(mapOverlayNoticeSource).toContain('aria-live={ariaLive}');
         expect(mapOverlayNoticeSource).toContain('aria-busy={ariaBusy}');
         expect(mapOverlayNoticeSource).toContain('aria-hidden="true">');
