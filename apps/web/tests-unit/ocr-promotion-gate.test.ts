@@ -8,7 +8,7 @@ import { assertReceiptOcrProductionPromotionAllowed, evaluateReceiptOcrProductio
 describe('receipt OCR production promotion gate', () => {
   test('blocks production prompt/preprocess promotion while validated fixture coverage is insufficient', () => {
     const baseline = summarizeReceiptOcrEvaluations([
-      { fixtureId: 'kakaotalk-20260425-231206797', provider: 'gemini', model: 'gemini-3-flash-preview', latencyMs: 1500, raw: gold, normalized: gold, gold },
+      { fixtureId: 'kakaotalk-20260425-231206797', provider: 'gemini', model: 'gemini-3.5-flash', latencyMs: 1500, raw: gold, normalized: gold, gold },
     ]);
     const candidate = { ...baseline, overallAvg: baseline.overallAvg + 3 };
 

@@ -43,7 +43,7 @@ export function getCurrentReceiptOcrProductionPromotionGate() {
     {
       fixtureId: CURRENT_OCR_GOLD_FIXTURE_ID,
       provider: 'gemini',
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.5-flash',
       latencyMs: 1500,
       raw: CURRENT_OCR_GOLD_LABEL,
       normalized: CURRENT_OCR_GOLD_LABEL,
