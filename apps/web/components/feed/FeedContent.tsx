@@ -655,7 +655,7 @@ export default function FeedContent({
                                             likeCount: likeCount,
                                             isLikedByUser: isLiked,
                                         }}
-                                        onLike={(reviewId) => toggleLike(reviewId, isLiked, likeCount, review.userId)}
+                                        onLike={(reviewId, currentIsLiked, currentCount) => toggleLike(reviewId, currentIsLiked, currentCount, review.userId)}
                                         onRestaurantClick={() => goToRestaurant(review.restaurantId, review.restaurant)}
                                         currentUserId={user?.id}
                                         onEditReview={setEditingReview}
