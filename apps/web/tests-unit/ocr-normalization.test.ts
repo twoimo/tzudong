@@ -37,8 +37,8 @@ describe('receipt OCR normalization', () => {
   test('applies only high-trust restaurant canonical corrections', () => {
     const envelope = buildReceiptOcrEnvelope({
       provider: 'gemini',
-      model: 'gemini-3-flash-preview',
-      attempts: [{ model: 'gemini-3-flash-preview', ok: true, elapsedMs: 1 }],
+      model: 'gemini-3.5-flash',
+      attempts: [{ model: 'gemini-3.5-flash', ok: true, elapsedMs: 1 }],
       data: { store_name: '천안초밥 시시린', date: '2025-12-15', time: '12:09', total_amount: 48000 },
       matchedRestaurantCandidates: [{
         id: 'restaurant-1',
