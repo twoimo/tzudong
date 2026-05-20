@@ -23,16 +23,20 @@ import { cn } from '@/lib/utils';
 interface MobileBookmarkMenuButtonProps {
     user: User;
     defaultOpen?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export default function MobileBookmarkMenuButton({ user, defaultOpen = false }: MobileBookmarkMenuButtonProps) {
+export default function MobileBookmarkMenuButton({ user, defaultOpen = false, open, onOpenChange }: MobileBookmarkMenuButtonProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const [isOpen, setIsOpen] = useState(defaultOpen);
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+    const isOpen = open ?? uncontrolledOpen;
+    const handleOpenChange = onOpenChange ?? setUncontrolledOpen;
     const { data: bookmarksData = [], isLoading: isBookmarksLoading, isError: isBookmarksError } = useBookmarks({ enabled: isOpen });
 
     return (
-        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
@@ -48,15 +52,15 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false }: 
                         <Badge
                             variant="secondary"
                             aria-hidden="true"
-                            className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full bg-primary px-1 text-[10px] font-bold tabular-nums text-primary-foreground"
+                            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground"
                         >
                             {bookmarksData.length > 99 ? '99+' : bookmarksData.length}
                         </Badge>
                     )}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">
-                <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
+            <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[110]">
+                <DropdownMenuLabel className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2.5 text-foreground">
                     <div className="min-w-0">
                         <span className="block font-semibold">북마크</span>
                         <span className="block text-xs font-normal text-muted-foreground">저장한 맛집 {isBookmarksLoading ? '확인 중' : `${bookmarksData.length}개`}</span>
@@ -67,15 +71,15 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false }: 
                         type="button"
                         aria-label="북마크 전체보기 페이지로 이동"
                         onClick={() => router.push('/mypage/bookmarks')}
-                        className="h-8 shrink-0 rounded-lg px-2 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                        className="h-8 shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                     >
                         전체보기
                     </Button>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-border" />
-                <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
+                <DropdownMenuSeparator className="my-2 bg-border" />
+                <ScrollArea className="h-72 max-h-[min(70vh,28rem)] pr-1">
                     {isBookmarksLoading ? (
-                        <div role="status" aria-label="북마크 목록 로딩 중" className="space-y-3 p-3">
+                        <div role="status" aria-label="북마크 목록 로딩 중" className="space-y-3 rounded-xl bg-background/70 p-3">
                             {[0, 1, 2].map((item) => (
                                 <div key={item} className="space-y-2">
                                     <Skeleton className="h-4 w-3/4 rounded" />
@@ -84,17 +88,17 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false }: 
                             ))}
                         </div>
                     ) : isBookmarksError ? (
-                        <div role="status" className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                        <div role="status" className="grid min-h-40 place-items-center rounded-xl bg-background/70 p-4 text-center text-sm text-muted-foreground">
                             <div>
-                                <Bookmark className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                                <Bookmark className="mx-auto mb-2 h-9 w-9 rounded-full bg-primary/10 p-2 text-primary/70" aria-hidden="true" />
                                 <p className="font-medium text-foreground">북마크를 불러오지 못했습니다</p>
                                 <p className="mt-1 text-xs leading-5">잠시 후 다시 열어 주세요.</p>
                             </div>
                         </div>
                     ) : bookmarksData.length === 0 ? (
-                        <div className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                        <div className="grid min-h-40 place-items-center rounded-xl bg-background/70 p-4 text-center text-sm text-muted-foreground">
                             <div>
-                                <Bookmark className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                                <Bookmark className="mx-auto mb-2 h-9 w-9 rounded-full bg-primary/10 p-2 text-primary/70" aria-hidden="true" />
                                 <p className="font-medium text-foreground">북마크한 맛집이 없습니다</p>
                                 <p className="mt-1 text-xs leading-5">맛집 상세에서 북마크를 누르면 여기에 모입니다.</p>
                             </div>
@@ -105,7 +109,7 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false }: 
                                 <DropdownMenuItem
                                     key={bookmark.id}
                                     aria-label={`${bookmark.restaurant.name} 북마크 열기`}
-                                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-accent focus:bg-accent w-full max-w-full touch-manipulation"
+                                    className="flex w-full max-w-full cursor-pointer items-center gap-3 rounded-xl p-2.5 touch-manipulation hover:bg-accent focus:bg-accent"
                                     onClick={() => {
                                         const restaurant = bookmark.restaurant;
                                         const isOverseas = restaurant.lat && restaurant.lng && (
@@ -127,7 +131,7 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false }: 
                                         router.push(`/?r=${bookmark.restaurant.id}${modeParam}&z=13`);
                                     }}
                                 >
-                                    <MapPin className="h-4 w-4 shrink-0 text-primary/70" aria-hidden="true" />
+                                    <MapPin className="h-8 w-8 shrink-0 rounded-full bg-primary/10 p-2 text-primary" aria-hidden="true" />
                                     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                                         <div className="flex items-center justify-between gap-2 w-full">
                                             <span className="text-sm font-medium text-foreground truncate block">

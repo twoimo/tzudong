@@ -165,6 +165,9 @@ describe('mobile and desktop parity source contracts', () => {
     expect(navigationRoutesSource).toContain("'/admin/banners'");
     expect(mobileBottomNavSource).toContain("path: '/'");
     expect(mobileBottomNavSource).toContain("path: '/stamp'");
+    expect(mobileBottomNavSource).toContain("'font-serif'");
+    expect(mobileBottomNavSource).toContain("'text-[12px] font-medium leading-none tracking-tight'");
+    expect(mobileBottomNavSource).toContain("'text-foreground/65 active:text-foreground'");
   });
 
   test('home map controls keep mobile touch targets and desktop map landmarks accessible', () => {

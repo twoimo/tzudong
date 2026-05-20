@@ -243,7 +243,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     }, [onClose, router, onRestaurantClick]);
 
     // [핸들러] 리뷰 좋아요 토글
-    const handleLike = useCallback(async (reviewId: string) => {
+    const handleLike = useCallback(async (reviewId: string, currentIsLikedOverride?: boolean) => {
         if (!user) {
             toast({
                 title: '로그인 필요',
@@ -257,7 +257,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
         const targetReview = reviews.find(r => r.id === reviewId);
         if (!targetReview) throw new Error('REVIEW_NOT_FOUND');
 
-        const currentIsLiked = targetReview.isLikedByUser;
+        const currentIsLiked = currentIsLikedOverride ?? targetReview.isLikedByUser;
 
         try {
             if (currentIsLiked) {
