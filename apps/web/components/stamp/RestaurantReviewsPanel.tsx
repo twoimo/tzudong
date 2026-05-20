@@ -142,7 +142,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                                     visitedAt: review.visitedAt,
                                     submittedAt: review.submittedAt,
                                 }}
-                                onLike={(reviewId) => onToggleLike(reviewId, review.isLikedByUser)}
+                                onLike={(reviewId, currentIsLiked) => onToggleLike(reviewId, currentIsLiked)}
                                 onClick={() => onReviewClick(review)}
                                 onRestaurantClick={() => { }}
                                 currentUserId={currentUserId}

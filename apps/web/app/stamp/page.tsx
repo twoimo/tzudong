@@ -1088,6 +1088,7 @@ export default function StampPage() {
                                                     onThumbnailChange={handleGuideThumbnailChange}
                                                     onClick={() => {}}
                                                     size={isDesktop ? "compact" : "default"}
+                                                    stampSize={isDesktop ? "compact" : "mobile"}
                                                     guideLabel="가이드"
                                                     isGuideCard={true}
                                                     guideTitle={STAMP_GUIDE_DEMO_RESTAURANT.name}
@@ -1109,6 +1110,7 @@ export default function StampPage() {
                                                 onThumbnailChange={handleCardThumbnailChange}
                                                 onClick={handleRestaurantClick}
                                                 size={isDesktop ? "compact" : "default"}
+                                                stampSize={isDesktop ? "compact" : "mobile"}
                                             />
                                         );
                                     })}
