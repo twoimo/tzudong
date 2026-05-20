@@ -88,6 +88,8 @@ type RestaurantSearchComponentProps = {
 type MobileBookmarkMenuButtonProps = {
     user: User;
     defaultOpen?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 };
 
 const loadMobileBookmarkMenuButton = async () => {
@@ -98,6 +100,8 @@ const loadMobileBookmarkMenuButton = async () => {
 type MobileNotificationMenuButtonProps = {
     user: User;
     defaultOpen?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 };
 
 const loadMobileNotificationMenuButton = async () => {
@@ -113,6 +117,8 @@ const mobileTopIconButtonClass = cn(
 const mobileTopIconButtonWithBadgeClass = cn(mobileTopIconButtonClass, 'relative');
 const mobileTopIconGlyphClass = 'h-[18px] w-[18px]';
 const mobileTopUserIconGlyphClass = 'h-5 w-5';
+const mobileUserMenuContentClass = 'w-max max-w-[calc(100vw-1rem)] bg-card border-border font-serif z-[110]';
+const mobileUserMenuItemClass = 'text-foreground hover:bg-accent py-1.5 whitespace-nowrap';
 
 const loadRestaurantSearch = async () => {
     const mod = await import('@/components/search/RestaurantSearch');
@@ -161,6 +167,7 @@ interface MobileControlOverlayProps {
 }
 
 type ActiveSheet = 'none' | 'region' | 'category' | 'search';
+type MobileTopDropdown = 'bookmark' | 'notification' | 'user' | null;
 type InertableHTMLElement = HTMLElement & { inert: boolean };
 
 type HiddenSearchLayerSiblingState = {
@@ -228,10 +235,20 @@ function MobileControlOverlayComponent({
     const [searchViewportHeight, setSearchViewportHeight] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
-    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [openTopDropdown, setOpenTopDropdown] = useState<MobileTopDropdown>(() => {
+        if (initialIntent === 'bookmark' || initialIntent === 'notification' || initialIntent === 'user') {
+            return initialIntent;
+        }
+
+        return null;
+    });
     const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
-    const shouldOpenBookmarkOnMount = initialIntent === 'bookmark';
-    const shouldOpenNotificationOnMount = initialIntent === 'notification';
+    const isBookmarkMenuOpen = openTopDropdown === 'bookmark';
+    const isNotificationMenuOpen = openTopDropdown === 'notification';
+    const isUserMenuOpen = openTopDropdown === 'user';
+    const handleBookmarkMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'bookmark' : null), []);
+    const handleNotificationMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'notification' : null), []);
+    const handleUserMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'user' : null), []);
     const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
         Boolean(user),
         loadMobileBookmarkMenuButton
@@ -543,17 +560,23 @@ function MobileControlOverlayComponent({
             return;
         }
 
+        if (initialIntent === 'bookmark' || initialIntent === 'notification') {
+            setOpenTopDropdown(initialIntent);
+            return;
+        }
+
         if (initialIntent === 'user') {
             if (user) {
-                setIsUserMenuOpen(true);
+                setOpenTopDropdown('user');
             } else {
+                setOpenTopDropdown(null);
                 onTopShellUserIconClick?.();
             }
         }
     }, [initialIntent, onTopShellUserIconClick, user]);
 
     const closeUserMenu = useCallback(() => {
-        setIsUserMenuOpen(false);
+        setOpenTopDropdown(null);
     }, []);
 
     const dispatchWindowEvent = useCallback((eventName: string) => {
@@ -585,7 +608,7 @@ function MobileControlOverlayComponent({
     }, [closeUserMenu, router, signOut]);
 
     const renderAnonymousBookmarkMenuButton = () => (
-        <DropdownMenu defaultOpen={shouldOpenBookmarkOnMount}>
+        <DropdownMenu open={isBookmarkMenuOpen} onOpenChange={handleBookmarkMenuOpenChange}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
@@ -633,11 +656,11 @@ function MobileControlOverlayComponent({
     const renderBookmarkMenuButton = () => {
         if (!user || !DeferredMobileBookmarkMenuButton) return renderAnonymousBookmarkMenuButton();
 
-        return <DeferredMobileBookmarkMenuButton user={user} defaultOpen={shouldOpenBookmarkOnMount} />;
+        return <DeferredMobileBookmarkMenuButton user={user} open={isBookmarkMenuOpen} onOpenChange={handleBookmarkMenuOpenChange} />;
     };
 
     const renderAnonymousNotificationMenuButton = () => (
-        <DropdownMenu defaultOpen={shouldOpenNotificationOnMount}>
+        <DropdownMenu open={isNotificationMenuOpen} onOpenChange={handleNotificationMenuOpenChange}>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
@@ -672,7 +695,7 @@ function MobileControlOverlayComponent({
     const renderNotificationMenuButton = () => {
         if (!user || !DeferredMobileNotificationMenuButton) return renderAnonymousNotificationMenuButton();
 
-        return <DeferredMobileNotificationMenuButton user={user} defaultOpen={shouldOpenNotificationOnMount} />;
+        return <DeferredMobileNotificationMenuButton user={user} open={isNotificationMenuOpen} onOpenChange={handleNotificationMenuOpenChange} />;
     };
     const renderUserMenuButton = () => {
         if (!user) {
@@ -682,6 +705,7 @@ function MobileControlOverlayComponent({
                     size="icon"
                     onClick={(event) => {
                         event.stopPropagation();
+                        setOpenTopDropdown(null);
                         onTopShellUserIconClick?.();
                     }}
                     className={mobileTopIconButtonClass}
@@ -693,7 +717,7 @@ function MobileControlOverlayComponent({
         }
 
         return (
-            <DropdownMenu open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
+            <DropdownMenu open={isUserMenuOpen} onOpenChange={handleUserMenuOpenChange}>
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
@@ -704,13 +728,13 @@ function MobileControlOverlayComponent({
                         <UserIcon className={mobileTopUserIconGlyphClass} aria-hidden="true" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-card border-border font-serif w-44 z-[110]">
-                    <DropdownMenuItem onClick={() => dispatchWindowEvent('openMyPage')} className="text-foreground hover:bg-accent py-1.5">
+                <DropdownMenuContent align="end" className={mobileUserMenuContentClass}>
+                    <DropdownMenuItem onClick={() => dispatchWindowEvent('openMyPage')} className={mobileUserMenuItemClass}>
                         <UserIcon className="mr-2 h-4 w-4" />
                         마이페이지
                     </DropdownMenuItem>
                     {!isAdmin && (
-                        <DropdownMenuItem onClick={handleInsightMenuClick} className="text-foreground hover:bg-accent py-1.5">
+                        <DropdownMenuItem onClick={handleInsightMenuClick} className={mobileUserMenuItemClass}>
                             <BarChart2 className="mr-2 h-4 w-4" />
                             인사이트
                         </DropdownMenuItem>
@@ -718,14 +742,14 @@ function MobileControlOverlayComponent({
                     {isAdmin && (
                         <>
                             <DropdownMenuSeparator className="bg-border my-1" />
-                            <DropdownMenuItem onClick={handleAdminConsoleClick} className="text-foreground hover:bg-accent py-1.5">
+                            <DropdownMenuItem onClick={handleAdminConsoleClick} className={mobileUserMenuItemClass}>
                                 <PanelLeft className="mr-2 h-4 w-4" />
                                 관리자 콘솔
                             </DropdownMenuItem>
                         </>
                     )}
                     <DropdownMenuSeparator className="bg-border my-1" />
-                    <DropdownMenuItem onClick={handleLogoutClick} className="text-foreground hover:bg-accent py-1.5">
+                    <DropdownMenuItem onClick={handleLogoutClick} className={mobileUserMenuItemClass}>
                         <LogOut className="mr-2 h-4 w-4" />
                         로그아웃
                     </DropdownMenuItem>
@@ -735,7 +759,7 @@ function MobileControlOverlayComponent({
                             type="button"
                             aria-label="사업자 정보 펼치기/접기"
                             onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
-                            className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
+                            className="flex w-max max-w-full items-center justify-between whitespace-nowrap hover:bg-accent rounded px-1 py-0.5 transition-colors"
                         >
                             <span className="text-[10px] text-muted-foreground">v2.0.0 © 타이니번</span>
                             {isBusinessInfoExpanded ? (
@@ -745,7 +769,7 @@ function MobileControlOverlayComponent({
                             )}
                         </button>
                         {isBusinessInfoExpanded && (
-                            <div className="mt-1 pt-1 border-t border-border text-[9px] text-muted-foreground space-y-0.5 px-1">
+                            <div className="mt-1 w-max max-w-[calc(100vw-2rem)] border-t border-border pt-1 text-[9px] text-muted-foreground space-y-0.5 px-1">
                                 <p className="font-medium text-foreground">타이니번 데이터랩</p>
                                 <p>대표: 최연우</p>
                                 <p>사업자: 601-09-04613</p>
