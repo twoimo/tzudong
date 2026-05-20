@@ -48,6 +48,8 @@ export interface ReviewCardProps {
 
 import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
 
+const LIKED_HEART_COLOR = '#ef4444';
+
 export const ReviewCard = React.memo(function ReviewCard({
     review,
     onLike,
@@ -357,7 +359,9 @@ export const ReviewCard = React.memo(function ReviewCard({
                         data-liked={optimisticLike.isLiked}
                     >
                         <Heart
-                            fill={optimisticLike.isLiked ? "currentColor" : "none"}
+                            color={optimisticLike.isLiked ? LIKED_HEART_COLOR : undefined}
+                            fill={optimisticLike.isLiked ? LIKED_HEART_COLOR : "none"}
+                            stroke={optimisticLike.isLiked ? LIKED_HEART_COLOR : "currentColor"}
                             className={cn(
                                 "h-5 w-5 transition-all group-active:fill-red-500 group-active:text-red-500 group-active:[&_path]:fill-red-500 group-active:[&_path]:stroke-red-500",
                                 optimisticLike.isLiked
