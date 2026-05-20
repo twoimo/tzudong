@@ -3,7 +3,7 @@ create table if not exists public.ocr_logs (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) on delete cascade not null,
   image_hash text not null,
-  model_used text default 'gemini-3-flash-preview',
+  model_used text default 'gemini-3.5-flash',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   success boolean default true,
   metadata jsonb
