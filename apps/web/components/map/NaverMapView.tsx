@@ -29,10 +29,12 @@ import {
 import type Supercluster from 'supercluster';
 import {
     createClusterIndex,
+    expandCluster,
     restaurantsToGeoJSON,
     getClusters,
     getClusterCategories,
     isCluster,
+    getClusterIndexMaxZoom,
     getClusterMaxZoom,
     getRegionalClusters,
     type ClusterProperties,
@@ -435,11 +437,13 @@ const NaverMapView = memo(({
 
     // [Cluster] Supercluster 인덱스 및 클러스터 상태
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
+    const [clusterIndexVersion, setClusterIndexVersion] = useState(0);
     const [clusters, setClusters] = useState<Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>>([]);
     const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
     const [seoulDistrictClusters, setSeoulDistrictClusters] = useState<SeoulDistrictCluster[]>([]); // 줄 9-10: 서울 자치구 25개 모두
     const [seoulDistrictClustersFiltered, setSeoulDistrictClustersFiltered] = useState<SeoulDistrictCluster[]>([]); // 줄 11-12: 마커 3개 이상만
     const [seoulIndividualIds, setSeoulIndividualIds] = useState<string[]>([]); // 줄 11-12: 마커 2개 이하
+    const [expandedClusterRestaurantIds, setExpandedClusterRestaurantIds] = useState<string[]>([]);
     const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
     const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
     const [isSeoulDistrictMode, setIsSeoulDistrictMode] = useState(false); // 서울 자치구 모드
@@ -1030,9 +1034,9 @@ const NaverMapView = memo(({
         [centerMarkerSelectionImmediately, onMarkerClick, onRestaurantSelect]
     );
 
-    // [Helper] 패널 오프셋을 고려한 morph (클러스터 클릭 시 사용)
+    // [Helper] 패널 오프셋을 고려한 즉시 이동 (클러스터 클릭 시 사용)
     // 우측 패널이 열려있을 때 클러스터 중심이 "보이는 영역"의 중앙에 위치하도록 조정
-    const morphWithPanelOffset = useCallback((
+    const jumpWithPanelOffset = useCallback((
         targetLat: number,
         targetLng: number,
         targetZoom: number
@@ -1048,7 +1052,8 @@ const NaverMapView = memo(({
             targetZoom,
             getViewportOffset() / 2
         );
-        map.morph(adjustedCenter, targetZoom);
+        map.setZoom(targetZoom, false);
+        map.setCenter(adjustedCenter);
     }, [getViewportOffset]);
 
     // [통합] 지도 중심 및 줌 조정 로직
@@ -1520,6 +1525,20 @@ const NaverMapView = memo(({
         displayRestaurantIds,
         displayRestaurants,
     }), [activeSearchedRestaurant, displayRestaurants, displayRestaurantIds]);
+    const filterSignature = useMemo(
+        () => [
+            ...filters.categories,
+            filters.minRating,
+            filters.minReviews,
+            filters.minUserVisits,
+            filters.minJjyangVisits,
+        ].join('|'),
+        [filters.categories, filters.minJjyangVisits, filters.minRating, filters.minReviews, filters.minUserVisits],
+    );
+
+    useEffect(() => {
+        setExpandedClusterRestaurantIds([]);
+    }, [filterSignature, selectedRegion]);
 
     useEffect(() => {
         const resetPlan = resolveReleasedSearchSelectionResetPlan({
@@ -1539,6 +1558,7 @@ const NaverMapView = memo(({
 
                 setClusters((previous) => previous.length === 0 ? previous : []);
                 clusterIndexRef.current = null;
+                setClusterIndexVersion((version) => version + 1);
             }
             return;
         }
@@ -1579,6 +1599,7 @@ const NaverMapView = memo(({
             index.load(geoJsonPoints);
             if (cancelled) return;
             clusterIndexRef.current = index;
+            setClusterIndexVersion((version) => version + 1);
 
             // 초기 클러스터 계산
             const map = mapInstanceRef.current;
@@ -1675,7 +1696,7 @@ const NaverMapView = memo(({
         return () => {
             maps.Event.removeListener(idleListener);
         };
-    }, [displayRestaurants, isMapInitialized, mapOptimization.idleDebounceMs]);
+    }, [clusterIndexVersion, displayRestaurants, isMapInitialized, mapOptimization.idleDebounceMs]);
 
 
 
@@ -1695,6 +1716,7 @@ const NaverMapView = memo(({
         perfMonitor.startMeasure('RenderMarkers');
 
         const effectiveMaxZoom = getClusterMaxZoom(selectedRegion);
+        const clusterIndexMaxZoom = getClusterIndexMaxZoom(selectedRegion);
         const {
             shouldCluster,
             shouldUseRegionalCluster,
@@ -1723,8 +1745,19 @@ const NaverMapView = memo(({
             extendedBounds,
             VIEWPORT_FILTER_ENABLED,
         );
+        const visibleRestaurantIds = new Set(visibleRestaurants.map((restaurant) => restaurant.id));
+        const restaurantsForMarkerRender = [...visibleRestaurants];
+        expandedClusterRestaurantIds.forEach((restaurantId) => {
+            if (visibleRestaurantIds.has(restaurantId)) return;
+
+            const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
+            if (!restaurant?.lat || !restaurant?.lng) return;
+
+            visibleRestaurantIds.add(restaurantId);
+            restaurantsForMarkerRender.push(restaurant);
+        });
         const swipeCandidates = buildPostSearchSwipeCandidates({
-            visibleRestaurants,
+            visibleRestaurants: restaurantsForMarkerRender,
             allRestaurants: restaurantsForSwipe,
             activeSearchedRestaurant,
         });
@@ -1744,6 +1777,9 @@ const NaverMapView = memo(({
             restaurantById,
             seoulClustersToRender,
             seoulIndividualIds: shouldUseSeoulDistrictFiltered ? seoulIndividualIds : [],
+        });
+        expandedClusterRestaurantIds.forEach((restaurantId) => {
+            renderTargetIdsForSignature.push(`expanded-cluster-${restaurantId}`);
         });
 
         const nextMarkerRenderSignature = buildMarkerRenderSignature({
@@ -1814,9 +1850,10 @@ const NaverMapView = memo(({
                         cluster.region,
                         () => {
                             activateNoncriticalMapEffects();
+                            setExpandedClusterRestaurantIds(cluster.restaurantIds);
                             const currentZoom = map.getZoom();
-                            const targetZoom = getRegionalClusterTargetZoom(currentZoom);
-                            morphWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
+                            const targetZoom = getRegionalClusterTargetZoom(currentZoom, clusterIndexMaxZoom);
+                            jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
                         }
                     );
             });
@@ -1851,9 +1888,10 @@ const NaverMapView = memo(({
                         cluster.region,
                         () => {
                             activateNoncriticalMapEffects();
+                            setExpandedClusterRestaurantIds(cluster.restaurantIds);
                             const currentZoom = map.getZoom();
-                            const targetZoom = getSeoulDistrictTargetZoom(currentZoom);
-                            morphWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
+                            const targetZoom = getSeoulDistrictTargetZoom(currentZoom, clusterIndexMaxZoom);
+                            jumpWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
                         }
                     );
                 });
@@ -1917,10 +1955,15 @@ const NaverMapView = memo(({
                                 clusterId,
                                 () => {
                                     activateNoncriticalMapEffects();
+                                    try {
+                                        setExpandedClusterRestaurantIds(expandCluster(clusterIndexRef.current!, clusterId));
+                                    } catch {
+                                        setExpandedClusterRestaurantIds([]);
+                                    }
                                     const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
                                     const currentZoom = map.getZoom();
-                                    const targetZoom = getSuperclusterTargetZoom(currentZoom, expansionZoom);
-                                    morphWithPanelOffset(lat, lng, targetZoom);
+                                    const targetZoom = getSuperclusterTargetZoom(currentZoom, expansionZoom, clusterIndexMaxZoom);
+                                    jumpWithPanelOffset(lat, lng, targetZoom);
                                 }
                             );
                         } else {
@@ -1952,7 +1995,7 @@ const NaverMapView = memo(({
                 // 참고: 서울 자치구 모드가 활성화된 경우, 서울 내의 개별 마커를 숨겨야 할까요?
                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
 
-                getRestaurantsWithRenderableCoordinates(visibleRestaurants).forEach(restaurant => {
+                getRestaurantsWithRenderableCoordinates(restaurantsForMarkerRender).forEach(restaurant => {
                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
                     if (shouldHideInSeoulDistrictMode({
                         address: restaurant.road_address || restaurant.jibun_address || '',
@@ -1989,7 +2032,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, morphWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, activateNoncriticalMapEffects, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, handleMarkerRestaurantSelection]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
