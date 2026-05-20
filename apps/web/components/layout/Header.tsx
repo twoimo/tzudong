@@ -400,7 +400,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <Badge
                     variant="destructive"
                     aria-hidden="true"
-                    className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full px-1 flex items-center justify-center p-0 text-[10px] font-bold tabular-nums bg-red-800"
+                    className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-white"
                   >
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Badge>
@@ -409,9 +409,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[100] shadow-primary"
+              className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[100]"
             >
-              <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
+              <DropdownMenuLabel className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2.5 text-foreground">
                 <div className="min-w-0">
                   <span className="block font-semibold">알림</span>
                   <span className="block text-xs font-normal text-muted-foreground">최근 알림 {notifications.length}개 · 안 읽음 {unreadCount > 99 ? '99+' : unreadCount}</span>
@@ -423,17 +423,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     type="button"
                     aria-label="모든 알림 읽음 처리"
                     onClick={markAllAsRead}
-                    className="h-8 shrink-0 rounded-lg px-2 text-xs hover:bg-accent text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                    className="h-8 shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                   >
                     <CheckCheck className="h-3 w-3 mr-1" aria-hidden="true" />
                     모두 읽음
                   </Button>
                 )}
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-border" />
-              <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
+              <DropdownMenuSeparator className="my-2 bg-border" />
+              <ScrollArea className="h-72 max-h-[min(70vh,28rem)] pr-1">
                 {isNotificationsLoading ? (
-                  <div role="status" aria-label="알림 목록 로딩 중" className="space-y-3 p-3">
+                  <div role="status" aria-label="알림 목록 로딩 중" className="space-y-3 rounded-xl bg-background/70 p-3">
                     {[0, 1, 2].map((item) => (
                       <div key={item} className="space-y-2">
                         <Skeleton className="h-4 w-3/4 rounded" />
@@ -442,17 +442,17 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     ))}
                   </div>
                 ) : isNotificationsError ? (
-                  <div role="status" className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                  <div role="status" className="grid min-h-40 place-items-center rounded-xl bg-background/70 p-4 text-center text-sm text-muted-foreground">
                     <div>
-                      <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                      <Bell className="mx-auto mb-2 h-9 w-9 rounded-full bg-primary/10 p-2 text-primary/70" aria-hidden="true" />
                       <p className="font-medium text-foreground">알림을 불러오지 못했습니다</p>
                       <p className="mt-1 text-xs leading-5">잠시 후 다시 열어 주세요.</p>
                     </div>
                   </div>
                 ) : notifications.length === 0 ? (
-                  <div className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+                  <div className="grid min-h-40 place-items-center rounded-xl bg-background/70 p-4 text-center text-sm text-muted-foreground">
                     <div>
-                      <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                      <Bell className="mx-auto mb-2 h-9 w-9 rounded-full bg-primary/10 p-2 text-primary/70" aria-hidden="true" />
                       <p className="font-medium text-foreground">새로운 알림이 없습니다</p>
                       <p className="mt-1 text-xs leading-5">리뷰 승인, 제보 처리, 랭킹 소식이 생기면 여기에 표시됩니다.</p>
                     </div>
@@ -464,14 +464,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         <DropdownMenuItem
                           aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
                           className={cn(
-                            "flex items-center gap-3 p-3 cursor-pointer hover:bg-accent focus:bg-accent w-full max-w-full touch-manipulation",
-                            !notification.isRead && "bg-accent/50"
+                            "flex w-full max-w-full cursor-pointer items-center gap-3 rounded-xl p-2.5 touch-manipulation hover:bg-accent focus:bg-accent",
+                            !notification.isRead && "bg-primary/5"
                           )}
                           onSelect={() => handleNotificationClick(notification)}
                         >
                           {/* 타입별 컬러 인디케이터 */}
                           <div className={cn(
-                            "w-1.5 h-12 rounded-full flex-shrink-0",
+                            "h-12 w-1.5 shrink-0 rounded-full",
                             getNotificationColor(notification.type)
                           )} />
                           <div className="flex-1 min-w-0">
@@ -480,7 +480,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                                 {notification.title}
                               </p>
                               {!notification.isRead && (
-                                <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold text-white">새 알림</span>
+                                <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">새 알림</span>
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">
@@ -496,7 +496,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           aria-label={`${notification.title} 알림 삭제`}
-                          className="ml-3 flex cursor-pointer items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive touch-manipulation"
+                          className="ml-1 mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground touch-manipulation hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"
                           onSelect={(event) => {
                             event.preventDefault();
                             removeNotification(notification.id);
