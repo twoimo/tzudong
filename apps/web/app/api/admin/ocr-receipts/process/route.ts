@@ -289,7 +289,7 @@ export async function POST(request: Request) {
 
         // 5. Gemini OCR 실행
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
         const finalImagePath = preprocessResult.warped || tempInputPath;
         const finalImageBuffer = fs.readFileSync(/* turbopackIgnore: true */ finalImagePath);
