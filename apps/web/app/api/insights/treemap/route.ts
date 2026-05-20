@@ -5,7 +5,7 @@ import {
     parseTreemapMetricMode,
     parseTreemapPeriod,
     type InsightTreemapPeriod,
-} from '@/lib/insight/treemap';
+} from '@/lib/public-insights/treemap';
 
 export const runtime = 'nodejs';
 const TREEMAP_API_CACHE_SECONDS = 60;

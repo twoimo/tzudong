@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { AppToaster } from '@/components/ui/app-toaster';
 
 const WebVitals = dynamic(
     () => import('@/lib/web-vitals').then((mod) => ({ default: mod.WebVitals })),
@@ -103,6 +104,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                 {/* [PERF] 성능 지표 모니터링 - 지연 로딩 */}
                 <WebVitals />
                 {children}
+                <AppToaster />
             </NotificationProvider>
         </AuthProvider>
     );

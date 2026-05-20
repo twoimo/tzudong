@@ -250,7 +250,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                 description: '좋아요를 누르려면 로그인이 필요합니다.',
                 variant: 'destructive',
             });
-            throw new Error('LOGIN_REQUIRED');
+            return;
         }
 
         // 현재 리뷰 찾기

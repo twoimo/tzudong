@@ -159,7 +159,22 @@ export default function ResetPasswordPage() {
     }
 
     if (!isValidSession) {
-        return null;
+        return (
+            <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-muted/30 px-4 py-10">
+                <div className="w-full max-w-md rounded-2xl border bg-background p-6 text-center shadow-sm">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-2xl">
+                        🔒
+                    </div>
+                    <h1 className="text-xl font-bold text-foreground">비밀번호 재설정 링크를 확인해주세요</h1>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        이 페이지는 이메일로 받은 비밀번호 재설정 링크를 통해 접속해야 사용할 수 있습니다. 링크가 만료되었거나 잘못 열렸다면 로그인 창에서 비밀번호 재설정을 다시 요청해주세요.
+                    </p>
+                    <Button className="mt-6 w-full" onClick={() => router.push('/')}>
+                        홈으로 돌아가기
+                    </Button>
+                </div>
+            </div>
+        );
     }
 
     return (

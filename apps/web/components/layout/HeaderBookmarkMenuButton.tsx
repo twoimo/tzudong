@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bookmark, Settings } from 'lucide-react';
+import { Bookmark, MapPin, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,11 +21,13 @@ import { useBookmarks } from '@/hooks/use-bookmarks';
 export default function HeaderBookmarkMenuButton() {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: bookmarksData = [] } = useBookmarks();
+  const [isOpen, setIsOpen] = useState(false);
+  const { data: bookmarksData = [], isLoading: isBookmarksLoading, isError: isBookmarksError } = useBookmarks({ enabled: isOpen });
   const [visibleBookmarkCount, setVisibleBookmarkCount] = useState(20);
 
   return (
     <DropdownMenu onOpenChange={(open) => {
+      setIsOpen(open);
       if (!open) {
         setTimeout(() => setVisibleBookmarkCount(20), 300);
       }
@@ -34,41 +37,75 @@ export default function HeaderBookmarkMenuButton() {
           variant="ghost"
           size="icon"
           type="button"
-          aria-label="북마크"
-          className="h-9 w-9 hover:bg-accent text-foreground relative transition-colors"
+          aria-label={bookmarksData.length > 0 ? `북마크, 저장한 맛집 ${bookmarksData.length}개` : "북마크"}
+          className="h-11 w-11 rounded-xl hover:bg-accent text-foreground relative transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
         >
-          <Bookmark className="h-5 w-5" />
+          <Bookmark className="h-5 w-5" aria-hidden="true" />
+          {!isBookmarksLoading && bookmarksData.length > 0 && (
+            <Badge
+              variant="secondary"
+              aria-hidden="true"
+              className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full border-primary/20 bg-primary px-1 text-[10px] font-bold tabular-nums text-primary-foreground"
+            >
+              {bookmarksData.length > 99 ? '99+' : bookmarksData.length}
+            </Badge>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-72 bg-card border-border font-serif z-[100]"
+        className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[100] shadow-primary"
       >
-        <DropdownMenuLabel className="flex items-center justify-between text-foreground">
-          <span>북마크</span>
+        <DropdownMenuLabel className="flex items-start justify-between gap-3 text-foreground">
+          <div className="min-w-0">
+            <span className="block font-semibold">북마크</span>
+            <span className="block text-xs font-normal text-muted-foreground">저장한 맛집 {isBookmarksLoading ? '확인 중' : `${bookmarksData.length}개`}</span>
+          </div>
           <Button
             variant="ghost"
             size="icon"
             type="button"
-            aria-label="북마크 관리 페이지로 이동"
+            aria-label="북마크 전체보기 페이지로 이동"
             onClick={() => router.push('/mypage/bookmarks')}
-            className="h-6 w-6 hover:bg-accent text-foreground"
+            className="h-8 w-8 shrink-0 rounded-lg hover:bg-accent text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
           >
-            <Settings className="h-3 w-3" />
+            <Settings className="h-4 w-4" aria-hidden="true" />
           </Button>
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-border" />
-        <ScrollArea className="h-64">
-          {bookmarksData.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              북마크한 맛집이 없습니다
+        <ScrollArea className="h-72 max-h-[min(70vh,28rem)]">
+          {isBookmarksLoading ? (
+            <div role="status" aria-label="북마크 목록 로딩 중" className="space-y-3 p-3">
+              {[0, 1, 2].map((item) => (
+                <div key={item} className="space-y-2">
+                  <Skeleton className="h-4 w-3/4 rounded" />
+                  <Skeleton className="h-3 w-full rounded" />
+                </div>
+              ))}
+            </div>
+          ) : isBookmarksError ? (
+            <div role="status" className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+              <div>
+                <Bookmark className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                <p className="font-medium text-foreground">북마크를 불러오지 못했습니다</p>
+                <p className="mt-1 text-xs leading-5">잠시 후 다시 열어 주세요.</p>
+              </div>
+            </div>
+          ) : bookmarksData.length === 0 ? (
+            <div className="grid min-h-40 place-items-center p-4 text-center text-sm text-muted-foreground">
+              <div>
+                <Bookmark className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
+                <p className="font-medium text-foreground">북마크한 맛집이 없습니다</p>
+                <p className="mt-1 text-xs leading-5">맛집 상세에서 북마크를 누르면 여기에 모입니다.</p>
+              </div>
             </div>
           ) : (
             <DropdownMenuGroup>
               {bookmarksData.slice(0, visibleBookmarkCount).map((bookmark) => (
                 <DropdownMenuItem
                   key={bookmark.id}
-                  className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent w-full max-w-full"
+                  aria-label={`${bookmark.restaurant.name} 북마크 열기`}
+                  className="flex items-center gap-3 p-3 cursor-pointer hover:bg-accent focus:bg-accent w-full max-w-full touch-manipulation"
                   onClick={() => {
                     const restaurant = bookmark.restaurant;
                     const isOverseas = restaurant.lat && restaurant.lng && (
@@ -89,6 +126,7 @@ export default function HeaderBookmarkMenuButton() {
                     }
                   }}
                 >
+                  <MapPin className="h-4 w-4 shrink-0 text-primary/70" aria-hidden="true" />
                   <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                     <div className="flex items-center justify-between gap-2 w-full">
                       <span className="text-sm font-medium text-foreground truncate block">

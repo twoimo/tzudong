@@ -2,13 +2,12 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 const PUBLIC_API_PREFIXES = [
     '/api/health',
-    '/api/naver-',
-    '/api/youtube-meta',
     '/api/shorten',
 ]
 
 const PUBLIC_PAGE_PATHS = new Set([
     '/',
+    '/home-frame',
 ])
 
 function shouldSkipSession(request: NextRequest) {
@@ -32,6 +31,7 @@ function shouldSkipSession(request: NextRequest) {
  * - 인증이 필요 없는 공개 라우트도 빠르게 통과
  */
 export async function proxy(request: NextRequest) {
+
     if (shouldSkipSession(request)) {
         return NextResponse.next()
     }
@@ -42,6 +42,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/((?!$|api/health|api/naver-|api/youtube-meta|api/shorten|_next/static|_next/image|favicon.ico|fonts/|images/|scripts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|otf|ttf|woff|woff2)$).*)',
+        '/',
+        '/((?!$|api/health|api/shorten|_next/static|_next/image|favicon.ico|fonts/|images/|scripts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|otf|ttf|woff|woff2)$).*)',
     ],
 }

@@ -26,7 +26,8 @@ export type LocationMatchEvidenceFamily =
   | 'source_geo'
   | 'cross_provider'
   | 'browser_verification'
-  | 'llm_verification';
+  | 'llm_verification'
+  | 'geocode_provider';
 
 export type LocationMatchPendingReason =
   | 'insufficient_evidence'
@@ -57,7 +58,7 @@ export interface LocationMatchResult {
   eval_value?: boolean;
   origin_name?: string | null;
   match_status?: 'matched' | 'pending' | 'failed';
-  matched_provider?: 'naver' | 'google' | 'playwright' | 'gemini' | null;
+  matched_provider?: 'naver' | 'google' | 'playwright' | 'gemini' | 'ncp_geocode' | null;
   matched_name?: string | null;
   naver_name?: string | null;
   google_name?: string | null;
@@ -127,6 +128,7 @@ export type EvaluationRecordStatus =
   | 'missing'
   | 'db_conflict'
   | 'geocoding_failed'
+  | 'address_review_geocode_recovered'
   | 'not_selected';
 
 // restaurants 테이블 구조에 맞춘 EvaluationRecord
@@ -193,15 +195,27 @@ export interface EvaluationRecord {
   recollect_version?: Record<string, unknown> | null;
   db_error_message?: string | null;
   db_error_details?: {
-    error_type: 'duplicate';
-    conflicting_restaurant: {
+    error_type?: 'duplicate';
+    address_consistency_review?: {
+      queue?: string;
+      reason_ko?: string;
+      generated_at?: string;
+      validation_source?: string;
+      geocode_top?: Record<string, unknown> | null;
+      ahp_score?: number;
+      ahp_label?: string;
+      top_failing_criterion?: string;
+      evidence_families?: string[];
+      suggested_action?: string;
+    };
+    conflicting_restaurant?: {
       id: string;
       name: string;
       jibun_address: string;
       road_address?: string;
     };
-    similarity_score: number;
-    detected_at: string;
+    similarity_score?: number;
+    detected_at?: string;
   } | null;
 }
 
@@ -222,7 +236,6 @@ export interface CategoryStats {
   hold: number;
   db_conflict: number;
   missing: number;
-  geocoding_failed: number;
   not_selected: number;
   deleted: number;
 }

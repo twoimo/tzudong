@@ -32,10 +32,13 @@ class MemoryStorage {
 }
 
 describe('home root runtime boundary', () => {
-    test('renders the real home map runtime directly without the temporary landing gate', () => {
+    test('starts the real home map runtime directly on root and layers controls progressively', () => {
         const pageSource = source('app/page.tsx');
+        const homeFrameSource = source('app/home-frame/page.tsx');
+        const proxySource = source('proxy.ts');
         const homeClientSource = source('app/home-client.tsx');
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
+        const homeViewportModeSource = source('hooks/useHomeViewportMode.ts');
         const homeCssSource = source('app/home-app-globals.css');
         const homeTailwindConfigSource = source('tailwind.home.config.ts');
 
@@ -43,15 +46,67 @@ describe('home root runtime boundary', () => {
         expect(pageSource).toContain("import HomeClient from './home-client'");
         expect(pageSource).toContain('<HomeRuntimeShell>');
         expect(pageSource).toContain('<HomeClient />');
+        expect(pageSource).not.toContain('HomeInitialShell');
+        expect(pageSource).not.toContain('homeFrameBootstrap');
+        expect(pageSource).not.toContain('homeDeepLinkPreviewBootstrap');
+        expect(pageSource).not.toContain('home-runtime-frame');
         expect(pageSource).not.toContain('HomeLandingShell');
         expect(pageSource).not.toContain('HomeMapIsland');
         expect(pageSource).not.toContain('지도 준비하기');
 
-        expect(homeClientSource).toContain('<HomeMapContainer');
+        expect(homeFrameSource).toContain("import { HomeRuntimeShell } from '../home-runtime-shell'");
+        expect(homeFrameSource).toContain("import HomeClient from '../home-client'");
+        expect(homeFrameSource).toContain('<HomeRuntimeShell>');
+        expect(homeFrameSource).toContain('<HomeClient />');
+        expect(proxySource).not.toContain("NextResponse.rewrite(new URL('/home-static.html', request.url))");
+        expect(proxySource).not.toContain('isRootPageRequest');
+        expect(proxySource).toContain("'/'");
+        expect(proxySource).toContain("'/home-frame'");
+
+        expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {isViewportResolved && !(isMobileOrTablet && isMapFullscreen)'));
+        expect(homeClientSource).toContain('loading: () => null');
+        expect(homeClientSource).toContain('tzudong:home-initial-intent');
+        expect(homeClientSource).toContain('initialIntent={initialMobileOverlayIntent}');
         expect(homeClientSource).not.toContain('home-map-activate-button');
+
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
         expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
+        expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
+        expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeProgressiveShell');
+        expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeLoadingSpinner');
+        expect(homeRuntimeShellSource).not.toContain('<HomeRuntimeProgressiveShell />');
+        expect(homeRuntimeShellSource).not.toContain('role="status"');
+        expect(homeRuntimeShellSource).not.toContain('aria-label="쯔동여지도 로딩 중"');
+        expect(homeRuntimeShellSource).not.toContain('animate-spin rounded-full');
+        expect(homeRuntimeShellSource).not.toContain('aria-label="쯔동여지도 홈 미리보기"');
+        expect(homeRuntimeShellSource).not.toContain('role="status" aria-live="polite"');
+        expect(homeRuntimeShellSource).not.toContain('aria-busy="true"');
+        expect(homeRuntimeShellSource).not.toContain('data-home-intent="search"');
+        expect(homeRuntimeShellSource).not.toContain('지도를 준비하고 있어요');
+        expect(homeRuntimeShellSource).not.toContain('지도 화면을 먼저 준비하고 맛집 정보를 순서대로 불러옵니다');
+        expect(homeRuntimeShellSource).not.toContain('bg-gradient-to-r');
+        expect(homeRuntimeShellSource).not.toContain('motion-reduce:animate-none');
+        expect(homeRuntimeShellSource).not.toContain('motion-reduce:hidden');
+        expect(homeRuntimeShellSource).not.toContain('홈 지도 준비 단계');
+        expect(homeRuntimeShellSource).not.toContain('rounded-3xl border border-border bg-background/90 px-8 py-7');
+        expect(homeRuntimeShellSource).not.toContain('animate-bounce');
+        expect(homeRuntimeShellSource).not.toContain('@keyframes');
+        expect(homeRuntimeShellSource).not.toContain('지도를 준비하고 있어요');
+        expect(homeRuntimeShellSource).not.toContain('쯔동여지도 검색하기');
+        expect(homeRuntimeShellSource).not.toContain('bg-[radial-gradient');
+        expect(homeRuntimeShellSource).not.toContain('bg-[linear-gradient');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}');
+        expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
+        expect(homeRuntimeShellSource).not.toContain('if (!hasMounted)');
+        expect(homeRuntimeShellSource).not.toContain('setHasMounted');
+        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'pending')");
+        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'desktop')");
+        expect(homeRuntimeShellSource).not.toContain("from '@/hooks/useDeviceType'");
+        expect(homeViewportModeSource).toContain("export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop'");
+        expect(homeViewportModeSource).toContain("const [mode, setMode] = useState<HomeViewportMode>('pending')");
+        expect(homeViewportModeSource).toContain('window.innerWidth <= BREAKPOINTS.tabletMax');
+        expect(homeViewportModeSource).toContain("previousMode === nextMode ? previousMode : nextMode");
         expect(homeRuntimeShellSource).toContain('HomeAuthSessionUpdatedDetail');
         expect(homeRuntimeShellSource).toContain('hasSupabaseAuthSessionHint');
         expect(homeRuntimeShellSource).toContain("typeof detail?.hasSession === 'boolean'");
@@ -65,10 +120,11 @@ describe('home root runtime boundary', () => {
         expect(source('tailwind.home.deferred.config.ts')).toContain('./components/admin/AdminRestaurantModal.tsx');
         expect(source('app/home-client-sidepanels.tsx')).toContain("import './home-deferred-globals.css'");
 
+        expect(exists('app/home-initial-shell.tsx')).toBe(false);
+        expect(exists('public/home-static.html')).toBe(false);
         expect(exists('app/home-landing-shell.tsx')).toBe(false);
         expect(exists('app/home-landing-shell.module.css')).toBe(false);
         expect(exists('app/home-map-island.tsx')).toBe(false);
-        expect(exists('app/home-map-runtime-activation.ts')).toBe(false);
     });
 
     test('detects Supabase SSR auth session hints from cookies and localStorage', () => {

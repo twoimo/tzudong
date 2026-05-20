@@ -10,9 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
-import { MobileSheetHeader, MobileSheetStepIndicator, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
-import { resetMobileSheetLayoutState, setMobileSheetLayoutState } from "@/lib/mobile-sheet-layout";
 import {
     OCR_PROGRESS_STEPS,
     addAiFilledField,
@@ -1402,18 +1402,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         mobileScrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
     }, [currentStep, isMobileOrTablet, isOpen]);
 
-    useEffect(() => {
-        if (!isOpen || !isMobileOrTablet) return;
-
-        setMobileSheetLayoutState({
-            hideBottomNav: true,
-            headerHideProgress: 0,
-            source: 'review-modal',
-        });
-
-        return () => resetMobileSheetLayoutState('review-modal');
-    }, [isMobileOrTablet, isOpen]);
-
     const renderFoodPhotosSection = useCallback(() => (
         <div className="space-y-2">
             <Label className="flex items-center gap-2">
@@ -2024,54 +2012,78 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     }
 
     if (isMobileOrTablet) {
-        if (!isOpen) return null;
+        const mobileTitleId = 'review-sheet-title';
+        const mobileDescriptionId = 'review-sheet-description';
 
         return (
-            <div
-                className="fixed inset-0 z-[110] h-[100dvh] bg-background"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="review-sheet-title"
+            <BottomSheet
+                isOpen={isOpen}
+                onClose={handleClose}
+                {...MOBILE_FULL_FORM_SHEET}
+                disableContentScroll
+                layoutSource="review-modal"
+                className="z-[110]"
+                ariaLabelledBy={mobileTitleId}
+                ariaDescribedBy={mobileDescriptionId}
+                focusTrapAllowSelectors={[]}
             >
-                <div
-                    ref={mobileScrollRef}
-                    className="h-[100dvh] overflow-y-auto overscroll-contain bg-background"
-                    style={{ WebkitOverflowScrolling: 'touch' }}
-                >
-                    <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
-                        <MobileSheetHeader
-                            title="쯔동여지도 리뷰 작성"
-                            titleId="review-sheet-title"
-                            compact
-                            className="pt-1.5 pb-1.5"
-                            action={(
-                                <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 작성 닫기">
-                                    <XIcon className="h-5 w-5" />
-                                </Button>
-                            )}
-                        />
-
-                        <div className="flex-1 space-y-3 px-4 pb-4 pt-2">
-                            {lastSavedAt ? (
-                                <div className="flex items-center gap-1 text-[10px] leading-none text-muted-foreground" aria-live="polite">
-                                    {isSaving ? (
-                                        <>
-                                            <div className="h-2.5 w-2.5 animate-spin rounded-full border border-primary border-t-transparent" />
-                                            <span>저장 중</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
-                                            <span className="text-green-600">
-                                                저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </>
-                                    )}
+                {isOpen && (
+                    <div
+                        ref={mobileScrollRef}
+                        className="h-full overflow-y-auto overscroll-contain bg-background"
+                        style={{ WebkitOverflowScrolling: 'touch' }}
+                    >
+                        <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
+                            <div className={mobileSheetStyles.header}>
+                                <div className="mb-2 flex items-center justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                                            {currentStep} / {REVIEW_FORM_STEPS.length} · {REVIEW_FORM_STEPS[currentStep - 1].label}
+                                        </p>
+                                        <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                                            쯔동여지도 리뷰 작성
+                                        </h2>
+                                    </div>
+                                    <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 작성 닫기">
+                                        <XIcon className="h-5 w-5" />
+                                    </Button>
                                 </div>
-                            ) : null}
-                            <MobileSheetStepIndicator steps={REVIEW_FORM_STEPS} currentStep={currentStep} className="grid-cols-3" />
+                                <p id={mobileDescriptionId} className="text-sm text-muted-foreground">
+                                    영수증 인증부터 후기 등록까지 3단계로 쉽게 작성해주세요.
+                                </p>
+                                <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="리뷰 작성 단계 진행률">
+                                    {REVIEW_FORM_STEPS.map((step) => (
+                                        <div key={step.id} className="space-y-1">
+                                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
+                                            <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                                {step.label}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-2 min-h-4">
+                                    {lastSavedAt ? (
+                                        <div className="flex items-center gap-1 text-[10px] leading-none text-muted-foreground" aria-live="polite">
+                                            {isSaving ? (
+                                                <>
+                                                    <div className="h-2.5 w-2.5 animate-spin rounded-full border border-primary border-t-transparent" />
+                                                    <span>저장 중</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                                                    <span className="text-green-600">
+                                                        저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
 
-                            <div className="space-y-4">
+                            <div className={mobileSheetStyles.content}>
+                                <div className="space-y-4">
                                 {currentStep === 1 && (
                                     <>
                                         <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
@@ -2578,10 +2590,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     </Button>
                                 )}
                             </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                )}
+            </BottomSheet>
         );
     }
 
@@ -2589,7 +2602,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         <>
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 {isOpen && (
-                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none">
+                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border-border/70 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none sm:p-6">
                         <DialogHeader className="relative space-y-3">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
                             {lastSavedAt && (
@@ -2611,20 +2624,32 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             )}
 
                             <div className="flex items-start justify-between gap-2 pt-3">
-                                <div className="flex-1 text-center">
-                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent flex items-center justify-center gap-3">
+                                <div className="flex-1">
+                                    <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                                        영수증 인증 · 방문 정보 · 리뷰
+                                    </p>
+                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
                                         쯔동여지도 리뷰 작성
                                     </DialogTitle>
-                                    <DialogDescription className="text-center">
-                                        맛집 방문 후기를 공유해주세요
+                                    <DialogDescription>
+                                        영수증 인증부터 후기 등록까지 필요한 정보를 한 화면에서 차근차근 작성해주세요.
                                     </DialogDescription>
                                 </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5" aria-label="리뷰 작성 안내 단계">
+                                {REVIEW_FORM_STEPS.map((step) => (
+                                    <div key={step.id} className="space-y-1">
+                                        <div className="h-1.5 rounded-full bg-red-800" />
+                                        <span className="block text-center text-[11px] font-medium text-muted-foreground">
+                                            {step.label}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </DialogHeader>
 
                         <div className="space-y-6 mt-2">
                             <div className="space-y-6">
-                                {/* 중요 공지 - 컴팩트 버전 */}
                                 {/* 중요 공지 - 컴팩트 버전 */}
                                 <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
                                     <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">

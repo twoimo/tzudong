@@ -60,6 +60,8 @@ function normalizeNotification(input: Partial<NotificationRecord>): Notification
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isError, setIsError] = useState(false);
     const { user } = useAuth();
     const userId = user?.id; // [OPTIMIZATION] user 객체 대신 id만 추출
 
@@ -67,8 +69,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const loadNotifications = useCallback(async () => {
         if (!userId) {
             setNotifications([]);
+            setIsLoading(false);
+            setIsError(false);
             return;
         }
+
+        setIsLoading(true);
+        setIsError(false);
 
         try {
             const supabase = await getSupabaseClient();
@@ -80,8 +87,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 .limit(50); // 최근 50개만 로드
 
             if (error) {
+                const isMissingNotificationsTable = error.code === 'PGRST116' ||
+                    error.code === 'PGRST204' ||
+                    error.message?.includes('relation') ||
+                    error.message?.includes('notifications');
+
                 // 테이블이 없는 경우 조용히 무시
-                if (error.code === 'PGRST116' || error.code === 'PGRST204' || error.message?.includes('relation') || error.message?.includes('notifications')) {
+                if (isMissingNotificationsTable) {
                     // 개발 환경에서만 정보 표시
                     if (process.env.NODE_ENV === 'development') {
                         console.info('[NotificationContext] 알림 테이블이 존재하지 않음 (정상, 무시됨)');
@@ -90,6 +102,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     console.error('알림 로드 실패:', error);
                 }
                 setNotifications([]);
+                setIsError(!isMissingNotificationsTable);
             } else {
                 const rows = (Array.isArray(data) ? data : []) as Partial<NotificationRecord>[];
                 const formattedNotifications: Notification[] = rows.map(normalizeNotification);
@@ -98,6 +111,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         } catch (error) {
             console.error('알림 로드 중 오류:', error);
             setNotifications([]);
+            setIsError(true);
+        } finally {
+            setIsLoading(false);
         }
     }, [userId]); // [OPTIMIZATION] user → userId
 
@@ -225,6 +241,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const value: NotificationContextType = {
         notifications,
         unreadCount,
+        isLoading,
+        isError,
         markAsRead,
         markAllAsRead,
         addNotification,

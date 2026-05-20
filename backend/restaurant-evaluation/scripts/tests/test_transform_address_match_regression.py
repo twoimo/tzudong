@@ -83,6 +83,84 @@ class TransformAddressMatchRegressionTests(unittest.TestCase):
         self.assertEqual("original", rows[0]["trace_id_name_source"])
         self.assertEqual("후보식당", rows[0]["google_name"])
 
+    def test_transform_matches_evaluation_metrics_by_provider_alias(self):
+        original_data = {
+            "youtube_link": "https://www.youtube.com/watch?v=test1234567",
+            "evaluation_results": {
+                "location_match_TF": [
+                    {
+                        "origin_name": "구룡포 과메기 문화관",
+                        "naver_name": "구룡포과메기문화관",
+                        "eval_value": True,
+                    }
+                ],
+                "visit_authenticity": {
+                    "values": [
+                        {
+                            "name": "구룡포과메기문화관",
+                            "eval_value": 1,
+                            "eval_basis": "방문 근거",
+                        }
+                    ]
+                },
+                "rb_inference_score": [
+                    {
+                        "name": "구룡포과메기문화관",
+                        "eval_value": 2,
+                        "eval_basis": "추론 근거",
+                    }
+                ],
+                "rb_grounding_TF": [
+                    {
+                        "name": "구룡포과메기문화관",
+                        "eval_value": True,
+                        "eval_basis": "근거 일치",
+                    }
+                ],
+                "review_faithfulness_score": [
+                    {
+                        "name": "구룡포과메기문화관",
+                        "eval_value": 1,
+                        "eval_basis": "리뷰 근거",
+                    }
+                ],
+                "category_validity_TF": [
+                    {"name": "구룡포과메기문화관", "eval_value": False}
+                ],
+                "category_TF": [
+                    {
+                        "name": "구룡포과메기문화관",
+                        "eval_value": False,
+                        "category_revision": "문화시설",
+                    }
+                ],
+            },
+            "restaurants": [
+                {
+                    "origin_name": "구룡포 과메기 문화관",
+                    "address": "경북 포항시",
+                    "category": "관광명소",
+                    "reasoning_basis": "근거",
+                    "youtuber_review": "리뷰",
+                    "lat": None,
+                    "lng": None,
+                }
+            ],
+            "evaluation_target": {"구룡포 과메기 문화관": True},
+            "recollect_version": {},
+        }
+
+        rows = transform_mod.transform_json_object(original_data, "results", "tzuyang", meta_cache=None, video_id=None)
+
+        self.assertEqual(1, len(rows))
+        results = rows[0]["evaluation_results"]
+        self.assertEqual(1, results["visit_authenticity"]["eval_value"])
+        self.assertEqual(2, results["rb_inference_score"]["eval_value"])
+        self.assertTrue(results["rb_grounding_TF"]["eval_value"])
+        self.assertEqual(1, results["review_faithfulness_score"]["eval_value"])
+        self.assertFalse(results["category_validity_TF"]["eval_value"])
+        self.assertFalse(results["category_TF"]["eval_value"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,6 +17,21 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
     const [loadError, setLoadError] = useState<Error | null>(null);
 
     useEffect(() => {
+        window.gm_authFailure = () => {
+            const error = new Error("Google Maps 인증 실패: API 키 또는 HTTP referrer 제한을 확인해주세요");
+            globalLoadState.error = error;
+            globalLoadState.isLoaded = false;
+            globalLoadState.isLoading = false;
+            setIsLoaded(false);
+            setLoadError(error);
+        };
+
+        // 이미 로드된 경우
+        if (globalLoadState.error) {
+            setLoadError(globalLoadState.error);
+            return;
+        }
+
         // 이미 로드된 경우
         if (globalLoadState.isLoaded) {
             setIsLoaded(true);
@@ -121,6 +136,7 @@ declare global {
     interface Window {
         google: typeof google;
         googleMapsCallback?: () => void;
+        gm_authFailure?: () => void;
     }
 }
 

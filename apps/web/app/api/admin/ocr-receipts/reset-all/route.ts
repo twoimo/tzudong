@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { createSupabaseServiceRoleClient } from '@/lib/insight/supabase';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const runtime = 'nodejs';
 
@@ -16,10 +16,54 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const GITHUB_OWNER = process.env.GITHUB_OWNER!;
 const GITHUB_REPO = process.env.GITHUB_REPO!;
 
-export async function POST() {
+const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화';
+
+export async function POST(request: Request) {
     try {
         const auth = await requireAdmin();
         if (!auth.ok) return auth.response;
+
+        let body: { confirmation?: string } = {};
+        try {
+            body = await request.json();
+        } catch {
+            body = {};
+        }
+
+        if (body.confirmation !== OCR_RESET_ALL_CONFIRMATION) {
+            return NextResponse.json(
+                { error: 'OCR 전체 초기화 확인 문구가 일치하지 않습니다.' },
+                { status: 400 }
+            );
+        }
+
+        if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
+            return NextResponse.json(
+                { error: 'GitHub 환경 변수가 설정되지 않았습니다.' },
+                { status: 500 }
+            );
+        }
+
+        const workflowUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/ocr-review-receipts.yml`;
+        const githubHeaders = {
+            'Authorization': `Bearer ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+        };
+
+        const workflowPreflightResponse = await fetch(workflowUrl, {
+            method: 'GET',
+            headers: githubHeaders,
+        });
+
+        if (!workflowPreflightResponse.ok) {
+            const errorText = await workflowPreflightResponse.text();
+            console.error('GitHub Actions 사전 확인 실패:', workflowPreflightResponse.status, errorText);
+            return NextResponse.json(
+                { error: `GitHub Actions 사전 확인 실패: ${workflowPreflightResponse.status}` },
+                { status: workflowPreflightResponse.status }
+            );
+        }
 
         const supabase = createSupabaseServiceRoleClient();
 
@@ -48,32 +92,23 @@ export async function POST() {
             );
         }
 
-        // 2. GitHub Actions 워크플로우 트리거
-        if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
-            return NextResponse.json(
-                { error: 'GitHub 환경 변수가 설정되지 않았습니다.' },
-                { status: 500 }
-            );
-        }
-
-        const response = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/ocr-review-receipts.yml/dispatches`,
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${GITHUB_TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ ref: 'main' }),
-            }
-        );
+        // 3. GitHub Actions 워크플로우 트리거
+        const response = await fetch(`${workflowUrl}/dispatches`, {
+            method: 'POST',
+            headers: githubHeaders,
+            body: JSON.stringify({ ref: 'main' }),
+        });
 
         if (!response.ok) {
             const errorText = await response.text();
             console.error('GitHub API 오류:', response.status, errorText);
             return NextResponse.json(
-                { error: `GitHub Actions 트리거 실패: ${response.status}` },
+                {
+                    error: `GitHub Actions 트리거 실패: ${response.status}`,
+                    partialFailure: true,
+                    resetApplied: true,
+                    readbackRequired: true,
+                },
                 { status: response.status }
             );
         }

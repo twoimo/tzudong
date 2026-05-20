@@ -10,11 +10,34 @@ interface EvaluationRowDetailsProps {
   onEdit?: () => void;
 }
 
+interface DuplicateErrorDetails {
+  error_type: 'duplicate';
+  conflicting_restaurant: {
+    id: string;
+    name: string;
+    jibun_address: string;
+    road_address?: string;
+  };
+  similarity_score: number;
+  detected_at: string;
+}
+
+function isDuplicateErrorDetails(value: EvaluationRecord['db_error_details']): value is DuplicateErrorDetails {
+  return Boolean(
+    value &&
+    value.error_type === 'duplicate' &&
+    value.conflicting_restaurant &&
+    typeof value.similarity_score === 'number' &&
+    typeof value.detected_at === 'string'
+  );
+}
+
 export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
   const { youtube_meta, restaurant_info, missing_message } = record;
 
   // 🔥 중복 에러 알림 표시
-  const showErrorAlert = record.db_error_message && record.db_error_details;
+  const duplicateErrorDetails = isDuplicateErrorDetails(record.db_error_details) ? record.db_error_details : null;
+  const showErrorAlert = record.db_error_message && duplicateErrorDetails;
 
   // Missing 음식점인 경우
   if ((record.status === 'missing' || record.is_missing)) {
@@ -23,7 +46,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
         {showErrorAlert && (
           <RestaurantErrorAlert
             errorMessage={record.db_error_message || null}
-            errorDetails={record.db_error_details || null}
+            errorDetails={duplicateErrorDetails}
             onResolve={() => {
               if (onEdit) {
                 onEdit();
@@ -171,7 +194,7 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
         <div className="p-4 bg-background">
           <RestaurantErrorAlert
             errorMessage={record.db_error_message || null}
-            errorDetails={record.db_error_details || null}
+            errorDetails={duplicateErrorDetails}
             onResolve={() => {
               if (onEdit) onEdit();
             }}

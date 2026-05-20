@@ -72,6 +72,11 @@ export function resolveNaverResizePlan<TCenter>({
 
     return {
         skip: false,
+        targetLat: resizeTarget.targetLat,
+        targetLng: resizeTarget.targetLng,
+        targetOffsetX,
+        targetOffsetY,
+        targetZoom: currentZoom,
         newCenterLatLng: resolveNaverResizeCenter({
             currentCenter,
             currentZoom,

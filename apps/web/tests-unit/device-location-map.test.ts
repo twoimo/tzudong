@@ -7,6 +7,7 @@ import {
     resolveDeviceLocationButtonLabel,
     resolveDeviceLocationFocusZoom,
     resolveDeviceLocationMapRenderPlan,
+    resolveDeviceLocationStateUpdatePlan,
     resolveDeviceOrientationHeading,
     resolveGeolocationHeading,
     shouldFocusDeviceLocation,
@@ -98,6 +99,77 @@ describe('device location map helpers', () => {
             hasLocation: true,
             nextFocusedRequestId: 8,
             shouldFocus: false,
+        });
+    });
+
+    test('skips insignificant device-location jitter before it reaches React state', () => {
+        const previous = {
+            lat: 37.5665,
+            lng: 126.9780,
+            accuracy: 24,
+            heading: 90,
+            mode: 'heading' as const,
+            focusRequestId: 4,
+            updatedAt: 1000,
+        };
+
+        expect(resolveDeviceLocationStateUpdatePlan({
+            previous: null,
+            next: previous,
+        })).toEqual({
+            nextLocation: previous,
+            shouldUpdate: true,
+        });
+
+        const tinyJitter = {
+            ...previous,
+            heading: 91.5,
+            updatedAt: 1100,
+        };
+        expect(resolveDeviceLocationStateUpdatePlan({
+            previous,
+            next: tinyJitter,
+        })).toEqual({
+            nextLocation: previous,
+            shouldUpdate: false,
+        });
+
+        const focusRequest = {
+            ...tinyJitter,
+            focusRequestId: 5,
+        };
+        expect(resolveDeviceLocationStateUpdatePlan({
+            previous,
+            next: focusRequest,
+        })).toEqual({
+            nextLocation: focusRequest,
+            shouldUpdate: true,
+        });
+
+        const meaningfulHeading = {
+            ...previous,
+            heading: 96,
+            updatedAt: 1200,
+        };
+        expect(resolveDeviceLocationStateUpdatePlan({
+            previous,
+            next: meaningfulHeading,
+        })).toEqual({
+            nextLocation: meaningfulHeading,
+            shouldUpdate: true,
+        });
+
+        const meaningfulMove = {
+            ...previous,
+            lat: 37.56655,
+            updatedAt: 1300,
+        };
+        expect(resolveDeviceLocationStateUpdatePlan({
+            previous,
+            next: meaningfulMove,
+        })).toEqual({
+            nextLocation: meaningfulMove,
+            shouldUpdate: true,
         });
     });
 

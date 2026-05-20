@@ -36,6 +36,14 @@ describe('mobile scroll nav visibility', () => {
             isHidden: false,
         })).toBe('unchanged');
     });
+
+    test('mobile auto-hide collapses the header banner with the bottom nav', () => {
+        const hookSource = readFileSync(join(import.meta.dir, '..', 'hooks/use-mobile-bottom-nav-auto-hide.ts'), 'utf8');
+
+        expect(hookSource).toContain('hideBottomNav: true');
+        expect(hookSource).toContain('headerHideProgress: 1');
+        expect(hookSource).not.toContain('headerHideProgress: 0');
+    });
 });
 
 describe('mobile mypage scroll frame guards', () => {

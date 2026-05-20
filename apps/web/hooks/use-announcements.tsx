@@ -69,7 +69,7 @@ const getFallbackBannerAnnouncements = (): Announcement[] => {
 /**
  * 모든 공지사항 조회 (관리자용)
  */
-export function useAnnouncementsAdmin() {
+export function useAnnouncementsAdmin(enabled = true) {
     const { isAdmin } = useAuth();
 
     return useQuery({
@@ -88,7 +88,7 @@ export function useAnnouncementsAdmin() {
 
             return parseAnnouncements(data as AnnouncementRow[]);
         },
-        enabled: isAdmin,
+        enabled: isAdmin && enabled,
         staleTime: 60 * 1000,
     });
 }
@@ -96,7 +96,7 @@ export function useAnnouncementsAdmin() {
 /**
  * 활성 공지사항 조회 (일반 사용자용)
  */
-export function useActiveAnnouncements() {
+export function useActiveAnnouncements(enabled = true) {
     return useQuery({
         queryKey: [...ANNOUNCEMENTS_QUERY_KEY, 'active'],
         queryFn: async (): Promise<Announcement[]> => {
@@ -119,6 +119,7 @@ export function useActiveAnnouncements() {
                 return getFallbackActiveAnnouncements();
             }
         },
+        enabled,
         staleTime: 60 * 1000,
         gcTime: 5 * 60 * 1000,
     });
