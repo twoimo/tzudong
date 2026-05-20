@@ -49,6 +49,7 @@ describe('naver map current state helpers', () => {
             restaurantsLength: 3,
         })).toEqual({
             hideDelayMs: 3000,
+            settleDelayMs: 1200,
             shouldShowRestaurantCount: true,
             shouldStorePreviousRestaurants: true,
         });
@@ -64,9 +65,21 @@ describe('naver map current state helpers', () => {
             restaurantsLength: 0,
         })).toEqual({
             hideDelayMs: 1000,
+            settleDelayMs: 1200,
             shouldShowRestaurantCount: false,
             shouldStorePreviousRestaurants: false,
         });
+    });
+
+    test('allows overriding the settle delay before showing final restaurant count', () => {
+        const plan = resolveNaverRestaurantCountUpdatePlan({
+            isLoadingRestaurants: false,
+            restaurantsLength: 375,
+            settleDelayMs: 1200,
+        });
+
+        expect(plan.settleDelayMs).toBe(1200);
+        expect(plan.shouldShowRestaurantCount).toBe(true);
     });
 
     test('suppresses restaurant count badge when already shown once', () => {
