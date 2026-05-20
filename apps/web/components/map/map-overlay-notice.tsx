@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 const baseNoticeClass =
     'z-10 flex w-fit max-w-[calc(100vw-2rem)] items-center justify-center rounded-full bg-card/95 px-3 py-2 text-sm font-medium leading-5 text-foreground shadow-sm backdrop-blur-sm sm:max-w-[26rem]';
 
-const noticeContentClass = 'grid min-w-0 grid-cols-[1.25rem_minmax(0,1fr)_1.25rem] items-center gap-1.5';
+const noticeContentClass = 'grid min-w-0 grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-1.5 pr-1';
 const noticeIconClass = 'flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none';
 const noticeTextClass = 'min-w-0 truncate break-keep text-center';
 
@@ -41,7 +41,6 @@ export const MapOverlayNotice = memo(({
                     {icon}
                 </span>
                 <span className={noticeTextClass}>{children}</span>
-                <span className={noticeIconClass} aria-hidden="true" />
             </span>
         ) : (
             <span className={cn(noticeTextClass, 'max-w-full')}>{children}</span>
@@ -82,7 +81,6 @@ export const MapOverlayNoticeButton = memo(({
                     {icon}
                 </span>
                 <span className={noticeTextClass}>{children}</span>
-                <span className={noticeIconClass} aria-hidden="true" />
             </span>
         ) : (
             <span className={cn(noticeTextClass, 'max-w-full')}>{children}</span>
