@@ -161,6 +161,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                 // 기본 스타일 및 고정 위치
                 'mobile-bottom-nav',
                 'fixed bottom-0 left-0 right-0 z-50',
+                'font-serif',
                 // 배경 및 테두리
                 'bg-background/95 backdrop-blur-md border-t border-border',
                 // 그리드 레이아웃
@@ -197,7 +198,7 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                             'relative',
                             isActive
                                 ? 'text-red-800'
-                                : 'text-muted-foreground active:text-foreground'
+                                : 'text-foreground/65 active:text-foreground'
                         )}
                     >
                         {/* 활성 상태 배경 원 */}
@@ -212,8 +213,8 @@ function MobileBottomNavComponent({ className, style }: MobileBottomNavProps) {
                             )}
                         />
                         <span className={cn(
-                            'text-[11px] font-medium tracking-wide',
-                            isActive && 'font-bold'
+                            'text-[12px] font-medium leading-none tracking-tight',
+                            isActive && 'font-semibold'
                         )}>
                             {item.label}
                         </span>
