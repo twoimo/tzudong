@@ -449,7 +449,8 @@ describe('web quality performance source contracts', () => {
         expect(stampCardSource).toContain("stampSize?: 'default' | 'compact' | 'mobile'");
         expect(stampCardSource).toContain('const resolvedStampSize = stampSize ?? size');
         expect(stampCardSource).toContain("const isStampCompact = resolvedStampSize === 'compact'");
-        expect(stampCardSource).toContain('h-[72%] max-h-44 w-auto max-w-[72%]');
+        expect(stampCardSource).toContain('h-[78%] max-h-64 w-auto max-w-[82%]');
+        expect(stampCardSource).toContain('pointer-events-none absolute inset-0 flex items-center justify-center');
         expect(stampCardSource).toContain('w-36 h-36 md:w-40 md:h-40');
         expect(stampCardSource).toContain('w-48 h-48 sm:w-56 sm:h-56');
         expect(stampPageSource).toContain('stampSize={isDesktop ? "compact" : "mobile"}');
@@ -515,7 +516,10 @@ describe('web quality performance source contracts', () => {
         expect(reviewCardSource).toContain('group -m-1.5 flex items-center gap-1 rounded-full');
         expect(reviewCardSource).toContain('active:text-red-500');
         expect(reviewCardSource).toContain('data-liked={optimisticLike.isLiked}');
-        expect(reviewCardSource).toContain('fill={optimisticLike.isLiked ? "currentColor" : "none"}');
+        expect(reviewCardSource).toContain("const LIKED_HEART_COLOR = '#ef4444';");
+        expect(reviewCardSource).toContain('color={optimisticLike.isLiked ? LIKED_HEART_COLOR : undefined}');
+        expect(reviewCardSource).toContain('fill={optimisticLike.isLiked ? LIKED_HEART_COLOR : "none"}');
+        expect(reviewCardSource).toContain('stroke={optimisticLike.isLiked ? LIKED_HEART_COLOR : "currentColor"}');
         expect(reviewCardSource).toContain('group-active:fill-red-500 group-active:text-red-500');
         expect(reviewCardSource).toContain('[&_path]:fill-red-500 [&_path]:stroke-red-500');
         expect(reviewCardSource).toContain('text-xs font-medium transition-colors group-active:text-red-500');
