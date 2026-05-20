@@ -139,4 +139,42 @@ test.describe('Phase 1: mobile home map regressions', () => {
         });
         await expect(page.getByTestId('restaurant-detail-panel')).toContainText('서울돈까스');
     });
+
+    test('MHM-07: tapping a cluster marker reveals the individual markers', async ({ page }) => {
+        await zoomMockMap(page, 8);
+
+        await page.waitForFunction(
+            () => document.querySelectorAll('.cluster-marker-container').length > 0,
+            undefined,
+            { timeout: 15000 }
+        );
+        expect(await page.locator('[data-testid="marker"]').count()).toBe(0);
+
+        const clicked = await page.locator('.cluster-marker-container').evaluateAll((elements) => {
+            const target = elements[0];
+            if (!(target instanceof HTMLElement)) return false;
+
+            target.click();
+            return true;
+        });
+        expect(clicked).toBe(true);
+
+        await page.waitForFunction(
+            () => {
+                const map = (window as typeof window & {
+                    __TZUDONG_DEBUG_MAP__?: { getZoom?: () => number };
+                }).__TZUDONG_DEBUG_MAP__;
+                return Number(map?.getZoom?.()) >= 14;
+            },
+            undefined,
+            { timeout: 15000 }
+        );
+
+        await waitForMarkerCount(page, 3);
+        await page.waitForFunction(
+            () => document.querySelectorAll('.cluster-marker-container').length === 0,
+            undefined,
+            { timeout: 15000 }
+        );
+    });
 });
