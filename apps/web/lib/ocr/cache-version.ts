@@ -1,4 +1,4 @@
-import type { OcrRoutingMode, OcrRoutingProvider } from '@/lib/admin/ai-settings-store';
+import type { OcrRoutingMode, OcrRoutingProvider } from '@/lib/ocr/runtime-config';
 
 export const RECEIPT_OCR_RAW_CACHE_KIND = 'receipt_ocr_raw_v1' as const;
 export const RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION = 'receipt-ocr-schema-v1' as const;

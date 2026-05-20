@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
@@ -19,7 +20,6 @@ import {
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
-import { useRestaurant } from '@/hooks/use-restaurants';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -29,6 +29,7 @@ const RestaurantDetailPanel = lazy(() =>
         default: mod.RestaurantDetailPanel,
     }))
 );
+const HydratedDetailRestaurant = lazy(() => import("@/components/home/HydratedDetailRestaurant"));
 
 interface HomeMapContainerProps {
     mapMode: 'domestic' | 'overseas';
@@ -173,8 +174,6 @@ function HomeMapContainerComponent({
     deviceLocation = null,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
-    const { data: fullPanelRestaurant } = useRestaurant(panelRestaurant?.id ?? null);
-    const detailPanelRestaurant = fullPanelRestaurant ?? panelRestaurant;
 
     // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
     const viewportHeightRef = useRef(typeof window !== 'undefined'
@@ -788,6 +787,34 @@ function HomeMapContainerComponent({
         endSheetDrag();
     }, [endSheetDrag]);
 
+    const handleSheetHandleKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+        const currentMaxHeight = getCurrentMaxHeight();
+        const currentHeight = sheetHeightRef.current;
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setSheetHeightSafe(currentHeight < HALF_SHEET_HEIGHT ? HALF_SHEET_HEIGHT : currentMaxHeight, true);
+            return;
+        }
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setSheetHeightSafe(currentHeight > HALF_SHEET_HEIGHT + SHEET_HALF_OPEN_TOLERANCE ? HALF_SHEET_HEIGHT : PEEK_SHEET_HEIGHT, true);
+            return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setSheetHeightSafe(currentHeight < HALF_SHEET_HEIGHT ? HALF_SHEET_HEIGHT : currentMaxHeight, true);
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            onPanelClose();
+        }
+    }, [getCurrentMaxHeight, onPanelClose, setSheetHeightSafe]);
+
     const handleContentTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         contentTouchStartYRef.current = e.touches[0].clientY;
         contentTouchStartXRef.current = e.touches[0].clientX;
@@ -1178,6 +1205,7 @@ function HomeMapContainerComponent({
     }, [isMapFullscreen, isPanelOpen, isDesktop, sheetHeight]);
     const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
 
+
     return (
         <div className="relative w-full h-full">
             {mapMode === 'domestic' ? (
@@ -1228,8 +1256,11 @@ function HomeMapContainerComponent({
             )}
 
             {/* [CSR] 맛집 상세 패널 - 데스크탑: 사이드 패널, 모바일/태블릿: 바텀시트 */}
-            {detailPanelRestaurant && (
-                <>
+            {panelRestaurant && (
+                <Suspense fallback={null}>
+                    <HydratedDetailRestaurant restaurant={panelRestaurant}>
+                        {(detailPanelRestaurant) => (
+                            <>
                     {/* 데스크탑 오버레이 패널 */}
                     {isDesktop && (
                         <>
@@ -1250,9 +1281,9 @@ function HomeMapContainerComponent({
                                 {/* 접기 버튼 */}
                                 <button
                                     onClick={onPanelClose}
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group"
-                                    title="패널 닫기"
-                                    aria-label="패널 닫기"
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex h-12 w-11 items-center justify-center bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                                    title="상세 패널 닫기"
+                                    aria-label="상세 패널 닫기"
                                 >
                                     <svg className="h-4 w-4 text-muted-foreground group-hover:text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1303,7 +1334,7 @@ function HomeMapContainerComponent({
                                             ref={handleRef}
                                             role="button"
                                             tabIndex={0}
-                                            className="sticky top-0 z-20 flex w-full justify-center py-1 bg-transparent cursor-grab active:cursor-grabbing select-none"
+                                            className="sticky top-0 z-20 flex w-full justify-center py-1 bg-transparent cursor-grab active:cursor-grabbing select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                                             style={{
                                                 touchAction: 'none',
                                                 WebkitTapHighlightColor: 'transparent',
@@ -1314,6 +1345,7 @@ function HomeMapContainerComponent({
                                             onTouchEnd={() => handleDragEnd()}
                                             onTouchCancel={() => handleDragEnd()}
                                             onMouseDown={handleMouseDown}
+                                            onKeyDown={handleSheetHandleKeyDown}
                                             aria-label="상세 패널 높이 조절"
                                         >
                                             <div className="w-8 h-1 bg-muted-foreground/40 rounded-full" />
@@ -1355,7 +1387,10 @@ function HomeMapContainerComponent({
                             </div>
                         </div>
                     )}
-                </>
+                            </>
+                        )}
+                    </HydratedDetailRestaurant>
+                </Suspense>
             )}
         </div>
     );

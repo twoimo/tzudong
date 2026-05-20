@@ -9,7 +9,7 @@ import { debugLog as logDebug } from '@/lib/debug-log';
  * 리뷰 좋아요 실시간 반영 훅
  * Supabase Realtime으로 review_likes 테이블 변경 감지하여 쿼리 캐시 무효화
  */
-export function useReviewLikesRealtime() {
+export function useReviewLikesRealtime(enabled = true) {
     const queryClient = useQueryClient();
     const channelNameRef = useRef(`review-likes-realtime-${Math.random().toString(36).slice(2)}`);
 
@@ -22,6 +22,8 @@ export function useReviewLikesRealtime() {
     }, [queryClient]);
 
     useEffect(() => {
+        if (!enabled) return;
+
         // Supabase Realtime 채널 구독
         const channel = supabase
             .channel(channelNameRef.current)
@@ -44,5 +46,5 @@ export function useReviewLikesRealtime() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [invalidateLikesQueries]);
+    }, [enabled, invalidateLikesQueries]);
 }

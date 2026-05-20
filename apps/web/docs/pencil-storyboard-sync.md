@@ -80,7 +80,6 @@ Use this as the first MVP review seed. It is intentionally route-level first; co
 | Review/submission | Submissions | `/submissions` | `app/submissions/page.tsx` | Public/auth fixture depends on current product state. |
 | Review/submission | Review modal | component state | `components/reviews/ReviewModal.tsx`, `components/ui/mobile-sheet-frame.tsx` | Component/state capture; not a route-only screenshot. |
 | Insights/admin | Insights | `/insights` | `app/insights/page.tsx` | May require mocked insight payloads. |
-| Insights/admin | Admin insight | `/admin/insight` | `app/admin/insight/page.tsx` | Admin session fixture required. |
 | Insights/admin | Admin evaluations | `/admin/evaluations` | `app/admin/evaluations/page.tsx` | Admin session fixture required; tables need stable row data. |
 | Insights/admin | Admin submissions | `/admin/submissions` | `app/admin/submissions/page.tsx` | Admin session fixture required. |
 | Auth/error/loading | Reset password | `/auth/reset-password` | `app/auth/reset-password/page.tsx` | Token/error variants should be separate states. |

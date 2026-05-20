@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { requireAdmin } from '@/lib/auth/require-admin';
 
 // YouTube 비디오 ID 추출
 function extractVideoId(url: string): string | null {
@@ -78,6 +79,9 @@ async function analyzeAdContent(text: string, openai: OpenAI): Promise<string[] 
 
 export async function POST(request: NextRequest) {
     try {
+        const auth = await requireAdmin();
+        if (!auth.ok) return auth.response;
+
         const body = await request.json();
         const { youtube_link } = body;
 

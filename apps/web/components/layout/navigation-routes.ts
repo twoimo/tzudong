@@ -16,9 +16,9 @@ export const AUTH_NAV_ROUTES = [
 ] as const;
 
 export const ADMIN_NAV_ROUTES = [
+    '/admin',
     '/admin/evaluations',
     '/admin/banners',
-    '/admin/ai-settings',
 ] as const;
 
 export function getNavigationPrefetchRoutes(params: {

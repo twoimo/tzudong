@@ -1,16 +1,27 @@
 import { memo } from "react";
-import { GlobalLoader } from "@/components/ui/global-loader";
 
-function MapSkeletonComponent() {
+type MapSkeletonProps = {
+    variant?: "embedded" | "fullscreen";
+    message?: string;
+};
+
+function MapSkeletonComponent({ variant = "embedded", message = "지도 화면을 준비하고 있어요" }: MapSkeletonProps) {
+    const containerClassName = variant === "fullscreen"
+        ? "fixed inset-0 z-50 h-[var(--full-height,100vh)] bg-background"
+        : "relative h-full min-h-[320px] w-full overflow-hidden bg-background";
+
     return (
-        <GlobalLoader
-            message="쯔동여지도 로딩 중..."
-            subMessage="맛있는 발견을 준비하고 있습니다"
-            fullScreen
-        />
+        <div
+            role="status"
+            aria-label={message}
+            aria-live="polite"
+            className={containerClassName}
+        >
+            <span className="sr-only">{message}</span>
+        </div>
     );
 }
 
-// [PERF] React.memo - props 없는 컴포넌트이지만 부모 리렌더링 시 불필요한 재생성 방지
+// [PERF] React.memo - 동일 props로 재렌더링될 때 지도형 스켈레톤 재생성을 방지
 export const MapSkeleton = memo(MapSkeletonComponent);
 MapSkeleton.displayName = "MapSkeleton";

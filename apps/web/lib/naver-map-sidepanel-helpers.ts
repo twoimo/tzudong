@@ -47,11 +47,13 @@ export function shouldCloseNaverInternalPanelOnEscape({
 }
 
 export function buildNaverMarkerRestaurantSelectionHandler({
+    centerMarkerImmediately,
     hasUserMovedMapRef,
     onMarkerClick,
     onRestaurantSelect,
     setInternalPanelOpen,
 }: {
+    centerMarkerImmediately?: (restaurant: Restaurant) => void;
     hasUserMovedMapRef: { current: boolean };
     onMarkerClick?: (restaurant: Restaurant) => void;
     onRestaurantSelect?: (restaurant: Restaurant) => void;
@@ -59,6 +61,7 @@ export function buildNaverMarkerRestaurantSelectionHandler({
 }) {
     return (restaurant: Restaurant) => {
         hasUserMovedMapRef.current = false;
+        centerMarkerImmediately?.(restaurant);
         if (onMarkerClick) {
             onMarkerClick(restaurant);
             return;
@@ -67,6 +70,146 @@ export function buildNaverMarkerRestaurantSelectionHandler({
         onRestaurantSelect?.(restaurant);
         setInternalPanelOpen(true);
     };
+}
+
+export function resolveNaverMarkerClickImmediateCenterPlan({
+    currentZoom,
+    isGridMode,
+    isMobileOrTablet,
+    isPanelCollapsed,
+    mapFocusZoom,
+    mobileVerticalOffset,
+    panelWidth,
+    restaurant,
+    usesExternalPanel,
+}: {
+    currentZoom: number;
+    isGridMode: boolean;
+    isMobileOrTablet: boolean;
+    isPanelCollapsed: boolean;
+    mapFocusZoom: number | null;
+    mobileVerticalOffset: number;
+    panelWidth: number;
+    restaurant: Pick<Restaurant, 'id' | 'lat' | 'lng'>;
+    usesExternalPanel: boolean;
+}) {
+    if (
+        isGridMode ||
+        typeof restaurant.lat !== 'number' ||
+        typeof restaurant.lng !== 'number'
+    ) {
+        return { skip: true } as const;
+    }
+
+    const predictedPanelOffset = usesExternalPanel && !isMobileOrTablet && !isPanelCollapsed
+        ? panelWidth
+        : 0;
+
+    return {
+        skip: false,
+        restaurantId: restaurant.id,
+        targetLat: restaurant.lat,
+        targetLng: restaurant.lng,
+        targetZoom: mapFocusZoom ?? currentZoom,
+        targetOffsetX: predictedPanelOffset / 2,
+        targetOffsetY: isMobileOrTablet ? mobileVerticalOffset : 0,
+    } as const;
+}
+
+export function applyNaverImmediateMarkerCenter({
+    currentZoom,
+    getAdjustedCenter,
+    map,
+    now = Date.now(),
+    plan,
+}: {
+    currentZoom: number;
+    getAdjustedCenter: (
+        lat: number,
+        lng: number,
+        targetZoom: number,
+        targetOffsetX: number,
+        targetOffsetY: number,
+    ) => unknown;
+    map: {
+        setCenter: (center: unknown) => void;
+        setZoom: (zoom: number) => void;
+    };
+    now?: number;
+    plan: ReturnType<typeof resolveNaverMarkerClickImmediateCenterPlan>;
+}) {
+    if (plan.skip) {
+        return { applied: false } as const;
+    }
+
+    const adjustedCenter = getAdjustedCenter(
+        plan.targetLat,
+        plan.targetLng,
+        plan.targetZoom,
+        plan.targetOffsetX,
+        plan.targetOffsetY,
+    );
+
+    if (plan.targetZoom !== currentZoom) {
+        map.setZoom(plan.targetZoom);
+    }
+    map.setCenter(adjustedCenter);
+
+    return {
+        applied: true,
+        markerCenter: {
+            restaurantId: plan.restaurantId,
+            targetLat: plan.targetLat,
+            targetLng: plan.targetLng,
+            targetZoom: plan.targetZoom,
+            targetOffsetX: plan.targetOffsetX,
+            targetOffsetY: plan.targetOffsetY,
+            centeredAt: now,
+        },
+    } as const;
+}
+
+export function shouldSkipNaverDeferredCenterAfterImmediateMarkerClick({
+    centeredAt,
+    immediateOffsetX,
+    immediateOffsetY,
+    immediateTargetLat,
+    immediateTargetLng,
+    immediateZoom,
+    maxAgeMs = 900,
+    restaurantId,
+    selectedRestaurantId,
+    targetLat,
+    targetLng,
+    targetOffsetX,
+    targetOffsetY,
+    targetZoom,
+}: {
+    centeredAt: number;
+    immediateOffsetX: number;
+    immediateOffsetY: number;
+    immediateTargetLat: number;
+    immediateTargetLng: number;
+    immediateZoom: number;
+    maxAgeMs?: number;
+    restaurantId: string;
+    selectedRestaurantId: string | null;
+    targetLat: number;
+    targetLng: number;
+    targetOffsetX: number;
+    targetOffsetY: number;
+    targetZoom: number;
+}) {
+    return (
+        restaurantId === selectedRestaurantId &&
+        Date.now() - centeredAt <= maxAgeMs &&
+        Math.abs(immediateTargetLat - targetLat) < 0.000001 &&
+        Math.abs(immediateTargetLng - targetLng) < 0.000001 &&
+        Math.abs(immediateOffsetX - targetOffsetX) < 1 &&
+        Math.abs(immediateOffsetY - targetOffsetY) < 1 &&
+        immediateZoom === targetZoom &&
+        Number.isFinite(targetZoom)
+    );
 }
 
 export function getNaverMapReviewRestaurant(restaurant: Restaurant | null) {

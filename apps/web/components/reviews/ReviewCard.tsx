@@ -265,6 +265,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                         <button
                             className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
                             onClick={handleRestaurantClick}
+                            aria-label={`${review.restaurantName} 맛집 상세 보기`}
                         >
                             <MapPin className="w-3 h-3" />
                             {review.restaurantName}
@@ -276,6 +277,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                     <button
                         className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 ${isShareCopied ? 'text-green-600' : 'text-muted-foreground hover:text-primary'}`}
                         title={isShareCopied ? "복사됨!" : "리뷰 공유"}
+                        aria-label={isShareCopied ? "리뷰 링크 복사됨" : "리뷰 공유"}
                         onClick={handleShareClick}
                     >
                         {isShareCopied ? (
@@ -289,6 +291,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                         <button
                             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 text-muted-foreground hover:text-primary"
                             title="리뷰 수정"
+                            aria-label="리뷰 수정"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onEditReview({
@@ -310,6 +313,8 @@ export const ReviewCard = React.memo(function ReviewCard({
                         className="flex items-center gap-1 group"
                         onClick={handleLike}
                         title={`좋아요 ${optimisticLike.count}개`}
+                        aria-label={`좋아요 ${optimisticLike.count}개${optimisticLike.isLiked ? ' 취소' : ' 누르기'}`}
+                        aria-pressed={optimisticLike.isLiked}
                     >
                         <Heart
                             className={`w-5 h-5 transition-all ${optimisticLike.isLiked ? 'fill-red-500 text-red-500 scale-110' : 'text-muted-foreground group-hover:text-red-500'}`}
@@ -382,6 +387,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                         {!isExpanded && shouldTruncate && (
                             <button
                                 className="text-xs text-muted-foreground hover:text-primary shrink-0"
+                                aria-label="리뷰 내용 더보기"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setIsExpanded(true);

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
@@ -25,8 +26,8 @@ type ReviewCountCandidateRestaurant = Pick<
     'id' | 'name' | 'approved_name' | 'road_address' | 'jibun_address' | 'status'
 >;
 
-const REVIEW_COUNT_RELATED_RESTAURANT_SELECT = 'id, name:approved_name, approved_name, road_address, jibun_address, status';
 const SUPABASE_IN_CHUNK_SIZE = 80;
+const REVIEW_COUNT_RELATED_RESTAURANT_SELECT = 'id, name:approved_name, approved_name, road_address, jibun_address, status';
 export const RESTAURANT_MERGE_SELECT = [
     'id',
     'name:approved_name',
@@ -259,6 +260,14 @@ function buildRestaurantQueryKey(
     number | null
 ] {
     return ["restaurants", normalizedBounds, normalizedCategory, normalizedRegion, normalizedMinReviews];
+}
+
+function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
+    return {
+        ...dbData,
+        address: dbData.road_address || dbData.jibun_address || '',
+        category: dbData.categories,
+    } as Restaurant;
 }
 
 
@@ -593,6 +602,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     if (conditions.length > 0) {
                         query.push(['or', `(${conditions.join(',')})`]);
                     }
+                } else if (buildOverseasCountryAddressOrFilter(normalizedRegion, '*')) {
+                    query.push(['or', `(${buildOverseasCountryAddressOrFilter(normalizedRegion, '*')})`]);
                 } else {
                     // address_elements의 SIDO에서 지역 필터링
                     // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
@@ -630,33 +641,5 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함
         refetchOnReconnect: false, // 재연결 시 재요청 안 함
-    });
-}
-
-export function useRestaurant(id: string | null) {
-    return useQuery({
-        queryKey: ["restaurant", id],
-        queryFn: async () => {
-            if (!id) return null;
-
-            const rows = await fetchSupabaseRows<DBRestaurant>('restaurants', [
-                ['select', RESTAURANT_MERGE_SELECT],
-                ['id', `eq.${id}`],
-                ['limit', 1],
-            ]);
-
-            const dbData = rows[0];
-            if (!dbData) return null;
-
-            // 호환성을 위한 데이터 변환
-            const restaurant: Restaurant = {
-                ...dbData,
-                address: dbData.road_address || dbData.jibun_address || '',
-                category: dbData.categories,
-            };
-
-            return restaurant;
-        },
-        enabled: !!id,
     });
 }

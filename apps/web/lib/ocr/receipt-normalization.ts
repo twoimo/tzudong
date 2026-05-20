@@ -2,7 +2,7 @@ import type {
   NvidiaNimReceiptOcrAttempt,
   NvidiaNimReceiptOcrData,
 } from '@/lib/ocr/nvidia-nim';
-import type { OcrRoutingProvider } from '@/lib/admin/ai-settings-store';
+import type { OcrRoutingProvider } from '@/lib/ocr/runtime-config';
 import type { OcrRestaurantMatchCandidate } from '@/lib/ocr/restaurant-matching';
 
 export const RECEIPT_OCR_NORMALIZATION_VERSION = 'receipt-normalization-v1';

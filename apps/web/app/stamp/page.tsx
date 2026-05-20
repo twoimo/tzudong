@@ -199,7 +199,7 @@ export default function StampPage() {
 
         const redirectIfDesktop = () => {
             if (window.innerWidth > BREAKPOINTS.tabletMax) {
-                router.replace('/');
+                router.replace('/?panel=stamp');
             }
         };
 
@@ -705,7 +705,7 @@ export default function StampPage() {
     const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean) => {
         if (!user) {
             console.warn('로그인이 필요합니다.');
-            throw new Error('LOGIN_REQUIRED');
+            return;
         }
         try {
             if (currentIsLiked) {

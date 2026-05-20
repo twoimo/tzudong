@@ -8,12 +8,24 @@ type MapBoundsLike = {
 export function buildMapViewBoundsQuery(bounds: MapBoundsLike | null) {
     if (!bounds) return undefined;
 
-    return {
-        south: bounds.getSouthWest().lat(),
-        west: bounds.getSouthWest().lng(),
-        north: bounds.getNorthEast().lat(),
-        east: bounds.getNorthEast().lng(),
+    const southWest = bounds.getSouthWest();
+    const northEast = bounds.getNorthEast();
+    if (!southWest || !northEast) throw new Error('Google Maps bounds are missing corners');
+
+    const query = {
+        south: southWest.lat(),
+        west: southWest.lng(),
+        north: northEast.lat(),
+        east: northEast.lng(),
     };
+
+    for (const value of Object.values(query)) {
+        if (!Number.isFinite(value)) {
+            throw new Error('Google Maps bounds contain non-finite coordinates');
+        }
+    }
+
+    return query;
 }
 
 export function findUpdatedSelectedRestaurant(
@@ -30,4 +42,3 @@ export function getMapViewRestaurantCountToastVisible(
 ) {
     return restaurantsLength > 0 && !isLoadingRestaurants;
 }
-

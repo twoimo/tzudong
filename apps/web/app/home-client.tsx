@@ -4,22 +4,32 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContextBase";
 import { useLayout } from "@/contexts/LayoutContext";
-import { useDeviceType } from "@/hooks/useDeviceType";
+import { useHomeViewportMode } from "@/hooks/useHomeViewportMode";
 import { toast } from "@/lib/no-toast";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import type { Restaurant } from "@/types/restaurant";
 import {
     resolveDeviceOrientationHeading,
     resolveGeolocationHeading,
+    resolveDeviceLocationStateUpdatePlan,
     type DeviceMapLocation,
 } from "@/lib/device-location-map";
+
+function HomeMapContainerPendingShell() {
+    return (
+        <section
+            aria-hidden="true"
+            className="relative flex-1 overflow-hidden bg-background"
+        />
+    );
+}
+
 
 // [OPTIMIZATION] 동적 임포트
 const HomeControlPanel = dynamic(
     () => import('../components/home/home-control-panel'),
     {
         ssr: false,
-        // 사용자 피드백 반영: 스켈레톤 UI 제거 (로딩 중에는 표시하지 않음)
         loading: () => null
     }
 );
@@ -28,7 +38,7 @@ const HomeMapContainer = dynamic(
     () => import('../components/home/home-map-container'),
     {
         ssr: false,
-        loading: () => <div className="flex-1 bg-muted/50 animate-pulse" aria-hidden="true" />
+        loading: () => <HomeMapContainerPendingShell />
     }
 );
 const SubmissionFloatingButton = dynamic(
@@ -50,10 +60,21 @@ import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
 
 import type { Announcement } from '@/types/announcement';
 
+type HomeStartupIntent = 'search' | 'bookmark' | 'notification' | 'user';
+
+const HOME_INITIAL_SHELL_INTENT_KEY = 'tzudong:home-initial-intent';
+
+const isHomeStartupIntent = (value: string | null): value is HomeStartupIntent => (
+    value === 'search' || value === 'bookmark' || value === 'notification' || value === 'user'
+);
+
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
-    const { isDesktop, isMobileOrTablet } = useDeviceType();
+    const viewportMode = useHomeViewportMode();
+    const isViewportResolved = viewportMode !== 'pending';
+    const isDesktop = viewportMode === 'desktop';
+    const isMobileOrTablet = viewportMode === 'mobileOrTablet';
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
     const [mapFocusZoom, setMapFocusZoom] = useState<number | null>(null); // [New] 지도 줌 레벨 제어
@@ -68,6 +89,7 @@ export default function HomeClient() {
     const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
     const [deviceLocation, setDeviceLocation] = useState<DeviceMapLocation | null>(null);
+    const [initialMobileOverlayIntent, setInitialMobileOverlayIntent] = useState<HomeStartupIntent | null>(null);
     const [isDeviceLocationPending, setIsDeviceLocationPending] = useState(false);
     const [isDeviceHeadingMode, setIsDeviceHeadingMode] = useState(false);
     const deviceLocationFocusRequestIdRef = useRef(0);
@@ -80,6 +102,11 @@ export default function HomeClient() {
     const [mapMountKey] = useState(() => Date.now());
 
     const state = useHomeState(mapMode);
+    const {
+        clearRestaurantDetailSelection,
+        openRestaurantDetailSelection,
+        releaseSearchSelectionOwnership,
+    } = state;
     // Deep-link restaurant params are consumed after the parent-owned
     // selection contract opens the detail panel; using history avoids
     // triggering a home refresh/reset loop while preserving other params.
@@ -104,7 +131,7 @@ export default function HomeClient() {
     const openPanel = useCallback((panel: PanelType) => {
         setIsMapFullscreen(false);
         // 맛집 상세 패널 닫기
-        state.clearRestaurantDetailSelection();
+        clearRestaurantDetailSelection();
         if (panel === 'announcement' && isMobileOrTablet) {
             setActiveRightPanel(null);
             setIsAnnouncementSheetOpen(true);
@@ -115,7 +142,7 @@ export default function HomeClient() {
         setIsAnnouncementSheetOpen(false);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
-    }, [isMobileOrTablet, state]);
+    }, [clearRestaurantDetailSelection, isMobileOrTablet]);
     useEffect(() => {
         openPanelRef.current = openPanel;
     }, [openPanel]);
@@ -124,11 +151,22 @@ export default function HomeClient() {
     // [OPTIMIZATION] useCallback으로 메모이제이션
     const closeAllPanels = useCallback(() => {
         setIsMapFullscreen(false);
-        state.clearRestaurantDetailSelection();
+        clearRestaurantDetailSelection();
         setActiveRightPanel(null);
         setIsAnnouncementSheetOpen(false);
         setIsPanelCollapsed(false);
-    }, [state]);
+    }, [clearRestaurantDetailSelection]);
+
+    useEffect(() => {
+        const handleHomeOverlayPanelOpened = () => {
+            closeAllPanels();
+        };
+
+        window.addEventListener('homeOverlayPanelOpened', handleHomeOverlayPanelOpened);
+        return () => {
+            window.removeEventListener('homeOverlayPanelOpened', handleHomeOverlayPanelOpened);
+        };
+    }, [closeAllPanels]);
 
     // 패널 접기/펼치기
     // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -177,7 +215,7 @@ export default function HomeClient() {
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
         // 그 다음 상세 패널 열기
-        state.openRestaurantDetailSelection(restaurant);
+        openRestaurantDetailSelection(restaurant);
 
         // [Fix] 줌 레벨 설정 (북마크 등에서 요청 시)
         if (focusZoom) {
@@ -188,21 +226,39 @@ export default function HomeClient() {
 
         // [Fix] 마커 클릭 시 URL의 restaurant 파라미터 제거하여 스티키 현상 방지
         clearConsumedRestaurantParams();
-    }, [clearConsumedRestaurantParams, state]);
+    }, [clearConsumedRestaurantParams, openRestaurantDetailSelection]);
     useEffect(() => {
         openDetailPanelRef.current = openDetailPanel;
     }, [openDetailPanel]);
 
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const intent = window.sessionStorage.getItem(HOME_INITIAL_SHELL_INTENT_KEY);
+            window.sessionStorage.removeItem(HOME_INITIAL_SHELL_INTENT_KEY);
+
+            if (!isHomeStartupIntent(intent)) return;
+
+            setInitialMobileOverlayIntent(intent);
+            if (intent === 'search') {
+                setActivePanel('control');
+            }
+        } catch (_) {
+            // Session storage may be unavailable in restrictive browser modes; fall back to normal home load.
+        }
+    }, []);
+
     const handleRestaurantSelectionSync = useCallback((restaurant: Restaurant | null) => {
         if (!restaurant) {
             setIsMapFullscreen(false);
-            state.clearRestaurantDetailSelection();
+            clearRestaurantDetailSelection();
             return;
         }
 
         setIsMapFullscreen(false);
-        state.openRestaurantDetailSelection(restaurant);
-    }, [state]);
+        openRestaurantDetailSelection(restaurant);
+    }, [clearRestaurantDetailSelection, openRestaurantDetailSelection]);
 
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({
@@ -243,7 +299,8 @@ export default function HomeClient() {
             deviceLocationFocusRequestIdRef.current = nextFocusRequestId;
         }
 
-        setDeviceLocation((previous) => ({
+        setDeviceLocation((previous) => {
+            const nextLocation: DeviceMapLocation = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
             accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
@@ -251,7 +308,13 @@ export default function HomeClient() {
             mode,
             focusRequestId: nextFocusRequestId,
             updatedAt: Date.now(),
-        }));
+            };
+
+            return resolveDeviceLocationStateUpdatePlan({
+                previous,
+                next: nextLocation,
+            }).nextLocation;
+        });
     }, []);
 
     const stopDeviceHeadingWatchers = useCallback(() => {
@@ -295,10 +358,21 @@ export default function HomeClient() {
             const heading = resolveDeviceOrientationHeading(event);
             if (heading === null) return;
 
-            setDeviceLocation((previous) => previous
-                ? { ...previous, heading, mode: 'heading', updatedAt: Date.now() }
-                : previous
-            );
+            setDeviceLocation((previous) => {
+                if (!previous) return previous;
+
+                const nextLocation: DeviceMapLocation = {
+                    ...previous,
+                    heading,
+                    mode: 'heading',
+                    updatedAt: Date.now(),
+                };
+
+                return resolveDeviceLocationStateUpdatePlan({
+                    previous,
+                    next: nextLocation,
+                }).nextLocation;
+            });
         };
 
         window.addEventListener('deviceorientationabsolute', handleOrientation);
@@ -406,20 +480,50 @@ export default function HomeClient() {
         <>
             <HomeClientEffects
                 activeRightPanel={activeRightPanel}
+                clearRestaurantDetailSelection={clearRestaurantDetailSelection}
                 isAdmin={isAdmin}
                 isLoggedIn={!!user}
-                isMobileOrTablet={isMobileOrTablet}
                 mapMode={mapMode}
                 openDetailPanelRef={openDetailPanelRef}
                 openPanelRef={openPanelRef}
                 selectedAnnouncement={selectedAnnouncement}
                 setMapMode={setMapMode}
                 setSelectedAnnouncement={setSelectedAnnouncement}
-                state={state}
                 togglePanelCollapse={togglePanelCollapse}
             />
 
-            {!(isMobileOrTablet && isMapFullscreen) && (
+            <HomeMapContainer
+                key={mapMountKey}
+                mapMode={mapMode}
+                mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
+                filters={state.filters}
+                selectedRegion={state.selectedRegion}
+                selectedCountry={state.selectedCountry}
+                searchedRestaurant={state.searchedRestaurant}
+                selectedRestaurant={state.selectedRestaurant}
+                refreshTrigger={state.refreshTrigger}
+                panelRestaurant={state.panelRestaurant}
+                isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
+                onAdminEditRestaurant={onAdminEditRestaurant}
+                onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
+                onRestaurantSelect={handleRestaurantSelectionSync}
+
+                onMapReady={handlers.handleMapReady}
+                onMarkerClick={openDetailPanel}
+                onPanelClose={closeAllPanels}
+                onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
+                onTogglePanelCollapse={togglePanelCollapse}
+                activePanel={activePanel}
+                onPanelClick={setActivePanel}
+                externalPanelOpen={activeRightPanel === null}
+                isPanelCollapsed={isPanelCollapsed}
+                isMapFullscreen={isMapFullscreen}
+                onMapFullscreenChange={setIsMapFullscreen}
+                deviceLocation={deviceLocation}
+                onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
+            />
+
+            {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
                 <HomeControlPanel
                     mapMode={mapMode}
                     selectedRegion={state.selectedRegion}
@@ -439,7 +543,7 @@ export default function HomeClient() {
                     isAdmin={isAdmin}
                     onModeChange={(mode) => {
                         setIsMapFullscreen(false);
-                        state.clearRestaurantDetailSelection();
+                        clearRestaurantDetailSelection();
                         setMapMode(mode);
                     }}
                     user={user}
@@ -449,39 +553,9 @@ export default function HomeClient() {
                     deviceLocation={deviceLocation}
                     isDeviceLocationPending={isDeviceLocationPending}
                     isDeviceHeadingMode={isDeviceHeadingMode}
+                    initialIntent={initialMobileOverlayIntent}
                 />
             )}
-
-            <HomeMapContainer
-                key={mapMountKey}
-                mapMode={mapMode}
-                mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
-                filters={state.filters}
-                selectedRegion={state.selectedRegion}
-                selectedCountry={state.selectedCountry}
-                searchedRestaurant={state.searchedRestaurant}
-                selectedRestaurant={state.selectedRestaurant}
-                refreshTrigger={state.refreshTrigger}
-                panelRestaurant={state.panelRestaurant}
-                isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
-                onAdminEditRestaurant={onAdminEditRestaurant}
-                onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
-                onRestaurantSelect={handleRestaurantSelectionSync}
-                onReleaseSearchSelectionOwnership={state.releaseSearchSelectionOwnership}
-
-                onMapReady={handlers.handleMapReady}
-                onMarkerClick={openDetailPanel}
-                onPanelClose={closeAllPanels}
-                onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
-                onTogglePanelCollapse={togglePanelCollapse}
-                activePanel={activePanel}
-                onPanelClick={setActivePanel}
-                externalPanelOpen={activeRightPanel === null}
-                isPanelCollapsed={isPanelCollapsed}
-                isMapFullscreen={isMapFullscreen}
-                onMapFullscreenChange={setIsMapFullscreen}
-                deviceLocation={deviceLocation}
-            />
 
             {isDesktop && (
                 <SubmissionFloatingButton
@@ -490,7 +564,7 @@ export default function HomeClient() {
                 />
             )}
 
-            {shouldRenderSidePanels && (
+            {isViewportResolved && shouldRenderSidePanels && (
                 <HomeClientSidePanels
                     activeRightPanel={activeRightPanel}
                     closeAllPanels={closeAllPanels}

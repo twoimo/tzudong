@@ -17,6 +17,7 @@ playwright-report/
 blob-report/
 playwright/.cache/
 tests/.auth/**
+.tmp-*/
 
 # Pencil storyboard transient artifacts
 design/pencil/screenshots/**

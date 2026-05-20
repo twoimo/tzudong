@@ -15,7 +15,7 @@ import {
   RECEIPT_OCR_PREPROCESS_VERSION,
   RECEIPT_OCR_PROMPT_VERSION,
 } from '@/lib/ocr/receipt-prompt';
-import { resolveOcrAiRuntimeConfig, type OcrAiRuntimeConfigCandidate } from '@/lib/admin/ai-settings-store';
+import { resolveOcrAiRuntimeConfig, type OcrAiRuntimeConfigCandidate } from '@/lib/ocr/runtime-config';
 import {
     buildOcrCacheVersion,
     doesOcrCacheMetadataMatch,

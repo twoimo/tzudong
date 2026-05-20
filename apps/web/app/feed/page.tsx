@@ -1,20 +1,32 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
 import FeedContent, { type FeedRestaurantRecord } from '@/components/feed/FeedContent';
 import { BREAKPOINTS } from '@/hooks/useDeviceType';
-import AuthModal from '@/components/auth/AuthModal';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
-import { ReviewModal } from '@/components/reviews/ReviewModal';
 import type { Restaurant } from '@/types/restaurant';
-import { EditRestaurantModal } from '@/components/modals/EditRestaurantModal';
 import { buildEditRestaurantInitialFormData } from '@/lib/edit-restaurant-request-form';
 import { GlobalLoader } from '@/components/ui/global-loader';
 
+const AuthModal = dynamic(() => import('@/components/auth/AuthModal'), { ssr: false });
+const RestaurantDetailPanel = dynamic(
+    () => import('@/components/restaurant/RestaurantDetailPanel').then((mod) => ({ default: mod.RestaurantDetailPanel })),
+    { ssr: false }
+);
+const ReviewModal = dynamic(
+    () => import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
+    { ssr: false }
+);
+const EditRestaurantModal = dynamic(
+    () => import('@/components/modals/EditRestaurantModal').then((mod) => ({ default: mod.EditRestaurantModal })),
+    { ssr: false }
+);
+
 function FeedPageContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isMounted, setIsMounted] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -28,7 +40,9 @@ function FeedPageContent() {
 
         const redirectIfDesktop = () => {
             if (window.innerWidth > BREAKPOINTS.tabletMax) {
-                router.replace('/');
+                const reviewId = searchParams.get('review');
+                const target = reviewId ? `/?panel=feed&review=${encodeURIComponent(reviewId)}` : '/?panel=feed';
+                router.replace(target);
             }
         };
 
@@ -38,7 +52,7 @@ function FeedPageContent() {
         return () => {
             window.removeEventListener('resize', redirectIfDesktop);
         };
-    }, [router]);
+    }, [router, searchParams]);
 
     // Mount 전에는 아무것도 렌더링하지 않음 (Hydration Mismatch 방지)
     if (!isMounted) return null;
@@ -118,12 +132,14 @@ function FeedPageContent() {
                     initialFormData={buildEditRestaurantInitialFormData(restaurantToEdit)}
                 />
             )}
-            <ReviewModal
-                isOpen={isReviewModalOpen}
-                onClose={() => setIsReviewModalOpen(false)}
-                restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
-                onSuccess={() => setIsReviewModalOpen(false)}
-            />
+            {isReviewModalOpen && (
+                <ReviewModal
+                    isOpen={isReviewModalOpen}
+                    onClose={() => setIsReviewModalOpen(false)}
+                    restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
+                    onSuccess={() => setIsReviewModalOpen(false)}
+                />
+            )}
         </div>
     );
 }

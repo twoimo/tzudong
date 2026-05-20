@@ -6,9 +6,10 @@ import type { FilterState } from '@/components/filters/filter-state';
 import { BREAKPOINTS, useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
-import MobileControlOverlay from '@/components/home/MobileControlOverlay';
-import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
+
+
+type MobileControlOverlayIntent = 'search' | 'bookmark' | 'notification' | 'user';
 
 type HomeDesktopControlPanelProps = {
     mapMode: 'domestic' | 'overseas';
@@ -16,7 +17,6 @@ type HomeDesktopControlPanelProps = {
     selectedCountry: string | null;
     selectedCategories: string[];
     filters: FilterState;
-    countryCounts: Record<string, number>;
     onRegionChange: (region: Region | null) => void;
     onCountryChange: (country: string) => void;
     onCategoryChange: (categories: string[]) => void;
@@ -26,6 +26,7 @@ type HomeDesktopControlPanelProps = {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     leftSidebarWidth?: number;
     rightPanelWidth?: number;
+    initialIntent?: MobileControlOverlayIntent | null;
 };
 
 const loadHomeDesktopControlPanel = async () => {
@@ -33,7 +34,14 @@ const loadHomeDesktopControlPanel = async () => {
     return mod.default as ComponentType<HomeDesktopControlPanelProps>;
 };
 
-interface HomeControlPanelProps {
+type MobileControlOverlayProps = HomeControlPanelProps;
+
+const loadMobileControlOverlay = async () => {
+    const mod = await import('@/components/home/MobileControlOverlay');
+    return mod.default as ComponentType<MobileControlOverlayProps>;
+};
+
+export interface HomeControlPanelProps {
     mapMode: 'domestic' | 'overseas';
     selectedRegion: Region | null;
     selectedCountry: string | null;
@@ -58,6 +66,7 @@ interface HomeControlPanelProps {
     deviceLocation?: DeviceMapLocation | null;
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
+    initialIntent?: MobileControlOverlayIntent | null;
 }
 
 function HomeControlPanelComponent({
@@ -84,21 +93,44 @@ function HomeControlPanelComponent({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    initialIntent = null,
 }: HomeControlPanelProps) {
     const { isMobileOrTablet } = useDeviceType();
-    const countryCounts = useOverseasCountryCounts(mapMode);
     const shouldRenderMobile = isMobileOrTablet || (
         typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax
     );
-    const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(false);
+    const [shouldLoadMobileOverlay, setShouldLoadMobileOverlay] = useState(() => (
+        Boolean(initialIntent) || (typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax)
+    ));
+    const [pendingMobileOverlayIntent, setPendingMobileOverlayIntent] = useState<MobileControlOverlayIntent | null>(initialIntent);
+    const [shouldLoadDesktopPanel, setShouldLoadDesktopPanel] = useState(() => (
+        typeof window !== 'undefined' ? window.innerWidth > BREAKPOINTS.tabletMax : false
+    ));
+    const DeferredMobileControlOverlay = useDeferredComponent<MobileControlOverlayProps>(
+        shouldRenderMobile && shouldLoadMobileOverlay,
+        loadMobileControlOverlay
+    );
+
+    useEffect(() => {
+        if (!initialIntent) return;
+
+        setPendingMobileOverlayIntent(initialIntent);
+        setShouldLoadMobileOverlay(true);
+    }, [initialIntent]);
     const DeferredHomeDesktopControlPanel = useDeferredComponent<HomeDesktopControlPanelProps>(
         shouldLoadDesktopPanel,
         loadHomeDesktopControlPanel
     );
 
     useEffect(() => {
+        let resizeRafId = 0;
         const updateShouldLoadDesktopPanel = () => {
-            setShouldLoadDesktopPanel(window.innerWidth > BREAKPOINTS.tabletMax);
+            if (resizeRafId) return;
+
+            resizeRafId = window.requestAnimationFrame(() => {
+                resizeRafId = 0;
+                setShouldLoadDesktopPanel(window.innerWidth > BREAKPOINTS.tabletMax);
+            });
         };
 
         updateShouldLoadDesktopPanel();
@@ -106,18 +138,28 @@ function HomeControlPanelComponent({
 
         return () => {
             window.removeEventListener('resize', updateShouldLoadDesktopPanel);
+            if (resizeRafId) window.cancelAnimationFrame(resizeRafId);
         };
     }, []);
 
+    useEffect(() => {
+        if (!shouldRenderMobile || shouldLoadMobileOverlay) return;
+
+        setShouldLoadMobileOverlay(true);
+    }, [shouldLoadMobileOverlay, shouldRenderMobile]);
+
     if (shouldRenderMobile) {
+        if (!DeferredMobileControlOverlay) {
+            return null;
+        }
+
         return (
-            <MobileControlOverlay
+            <DeferredMobileControlOverlay
                 mapMode={mapMode}
                 selectedRegion={selectedRegion}
                 selectedCountry={selectedCountry}
                 selectedCategories={selectedCategories}
                 filters={filters}
-                countryCounts={countryCounts}
                 onRegionChange={onRegionChange}
                 onCountryChange={onCountryChange}
                 onCategoryChange={onCategoryChange}
@@ -133,6 +175,7 @@ function HomeControlPanelComponent({
                 deviceLocation={deviceLocation}
                 isDeviceLocationPending={isDeviceLocationPending}
                 isDeviceHeadingMode={isDeviceHeadingMode}
+                initialIntent={pendingMobileOverlayIntent}
             />
         );
     }
@@ -148,7 +191,6 @@ function HomeControlPanelComponent({
             selectedCountry={selectedCountry}
             selectedCategories={selectedCategories}
             filters={filters}
-            countryCounts={countryCounts}
             onRegionChange={onRegionChange}
             onCountryChange={onCountryChange}
             onCategoryChange={onCategoryChange}
@@ -158,6 +200,7 @@ function HomeControlPanelComponent({
             onPanelClick={onPanelClick}
             leftSidebarWidth={leftSidebarWidth}
             rightPanelWidth={rightPanelWidth}
+            initialIntent={initialIntent}
         />
     );
 }

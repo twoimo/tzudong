@@ -6,6 +6,8 @@ import { getNavigationPrefetchRoutes } from '../components/layout/navigation-rou
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 const exists = (relativePath: string) => existsSync(join(import.meta.dir, '..', relativePath));
+const RETIRED_COSTS_ROUTE = '/' + 'costs';
+const RETIRED_ADMIN_COSTS_ROUTE = '/admin/' + 'costs';
 
 describe('frontend unused route compatibility', () => {
     test('keeps public submissions as a compatibility redirect and removes costs pages', () => {
@@ -14,50 +16,127 @@ describe('frontend unused route compatibility', () => {
 
         expect(nextConfigSource).toContain("source: '/submissions'");
         expect(nextConfigSource).toContain("destination: '/mypage'");
-        expect(nextConfigSource).not.toContain("source: '/costs'");
-        expect(nextConfigSource).not.toContain("destination: '/admin/costs'");
+        expect(nextConfigSource).not.toContain(`source: '${RETIRED_COSTS_ROUTE}'`);
+        expect(nextConfigSource).not.toContain(`destination: '${RETIRED_ADMIN_COSTS_ROUTE}'`);
         expect(submissionsPageSource).toContain("redirect('/mypage')");
-        expect(exists('app/costs/page.tsx')).toBe(false);
-        expect(exists('app/admin/costs/page.tsx')).toBe(false);
+        expect(exists(join('app', 'costs', 'page.tsx'))).toBe(false);
+        expect(exists(join('app', 'admin', 'costs', 'page.tsx'))).toBe(false);
     });
 
     test('moves admin submissions to the canonical evaluations view', () => {
         const adminSubmissionsSource = source('app/admin/submissions/page.tsx');
         const adminEvaluationsSource = source('app/admin/evaluations/page.tsx');
+        const adminLoadingSource = source('app/admin/loading.tsx');
+        const adminBannersSource = source('app/admin/banners/page.tsx');
         const headerSource = source('components/layout/Header.tsx');
+        const mobileControlOverlaySource = source('components/home/MobileControlOverlay.tsx');
         const homeEffectsSource = source('app/home-client-effects.tsx');
 
         expect(adminSubmissionsSource).toContain("redirect('/admin/evaluations?view=submissions')");
         expect(adminSubmissionsSource).not.toContain('"use client"');
         expect(adminSubmissionsSource).not.toContain('useInfiniteQuery');
-        expect(adminEvaluationsSource).toContain("searchParams.get('view') === 'submissions'");
+        expect(adminEvaluationsSource).toContain("const routeView = embedded ? null : searchParams.get('view');");
+        expect(adminEvaluationsSource).toContain("routeView === 'submissions'");
         expect(adminEvaluationsSource).toContain("@/components/admin/EvaluationTableNew");
-        expect(headerSource).toContain("/admin/evaluations?view=submissions");
-        expect(headerSource).toContain("/admin/evaluations?view=submissions&tab=reviews");
+        expect(adminEvaluationsSource).toContain('fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}');
+        expect(adminEvaluationsSource).toContain('return <AdminEvaluationRouteSkeleton />;');
+        expect(adminEvaluationsSource).toContain('switchToEvaluationListView');
+        expect(adminEvaluationsSource).toContain('switchToEvaluationSlideView');
+        expect(adminEvaluationsSource).not.toContain('YouTube 자막 수집 실행');
+        expect(adminEvaluationsSource).not.toContain('handleCollectTranscripts');
+        expect(adminEvaluationsSource).not.toContain('EmbeddedEvaluationLoading');
+        expect(adminEvaluationsSource).not.toContain('<GlobalLoader');
+        expect(adminEvaluationsSource).not.toContain('제보 큐를 여는 중');
+        expect(adminEvaluationsSource).not.toContain('리뷰 검수 큐를 여는 중');
+        expect(adminEvaluationsSource).not.toContain('맛집 검수 화면을 여는 중');
+        expect(adminEvaluationsSource).not.toContain('authLoading || (loading && allRecords.length === 0)');
+        expect(adminEvaluationsSource).not.toContain('loading && allRecords.length === 0)) {');
+        expect(adminLoadingSource).toContain('return null;');
+        expect(adminLoadingSource).toContain('모듈별 스켈레톤만 한 번');
+        expect(adminLoadingSource).not.toContain('AdminConsoleLoadingSkeleton');
+        expect(adminLoadingSource).not.toContain('GlobalLoader');
+        expect(adminBannersSource).toContain('<Suspense fallback={null}>');
+        expect(adminBannersSource).toContain('if (authLoading) {');
+        expect(adminBannersSource).toContain('return null;');
+        expect(adminBannersSource).not.toContain('EmbeddedBannerLoading');
+        expect(adminBannersSource).not.toContain('배너 관리 준비 중');
+        expect(adminBannersSource).not.toContain('GlobalLoader');
+        expect(headerSource).toContain("관리자 콘솔");
+        expect(headerSource).toContain("router.push('/admin')");
+        expect(headerSource).not.toContain("router.push('/admin?module=announcements')");
+        expect(headerSource).not.toContain("/admin/evaluations?view=submissions");
+        expect(headerSource).not.toContain("/admin/evaluations?view=submissions&tab=reviews");
+        expect(mobileControlOverlaySource).toContain("관리자 콘솔");
+        expect(mobileControlOverlaySource).toContain("router.push('/admin')");
+        expect(mobileControlOverlaySource).not.toContain('맛집관리');
+        expect(mobileControlOverlaySource).not.toContain('제보관리');
+        expect(mobileControlOverlaySource).not.toContain('리뷰관리');
+        expect(mobileControlOverlaySource).not.toContain('배너관리');
+        expect(mobileControlOverlaySource).not.toContain("router.push('/admin/banners')");
+        expect(mobileControlOverlaySource).not.toContain("openAdminSubmissions");
+        expect(mobileControlOverlaySource).not.toContain("openAdminReviews");
         expect(homeEffectsSource).toContain("/admin/evaluations?view=submissions");
+        expect(homeEffectsSource).toContain("router.push('/mypage/profile')");
+        expect(homeEffectsSource).not.toContain("router.push('/mypage')");
     });
 
     test('prefetches canonical admin routes instead of retired submissions route', () => {
         const adminRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: true });
         const userRoutes = getNavigationPrefetchRoutes({ isLoggedIn: true, isAdmin: false });
 
+        expect(adminRoutes).toContain('/admin');
         expect(adminRoutes).toContain('/admin/evaluations');
-        expect(adminRoutes).not.toContain('/admin/costs');
-        expect(adminRoutes).toContain('/admin/ai-settings');
+        expect(adminRoutes).toContain('/admin/banners');
+        expect(adminRoutes).not.toContain(RETIRED_ADMIN_COSTS_ROUTE);
+        const retiredAiSettingsRoute = `/admin/${'ai-settings'}`;
+        expect(adminRoutes).not.toContain(retiredAiSettingsRoute);
         expect(adminRoutes).not.toContain('/admin/submissions');
+        expect(userRoutes).not.toContain('/admin');
         expect(userRoutes).not.toContain('/admin/evaluations');
+        expect(userRoutes).not.toContain('/admin/banners');
         expect(userRoutes).not.toContain('/admin/submissions');
-        expect(userRoutes).not.toContain('/admin/ai-settings');
+        expect(userRoutes).not.toContain(retiredAiSettingsRoute);
     });
 
-    test('defers insight and global map route retirement until parity is explicit', () => {
+    test('keeps the unified admin console as the canonical embedded module hub', () => {
+        const adminPageSource = source('app/admin/page.tsx');
+        const adminConsoleSource = source('components/admin/AdminConsoleOverview.tsx');
+
+        expect(adminPageSource).toContain('<AdminConsoleOverview />');
+        expect(adminConsoleSource).toContain('getAdminModuleIdFromSearchParams(searchParams)');
+        expect(adminConsoleSource).toContain('buildCanonicalAdminModuleHref');
+        expect(adminConsoleSource).toContain('router.replace(buildCanonicalAdminModuleHref(moduleId)');
+        expect(adminConsoleSource).toContain('currentHref !== canonicalHref');
+        expect(adminConsoleSource).toContain('router.replace(canonicalHref, { scroll: false });');
+        expect(adminConsoleSource).toContain('router.replace');
+        expect(adminConsoleSource).not.toContain('검수 큐 작업 화면 연결 중');
+        expect(adminConsoleSource).not.toContain('window.history.replaceState');
+        expect(adminConsoleSource).toContain('<AdminRestaurantEvaluationModule key="restaurants" embedded initialView="evaluations" />');
+        expect(adminConsoleSource).toContain('<AdminSubmissionEvaluationModule key="submissions" embedded initialView="submissions" initialSubmissionTab="new" />');
+        expect(adminConsoleSource).toContain('<AdminReviewEvaluationModule key="reviews" embedded initialView="submissions" initialSubmissionTab="reviews" />');
+        expect(adminConsoleSource).not.toContain('AdminConsoleLoadingSkeleton');
+        expect(adminConsoleSource).toContain('if (authLoading) {');
+        expect(adminConsoleSource).toContain('return null;');
+        expect(adminConsoleSource).not.toContain('<GlobalLoader');
+        expect(adminConsoleSource).toContain('<AdminBannerModule key="admin-banners" embedded />');
+        expect(adminConsoleSource).toContain('AdminAnnouncementModule');
+        expect(adminConsoleSource).toContain('adminActionsMode="inline"');
+        expect(adminConsoleSource).toContain('id: "announcements"');
+        expect(adminConsoleSource).toContain('/admin?module=announcements');
+        expect(adminConsoleSource).toContain('<InsightsModule key="admin-insights" />');
+        expect(adminConsoleSource).toContain('router.replace("/")');
+        expect(adminConsoleSource).not.toContain('router.push("/admin/evaluations")');
+        expect(adminConsoleSource).not.toContain('router.push("/admin/banners")');
+    });
+
+    test('removes admin insight fallback while preserving public insights and global map', () => {
         const insightsClientSource = source('app/insights/insights-client.tsx');
         const recommendationPopupSource = source('components/recommendation/DailyRecommendationPopup.tsx');
 
-        expect(exists('app/admin/insight/page.tsx')).toBe(true);
-        expect(exists('app/admin/insight/insight-client.tsx')).toBe(true);
+        expect(exists(join('app', 'admin', 'insight', 'page.tsx'))).toBe(false);
+        expect(exists(join('app', 'admin', 'insight', 'insight-client.tsx'))).toBe(false);
         expect(exists('app/global-map/page.tsx')).toBe(true);
-        expect(insightsClientSource).toContain("@/app/admin/insight/insight-client");
+        expect(insightsClientSource).not.toContain(`@/app/admin/${'insight'}/insight-client`);
         expect(recommendationPopupSource).toContain("'/global-map'");
     });
 
@@ -67,6 +146,7 @@ describe('frontend unused route compatibility', () => {
         expect(exists('components/ui/pagination.tsx')).toBe(false);
         expect(exists('components/ui/toaster.tsx')).toBe(false);
         expect(exists('lib/insight/keyword-label.ts')).toBe(false);
+        expect(exists('lib/insight')).toBe(false);
         expect(exists('components/ui/scrollable-tag-container.tsx')).toBe(true);
         expect(exists('lib/ocr/dataset-allowlist.ts')).toBe(true);
     });

@@ -101,7 +101,6 @@ function LeaderboardSkeletonComponent({
             {showHeader && <Skeleton className="h-6 w-32" />}
             {Array.from({ length: count }, (_, i) => (
                 <div key={i} className="flex items-center gap-3 py-2">
-                    <Skeleton className="h-5 w-5 rounded" />
                     <Skeleton className="h-9 w-9 rounded-full" />
                     <Skeleton className="h-4 w-24 flex-1" />
                     <Skeleton className="h-4 w-12" />

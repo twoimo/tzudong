@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 
 /**
  * [PERF] 루트 에러 바운더리 - 에러 발생 시 앱 전체 크래시 방지
@@ -29,12 +28,20 @@ export default function RootError({
                     일시적인 오류가 발생했습니다. 다시 시도해 주세요.
                 </p>
                 <div className="flex gap-3 justify-center">
-                    <Button onClick={reset} variant="default">
+                    <button
+                        type="button"
+                        onClick={reset}
+                        className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
                         다시 시도
-                    </Button>
-                    <Button onClick={() => window.location.href = '/'} variant="outline">
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => window.location.href = '/'}
+                        className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
                         홈으로 이동
-                    </Button>
+                    </button>
                 </div>
             </div>
         </div>
