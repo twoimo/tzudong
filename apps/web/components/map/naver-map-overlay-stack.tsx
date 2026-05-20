@@ -20,6 +20,7 @@ export function NaverMapOverlayStack({
     isMobileOverlayReady = true,
     mapToast,
     onAnnouncementToastClick,
+    restaurantCountToastCount,
     restaurantsLength,
     showAnnouncementToast,
     showOnlineUsers,
@@ -35,6 +36,7 @@ export function NaverMapOverlayStack({
     isMobileOverlayReady?: boolean;
     mapToast: { message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null;
     onAnnouncementToastClick?: () => void;
+    restaurantCountToastCount: number;
     restaurantsLength: number;
     showAnnouncementToast: boolean;
     showOnlineUsers: boolean;
@@ -57,7 +59,7 @@ export function NaverMapOverlayStack({
 
             {!isLoadingRestaurants && isLoaded && restaurantsLength > 0 && showRestaurantCount && (
                 <RestaurantCountBadge
-                    count={restaurantsLength}
+                    count={restaurantCountToastCount}
                     style={centerOffsetStyle}
                     className={badgePositionClass}
                 />
