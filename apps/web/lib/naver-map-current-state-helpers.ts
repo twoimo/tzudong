@@ -47,6 +47,7 @@ export function getNaverCurrentPanelOffset(currentState: { effectivePanelOffset:
 export function resolveNaverRestaurantCountUpdatePlan({
     hasAlreadyShownCount = false,
     hideDelayMs = 3000,
+    settleDelayMs = 1200,
     isMobileOrTablet = false,
     isNoncriticalEffectsActive = true,
     isLoadingRestaurants,
@@ -54,6 +55,7 @@ export function resolveNaverRestaurantCountUpdatePlan({
 }: {
     hasAlreadyShownCount?: boolean;
     hideDelayMs?: number;
+    settleDelayMs?: number;
     isMobileOrTablet?: boolean;
     isNoncriticalEffectsActive?: boolean;
     isLoadingRestaurants: boolean;
@@ -69,6 +71,7 @@ export function resolveNaverRestaurantCountUpdatePlan({
 
     return {
         hideDelayMs,
+        settleDelayMs,
         shouldShowRestaurantCount,
         shouldStorePreviousRestaurants: hasData,
     } as const;
