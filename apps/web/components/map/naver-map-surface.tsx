@@ -15,6 +15,7 @@ export function NaverMapSurface({
     mapRef,
     mapToast,
     onAnnouncementToastClick,
+    renderOverlayStack = true,
     restaurantsLength,
     showAnnouncementToast,
     showOnlineUsers,
@@ -32,6 +33,7 @@ export function NaverMapSurface({
     mapRef: RefObject<HTMLDivElement | null>;
     mapToast: { message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null;
     onAnnouncementToastClick?: () => void;
+    renderOverlayStack?: boolean;
     restaurantsLength: number;
     showAnnouncementToast: boolean;
     showOnlineUsers: boolean;
@@ -45,21 +47,24 @@ export function NaverMapSurface({
                 className="w-full h-full"
             />
 
-            <NaverMapOverlayStack
-                announcementToastTitle={announcementToastTitle}
-                badgePositionClass={badgePositionClass}
-                centerOffsetStyle={centerOffsetStyle}
-                count={count}
-                floatingToastPositionClass={floatingToastPositionClass}
-                isLoaded={isLoaded}
-                isLoadingRestaurants={isLoadingRestaurants}
-                mapToast={mapToast}
-                onAnnouncementToastClick={onAnnouncementToastClick}
-                restaurantsLength={restaurantsLength}
-                showAnnouncementToast={showAnnouncementToast}
-                showOnlineUsers={showOnlineUsers}
-                showRestaurantCount={showRestaurantCount}
-            />
+            {renderOverlayStack && (
+                <NaverMapOverlayStack
+                    announcementToastTitle={announcementToastTitle}
+                    badgePositionClass={badgePositionClass}
+                    centerOffsetStyle={centerOffsetStyle}
+                    count={count}
+                    floatingToastPositionClass={floatingToastPositionClass}
+                    isLoaded={isLoaded}
+                    isLoadingRestaurants={isLoadingRestaurants}
+                    mapToast={mapToast}
+                    onAnnouncementToastClick={onAnnouncementToastClick}
+                    restaurantsLength={restaurantsLength}
+                    showAnnouncementToast={showAnnouncementToast}
+                    showOnlineUsers={showOnlineUsers}
+                    showRestaurantCount={showRestaurantCount}
+                />
+            )}
         </div>
     );
 }
+

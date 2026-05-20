@@ -68,4 +68,31 @@ describe('naver map current state helpers', () => {
             shouldStorePreviousRestaurants: false,
         });
     });
+
+    test('suppresses restaurant count badge when already shown once', () => {
+        const plan = resolveNaverRestaurantCountUpdatePlan({
+            hasAlreadyShownCount: true,
+            isLoadingRestaurants: false,
+            restaurantsLength: 375,
+        });
+        expect(plan.shouldShowRestaurantCount).toBe(false);
+        // shouldStorePreviousRestaurants is still true since data exists
+        expect(plan.shouldStorePreviousRestaurants).toBe(true);
+    });
+
+    test('suppresses restaurant count badge on mobile until noncritical effects are active', () => {
+        expect(resolveNaverRestaurantCountUpdatePlan({
+            isMobileOrTablet: true,
+            isNoncriticalEffectsActive: false,
+            isLoadingRestaurants: false,
+            restaurantsLength: 347,
+        }).shouldShowRestaurantCount).toBe(false);
+
+        expect(resolveNaverRestaurantCountUpdatePlan({
+            isMobileOrTablet: true,
+            isNoncriticalEffectsActive: true,
+            isLoadingRestaurants: false,
+            restaurantsLength: 347,
+        }).shouldShowRestaurantCount).toBe(true);
+    });
 });
