@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
     KOREA_CLUSTER_BBOX,
+    getIndividualMarkerRevealZoom,
     getRegionalClusterTargetZoom,
     getSeoulDistrictTargetZoom,
     getSuperclusterTargetZoom,
@@ -12,20 +13,28 @@ import {
 } from '../lib/naver-map-cluster-helpers';
 
 describe('naver map cluster helpers', () => {
+    test('computes the first zoom where rendered and quantized cluster modes are disabled', () => {
+        expect(getIndividualMarkerRevealZoom({ currentZoom: 8, clusterMaxZoom: 12 })).toBe(14);
+        expect(getIndividualMarkerRevealZoom({ currentZoom: 8, clusterMaxZoom: 11 })).toBe(13);
+        expect(getIndividualMarkerRevealZoom({ currentZoom: 14, clusterMaxZoom: 12 })).toBe(15);
+        expect(getIndividualMarkerRevealZoom({ currentZoom: 18, clusterMaxZoom: 12 })).toBe(18);
+    });
+
     test('computes regional cluster target zoom', () => {
-        expect(getRegionalClusterTargetZoom(7)).toBe(9);
-        expect(getRegionalClusterTargetZoom(8)).toBe(9);
+        expect(getRegionalClusterTargetZoom(7, 12)).toBe(14);
+        expect(getRegionalClusterTargetZoom(8, 12)).toBe(14);
     });
 
     test('computes seoul district target zoom', () => {
-        expect(getSeoulDistrictTargetZoom(9)).toBe(11);
-        expect(getSeoulDistrictTargetZoom(11)).toBe(13);
-        expect(getSeoulDistrictTargetZoom(13)).toBe(13);
+        expect(getSeoulDistrictTargetZoom(9, 12)).toBe(14);
+        expect(getSeoulDistrictTargetZoom(11, 12)).toBe(14);
+        expect(getSeoulDistrictTargetZoom(13, 12)).toBe(14);
     });
 
-    test('computes supercluster target zoom with lower bound', () => {
-        expect(getSuperclusterTargetZoom(8, 7)).toBe(10);
-        expect(getSuperclusterTargetZoom(8, 12)).toBe(12);
+    test('computes supercluster target zoom beyond the cluster render ceiling', () => {
+        expect(getSuperclusterTargetZoom(8, 7, 12)).toBe(14);
+        expect(getSuperclusterTargetZoom(8, 12, 12)).toBe(14);
+        expect(getSuperclusterTargetZoom(8, 15, 12)).toBe(15);
     });
 
     test('quantizes supercluster zoom buckets in two-level steps', () => {
