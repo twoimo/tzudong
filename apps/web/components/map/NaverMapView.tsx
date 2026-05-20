@@ -14,6 +14,7 @@ import { REGION_MAP_CONFIG } from "@/config/maps";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
 import { NaverMapSurface } from "@/components/map/naver-map-surface";
+import { NaverMapOverlayStack } from "@/components/map/naver-map-overlay-stack";
 import {
     NaverMapDetailPanelShell,
     NaverMapReviewModal,
@@ -447,7 +448,9 @@ const NaverMapView = memo(({
     const { isSidebarOpen } = useLayout();
 
     // 디바이스 타입 감지 (모바일/태블릿에서는 오프셋 제거)
-    const { isMobileOrTablet } = useDeviceType();
+    // Next.js 클라이언트 사이드 수화(Hydration) 동안 desktop 기본값 오인 방지를 위해 window 너비와 동기화
+    const { isMobileOrTablet: rawIsMobileOrTablet } = useDeviceType();
+    const isMobileOrTablet = typeof window !== 'undefined' ? window.innerWidth <= 1279 : rawIsMobileOrTablet;
 
     // [OPTIMIZATION] 디바이스 성능 티어 기반 지도 최적화 설정
     const mapOptimization = useMapOptimization();
@@ -484,6 +487,7 @@ const NaverMapView = memo(({
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
+    const hasShownRestaurantCountRef = useRef(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [onlineUsersCount, setOnlineUsersCount] = useState(0);
     const [showAnnouncementToast, setShowAnnouncementToast] = useState(false);
@@ -492,6 +496,71 @@ const NaverMapView = memo(({
     const [announcementToastPayload, setAnnouncementToastPayload] = useState<Announcement | null>(null);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
     const [mapInitError, setMapInitError] = useState<string | null>(null);
+
+    // 모바일 초기 로드 시 검색창(MobileControlOverlay) 및 카테고리 슬라이더가
+    // 클라이언트 사이드에서 마운트 및 수화가 완료되고 실제 DOM에 성공적으로 안착했을 때만 비임계 지도 효과들을 활성화합니다.
+    useEffect(() => {
+        if (!isMobileOrTablet) {
+            setShouldRunNoncriticalMapEffects(true);
+            return;
+        }
+
+        let checkIntervalId: number;
+        let settleTimeoutId: number;
+
+        const attemptActivation = () => {
+            if (typeof document === 'undefined') return;
+
+            const searchButton = document.getElementById('tzudong-mobile-search-button');
+            const categorySlider = document.getElementById('tzudong-mobile-category-slider');
+
+            // 조건문: 검색창과 카테고리 슬라이더가 모두 실제 DOM에 로드되었는지 확인
+            if (searchButton && categorySlider) {
+                // 엘리먼트가 완전히 마운트된 것이 확인되었으므로, 500ms 동안 시각적으로 정착할 여유를 준 뒤 활성화합니다.
+                settleTimeoutId = window.setTimeout(() => {
+                    setShouldRunNoncriticalMapEffects(true);
+                }, 500);
+
+                window.removeEventListener('tzudong_mobile_overlay_ready', handleReady);
+                if (checkIntervalId) {
+                    window.clearInterval(checkIntervalId);
+                }
+            }
+        };
+
+        const handleReady = () => {
+            attemptActivation();
+        };
+
+        // 1. 컴포넌트 마운트 완료 이벤트를 리스닝합니다.
+        window.addEventListener('tzudong_mobile_overlay_ready', handleReady);
+
+        // 2. 주기적으로 DOM 조건 체크 (폴링: 100ms 마다 검사하여 확실하게 확인)
+        checkIntervalId = window.setInterval(() => {
+            attemptActivation();
+        }, 100);
+
+        // 즉시 첫 번째 조건 체크 수행
+        attemptActivation();
+
+        // 3초 내에 감지되지 않을 시 비임계 효과 강제 활성화 (사용성 확보를 위한 복구 폴백)
+        const fallbackTimeoutId = window.setTimeout(() => {
+            setShouldRunNoncriticalMapEffects(true);
+            window.removeEventListener('tzudong_mobile_overlay_ready', handleReady);
+            if (checkIntervalId) {
+                window.clearInterval(checkIntervalId);
+            }
+        }, 3000);
+
+        return () => {
+            window.removeEventListener('tzudong_mobile_overlay_ready', handleReady);
+            if (checkIntervalId) {
+                window.clearInterval(checkIntervalId);
+            }
+            clearTimeout(settleTimeoutId);
+            clearTimeout(fallbackTimeoutId);
+        };
+    }, [isMobileOrTablet]);
 
     const activeSearchedRestaurant = useMemo(() => getActiveSearchedRestaurant({
         searchedRestaurant,
@@ -1366,9 +1435,17 @@ const NaverMapView = memo(({
     // 지역 변경 시 로딩 중에도 이전 마커를 유지하기 위한 상태
     const [previousRestaurants, setPreviousRestaurants] = useState<Restaurant[]>([]);
 
+    // 지역이나 필터가 바뀌면 맛집 개수 배지 표시 플래그를 리셋 (새 쿼리에서 다시 1번 표시)
+    useEffect(() => {
+        hasShownRestaurantCountRef.current = false;
+    }, [selectedRegion, filters]);
+
     // restaurants가 변경될 때 이전 데이터를 저장하고, 개수 표시를 3초간 활성화
     useEffect(() => {
         const countUpdatePlan = resolveNaverRestaurantCountUpdatePlan({
+            hasAlreadyShownCount: hasShownRestaurantCountRef.current,
+            isMobileOrTablet,
+            isNoncriticalEffectsActive: shouldRunNoncriticalMapEffects,
             isLoadingRestaurants,
             restaurantsLength: restaurants.length,
         });
@@ -1377,15 +1454,49 @@ const NaverMapView = memo(({
             setPreviousRestaurants(restaurants);
         }
 
-        // 맛집 개수가 있을 때만 배지 표시 및 타이머 설정
-        if (countUpdatePlan.shouldShowRestaurantCount) {
-            setShowRestaurantCount(true);
-            const timer = setTimeout(() => {
+        // 1. 로딩 중이거나 데이터가 없으면 배지를 즉시 닫고 리턴합니다.
+        if (isLoadingRestaurants || restaurants.length === 0) {
+            setShowRestaurantCount(false);
+            return;
+        }
+
+        // 2. 이미 배지가 노출 중인 상태라면: 최신 데이터로 개수 노출을 유지하고, 숨김 타이머를 연장합니다.
+        if (showRestaurantCount) {
+            const hideTimer = setTimeout(() => {
                 setShowRestaurantCount(false);
             }, countUpdatePlan.hideDelayMs);
-            return () => clearTimeout(timer);
+
+            return () => {
+                clearTimeout(hideTimer);
+            };
         }
-    }, [restaurants, isLoadingRestaurants]);
+
+        // 3. 아직 배지가 노출되지 않았고, 조건상 노출이 가능한 경우 (shouldShowRestaurantCount === true)
+        if (countUpdatePlan.shouldShowRestaurantCount) {
+            const showDelayMs = isMobileOrTablet && !shouldRunNoncriticalMapEffects ? 600 : 0;
+
+            const showTimer = setTimeout(() => {
+                setShowRestaurantCount(true);
+                // 실제로 화면에 배지가 나타난 시점에 락(Lock)을 걸어 중복 노출을 차단합니다.
+                hasShownRestaurantCountRef.current = true;
+            }, showDelayMs);
+
+            const hideTimer = setTimeout(() => {
+                setShowRestaurantCount(false);
+            }, showDelayMs + countUpdatePlan.hideDelayMs);
+
+            return () => {
+                clearTimeout(showTimer);
+                clearTimeout(hideTimer);
+            };
+        }
+    }, [
+        restaurants,
+        isLoadingRestaurants,
+        isMobileOrTablet,
+        shouldRunNoncriticalMapEffects,
+        showRestaurantCount
+    ]);
 
     const showRestaurantCountRef = useRef(showRestaurantCount);
 
@@ -2386,11 +2497,31 @@ const NaverMapView = memo(({
                     mapRef={mapRef}
                     mapToast={mapToast}
                     onAnnouncementToastClick={handleAnnouncementToastClick}
+                    renderOverlayStack={!isMobileOrTablet}
                     restaurantsLength={restaurants.length}
                     showAnnouncementToast={showAnnouncementToast}
                     showOnlineUsers={showOnlineUsers}
                     showRestaurantCount={showRestaurantCount}
                 />
+                {/* 모바일: z-0 스태킹 컨텍스트 밖에서 렌더링하여 MobileControlOverlay 위에 표시 */}
+                {isMobileOrTablet && (
+                    <NaverMapOverlayStack
+                        announcementToastTitle={announcementToastTitle}
+                        badgePositionClass={floatingBadgePositionClass}
+                        centerOffsetStyle={centerOffsetStyle}
+                        count={onlineUsersCount}
+                        floatingToastPositionClass={floatingToastPositionClass}
+                        isLoaded={isLoaded}
+                        isLoadingRestaurants={isLoadingRestaurants}
+                        isMobileOverlayReady={shouldRunNoncriticalMapEffects}
+                        mapToast={mapToast}
+                        onAnnouncementToastClick={handleAnnouncementToastClick}
+                        restaurantsLength={restaurants.length}
+                        showAnnouncementToast={showAnnouncementToast}
+                        showOnlineUsers={showOnlineUsers}
+                        showRestaurantCount={showRestaurantCount}
+                    />
+                )}
             </div >
         );
     }
@@ -2413,11 +2544,32 @@ const NaverMapView = memo(({
                 mapRef={mapRef}
                 mapToast={mapToast}
                 onAnnouncementToastClick={handleAnnouncementToastClick}
+                renderOverlayStack={!isMobileOrTablet}
                 restaurantsLength={restaurants.length}
                 showAnnouncementToast={showAnnouncementToast}
                 showOnlineUsers={showOnlineUsers}
                 showRestaurantCount={showRestaurantCount}
             />
+
+            {/* 모바일: z-0 스태킹 컨텍스트 밖에서 렌더링하여 MobileControlOverlay 위에 표시 */}
+            {isMobileOrTablet && (
+                <NaverMapOverlayStack
+                    announcementToastTitle={announcementToastTitle}
+                    badgePositionClass={floatingBadgePositionClass}
+                    centerOffsetStyle={centerOffsetStyle}
+                    count={onlineUsersCount}
+                    floatingToastPositionClass={floatingToastPositionClass}
+                    isLoaded={isLoaded}
+                    isLoadingRestaurants={isLoadingRestaurants}
+                    isMobileOverlayReady={shouldRunNoncriticalMapEffects}
+                    mapToast={mapToast}
+                    onAnnouncementToastClick={handleAnnouncementToastClick}
+                    restaurantsLength={restaurants.length}
+                    showAnnouncementToast={showAnnouncementToast}
+                    showOnlineUsers={showOnlineUsers}
+                    showRestaurantCount={showRestaurantCount}
+                />
+            )}
 
             {/* 레스토랑 상세 패널 - 외부 onMarkerClick이 없을 때만 렌더링 (외부 패널 관리가 아닌 경우에만) */}
             {selectedRestaurant && !onMarkerClick && (

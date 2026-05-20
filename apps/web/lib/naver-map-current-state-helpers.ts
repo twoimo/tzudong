@@ -45,19 +45,31 @@ export function getNaverCurrentPanelOffset(currentState: { effectivePanelOffset:
 }
 
 export function resolveNaverRestaurantCountUpdatePlan({
+    hasAlreadyShownCount = false,
     hideDelayMs = 3000,
+    isMobileOrTablet = false,
+    isNoncriticalEffectsActive = true,
     isLoadingRestaurants,
     restaurantsLength,
 }: {
+    hasAlreadyShownCount?: boolean;
     hideDelayMs?: number;
+    isMobileOrTablet?: boolean;
+    isNoncriticalEffectsActive?: boolean;
     isLoadingRestaurants: boolean;
     restaurantsLength: number;
 }) {
-    const shouldShowRestaurantCount = restaurantsLength > 0 && !isLoadingRestaurants;
+    const hasData = restaurantsLength > 0 && !isLoadingRestaurants;
+    // On mobile, wait until noncritical effects are active (search bar has rendered)
+    // before showing the badge so it doesn't float at the top before the search bar.
+    const isMobileReady = !isMobileOrTablet || isNoncriticalEffectsActive;
+    // Once the badge has been shown for this query session, don't show again
+    // (prevents 347 → 375 double-toast from progressive loading).
+    const shouldShowRestaurantCount = hasData && isMobileReady && !hasAlreadyShownCount;
 
     return {
         hideDelayMs,
         shouldShowRestaurantCount,
-        shouldStorePreviousRestaurants: shouldShowRestaurantCount,
+        shouldStorePreviousRestaurants: hasData,
     } as const;
 }
