@@ -97,6 +97,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('new maps.Marker');
     expect(consoleSource).toContain('createClusterIndex');
     expect(consoleSource).toContain('getClusterCategories');
+    expect(consoleSource).toContain('mapRef.current.setZoom?.(visibleRestaurants.length > 1 ? REGION_MAP_CONFIG["서울특별시"].zoom : 14, false)');
+    expect(consoleSource).toContain('map.setZoom?.(Math.max(currentZoom + 1, expansionZoom), false)');
+    expect(consoleSource).toContain('map.setCenter?.(new maps.LatLng(lat, lng))');
+    expect(consoleSource).toContain('mapRef.current.setCenter?.(center)');
+    expect(consoleSource).toContain('mapRef.current.setZoom?.(ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM + 1, false)');
+    expect(consoleSource).not.toContain('panTo?.(');
     expect(consoleSource).not.toContain('pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5');
     expect(consoleSource).not.toContain('홈 마커·클러스터 재사용');
     expect(consoleSource).toContain('function AdminMapLoadingSkeleton');
