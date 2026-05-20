@@ -86,6 +86,19 @@ export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom:
     return regionConfig.zoom - 1;
 };
 
+export const getClusterIndexMaxZoom = (
+    selectedRegion: Region | null,
+    options: ClusterOptions = {},
+    usePerformanceOptimization: boolean = true
+): number => {
+    const performanceOptions = usePerformanceOptimization
+        ? getPerformanceBasedClusterOptions()
+        : { maxZoom: 12, radius: 40, minPoints: 2 };
+    const regionMaxZoom = getClusterMaxZoom(selectedRegion, performanceOptions.maxZoom);
+
+    return options.maxZoom ?? Math.max(regionMaxZoom, performanceOptions.maxZoom);
+};
+
 /**
  * [성능 최적화] GeoJSON 변환 캐시
  * WeakMap을 사용하여 동일한 레스토랑 배열에 대한 재변환을 방지
@@ -155,8 +168,7 @@ export const createClusterIndex = (
         : { maxZoom: 12, radius: 40, minPoints: 2 };
 
     // maxZoom 결정: 지역별 설정 vs 성능 기반 설정 중 더 높은 값(더 늦게 해제) 사용
-    const regionMaxZoom = getClusterMaxZoom(selectedRegion, performanceOptions.maxZoom);
-    const finalMaxZoom = options.maxZoom ?? Math.max(regionMaxZoom, performanceOptions.maxZoom);
+    const finalMaxZoom = getClusterIndexMaxZoom(selectedRegion, options, usePerformanceOptimization);
 
     return new Supercluster<ClusterProperties>({
         radius: options.radius ?? performanceOptions.radius,

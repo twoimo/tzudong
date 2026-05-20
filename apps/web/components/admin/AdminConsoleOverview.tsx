@@ -191,10 +191,9 @@ type AdminNaverBoundsLike = {
 
 type AdminNaverMapInstance = {
   setCenter?: (center: unknown) => void;
-  setZoom?: (zoom: number) => void;
+  setZoom?: (zoom: number, effect?: boolean) => void;
   getZoom?: () => number;
   getBounds?: () => AdminNaverBoundsLike | null;
-  panTo?: (center: unknown) => void;
 };
 
 type AdminNaverMarkerInstance = {
@@ -1207,7 +1206,7 @@ function AdminNaverMapSurface({
       });
     } else {
       mapRef.current.setCenter?.(center);
-      mapRef.current.setZoom?.(visibleRestaurants.length > 1 ? REGION_MAP_CONFIG["서울특별시"].zoom : 14);
+      mapRef.current.setZoom?.(visibleRestaurants.length > 1 ? REGION_MAP_CONFIG["서울특별시"].zoom : 14, false);
     }
 
     setViewportVersion((version) => version + 1);
@@ -1274,8 +1273,8 @@ function AdminNaverMapSurface({
         });
         const listener = maps.Event.addListener(marker, "click", () => {
           const expansionZoom = Math.min(clusterIndex.getClusterExpansionZoom(clusterId), 18);
-          map.setZoom?.(Math.max(currentZoom + 1, expansionZoom));
-          map.panTo?.(new maps.LatLng(lat, lng));
+          map.setZoom?.(Math.max(currentZoom + 1, expansionZoom), false);
+          map.setCenter?.(new maps.LatLng(lat, lng));
         });
         markerRefs.current.push({ marker, listener });
         return;
@@ -1315,9 +1314,9 @@ function AdminNaverMapSurface({
     const maps = getAdminNaverMaps();
     if (!maps) return;
     const center = new maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng);
-    mapRef.current.panTo?.(center);
+    mapRef.current.setCenter?.(center);
     if ((mapRef.current.getZoom?.() ?? 0) < ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM + 1) {
-      mapRef.current.setZoom?.(ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM + 1);
+      mapRef.current.setZoom?.(ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM + 1, false);
     }
   }, [isLoaded, selectedRestaurant]);
 
