@@ -209,6 +209,20 @@ function MobileControlOverlayComponent({
     const pathname = usePathname();
     const router = useRouter();
     const { signOut } = useAuth();
+
+    // 클라이언트 마운트 및 수화(Hydration) 완료 감지용 글로벌 플래그 설정 및 이벤트 발행
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            (window as any).__tzudong_mobile_overlay_ready = true;
+            window.dispatchEvent(new CustomEvent('tzudong_mobile_overlay_ready'));
+        }
+        return () => {
+            if (typeof window !== 'undefined') {
+                (window as any).__tzudong_mobile_overlay_ready = false;
+            }
+        };
+    }, []);
+
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     const [quickSelectedCategories, setQuickSelectedCategories] = useState<string[]>(selectedCategories);
     const [searchViewportHeight, setSearchViewportHeight] = useState<number | null>(null);
@@ -755,6 +769,7 @@ function MobileControlOverlayComponent({
                     )}
                 >
                     <Button
+                        id="tzudong-mobile-search-button"
                         variant="ghost"
                         onClick={() => toggleSheet('search')}
                         className="flex-1 h-10 min-h-11 rounded-full justify-start gap-2 px-2.5 hover:bg-secondary/80"
@@ -782,7 +797,10 @@ function MobileControlOverlayComponent({
                     {renderUserMenuButton()}
                 </div>
 
-                <div className="pointer-events-auto mt-2 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div
+                    id="tzudong-mobile-category-slider"
+                    className="pointer-events-auto mt-2 -mx-3 flex gap-2 overflow-x-auto pl-[calc(env(safe-area-inset-left)+8px)] pr-[calc(env(safe-area-inset-right)+8px)] py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
                     {quickTopCategories.map((category) => {
                         const isSelected = quickSelectedCategories.includes(category);
                         return (

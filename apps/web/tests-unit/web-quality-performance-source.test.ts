@@ -363,10 +363,10 @@ describe('web quality performance source contracts', () => {
         expect(source('components/home/MobileControlOverlay.tsx')).toContain('fetchSupabaseRows');
         expect(source('components/home/MobileControlOverlay.tsx')).not.toContain("import { supabase } from '@/integrations/supabase/client'");
         expect(mapOverlayNoticeSource).toContain('max-w-[calc(100vw-2rem)]');
-        expect(mapOverlayNoticeSource).toContain('grid-cols-[1.25rem_minmax(0,1fr)_1.25rem]');
+        expect(mapOverlayNoticeSource).toContain('grid-cols-[1.25rem_minmax(0,1fr)]');
         expect(mapOverlayNoticeSource).toContain('aria-live={ariaLive}');
         expect(mapOverlayNoticeSource).toContain('aria-busy={ariaBusy}');
-        expect(mapOverlayNoticeSource).toContain('aria-hidden="true" />');
+        expect(mapOverlayNoticeSource).toContain('aria-hidden="true">');
         expect(mapIndicatorsSource).toContain('MapOverlayNotice');
         expect(mapIndicatorsSource).toContain('motion-reduce:animate-none');
         expect(mapIndicatorsSource).toContain('isBusy = !isLoaded');
@@ -922,8 +922,8 @@ describe('web quality performance source contracts', () => {
         expect(noToastSource).not.toContain('toast-disabled');
         expect(appToasterSource).toContain('<ToastProvider swipeDirection="right">');
         expect(appToasterSource).toContain('<ToastViewport />');
-        expect(toastSource).toContain('top-[calc(env(safe-area-inset-top)+7.25rem)]');
-        expect(toastSource).not.toContain('top-[calc(env(safe-area-inset-top)+5rem)]');
+        expect(toastSource).toContain('top-[calc(env(safe-area-inset-top)+132px)]');
+        expect(toastSource).not.toContain('top-[calc(env(safe-area-inset-top)+7.25rem)]');
         expect(toastSource).toContain('z-[250]');
         expect(toastSource).toContain('w-[min(300px,calc(100vw-1.5rem))]');
         expect(toastSource).toContain('sm:w-[min(300px,calc(100vw-1.5rem))]');
