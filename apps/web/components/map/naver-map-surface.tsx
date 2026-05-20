@@ -16,6 +16,7 @@ export function NaverMapSurface({
     mapToast,
     onAnnouncementToastClick,
     renderOverlayStack = true,
+    restaurantCountToastCount,
     restaurantsLength,
     showAnnouncementToast,
     showOnlineUsers,
@@ -34,6 +35,7 @@ export function NaverMapSurface({
     mapToast: { message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null;
     onAnnouncementToastClick?: () => void;
     renderOverlayStack?: boolean;
+    restaurantCountToastCount: number;
     restaurantsLength: number;
     showAnnouncementToast: boolean;
     showOnlineUsers: boolean;
@@ -58,6 +60,7 @@ export function NaverMapSurface({
                     isLoadingRestaurants={isLoadingRestaurants}
                     mapToast={mapToast}
                     onAnnouncementToastClick={onAnnouncementToastClick}
+                    restaurantCountToastCount={restaurantCountToastCount}
                     restaurantsLength={restaurantsLength}
                     showAnnouncementToast={showAnnouncementToast}
                     showOnlineUsers={showOnlineUsers}
@@ -67,4 +70,3 @@ export function NaverMapSurface({
         </div>
     );
 }
-

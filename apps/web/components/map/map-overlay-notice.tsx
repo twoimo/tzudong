@@ -3,11 +3,11 @@ import { memo, type CSSProperties, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 const baseNoticeClass =
-    'z-10 flex w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] items-center justify-center rounded-2xl bg-card/95 px-3 py-2 text-sm font-medium leading-5 text-foreground shadow-sm backdrop-blur-sm sm:w-fit sm:max-w-[26rem] sm:rounded-full';
+    'z-10 flex min-h-9 w-fit max-w-[calc(100vw-2rem)] items-center justify-center rounded-2xl bg-card/95 px-3 py-2 text-sm font-medium leading-5 text-foreground shadow-sm backdrop-blur-sm sm:max-w-[26rem] sm:rounded-full';
 
-const noticeContentClass = 'grid w-full min-w-0 grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-1.5 pr-1 sm:w-auto';
+const noticeContentClass = 'grid max-w-full min-w-0 grid-cols-[1.25rem_max-content] items-center gap-1.5 pr-1';
 const noticeIconClass = 'flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none';
-const noticeTextClass = 'min-w-0 whitespace-normal break-keep text-center [overflow-wrap:anywhere]';
+const noticeTextClass = 'min-w-0 whitespace-nowrap break-keep text-center';
 
 type MapOverlayNoticeProps = {
     children: ReactNode;
