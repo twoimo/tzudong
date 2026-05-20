@@ -385,6 +385,9 @@ function areStringArraysEqual(previous: readonly string[], next: readonly string
     return previous.length === next.length && previous.every((value, index) => value === next[index]);
 }
 
+const RESTAURANT_COUNT_TOAST_HIDE_DELAY_MS = 3000;
+const RESTAURANT_COUNT_TOAST_SETTLE_DELAY_MS = 1200;
+
 const NaverMapView = memo(({
     mapFocusZoom,
     filters,
@@ -491,6 +494,7 @@ const NaverMapView = memo(({
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
+    const [restaurantCountToastCount, setRestaurantCountToastCount] = useState(0);
     const hasShownRestaurantCountRef = useRef(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [onlineUsersCount, setOnlineUsersCount] = useState(0);
@@ -1430,7 +1434,12 @@ const NaverMapView = memo(({
         selectedRegion,
     }), [filters, isLoaded, restaurantQueryBounds, selectedRegion]);
 
-    const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantQueryOptions);
+    const {
+        data: restaurants = [],
+        isFetching: isFetchingRestaurants,
+        isLoading: isLoadingRestaurants,
+        refetch,
+    } = useRestaurants(restaurantQueryOptions);
 
     const handleReviewSuccess = useMemo(
         () => buildNaverMapReviewSuccessHandler({ refetch, showMapToast }),
@@ -1443,65 +1452,61 @@ const NaverMapView = memo(({
     // 지역이나 필터가 바뀌면 맛집 개수 배지 표시 플래그를 리셋 (새 쿼리에서 다시 1번 표시)
     useEffect(() => {
         hasShownRestaurantCountRef.current = false;
+        setRestaurantCountToastCount(0);
+        setShowRestaurantCount(false);
     }, [selectedRegion, filters]);
 
-    // restaurants가 변경될 때 이전 데이터를 저장하고, 개수 표시를 3초간 활성화
+    // restaurants가 변경될 때 이전 데이터를 저장하고, 개수가 안정된 뒤 최종 개수만 1번 표시
     useEffect(() => {
         const countUpdatePlan = resolveNaverRestaurantCountUpdatePlan({
             hasAlreadyShownCount: hasShownRestaurantCountRef.current,
+            hideDelayMs: RESTAURANT_COUNT_TOAST_HIDE_DELAY_MS,
             isMobileOrTablet,
             isNoncriticalEffectsActive: shouldRunNoncriticalMapEffects,
-            isLoadingRestaurants,
+            isLoadingRestaurants: isLoadingRestaurants || isFetchingRestaurants,
             restaurantsLength: restaurants.length,
+            settleDelayMs: RESTAURANT_COUNT_TOAST_SETTLE_DELAY_MS,
         });
 
         if (countUpdatePlan.shouldStorePreviousRestaurants) {
             setPreviousRestaurants(restaurants);
         }
 
-        // 1. 로딩 중이거나 데이터가 없으면 배지를 즉시 닫고 리턴합니다.
-        if (isLoadingRestaurants || restaurants.length === 0) {
+        if (isLoadingRestaurants || isFetchingRestaurants || restaurants.length === 0) {
             setShowRestaurantCount(false);
             return;
         }
 
-        // 2. 이미 배지가 노출 중인 상태라면: 최신 데이터로 개수 노출을 유지하고, 숨김 타이머를 연장합니다.
-        if (showRestaurantCount) {
-            const hideTimer = setTimeout(() => {
-                setShowRestaurantCount(false);
-            }, countUpdatePlan.hideDelayMs);
-
-            return () => {
-                clearTimeout(hideTimer);
-            };
-        }
-
-        // 3. 아직 배지가 노출되지 않았고, 조건상 노출이 가능한 경우 (shouldShowRestaurantCount === true)
         if (countUpdatePlan.shouldShowRestaurantCount) {
-            const showDelayMs = isMobileOrTablet && !shouldRunNoncriticalMapEffects ? 600 : 0;
-
             const showTimer = setTimeout(() => {
+                setRestaurantCountToastCount(restaurants.length);
                 setShowRestaurantCount(true);
-                // 실제로 화면에 배지가 나타난 시점에 락(Lock)을 걸어 중복 노출을 차단합니다.
                 hasShownRestaurantCountRef.current = true;
-            }, showDelayMs);
-
-            const hideTimer = setTimeout(() => {
-                setShowRestaurantCount(false);
-            }, showDelayMs + countUpdatePlan.hideDelayMs);
+            }, countUpdatePlan.settleDelayMs);
 
             return () => {
                 clearTimeout(showTimer);
-                clearTimeout(hideTimer);
             };
         }
     }, [
         restaurants,
         isLoadingRestaurants,
+        isFetchingRestaurants,
         isMobileOrTablet,
         shouldRunNoncriticalMapEffects,
-        showRestaurantCount
     ]);
+
+    useEffect(() => {
+        if (!showRestaurantCount) return;
+
+        const hideTimer = setTimeout(() => {
+            setShowRestaurantCount(false);
+        }, RESTAURANT_COUNT_TOAST_HIDE_DELAY_MS);
+
+        return () => {
+            clearTimeout(hideTimer);
+        };
+    }, [showRestaurantCount]);
 
     const showRestaurantCountRef = useRef(showRestaurantCount);
 
@@ -2541,6 +2546,7 @@ const NaverMapView = memo(({
                     mapToast={mapToast}
                     onAnnouncementToastClick={handleAnnouncementToastClick}
                     renderOverlayStack={!isMobileOrTablet}
+                    restaurantCountToastCount={restaurantCountToastCount}
                     restaurantsLength={restaurants.length}
                     showAnnouncementToast={showAnnouncementToast}
                     showOnlineUsers={showOnlineUsers}
@@ -2559,6 +2565,7 @@ const NaverMapView = memo(({
                         isMobileOverlayReady={shouldRunNoncriticalMapEffects}
                         mapToast={mapToast}
                         onAnnouncementToastClick={handleAnnouncementToastClick}
+                        restaurantCountToastCount={restaurantCountToastCount}
                         restaurantsLength={restaurants.length}
                         showAnnouncementToast={showAnnouncementToast}
                         showOnlineUsers={showOnlineUsers}
@@ -2588,6 +2595,7 @@ const NaverMapView = memo(({
                 mapToast={mapToast}
                 onAnnouncementToastClick={handleAnnouncementToastClick}
                 renderOverlayStack={!isMobileOrTablet}
+                restaurantCountToastCount={restaurantCountToastCount}
                 restaurantsLength={restaurants.length}
                 showAnnouncementToast={showAnnouncementToast}
                 showOnlineUsers={showOnlineUsers}
@@ -2607,6 +2615,7 @@ const NaverMapView = memo(({
                     isMobileOverlayReady={shouldRunNoncriticalMapEffects}
                     mapToast={mapToast}
                     onAnnouncementToastClick={handleAnnouncementToastClick}
+                    restaurantCountToastCount={restaurantCountToastCount}
                     restaurantsLength={restaurants.length}
                     showAnnouncementToast={showAnnouncementToast}
                     showOnlineUsers={showOnlineUsers}
