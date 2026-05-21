@@ -21,7 +21,7 @@ import {
   Tag,
   PlusCircle,
 } from "lucide-react";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 
 type SubmissionStatus = 'pending' | 'approved' | 'partially_approved' | 'rejected';
 type ItemStatus = 'pending' | 'approved' | 'rejected';
@@ -293,13 +293,7 @@ export default function NewSubmissionsPage() {
   );
 
   if (isLoading) {
-    return (
-      <GlobalLoader
-        message="제보 내역을 불러오는 중..."
-        subMessage="잠시만 기다려주세요"
-        fullScreen
-      />
-    );
+    return <MyPageSectionSkeleton label="신규 맛집 제보 내역을 불러오는 중…" />;
   }
 
   return (

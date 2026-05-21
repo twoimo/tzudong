@@ -60,6 +60,7 @@ interface HomeMapContainerProps {
     isMapFullscreen?: boolean;
     onMapFullscreenChange?: (isFullscreen: boolean) => void;
     deviceLocation?: DeviceMapLocation | null;
+    renderDesktopDetailPanel?: boolean;
 }
 
 // ========== [PERFORMANCE] 상수 호이스팅 - 컴포넌트 외부로 이동하여 리렌더링 시 재선언 방지 ==========
@@ -87,6 +88,8 @@ const HALF_TO_FULL_FAST_DISTANCE_PX = 12;
 const HALF_TO_FULL_VELOCITY_FLOOR_PX_PER_MS = 0.16;
 const HALF_TO_FULL_QUICK_VELOCITY_FLOOR_PX_PER_MS = 0.19;
 const QUICK_GESTURE_DURATION_MS = 85;
+const DESKTOP_LEFT_PANEL_WIDTH_PX = 392;
+const DESKTOP_LEFT_PANEL_WIDTH_CSS = `min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px))`;
 const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
 const QUICK_GESTURE_SHORT_DISTANCE_PX = 25;
 const LONG_PRESS_TRANSITION_THRESHOLD_MS = 175;
@@ -172,6 +175,7 @@ function HomeMapContainerComponent({
     isMapFullscreen = false,
     onMapFullscreenChange,
     deviceLocation = null,
+    renderDesktopDetailPanel = true,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
@@ -1195,6 +1199,7 @@ function HomeMapContainerComponent({
 
     const mapPadding = useMemo(() => {
         if (!isPanelOpen || isMapFullscreen) return undefined;
+        if (isDesktop && !renderDesktopDetailPanel) return { top: 0, bottom: 0, left: 0, right: 0 };
         // Desktop: Right panel 400px
         if (isDesktop) return { top: 0, bottom: 0, left: 0, right: 400 };
         // Mobile: 바텀시트 높이만큼 bottom padding을 동적으로 적용하여
@@ -1202,12 +1207,26 @@ function HomeMapContainerComponent({
         const clampedSheetHeight = Math.max(0, Math.min(100, sheetHeight));
         const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
         return { top: 0, bottom: vh * (clampedSheetHeight / 100), left: 0, right: 0 };
-    }, [isMapFullscreen, isPanelOpen, isDesktop, sheetHeight]);
+    }, [isMapFullscreen, isPanelOpen, isDesktop, renderDesktopDetailPanel, sheetHeight]);
+    const shouldExposeDetailPanelToMap = isMobileOrTablet
+        ? isPanelOpen
+        : (renderDesktopDetailPanel && isPanelOpen);
     const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
+    const shouldReserveDesktopLeftPanel = isDesktop && !isPanelCollapsed && !isMapFullscreen && !renderDesktopDetailPanel;
+    const desktopMapLayoutStyle = shouldReserveDesktopLeftPanel
+        ? {
+            marginLeft: DESKTOP_LEFT_PANEL_WIDTH_CSS,
+            width: `calc(100% - ${DESKTOP_LEFT_PANEL_WIDTH_CSS})`,
+        }
+        : undefined;
 
 
     return (
-        <div className="relative w-full h-full">
+        <div
+            className="relative h-full w-full transition-[margin,width] duration-300 ease-out"
+            data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}
+            style={desktopMapLayoutStyle}
+        >
             {mapMode === 'domestic' ? (
                 <Suspense fallback={<MapSkeleton />}>
                     <NaverMapView
@@ -1225,7 +1244,8 @@ function HomeMapContainerComponent({
                         onMarkerClick={handleMapMarkerClick}
                         externalPanelOpen={externalPanelOpen}
                         isPanelCollapsed={isPanelCollapsed}
-                        isPanelOpen={isPanelOpen}
+                        isPanelOpen={shouldExposeDetailPanelToMap}
+                        reservesDesktopLeftPanelSpace={shouldReserveDesktopLeftPanel}
                         mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen && !isMapFullscreen ? sheetHeight : 0}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                         onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}
@@ -1262,7 +1282,7 @@ function HomeMapContainerComponent({
                         {(detailPanelRestaurant) => (
                             <>
                     {/* 데스크탑 오버레이 패널 */}
-                    {isDesktop && (
+                    {isDesktop && renderDesktopDetailPanel && (
                         <>
                             {/* 상세 패널 */}
                             <div
