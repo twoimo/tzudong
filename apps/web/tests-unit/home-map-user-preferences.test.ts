@@ -19,7 +19,7 @@ function createMemoryStorage(initial: Record<string, string> = {}) {
 }
 
 describe("home map user preferences", () => {
-  test("keeps map and left-panel layout preferences scoped per account", () => {
+  test("keeps map and side-panel layout preferences scoped per account", () => {
     const userId = "user-123";
     const storage = createMemoryStorage();
     const saved = writeHomeMapUserPreferences(
@@ -27,6 +27,7 @@ describe("home map user preferences", () => {
       {
         desktopPanelDefault: "collapsed",
         desktopMapLayout: "map-first",
+        desktopPanelSide: "right",
         reduceMapMotion: true,
       },
       storage,
@@ -35,6 +36,7 @@ describe("home map user preferences", () => {
     expect(saved).toEqual({
       desktopPanelDefault: "collapsed",
       desktopMapLayout: "map-first",
+      desktopPanelSide: "right",
       reduceMapMotion: true,
     });
     expect(readHomeMapUserPreferences(userId, storage)).toEqual(saved);
@@ -51,6 +53,7 @@ describe("home map user preferences", () => {
       normalizeHomeMapUserPreferences({
         desktopPanelDefault: "right",
         desktopMapLayout: "freeform",
+        desktopPanelSide: "center",
         reduceMapMotion: "yes",
       }),
     ).toEqual(DEFAULT_HOME_MAP_USER_PREFERENCES);

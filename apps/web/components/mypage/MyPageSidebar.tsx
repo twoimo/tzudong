@@ -182,31 +182,6 @@ export function MyPageSidebar() {
             data-mypage-left-panel-expanded="true"
         >
             <div className="p-6 border-b border-border flex flex-col items-center text-center space-y-4">
-                <div className="flex w-full items-center justify-between gap-2" data-mypage-sidebar-brand="true">
-                    <Link
-                        href="/"
-                        aria-label="쯔동여지도 홈으로 이동"
-                        className="flex min-w-0 items-center gap-2 rounded-full border border-primary/15 bg-primary/5 py-1 pl-1 pr-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                        data-mypage-sidebar-logo="true"
-                    >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-                            <NextImage
-                                src="/logo.png"
-                                alt=""
-                                aria-hidden="true"
-                                width={30}
-                                height={30}
-                                className="h-7 w-7 rounded-lg object-contain"
-                                priority
-                            />
-                        </span>
-                        <span className="truncate">쯔동여지도</span>
-                    </Link>
-                    <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[11px] font-semibold text-muted-foreground">
-                        마이페이지
-                    </span>
-                </div>
-
                 <div className="relative group h-20 w-20 shrink-0 rounded-full">
                     <label
                         htmlFor="mypage-sidebar-avatar-upload"
