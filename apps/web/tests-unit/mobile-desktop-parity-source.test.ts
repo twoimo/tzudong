@@ -532,6 +532,11 @@ describe("mobile and desktop parity source contracts", () => {
     expect(stampOverlaySource).toContain(
       'data-stamp-card-grid-single-column={singleColumnCards ? "true" : "false"}',
     );
+    expect(stampOverlaySource).toContain("const skeletonCardCount = singleColumnCards ? 8 : 16");
+    expect(stampOverlaySource).toContain("count={skeletonCardCount}");
+    expect(stampOverlaySource).toContain("const skeletonGridColumns = singleColumnCards");
+    expect(stampOverlaySource).toContain("grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4");
+    expect(stampOverlaySource).toContain("columns={skeletonGridColumns}");
     expect(stampOverlaySource).toContain(
       '? "grid grid-cols-1 gap-3 md:gap-3"',
     );
