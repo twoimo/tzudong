@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import RegionSelector from "@/components/region/RegionSelector";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
@@ -32,14 +33,26 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 import { cn } from "@/lib/utils";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from "@/lib/desktop-left-panel-entry";
+import {
+  DEFAULT_HOME_MAP_USER_PREFERENCES,
+  readHomeMapUserPreferences,
+  writeHomeMapUserPreferences,
+  type HomeMapLayoutMode,
+  type HomeMapPanelDefault,
+  type HomeMapUserPreferences,
+} from "@/lib/home-map-user-preferences";
 import type { User } from "@supabase/supabase-js";
 import {
   Bell,
   Bookmark,
   ChevronLeft,
   ChevronRight,
+  Gauge,
   MapPin,
   MessageSquare,
+  PanelLeft,
+  Settings2,
+  SlidersHorizontal,
   Stamp,
   Trophy,
   UserRound,
@@ -86,6 +99,7 @@ type DesktopLeftPanelView =
   | "profile"
   | "bookmarks"
   | "notifications"
+  | "settings"
   | "announcement"
   | "adminReviews";
 
@@ -217,6 +231,7 @@ interface HomeDesktopControlPanelProps {
   onModeChange?: (mode: "domestic" | "overseas") => void;
   isPanelCollapsed?: boolean;
   onTogglePanelCollapse?: () => void;
+  onSetPanelCollapsed?: (collapsed: boolean) => void;
   user?: User | null;
   isAdmin?: boolean;
   activeRightPanel?: HomeOverlayPanelType;
@@ -260,6 +275,7 @@ const DESKTOP_LEFT_PANEL_LOADING_LABELS: Partial<Record<DesktopLeftPanelView, st
   profile: "프로필",
   bookmarks: "북마크",
   notifications: "알림",
+  settings: "환경설정",
   announcement: "공지사항",
   adminReviews: "관리자 리뷰",
 };
@@ -273,18 +289,298 @@ function DesktopLeftPanelLoadingState({ label }: { label: string }) {
       className="flex h-full min-h-0 flex-col gap-3 bg-background p-4"
       data-desktop-left-panel-loading="true"
     >
-      <div className="h-7 w-32 rounded-full bg-muted animate-pulse motion-reduce:animate-none" />
+      <Skeleton className="h-7 w-32 rounded-full" />
       <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
-        <div className="h-4 w-3/4 rounded bg-muted animate-pulse motion-reduce:animate-none" />
-        <div className="h-3 w-full rounded bg-muted animate-pulse motion-reduce:animate-none" />
-        <div className="h-3 w-2/3 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+        <Skeleton className="h-4 w-3/4 rounded-full" />
+        <Skeleton className="h-3 w-full rounded-full" />
+        <Skeleton className="h-3 w-2/3 rounded-full" />
       </div>
       <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
-        <div className="h-4 w-2/3 rounded bg-muted animate-pulse motion-reduce:animate-none" />
-        <div className="h-3 w-full rounded bg-muted animate-pulse motion-reduce:animate-none" />
-        <div className="h-3 w-1/2 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+        <Skeleton className="h-4 w-2/3 rounded-full" />
+        <Skeleton className="h-3 w-full rounded-full" />
+        <Skeleton className="h-3 w-1/2 rounded-full" />
       </div>
     </div>
+  );
+}
+
+const LAYOUT_PRESETS = [
+  {
+    id: "balanced",
+    title: "균형형",
+    description: "좌측 패널을 펼치고 지도는 패널 너비를 고려해 보여줍니다.",
+    desktopPanelDefault: "expanded",
+    desktopMapLayout: "panel-aware",
+  },
+  {
+    id: "map-first",
+    title: "지도 우선",
+    description: "초기 진입 시 패널을 접고 지도를 가장 넓게 보여줍니다.",
+    desktopPanelDefault: "collapsed",
+    desktopMapLayout: "map-first",
+  },
+] as const satisfies ReadonlyArray<{
+  id: string;
+  title: string;
+  description: string;
+  desktopPanelDefault: HomeMapPanelDefault;
+  desktopMapLayout: HomeMapLayoutMode;
+}>;
+
+function DesktopMapSettingsPanel({
+  user,
+  isAdmin,
+  isPanelCollapsed,
+  onClose,
+  onSetPanelCollapsed,
+}: {
+  user: User;
+  isAdmin: boolean;
+  isPanelCollapsed: boolean;
+  onClose: () => void;
+  onSetPanelCollapsed?: (collapsed: boolean) => void;
+}) {
+  const [preferences, setPreferences] = useState<HomeMapUserPreferences>(() =>
+    readHomeMapUserPreferences(user.id),
+  );
+  const selectedPreset =
+    LAYOUT_PRESETS.find(
+      (preset) =>
+        preset.desktopPanelDefault === preferences.desktopPanelDefault &&
+        preset.desktopMapLayout === preferences.desktopMapLayout,
+    )?.id ?? "custom";
+
+  useEffect(() => {
+    setPreferences(readHomeMapUserPreferences(user.id));
+  }, [user.id]);
+
+  const persistPreferences = useCallback(
+    (nextPreferences: HomeMapUserPreferences) => {
+      const normalized = writeHomeMapUserPreferences(user.id, nextPreferences);
+      setPreferences(normalized);
+      onSetPanelCollapsed?.(normalized.desktopPanelDefault === "collapsed");
+    },
+    [onSetPanelCollapsed, user.id],
+  );
+
+  const applyPreset = useCallback(
+    (preset: (typeof LAYOUT_PRESETS)[number]) => {
+      persistPreferences({
+        ...preferences,
+        desktopPanelDefault: preset.desktopPanelDefault,
+        desktopMapLayout: preset.desktopMapLayout,
+      });
+    },
+    [persistPreferences, preferences],
+  );
+
+  const updatePanelDefault = useCallback(
+    (desktopPanelDefault: HomeMapPanelDefault) => {
+      persistPreferences({
+        ...preferences,
+        desktopPanelDefault,
+        desktopMapLayout:
+          desktopPanelDefault === "collapsed"
+            ? "map-first"
+            : preferences.desktopMapLayout,
+      });
+    },
+    [persistPreferences, preferences],
+  );
+
+  const updateMapLayout = useCallback(
+    (desktopMapLayout: HomeMapLayoutMode) => {
+      persistPreferences({
+        ...preferences,
+        desktopMapLayout,
+        desktopPanelDefault:
+          desktopMapLayout === "map-first"
+            ? "collapsed"
+            : preferences.desktopPanelDefault,
+      });
+    },
+    [persistPreferences, preferences],
+  );
+
+  const resetPreferences = useCallback(() => {
+    persistPreferences(DEFAULT_HOME_MAP_USER_PREFERENCES);
+  }, [persistPreferences]);
+
+  return (
+    <section
+      className="flex h-full min-h-0 flex-col bg-background"
+      data-desktop-left-panel-view="settings"
+      aria-labelledby="desktop-map-settings-title"
+    >
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.12em] text-primary">
+            <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+            계정별 환경설정
+          </p>
+          <h2
+            id="desktop-map-settings-title"
+            className="mt-1 text-lg font-bold tracking-[-0.04em] text-foreground"
+          >
+            지도와 좌측 패널 맞춤 설정
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고,
+            다음 데스크탑 접속부터 같은 배치로 시작합니다.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 rounded-full"
+          onClick={onClose}
+          aria-label="환경설정 닫기"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div className="space-y-4">
+          <section className="rounded-2xl border border-border bg-card p-3">
+            <div className="flex items-start gap-2">
+              <PanelLeft className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">
+                  시작 레이아웃 프리셋
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  수치 슬라이더 대신 안전한 프리셋만 제공해 지도 영역이 깨지지
+                  않게 했습니다.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {LAYOUT_PRESETS.map((preset) => {
+                const isSelected = selectedPreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => applyPreset(preset)}
+                    className={cn(
+                      "rounded-2xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 motion-reduce:transition-none",
+                      isSelected
+                        ? "border-primary/40 bg-primary/5 text-foreground"
+                        : "border-border bg-background hover:border-primary/25 hover:bg-secondary/50",
+                    )}
+                  >
+                    <span className="text-sm font-bold">{preset.title}</span>
+                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                      {preset.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-card p-3">
+            <div className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">
+                  지도 영역 위치
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  패널을 고려해 마커를 보여줄지, 지도를 최대한 넓게 시작할지
+                  고릅니다.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                ["panel-aware", "패널 고려"],
+                ["map-first", "지도 우선"],
+              ].map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={
+                    preferences.desktopMapLayout === value
+                      ? "default"
+                      : "outline"
+                  }
+                  className="rounded-xl"
+                  onClick={() => updateMapLayout(value as HomeMapLayoutMode)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-card p-3">
+            <div className="flex items-start gap-2">
+              <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">
+                  좌측 패널 기본 상태
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  현재 패널은 {isPanelCollapsed ? "접힘" : "펼침"} 상태입니다.
+                  선택하면 즉시 적용됩니다.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                ["expanded", "펼쳐서 시작"],
+                ["collapsed", "접어서 시작"],
+              ].map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={
+                    preferences.desktopPanelDefault === value
+                      ? "default"
+                      : "outline"
+                  }
+                  className="rounded-xl"
+                  onClick={() => updatePanelDefault(value as HomeMapPanelDefault)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-muted/30 p-3">
+            <h3 className="text-sm font-bold text-foreground">
+              다음 단계 후보
+            </h3>
+            <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
+              <li>• 모바일 바텀시트 기본 높이와 데스크탑 패널 너비 동기화</li>
+              <li>• 관리자 계정 전용 운영 기본값 템플릿</li>
+              <li>• 지도 이동/마커 애니메이션 최소화 옵션의 전역 적용</li>
+            </ul>
+            {isAdmin && (
+              <p className="mt-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-5 text-primary">
+                관리자 계정은 운영 화면 진입 시 좌측 패널 펼침 정책을 유지합니다.
+              </p>
+            )}
+          </section>
+        </div>
+      </div>
+
+      <footer className="shrink-0 border-t border-border bg-background/95 px-4 py-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full rounded-xl"
+          onClick={resetPreferences}
+        >
+          기본값으로 되돌리기
+        </Button>
+      </footer>
+    </section>
   );
 }
 
@@ -295,6 +591,7 @@ const DESKTOP_LEFT_PANEL_ROUTE_VIEWS = [
   "profile",
   "bookmarks",
   "notifications",
+  "settings",
 ] as const satisfies ReadonlyArray<Exclude<DesktopLeftPanelView, "map" | "announcement" | "adminReviews">>;
 
 function isDesktopLeftPanelRouteView(
@@ -356,6 +653,7 @@ export default function HomeDesktopControlPanel({
   onModeChange,
   isPanelCollapsed = false,
   onTogglePanelCollapse,
+  onSetPanelCollapsed,
   user = null,
   isAdmin = false,
   activeRightPanel = null,
@@ -523,7 +821,8 @@ export default function HomeDesktopControlPanel({
     if (
       (panelParam === "profile" ||
         panelParam === "bookmarks" ||
-        panelParam === "notifications") &&
+        panelParam === "notifications" ||
+        panelParam === "settings") &&
       !user
     ) {
       requestAuthUi({
@@ -534,7 +833,9 @@ export default function HomeDesktopControlPanel({
             ? "open-profile"
             : panelParam === "bookmarks"
               ? "open-bookmarks"
-              : "open-notifications",
+              : panelParam === "notifications"
+                ? "open-notifications"
+                : "open-settings",
       });
       router.replace("/", { scroll: false });
       setActiveLeftPanelView("map");
@@ -727,7 +1028,8 @@ export default function HomeDesktopControlPanel({
     if (
       (returnView === "profile" ||
         returnView === "bookmarks" ||
-        returnView === "notifications") &&
+        returnView === "notifications" ||
+        returnView === "settings") &&
       !user
     ) {
       setActiveLeftPanelView("map");
@@ -1261,6 +1563,14 @@ export default function HomeDesktopControlPanel({
               onOpenAnnouncements={() =>
                 router.replace("/?panel=announcement", { scroll: false })
               }
+            />
+          ) : activeLeftPanelView === "settings" && user ? (
+            <DesktopMapSettingsPanel
+              user={user}
+              isAdmin={isAdmin}
+              isPanelCollapsed={isPanelCollapsed}
+              onClose={handleReturnToMapPanel}
+              onSetPanelCollapsed={onSetPanelCollapsed}
             />
           ) : activeLeftPanelView === "announcement" &&
             DeferredAnnouncementPanel ? (

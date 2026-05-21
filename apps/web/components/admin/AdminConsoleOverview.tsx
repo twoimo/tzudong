@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import Link from "next/link";
 import type Supercluster from "supercluster";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -42,11 +43,9 @@ import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
 import {
-  clusterAnimationManager,
-  injectClusterCSS,
-  removeClusterCSS,
-} from "@/lib/cluster-marker";
-import { buildNaverClusterAnimationIconPlan } from "@/lib/naver-map-cluster-visuals";
+  buildNaverClusterMarkerRenderPlan,
+  getClusterVisualKey,
+} from "@/lib/naver-map-cluster-visuals";
 import {
   createClusterIndex,
   getClusterCategories,
@@ -843,7 +842,6 @@ function AdminSidebar({
   const activeSidebarItem = orderedSidebarSections
     .flatMap((section) => section.items)
     .find((item) => item.id === activeModuleId);
-  const ActiveSidebarIcon = activeSidebarItem?.icon ?? Sparkles;
   const activeSidebarLabel = activeSidebarItem?.title ?? "전체 현황";
 
   useEffect(() => {
@@ -955,15 +953,24 @@ function AdminSidebar({
             "lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1",
         )}
       >
-        <span
+        <Link
+          href="/"
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/5 text-primary",
+            "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/15 bg-primary/5 text-primary transition hover:border-primary/30 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
             isCollapsed && "lg:hidden",
           )}
-          aria-hidden="true"
+          aria-label="쯔동여지도 홈으로 이동"
         >
-          <ActiveSidebarIcon className="h-4 w-4" />
-        </span>
+          <Image
+            src="/logo.png"
+            alt=""
+            aria-hidden="true"
+            width={32}
+            height={32}
+            className="h-7 w-7 rounded-lg object-contain"
+            priority
+          />
+        </Link>
         <div
           className={cn(
             "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
@@ -1556,21 +1563,6 @@ function AdminNaverMapSurface({
   );
 
   useEffect(() => {
-    injectClusterCSS();
-    clusterAnimationManager.start(1400);
-
-    const cleanupAnimationListener = clusterAnimationManager.addListener(() => {
-      setViewportVersion((version) => version + 1);
-    });
-
-    return () => {
-      cleanupAnimationListener();
-      removeClusterCSS();
-      clusterAnimationManager.clear();
-    };
-  }, []);
-
-  useEffect(() => {
     if (!isLoaded || !mapContainerRef.current) return;
     const maps = getAdminNaverMaps();
     if (!maps) return;
@@ -1659,15 +1651,12 @@ function AdminNaverMapSurface({
       if (isCluster(feature)) {
         const clusterId = feature.properties.cluster_id!;
         const categories = getClusterCategories(clusterIndex, clusterId);
-        const renderPlan = buildNaverClusterAnimationIconPlan({
-          categories: categories.length > 0 ? categories : ["기타"],
+        const markerCategories = categories.length > 0 ? categories : ["기타"];
+        const renderPlan = buildNaverClusterMarkerRenderPlan({
+          categories: markerCategories,
           count: feature.properties.point_count || 0,
-          getCurrentIndex: (hash, categoryCount) => {
-            clusterAnimationManager.register(hash);
-            return clusterAnimationManager.getCurrentIndex(hash, categoryCount);
-          },
+          currentIndex: getClusterVisualKey(clusterId) % markerCategories.length,
           position: { lat, lng },
-          uniqueKey: clusterId,
         });
         const marker = new maps.Marker({
           map,
