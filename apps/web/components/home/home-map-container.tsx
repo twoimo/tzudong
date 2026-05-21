@@ -20,6 +20,7 @@ import {
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
+import type { HomeMapLayoutMode } from '@/lib/home-map-user-preferences';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -56,6 +57,7 @@ interface HomeMapContainerProps {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     externalPanelOpen?: boolean; // 외부 패널이 열려있지 않을 때 NaverMap 내부 패널 닫기
     isPanelCollapsed?: boolean; // 패널 접기 상태
+    desktopMapLayout?: HomeMapLayoutMode;
     onSwipeableRestaurantsChange?: (restaurants: Restaurant[]) => void;
     isMapFullscreen?: boolean;
     onMapFullscreenChange?: (isFullscreen: boolean) => void;
@@ -171,6 +173,7 @@ function HomeMapContainerComponent({
     onPanelClick,
     externalPanelOpen,
     isPanelCollapsed,
+    desktopMapLayout = 'panel-aware',
     onSwipeableRestaurantsChange,
     isMapFullscreen = false,
     onMapFullscreenChange,
@@ -1212,7 +1215,12 @@ function HomeMapContainerComponent({
         ? isPanelOpen
         : (renderDesktopDetailPanel && isPanelOpen);
     const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
-    const shouldReserveDesktopLeftPanel = isDesktop && !isPanelCollapsed && !isMapFullscreen && !renderDesktopDetailPanel;
+    const shouldReserveDesktopLeftPanel =
+        desktopMapLayout === 'panel-aware' &&
+        isDesktop &&
+        !isPanelCollapsed &&
+        !isMapFullscreen &&
+        !renderDesktopDetailPanel;
     const desktopMapLayoutStyle = shouldReserveDesktopLeftPanel
         ? {
             marginLeft: DESKTOP_LEFT_PANEL_WIDTH_CSS,
