@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useHydration } from "@/hooks/useHydration";
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
+import type { HomeMapPanelSide } from "@/lib/home-map-user-preferences";
 
 interface SubmissionFloatingButtonProps {
     onClick: () => void;
@@ -16,7 +17,11 @@ interface SubmissionFloatingButtonProps {
     deviceLocation?: DeviceMapLocation | null;
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
+    desktopPanelSide?: HomeMapPanelSide;
+    isPanelCollapsed?: boolean;
 }
+
+const DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS = "min(392px, calc(100vw - 32px))";
 
 // [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
 const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
@@ -27,10 +32,14 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
     deviceLocation = null,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    desktopPanelSide = "left",
+    isPanelCollapsed = false,
 }: SubmissionFloatingButtonProps) {
     const { isMobileOrTablet } = useDeviceType();
     const isHydrated = useHydration();
     void isSidebarOpen;
+    const shouldOffsetForRightPanel =
+        !isMobileOrTablet && desktopPanelSide === "right" && !isPanelCollapsed;
     const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
         hasLocation: Boolean(deviceLocation),
         isHeadingMode: isDeviceHeadingMode,
@@ -45,12 +54,21 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                 // 검색 버튼: bottom-20(80px) + h-12(48px) = top at 128px
                 // 제보 버튼: bottom-36(144px) -> 16px 간격
                 // 데스크탑: 우측 하단 고정
-                isMobileOrTablet ? "right-4 bottom-36" : "right-6 bottom-6",
+                isMobileOrTablet ? "right-4 bottom-36" : "bottom-6",
                 "flex flex-col gap-2",
                 // Hydration 깜빡임 방지
                 isHydrated ? "opacity-100" : "opacity-0",
                 className
             )}
+            style={
+                isMobileOrTablet
+                    ? undefined
+                    : {
+                        right: shouldOffsetForRightPanel
+                            ? `calc(${DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS} + 1.5rem)`
+                            : "1.5rem",
+                    }
+            }
             aria-label="지도 빠른 작업"
         >
             <Button
