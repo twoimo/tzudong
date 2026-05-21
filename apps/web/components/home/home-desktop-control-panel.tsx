@@ -462,7 +462,7 @@ function DesktopMapSettingsPanel({
         </Button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4">
         <div className="space-y-4">
           <section className="rounded-2xl border border-border bg-card p-3">
             <div className="flex items-start gap-2">
@@ -1407,7 +1407,7 @@ export default function HomeDesktopControlPanel({
         id="desktop-left-map-panel"
         ref={desktopSearchShellRef}
         className={cn(
-          "fixed inset-y-0 z-[90] flex w-[min(392px,calc(100vw-32px))] flex-col border-border bg-background shadow-xl",
+          "desktop-left-panel-scrollbarless fixed inset-y-0 z-[90] flex w-[min(392px,calc(100vw-32px))] flex-col border-border bg-background shadow-xl",
           desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r",
           "transition-transform duration-300 ease-out motion-reduce:transition-none",
           isPanelCollapsed
@@ -1547,7 +1547,7 @@ export default function HomeDesktopControlPanel({
 
         <div
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+            "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
             hasActiveDetail || isDetailPanelTransitionPending || isInlinePanelViewActive
               ? "px-0 py-0"
               : "px-4 py-4",
