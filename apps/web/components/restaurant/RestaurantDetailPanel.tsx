@@ -73,6 +73,7 @@ interface RestaurantDetailPanelProps {
     isPanelOpen?: boolean;
     isMobile?: boolean;
     className?: string;
+    showDesktopBackButton?: boolean;
     onUserClick?: (userId: string) => void;
     onRestaurantClick?: (restaurant: Restaurant) => void;
     onSwipeLeft?: () => void;
@@ -81,6 +82,8 @@ interface RestaurantDetailPanelProps {
 
 const RESTAURANT_DETAIL_SWIPE_HINT_KEY = 'restaurant-detail-swipe-hint-seen-v1';
 const RESTAURANT_DETAIL_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
+const RESTAURANT_DETAIL_REVIEW_STALE_MS = 60 * 1000;
+const RESTAURANT_DETAIL_REVIEW_GC_MS = 5 * 60 * 1000;
 
 interface Review {
     id: string;
@@ -114,6 +117,7 @@ export function RestaurantDetailPanel({
     isPanelOpen = true,
     isMobile = false,
     className,
+    showDesktopBackButton = false,
     onUserClick,
     onRestaurantClick,
     onSwipeLeft,
@@ -319,9 +323,8 @@ export function RestaurantDetailPanel({
         initialPageParam: 0,
         getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
         enabled: !!restaurant?.id && shouldLoadReviewData,
-        refetchOnMount: 'always',
-        staleTime: 0,
-        gcTime: 30 * 1000,
+        staleTime: RESTAURANT_DETAIL_REVIEW_STALE_MS,
+        gcTime: RESTAURANT_DETAIL_REVIEW_GC_MS,
     });
 
     // [리뷰 데이터 평탄화]
@@ -356,6 +359,8 @@ export function RestaurantDetailPanel({
     }, [safeReviewsData]);
 
     useEffect(() => {
+        if (viewMode !== 'reviews') return;
+
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting) {
@@ -370,7 +375,7 @@ export function RestaurantDetailPanel({
         }
 
         return () => observer.disconnect();
-    }, [handleLoadMoreReviews]);
+    }, [handleLoadMoreReviews, viewMode]);
 
     // [핸들러] 전체 리뷰 보기
     const handleViewAllReviews = useCallback(() => {
@@ -820,73 +825,75 @@ export function RestaurantDetailPanel({
                                 </>
                             )}
                             {viewMode === 'detail' && (
-                                <div className="flex-1 min-w-0">
-                                    <ScrollableTagContainer className="mb-1" maxWidth="100%">
-                                        {categories.map((cat, index) => (
-                                            <Badge
-                                                key={index}
-                                                variant={index === 0 ? "default" : "secondary"}
-                                                className="text-xs whitespace-nowrap"
+                                <>
+                                    <div className="flex-1 min-w-0">
+                                        <ScrollableTagContainer className="mb-1" maxWidth="100%">
+                                            {categories.map((cat, index) => (
+                                                <Badge
+                                                    key={index}
+                                                    variant={index === 0 ? "default" : "secondary"}
+                                                    className="text-xs whitespace-nowrap"
+                                                >
+                                                    {cat}
+                                                </Badge>
+                                            ))}
+
+                                            {/* 광고 태그 - 모든 병합된 영상에서 수집 */}
+                                            {(() => {
+                                                const allAds: string[] = [];
+                                                const metas: unknown[] = youtubeMetas;
+
+                                                metas.forEach((meta) => {
+                                                    if (!meta || typeof meta !== 'object') return;
+                                                    if (!('ads_info' in meta)) return;
+
+                                                    const adsInfo = (meta as { ads_info?: unknown }).ads_info;
+                                                    if (!adsInfo || typeof adsInfo !== 'object') return;
+
+                                                    const { is_ads, what_ads } = adsInfo as { is_ads?: unknown; what_ads?: unknown };
+                                                    if (is_ads === true && Array.isArray(what_ads)) {
+                                                        const normalizedAds = what_ads.filter((ad): ad is string => typeof ad === 'string');
+                                                        allAds.push(...normalizedAds);
+                                                    }
+                                                });
+
+                                                const uniqueAds = Array.from(new Set(allAds));
+
+                                                return uniqueAds.length > 0 ? (
+                                                    <>
+                                                        {uniqueAds.map((ad: string, index: number) => (
+                                                            <Badge
+                                                                key={index}
+                                                                variant="outline"
+                                                                className="text-xs bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
+                                                            >
+                                                                📢 {ad}
+                                                            </Badge>
+                                                        ))}
+                                                    </>
+                                                ) : null;
+                                            })()}
+                                        </ScrollableTagContainer>
+                                        <div className="flex items-center gap-2">
+                                            {/* 카테고리 이미지 - 이모지 대신 이미지 표시 */}
+                                            <div className="relative w-8 h-8 shrink-0">
+                                                <Image
+                                                    src={getCategoryImagePath(categories[0] || '')}
+                                                    alt={categories[0] || '카테고리'}
+                                                    fill
+                                                    sizes="32px"
+                                                    className="object-contain"
+                                                />
+                                            </div>
+                                            <h2
+                                                className="text-xl font-bold truncate"
+                                                title={restaurant.name}
                                             >
-                                                {cat}
-                                            </Badge>
-                                        ))}
-
-                                        {/* 광고 태그 - 모든 병합된 영상에서 수집 */}
-                                        {(() => {
-                                            const allAds: string[] = [];
-                                            const metas: unknown[] = youtubeMetas;
-
-                                            metas.forEach((meta) => {
-                                                if (!meta || typeof meta !== 'object') return;
-                                                if (!('ads_info' in meta)) return;
-
-                                                const adsInfo = (meta as { ads_info?: unknown }).ads_info;
-                                                if (!adsInfo || typeof adsInfo !== 'object') return;
-
-                                                const { is_ads, what_ads } = adsInfo as { is_ads?: unknown; what_ads?: unknown };
-                                                if (is_ads === true && Array.isArray(what_ads)) {
-                                                    const normalizedAds = what_ads.filter((ad): ad is string => typeof ad === 'string');
-                                                    allAds.push(...normalizedAds);
-                                                }
-                                            });
-
-                                            const uniqueAds = Array.from(new Set(allAds));
-
-                                            return uniqueAds.length > 0 ? (
-                                                <>
-                                                    {uniqueAds.map((ad: string, index: number) => (
-                                                        <Badge
-                                                            key={index}
-                                                            variant="outline"
-                                                            className="text-xs bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
-                                                        >
-                                                            📢 {ad}
-                                                        </Badge>
-                                                    ))}
-                                                </>
-                                            ) : null;
-                                        })()}
-                                    </ScrollableTagContainer>
-                                    <div className="flex items-center gap-2">
-                                        {/* 카테고리 이미지 - 이모지 대신 이미지 표시 */}
-                                        <div className="relative w-8 h-8 shrink-0">
-                                            <Image
-                                                src={getCategoryImagePath(categories[0] || '')}
-                                                alt={categories[0] || '카테고리'}
-                                                fill
-                                                sizes="32px"
-                                                className="object-contain"
-                                            />
+                                                {restaurant.name}
+                                            </h2>
                                         </div>
-                                        <h2
-                                            className="text-xl font-bold truncate"
-                                            title={restaurant.name}
-                                        >
-                                            {restaurant.name}
-                                        </h2>
                                     </div>
-                                </div>
+                                </>
                             )}
                         </div>
                         <div className="flex gap-1 shrink-0">
@@ -923,6 +930,18 @@ export function RestaurantDetailPanel({
                                     aria-label="맛집 정보 관리자 편집"
                                 >
                                     <Settings className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                            )}
+                            {showDesktopBackButton && !isMobile && viewMode === 'detail' && (
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={onClose}
+                                    title="상세 패널 닫기"
+                                    aria-label="상세 패널 닫기"
+                                    className="border-red-800 text-red-800 hover:border-red-900 hover:bg-red-50 hover:text-red-900 dark:border-red-500 dark:text-red-400 dark:hover:border-red-400 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+                                >
+                                    <X className="h-4 w-4" aria-hidden="true" />
                                 </Button>
                             )}
                             {isMobile && (

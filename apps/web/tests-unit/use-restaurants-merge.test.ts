@@ -4,6 +4,9 @@ type MergeInput = Array<Record<string, unknown>>;
 
 type MergeRestaurantsExports = {
     mergeRestaurants: (restaurants: MergeInput) => unknown[];
+};
+
+type RestaurantDetailExports = {
     buildRestaurantDetailFromMergeRows: (mergeContextRestaurant: Record<string, unknown>, rows: MergeInput) => Record<string, unknown> | null;
 };
 
@@ -37,6 +40,11 @@ type MergeFixtureRestaurant = MergeInput[number];
 const loadUseRestaurants = async (): Promise<MergeRestaurantsExports> => {
     const mergeModule = (await import('../hooks/use-restaurants')) as unknown as MergeRestaurantsExports;
     return mergeModule;
+};
+
+const loadRestaurantDetail = async (): Promise<RestaurantDetailExports> => {
+    const detailModule = (await import('../hooks/use-restaurant-detail')) as unknown as RestaurantDetailExports;
+    return detailModule;
 };
 
 function makeRestaurant(overrides: Partial<MergeFixtureRestaurant>): MergeFixtureRestaurant {
@@ -171,7 +179,7 @@ describe('mergeRestaurants', () => {
     });
 
     test('restores merged videos and reviews when compact detail context has only merged ids', async () => {
-        const { buildRestaurantDetailFromMergeRows } = await loadUseRestaurants();
+        const { buildRestaurantDetailFromMergeRows } = await loadRestaurantDetail();
 
         const compactContext = makeRestaurant({
             id: 'video-new',
@@ -216,7 +224,7 @@ describe('mergeRestaurants', () => {
     });
 
     test('keeps compact detail context visible when full merge rows are unavailable', async () => {
-        const { buildRestaurantDetailFromMergeRows } = await loadUseRestaurants();
+        const { buildRestaurantDetailFromMergeRows } = await loadRestaurantDetail();
 
         const compactContext = makeRestaurant({
             id: 'compact-only',
