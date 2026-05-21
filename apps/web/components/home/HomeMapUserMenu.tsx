@@ -1,0 +1,301 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ChevronDown,
+  ChevronUp,
+  LogOut,
+  Maximize2,
+  Minimize2,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContextBase";
+import { supabase } from "@/integrations/supabase/client";
+import { requestAuthUi } from "@/lib/auth-ui-events";
+import {
+  DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT,
+  shouldExpandDesktopLeftPanelForRoute,
+} from "@/lib/desktop-left-panel-entry";
+import { toast } from "@/lib/no-toast";
+import { cn } from "@/lib/utils";
+
+const desktopUserMenuItemClass =
+  "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
+
+const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
+  if (!user) return "사용자";
+
+  const metadata = user.user_metadata ?? {};
+  const candidates = [
+    metadata.nickname,
+    metadata.name,
+    metadata.full_name,
+    user.email?.split("@")[0],
+  ];
+  const displayName = candidates.find(
+    (candidate): candidate is string =>
+      typeof candidate === "string" && candidate.trim().length > 0,
+  );
+
+  return displayName?.trim() ?? "사용자";
+};
+
+export default function HomeMapUserMenu() {
+  const { user, isAdmin, signOut } = useAuth();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
+
+  const displayName = useMemo(() => getDisplayName(user), [user]);
+  const { data: profileAvatarUrl = null } = useQuery({
+    queryKey: ["home-map-user-menu-avatar", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("지도 사용자 프로필 사진 조회 실패:", error);
+        return null;
+      }
+
+      const profile = data as { avatar_url?: string | null } | null;
+      return typeof profile?.avatar_url === "string" && profile.avatar_url.trim()
+        ? profile.avatar_url
+        : null;
+    },
+    enabled: Boolean(user?.id),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const navigateToPage = useCallback(
+    (href: string) => {
+      if (shouldExpandDesktopLeftPanelForRoute(href)) {
+        window.dispatchEvent(
+          new CustomEvent(DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT, {
+            detail: { href },
+          }),
+        );
+      }
+
+      router.push(href);
+    },
+    [router],
+  );
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await signOut();
+      queryClient.clear();
+      toast.success("로그아웃되었습니다");
+      router.push("/");
+    } catch (error) {
+      console.error("로그아웃 실패:", error);
+      toast.error("로그아웃에 실패했습니다");
+    }
+  }, [queryClient, router, signOut]);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    syncFullscreenState();
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+    };
+  }, []);
+
+  const handleFullscreenToggle = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        return;
+      }
+
+      await document.exitFullscreen();
+    } catch (error) {
+      console.error("지도 전체화면 전환 실패:", error);
+      toast.error("전체화면 전환에 실패했습니다");
+    }
+  }, []);
+
+  const handleLoginClick = useCallback(() => {
+    requestAuthUi({
+      source: "desktop-map-user-menu",
+      route: "/",
+      reason: "mypage",
+    });
+  }, []);
+
+  const userAvatarButton = (
+    <span
+      className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary"
+      aria-hidden="true"
+    >
+      {profileAvatarUrl ? (
+        <Image
+          src={profileAvatarUrl}
+          alt=""
+          fill
+          sizes="36px"
+          className="rounded-full object-cover"
+        />
+      ) : (
+        <UserRound className="h-5 w-5" />
+      )}
+    </span>
+  );
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        data-desktop-map-fullscreen-toggle="true"
+        className="fixed right-20 top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        aria-label={isFullscreen ? "지도 전체화면 끄기" : "지도 전체화면 켜기"}
+        aria-pressed={isFullscreen}
+        onClick={handleFullscreenToggle}
+      >
+        {isFullscreen ? (
+          <Minimize2 className="h-5 w-5" aria-hidden="true" />
+        ) : (
+          <Maximize2 className="h-5 w-5" aria-hidden="true" />
+        )}
+      </Button>
+
+      {user ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              data-desktop-map-user-menu="true"
+              className="fixed right-6 top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              aria-label="사용자 메뉴 열기"
+            >
+              {userAvatarButton}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            sideOffset={10}
+            className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-serif shadow-2xl"
+          >
+            <DropdownMenuLabel className="max-w-[min(22rem,calc(100vw-4rem))] rounded-xl px-3 py-2 text-foreground">
+              <span className="block truncate text-sm font-semibold">
+                {displayName}
+              </span>
+              {user.email && (
+                <span className="block truncate text-xs font-normal text-muted-foreground">
+                  {user.email}
+                </span>
+              )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="my-1 bg-border" />
+            <DropdownMenuItem
+              onClick={() => navigateToPage("/mypage/profile")}
+              className={desktopUserMenuItemClass}
+            >
+              <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
+              마이페이지
+            </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem
+                onClick={() => navigateToPage("/admin")}
+                className={desktopUserMenuItemClass}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+                관리자 콘솔
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator className="my-1 bg-border" />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className={cn(
+                desktopUserMenuItemClass,
+                "text-destructive focus:text-destructive",
+              )}
+            >
+              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+              로그아웃
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-1 bg-border" />
+            <div className="px-2 py-1" data-desktop-map-business-info="true">
+              <button
+                type="button"
+                aria-label="사업자 정보 펼치기/접기"
+                aria-expanded={isBusinessInfoExpanded}
+                aria-controls="desktop-map-business-info-content"
+                onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
+                className="flex w-max max-w-full items-center justify-between rounded-lg px-1 py-1 text-left whitespace-nowrap transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <span className="text-[10px] text-muted-foreground">
+                  v2.0.0 © 타이니번
+                </span>
+                {isBusinessInfoExpanded ? (
+                  <ChevronUp
+                    className="ml-2 h-3 w-3 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <ChevronDown
+                    className="ml-2 h-3 w-3 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+              {isBusinessInfoExpanded && (
+                <div
+                  id="desktop-map-business-info-content"
+                  className="mt-1 space-y-0.5 border-t border-border px-1 pt-1 text-[9px] leading-4 text-muted-foreground whitespace-nowrap"
+                >
+                  <p className="font-medium text-foreground">타이니번 데이터랩</p>
+                  <p>대표: 최연우</p>
+                  <p>사업자: 601-09-04613</p>
+                  <p>이메일: cs@tzudong.app</p>
+                </div>
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-desktop-map-user-menu="true"
+          className="fixed right-6 top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          aria-label="로그인 열기"
+          onClick={handleLoginClick}
+        >
+          {userAvatarButton}
+        </Button>
+      )}
+    </>
+  );
+}

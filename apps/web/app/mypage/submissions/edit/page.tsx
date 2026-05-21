@@ -21,7 +21,7 @@ import {
   Edit3,
   ArrowRight,
 } from "lucide-react";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 
 type SubmissionStatus = 'pending' | 'approved' | 'partially_approved' | 'rejected';
 type ItemStatus = 'pending' | 'approved' | 'rejected';
@@ -350,13 +350,7 @@ export default function EditSubmissionsPage() {
   );
 
   if (isLoading) {
-    return (
-      <GlobalLoader
-        message="수정 요청 내역을 불러오는 중..."
-        subMessage="잠시만 기다려주세요"
-        fullScreen
-      />
-    );
+    return <MyPageSectionSkeleton label="맛집 수정 요청 내역을 불러오는 중…" />;
   }
 
   return (

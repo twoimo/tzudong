@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
 
@@ -347,13 +347,7 @@ export default function ReviewsPage() {
 
   // 로딩 상태
   if (isLoading) {
-    return (
-      <GlobalLoader
-        message="리뷰를 불러오는 중..."
-        subMessage="작성하신 리뷰 목록을 확인하고 있습니다"
-        fullScreen
-      />
-    );
+    return <MyPageSectionSkeleton label="리뷰를 불러오는 중…" />;
   }
 
   return (
