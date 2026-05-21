@@ -543,9 +543,10 @@ describe("mobile and desktop parity source contracts", () => {
       "const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant)",
     );
     expect(homeDesktopControlPanelSource).toContain("!hasActiveDetail && !isDetailPanelTransitionPending");
-    expect(homeDesktopControlPanelSource).toContain(
-      "hasActiveDetail || isDetailPanelTransitionPending || isInlinePanelViewActive",
-    );
+    expect(homeDesktopControlPanelSource).toContain("hasActiveDetail ||");
+    expect(homeDesktopControlPanelSource).toContain("isDetailPanelTransitionPending ||");
+    expect(homeDesktopControlPanelSource).toContain("isInlinePanelViewActive ||");
+    expect(homeDesktopControlPanelSource).toContain("shouldShowDesktopMapHome");
     expect(homeDesktopControlPanelSource).toContain(' ? "px-0 py-0"');
     expect(homeDesktopControlPanelSource).toContain(' : "px-4 py-4"');
     expect(homeDesktopControlPanelSource).toContain(
