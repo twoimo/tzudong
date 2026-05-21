@@ -497,6 +497,12 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource.indexOf('{ id: "profile", label: "프로필", icon: UserRound }')).toBeLessThan(
       homeDesktopControlPanelSource.indexOf('{ id: "feed", label: "리뷰", icon: MessageSquare }'),
     );
+    const myPageProfileSource = source("app/mypage/profile/page.tsx");
+    expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
+    expect(myPageProfileSource).toContain('저장한 맛집');
+    expect(myPageProfileSource).toContain('내 리뷰');
+    expect(myPageProfileSource).toContain('맛집 제보');
+    expect(myPageProfileSource).toContain('지도 환경설정');
     expect(homeDesktopControlPanelSource).not.toContain("지도 필터");
     expect(homeDesktopControlPanelSource).toContain(
       "const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant)",
@@ -560,6 +566,10 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'router.replace("/?panel=notifications", { scroll: false })',
     );
+    expect(homeDesktopControlPanelSource).toContain(
+      'data-desktop-left-panel-view="settings"',
+    );
+    expect(homeDesktopControlPanelSource).toContain("지도와 좌측 패널 맞춤 설정");
     expect(homeDesktopControlPanelSource).toContain("open-notifications");
     expect(homeDesktopControlPanelSource).not.toContain(
       'router.push("/admin")',
@@ -618,6 +628,8 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeMapContainerSource).toContain(
       "renderDesktopDetailPanel && isPanelOpen",
     );
+    expect(homeMapContainerSource).toContain("desktopMapLayout?: HomeMapLayoutMode");
+    expect(homeMapContainerSource).toContain("desktopMapLayout === 'panel-aware'");
     expect(homeMapContainerSource).toContain(
       'data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}',
     );
