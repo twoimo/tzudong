@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'restaurant_search_history';
-const MAX_HISTORY = 5;
+const MAX_HISTORY = 12;
 
 export interface SearchHistoryItem {
     id: string;
@@ -48,7 +48,7 @@ export function useSearchHistory() {
         const newHistory = [
             { ...item, searchedAt: Date.now() },
             ...filtered
-        ].slice(0, MAX_HISTORY); // 최대 5개까지만 유지
+        ].slice(0, MAX_HISTORY); // 좌측 패널 확장 노출까지 고려해 최대 12개 유지
 
         // 로컬스토리지에 먼저 저장 (동기적으로, 컴포넌트 언마운트되어도 유실 방지)
         try {

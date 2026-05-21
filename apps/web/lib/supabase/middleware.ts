@@ -48,10 +48,26 @@ const isAdminPageRequest = (request: NextRequest) => {
     return (method === 'GET' || method === 'HEAD') && (pathname === '/admin' || pathname.startsWith('/admin/'));
 };
 
-const redirectAdminAuthRequiredWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
+const isMyPageRequest = (request: NextRequest) => {
+    const { pathname } = request.nextUrl;
+    const method = request.method.toUpperCase();
+
+    return (method === 'GET' || method === 'HEAD') && (pathname === '/mypage' || pathname.startsWith('/mypage/'));
+};
+
+const getRequestedPathWithSearch = (request: NextRequest) => {
+    const { pathname, search } = request.nextUrl;
+    return `${pathname}${search}`;
+};
+
+const redirectAuthRequiredWithSessionCookies = (
+    request: NextRequest,
+    sourceResponse: NextResponse,
+    reason: 'admin' | 'mypage',
+) => {
     const redirectUrl = new URL('/auth/required', request.url);
-    redirectUrl.searchParams.set('reason', 'admin');
-    redirectUrl.searchParams.set('next', request.nextUrl.pathname);
+    redirectUrl.searchParams.set('reason', reason);
+    redirectUrl.searchParams.set('next', getRequestedPathWithSearch(request));
     const redirectResponse = NextResponse.redirect(redirectUrl);
 
     for (const cookie of sourceResponse.cookies.getAll()) {
@@ -60,6 +76,12 @@ const redirectAdminAuthRequiredWithSessionCookies = (request: NextRequest, sourc
 
     return redirectResponse;
 };
+
+const redirectAdminAuthRequiredWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) =>
+    redirectAuthRequiredWithSessionCookies(request, sourceResponse, 'admin');
+
+const redirectMyPageAuthRequiredWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) =>
+    redirectAuthRequiredWithSessionCookies(request, sourceResponse, 'mypage');
 
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -139,6 +161,10 @@ export async function updateSession(request: NextRequest) {
         if (accountStatusError && !isMissingOptionalAdminStatusStoreError(accountStatusError)) {
             return redirectAdminAuthRequiredWithSessionCookies(request, supabaseResponse);
         }
+    }
+
+    if (isMyPageRequest(request) && (authFailed || !authUserId)) {
+        return redirectMyPageAuthRequiredWithSessionCookies(request, supabaseResponse);
     }
 
     return supabaseResponse

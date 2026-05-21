@@ -7,6 +7,7 @@ const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..'
 describe('header bookmark and notification UX source contracts', () => {
   test('desktop bookmark menu has intent-loaded data, responsive panel, and clear loading/empty/error states', () => {
     const bookmarkSource = source('components/layout/HeaderBookmarkMenuButton.tsx');
+    const leftPanelBookmarkSource = source('components/home/DesktopLeftPanelBookmarks.tsx');
     const hookSource = source('hooks/use-bookmarks.tsx');
 
     expect(hookSource).toContain('interface UseBookmarksOptions');
@@ -26,10 +27,26 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(bookmarkSource).toContain('북마크를 불러오지 못했습니다');
     expect(bookmarkSource).toContain('북마크한 맛집이 없습니다');
     expect(bookmarkSource).toContain('MapPin className="h-8 w-8 shrink-0 rounded-full bg-primary/10 p-2 text-primary');
+    expect(leftPanelBookmarkSource).toContain('onClose?: () => void;');
+    expect(leftPanelBookmarkSource).toContain('aria-label="북마크 패널 닫기"');
+    expect(leftPanelBookmarkSource).toContain('className="h-9 w-9 rounded-full hover:bg-muted"');
+    expect(leftPanelBookmarkSource).toContain(
+      'className="group rounded-xl border border-border bg-card shadow-sm transition-colors hover:bg-accent"',
+    );
+    expect(leftPanelBookmarkSource).toContain(
+      'className="flex w-full items-start gap-3 rounded-t-xl p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+    );
+    expect(leftPanelBookmarkSource).toContain(
+      'className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground"',
+    );
+    expect(leftPanelBookmarkSource).not.toContain(
+      'className="group flex w-full items-start gap-3 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+    );
   });
 
   test('desktop notification menu distinguishes loading, error, empty, unread, and destination states', () => {
     const headerSource = source('components/layout/Header.tsx');
+    const leftPanelNotificationSource = source('components/home/DesktopLeftPanelNotifications.tsx');
 
     expect(headerSource).toContain('isLoading: isNotificationsLoading');
     expect(headerSource).toContain('isError: isNotificationsError');
@@ -50,6 +67,11 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(headerSource).toContain('aria-label="모든 알림 읽음 처리"');
     expect(headerSource).toContain('router.push(`/?r=${restaurantId}&z=13`)');
     expect(headerSource).toContain("router.push('/?panel=announcement')");
+    expect(leftPanelNotificationSource).toContain('onClose?: () => void;');
+    expect(leftPanelNotificationSource).toContain('aria-label="알림 패널 닫기"');
+    expect(leftPanelNotificationSource).toContain('className="h-9 w-9 rounded-full hover:bg-muted"');
+    expect(leftPanelNotificationSource).toContain('className="grid gap-2"');
+    expect(leftPanelNotificationSource).toContain('className="truncate text-xs text-muted-foreground"');
       });
 
   test('mobile bookmark and notification controls keep the same touch, state, and responsive affordances', () => {
