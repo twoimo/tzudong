@@ -123,6 +123,13 @@ describe("web quality performance source contracts", () => {
     const homeDesktopControlPanelSource = source(
       "components/home/home-desktop-control-panel.tsx",
     );
+    const homeAppGlobalsSource = source("app/home-app-globals.css");
+    const desktopBookmarksSource = source(
+      "components/home/DesktopLeftPanelBookmarks.tsx",
+    );
+    const desktopNotificationsSource = source(
+      "components/home/DesktopLeftPanelNotifications.tsx",
+    );
     const homeClientEffectsSource = source("app/home-client-effects.tsx");
     const homeViewportModeSource = source("hooks/useHomeViewportMode.ts");
     const regionSelectorSource = source("components/region/RegionSelector.tsx");
@@ -601,6 +608,17 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-map-panel="true"',
     );
+    expect(homeDesktopControlPanelSource).toContain("desktop-left-panel-scrollbarless");
+    expect(homeAppGlobalsSource).toContain(".desktop-left-panel-scrollbarless,");
+    expect(homeAppGlobalsSource).toContain(".desktop-left-panel-scrollbarless :where(");
+    expect(homeAppGlobalsSource).toContain('[class*="overflow-y-auto"]');
+    expect(homeAppGlobalsSource).toContain('[class*="overflow-x-auto"]');
+    expect(homeAppGlobalsSource).toContain("-ms-overflow-style: none !important");
+    expect(homeAppGlobalsSource).toContain("scrollbar-width: none !important");
+    expect(homeAppGlobalsSource).toContain(")::-webkit-scrollbar");
+    expect(homeAppGlobalsSource).toContain("display: none !important");
+    expect(homeAppGlobalsSource).toContain("width: 0 !important");
+    expect(homeAppGlobalsSource).toContain("height: 0 !important");
     expect(homeDesktopControlPanelSource).toContain(
       'import Image from "next/image"',
     );
@@ -767,6 +785,18 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'aria-label={`${label} 패널 불러오는 중`}',
     );
+    expect(homeDesktopControlPanelSource).toContain('role="status"');
+    expect(homeDesktopControlPanelSource).toContain('aria-live="polite"');
+    expect(homeDesktopControlPanelSource).toContain(
+      "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
+    );
+    expect(desktopBookmarksSource).toContain(
+      "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
+    );
+    expect(desktopNotificationsSource).toContain(
+      "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
+    );
+    expect(desktopNotificationsSource).not.toContain("<Fragment");
     expect(homeDesktopControlPanelSource).toContain("isInlineDetailOpenPending");
     expect(homeDesktopControlPanelSource).toContain("isDetailPanelTransitionPending");
     expect(homeDesktopControlPanelSource).toContain('<DesktopLeftPanelLoadingState label="맛집 상세" />');
