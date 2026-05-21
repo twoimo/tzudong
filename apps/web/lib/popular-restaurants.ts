@@ -1,0 +1,90 @@
+import { mergeRestaurants } from '@/hooks/use-restaurants';
+import { supabase } from '@/integrations/supabase/client';
+import type { Restaurant } from '@/types/restaurant';
+
+export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-weekly'] as const;
+
+export const KOREAN_RESTAURANT_REGIONS = [
+  '서울특별시',
+  '부산광역시',
+  '대구광역시',
+  '인천광역시',
+  '광주광역시',
+  '대전광역시',
+  '울산광역시',
+  '세종특별자치시',
+  '경기도',
+  '강원특별자치도',
+  '충청북도',
+  '충청남도',
+  '전북특별자치도',
+  '전라남도',
+  '경상북도',
+  '경상남도',
+  '제주특별자치도',
+] as const;
+
+export const POPULAR_RESTAURANT_SELECT =
+  'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count';
+
+type PopularRestaurantsArgs = {
+  limit: number;
+  fetchLimit?: number;
+  selectedRegion?: string | null;
+  isKoreanOnly?: boolean;
+};
+
+export const getPopularRestaurantsQueryKey = ({
+  limit,
+  selectedRegion,
+  isKoreanOnly = false,
+}: PopularRestaurantsArgs) => [
+  ...POPULAR_RESTAURANTS_QUERY_KEY,
+  limit,
+  selectedRegion ?? 'all',
+  isKoreanOnly ? 'korean' : 'global',
+];
+
+const matchesRestaurantAddressContext = (
+  restaurant: Restaurant,
+  selectedRegion: string | null | undefined,
+  isKoreanOnly: boolean,
+) => {
+  const address =
+    restaurant.road_address ||
+    restaurant.jibun_address ||
+    restaurant.english_address ||
+    '';
+
+  if (selectedRegion && !address.includes(selectedRegion)) return false;
+
+  if (!isKoreanOnly) return true;
+
+  return KOREAN_RESTAURANT_REGIONS.some((region) => address.includes(region));
+};
+
+export async function fetchPopularRestaurants({
+  limit,
+  fetchLimit = Math.max(limit * 4, 12),
+  selectedRegion,
+  isKoreanOnly = false,
+}: PopularRestaurantsArgs): Promise<Restaurant[]> {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select(POPULAR_RESTAURANT_SELECT)
+    .eq('status', 'approved')
+    .gt('weekly_search_count', 0)
+    .order('weekly_search_count', { ascending: false })
+    .limit(fetchLimit);
+
+  if (error) throw error;
+
+  return mergeRestaurants((data ?? []) as Restaurant[])
+    .filter((restaurant) =>
+      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+    )
+    .sort(
+      (a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0),
+    )
+    .slice(0, limit);
+}

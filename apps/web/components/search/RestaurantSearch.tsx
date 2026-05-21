@@ -10,6 +10,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, YoutubeMeta } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
+import {
+  fetchPopularRestaurants,
+  getPopularRestaurantsQueryKey,
+  KOREAN_RESTAURANT_REGIONS,
+  POPULAR_RESTAURANTS_QUERY_KEY,
+} from "@/lib/popular-restaurants";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,32 +59,11 @@ interface RestaurantSearchProps {
 
 const MIN_SEARCH_QUERY_LENGTH = 2;
 
-const KOREAN_REGIONS = [
-  "서울특별시",
-  "부산광역시",
-  "대구광역시",
-  "인천광역시",
-  "광주광역시",
-  "대전광역시",
-  "울산광역시",
-  "세종특별자치시",
-  "경기도",
-  "강원특별자치도",
-  "충청북도",
-  "충청남도",
-  "전북특별자치도",
-  "전라남도",
-  "경상북도",
-  "경상남도",
-  "제주특별자치도",
-];
-
 const getSearchQueryFromUrl = () => {
   if (typeof window === "undefined") return "";
   return new URLSearchParams(window.location.search).get("q") || "";
 };
 
-const POPULAR_RESTAURANTS_QUERY_KEY = ["popular-searches-weekly"] as const;
 const RESTAURANT_SEARCH_SELECT =
   "id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at";
 
@@ -169,37 +154,26 @@ const RestaurantSearch = ({
   const effectivePopularMaxItems = popularMaxItems ?? effectiveMaxItems;
   const popularRestaurantLimit = Math.max(effectivePopularMaxItems, 5);
   const popularRestaurantsQueryKey = useMemo(
-    () => [...POPULAR_RESTAURANTS_QUERY_KEY, popularRestaurantLimit],
-    [popularRestaurantLimit],
+    () =>
+      getPopularRestaurantsQueryKey({
+        limit: popularRestaurantLimit,
+        selectedRegion,
+        isKoreanOnly,
+      }),
+    [isKoreanOnly, popularRestaurantLimit, selectedRegion],
   );
 
-  // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 N개) - [OPTIMIZATION] 병합 로직 적용
+  // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 N개) - [OPTIMIZATION] 병합/필터링 로직 공유
   const { data: popularRestaurants = [], isLoading: isPopularRestaurantsLoading } = useQuery({
     queryKey: popularRestaurantsQueryKey,
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from("restaurants")
-          .select(
-            "id, name:approved_name, road_address, jibun_address, english_address, status, weekly_search_count, categories, youtube_meta",
-          )
-          .eq("status", "approved")
-          .gt("weekly_search_count", 0) // weekly_search_count가 0보다 큰 것만
-          .order("weekly_search_count", { ascending: false })
-          .limit(20); // 병합 전에 더 많이 가져오기
-
-        if (error) throw error;
-
-        // 병합 로직 적용
-        const merged = mergeRestaurants((data || []) as Restaurant[]);
-
-        // 병합 후 weekly_search_count 기준으로 정렬하여 화면별 노출 개수만 선택
-        return merged
-          .sort(
-            (a, b) =>
-              (b.weekly_search_count || 0) - (a.weekly_search_count || 0),
-          )
-          .slice(0, popularRestaurantLimit);
+        return await fetchPopularRestaurants({
+          limit: popularRestaurantLimit,
+          fetchLimit: 20,
+          selectedRegion,
+          isKoreanOnly,
+        });
       } catch (error) {
         console.error("주간 인기 검색어 조회 실패:", error);
         return [];
@@ -273,7 +247,7 @@ const RestaurantSearch = ({
           if (isKoreanOnly) {
             results = results.filter((r) => {
               const addr = r.road_address || r.jibun_address || "";
-              return KOREAN_REGIONS.some((region) => addr.includes(region));
+              return KOREAN_RESTAURANT_REGIONS.some((region) => addr.includes(region));
             });
           }
         } else {
