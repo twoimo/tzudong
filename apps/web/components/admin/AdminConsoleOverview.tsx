@@ -13,7 +13,6 @@ import {
   Bot,
   Clapperboard,
   ClipboardList,
-  FileCheck2,
   Image as ImageIcon,
   MapPin,
   Megaphone,
@@ -846,23 +845,24 @@ function AdminSidebar({
   const activeSidebarLabel = activeSidebarItem?.title ?? "전체 현황";
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
 
     async function loadSidebarOrder() {
       try {
         const response = await fetch("/api/admin/preferences/sidebar-order", {
           headers: { Accept: "application/json" },
           cache: "no-store",
+          signal: controller.signal,
         });
 
         if (!response.ok) return;
 
         const payload = (await response.json()) as { order?: unknown };
-        if (isMounted) {
+        if (!controller.signal.aborted) {
           setSidebarOrder(normalizeAdminSidebarOrder(payload.order));
         }
       } catch {
-        if (isMounted) {
+        if (!controller.signal.aborted) {
           setSidebarOrderMessage(
             "저장된 메뉴 순서를 불러오지 못해 처음 상태로 표시합니다.",
           );
@@ -873,7 +873,7 @@ function AdminSidebar({
     void loadSidebarOrder();
 
     return () => {
-      isMounted = false;
+      controller.abort();
     };
   }, []);
 
@@ -1450,7 +1450,7 @@ function AdminYoutubeThumbnailImage({
       alt={`${restaurantName} 유튜브 썸네일`}
       fill
       sizes="(min-width: 1280px) 240px, (min-width: 640px) 50vw, 100vw"
-      className="object-cover transition duration-200 group-hover:scale-[1.02]"
+      className="object-cover transition-opacity duration-200 group-hover:opacity-90 motion-reduce:transition-none"
       onError={() => setQuality("hqdefault")}
     />
   );
@@ -1508,18 +1508,17 @@ function AdminCreatorLayerControls({ tzuyangCount }: { tzuyangCount: number }) {
 function AdminMapLoadingSkeleton() {
   return (
     <div
-      className="absolute inset-0 bg-card/35"
+      className="absolute inset-0 bg-card/35 backdrop-blur-[1px]"
+      data-admin-map-loading-skeleton="true"
       role="status"
       aria-busy="true"
       aria-live="polite"
       aria-label="관리자 네이버 지도 로딩"
     >
       <span className="sr-only">네이버 지도를 준비하고 있습니다.</span>
-      <div
-        className="absolute left-3 top-3 rounded-full border border-border bg-card/85 px-3 py-1.5 text-[11px] font-bold text-muted-foreground shadow-sm backdrop-blur-sm"
-        aria-hidden="true"
-      >
-        지도 준비 중
+      <div className="absolute left-3 top-3 space-y-1.5" aria-hidden="true">
+        <Skeleton className="h-7 w-24 rounded-full motion-reduce:animate-none" />
+        <Skeleton className="h-2 w-16 rounded-full motion-reduce:animate-none" />
       </div>
     </div>
   );
@@ -2305,56 +2304,6 @@ function AdminOverviewDashboard({
   );
 }
 
-function LlmSessionPanel() {
-  return (
-    <aside
-      id="llm-session"
-      className="rounded-2xl border border-primary/15 bg-card/95 p-5 shadow-sm"
-    >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-primary">읽기 전용 보조</p>
-          <h2 className="text-xl font-bold text-foreground">자동 운영 보조</h2>
-        </div>
-        <Bot className="h-6 w-6 text-primary" aria-hidden="true" />
-      </div>
-
-      <div className="space-y-3">
-        {[
-          [
-            "현재 화면 요약",
-            "선택한 모듈의 대기 건수와 위험 액션을 요약합니다.",
-          ],
-          [
-            "다음 검수 추천",
-            "오래된 제보, 지오코딩 실패, 미승인 리뷰를 우선순위로 정리합니다.",
-          ],
-          [
-            "위험 액션 체크리스트",
-            "삭제/반려/공개 배너 변경 전 확인 항목을 생성합니다.",
-          ],
-        ].map(([title, description]) => (
-          <div
-            key={title}
-            className="rounded-xl border border-border bg-muted/30 p-3"
-          >
-            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {description}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <Separator className="my-4" />
-      <p className="text-xs leading-5 text-muted-foreground">
-        자동 운영 보조는 읽기/제안 전용입니다. 실제 승인·삭제·공개 적용은 관리자
-        확인 버튼과 상태 재확인 이후에만 진행됩니다.
-      </p>
-    </aside>
-  );
-}
-
 function LlmSessionWorkspace() {
   return (
     <section aria-labelledby="admin-llm-session-title" className="space-y-3">
@@ -2434,33 +2383,6 @@ function LlmSessionWorkspace() {
         </Card>
       </div>
     </section>
-  );
-}
-
-function ConnectedRoutesCard() {
-  return (
-    <Card className="border-border bg-card/95 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <MapPin className="h-5 w-5 text-primary" aria-hidden="true" />
-          현재 연결된 화면
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm text-muted-foreground">
-        <p className="flex items-center gap-2">
-          <FileCheck2 className="h-4 w-4" aria-hidden="true" /> 데이터 검수 독립
-          화면도 유지됩니다 · /admin/evaluations
-        </p>
-        <p className="flex items-center gap-2">
-          <ImageIcon className="h-4 w-4" aria-hidden="true" /> 배너 독립 화면도
-          유지됩니다 · /admin/banners
-        </p>
-        <p className="flex items-center gap-2">
-          <BarChart2 className="h-4 w-4" aria-hidden="true" /> 인사이트 독립
-          화면도 유지됩니다 · /insights
-        </p>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -2607,14 +2529,14 @@ function AdminConsoleCanvasSkeleton() {
       aria-label="관리자 콘솔 작업 화면 로딩 중"
     >
       <div className="min-h-[390px] rounded-xl border border-border bg-card p-3 xl:min-h-0">
-        <Skeleton className="h-full min-h-[360px] rounded-lg" />
+        <Skeleton className="h-full min-h-[360px] rounded-lg motion-reduce:animate-none" />
       </div>
       <div className="min-h-[420px] rounded-xl border border-border bg-card p-3 xl:min-h-0">
         <div className="space-y-3">
-          <Skeleton className="h-8 w-40 rounded-lg" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-8 w-40 rounded-lg motion-reduce:animate-none" />
+          <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />
+          <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />
+          <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />
         </div>
       </div>
     </div>
