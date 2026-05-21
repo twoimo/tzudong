@@ -58,7 +58,9 @@ describe("header action loading source contract", () => {
     const userMenuSource = source("components/home/HomeMapUserMenu.tsx");
 
     expect(homeClientSource).toContain("const HomeMapUserMenu = dynamic(");
-    expect(homeClientSource).toContain("<HomeMapUserMenu />");
+    expect(homeClientSource).toContain("<HomeMapUserMenu");
+    expect(homeClientSource).toContain("desktopPanelSide={desktopPanelSide}");
+    expect(homeClientSource).toContain("isPanelCollapsed={isPanelCollapsed}");
     expect(homeClientSource).toContain("function HomeMapUserMenuPendingShell()");
     expect(homeClientSource).toContain(
       "data-desktop-map-user-menu-pending=\"true\"",
@@ -81,7 +83,9 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).toContain("requestAuthUi({");
     expect(userMenuSource).toContain('source: "desktop-map-user-menu"');
     expect(userMenuSource).toContain('aria-label="로그인 열기"');
-    expect(userMenuSource).toContain('className="fixed right-20 top-4 z-[120] h-11 w-11 rounded-full');
+    expect(userMenuSource).toContain('fixed top-4 z-[120] h-11 w-11 rounded-full');
+    expect(userMenuSource).toContain('shouldOffsetForRightPanel ? "" : "right-20"');
+    expect(userMenuSource).toContain('style={fullscreenButtonStyle}');
     expect(userMenuSource).toContain('aria-label={isFullscreen ? "지도 전체화면 끄기" : "지도 전체화면 켜기"}');
     expect(userMenuSource).toContain('document.documentElement.requestFullscreen()');
     expect(userMenuSource).toContain('document.exitFullscreen()');
