@@ -75,12 +75,11 @@ export default function LeaderboardPage() {
                     loadMoreUsers();
                 }
             },
-            { threshold: 0.1 }
+            { root: scrollRef.current, threshold: 0.1 }
         );
 
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current);
-        }
+        const target = loadMoreRef.current;
+        if (target) observer.observe(target);
 
         return () => observer.disconnect();
     }, [loadMoreUsers]);
@@ -168,7 +167,11 @@ export default function LeaderboardPage() {
                 {/* List Content */}
                 <div>
                     {isLoading ? (
-                        <LeaderboardSkeleton count={8} showHeader={false} />
+                        <LeaderboardSkeleton
+                            count={8}
+                            showHeader={false}
+                            className="pl-2 pr-6 sm:px-6"
+                        />
                     ) : (
                         <LeaderboardList
                             users={displayedUsers}
