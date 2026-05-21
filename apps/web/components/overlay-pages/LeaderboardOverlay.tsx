@@ -6,7 +6,6 @@ import { Trophy, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from '@/contexts/AuthContext';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { LeaderboardSkeleton } from '@/components/ui/skeleton-loaders';
@@ -31,6 +30,7 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
     const LEADERBOARD_PAGE_SIZE = 15;
     const [period, setPeriod] = useState<'all' | 'monthly'>('all');
     const { data: leaderboardData = [], isLoading } = useLeaderboard(period);
+    const scrollRef = useRef<HTMLDivElement>(null);
     const userItemRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [displayLimit, setDisplayLimit] = useState(LEADERBOARD_PAGE_SIZE);
@@ -60,12 +60,11 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                     loadMoreUsers();
                 }
             },
-            { threshold: 0.1 }
+            { root: scrollRef.current, threshold: 0.1 }
         );
 
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current);
-        }
+        const target = loadMoreRef.current;
+        if (target) observer.observe(target);
 
         return () => observer.disconnect();
     }, [loadMoreUsers]);
@@ -81,7 +80,10 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
 
     return (
         <div className="flex flex-col bg-background h-full">
-            <ScrollArea className="h-full">
+            <div
+                ref={scrollRef}
+                className="h-full overflow-y-auto overflow-x-hidden overscroll-contain"
+            >
                 {/* 헤더 - 모바일/태블릿 페이지와 동일 스타일 */}
                 <div className="border-b border-border bg-background p-4 sm:p-6">
                     <div className="flex items-center justify-between gap-2">
@@ -148,7 +150,11 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                         style={DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE}
                     >
                         {isLoading ? (
-                            <LeaderboardSkeleton count={8} showHeader={false} />
+                            <LeaderboardSkeleton
+                                count={8}
+                                showHeader={false}
+                                compactLeftPanel
+                            />
                         ) : (
                             <LeaderboardList
                                 users={displayedUsers}
@@ -171,7 +177,7 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                         )}
                     </div>
                 </div>
-            </ScrollArea>
+            </div>
         </div>
     );
 }
