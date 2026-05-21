@@ -43,6 +43,8 @@ import {
   Youtube,
   Camera,
   X,
+  Settings2,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useBookmarks } from "@/hooks/use-bookmarks";
@@ -451,9 +453,131 @@ export default function ProfilePage() {
   // 프로필 사진 URL (avatar_url 컬럼만 사용 - 삭제 시 완전히 제거됨)
   const avatarUrl = profile?.avatar_url;
   const createdAt = user.created_at ? new Date(user.created_at) : new Date();
+  const joinedDateLabel = format(createdAt, "yyyy년 M월 d일", { locale: ko });
+  const hasCustomNickname = Boolean(profile?.nickname?.trim());
+  const profileCompletionItems = [
+    { label: "닉네임", complete: hasCustomNickname },
+    { label: "프로필 사진", complete: Boolean(avatarUrl) },
+    { label: "첫 북마크", complete: bookmarks.length > 0 },
+  ];
+  const completedProfileItems = profileCompletionItems.filter((item) => item.complete).length;
+  const profileCompletionPercent = Math.round((completedProfileItems / profileCompletionItems.length) * 100);
+  const profileQuickActions = [
+    {
+      href: "/mypage/bookmarks",
+      icon: Bookmark,
+      title: "저장한 맛집",
+      description: `${bookmarks.length}개 북마크 확인`,
+      accent: "bg-primary/10 text-primary",
+    },
+    {
+      href: "/mypage/reviews",
+      icon: MessageSquare,
+      title: "내 리뷰",
+      description: "작성·수정 내역 관리",
+      accent: "bg-sky-500/10 text-sky-600",
+    },
+    {
+      href: "/mypage/submissions/new",
+      icon: MapPin,
+      title: "맛집 제보",
+      description: "새로운 맛집 알려주기",
+      accent: "bg-emerald-500/10 text-emerald-600",
+    },
+    {
+      href: "/?panel=settings",
+      icon: Settings2,
+      title: "지도 환경설정",
+      description: "좌측 패널·지도 위치 조정",
+      accent: "bg-violet-500/10 text-violet-600",
+    },
+  ];
+  const nextProfileStep = profileCompletionItems.find((item) => !item.complete)?.label ?? "맛집 활동";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5" data-mypage-profile-page="true">
+      <section
+        className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-background to-secondary/30 shadow-sm"
+        data-mypage-profile-hero="true"
+      >
+        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] lg:p-6">
+          <div className="flex min-w-0 gap-4">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-primary/15 bg-background shadow-sm sm:h-20 sm:w-20">
+              {avatarUrl ? (
+                <NextImage
+                  src={avatarUrl}
+                  alt={displayName}
+                  fill
+                  sizes="80px"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-primary/10">
+                  <User className="h-8 w-8 text-primary" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  마이페이지 허브
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
+                  {displayName}님, 오늘도 맛집 기록을 이어가요
+                </h1>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {user.email} · 가입일 {joinedDateLabel}
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3" data-mypage-profile-summary="true">
+                <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+                  <p className="text-xs text-muted-foreground">북마크</p>
+                  <p className="mt-1 text-xl font-bold">{bookmarks.length}개</p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+                  <p className="text-xs text-muted-foreground">프로필 완성도</p>
+                  <p className="mt-1 text-xl font-bold">{profileCompletionPercent}%</p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+                  <p className="text-xs text-muted-foreground">다음 추천</p>
+                  <p className="mt-1 truncate text-sm font-semibold">{nextProfileStep}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm" data-mypage-next-actions="true">
+            <div className="mb-2 flex items-center justify-between gap-2 px-1">
+              <div>
+                <p className="text-sm font-semibold">바로 할 수 있는 일</p>
+                <p className="text-xs text-muted-foreground">마이페이지에서 자주 찾는 기능을 모았습니다</p>
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              {profileQuickActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="group flex min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-card px-3 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${action.accent}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">{action.title}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{action.description}</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
       {/* 기본 정보 */}
       <Card>
         <CardHeader>
@@ -584,7 +708,7 @@ export default function ProfilePage() {
             <div>
               <p className="text-sm text-muted-foreground">가입일</p>
               <p className="font-medium">
-                {format(createdAt, "yyyy년 M월 d일", { locale: ko })}
+                {joinedDateLabel}
               </p>
             </div>
           </div>

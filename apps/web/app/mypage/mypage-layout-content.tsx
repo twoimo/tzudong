@@ -32,8 +32,27 @@ function MyPageContentLoadingState() {
       data-mypage-content-loading="true"
       aria-label="마이페이지 내용 로딩 중"
     >
-      <Skeleton className="h-8 w-40 rounded-lg" />
-      <Skeleton className="h-28 w-full rounded-2xl" />
+      <div className="rounded-3xl border border-border bg-card p-4" data-mypage-content-hero-skeleton="true">
+        <div className="flex gap-4">
+          <Skeleton className="h-16 w-16 shrink-0 rounded-2xl sm:h-20 sm:w-20" />
+          <div className="min-w-0 flex-1 space-y-3">
+            <Skeleton className="h-4 w-28 rounded-full" />
+            <Skeleton className="h-7 w-3/4 max-w-sm rounded-lg" />
+            <Skeleton className="h-4 w-1/2 max-w-xs rounded-full" />
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Skeleton className="h-16 rounded-2xl" />
+              <Skeleton className="h-16 rounded-2xl" />
+              <Skeleton className="h-16 rounded-2xl" />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2" data-mypage-content-actions-skeleton="true">
+              <Skeleton className="h-14 rounded-2xl" />
+              <Skeleton className="h-14 rounded-2xl" />
+              <Skeleton className="h-14 rounded-2xl" />
+              <Skeleton className="h-14 rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      </div>
       <Skeleton className="h-28 w-full rounded-2xl" />
       <Skeleton className="h-28 w-full rounded-2xl" />
     </div>
