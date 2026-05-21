@@ -10,6 +10,7 @@ import {
   LogOut,
   Maximize2,
   Minimize2,
+  Settings2,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
@@ -223,6 +224,13 @@ export default function HomeMapUserMenu() {
             >
               <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
               마이페이지
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => navigateToPage("/?panel=settings")}
+              className={desktopUserMenuItemClass}
+            >
+              <Settings2 className="mr-2 h-4 w-4" aria-hidden="true" />
+              환경설정
             </DropdownMenuItem>
             {isAdmin && (
               <DropdownMenuItem
