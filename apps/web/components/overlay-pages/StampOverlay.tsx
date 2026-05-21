@@ -122,6 +122,10 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     }), [reviewedRestaurantCandidates, userVisitedIds]);
     const isUserStampsReady = !user?.id || isUserStampsFetched;
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
+    const skeletonCardCount = singleColumnCards ? 8 : 16;
+    const skeletonGridColumns = singleColumnCards
+        ? "grid-cols-1 md:gap-3"
+        : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4";
 
     const dismissStampGuide = useCallback(() => {
         setShowStampGuide(false);
@@ -445,9 +449,17 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
             {/* 그리드 */}
             <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
                 {isRestaurantsLoading ? (
-                    <StampGridSkeleton count={16} showHeader={false} />
+                    <StampGridSkeleton
+                        count={skeletonCardCount}
+                        showHeader={false}
+                        columns={skeletonGridColumns}
+                    />
                 ) : shouldWaitForStampState ? (
-                    <StampGridSkeleton count={16} showHeader={false} />
+                    <StampGridSkeleton
+                        count={skeletonCardCount}
+                        showHeader={false}
+                        columns={skeletonGridColumns}
+                    />
                 ) : isRestaurantsError ? (
                     <div
                         role="status"
