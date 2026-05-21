@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Bookmark, MessageSquare, PlusCircle, Edit, Tv, Camera, X, User, Loader2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { ReturnToMapButton } from '@/components/layout/ReturnToMapButton';
 
 interface SidebarItemProps {
     href: string;
@@ -182,6 +183,7 @@ export function MyPageSidebar() {
             data-mypage-left-panel-expanded="true"
         >
             <div className="p-6 border-b border-border flex flex-col items-center text-center space-y-4">
+                <ReturnToMapButton className="self-stretch justify-start" />
                 <div className="relative group h-20 w-20 shrink-0 rounded-full">
                     <label
                         htmlFor="mypage-sidebar-avatar-upload"
