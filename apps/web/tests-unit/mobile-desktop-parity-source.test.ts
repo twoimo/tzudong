@@ -251,6 +251,7 @@ describe("mobile and desktop parity source contracts", () => {
     const homeDesktopControlPanelSource = source(
       "components/home/home-desktop-control-panel.tsx",
     );
+    const homeAppGlobalsSource = source("app/home-app-globals.css");
     const floatingNavSource = source(
       "components/layout/FloatingNavButtons.tsx",
     );
@@ -301,6 +302,16 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-map-panel="true"',
     );
+    expect(homeDesktopControlPanelSource).toContain("desktop-left-panel-scrollbarless");
+    expect(homeAppGlobalsSource).toContain(".desktop-left-panel-scrollbarless :where(");
+    expect(homeAppGlobalsSource).toContain('[class*="overflow-y-auto"]');
+    expect(homeAppGlobalsSource).toContain(")::-webkit-scrollbar");
+    expect(homeAppGlobalsSource).toContain("-ms-overflow-style: none !important");
+    expect(homeAppGlobalsSource).toContain("scrollbar-width: none !important");
+    expect(homeAppGlobalsSource).toContain("display: none !important");
+    expect(homeAppGlobalsSource).toContain("width: 0 !important");
+    expect(homeAppGlobalsSource).toContain("height: 0 !important");
+    expect(homeDesktopControlPanelSource).toContain("overflow-x-hidden overscroll-contain");
     expect(homeDesktopControlPanelSource).toContain(
       'import Image from "next/image"',
     );
