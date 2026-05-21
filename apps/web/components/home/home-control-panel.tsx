@@ -7,6 +7,7 @@ import type { FilterState } from '@/components/filters/filter-state';
 import { BREAKPOINTS, useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
+import type { HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 
 
@@ -37,6 +38,7 @@ type HomeDesktopControlPanelProps = {
     isPanelCollapsed?: boolean;
     onTogglePanelCollapse?: () => void;
     onSetPanelCollapsed?: (collapsed: boolean) => void;
+    desktopPanelSide?: HomeMapPanelSide;
     user?: User | null;
     isAdmin?: boolean;
     activeRightPanel?: HomeOverlayPanelType;
@@ -80,6 +82,7 @@ export interface HomeControlPanelProps {
     isPanelCollapsed?: boolean;
     onTogglePanelCollapse?: () => void;
     onSetPanelCollapsed?: (collapsed: boolean) => void;
+    desktopPanelSide?: HomeMapPanelSide;
     user?: User | null;
     onSubmissionClick?: () => void;
     onTopShellUserIconClick?: () => void;
@@ -123,6 +126,7 @@ function HomeControlPanelComponent({
     isPanelCollapsed = false,
     onTogglePanelCollapse,
     onSetPanelCollapsed,
+    desktopPanelSide,
     initialIntent = null,
     activeRightPanel = null,
     selectedAnnouncement = null,
@@ -241,6 +245,7 @@ function HomeControlPanelComponent({
             isPanelCollapsed={isPanelCollapsed}
             onTogglePanelCollapse={onTogglePanelCollapse}
             onSetPanelCollapsed={onSetPanelCollapsed}
+            desktopPanelSide={desktopPanelSide}
             user={user}
             isAdmin={isAdmin}
             activeRightPanel={activeRightPanel}
