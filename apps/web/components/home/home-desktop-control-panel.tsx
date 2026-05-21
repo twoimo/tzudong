@@ -332,13 +332,11 @@ const LAYOUT_PRESETS = [
 
 function DesktopMapSettingsPanel({
   user,
-  isAdmin,
   isPanelCollapsed,
   onClose,
   onSetPanelCollapsed,
 }: {
   user: User;
-  isAdmin: boolean;
   isPanelCollapsed: boolean;
   onClose: () => void;
   onSetPanelCollapsed?: (collapsed: boolean) => void;
@@ -610,22 +608,6 @@ function DesktopMapSettingsPanel({
                 </Button>
               ))}
             </div>
-          </section>
-
-          <section className="rounded-2xl border border-border bg-muted/30 p-3">
-            <h3 className="text-sm font-bold text-foreground">
-              다음 단계 후보
-            </h3>
-            <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
-              <li>• 모바일 바텀시트 기본 높이와 데스크탑 패널 너비 동기화</li>
-              <li>• 관리자 계정 전용 운영 기본값 템플릿</li>
-              <li>• 지도 이동/마커 애니메이션 최소화 옵션의 전역 적용</li>
-            </ul>
-            {isAdmin && (
-              <p className="mt-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-5 text-primary">
-                관리자 계정은 운영 화면 진입 시 사이드 패널 펼침 정책을 유지합니다.
-              </p>
-            )}
           </section>
         </div>
       </div>
@@ -1576,8 +1558,8 @@ export default function HomeDesktopControlPanel({
           ) : activeLeftPanelView === "feed" && DeferredFeedOverlay ? (
             <DeferredFeedOverlay
               onClose={handleReturnToMapPanel}
-              hideReviewModal={false}
-              hideFloatingButton
+              onOpenReviewModal={onReviewModalOpen}
+              hideReviewModal={Boolean(onReviewModalOpen)}
               initialReviewId={searchParams.get("review")}
               onOpenRestaurantDetail={
                 handleInlinePanelRestaurantOpen as (
@@ -1647,7 +1629,6 @@ export default function HomeDesktopControlPanel({
           ) : activeLeftPanelView === "settings" && user ? (
             <DesktopMapSettingsPanel
               user={user}
-              isAdmin={isAdmin}
               isPanelCollapsed={isPanelCollapsed}
               onClose={handleReturnToMapPanel}
               onSetPanelCollapsed={onSetPanelCollapsed}

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReturnToMapButton } from "@/components/layout/ReturnToMapButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Popover,
@@ -953,6 +954,7 @@ function AdminSidebar({
             "lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1",
         )}
       >
+        <ReturnToMapButton iconOnly className="h-8 w-8" />
         <Link
           href="/"
           className={cn(
