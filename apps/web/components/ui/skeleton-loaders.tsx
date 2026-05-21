@@ -91,17 +91,37 @@ function LeaderboardSkeletonComponent({
     count = 8,
     showHeader = true,
     className,
+    compactLeftPanel = false,
 }: {
     count?: number;
     showHeader?: boolean;
     className?: string;
+    compactLeftPanel?: boolean;
 }) {
     return (
-        <div className={cn("w-full p-4 space-y-3", className)} style={CONTAIN_STYLE}>
+        <div
+            className={cn(
+                "w-full space-y-3",
+                compactLeftPanel ? "px-2 py-4" : "p-4",
+                className,
+            )}
+            style={CONTAIN_STYLE}
+        >
             {showHeader && <Skeleton className="h-6 w-32" />}
             {Array.from({ length: count }, (_, i) => (
-                <div key={i} className="flex items-center gap-3 py-2">
-                    <Skeleton className="h-9 w-9 rounded-full" />
+                <div
+                    key={i}
+                    className={cn(
+                        "flex items-center py-2",
+                        compactLeftPanel ? "gap-2" : "gap-3",
+                    )}
+                >
+                    <Skeleton
+                        className={cn(
+                            "h-9 rounded-full",
+                            compactLeftPanel ? "w-7" : "w-9",
+                        )}
+                    />
                     <Skeleton className="h-4 w-24 flex-1" />
                     <Skeleton className="h-4 w-12" />
                 </div>
