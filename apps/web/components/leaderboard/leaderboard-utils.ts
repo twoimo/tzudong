@@ -20,21 +20,6 @@ export interface UserTier {
 
 // --- Constants & Helpers ---
 
-export const getRankIcon = (rank: number) => {
-    switch (rank) {
-        case 1:
-            return React.createElement(Trophy, { className: "h-5 w-5 text-yellow-500" });
-        case 2:
-            return React.createElement(Medal, { className: "h-5 w-5 text-muted-foreground" });
-        case 3:
-            return React.createElement(Award, { className: "h-5 w-5 text-amber-600" });
-        default:
-            return rank; // Use simple number return for caller to wrap if needed, or return span?
-        // Original returned span. Let's return the component or node.
-        // But usually JSX elements.
-    }
-};
-
 export const getRankIconElement = (rank: number) => {
     switch (rank) {
         case 1:

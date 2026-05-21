@@ -1560,6 +1560,11 @@ describe("web quality performance source contracts", () => {
       "components/leaderboard/LeaderboardList.tsx",
     );
     const leaderboardPageSource = source("app/leaderboard/page.tsx");
+    const leaderboardLoadingSource = source("app/leaderboard/loading.tsx");
+    const leaderboardSkeletonSource = source("components/ui/skeleton-loaders.tsx");
+    const leaderboardUtilsSource = source(
+      "components/leaderboard/leaderboard-utils.ts",
+    );
 
     expect(feedContentSource).toContain(
       'aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}',
@@ -1625,15 +1630,56 @@ describe("web quality performance source contracts", () => {
       'className="flex h-10 items-center justify-center"',
     );
     expect(leaderboardOverlaySource).toContain("compactLeftPanel");
+    expect(leaderboardOverlaySource).toContain(
+      "const scrollRef = useRef<HTMLDivElement>(null);",
+    );
+    expect(leaderboardOverlaySource).toContain(
+      "{ root: scrollRef.current, threshold: 0.1 }",
+    );
+    expect(leaderboardOverlaySource).toContain(
+      'className="h-full overflow-y-auto overflow-x-hidden overscroll-contain"',
+    );
+    expect(leaderboardOverlaySource).not.toContain(
+      'import { ScrollArea } from "@/components/ui/scroll-area"',
+    );
+    expect(leaderboardOverlaySource).not.toContain("<ScrollArea");
     expect(leaderboardListSource).toContain("compactLeftPanel?: boolean");
     expect(leaderboardListSource).toContain(
       '? "flex items-center gap-2 pl-2 pr-5',
     );
+    expect(leaderboardListSource).toContain("pl-2 pr-6 sm:px-6");
+    expect(leaderboardListSource).not.toContain("px-4 sm:px-6 md:px-6");
+    expect(leaderboardPageSource).toContain('className="pl-2 pr-6 sm:px-6"');
+    expect(leaderboardLoadingSource).toContain(
+      'className="pl-2 pr-6 sm:px-6"',
+    );
+    expect(leaderboardSkeletonSource).toContain("compactLeftPanel?: boolean");
+    expect(leaderboardSkeletonSource).toContain("compactLeftPanel = false");
+    expect(leaderboardSkeletonSource).toContain(
+      'compactLeftPanel ? "px-2 py-4" : "p-4"',
+    );
+    expect(leaderboardSkeletonSource).toContain(
+      'compactLeftPanel ? "gap-2" : "gap-3"',
+    );
+    expect(leaderboardSkeletonSource).toContain(
+      'compactLeftPanel ? "w-7" : "w-9"',
+    );
+    expect(leaderboardOverlaySource).toContain("compactLeftPanel");
     expect(leaderboardListSource).toContain(
-      "paddingLeft: '0.5rem', paddingRight: '1.25rem'",
+      "const COMPACT_LEFT_PANEL_ROW_STYLE = {",
+    );
+    expect(leaderboardListSource).toContain("paddingLeft: '0.5rem'");
+    expect(leaderboardListSource).toContain("paddingRight: '1.25rem'");
+    expect(leaderboardListSource).toContain(
+      "? COMPACT_LEFT_PANEL_ROW_STYLE",
     );
     expect(leaderboardListSource).toContain(
       'compactLeftPanel && "w-7 sm:w-7"',
+    );
+    expect(leaderboardUtilsSource).toContain("getRankIconElement");
+    expect(leaderboardUtilsSource).not.toContain("getRankIcon =");
+    expect(leaderboardPageSource).toContain(
+      "{ root: scrollRef.current, threshold: 0.1 }",
     );
     expect(leaderboardPageSource).toContain(
       'aria-label="랭킹 및 티어 산정 기준 보기"',
