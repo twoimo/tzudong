@@ -1502,6 +1502,11 @@ describe("web quality performance source contracts", () => {
     );
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
+    expect(stampOverlaySource).toContain("const skeletonCardCount = singleColumnCards ? 8 : 16");
+    expect(stampOverlaySource).toContain("count={skeletonCardCount}");
+    expect(stampOverlaySource).toContain("const skeletonGridColumns = singleColumnCards");
+    expect(stampOverlaySource).toContain("grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-4");
+    expect(stampOverlaySource).toContain("columns={skeletonGridColumns}");
     expect(stampOverlaySource).toContain(
       "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 mt-4 overflow-hidden",
     );
@@ -1829,6 +1834,10 @@ describe("web quality performance source contracts", () => {
     expect(myPageSource).not.toContain("useRouter");
     expect(myPageLayoutSource).toContain("<AppRuntimeLayout>");
     expect(myPageLayoutContentSource).toContain("dynamic(");
+    expect(myPageLayoutContentSource).toContain("function MyPageMobileBrandHeader()");
+    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-brand-logo="true"');
+    expect(myPageLayoutContentSource).toContain('aria-label="쯔동여지도 홈으로 이동"');
+    expect(myPageLayoutContentSource).toContain('<MyPageMobileBrandHeader />');
     expect(myPageLayoutContentSource).toContain('data-mypage-viewport-layout="edge-to-edge"');
     expect(myPageLayoutContentSource).toContain("w-full max-w-none");
     expect(myPageLayoutContentSource).not.toContain("container mx-auto h-full min-h-0 max-w-6xl flex");
@@ -1870,6 +1879,11 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       'data-mypage-left-panel-expanded="true"',
     );
+    expect(myPageSidebarSource).toContain('data-mypage-sidebar-brand="true"');
+    expect(myPageSidebarSource).toContain('data-mypage-sidebar-logo="true"');
+    expect(myPageSidebarSource).toContain('aria-label="쯔동여지도 홈으로 이동"');
+    expect(myPageSidebarSource).toContain('<span className="truncate">쯔동여지도</span>');
+    expect(myPageSidebarSource).toContain('src="/logo.png"');
     expect(myPageSidebarSource).toContain('aria-current={isActive ? "page" : undefined}');
     expect(myPageSidebarSource).toContain('focus-visible:ring-2 focus-visible:ring-primary');
     expect(myPageSidebarSource).toContain("await import('@/lib/image-utils')");

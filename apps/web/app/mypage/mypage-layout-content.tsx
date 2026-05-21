@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import dynamic from "next/dynamic";
@@ -24,6 +26,28 @@ function MyPageSidebarExpandedPlaceholder() {
   );
 }
 
+
+function MyPageMobileBrandHeader() {
+  return (
+    <Link
+      href="/"
+      aria-label="쯔동여지도 홈으로 이동"
+      className="mb-3 flex w-fit items-center gap-2 rounded-full border border-border bg-card/95 px-2.5 py-1.5 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
+      data-mypage-mobile-brand-logo="true"
+    >
+      <Image
+        src="/logo.png"
+        alt=""
+        aria-hidden="true"
+        width={28}
+        height={28}
+        className="h-7 w-7 rounded-lg object-contain"
+        priority
+      />
+      <span>쯔동여지도</span>
+    </Link>
+  );
+}
 
 function MyPageContentLoadingState() {
   return (
@@ -112,6 +136,7 @@ export function MyPageLayoutContent({
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
           <div className="flex h-full min-h-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:px-5 md:py-6 md:pb-6 lg:px-6 lg:py-7">
+            <MyPageMobileBrandHeader />
             {userLoading ? <MyPageContentLoadingState /> : children}
           </div>
         </div>
