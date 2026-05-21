@@ -12,6 +12,12 @@ import {
   DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT,
   shouldExpandDesktopLeftPanelForRoute,
 } from "@/lib/desktop-left-panel-entry";
+import {
+  HOME_MAP_USER_PREFERENCES_EVENT,
+  readHomeMapUserPreferences,
+  type HomeMapLayoutMode,
+  type HomeMapUserPreferencesEvent,
+} from "@/lib/home-map-user-preferences";
 import type { Restaurant } from "@/types/restaurant";
 import {
   resolveDeviceOrientationHeading,
@@ -129,6 +135,8 @@ export default function HomeClient() {
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [desktopMapLayout, setDesktopMapLayout] =
+    useState<HomeMapLayoutMode>("panel-aware");
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [deviceLocation, setDeviceLocation] =
@@ -225,6 +233,39 @@ export default function HomeClient() {
       );
     };
   }, [closeAllPanels]);
+
+  useEffect(() => {
+    if (!user?.id || !isDesktop) return;
+
+    const preferences = readHomeMapUserPreferences(user.id);
+    setIsPanelCollapsed(preferences.desktopPanelDefault === "collapsed");
+    setDesktopMapLayout(preferences.desktopMapLayout);
+  }, [isDesktop, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !isDesktop) return;
+
+    const handlePreferencesChanged = (event: Event) => {
+      const customEvent = event as HomeMapUserPreferencesEvent;
+      if (customEvent.detail?.userId !== user.id) return;
+
+      setIsPanelCollapsed(
+        customEvent.detail.preferences.desktopPanelDefault === "collapsed",
+      );
+      setDesktopMapLayout(customEvent.detail.preferences.desktopMapLayout);
+    };
+
+    window.addEventListener(
+      HOME_MAP_USER_PREFERENCES_EVENT,
+      handlePreferencesChanged,
+    );
+    return () => {
+      window.removeEventListener(
+        HOME_MAP_USER_PREFERENCES_EVENT,
+        handlePreferencesChanged,
+      );
+    };
+  }, [isDesktop, user?.id]);
 
   // 패널 접기/펼치기
   // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -658,6 +699,7 @@ export default function HomeClient() {
         onPanelClick={setActivePanel}
         externalPanelOpen={true}
         isPanelCollapsed={isPanelCollapsed}
+        desktopMapLayout={desktopMapLayout}
         isMapFullscreen={isMapFullscreen}
         onMapFullscreenChange={setIsMapFullscreen}
         deviceLocation={deviceLocation}
@@ -701,6 +743,7 @@ export default function HomeClient() {
           isDeviceHeadingMode={isDeviceHeadingMode}
           isPanelCollapsed={isPanelCollapsed}
           onTogglePanelCollapse={togglePanelCollapse}
+          onSetPanelCollapsed={setIsPanelCollapsed}
           initialIntent={initialMobileOverlayIntent}
           activeRightPanel={activeRightPanel}
           selectedAnnouncement={selectedAnnouncement}

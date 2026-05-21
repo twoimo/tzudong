@@ -194,6 +194,9 @@ describe("web quality performance source contracts", () => {
     expect(homeClientSource).toContain("<HomeMapContainer");
     expect(homeClientSource).toContain("<HomeControlPanel");
     expect(homeClientSource).toContain("isPanelCollapsed={isPanelCollapsed}");
+    expect(homeClientSource).toContain("desktopMapLayout={desktopMapLayout}");
+    expect(homeClientSource).toContain("setDesktopMapLayout(preferences.desktopMapLayout)");
+    expect(homeClientSource).toContain("setDesktopMapLayout(customEvent.detail.preferences.desktopMapLayout)");
     expect(homeClientSource).toContain(
       "onTogglePanelCollapse={togglePanelCollapse}",
     );
@@ -739,6 +742,8 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-panel-loading="true"',
     );
+    expect(homeDesktopControlPanelSource).toContain('import { Skeleton } from "@/components/ui/skeleton"');
+    expect(homeDesktopControlPanelSource).not.toContain("bg-muted animate-pulse");
     expect(homeDesktopControlPanelSource).toContain(
       'aria-label={`${label} 패널 불러오는 중`}',
     );
@@ -845,9 +850,9 @@ describe("web quality performance source contracts", () => {
     const homeMapContainerSource = source(
       "components/home/home-map-container.tsx",
     );
-    expect(homeMapContainerSource).toContain(
-      "const shouldReserveDesktopLeftPanel = isDesktop && !isPanelCollapsed && !isMapFullscreen && !renderDesktopDetailPanel",
-    );
+    expect(homeMapContainerSource).toContain("desktopMapLayout?: HomeMapLayoutMode");
+    expect(homeMapContainerSource).toContain("desktopMapLayout = 'panel-aware'");
+    expect(homeMapContainerSource).toContain("desktopMapLayout === 'panel-aware'");
     expect(homeMapContainerSource).toContain(
       'data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}',
     );
@@ -1613,6 +1618,21 @@ describe("web quality performance source contracts", () => {
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
       'router.replace("/?panel=notifications", { scroll: false })',
     );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      '"settings"',
+    );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      'data-desktop-left-panel-view="settings"',
+    );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      "writeHomeMapUserPreferences(user.id",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      "readHomeMapUserPreferences(user.id)",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      "HOME_MAP_USER_PREFERENCES_EVENT",
+    );
     expect(overlayLayoutSource).toContain(
       'router.replace("/", { scroll: false });',
     );
@@ -1825,6 +1845,9 @@ describe("web quality performance source contracts", () => {
     expect(myPageLayoutContentSource).toContain("if (!shouldShowSidebarFrame) return null;");
     expect(myPageLayoutContentSource).toContain("function MyPageContentLoadingState()");
     expect(myPageLayoutContentSource).toContain('data-mypage-content-loading="true"');
+    expect(myPageLayoutContentSource).toContain('data-mypage-content-hero-skeleton="true"');
+    expect(myPageLayoutContentSource).toContain('data-mypage-content-actions-skeleton="true"');
+    expect(myPageLayoutContentSource).toContain("rounded-3xl border border-border bg-card p-4");
     expect(myPageLayoutContentSource).toContain("<Skeleton");
     expect(myPageLayoutContentSource).not.toContain("<GlobalLoader");
     expect(myPageSectionSkeletonSource).toContain(
@@ -1869,6 +1892,16 @@ describe("web quality performance source contracts", () => {
       'className="rounded-full object-cover"',
     );
     expect(myPageSidebarSource).not.toContain("AvatarImage");
+    expect(myPageProfileSource).toContain('data-mypage-profile-page="true"');
+    expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
+    expect(myPageProfileSource).toContain('data-mypage-profile-summary="true"');
+    expect(myPageProfileSource).toContain('data-mypage-next-actions="true"');
+    expect(myPageProfileSource).toContain('마이페이지 허브');
+    expect(myPageProfileSource).toContain('바로 할 수 있는 일');
+    expect(myPageProfileSource).toContain('지도 환경설정');
+    expect(myPageProfileSource).toContain('href: "/?panel=settings"');
+    expect(myPageProfileSource).toContain('const profileCompletionPercent = Math.round');
+    expect(myPageProfileSource).toContain('const joinedDateLabel = format(createdAt');
     expect(myPageProfileSource).toContain('htmlFor="profile-avatar-upload"');
     expect(myPageProfileSource).toContain('id="profile-avatar-upload"');
     expect(myPageProfileSource).toContain(

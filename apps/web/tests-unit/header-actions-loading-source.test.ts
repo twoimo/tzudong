@@ -95,12 +95,17 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).toContain('sizes="36px"');
     expect(userMenuSource).toContain('<UserRound className="h-5 w-5" />');
     expect(userMenuSource).toContain('navigateToPage("/mypage/profile")');
+    expect(userMenuSource).toContain('navigateToPage("/?panel=settings")');
+    expect(userMenuSource).toContain("환경설정");
     expect(userMenuSource).toContain('navigateToPage("/admin")');
     expect(userMenuSource).toContain(
       "shouldExpandDesktopLeftPanelForRoute(href)",
     );
     expect(userMenuSource).toContain(
       "DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT",
+    );
+    expect(source("lib/desktop-left-panel-entry.ts")).toContain(
+      'searchParams.get("panel") === "settings"',
     );
     expect(userMenuSource).toContain("{isAdmin && (");
     expect(userMenuSource).toContain("await signOut();");
