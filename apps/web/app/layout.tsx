@@ -1,15 +1,30 @@
 import type { Metadata } from "next";
+import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { RootSpeedInsights } from "./root-speed-insights";
 import "./globals.css";
 
 // 카카오톡 OG 이미지 표시를 위해 절대 URL 필요
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tzudong.vercel.app';
+const siteUrl = SITE_URL;
 const supabasePreconnectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
 const shouldPreconnectSupabase = Boolean(supabasePreconnectUrl && /^https?:\/\//i.test(supabasePreconnectUrl));
 export const metadata: Metadata = {
     metadataBase: new URL(siteUrl),
-    title: "쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에!",
-    description: "쯔양 유튜브에 나온 전국 맛집을 지도에서 한눈에! 영상 보기, 리뷰, 도장 깨기까지",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    applicationName: SITE_NAME,
+    alternates: {
+        canonical: '/',
+    },
+    robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+        },
+    },
     icons: {
         icon: [
             { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
@@ -20,26 +35,26 @@ export const metadata: Metadata = {
         ],
     },
     openGraph: {
-        title: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에!',
-        description: '쯔양 유튜브에 나온 전국 맛집을 지도에서 한눈에! 영상 보기, 리뷰, 도장 깨기까지',
+        title: DEFAULT_TITLE,
+        description: DEFAULT_DESCRIPTION,
         url: siteUrl,
         type: 'website',
         locale: 'ko_KR',
-        siteName: '쯔동여지도',
+        siteName: SITE_NAME,
         images: [
             {
-                url: '/og-image-20260213.png',
+                url: OG_IMAGE_PATH,
                 width: 1200,
                 height: 630,
-                alt: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에!',
+                alt: OG_IMAGE_ALT,
             },
         ],
     },
     twitter: {
         card: 'summary_large_image',
-        title: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에!',
-        description: '쯔양 유튜브에 나온 전국 맛집을 지도에서 한눈에! 영상 보기, 리뷰, 도장 깨기까지',
-        images: ['/og-image-20260213.png'],
+        title: DEFAULT_TITLE,
+        description: DEFAULT_DESCRIPTION,
+        images: [OG_IMAGE_PATH],
     },
 };
 

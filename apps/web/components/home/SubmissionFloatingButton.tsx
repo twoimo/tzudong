@@ -1,33 +1,44 @@
 'use client';
 
 import { memo } from 'react';
-import { Send } from "lucide-react";
+import { LocateFixed, Navigation, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useHydration } from "@/hooks/useHydration";
+import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
 
 interface SubmissionFloatingButtonProps {
     onClick: () => void;
     isSidebarOpen: boolean;
     className?: string;
+    onDeviceLocationClick?: () => void;
+    deviceLocation?: DeviceMapLocation | null;
+    isDeviceLocationPending?: boolean;
+    isDeviceHeadingMode?: boolean;
 }
 
 // [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
 const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
     onClick,
     isSidebarOpen,
-    className
+    className,
+    onDeviceLocationClick,
+    deviceLocation = null,
+    isDeviceLocationPending = false,
+    isDeviceHeadingMode = false,
 }: SubmissionFloatingButtonProps) {
     const { isMobileOrTablet } = useDeviceType();
     const isHydrated = useHydration();
     void isSidebarOpen;
+    const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
+        hasLocation: Boolean(deviceLocation),
+        isHeadingMode: isDeviceHeadingMode,
+        isPending: isDeviceLocationPending,
+    });
 
     return (
-        <Button
-            type="button"
-            onClick={onClick}
-            aria-label="맛집 제보하기"
+        <div
             className={cn(
                 "fixed z-50",
                 // 모바일/태블릿: 우측 하단 (검색 버튼 위)
@@ -35,22 +46,61 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                 // 제보 버튼: bottom-36(144px) -> 16px 간격
                 // 데스크탑: 우측 하단 고정
                 isMobileOrTablet ? "right-4 bottom-36" : "right-6 bottom-6",
-                // [Mobile] 돋보기 아이콘과 동일한 크기 (h-12 w-12)
-                isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
-                "rounded-full shadow-xl",
-                "bg-red-800 hover:bg-red-900 text-white",
-                "transition-all duration-300 ease-in-out",
-                "hover:scale-110 active:scale-95",
-                "flex items-center justify-center",
-                "border-2 border-border/20",
+                "flex flex-col gap-2",
                 // Hydration 깜빡임 방지
                 isHydrated ? "opacity-100" : "opacity-0",
                 className
             )}
-            title="맛집 제보하기"
+            aria-label="지도 빠른 작업"
         >
-            <Send className="h-6 w-6" />
-        </Button>
+            <Button
+                type="button"
+                onClick={onClick}
+                aria-label="맛집 제보하기"
+                className={cn(
+                    // [Mobile] 돋보기 아이콘과 동일한 크기 (h-12 w-12)
+                    isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
+                    "rounded-full shadow-xl",
+                    "bg-red-800 hover:bg-red-900 text-white",
+                    "transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none",
+                    "hover:scale-110 active:scale-95",
+                    "flex items-center justify-center",
+                    "border-2 border-border/20"
+                )}
+                title="맛집 제보하기"
+            >
+                <Send className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
+            </Button>
+
+            {onDeviceLocationClick ? (
+                <Button
+                    type="button"
+                    onClick={onDeviceLocationClick}
+                    disabled={isDeviceLocationPending}
+                    aria-label={deviceLocationButtonLabel}
+                    className={cn(
+                        isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
+                        "rounded-full shadow-xl",
+                        "transition-colors duration-150 ease-out motion-reduce:transition-none",
+                        "flex items-center justify-center",
+                        "border-2",
+                        isDeviceHeadingMode
+                            ? "bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70"
+                            : deviceLocation
+                                ? "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                                : "bg-background hover:bg-secondary text-foreground border-border/70",
+                        isDeviceLocationPending && "opacity-80"
+                    )}
+                    title={deviceLocationButtonLabel}
+                >
+                    {isDeviceHeadingMode ? (
+                        <Navigation className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
+                    ) : (
+                        <LocateFixed className={isMobileOrTablet ? "h-5 w-5" : "h-6 w-6"} aria-hidden="true" />
+                    )}
+                </Button>
+            ) : null}
+        </div>
     );
 });
 

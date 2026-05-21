@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Search, Trophy, Eye, EyeOff, X, Filter } from "lucide-react";
+import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
+import { AlertCircle, Search, Trophy, Eye, EyeOff, X, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +18,8 @@ import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/componen
 import { StampCard } from "@/components/stamp/StampCard";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
+import { compareStampRestaurants } from "@/lib/stamp-restaurant-order";
+import { cn } from "@/lib/utils";
 
 const STAMP_PAGE_SIZE = 16;
 const STAMP_GUIDE_DEMO_RESTAURANT = {
@@ -29,6 +32,19 @@ const STAMP_GUIDE_DEMO_RESTAURANT = {
 } as unknown as Restaurant;
 const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 도장이 찍혀요.";
 
+function getStampRestaurantCategories(restaurant: Restaurant): string[] {
+    const categoryData = restaurant.category ?? restaurant.categories;
+    if (Array.isArray(categoryData)) return categoryData;
+    if (typeof categoryData !== 'string') return [];
+
+    try {
+        const parsed = JSON.parse(categoryData);
+        return Array.isArray(parsed) ? parsed : [categoryData];
+    } catch {
+        return [categoryData];
+    }
+}
+
 type UserReviewWithRestaurant = UserReview & {
     restaurant?: Restaurant | null;
 };
@@ -36,13 +52,14 @@ type UserReviewWithRestaurant = UserReview & {
 interface StampOverlayProps {
     onClose?: () => void;
     onOpenRestaurantDetail?: (restaurant: Restaurant) => void;
+    singleColumnCards?: boolean;
 }
 
 /**
  * 도장 오버레이 (데스크탑)
  * - StampCard 공유 컴포넌트 사용
  */
-export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampOverlayProps) {
+export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleColumnCards = false }: StampOverlayProps) {
     const { user } = useAuth();
     const [displayLimit, setDisplayLimit] = useState(STAMP_PAGE_SIZE);
     const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
@@ -52,6 +69,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
         searchQuery: "",
         categories: [],
         regions: [],
+        fanVisitsMin: 0,
         showUnvisitedOnly: false,
     });
 
@@ -124,14 +142,19 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
     }, [isUserStampsLoading, user?.id, userReviewData.length]);
 
     // 맛집 데이터
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading } = useRestaurants({ enabled: true });
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isError: isRestaurantsError } = useRestaurants({ enabled: true });
+    const deferredSearchQuery = useDeferredValue(filters.searchQuery);
+
+    const normalizedCategoriesByRestaurantId = useMemo(() => new Map(
+        allMergedRestaurants.map((restaurant) => [restaurant.id, getStampRestaurantCategories(restaurant)]),
+    ), [allMergedRestaurants]);
 
     // 필터링 (도장 찍힌 맛집 먼저)
     const filteredRestaurants = useMemo(() => {
         let result = allMergedRestaurants;
 
-        if (filters.searchQuery.trim()) {
-            const query = filters.searchQuery.trim().toLowerCase();
+        if (deferredSearchQuery.trim()) {
+            const query = deferredSearchQuery.trim().toLowerCase();
             result = result.filter(r =>
                 getRestaurantDisplayName(r).toLowerCase().includes(query) ||
                 (r.road_address && r.road_address.toLowerCase().includes(query))
@@ -147,19 +170,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
 
         if (filters.categories.length > 0) {
             result = result.filter(r => {
-                const categoryData = r.category ?? r.categories;
-                let restaurantCategories: string[] = [];
-                if (Array.isArray(categoryData)) {
-                    restaurantCategories = categoryData;
-                } else if (typeof categoryData === 'string') {
-                    try {
-                        const parsed = JSON.parse(categoryData);
-                        if (Array.isArray(parsed)) restaurantCategories = parsed;
-                        else restaurantCategories = [categoryData];
-                    } catch {
-                        restaurantCategories = [categoryData];
-                    }
-                }
+                const restaurantCategories = normalizedCategoriesByRestaurantId.get(r.id) ?? [];
                 return filters.categories.some(filterCat => restaurantCategories.includes(filterCat));
             });
         }
@@ -168,14 +179,18 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
             result = result.filter(r => !isVisited(r));
         }
 
-        result = [...result].sort((a, b) => {
-            const aVisited = isVisited(a) ? 1 : 0;
-            const bVisited = isVisited(b) ? 1 : 0;
-            return bVisited - aVisited;
-        });
+        if ((filters.fanVisitsMin ?? 0) > 0) {
+            result = result.filter(r => (r.review_count || 0) >= (filters.fanVisitsMin ?? 0));
+        }
+
+        result = [...result].sort((a, b) => compareStampRestaurants(a, b, {
+            isVisited,
+            sortColumn: "fanVisits",
+            sortDirection: "desc",
+        }));
 
         return result;
-    }, [allMergedRestaurants, filters, isVisited, user]);
+    }, [allMergedRestaurants, deferredSearchQuery, filters, isVisited, normalizedCategoriesByRestaurantId, user]);
 
     const overlayGuideCount = showStampGuide ? 1 : 0;
     const displayedRestaurants = useMemo(
@@ -192,7 +207,8 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
         (filters.searchQuery ? 1 : 0) +
         filters.categories.length +
         filters.regions.length +
-        (filters.showUnvisitedOnly ? 1 : 0);
+        (filters.showUnvisitedOnly ? 1 : 0) +
+        ((filters.fanVisitsMin ?? 0) > 0 ? 1 : 0);
 
     // 무한 스크롤
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -244,35 +260,38 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
     }, []);
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div
+            className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+            data-desktop-left-panel-stamp-mobile-parity="true"
+        >
             {/* 헤더 */}
-            <div className="p-4 sm:p-6 border-b border-border shrink-0 bg-background rounded-t-2xl">
+            <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="min-w-0">
-                        <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
-                            <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
-                            <span className="whitespace-nowrap">쯔동여지도 도장</span>
-                            <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap">
-                                ({filteredRestaurants.length.toLocaleString()}개)
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-w-0">
+                                <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+                                <span className="whitespace-nowrap">쯔동여지도 도장</span>
+                            </h1>
+                            <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap shrink-0">
+                                ({allMergedRestaurants.length.toLocaleString()}개)
                             </span>
-                        </h1>
+                        </div>
                         <p className="text-xs xs:text-sm text-muted-foreground mt-1 whitespace-nowrap">
                             맛집을 찾아 도장을 찍어보세요!
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {user && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-full hover:bg-muted"
-                                onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
-                                title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
-                                aria-label={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
-                            >
-                                {filters.showUnvisitedOnly ? <EyeOff className="h-5 w-5 text-primary" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-                            </Button>
-                        )}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full hover:bg-muted"
+                            onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
+                            title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
+                            aria-label={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
+                        >
+                            {filters.showUnvisitedOnly ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+                        </Button>
                         <Button
                             variant="outline"
                             size="icon"
@@ -297,13 +316,18 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                 </div>
 
                 {/* 필터 영역 */}
-                {isFilterExpanded && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                        <div className="md:col-span-1">
+                <div className={cn(
+                    "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 mt-4 overflow-hidden",
+                    !isFilterExpanded && "hidden"
+                )}>
+                        <div className="lg:col-span-2">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="맛집명 검색..."
+                                    aria-label="도장 맛집 검색"
+                                    name="stamp-overlay-search"
+                                    autoComplete="off"
+                                    placeholder="맛집명 검색…"
                                     value={filters.searchQuery}
                                     onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
                                     className="pl-9"
@@ -313,7 +337,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
 
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between w-full">
+                                <Button variant="outline" className="justify-between">
                                     <span className="truncate">지역 {filters.regions.length > 0 && `(${filters.regions.length})`}</span>
                                     <Filter className="h-4 w-4 ml-2" />
                                 </Button>
@@ -343,7 +367,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
 
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between w-full">
+                                <Button variant="outline" className="justify-between">
                                     <span className="truncate">카테고리 {filters.categories.length > 0 && `(${filters.categories.length})`}</span>
                                     <Filter className="h-4 w-4 ml-2" />
                                 </Button>
@@ -370,19 +394,95 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                                 </div>
                             </PopoverContent>
                         </Popover>
+
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="justify-between">
+                                    <span className="truncate">
+                                        리뷰 {(filters.fanVisitsMin ?? 0) > 0 ? `${filters.fanVisitsMin}개 이상` : "전체"}
+                                    </span>
+                                    <Filter className="h-4 w-4 ml-2" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 z-[100]" align="start">
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="font-semibold text-sm">최소 리뷰 수</h4>
+                                        <span className="text-sm text-muted-foreground">{filters.fanVisitsMin ?? 0}개 이상</span>
+                                    </div>
+                                    <Slider
+                                        value={[filters.fanVisitsMin ?? 0]}
+                                        max={100}
+                                        step={1}
+                                        onValueChange={(value) => setFilters(prev => ({ ...prev, fanVisitsMin: value[0] }))}
+                                    />
+                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                        <span>0개</span>
+                                        <span>100개+</span>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        <Button
+                            variant="outline"
+                            onClick={() => setFilters({
+                                searchQuery: "",
+                                categories: [],
+                                regions: [],
+                                fanVisitsMin: 0,
+                                showUnvisitedOnly: false,
+                            })}
+                            title="필터 초기화"
+                            disabled={activeFilterCount === 0}
+                            className={cn(activeFilterCount === 0 && "opacity-50 cursor-not-allowed")}
+                        >
+                            필터 초기화
+                        </Button>
                     </div>
-                )}
             </div>
 
             {/* 그리드 */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background">
                 {isRestaurantsLoading ? (
                     <StampGridSkeleton count={16} showHeader={false} />
                 ) : shouldWaitForStampState ? (
                     <StampGridSkeleton count={16} showHeader={false} />
+                ) : isRestaurantsError ? (
+                    <div
+                        role="status"
+                        className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground"
+                    >
+                        <div>
+                            <AlertCircle
+                                className="mx-auto mb-2 h-10 w-10 rounded-full bg-destructive/10 p-2 text-destructive/80"
+                                aria-hidden="true"
+                            />
+                            <p className="font-medium text-foreground">도장 맛집을 불러오지 못했습니다</p>
+                            <p className="mt-1 text-xs leading-5">잠시 후 다시 열거나 필터를 초기화해 주세요.</p>
+                        </div>
+                    </div>
+                ) : displayedCards.length === 0 ? (
+                    <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground">
+                        <div>
+                            <Trophy
+                                className="mx-auto mb-2 h-10 w-10 rounded-full bg-primary/10 p-2 text-primary/70"
+                                aria-hidden="true"
+                            />
+                            <p className="font-medium text-foreground">조건에 맞는 도장 맛집이 없습니다</p>
+                            <p className="mt-1 text-xs leading-5">검색어를 줄이거나 필터를 초기화해 다시 확인해 보세요.</p>
+                        </div>
+                    </div>
                 ) : (
                     <div className="space-y-3">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <div
+                            className={cn(
+                                singleColumnCards
+                                    ? "grid grid-cols-1 gap-3 md:gap-3"
+                                    : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4"
+                            )}
+                            data-stamp-card-grid-single-column={singleColumnCards ? "true" : "false"}
+                        >
                             {displayedCards.map((restaurant) => {
                                 const isGuideCard = restaurant.id === STAMP_GUIDE_DEMO_RESTAURANT.id;
                                 const isVisitedCard = isGuideCard ? true : isVisited(restaurant);
@@ -396,7 +496,8 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                                         currentThumbnailIndex={currentIndex}
                                         onThumbnailChange={handleThumbnailChange}
                                         onClick={isGuideCard ? () => {} : handleRestaurantClick}
-                                        size="compact"
+                                        size="default"
+                                        stampSize="mobile"
                                         guideLabel={isGuideCard ? "가이드" : undefined}
                                         isGuideCard={isGuideCard}
                                         guideTitle={isGuideCard ? restaurant.name : undefined}

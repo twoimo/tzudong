@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useMemo, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import { MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -59,7 +59,10 @@ export const StampCard = memo(function StampCard({
     const youtubeLinks = typedRestaurant.mergedYoutubeLinks ?? (typedRestaurant.youtube_link ? [typedRestaurant.youtube_link] : []);
     const currentIndex = currentThumbnailIndex % (youtubeLinks.length || 1);
     const thumbnailUrl = youtubeLinks[currentIndex] ? getYouTubeThumbnailUrl(youtubeLinks[currentIndex]) : null;
-    const category = parseCategory(typedRestaurant.category ?? typedRestaurant.categories);
+    const category = useMemo(
+        () => parseCategory(typedRestaurant.category ?? typedRestaurant.categories),
+        [typedRestaurant.category, typedRestaurant.categories],
+    );
     const reviewCount = typedRestaurant.verified_review_count ?? typedRestaurant.review_count ?? 0;
 
     const handlePrevThumbnail = (e: React.MouseEvent) => {
@@ -78,24 +81,49 @@ export const StampCard = memo(function StampCard({
     const resolvedStampSize = stampSize ?? size;
     const isStampCompact = resolvedStampSize === 'compact';
     const stampSizeClass = resolvedStampSize === 'mobile'
-        ? "h-[78%] max-h-64 w-auto max-w-[82%]"
+        ? "w-auto"
         : isStampCompact
             ? "w-36 h-36 md:w-40 md:h-40"
             : "w-48 h-48 sm:w-56 sm:h-56";
+    const stampImageStyle = resolvedStampSize === 'mobile'
+        ? {
+            transform: 'rotate(-45deg)',
+            height: '70%',
+            maxHeight: '8.5rem',
+            maxWidth: '40%',
+        }
+        : { transform: 'rotate(-45deg)' };
 
     const handleGuideClose = (e: React.MouseEvent) => {
         e.stopPropagation();
         onGuideClose?.();
     };
 
+    const handleCardOpen = () => {
+        if (isGuideCard) return;
+        onClick(restaurant);
+    };
+
+    const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+        if (isGuideCard) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        onClick(restaurant);
+    };
+
     return (
         <Card
             className={cn(
-                "relative overflow-hidden transition-all duration-300 cursor-pointer group",
+                "relative overflow-hidden transition-[box-shadow,border-color,transform] duration-300 group",
+                isGuideCard ? "cursor-default" : "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
                 isSelected && "ring-2 ring-primary"
             )}
-            onClick={() => onClick(restaurant)}
+            onClick={handleCardOpen}
+            onKeyDown={handleCardKeyDown}
+            role={isGuideCard ? undefined : "button"}
+            tabIndex={isGuideCard ? undefined : 0}
+            aria-label={isGuideCard ? undefined : `${restaurantDisplayName} 도장 카드 열기`}
         >
             <div className="aspect-video relative">
                 {thumbnailUrl ? (
@@ -106,10 +134,9 @@ export const StampCard = memo(function StampCard({
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1536px) 25vw, 20vw"
                             className={cn(
-                                "w-full h-full object-cover transition-all duration-300",
+                                "w-full h-full object-cover transition-[filter,opacity,transform] duration-300",
                                 showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
-                            style={showStamp ? { filter: 'grayscale(1)' } : undefined}
                         />
 
                         {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 */}
@@ -117,17 +144,17 @@ export const StampCard = memo(function StampCard({
                             <>
                                 <button
                                     onClick={handlePrevThumbnail}
-                                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    className="absolute left-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                                     aria-label="이전 썸네일"
                                 >
-                                    <ChevronLeft className="h-4 w-4" />
+                                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                                 </button>
                                 <button
                                     onClick={handleNextThumbnail}
-                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                                     aria-label="다음 썸네일"
                                 >
-                                    <ChevronRight className="h-4 w-4" />
+                                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
                                 </button>
 
                                 {/* 점 인디케이터 */}
@@ -171,12 +198,12 @@ export const StampCard = memo(function StampCard({
                                         type="button"
                                         onClick={handleGuideClose}
                                         className={cn(
-                                            "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white",
+                                            "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
                                             isCompact ? "w-5 h-5" : "w-6 h-6"
                                         )}
                                         aria-label="가이드 닫기"
                                     >
-                                        <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} />
+                                        <X className={cn("shrink-0", isCompact ? "h-3 w-3" : "h-4 w-4")} aria-hidden="true" />
                                     </button>
                                 )}
                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -185,14 +212,14 @@ export const StampCard = memo(function StampCard({
                                         src="/images/stamp-clear.png"
                                         alt="방문 완료"
                                         className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg dark:hidden")}
-                                        style={{ transform: 'rotate(-45deg)' }}
+                                        style={stampImageStyle}
                                     />
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src="/images/stamp-clear-dark.png"
                                         alt="방문 완료"
                                         className={cn(stampSizeClass, "object-contain opacity-90 drop-shadow-lg hidden dark:block")}
-                                        style={{ transform: 'rotate(-45deg)' }}
+                                        style={stampImageStyle}
                                     />
                                 </div>
                             </div>
@@ -200,7 +227,7 @@ export const StampCard = memo(function StampCard({
                     </>
                 ) : (
                     <div className="w-full h-full bg-muted flex items-center justify-center">
-                        <MapPin className="h-8 w-8 text-muted-foreground" />
+                        <MapPin className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
                     </div>
                 )}
             </div>
