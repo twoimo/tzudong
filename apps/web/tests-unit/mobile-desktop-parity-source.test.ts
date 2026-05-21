@@ -402,20 +402,37 @@ describe("mobile and desktop parity source contracts", () => {
       "검색·필터·상세를 왼쪽에서 빠르게 확인하세요.",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "fixed inset-y-0 left-0 z-[90]",
+      "fixed inset-y-0 z-[90] flex",
     );
+    expect(homeDesktopControlPanelSource).toContain(
+      'desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "data-desktop-panel-side={desktopPanelSide}",
+    );
+    expect(homeDesktopControlPanelSource).toContain("motion-reduce:transition-none");
+    expect(homeDesktopControlPanelSource).toContain("aria-pressed={preferences.desktopPanelSide === value}");
+    expect(homeDesktopControlPanelSource).toContain("aria-pressed={preferences.desktopMapLayout === value}");
+    expect(homeDesktopControlPanelSource).toContain("aria-pressed={preferences.desktopPanelDefault === value}");
 
     expect(homeDesktopControlPanelSource).toContain(
       'data-panel-collapsed={isPanelCollapsed ? "true" : "false"}',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'isPanelCollapsed ? "-translate-x-full" : "translate-x-0"',
+      'desktopPanelSide === "right"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      '"translate-x-full"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      '"-translate-x-full"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       "const panelToggleLabel = isPanelCollapsed",
     );
-    expect(homeDesktopControlPanelSource).toContain("좌측 패널 펼치기");
-    expect(homeDesktopControlPanelSource).toContain("좌측 패널 접기");
+    expect(homeDesktopControlPanelSource).toContain('const panelSideLabel = desktopPanelSide === "right" ? "우측" : "좌측"');
+    expect(homeDesktopControlPanelSource).toContain("`${panelSideLabel} 패널 펼치기`");
+    expect(homeDesktopControlPanelSource).toContain("`${panelSideLabel} 패널 접기`");
     expect(homeDesktopControlPanelSource).toContain(
       'aria-controls="desktop-left-map-panel"',
     );
@@ -574,7 +591,8 @@ describe("mobile and desktop parity source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-panel-view="settings"',
     );
-    expect(homeDesktopControlPanelSource).toContain("지도와 좌측 패널 맞춤 설정");
+    expect(homeDesktopControlPanelSource).toContain("지도와 사이드 패널 맞춤 설정");
+    expect(homeDesktopControlPanelSource).toContain("사이드 패널 위치");
     expect(homeDesktopControlPanelSource).toContain("open-notifications");
     expect(homeDesktopControlPanelSource).not.toContain(
       'router.push("/admin")',
@@ -602,6 +620,18 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(source("components/home/SubmissionFloatingButton.tsx")).toContain(
       "aria-label={deviceLocationButtonLabel}",
+    );
+    expect(source("components/home/SubmissionFloatingButton.tsx")).toContain(
+      "desktopPanelSide?: HomeMapPanelSide",
+    );
+    expect(source("components/home/SubmissionFloatingButton.tsx")).toContain(
+      "shouldOffsetForRightPanel",
+    );
+    expect(source("components/home/SubmissionFloatingButton.tsx")).toContain(
+      "DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      "desktopPanelSide={desktopPanelSide}",
     );
     expect(source("app/home-client-sidepanels.tsx")).toContain(
       "presentation={isMobileOrTablet ? 'auto' : 'map-panel'}",
@@ -634,15 +664,26 @@ describe("mobile and desktop parity source contracts", () => {
       "renderDesktopDetailPanel && isPanelOpen",
     );
     expect(homeMapContainerSource).toContain("desktopMapLayout?: HomeMapLayoutMode");
+    expect(homeMapContainerSource).toContain("desktopPanelSide?: HomeMapPanelSide");
     expect(homeMapContainerSource).toContain("desktopMapLayout === 'panel-aware'");
+    expect(homeMapContainerSource).toContain("motion-reduce:transition-none");
     expect(homeMapContainerSource).toContain(
       'data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}',
     );
     expect(homeMapContainerSource).toContain(
-      "marginLeft: DESKTOP_LEFT_PANEL_WIDTH_CSS",
+      'data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}',
     );
     expect(homeMapContainerSource).toContain(
-      "reservesDesktopLeftPanelSpace={shouldReserveDesktopLeftPanel}",
+      "data-home-map-panel-side={desktopPanelSide}",
+    );
+    expect(homeMapContainerSource).toContain(
+      "marginLeft: shouldReserveDesktopLeftPanel ? DESKTOP_LEFT_PANEL_WIDTH_CSS : undefined",
+    );
+    expect(homeMapContainerSource).toContain(
+      "marginRight: shouldReserveDesktopRightPanel ? DESKTOP_LEFT_PANEL_WIDTH_CSS : undefined",
+    );
+    expect(homeMapContainerSource).toContain(
+      "reservesDesktopLeftPanelSpace={shouldReserveDesktopSidePanel}",
     );
     expect(source("components/map/NaverMapView.tsx")).toContain(
       "usesExternalPanel: Boolean(onMarkerClick) && !reservesDesktopLeftPanelSpace",

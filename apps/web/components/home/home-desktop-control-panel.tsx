@@ -39,6 +39,7 @@ import {
   writeHomeMapUserPreferences,
   type HomeMapLayoutMode,
   type HomeMapPanelDefault,
+  type HomeMapPanelSide,
   type HomeMapUserPreferences,
 } from "@/lib/home-map-user-preferences";
 import type { User } from "@supabase/supabase-js";
@@ -51,6 +52,7 @@ import {
   MapPin,
   MessageSquare,
   PanelLeft,
+  PanelRight,
   Settings2,
   SlidersHorizontal,
   Stamp,
@@ -232,6 +234,7 @@ interface HomeDesktopControlPanelProps {
   isPanelCollapsed?: boolean;
   onTogglePanelCollapse?: () => void;
   onSetPanelCollapsed?: (collapsed: boolean) => void;
+  desktopPanelSide?: HomeMapPanelSide;
   user?: User | null;
   isAdmin?: boolean;
   activeRightPanel?: HomeOverlayPanelType;
@@ -308,7 +311,7 @@ const LAYOUT_PRESETS = [
   {
     id: "balanced",
     title: "균형형",
-    description: "좌측 패널을 펼치고 지도는 패널 너비를 고려해 보여줍니다.",
+    description: "사이드 패널을 펼치고 지도는 패널 너비를 고려해 보여줍니다.",
     desktopPanelDefault: "expanded",
     desktopMapLayout: "panel-aware",
   },
@@ -355,10 +358,20 @@ function DesktopMapSettingsPanel({
   }, [user.id]);
 
   const persistPreferences = useCallback(
-    (nextPreferences: HomeMapUserPreferences) => {
-      const normalized = writeHomeMapUserPreferences(user.id, nextPreferences);
+    (
+      nextPreferences: HomeMapUserPreferences,
+      options: { preservePanelCollapse?: boolean } = {},
+    ) => {
+      const normalized = writeHomeMapUserPreferences(
+        user.id,
+        nextPreferences,
+        undefined,
+        options,
+      );
       setPreferences(normalized);
-      onSetPanelCollapsed?.(normalized.desktopPanelDefault === "collapsed");
+      if (!options.preservePanelCollapse) {
+        onSetPanelCollapsed?.(normalized.desktopPanelDefault === "collapsed");
+      }
     },
     [onSetPanelCollapsed, user.id],
   );
@@ -402,6 +415,16 @@ function DesktopMapSettingsPanel({
     [persistPreferences, preferences],
   );
 
+  const updatePanelSide = useCallback(
+    (desktopPanelSide: HomeMapPanelSide) => {
+      persistPreferences({
+        ...preferences,
+        desktopPanelSide,
+      }, { preservePanelCollapse: true });
+    },
+    [persistPreferences, preferences],
+  );
+
   const resetPreferences = useCallback(() => {
     persistPreferences(DEFAULT_HOME_MAP_USER_PREFERENCES);
   }, [persistPreferences]);
@@ -422,7 +445,7 @@ function DesktopMapSettingsPanel({
             id="desktop-map-settings-title"
             className="mt-1 text-lg font-bold tracking-[-0.04em] text-foreground"
           >
-            지도와 좌측 패널 맞춤 설정
+            지도와 사이드 패널 맞춤 설정
           </h2>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             이 브라우저에서 {user.email ?? "현재 계정"} 기준으로 저장되고,
@@ -508,8 +531,44 @@ function DesktopMapSettingsPanel({
                       ? "default"
                       : "outline"
                   }
+                  aria-pressed={preferences.desktopMapLayout === value}
                   className="rounded-xl"
                   onClick={() => updateMapLayout(value as HomeMapLayoutMode)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-card p-3">
+            <div className="flex items-start gap-2">
+              <PanelRight className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <div>
+                <h3 className="text-sm font-bold text-foreground">
+                  사이드 패널 위치
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  오른손 조작이나 넓은 화면 취향에 맞춰 패널을 좌우로 옮길 수 있습니다.
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                ["left", "왼쪽"],
+                ["right", "오른쪽"],
+              ].map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={
+                    preferences.desktopPanelSide === value
+                      ? "default"
+                      : "outline"
+                  }
+                  aria-pressed={preferences.desktopPanelSide === value}
+                  className="rounded-xl"
+                  onClick={() => updatePanelSide(value as HomeMapPanelSide)}
                 >
                   {label}
                 </Button>
@@ -522,7 +581,7 @@ function DesktopMapSettingsPanel({
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <div>
                 <h3 className="text-sm font-bold text-foreground">
-                  좌측 패널 기본 상태
+                  사이드 패널 기본 상태
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   현재 패널은 {isPanelCollapsed ? "접힘" : "펼침"} 상태입니다.
@@ -543,6 +602,7 @@ function DesktopMapSettingsPanel({
                       ? "default"
                       : "outline"
                   }
+                  aria-pressed={preferences.desktopPanelDefault === value}
                   className="rounded-xl"
                   onClick={() => updatePanelDefault(value as HomeMapPanelDefault)}
                 >
@@ -563,7 +623,7 @@ function DesktopMapSettingsPanel({
             </ul>
             {isAdmin && (
               <p className="mt-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-5 text-primary">
-                관리자 계정은 운영 화면 진입 시 좌측 패널 펼침 정책을 유지합니다.
+                관리자 계정은 운영 화면 진입 시 사이드 패널 펼침 정책을 유지합니다.
               </p>
             )}
           </section>
@@ -654,6 +714,7 @@ export default function HomeDesktopControlPanel({
   isPanelCollapsed = false,
   onTogglePanelCollapse,
   onSetPanelCollapsed,
+  desktopPanelSide = "left",
   user = null,
   isAdmin = false,
   activeRightPanel = null,
@@ -1214,13 +1275,15 @@ export default function HomeDesktopControlPanel({
   const isDetailPanelTransitionPending =
     isInlineDetailOpenPending && !hasActiveDetail;
   const isInlinePanelViewActive = activeLeftPanelView !== "map";
+  const panelSideLabel = desktopPanelSide === "right" ? "우측" : "좌측";
   const panelToggleLabel = isPanelCollapsed
-    ? "좌측 패널 펼치기"
-    : "좌측 패널 접기";
+    ? `${panelSideLabel} 패널 펼치기`
+    : `${panelSideLabel} 패널 접기`;
   const floatingControlsStyle = {
-    left: isPanelCollapsed
-      ? "1rem"
-      : `calc(min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px)) + 1rem)`,
+    left:
+      !isPanelCollapsed && desktopPanelSide === "left"
+        ? `calc(min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px)) + 1rem)`
+        : "1rem",
     "--desktop-floating-nav-button-width": DESKTOP_FLOATING_NAV_BUTTON_WIDTH,
   } as CSSProperties;
 
@@ -1362,14 +1425,20 @@ export default function HomeDesktopControlPanel({
         id="desktop-left-map-panel"
         ref={desktopSearchShellRef}
         className={cn(
-          "fixed inset-y-0 left-0 z-[90] flex w-[min(392px,calc(100vw-32px))] flex-col border-r border-border bg-background shadow-xl",
-          "transition-transform duration-300 ease-out",
-          isPanelCollapsed ? "-translate-x-full" : "translate-x-0",
+          "fixed inset-y-0 z-[90] flex w-[min(392px,calc(100vw-32px))] flex-col border-border bg-background shadow-xl",
+          desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r",
+          "transition-transform duration-300 ease-out motion-reduce:transition-none",
+          isPanelCollapsed
+            ? desktopPanelSide === "right"
+              ? "translate-x-full"
+              : "-translate-x-full"
+            : "translate-x-0",
         )}
         style={{
           width: `min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px))`,
         }}
         data-desktop-left-map-panel="true"
+        data-desktop-panel-side={desktopPanelSide}
         data-panel-collapsed={isPanelCollapsed ? "true" : "false"}
         onMouseDownCapture={handlePanelMouseDownCapture}
         onFocusCapture={handlePanelFocusCapture}
@@ -1378,13 +1447,24 @@ export default function HomeDesktopControlPanel({
           <button
             type="button"
             onClick={onTogglePanelCollapse}
-            className="group absolute right-0 top-1/2 z-50 flex h-12 w-6 -translate-y-1/2 translate-x-full items-center justify-center rounded-r-lg border border-l-0 border-border bg-background shadow-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className={cn(
+              "group absolute top-1/2 z-50 flex h-12 w-6 -translate-y-1/2 items-center justify-center border border-border bg-background shadow-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+              desktopPanelSide === "right"
+                ? "left-0 -translate-x-full rounded-l-lg border-r-0"
+                : "right-0 translate-x-full rounded-r-lg border-l-0",
+            )}
             title={panelToggleLabel}
             aria-label={panelToggleLabel}
             aria-controls="desktop-left-map-panel"
             aria-expanded={!isPanelCollapsed}
           >
             {isPanelCollapsed ? (
+              desktopPanelSide === "right" ? (
+                <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
+              )
+            ) : desktopPanelSide === "right" ? (
               <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
             ) : (
               <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground" aria-hidden="true" />
