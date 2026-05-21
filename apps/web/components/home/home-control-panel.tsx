@@ -36,6 +36,7 @@ type HomeDesktopControlPanelProps = {
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
     isPanelCollapsed?: boolean;
     onTogglePanelCollapse?: () => void;
+    onSetPanelCollapsed?: (collapsed: boolean) => void;
     user?: User | null;
     isAdmin?: boolean;
     activeRightPanel?: HomeOverlayPanelType;
@@ -78,6 +79,7 @@ export interface HomeControlPanelProps {
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
     isPanelCollapsed?: boolean;
     onTogglePanelCollapse?: () => void;
+    onSetPanelCollapsed?: (collapsed: boolean) => void;
     user?: User | null;
     onSubmissionClick?: () => void;
     onTopShellUserIconClick?: () => void;
@@ -120,6 +122,7 @@ function HomeControlPanelComponent({
     isDeviceHeadingMode = false,
     isPanelCollapsed = false,
     onTogglePanelCollapse,
+    onSetPanelCollapsed,
     initialIntent = null,
     activeRightPanel = null,
     selectedAnnouncement = null,
@@ -237,6 +240,7 @@ function HomeControlPanelComponent({
             onModeChange={onModeChange}
             isPanelCollapsed={isPanelCollapsed}
             onTogglePanelCollapse={onTogglePanelCollapse}
+            onSetPanelCollapsed={onSetPanelCollapsed}
             user={user}
             isAdmin={isAdmin}
             activeRightPanel={activeRightPanel}

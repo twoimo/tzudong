@@ -93,6 +93,10 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]');
     expect(consoleSource).toContain('useNaverMaps');
     expect(consoleSource).toContain('getNaverIndividualMarkerVisual');
+    expect(consoleSource).toContain('buildNaverClusterMarkerRenderPlan');
+    expect(consoleSource).toContain('getClusterVisualKey');
+    expect(consoleSource).toContain('currentIndex: getClusterVisualKey(clusterId) % markerCategories.length');
+    expect(consoleSource).not.toContain('currentIndex: 0');
     expect(consoleSource).toContain('new maps.Map');
     expect(consoleSource).toContain('new maps.Marker');
     expect(consoleSource).toContain('createClusterIndex');
@@ -105,6 +109,9 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('map.setCenter?.(new maps.LatLng(lat, lng))');
     expect(consoleSource).toContain('mapRef.current.setCenter?.(center)');
     expect(consoleSource).toContain('mapRef.current.setZoom?.(ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM + 1, false)');
+    expect(consoleSource).not.toContain('clusterAnimationManager.start(1400)');
+    expect(consoleSource).not.toContain('buildNaverClusterAnimationIconPlan');
+    expect(consoleSource).not.toContain('injectClusterCSS();');
     expect(consoleSource).not.toContain('panTo?.(');
     expect(consoleSource).not.toContain('pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5');
     expect(consoleSource).not.toContain('홈 마커·클러스터 재사용');
@@ -305,6 +312,9 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('isCollapsed &&');
     expect(consoleSource).toContain('"lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1"');
     expect(consoleSource).toContain('isCollapsed && "lg:hidden"');
+    expect(consoleSource).toContain('href="/"');
+    expect(consoleSource).toContain('aria-label="쯔동여지도 홈으로 이동"');
+    expect(consoleSource).toContain('src="/logo.png"');
     expect(consoleSource).toContain('flex gap-2 overflow-x-auto overscroll-x-contain');
     expect(consoleSource).toContain('lg:block lg:min-h-0 lg:flex-1 lg:space-y-1.5');
     expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
