@@ -8,6 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getRankIconElement, getUserTier, LeaderboardUser } from './leaderboard-utils';
 
+const COMPACT_LEFT_PANEL_ROW_STYLE = {
+    paddingLeft: '0.5rem',
+    paddingRight: '1.25rem',
+} as const;
+
 interface LeaderboardListProps {
     users: LeaderboardUser[];
     currentUserId?: string;
@@ -35,13 +40,13 @@ export function LeaderboardList({
                                 ref={isCurrentUser ? userItemRef : null}
                                 style={
                                     compactLeftPanel
-                                        ? { paddingLeft: '0.5rem', paddingRight: '1.25rem' }
+                                        ? COMPACT_LEFT_PANEL_ROW_STYLE
                                         : undefined
                                 }
                                 className={cn(
                                 compactLeftPanel
                                     ? "flex items-center gap-2 pl-2 pr-5 py-4 sm:gap-2.5 sm:pl-2 sm:pr-5 sm:py-4.5 md:pl-2 md:pr-5 lg:gap-2.5 lg:pl-2 lg:pr-5 lg:py-3 transition-colors hover:bg-muted/50 min-w-0"
-                                    : "flex items-center gap-2.5 sm:gap-4 md:gap-5 px-4 sm:px-6 md:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
+                                    : "flex items-center gap-2.5 sm:gap-4 md:gap-5 pl-2 pr-6 sm:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
                                 isCurrentUser && "bg-primary/5 border-l-4 border-l-primary"
                             )}
                         >
