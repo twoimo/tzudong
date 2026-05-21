@@ -26,6 +26,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain('aria-label="관리자 콘솔 사이드바"');
     expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
     expect(consoleSource).toContain('data-admin-console-shell="true"');
+    expect(consoleSource).toContain('<ReturnToMapButton iconOnly className="h-8 w-8" />');
     expect(consoleSource).toContain('data-admin-console-layout="sidebar-content"');
     expect(consoleSource).toContain('data-admin-console-content="true"');
     expect(consoleSource).toContain('data-admin-console-content-loading="true"');
@@ -259,6 +260,9 @@ describe("mobile and desktop parity source contracts", () => {
     const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
     const detailPanelSource = source(
       "components/restaurant/RestaurantDetailPanel.tsx",
+    );
+    const myPageLayoutContentSource = source(
+      "app/mypage/mypage-layout-content.tsx",
     );
 
     expect(mobileOverlaySource).toContain("min-h-11");
@@ -515,6 +519,9 @@ describe("mobile and desktop parity source contracts", () => {
       homeDesktopControlPanelSource.indexOf('{ id: "feed", label: "리뷰", icon: MessageSquare }'),
     );
     const myPageProfileSource = source("app/mypage/profile/page.tsx");
+    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-return-slot="true"');
+    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-return-skeleton="true"');
+    expect(myPageLayoutContentSource).toContain('<ReturnToMapButton className="w-fit" />');
     expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
     expect(myPageProfileSource).toContain('저장한 맛집');
     expect(myPageProfileSource).toContain('내 리뷰');
