@@ -123,6 +123,11 @@ describe("web quality performance source contracts", () => {
     const homeDesktopControlPanelSource = source(
       "components/home/home-desktop-control-panel.tsx",
     );
+    const desktopLeftPanelMapHomeSource = source(
+      "components/home/DesktopLeftPanelMapHome.tsx",
+    );
+    const feedContentSource = source("components/feed/FeedContent.tsx");
+    const popularRestaurantsSource = source("lib/popular-restaurants.ts");
     const homeAppGlobalsSource = source("app/home-app-globals.css");
     const desktopBookmarksSource = source(
       "components/home/DesktopLeftPanelBookmarks.tsx",
@@ -573,11 +578,90 @@ describe("web quality performance source contracts", () => {
       "useDeferredComponent<RestaurantSearchComponentProps>",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'activeLeftPanelView === "map"',
+      "const loadDesktopLeftPanelMapHome = async () =>",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'activeLeftPanelView === "map" && !isPanelOpen',
+      'import("@/components/home/DesktopLeftPanelMapHome")',
     );
+    expect(homeDesktopControlPanelSource).toContain(
+      "useDeferredComponent<DesktopLeftPanelMapHomeComponentProps>",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "shouldShowDesktopSearchResults",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "shouldShowDesktopMapHome",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "<DeferredDesktopLeftPanelMapHome",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      '<DesktopLeftPanelLoadingState label="홈 추천" />',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'source: "desktop-left-panel-home-feed"',
+    );
+    expect(homeDesktopControlPanelSource).toContain('selectedRegion={');
+    expect(homeDesktopControlPanelSource).toContain(
+      'isKoreanOnly={mapMode === "domestic"}',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "setIsDesktopSearchActive(false);",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      'data-desktop-left-panel-map-home="true"',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      'data-desktop-left-panel-popular-restaurants="true"',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "POPULAR_RESTAURANT_LIMIT = 3",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "getPopularRestaurantsQueryKey",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "desktopLeftPanelHomePopularQueryKey",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain("selectedRegion");
+    expect(desktopLeftPanelMapHomeSource).toContain("isKoreanOnly");
+    expect(popularRestaurantsSource).toContain("POPULAR_RESTAURANTS_QUERY_KEY");
+    expect(popularRestaurantsSource).toContain("KOREAN_RESTAURANT_REGIONS");
+    expect(popularRestaurantsSource).toContain(
+      ".gt('weekly_search_count', 0)",
+    );
+    expect(popularRestaurantsSource).toContain("selectedRegion");
+    expect(popularRestaurantsSource).toContain("isKoreanOnly");
+    expect(popularRestaurantsSource).toContain(".slice(0, limit)");
+    expect(restaurantSearchSource).toContain("fetchPopularRestaurants");
+    expect(restaurantSearchSource).toContain("getPopularRestaurantsQueryKey");
+    expect(desktopLeftPanelMapHomeSource.indexOf(
+      'data-desktop-left-panel-popular-restaurants="true"',
+    )).toBeLessThan(
+      desktopLeftPanelMapHomeSource.indexOf(
+        'data-desktop-left-panel-review-feed="true"',
+      ),
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      'data-desktop-left-panel-review-feed="true"',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain("shouldLoadReviewFeed");
+    expect(desktopLeftPanelMapHomeSource).toContain("requestReviewFeed");
+    expect(desktopLeftPanelMapHomeSource).toContain("onWheel={requestReviewFeed}");
+    expect(desktopLeftPanelMapHomeSource).toContain("onPointerEnter={requestReviewFeed}");
+    expect(desktopLeftPanelMapHomeSource).toContain("사용자 맛집 리뷰 불러오기");
+    expect(desktopLeftPanelMapHomeSource).toContain("FeedContent");
+    expect(desktopLeftPanelMapHomeSource).toContain("showHeader={false}");
+    expect(desktopLeftPanelMapHomeSource).toContain("hideFloatingButton");
+    expect(desktopLeftPanelMapHomeSource).toContain("hideReviewModal");
+    expect(feedContentSource).toContain("showHeader?: boolean");
+    expect(feedContentSource).toContain("showHeader = true");
+    expect(feedContentSource).toContain("{showHeader && (");
+    expect(homeDesktopControlPanelSource).toContain(
+      'activeLeftPanelView === "map"',
+    );
+    expect(homeDesktopControlPanelSource).toContain("!isPanelOpen");
     expect(homeDesktopControlPanelSource).not.toContain(
       'activeLeftPanelView === "map" && isDesktopSearchActive',
     );
@@ -896,9 +980,9 @@ describe("web quality performance source contracts", () => {
       "const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant)",
     );
     expect(homeDesktopControlPanelSource).toContain("{!hasActiveDetail && !isDetailPanelTransitionPending && (");
-    expect(homeDesktopControlPanelSource).toContain(
-      "hasActiveDetail || isDetailPanelTransitionPending || isInlinePanelViewActive",
-    );
+    expect(homeDesktopControlPanelSource).toContain("hasActiveDetail ||");
+    expect(homeDesktopControlPanelSource).toContain("isDetailPanelTransitionPending ||");
+    expect(homeDesktopControlPanelSource).toContain("isInlinePanelViewActive ||");
     expect(homeDesktopControlPanelSource).toContain(' ? "px-0 py-0"');
     expect(homeDesktopControlPanelSource).toContain(' : "px-4 py-4"');
     expect(homeDesktopControlPanelSource).toContain(
