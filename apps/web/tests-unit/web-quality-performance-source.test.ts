@@ -776,6 +776,19 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       ') : activeLeftPanelView === "feed" && DeferredFeedOverlay ? (',
     );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onOpenReviewModal={onReviewModalOpen}",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "hideReviewModal={Boolean(onReviewModalOpen)}",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
+      "hideFloatingButton\n              initialReviewId",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain("다음 단계 후보");
+    expect(homeDesktopControlPanelSource).not.toContain(
+      "관리자 계정은 운영 화면 진입 시 사이드 패널 펼침 정책을 유지합니다.",
+    );
     expect(homeDesktopControlPanelSource).toContain("loadAnnouncementPanel");
     expect(homeDesktopControlPanelSource).toContain("loadAdminReviewPanel");
     expect(homeDesktopControlPanelSource).toContain(
@@ -1841,6 +1854,23 @@ describe("web quality performance source contracts", () => {
   test("feed direct route defers heavy modals and detail panels until interaction", () => {
     const feedPageSource = source("app/feed/page.tsx");
     const feedContentSource = source("components/feed/FeedContent.tsx");
+    const homeSidePanelsSource = source("app/home-client-sidepanels.tsx");
+
+    expect(homeSidePanelsSource).toContain('data-desktop-map-review-panel="true"');
+    expect(homeSidePanelsSource).toContain('role="dialog"');
+    expect(homeSidePanelsSource).toContain('tabIndex={-1}');
+    expect(homeSidePanelsSource).toContain("desktopReviewPanelOpenerRef");
+    expect(homeSidePanelsSource).toContain("desktopReviewPanelRef.current?.focus({ preventScroll: true })");
+    expect(homeSidePanelsSource).toContain('data-desktop-map-review-drag-handle="true"');
+    expect(homeSidePanelsSource).toContain("onKeyDown={handleDesktopReviewPanelKeyDown}");
+    expect(homeSidePanelsSource).toContain("DESKTOP_REVIEW_PANEL_KEYBOARD_STEP");
+    expect(homeSidePanelsSource).toContain("ArrowLeft: [-step, 0]");
+    expect(homeSidePanelsSource).toContain(
+      "style={{ transform: `translate3d(${desktopReviewPanelPosition.x}px, ${desktopReviewPanelPosition.y}px, 0)` }}",
+    );
+    expect(homeSidePanelsSource).toContain("setPointerCapture(event.pointerId)");
+    expect(homeSidePanelsSource).toContain("releasePointerCapture(event.pointerId)");
+    expect(homeSidePanelsSource).toContain("inline");
 
     expect(feedPageSource).toContain("const RestaurantDetailPanel = dynamic(");
     expect(feedPageSource).toContain("const ReviewModal = dynamic(");
@@ -1865,6 +1895,7 @@ describe("web quality performance source contracts", () => {
     );
     const myPageLoadingSource = source("app/mypage/loading.tsx");
     const myPageSidebarSource = source("components/mypage/MyPageSidebar.tsx");
+    const returnToMapButtonSource = source("components/layout/ReturnToMapButton.tsx");
     const myPageSectionSkeletonSource = source(
       "components/mypage/MyPageSectionSkeleton.tsx",
     );
@@ -1887,6 +1918,10 @@ describe("web quality performance source contracts", () => {
     expect(myPageLayoutContentSource).not.toContain('data-mypage-mobile-brand-logo="true"');
     expect(myPageLayoutContentSource).not.toContain('<MyPageMobileBrandHeader />');
     expect(myPageLayoutContentSource).toContain('data-mypage-viewport-layout="edge-to-edge"');
+    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-return-slot="true"');
+    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-return-skeleton="true"');
+    expect(myPageLayoutContentSource).toContain('<ReturnToMapButton className="w-fit" />');
+    expect(myPageLayoutContentSource).not.toContain('<ReturnToMapButton className="mb-3 w-fit md:hidden" />');
     expect(myPageLayoutContentSource).toContain("w-full max-w-none");
     expect(myPageLayoutContentSource).not.toContain("container mx-auto h-full min-h-0 max-w-6xl flex");
     expect(myPageLayoutContentSource).toContain("shouldRenderSidebar");
@@ -1929,11 +1964,19 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageSidebarSource).not.toContain('data-mypage-sidebar-brand="true"');
     expect(myPageSidebarSource).not.toContain('data-mypage-sidebar-logo="true"');
+    expect(myPageSidebarSource).toContain('<ReturnToMapButton className="self-stretch justify-start" />');
     expect(myPageSidebarSource).not.toContain('aria-label="쯔동여지도 홈으로 이동"');
     expect(myPageSidebarSource).not.toContain('<span className="truncate">쯔동여지도</span>');
     expect(myPageSidebarSource).not.toContain('src="/logo.png"');
     expect(myPageSidebarSource).toContain('aria-current={isActive ? "page" : undefined}');
     expect(myPageSidebarSource).toContain('focus-visible:ring-2 focus-visible:ring-primary');
+    expect(returnToMapButtonSource).toContain('data-return-to-map-button="true"');
+    expect(returnToMapButtonSource).toContain("function canUseBrowserBack()");
+    expect(returnToMapButtonSource).toContain('window.history.length <= 1');
+    expect(returnToMapButtonSource).toContain("new URL(document.referrer).origin === window.location.origin");
+    expect(returnToMapButtonSource).toContain("router.back()");
+    expect(returnToMapButtonSource).toContain("router.push(fallbackHref)");
+    expect(returnToMapButtonSource).toContain('fallbackHref = "/"');
     expect(myPageSidebarSource).toContain("await import('@/lib/image-utils')");
     expect(myPageSidebarSource).not.toContain(
       "import { compressImage } from '@/lib/image-utils'",
