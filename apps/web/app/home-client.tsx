@@ -16,6 +16,7 @@ import {
   HOME_MAP_USER_PREFERENCES_EVENT,
   readHomeMapUserPreferences,
   type HomeMapLayoutMode,
+  type HomeMapPanelSide,
   type HomeMapUserPreferencesEvent,
 } from "@/lib/home-map-user-preferences";
 import type { Restaurant } from "@/types/restaurant";
@@ -137,6 +138,8 @@ export default function HomeClient() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [desktopMapLayout, setDesktopMapLayout] =
     useState<HomeMapLayoutMode>("panel-aware");
+  const [desktopPanelSide, setDesktopPanelSide] =
+    useState<HomeMapPanelSide>("left");
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [deviceLocation, setDeviceLocation] =
@@ -240,6 +243,7 @@ export default function HomeClient() {
     const preferences = readHomeMapUserPreferences(user.id);
     setIsPanelCollapsed(preferences.desktopPanelDefault === "collapsed");
     setDesktopMapLayout(preferences.desktopMapLayout);
+    setDesktopPanelSide(preferences.desktopPanelSide);
   }, [isDesktop, user?.id]);
 
   useEffect(() => {
@@ -249,10 +253,13 @@ export default function HomeClient() {
       const customEvent = event as HomeMapUserPreferencesEvent;
       if (customEvent.detail?.userId !== user.id) return;
 
-      setIsPanelCollapsed(
-        customEvent.detail.preferences.desktopPanelDefault === "collapsed",
-      );
+      if (!customEvent.detail.preservePanelCollapse) {
+        setIsPanelCollapsed(
+          customEvent.detail.preferences.desktopPanelDefault === "collapsed",
+        );
+      }
       setDesktopMapLayout(customEvent.detail.preferences.desktopMapLayout);
+      setDesktopPanelSide(customEvent.detail.preferences.desktopPanelSide);
     };
 
     window.addEventListener(
@@ -700,6 +707,7 @@ export default function HomeClient() {
         externalPanelOpen={true}
         isPanelCollapsed={isPanelCollapsed}
         desktopMapLayout={desktopMapLayout}
+        desktopPanelSide={desktopPanelSide}
         isMapFullscreen={isMapFullscreen}
         onMapFullscreenChange={setIsMapFullscreen}
         deviceLocation={deviceLocation}
@@ -744,6 +752,7 @@ export default function HomeClient() {
           isPanelCollapsed={isPanelCollapsed}
           onTogglePanelCollapse={togglePanelCollapse}
           onSetPanelCollapsed={setIsPanelCollapsed}
+          desktopPanelSide={desktopPanelSide}
           initialIntent={initialMobileOverlayIntent}
           activeRightPanel={activeRightPanel}
           selectedAnnouncement={selectedAnnouncement}
@@ -752,7 +761,10 @@ export default function HomeClient() {
 
       {isDesktop && (
         <>
-          <HomeMapUserMenu />
+          <HomeMapUserMenu
+            desktopPanelSide={desktopPanelSide}
+            isPanelCollapsed={isPanelCollapsed}
+          />
           <SubmissionFloatingButton
             onClick={handleSubmissionButtonClick}
             isSidebarOpen={isSidebarOpen}
@@ -760,6 +772,8 @@ export default function HomeClient() {
             deviceLocation={deviceLocation}
             isDeviceLocationPending={isDeviceLocationPending}
             isDeviceHeadingMode={isDeviceHeadingMode}
+            desktopPanelSide={desktopPanelSide}
+            isPanelCollapsed={isPanelCollapsed}
           />
         </>
       )}

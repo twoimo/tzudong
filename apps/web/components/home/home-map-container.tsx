@@ -20,7 +20,7 @@ import {
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
-import type { HomeMapLayoutMode } from '@/lib/home-map-user-preferences';
+import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -58,6 +58,7 @@ interface HomeMapContainerProps {
     externalPanelOpen?: boolean; // 외부 패널이 열려있지 않을 때 NaverMap 내부 패널 닫기
     isPanelCollapsed?: boolean; // 패널 접기 상태
     desktopMapLayout?: HomeMapLayoutMode;
+    desktopPanelSide?: HomeMapPanelSide;
     onSwipeableRestaurantsChange?: (restaurants: Restaurant[]) => void;
     isMapFullscreen?: boolean;
     onMapFullscreenChange?: (isFullscreen: boolean) => void;
@@ -174,6 +175,7 @@ function HomeMapContainerComponent({
     externalPanelOpen,
     isPanelCollapsed,
     desktopMapLayout = 'panel-aware',
+    desktopPanelSide = 'left',
     onSwipeableRestaurantsChange,
     isMapFullscreen = false,
     onMapFullscreenChange,
@@ -1215,15 +1217,18 @@ function HomeMapContainerComponent({
         ? isPanelOpen
         : (renderDesktopDetailPanel && isPanelOpen);
     const isSheetAtFullHeight = sheetHeight >= getCurrentMaxHeight() - SHEET_HALF_OPEN_TOLERANCE;
-    const shouldReserveDesktopLeftPanel =
+    const shouldReserveDesktopSidePanel =
         desktopMapLayout === 'panel-aware' &&
         isDesktop &&
         !isPanelCollapsed &&
         !isMapFullscreen &&
         !renderDesktopDetailPanel;
-    const desktopMapLayoutStyle = shouldReserveDesktopLeftPanel
+    const shouldReserveDesktopLeftPanel = shouldReserveDesktopSidePanel && desktopPanelSide === 'left';
+    const shouldReserveDesktopRightPanel = shouldReserveDesktopSidePanel && desktopPanelSide === 'right';
+    const desktopMapLayoutStyle = shouldReserveDesktopSidePanel
         ? {
-            marginLeft: DESKTOP_LEFT_PANEL_WIDTH_CSS,
+            marginLeft: shouldReserveDesktopLeftPanel ? DESKTOP_LEFT_PANEL_WIDTH_CSS : undefined,
+            marginRight: shouldReserveDesktopRightPanel ? DESKTOP_LEFT_PANEL_WIDTH_CSS : undefined,
             width: `calc(100% - ${DESKTOP_LEFT_PANEL_WIDTH_CSS})`,
         }
         : undefined;
@@ -1231,8 +1236,10 @@ function HomeMapContainerComponent({
 
     return (
         <div
-            className="relative h-full w-full transition-[margin,width] duration-300 ease-out"
+            className="relative h-full w-full transition-[margin,width] duration-300 ease-out motion-reduce:transition-none"
             data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}
+            data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}
+            data-home-map-panel-side={desktopPanelSide}
             style={desktopMapLayoutStyle}
         >
             {mapMode === 'domestic' ? (
@@ -1253,7 +1260,7 @@ function HomeMapContainerComponent({
                         externalPanelOpen={externalPanelOpen}
                         isPanelCollapsed={isPanelCollapsed}
                         isPanelOpen={shouldExposeDetailPanelToMap}
-                        reservesDesktopLeftPanelSpace={shouldReserveDesktopLeftPanel}
+                        reservesDesktopLeftPanelSpace={shouldReserveDesktopSidePanel}
                         mobileSheetHeightPercent={isMobileOrTablet && isPanelOpen && !isMapFullscreen ? sheetHeight : 0}
                         onVisibleRestaurantsChange={handleSwipeableRestaurantsChange}
                         onSearchSelectionRelease={handleReleaseSearchSelectionOwnership}

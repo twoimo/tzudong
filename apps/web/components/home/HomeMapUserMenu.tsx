@@ -32,9 +32,11 @@ import {
 } from "@/lib/desktop-left-panel-entry";
 import { toast } from "@/lib/no-toast";
 import { cn } from "@/lib/utils";
+import type { HomeMapPanelSide } from "@/lib/home-map-user-preferences";
 
 const desktopUserMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
+const DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS = "min(392px, calc(100vw - 32px))";
 
 const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
   if (!user) return "사용자";
@@ -54,7 +56,13 @@ const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
   return displayName?.trim() ?? "사용자";
 };
 
-export default function HomeMapUserMenu() {
+export default function HomeMapUserMenu({
+  desktopPanelSide = "left",
+  isPanelCollapsed = false,
+}: {
+  desktopPanelSide?: HomeMapPanelSide;
+  isPanelCollapsed?: boolean;
+}) {
   const { user, isAdmin, signOut } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -150,6 +158,14 @@ export default function HomeMapUserMenu() {
     });
   }, []);
 
+  const shouldOffsetForRightPanel = desktopPanelSide === "right" && !isPanelCollapsed;
+  const userButtonStyle = shouldOffsetForRightPanel
+    ? { right: `calc(${DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS} + 1.5rem)` }
+    : undefined;
+  const fullscreenButtonStyle = shouldOffsetForRightPanel
+    ? { right: `calc(${DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS} + 5rem)` }
+    : undefined;
+
   const userAvatarButton = (
     <span
       className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary"
@@ -176,7 +192,11 @@ export default function HomeMapUserMenu() {
         variant="ghost"
         size="icon"
         data-desktop-map-fullscreen-toggle="true"
-        className="fixed right-20 top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className={cn(
+          "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          shouldOffsetForRightPanel ? "" : "right-20",
+        )}
+        style={fullscreenButtonStyle}
         aria-label={isFullscreen ? "지도 전체화면 끄기" : "지도 전체화면 켜기"}
         aria-pressed={isFullscreen}
         onClick={handleFullscreenToggle}
@@ -196,7 +216,11 @@ export default function HomeMapUserMenu() {
               variant="ghost"
               size="icon"
               data-desktop-map-user-menu="true"
-              className="fixed right-6 top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className={cn(
+                "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                shouldOffsetForRightPanel ? "" : "right-6",
+              )}
+              style={userButtonStyle}
               aria-label="사용자 메뉴 열기"
             >
               {userAvatarButton}
@@ -297,7 +321,11 @@ export default function HomeMapUserMenu() {
           variant="ghost"
           size="icon"
           data-desktop-map-user-menu="true"
-          className="fixed right-6 top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className={cn(
+            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            shouldOffsetForRightPanel ? "" : "right-6",
+          )}
+          style={userButtonStyle}
           aria-label="로그인 열기"
           onClick={handleLoginClick}
         >
