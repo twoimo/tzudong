@@ -117,7 +117,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('홈 마커·클러스터 재사용');
     expect(consoleSource).toContain('function AdminMapLoadingSkeleton');
     expect(consoleSource).toContain('aria-label="관리자 네이버 지도 로딩"');
-    expect(consoleSource).toContain('지도 준비 중');
+    expect(consoleSource).toContain('data-admin-map-loading-skeleton="true"');
+    expect(consoleSource).not.toContain('지도 준비 중');
     expect(consoleSource).not.toContain('w-full max-w-xs space-y-3 rounded-2xl border border-border bg-card/95 p-4 shadow-sm');
     expect(consoleSource).not.toContain('background-image:linear-gradient');
     expect(consoleSource).not.toContain('skeletonMarkers');
@@ -154,8 +155,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('AdminConsoleLoadingSkeleton');
     expect(consoleSource).toContain('function AdminConsoleCanvasSkeleton()');
     expect(consoleSource).toContain('data-admin-console-content-loading="true"');
+    expect(consoleSource).toContain('data-admin-map-loading-skeleton="true"');
     expect(consoleSource).toContain('{authLoading ? (');
     expect(consoleSource).toContain('<AdminConsoleCanvasSkeleton />');
+    expect(consoleSource).toContain('backdrop-blur-[1px]');
+    expect(consoleSource).not.toContain('지도 준비 중');
+    expect(consoleSource).not.toContain('group-hover:scale-[1.02]');
     expect(consoleSource).toContain('return null;');
     expect(adminLoadingSource).not.toContain('AdminConsoleLoadingSkeleton');
     expect(consoleSource).toContain('lg:w-48');
@@ -299,7 +304,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const preferenceRouteSource = source('app/api/admin/preferences/sidebar-order/route.ts');
     const overviewSource = consoleSource.slice(
       consoleSource.indexOf('function AdminOverviewDashboard'),
-      consoleSource.indexOf('function LlmSessionPanel'),
+      consoleSource.indexOf('function LlmSessionWorkspace'),
     );
 
     expect(consoleSource).toContain('DEFAULT_ADMIN_SIDEBAR_ORDER');
@@ -352,7 +357,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
     const overviewSource = consoleSource.slice(
       consoleSource.indexOf('function AdminOverviewDashboard'),
-      consoleSource.indexOf('function LlmSessionPanel'),
+      consoleSource.indexOf('function LlmSessionWorkspace'),
     );
 
     expect(overviewSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
@@ -427,6 +432,11 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(usersSource).toContain('flex h-full min-h-0 flex-col bg-background');
     expect(usersSource).toContain('gap-2 overflow-y-auto p-2');
     expect(usersSource).toContain('h-9 rounded-lg pl-9');
+    expect(consoleSource).toContain('const controller = new AbortController();');
+    expect(consoleSource).toContain('signal: controller.signal');
+    expect(consoleSource).toContain('return () => {');
+    expect(consoleSource).toContain('controller.abort();');
+    expect(consoleSource).toContain('if (!controller.signal.aborted)');
     expect(usersSource).toContain('const loadUsers = useCallback(async (signal?: AbortSignal)');
     expect(usersSource).toContain('return () => controller.abort();');
     expect(usersSource).toContain('if (!signal?.aborted)');
@@ -479,6 +489,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('안전한 CRUD 흐름');
     expect(consoleSource).not.toContain('audit source');
     expect(consoleSource).not.toContain('lg:w-52');
+    expect(consoleSource).not.toContain('function LlmSessionPanel()');
+    expect(consoleSource).not.toContain('function ConnectedRoutesCard()');
     expect(usersSource).not.toContain('min-h-[560px]');
     expect(usersSource).toContain('isLoading ? <span className="inline-block h-6 w-12 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none"');
     expect(usersSource).not.toContain("value={isLoading ? '—' : summary.loadedUsers}");

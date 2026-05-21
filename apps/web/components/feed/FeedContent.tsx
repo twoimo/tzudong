@@ -117,6 +117,8 @@ interface FeedContentProps {
     onOpenUserProfile?: (userId: string) => void;
     /** 로그인 모달 열기 */
     onOpenAuth?: () => void;
+    /** 헤더/필터 영역 표시 여부 */
+    showHeader?: boolean;
 }
 
 
@@ -131,6 +133,7 @@ export default function FeedContent({
     onOpenRestaurantDetail,
     onOpenUserProfile,
     onOpenAuth,
+    showHeader = true,
 }: FeedContentProps) {
 
     const { user } = useAuth();
@@ -548,8 +551,9 @@ export default function FeedContent({
                 isOverlay ? "h-full" : "min-h-full md:border-x md:border-border md:shadow-sm max-w-2xl"
             )}>
                 {/* 헤더 */}
-                <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
-                    <div className="flex items-center justify-between">
+                {showHeader && (
+                    <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
+                        <div className="flex items-center justify-between">
                         <div className="min-w-0">
                             <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
                                 <MessageSquareText className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
@@ -597,8 +601,8 @@ export default function FeedContent({
                                 </Button>
                             )}
                         </div>
-                    </div>
-                    {isFilterExpanded && (
+                        </div>
+                        {isFilterExpanded && (
                         <div className="mt-4">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -610,8 +614,9 @@ export default function FeedContent({
                                 />
                             </div>
                         </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
                 {/* 피드 목록 */}
                 {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
