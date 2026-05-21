@@ -13,7 +13,7 @@ import {
     ExternalLink,
 } from "lucide-react";
 import { useBookmarks, useToggleBookmark } from "@/hooks/use-bookmarks";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 
 const PAGE_SIZE = 15;
 
@@ -79,13 +79,7 @@ export default function BookmarksPage() {
 
     // 로딩 상태
     if (isLoading) {
-        return (
-            <GlobalLoader
-                message="북마크를 불러오는 중..."
-                subMessage="저장한 맛집 목록을 확인하고 있습니다"
-                fullScreen
-            />
-        );
+        return <MyPageSectionSkeleton label="북마크를 불러오는 중…" />;
     }
 
     return (

@@ -20,7 +20,7 @@ const ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES = [
   "lg:grid",
   "lg:gap-0",
   "lg:h-11",
-  "lg:h-[calc(100dvh-var(--app-header-height,56px))]",
+  "lg:h-[calc(100dvh_-_var(--app-header-height,0px))]",
   "lg:inline-flex",
   "lg:m-0",
   "lg:min-h-11",
@@ -53,9 +53,29 @@ const config: Config = {
         xs: "375px",
       },
       fontFamily: {
-        sans: ['"Noto Serif KR"', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'ui-serif', 'Georgia', 'serif'],
-        serif: ['"Noto Serif KR"', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'ui-serif', 'Georgia', 'serif'],
-        display: ['"ChosunCentennial"', '"Noto Serif KR"', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'cursive'],
+        sans: [
+          '"Noto Serif KR"',
+          '"Apple SD Gothic Neo"',
+          '"Malgun Gothic"',
+          "ui-serif",
+          "Georgia",
+          "serif",
+        ],
+        serif: [
+          '"Noto Serif KR"',
+          '"Apple SD Gothic Neo"',
+          '"Malgun Gothic"',
+          "ui-serif",
+          "Georgia",
+          "serif",
+        ],
+        display: [
+          '"ChosunCentennial"',
+          '"Noto Serif KR"',
+          '"Apple SD Gothic Neo"',
+          '"Malgun Gothic"',
+          "cursive",
+        ],
         stylish: ['"Stylish"', "sans-serif"],
         gugi: ['"Gugi"', "cursive"],
         brush: ['"Nanum Brush Script"', "cursive"],
@@ -120,12 +140,12 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       backgroundImage: {
-        'gradient-primary': "var(--gradient-primary)",
-        'gradient-secondary': "var(--gradient-secondary)",
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-secondary": "var(--gradient-secondary)",
       },
       boxShadow: {
-        'primary': 'var(--shadow-primary)',
-        'glow': 'var(--shadow-glow)',
+        primary: "var(--shadow-primary)",
+        glow: "var(--shadow-glow)",
       },
       keyframes: {
         "accordion-down": {

@@ -97,7 +97,10 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('new maps.Marker');
     expect(consoleSource).toContain('createClusterIndex');
     expect(consoleSource).toContain('getClusterCategories');
-    expect(consoleSource).toContain('mapRef.current.setZoom?.(visibleRestaurants.length > 1 ? REGION_MAP_CONFIG["서울특별시"].zoom : 14, false)');
+    expect(consoleSource).toContain('mapRef.current.setZoom?.(');
+    expect(consoleSource).toContain('visibleRestaurants.length > 1');
+    expect(consoleSource).toContain('? REGION_MAP_CONFIG["서울특별시"].zoom');
+    expect(consoleSource).toContain(': 14,');
     expect(consoleSource).toContain('map.setZoom?.(Math.max(currentZoom + 1, expansionZoom), false)');
     expect(consoleSource).toContain('map.setCenter?.(new maps.LatLng(lat, lng))');
     expect(consoleSource).toContain('mapRef.current.setCenter?.(center)');
@@ -142,7 +145,10 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(adminLoadingSource).toContain('return null;');
     expect(adminLoadingSource).toContain('모듈별 스켈레톤만 한 번');
     expect(consoleSource).not.toContain('AdminConsoleLoadingSkeleton');
-    expect(consoleSource).toContain('if (authLoading) {');
+    expect(consoleSource).toContain('function AdminConsoleCanvasSkeleton()');
+    expect(consoleSource).toContain('data-admin-console-content-loading="true"');
+    expect(consoleSource).toContain('{authLoading ? (');
+    expect(consoleSource).toContain('<AdminConsoleCanvasSkeleton />');
     expect(consoleSource).toContain('return null;');
     expect(adminLoadingSource).not.toContain('AdminConsoleLoadingSkeleton');
     expect(consoleSource).toContain('lg:w-48');
@@ -175,7 +181,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
 
     expect(consoleSource).toContain('실제 이동시간 API가 붙기 전까지는');
-    expect(consoleSource).toContain('승인 맛집과 연결된 데이터가 있을 때만 표시합니다.');
+    expect(consoleSource).toContain('최근 영상 요약은 승인 맛집과 연결된 데이터가 있을 때만');
+    expect(consoleSource).toContain('표시합니다.');
     expect(consoleSource).toContain('향후 유튜버 A');
     expect(consoleSource).toContain('향후 유튜버 B');
     expect(consoleSource).not.toContain('ADMIN_OVERVIEW_WIDGET_STORAGE_KEY');
@@ -194,9 +201,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
     const middlewareSource = source('lib/supabase/middleware.ts');
 
-    expect(consoleSource).toContain('router.replace("/")');
-    expect(consoleSource).toContain('if (!user || !isAdmin)');
+    expect(consoleSource).toContain('shouldRenderAdminShell');
+    expect(consoleSource).toContain('canLoadAdminConsoleData');
+    expect(consoleSource).toContain('useAdminOverviewStats(canLoadAdminConsoleData)');
     expect(consoleSource).toContain('return null;');
+    expect(consoleSource).not.toContain('router.replace("/")');
+    expect(consoleSource).not.toContain('if (!user || !isAdmin)');
     expect(consoleSource).not.toContain('function AdminAccessGate');
     expect(consoleSource).not.toContain('관리자 로그인이 필요합니다');
     expect(consoleSource).not.toContain('관리자 권한이 필요합니다');
@@ -206,7 +216,9 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(middlewareSource).toContain("pathname === '/admin' || pathname.startsWith('/admin/')");
     expect(middlewareSource).toContain("eq('role', 'admin')");
     expect(middlewareSource).toContain("new URL('/auth/required', request.url)");
-    expect(middlewareSource).toContain("redirectUrl.searchParams.set('reason', 'admin')");
+    expect(middlewareSource).toContain("redirectUrl.searchParams.set('reason', reason)");
+    expect(middlewareSource).toContain("redirectAuthRequiredWithSessionCookies(request, sourceResponse, 'admin')");
+    expect(middlewareSource).toContain("getRequestedPathWithSearch(request)");
   });
 
   test('keeps unified admin console as the single operator shell', () => {
@@ -220,6 +232,13 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('sidebarSections');
     expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
     expect(consoleSource).toContain('aria-label="관리자 콘솔 작업 화면"');
+    expect(consoleSource).toContain('data-admin-console-layout="sidebar-content"');
+    expect(consoleSource).toContain('data-admin-console-content="true"');
+    expect(consoleSource).toContain('h-[var(--full-height,100vh)]');
+    expect(consoleSource).toContain('grid-rows-[auto_minmax(0,1fr)]');
+    expect(consoleSource).toContain('lg:grid-cols-[12rem_minmax(0,1fr)]');
+    expect(consoleSource).toContain('lg:grid-cols-[3.5rem_minmax(0,1fr)]');
+    expect(consoleSource).toContain('data-admin-console-sidebar-collapsed={isSidebarCollapsed ? "true" : "false"}');
   });
 
   test('keeps admin console keyboard and screen-reader navigation intact', () => {
@@ -239,7 +258,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
 
     expect(consoleSource.indexOf('id: "announcements"')).toBeLessThan(consoleSource.indexOf('id: "banners"'));
-    expect(consoleSource).toContain('["announcements", "storyboard", "banners", "users", "insights", "audit"]');
+    expect(consoleSource).toContain('          "announcements",');
+    expect(consoleSource).toContain('          "storyboard",');
+    expect(consoleSource).toContain('          "banners",');
+    expect(consoleSource).toContain('          "users",');
+    expect(consoleSource).toContain('          "insights",');
+    expect(consoleSource).toContain('          "audit",');
     expect(source('app/api/admin/preferences/sidebar-order/route.ts')).toContain("운영: ['announcements', 'storyboard', 'banners', 'users', 'insights', 'audit']");
   });
 
@@ -278,7 +302,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('buildOrderedSidebarSections');
     expect(consoleSource).toContain('aria-controls="admin-sidebar-order-editor"');
     expect(consoleSource).toContain('sticky top-0 z-30 flex w-full shrink-0 flex-col');
-    expect(consoleSource).toContain('isCollapsed && "lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1"');
+    expect(consoleSource).toContain('isCollapsed &&');
+    expect(consoleSource).toContain('"lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1"');
     expect(consoleSource).toContain('isCollapsed && "lg:hidden"');
     expect(consoleSource).toContain('flex gap-2 overflow-x-auto overscroll-x-contain');
     expect(consoleSource).toContain('lg:block lg:min-h-0 lg:flex-1 lg:space-y-1.5');
@@ -370,7 +395,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('문서 스크롤 없음');
     expect(consoleSource).not.toContain('module.description');
     expect(consoleSource).toContain('aria-label={`${module.title} 작업 화면`}');
-    expect(consoleSource).toContain('사용자 권한 변경 감사는 저장되며');
+    expect(consoleSource).toContain('사용자');
+    expect(consoleSource).toContain('권한 변경 감사는 저장되며');
   });
 
   test('keeps admin pages dense without sacrificing responsive boundaries', () => {
@@ -381,7 +407,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const announcementSource = source('components/announcement/AnnouncementPanel.tsx');
 
     expect(consoleSource).toContain('lg:w-48');
-    expect(consoleSource).toContain('cn("flex gap-2 overflow-x-auto overscroll-x-contain');
+    expect(consoleSource).toContain('"flex gap-2 overflow-x-auto overscroll-x-contain');
     expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
     expect(consoleSource).toContain('p-2 sm:p-2 lg:border-y-0 lg:p-2 xl:p-2');
     expect(consoleSource).toContain('min-h-[420px] flex-1');
@@ -397,8 +423,10 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(evaluationsSource).toContain('embedded ? "border-b border-border bg-card px-2 py-1.5"');
     expect(evaluationsSource).toContain('p-2 sm:p-2');
     expect(consoleSource).toContain('const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {');
-    expect(consoleSource).toContain('const AdminAnnouncementModule = dynamic(() => import("@/components/announcement/AnnouncementPanel"), {');
-    expect(consoleSource).toContain('const AdminUsersModule = dynamic(() => import("@/components/admin/AdminUsersPanel"), {');
+    expect(consoleSource).toContain('const AdminAnnouncementModule = dynamic(');
+    expect(consoleSource).toContain('() => import("@/components/announcement/AnnouncementPanel")');
+    expect(consoleSource).toContain('const AdminUsersModule = dynamic(');
+    expect(consoleSource).toContain('() => import("@/components/admin/AdminUsersPanel")');
     expect(consoleSource).toContain('ssr: false,');
     expect(consoleSource).not.toContain('loading: () => <InlineModuleLoading');
     expect(consoleSource).not.toContain('loading: () => <InlineEvaluationModuleSkeleton');

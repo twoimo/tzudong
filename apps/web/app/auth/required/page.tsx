@@ -12,6 +12,7 @@ type AuthRequiredPageProps = {
 export default async function AuthRequiredPage({ searchParams }: AuthRequiredPageProps) {
     const params = await searchParams;
     const isAdminReason = params.reason === 'admin';
+    const isMyPageReason = params.reason === 'mypage';
     const nextPath = params.next?.startsWith('/') ? params.next : '/';
 
     return (
@@ -24,6 +25,8 @@ export default async function AuthRequiredPage({ searchParams }: AuthRequiredPag
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">
                     {isAdminReason
                         ? '관리자 콘솔은 관리자 계정으로 로그인한 뒤 사용할 수 있습니다.'
+                        : isMyPageReason
+                            ? '마이페이지는 로그인한 뒤 사용할 수 있습니다.'
                         : '요청한 페이지는 로그인 후 사용할 수 있습니다.'}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">

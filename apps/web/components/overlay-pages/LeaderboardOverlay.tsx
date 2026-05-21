@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { Trophy, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,11 @@ interface LeaderboardOverlayProps {
     onOpenUserProfile?: (userId: string) => void;
 }
 
+const DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE: CSSProperties = {
+    width: 'calc(100% - 1.5rem)',
+    maxWidth: '368px',
+    marginInline: 'auto',
+};
 
 /**
  * 랭킹 오버레이
@@ -138,17 +143,27 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
 
                 {/* 랭킹 목록 */}
                 <div>
-                    {isLoading ? (
-                        <LeaderboardSkeleton count={8} showHeader={false} />
-                    ) : (
-                        <LeaderboardList
-                            users={displayedUsers}
-                            currentUserId={currentUser?.id}
-                            onOpenUserProfile={onOpenUserProfile}
-                            userItemRef={userItemRef}
-                        />
-                    )}
-                    <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
+                    <div
+                        data-desktop-left-panel-leaderboard-list="true"
+                        style={DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE}
+                    >
+                        {isLoading ? (
+                            <LeaderboardSkeleton count={8} showHeader={false} />
+                        ) : (
+                            <LeaderboardList
+                                users={displayedUsers}
+                                currentUserId={currentUser?.id}
+                                onOpenUserProfile={onOpenUserProfile}
+                                userItemRef={userItemRef}
+                                compactLeftPanel
+                            />
+                        )}
+                    </div>
+                    <div
+                        ref={loadMoreRef}
+                        className="flex h-10 items-center justify-center"
+                        style={DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE}
+                    >
                         {hasMoreToDisplay && (
                             <span className="text-sm text-muted-foreground">
                                 더 불러오는 중... ({displayedUsers.length} / {leaderboardData.length}명)
