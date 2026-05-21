@@ -10,11 +10,6 @@ const BottomSheet = dynamic(
     { ssr: false }
 );
 
-const RightPanelWrapper = dynamic(
-    () => import('@/components/layout/RightPanelWrapper'),
-    { ssr: false }
-);
-
 const AdminRestaurantModal = dynamic(
     () => import('@/components/admin/AdminRestaurantModal').then((mod) => ({ default: mod.AdminRestaurantModal })),
     { ssr: false }
@@ -30,11 +25,6 @@ const RestaurantSubmissionModal = dynamic(
     { ssr: false }
 );
 
-const AdminReviewPanel = dynamic(
-    () => import('@/components/admin/AdminReviewPanel'),
-    { ssr: false }
-);
-
 const AnnouncementPanel = dynamic(
     () => import('@/components/announcement/AnnouncementPanel'),
     { ssr: false }
@@ -46,40 +36,32 @@ const ReviewModal = dynamic(
 );
 
 type HomeState = ReturnType<typeof useHomeState>;
-type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
-
 type HomeClientSidePanelsProps = {
-    activeRightPanel: PanelType;
     closeAllPanels: () => void;
     isAdmin: boolean;
     isAnnouncementSheetOpen: boolean;
     isMobileOrTablet: boolean;
-    isPanelCollapsed: boolean;
     isSubmissionModalOpen: boolean;
     selectedAnnouncement: Announcement | null;
     setIsAnnouncementSheetOpen: (isOpen: boolean) => void;
     setIsSubmissionModalOpen: (isOpen: boolean) => void;
     setSelectedAnnouncement: (announcement: Announcement | null) => void;
     state: HomeState;
-    togglePanelCollapse: () => void;
 };
 
 const ANNOUNCEMENT_HALF_HEIGHT = 50;
 
 export default function HomeClientSidePanels({
-    activeRightPanel,
     closeAllPanels,
     isAdmin,
     isAnnouncementSheetOpen,
     isMobileOrTablet,
-    isPanelCollapsed,
     isSubmissionModalOpen,
     selectedAnnouncement,
     setIsAnnouncementSheetOpen,
     setIsSubmissionModalOpen,
     setSelectedAnnouncement,
     state,
-    togglePanelCollapse,
 }: HomeClientSidePanelsProps) {
     return (
         <>
@@ -119,6 +101,7 @@ export default function HomeClientSidePanels({
                 <RestaurantSubmissionModal
                     isOpen={isSubmissionModalOpen}
                     onClose={() => setIsSubmissionModalOpen(false)}
+                    presentation={isMobileOrTablet ? 'auto' : 'map-panel'}
                 />
             )}
 
@@ -133,35 +116,7 @@ export default function HomeClientSidePanels({
                 />
             )}
 
-            {isAdmin && (
-                <RightPanelWrapper
-                    isOpen={activeRightPanel === 'adminReviews'}
-                    isCollapsed={isPanelCollapsed}
-                >
-                    <AdminReviewPanel
-                        isOpen={!isPanelCollapsed}
-                        onClose={closeAllPanels}
-                        onToggleCollapse={togglePanelCollapse}
-                        isCollapsed={isPanelCollapsed}
-                    />
-                </RightPanelWrapper>
-            )}
-
-            {!isMobileOrTablet ? (
-                <RightPanelWrapper
-                    isOpen={activeRightPanel === 'announcement'}
-                    isCollapsed={isPanelCollapsed}
-                >
-                    <AnnouncementPanel
-                        isOpen={!isPanelCollapsed}
-                        onClose={closeAllPanels}
-                        onToggleCollapse={togglePanelCollapse}
-                        isCollapsed={isPanelCollapsed}
-                        isAdmin={isAdmin}
-                        initialAnnouncement={selectedAnnouncement}
-                    />
-                </RightPanelWrapper>
-            ) : (
+            {isMobileOrTablet && (
                 <BottomSheet
                     isOpen={isAnnouncementSheetOpen}
                     onClose={() => {

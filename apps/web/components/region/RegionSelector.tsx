@@ -17,9 +17,20 @@ interface RegionSelectorProps {
   onRegionChange: (region: Region | null) => void;
   onRegionSelect?: (region: Region | null) => void; // 그리드 모드에서 지역 선택 시 호출
   className?: string;
+  contentSide?: "top" | "right" | "bottom" | "left";
+  contentAlign?: "start" | "center" | "end";
+  contentClassName?: string;
 }
 
-const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, className }: RegionSelectorProps) => {
+const RegionSelector = ({
+  selectedRegion,
+  onRegionChange,
+  onRegionSelect,
+  className,
+  contentSide = "bottom",
+  contentAlign = "start",
+  contentClassName
+}: RegionSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   // 모든 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
@@ -101,24 +112,31 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
 
   return (
     <Select value={selectedRegion || "all"} onValueChange={handleRegionChange} open={isOpen} onOpenChange={setIsOpen}>
-      <SelectTrigger className={`w-full min-w-0 sm:w-[200px] ${className}`}>
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
+      <SelectTrigger
+        aria-label="지역 필터"
+        className={`w-full min-w-0 sm:w-[200px] ${className}`}
+      >
+        <div className="flex min-w-max items-center gap-2 whitespace-nowrap">
+          <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
           <SelectValue placeholder="지역을 선택하세요" />
         </div>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent
+        side={contentSide}
+        align={contentAlign}
+        className={`z-[180] max-h-[min(24rem,calc(100dvh-8rem))] rounded-2xl border-border shadow-2xl ${contentClassName ?? ""}`}
+      >
         <SelectItem value="all">
-          <div className="flex items-center justify-between w-full">
-            <span>전국</span>
-            <span className="ml-2 text-xs text-muted-foreground">({totalCount}개)</span>
+          <div className="flex w-full items-center justify-between whitespace-nowrap">
+            <span className="whitespace-nowrap">대한민국</span>
+            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({totalCount}개)</span>
           </div>
         </SelectItem>
         {REGIONS.map((region) => {
           const count = regionCounts[region] || 0;
           return (
             <SelectItem key={region} value={region}>
-              <div className="flex items-center justify-between w-full">
+              <div className="flex w-full items-center justify-between whitespace-nowrap">
                 <span className="whitespace-nowrap">{region}</span>
                 <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({count}개)</span>
               </div>

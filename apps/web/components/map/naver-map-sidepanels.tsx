@@ -11,6 +11,7 @@ type RestaurantDetailPanelProps = {
     onRequestEditRestaurant?: () => void;
     onToggleCollapse: () => void;
     isPanelOpen: boolean;
+    showDesktopBackButton?: boolean;
 };
 
 type ReviewModalProps = {
@@ -29,6 +30,22 @@ const loadReviewModal = async () => {
     const mod = await import('@/components/reviews/ReviewModal');
     return mod.ReviewModal as ComponentType<ReviewModalProps>;
 };
+
+function NaverMapDetailPanelSkeleton() {
+    return (
+        <div
+            role="status"
+            aria-label="맛집 상세 패널 로딩 중"
+            className="flex h-full flex-col gap-3 bg-background p-4"
+            data-map-detail-panel-skeleton="true"
+        >
+            <div className="h-48 rounded-2xl bg-muted animate-pulse motion-reduce:animate-none" />
+            <div className="h-5 w-2/3 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+            <div className="h-3 w-full rounded bg-muted animate-pulse motion-reduce:animate-none" />
+            <div className="h-3 w-1/2 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+        </div>
+    );
+}
 
 export function NaverMapDetailPanelShell({
     activePanel,
@@ -65,8 +82,8 @@ export function NaverMapDetailPanelShell({
             onFocusCapture={onFocusCapture}
         >
             <div ref={detailPanelRef} className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
-                {RestaurantDetailPanel && (
-                    <Suspense fallback={null}>
+                {RestaurantDetailPanel ? (
+                    <Suspense fallback={<NaverMapDetailPanelSkeleton />}>
                         <RestaurantDetailPanel
                             restaurant={restaurant}
                             onClose={onClose}
@@ -75,8 +92,11 @@ export function NaverMapDetailPanelShell({
                             onRequestEditRestaurant={onRequestEditRestaurant}
                             onToggleCollapse={onToggleCollapse}
                             isPanelOpen={internalPanelOpen}
+                            showDesktopBackButton
                         />
                     </Suspense>
+                ) : (
+                    <NaverMapDetailPanelSkeleton />
                 )}
             </div>
         </div>

@@ -27,7 +27,7 @@ function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
     } as Restaurant;
 }
 
-function buildRestaurantDetailFromMergeRows(
+export function buildRestaurantDetailFromMergeRows(
     mergeContextRestaurant: Restaurant,
     rows: DBRestaurant[],
 ): Restaurant | null {
