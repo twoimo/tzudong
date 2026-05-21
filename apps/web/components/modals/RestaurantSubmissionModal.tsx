@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,11 +27,38 @@ import {
 interface RestaurantSubmissionModalProps {
     isOpen: boolean;
     onClose: () => void;
+    presentation?: 'auto' | 'map-panel';
 }
+
+type DesktopSubmissionPanelPosition = {
+    x: number;
+    y: number;
+};
+
+type DesktopSubmissionPanelDragState = {
+    pointerId: number;
+    startX: number;
+    startY: number;
+    initialLeft: number;
+    initialTop: number;
+    originX: number;
+    originY: number;
+    panelWidth: number;
+    panelHeight: number;
+};
+
+const DESKTOP_SUBMISSION_PANEL_VIEWPORT_MARGIN = 16;
+const DEFAULT_DESKTOP_SUBMISSION_PANEL_POSITION: DesktopSubmissionPanelPosition = { x: 0, y: 0 };
+
+const clampDesktopSubmissionPanelAxis = (value: number, min: number, max: number) => {
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+};
 
 export default function RestaurantSubmissionModal({
     isOpen,
     onClose,
+    presentation = 'auto',
 }: RestaurantSubmissionModalProps) {
     const getErrorMessage = (error: unknown, fallback: string) => {
         return error instanceof Error && error.message ? error.message : fallback;
@@ -54,7 +81,10 @@ export default function RestaurantSubmissionModal({
     });
     const [isSaving, setIsSaving] = useState(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+    const [desktopSubmissionPanelPosition, setDesktopSubmissionPanelPosition] = useState<DesktopSubmissionPanelPosition>(DEFAULT_DESKTOP_SUBMISSION_PANEL_POSITION);
     const mobileFormRef = useRef<HTMLFormElement>(null);
+    const desktopSubmissionPanelRef = useRef<HTMLElement>(null);
+    const desktopSubmissionPanelDragRef = useRef<DesktopSubmissionPanelDragState | null>(null);
 
     // 모달 열릴 때 초기화
     useEffect(() => {
@@ -75,6 +105,13 @@ export default function RestaurantSubmissionModal({
         const scrollContainer = mobileFormRef.current?.parentElement;
         scrollContainer?.scrollTo({ top: 0, behavior: 'instant' });
     }, [currentStep, isMobileOrTablet, isOpen]);
+
+    useEffect(() => {
+        if (isOpen) return;
+
+        desktopSubmissionPanelDragRef.current = null;
+        setDesktopSubmissionPanelPosition(DEFAULT_DESKTOP_SUBMISSION_PANEL_POSITION);
+    }, [isOpen]);
 
     // 신규 제보 (new) - restaurant_submissions + restaurant_submission_items
     const submitNewMutation = useMutation({
@@ -326,6 +363,69 @@ export default function RestaurantSubmissionModal({
     const mobileTitleId = 'restaurant-submission-sheet-title';
     const mobileDescriptionId = 'restaurant-submission-sheet-description';
     const validationMessageId = 'restaurant-submission-validation-message';
+    const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
+
+    const getClampedDesktopSubmissionPanelPosition = useCallback((clientX: number, clientY: number): DesktopSubmissionPanelPosition | null => {
+        const dragState = desktopSubmissionPanelDragRef.current;
+        if (!dragState || typeof window === 'undefined') return null;
+
+        const deltaX = clientX - dragState.startX;
+        const deltaY = clientY - dragState.startY;
+        const minLeft = DESKTOP_SUBMISSION_PANEL_VIEWPORT_MARGIN;
+        const minTop = DESKTOP_SUBMISSION_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = window.innerWidth - dragState.panelWidth - DESKTOP_SUBMISSION_PANEL_VIEWPORT_MARGIN;
+        const maxTop = window.innerHeight - dragState.panelHeight - DESKTOP_SUBMISSION_PANEL_VIEWPORT_MARGIN;
+        const clampedLeft = clampDesktopSubmissionPanelAxis(dragState.initialLeft + deltaX, minLeft, maxLeft);
+        const clampedTop = clampDesktopSubmissionPanelAxis(dragState.initialTop + deltaY, minTop, maxTop);
+
+        return {
+            x: dragState.originX + clampedLeft - dragState.initialLeft,
+            y: dragState.originY + clampedTop - dragState.initialTop,
+        };
+    }, []);
+
+    const handleDesktopSubmissionPanelPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (!shouldRenderMapPanel || event.button !== 0) return;
+
+        const target = event.target;
+        if (target instanceof HTMLElement && target.closest('button, input, textarea, select, a')) return;
+
+        const panel = desktopSubmissionPanelRef.current;
+        if (!panel) return;
+
+        const rect = panel.getBoundingClientRect();
+        desktopSubmissionPanelDragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            initialLeft: rect.left,
+            initialTop: rect.top,
+            originX: desktopSubmissionPanelPosition.x,
+            originY: desktopSubmissionPanelPosition.y,
+            panelWidth: rect.width,
+            panelHeight: rect.height,
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }, [desktopSubmissionPanelPosition.x, desktopSubmissionPanelPosition.y, shouldRenderMapPanel]);
+
+    const handleDesktopSubmissionPanelPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (desktopSubmissionPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        const nextPosition = getClampedDesktopSubmissionPanelPosition(event.clientX, event.clientY);
+        if (nextPosition) {
+            setDesktopSubmissionPanelPosition(nextPosition);
+        }
+    }, [getClampedDesktopSubmissionPanelPosition]);
+
+    const handleDesktopSubmissionPanelPointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (desktopSubmissionPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        desktopSubmissionPanelDragRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    }, []);
 
     const renderValidationMessage = () => validationMessage && (
         <div
@@ -652,6 +752,80 @@ export default function RestaurantSubmissionModal({
         </form>
     );
 
+    const steppedSubmissionForm = (
+        <form
+            ref={mobileFormRef}
+            onSubmit={handleSubmit}
+            className={mobileSheetStyles.frame}
+        >
+            <div
+                className={`${mobileSheetStyles.header}${shouldRenderMapPanel ? ' cursor-move select-none touch-none' : ''}`}
+                data-desktop-map-submission-drag-handle={shouldRenderMapPanel ? "true" : undefined}
+                title={shouldRenderMapPanel ? "마우스로 드래그해서 제보 창 이동" : undefined}
+                onPointerDown={shouldRenderMapPanel ? handleDesktopSubmissionPanelPointerDown : undefined}
+                onPointerMove={shouldRenderMapPanel ? handleDesktopSubmissionPanelPointerMove : undefined}
+                onPointerUp={shouldRenderMapPanel ? handleDesktopSubmissionPanelPointerEnd : undefined}
+                onPointerCancel={shouldRenderMapPanel ? handleDesktopSubmissionPanelPointerEnd : undefined}
+            >
+                <div className="mb-2 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                            {currentStep} / {RESTAURANT_SUBMISSION_STEPS.length} · {RESTAURANT_SUBMISSION_STEPS[currentStep - 1].title}
+                        </p>
+                        <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                            {title}
+                        </h2>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="제보 닫기">
+                        <X className="h-5 w-5" />
+                    </Button>
+                </div>
+                <p id={mobileDescriptionId} className="text-sm text-muted-foreground">{description}</p>
+                <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="제보 단계 진행률">
+                    {RESTAURANT_SUBMISSION_STEPS.map((step) => (
+                        <div key={step.id} className="space-y-1">
+                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
+                            <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                {step.shortTitle}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-2 min-h-4">{draftStatus}</div>
+            </div>
+
+            <div className={mobileSheetStyles.content}>
+                {renderMobileStepContent()}
+            </div>
+
+            <div className={mobileSheetStyles.footer}>
+                {validationMessage && <div className="pb-2">{renderValidationMessage()}</div>}
+                <div className="flex gap-2">
+                    {currentStep > 1 ? (
+                        <Button type="button" variant="outline" onClick={handlePreviousStep} className="min-w-24">
+                            <ChevronLeft className="mr-1 h-4 w-4" />
+                            이전
+                        </Button>
+                    ) : (
+                        <Button type="button" variant="outline" onClick={onClose} className="min-w-24">
+                            취소
+                        </Button>
+                    )}
+                    {currentStep < 3 ? (
+                        <Button key={`next-${currentStep}`} type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
+                            다음
+                        </Button>
+                    ) : (
+                        <Button key="submit" type="submit" disabled={isPending} className={`${mobileSheetStyles.primaryAction} flex-1`}>
+                            <Send className="mr-2 h-4 w-4" />
+                            {isPending ? '제출 중...' : submissionMode === 'new' ? '제보하기' : '추천하기'}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </form>
+    );
+
     if (isMobileOrTablet) {
         return (
             <BottomSheet
@@ -664,70 +838,25 @@ export default function RestaurantSubmissionModal({
                 ariaDescribedBy={validationMessage ? `${mobileDescriptionId} ${validationMessageId}` : mobileDescriptionId}
                 focusTrapAllowSelectors={[]}
             >
-                <form
-                    ref={mobileFormRef}
-                    onSubmit={handleSubmit}
-                    className={mobileSheetStyles.frame}
-                >
-                    <div className={mobileSheetStyles.header}>
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium text-red-700 dark:text-red-300">
-                                    {currentStep} / {RESTAURANT_SUBMISSION_STEPS.length} · {RESTAURANT_SUBMISSION_STEPS[currentStep - 1].title}
-                                </p>
-                                <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                                    {title}
-                                </h2>
-                            </div>
-                            <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="제보 닫기">
-                                <X className="h-5 w-5" />
-                            </Button>
-                        </div>
-                        <p id={mobileDescriptionId} className="text-sm text-muted-foreground">{description}</p>
-                        <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="제보 단계 진행률">
-                            {RESTAURANT_SUBMISSION_STEPS.map((step) => (
-                                <div key={step.id} className="space-y-1">
-                                    <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
-                                    <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
-                                        {step.shortTitle}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-2 min-h-4">{draftStatus}</div>
-                    </div>
-
-                    <div className={mobileSheetStyles.content}>
-                        {renderMobileStepContent()}
-                    </div>
-
-                    <div className={mobileSheetStyles.footer}>
-                        {validationMessage && <div className="pb-2">{renderValidationMessage()}</div>}
-                        <div className="flex gap-2">
-                            {currentStep > 1 ? (
-                                <Button type="button" variant="outline" onClick={handlePreviousStep} className="min-w-24">
-                                    <ChevronLeft className="mr-1 h-4 w-4" />
-                                    이전
-                                </Button>
-                            ) : (
-                                <Button type="button" variant="outline" onClick={onClose} className="min-w-24">
-                                    취소
-                                </Button>
-                            )}
-                            {currentStep < 3 ? (
-                                <Button key={`next-${currentStep}`} type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
-                                    다음
-                                </Button>
-                            ) : (
-                                <Button key="submit" type="submit" disabled={isPending} className={`${mobileSheetStyles.primaryAction} flex-1`}>
-                                    <Send className="mr-2 h-4 w-4" />
-                                    {isPending ? '제출 중...' : submissionMode === 'new' ? '제보하기' : '추천하기'}
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </form>
+                {steppedSubmissionForm}
             </BottomSheet>
+        );
+    }
+
+    if (shouldRenderMapPanel) {
+        if (!isOpen) return null;
+
+        return (
+            <section
+                ref={desktopSubmissionPanelRef}
+                className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                style={{ transform: `translate3d(${desktopSubmissionPanelPosition.x}px, ${desktopSubmissionPanelPosition.y}px, 0)` }}
+                data-desktop-map-submission-panel="true"
+                aria-labelledby={mobileTitleId}
+                aria-describedby={validationMessage ? `${mobileDescriptionId} ${validationMessageId}` : mobileDescriptionId}
+            >
+                {steppedSubmissionForm}
+            </section>
         );
     }
 

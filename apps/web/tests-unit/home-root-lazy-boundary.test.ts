@@ -63,7 +63,7 @@ describe('home root runtime boundary', () => {
         expect(proxySource).toContain("'/'");
         expect(proxySource).toContain("'/home-frame'");
 
-        expect(homeClientSource.indexOf('            <HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('            {isViewportResolved && !(isMobileOrTablet && isMapFullscreen)'));
+        expect(homeClientSource.indexOf('<HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('{isViewportResolved && !(isMobileOrTablet && isMapFullscreen)'));
         expect(homeClientSource).toContain('loading: () => null');
         expect(homeClientSource).toContain('tzudong:home-initial-intent');
         expect(homeClientSource).toContain('initialIntent={initialMobileOverlayIntent}');

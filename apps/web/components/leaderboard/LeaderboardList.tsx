@@ -13,13 +13,15 @@ interface LeaderboardListProps {
     currentUserId?: string;
     onOpenUserProfile?: (userId: string) => void;
     userItemRef?: React.RefObject<HTMLDivElement | null>;
+    compactLeftPanel?: boolean;
 }
 
 export function LeaderboardList({
     users,
     currentUserId,
     onOpenUserProfile,
-    userItemRef
+    userItemRef,
+    compactLeftPanel = false
 }: LeaderboardListProps) {
     return (
         <div className="divide-y divide-border">
@@ -31,18 +33,35 @@ export function LeaderboardList({
                             <div
                                 key={`${user.id}-${index}`}
                                 ref={isCurrentUser ? userItemRef : null}
+                                style={
+                                    compactLeftPanel
+                                        ? { paddingLeft: '0.5rem', paddingRight: '1.25rem' }
+                                        : undefined
+                                }
                                 className={cn(
-                                "flex items-center gap-2.5 sm:gap-4 md:gap-5 px-4 sm:px-6 md:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
+                                compactLeftPanel
+                                    ? "flex items-center gap-2 pl-2 pr-5 py-4 sm:gap-2.5 sm:pl-2 sm:pr-5 sm:py-4.5 md:pl-2 md:pr-5 lg:gap-2.5 lg:pl-2 lg:pr-5 lg:py-3 transition-colors hover:bg-muted/50 min-w-0"
+                                    : "flex items-center gap-2.5 sm:gap-4 md:gap-5 px-4 sm:px-6 md:px-6 py-4 sm:py-4.5 lg:gap-4 lg:px-6 lg:py-3 transition-colors hover:bg-muted/50 min-w-0",
                                 isCurrentUser && "bg-primary/5 border-l-4 border-l-primary"
                             )}
                         >
                         {/* Rank */}
-                        <div className="flex-shrink-0 w-10 sm:w-10 flex items-center justify-center">
+                        <div
+                            className={cn(
+                                "flex-shrink-0 w-10 sm:w-10 flex items-center justify-center",
+                                compactLeftPanel && "w-7 sm:w-7"
+                            )}
+                        >
                             {getRankIconElement(user.rank)}
                         </div>
 
                         {/* Username */}
-                        <div className="flex-1 min-w-0 max-w-[42vw] sm:max-w-xs">
+                        <div
+                            className={cn(
+                                "flex-1 min-w-0 max-w-[42vw] sm:max-w-xs",
+                                compactLeftPanel && "max-w-none sm:max-w-none"
+                            )}
+                        >
                             {onOpenUserProfile ? (
                                 <button
                                     type="button"
@@ -70,7 +89,12 @@ export function LeaderboardList({
                         </div>
 
                         {/* Stats */}
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 ml-auto min-w-0">
+                        <div
+                            className={cn(
+                                "flex items-center gap-2 sm:gap-3 md:gap-4 ml-auto min-w-0",
+                                compactLeftPanel && "gap-1.5 sm:gap-2 md:gap-2"
+                            )}
+                        >
                             <div className="flex items-center gap-1 shrink-0">
                                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 lg:h-3.5 lg:w-3.5 text-amber-500 fill-amber-100" />
                                 <span className="font-bold text-base sm:text-lg lg:text-sm text-amber-600">
