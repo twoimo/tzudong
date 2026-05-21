@@ -51,6 +51,28 @@
   /* Chrome, Safari and Opera */
 }
 
+/* 데스크탑 지도 좌측 패널 내부는 스크롤 동작만 유지하고 스크롤바는 모두 숨긴다. */
+.desktop-left-panel-scrollbarless,
+.desktop-left-panel-scrollbarless :where(
+  [class*="overflow-y-auto"],
+  [class*="overflow-x-auto"],
+  [class*="overflow-auto"]
+) {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.desktop-left-panel-scrollbarless::-webkit-scrollbar,
+.desktop-left-panel-scrollbarless :where(
+  [class*="overflow-y-auto"],
+  [class*="overflow-x-auto"],
+  [class*="overflow-auto"]
+)::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
