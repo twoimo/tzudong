@@ -94,7 +94,8 @@ describe('admin user-management source contract', () => {
   });
 
   test('adds an admin audit trail migration with RLS read access for admins', () => {
-    const migrationSource = repoSource('backend/supabase/migrations/20260514_admin_user_management_audit.sql');
+    const migrationSource = repoSource('backend/supabase/migrations/20260514_admin_user_management_audit.sql')
+      .replace(/\r\n/g, '\n');
 
     expect(migrationSource).toContain('CREATE TABLE IF NOT EXISTS public.admin_audit_events');
     expect(migrationSource).toContain('ALTER TABLE public.admin_audit_events ENABLE ROW LEVEL SECURITY');

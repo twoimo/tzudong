@@ -57,8 +57,12 @@ describe('mobile mypage scroll frame guards', () => {
         expect(layoutSource).toContain('h-full min-h-0 bg-background overflow-hidden');
         expect(layoutSource).toContain('flex-1 h-full min-h-0 overflow-y-auto');
         expect(layoutSource).toContain('flex h-full min-h-full flex-col');
-        expect(layoutSource).toContain('GlobalLoader');
-        expect(layoutSource).toContain('fullScreen');
+        expect(layoutSource).toContain('data-mypage-viewport-layout="edge-to-edge"');
+        expect(layoutSource).toContain('w-full max-w-none');
+        expect(layoutSource).toContain('md:px-5 md:py-6');
+        expect(layoutSource).toContain('Skeleton');
+        expect(layoutSource).not.toContain('GlobalLoader');
+        expect(layoutSource).not.toContain('fullScreen');
     });
 
     test('mypage scroll frame avoids snap locking so the top area remains freely scrollable', () => {

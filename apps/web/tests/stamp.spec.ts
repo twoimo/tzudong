@@ -2,11 +2,16 @@ import { test, expect } from '@playwright/test';
 import { hidePopupOverlay, expandMobileFilter } from './helpers';
 
 test.describe('Phase 3: Stamp Page Features', () => {
-    test.beforeEach(async ({ page }) => {
-        await page.goto('/stamp');
+    test.beforeEach(async ({ page, isMobile }) => {
+        await page.goto(isMobile ? '/stamp' : '/?panel=stamp');
         await hidePopupOverlay(page);
-        // 페이지 로딩 대기
-        await expect(page.getByTestId('stamp-page-container')).toBeVisible({ timeout: 15000 });
+        // 모바일/태블릿은 독립 /stamp 페이지, 데스크탑은 지도 좌측 패널에서 도장 UX를 제공한다.
+        if (isMobile) {
+            await expect(page.getByTestId('stamp-page-container')).toBeVisible({ timeout: 15000 });
+        } else {
+            await expect(page.locator('[data-desktop-left-map-panel="true"]')).toBeVisible({ timeout: 15000 });
+        }
+        await expect(page.getByRole('heading', { name: /쯔동여지도 도장/i })).toBeVisible({ timeout: 15000 });
     });
 
     test('STAMP-01: 스탬프 페이지 로딩 및 헤더 렌더링', async ({ page }) => {
@@ -15,7 +20,7 @@ test.describe('Phase 3: Stamp Page Features', () => {
         await expect(header).toBeVisible();
 
         // 총 개수 표시 확인
-        const totalCount = page.getByText(/전체.*개/);
+        const totalCount = page.getByText(/전체.*개|\(\d+개\)/).first();
         await expect(totalCount).toBeVisible();
     });
 

@@ -19,8 +19,9 @@ function SidebarItem({ href, icon, label, isActive }: SidebarItemProps) {
     return (
         <Link
             href={href}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -176,7 +177,10 @@ export function MyPageSidebar() {
     if (!user) return null;
 
     return (
-        <aside className="hidden md:flex flex-col w-64 shrink-0 h-full border-r border-border bg-card">
+        <aside
+            className="hidden md:flex flex-col w-64 shrink-0 h-full border-r border-border bg-card"
+            data-mypage-left-panel-expanded="true"
+        >
             <div className="p-6 border-b border-border flex flex-col items-center text-center space-y-4">
                 <div className="relative group h-20 w-20 shrink-0 rounded-full">
                     <label
