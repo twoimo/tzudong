@@ -93,6 +93,14 @@ const loadDesktopRestaurantSearch = async () => {
   return mod.default as ComponentType<RestaurantSearchComponentProps>;
 };
 
+type DesktopLeftPanelMapHomeComponentProps = {
+  onRestaurantOpen: (restaurant: Restaurant) => void;
+  onOpenUserProfile?: (userId: string) => void;
+  onOpenAuth?: () => void;
+  selectedRegion?: string | null;
+  isKoreanOnly?: boolean;
+};
+
 type DesktopLeftPanelView =
   | "map"
   | "feed"
@@ -173,6 +181,11 @@ type AdminReviewPanelComponentProps = {
 const loadFeedOverlay = async () => {
   const mod = await import("@/components/overlay-pages/FeedOverlay");
   return mod.default as ComponentType<FeedOverlayComponentProps>;
+};
+
+const loadDesktopLeftPanelMapHome = async () => {
+  const mod = await import("@/components/home/DesktopLeftPanelMapHome");
+  return mod.default as ComponentType<DesktopLeftPanelMapHomeComponentProps>;
 };
 
 const loadStampOverlay = async () => {
@@ -732,10 +745,23 @@ export default function HomeDesktopControlPanel({
     searchType: "name",
     isSearchActive: false,
   });
+  const shouldShowDesktopSearchResults =
+    activeLeftPanelView === "map" &&
+    !isPanelOpen &&
+    (isDesktopSearchActive || desktopSearchQuery.trim().length > 0);
+  const shouldShowDesktopMapHome =
+    activeLeftPanelView === "map" &&
+    !isPanelOpen &&
+    !shouldShowDesktopSearchResults;
   const DeferredRestaurantSearch =
     useDeferredComponent<RestaurantSearchComponentProps>(
-      activeLeftPanelView === "map" && !isPanelOpen,
+      shouldShowDesktopSearchResults,
       loadDesktopRestaurantSearch,
+    );
+  const DeferredDesktopLeftPanelMapHome =
+    useDeferredComponent<DesktopLeftPanelMapHomeComponentProps>(
+      shouldShowDesktopMapHome,
+      loadDesktopLeftPanelMapHome,
     );
   const DeferredFeedOverlay = useDeferredComponent<FeedOverlayComponentProps>(
     activeLeftPanelView === "feed",
@@ -1010,8 +1036,7 @@ export default function HomeDesktopControlPanel({
 
   const clearDesktopSearch = useCallback(() => {
     setDesktopSearchQuery("");
-    setIsDesktopSearchActive(true);
-    desktopSearchInputRef.current?.focus();
+    setIsDesktopSearchActive(false);
   }, []);
 
   const handleDesktopSearchRestaurantSelect = useCallback(
@@ -1548,7 +1573,10 @@ export default function HomeDesktopControlPanel({
         <div
           className={cn(
             "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
-            hasActiveDetail || isDetailPanelTransitionPending || isInlinePanelViewActive
+            hasActiveDetail ||
+              isDetailPanelTransitionPending ||
+              isInlinePanelViewActive ||
+              shouldShowDesktopMapHome
               ? "px-0 py-0"
               : "px-4 py-4",
           )}
@@ -1688,7 +1716,7 @@ export default function HomeDesktopControlPanel({
                     )}
                   </HydratedDetailRestaurant>
                 </div>
-              ) : DeferredRestaurantSearch ? (
+              ) : shouldShowDesktopSearchResults && DeferredRestaurantSearch ? (
                 <div
                   className="h-full min-h-0 px-0 py-0"
                   data-desktop-left-panel-search-home="true"
@@ -1716,6 +1744,30 @@ export default function HomeDesktopControlPanel({
                     className="h-full w-full"
                   />
                 </div>
+              ) : shouldShowDesktopMapHome ? (
+                DeferredDesktopLeftPanelMapHome ? (
+                  <DeferredDesktopLeftPanelMapHome
+                    onRestaurantOpen={
+                      handleInlinePanelRestaurantOpen as (
+                        restaurant: Restaurant,
+                      ) => void
+                    }
+                    onOpenUserProfile={handleInlinePanelUserOpen}
+                    selectedRegion={
+                      mapMode === "domestic" ? selectedRegion : selectedCountry
+                    }
+                    isKoreanOnly={mapMode === "domestic"}
+                    onOpenAuth={() =>
+                      requestAuthUi({
+                        source: "desktop-left-panel-home-feed",
+                        route: "/",
+                        reason: "review-action",
+                      })
+                    }
+                  />
+                ) : (
+                  <DesktopLeftPanelLoadingState label="홈 추천" />
+                )
               ) : null}
             </>
           )}
