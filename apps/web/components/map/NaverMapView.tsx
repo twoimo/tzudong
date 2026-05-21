@@ -295,6 +295,7 @@ interface NaverMapViewProps {
     externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
     isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
     isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
+    reservesDesktopLeftPanelSpace?: boolean; // 외부 좌측 패널이 지도 위에 겹치지 않고 레이아웃 공간을 선점하는지
     mobileSheetHeightPercent?: number; // 모바일 바텀시트 높이(%) - 마커 Y축 중앙 보정
     onVisibleRestaurantsChange?: (restaurants: Restaurant[]) => void;
     onSearchSelectionRelease?: () => void;
@@ -406,6 +407,7 @@ const NaverMapView = memo(({
     externalPanelOpen,
     isPanelCollapsed = false,
     isPanelOpen: propIsPanelOpen,
+    reservesDesktopLeftPanelSpace = false,
     mobileSheetHeightPercent = 0,
     onVisibleRestaurantsChange,
     onSearchSelectionRelease,
@@ -1008,7 +1010,7 @@ const NaverMapView = memo(({
             mobileVerticalOffset: getMobileVerticalOffset(),
             panelWidth,
             restaurant,
-            usesExternalPanel: Boolean(onMarkerClick),
+            usesExternalPanel: Boolean(onMarkerClick) && !reservesDesktopLeftPanelSpace,
         });
 
         if (immediateCenterPlan.skip) {
@@ -1025,7 +1027,7 @@ const NaverMapView = memo(({
         if (immediateCenterResult.applied) {
             lastImmediateMarkerCenterRef.current = immediateCenterResult.markerCenter;
         }
-    }, [getMobileVerticalOffset, isGridMode, isMobileOrTablet, isPanelCollapsed, mapFocusZoom, onMarkerClick, panelWidth]);
+    }, [getMobileVerticalOffset, isGridMode, isMobileOrTablet, isPanelCollapsed, mapFocusZoom, onMarkerClick, panelWidth, reservesDesktopLeftPanelSpace]);
 
     const handleMarkerRestaurantSelection = useMemo(
         () => buildNaverMarkerRestaurantSelectionHandler({
@@ -1295,6 +1297,7 @@ const NaverMapView = memo(({
         isMobileOrTablet,
         mapFocusZoom,
         mobileSheetHeightPercent,
+        reservesDesktopLeftPanelSpace,
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트

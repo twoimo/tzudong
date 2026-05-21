@@ -797,7 +797,8 @@ function MobileControlOverlayComponent({
                         variant="ghost"
                         onClick={() => toggleSheet('search')}
                         className="flex-1 h-10 min-h-11 rounded-full justify-start gap-2 px-2.5 hover:bg-secondary/80"
-                        aria-label={searchQuery.trim() ? `${searchQuery.trim()} 검색 열기` : '쯔동여지도 검색하기'}
+                        aria-label="맛집 검색 열기"
+                        title={searchQuery.trim() ? `${searchQuery.trim()} 검색` : '쯔동여지도 검색하기'}
                     >
                         <Image
                             src="/logo.png"
@@ -876,7 +877,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-9 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -889,7 +890,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-9 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -924,8 +925,27 @@ function MobileControlOverlayComponent({
 
             </div>
 
-            {/* 우측 하단: 현재 위치, 제보 버튼 */}
+            {/* 우측 하단: 제보, 현재 위치 버튼 */}
             <div className="fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-40 flex flex-col gap-2">
+                {/* 제보 버튼 */}
+                <Button
+                    onClick={() => {
+                        onSubmissionClick?.();
+                    }}
+                    className={cn(
+                        'h-12 w-12 rounded-full shadow-lg',
+                        'bg-red-800 hover:bg-red-900 text-white',
+                        'transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none',
+                        'hover:scale-110 active:scale-95',
+                        'flex items-center justify-center',
+                        'border-2 border-border/20'
+                    )}
+                    title="맛집 제보하기"
+                    aria-label="맛집 제보하기"
+                >
+                    <Send className="h-5 w-5" aria-hidden="true" />
+                </Button>
+
                 {/* 기기 위치 버튼: 첫 탭은 현재 위치, 두 번째 탭부터 방향 표시 */}
                 <Button
                     type="button"
@@ -951,25 +971,6 @@ function MobileControlOverlayComponent({
                     ) : (
                         <LocateFixed className="h-5 w-5" aria-hidden="true" />
                     )}
-                </Button>
-
-                {/* 제보 버튼 */}
-                <Button
-                    onClick={() => {
-                        onSubmissionClick?.();
-                    }}
-                    className={cn(
-                        'h-12 w-12 rounded-full shadow-lg',
-                        'bg-red-800 hover:bg-red-900 text-white',
-                        'transition-all duration-300 ease-in-out motion-reduce:transition-none',
-                        'hover:scale-110 active:scale-95',
-                        'flex items-center justify-center',
-                        'border-2 border-border/20'
-                    )}
-                    title="맛집 제보하기"
-                    aria-label="맛집 제보하기"
-                >
-                    <Send className="h-5 w-5" aria-hidden="true" />
                 </Button>
             </div>
 
@@ -1008,6 +1009,7 @@ function MobileControlOverlayComponent({
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         placeholder={searchType === 'name' ? '쯔동여지도 검색하기' : '유튜브 제목으로 검색하기'}
+                                        name="mobile-home-restaurant-search"
                                         inputMode="search"
                                         enterKeyHint="search"
                                         autoComplete="off"
@@ -1133,7 +1135,7 @@ function MobileControlOverlayComponent({
                                                 handleClose();
                                             }}
                                         >
-                                            <span className="font-medium">전국</span>
+                                            <span className="font-medium">대한민국</span>
                                             <span className="text-sm opacity-75">({restaurants.length}개)</span>
                                         </Button>
 

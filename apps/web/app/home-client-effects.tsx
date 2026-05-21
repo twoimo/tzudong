@@ -6,6 +6,7 @@ import type { MutableRefObject } from 'react';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
 import { requestAuthUi } from '@/lib/auth-ui-events';
+import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from '@/lib/desktop-left-panel-entry';
 
 type HomeSupabaseActions = typeof import('./home-supabase-actions');
 type HomeRestaurantDeepLinkResult = Awaited<ReturnType<HomeSupabaseActions['resolveHomeRestaurantDeepLink']>>;
@@ -323,6 +324,13 @@ export default function HomeClientEffects({
             const detail = (event as CustomEvent<{ id: string, mode: 'domestic' | 'overseas' } | string>).detail;
             const restaurantId = typeof detail === 'string' ? detail : detail.id;
             const mode = typeof detail === 'string' ? null : detail.mode;
+            const notifyInlineDetailOpenFailed = () => {
+                window.dispatchEvent(
+                    new CustomEvent(HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT, {
+                        detail: { restaurantId },
+                    }),
+                );
+            };
 
             if (mode) {
                 setMapMode(mode);
@@ -331,7 +339,10 @@ export default function HomeClientEffects({
             try {
                 const { resolveHomeBookmarkRestaurantSelection } = await import('./home-supabase-actions');
                 const result = await resolveHomeBookmarkRestaurantSelection(restaurantId, mode);
-                if (!result) return;
+                if (!result) {
+                    notifyInlineDetailOpenFailed();
+                    return;
+                }
 
                 if (result.inferredMode) {
                     setMapMode(result.inferredMode);
@@ -339,6 +350,7 @@ export default function HomeClientEffects({
 
                 openDetailPanelRef.current(result.restaurant, 13);
             } catch (error) {
+                notifyInlineDetailOpenFailed();
                 console.error('맛집 조회 실패:', error);
             }
         };
