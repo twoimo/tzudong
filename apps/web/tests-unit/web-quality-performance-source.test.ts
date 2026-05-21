@@ -195,8 +195,11 @@ describe("web quality performance source contracts", () => {
     expect(homeClientSource).toContain("<HomeControlPanel");
     expect(homeClientSource).toContain("isPanelCollapsed={isPanelCollapsed}");
     expect(homeClientSource).toContain("desktopMapLayout={desktopMapLayout}");
+    expect(homeClientSource).toContain("desktopPanelSide={desktopPanelSide}");
     expect(homeClientSource).toContain("setDesktopMapLayout(preferences.desktopMapLayout)");
+    expect(homeClientSource).toContain("setDesktopPanelSide(preferences.desktopPanelSide)");
     expect(homeClientSource).toContain("setDesktopMapLayout(customEvent.detail.preferences.desktopMapLayout)");
+    expect(homeClientSource).toContain("setDesktopPanelSide(customEvent.detail.preferences.desktopPanelSide)");
     expect(homeClientSource).toContain(
       "onTogglePanelCollapse={togglePanelCollapse}",
     );
@@ -698,20 +701,37 @@ describe("web quality performance source contracts", () => {
       "검색·필터·상세를 왼쪽에서 빠르게 확인하세요.",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "fixed inset-y-0 left-0 z-[90]",
+      "fixed inset-y-0 z-[90] flex",
     );
+    expect(homeDesktopControlPanelSource).toContain(
+      'desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "data-desktop-panel-side={desktopPanelSide}",
+    );
+    expect(homeDesktopControlPanelSource).toContain("motion-reduce:transition-none");
+    expect(homeDesktopControlPanelSource).toContain("aria-pressed={preferences.desktopPanelSide === value}");
+    expect(homeDesktopControlPanelSource).toContain("aria-pressed={preferences.desktopMapLayout === value}");
+    expect(homeDesktopControlPanelSource).toContain("aria-pressed={preferences.desktopPanelDefault === value}");
 
     expect(homeDesktopControlPanelSource).toContain(
       'data-panel-collapsed={isPanelCollapsed ? "true" : "false"}',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'isPanelCollapsed ? "-translate-x-full" : "translate-x-0"',
+      'desktopPanelSide === "right"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      '"translate-x-full"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      '"-translate-x-full"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       "const panelToggleLabel = isPanelCollapsed",
     );
-    expect(homeDesktopControlPanelSource).toContain("좌측 패널 펼치기");
-    expect(homeDesktopControlPanelSource).toContain("좌측 패널 접기");
+    expect(homeDesktopControlPanelSource).toContain('const panelSideLabel = desktopPanelSide === "right" ? "우측" : "좌측"');
+    expect(homeDesktopControlPanelSource).toContain("`${panelSideLabel} 패널 펼치기`");
+    expect(homeDesktopControlPanelSource).toContain("`${panelSideLabel} 패널 접기`");
     expect(homeDesktopControlPanelSource).toContain(
       'aria-controls="desktop-left-map-panel"',
     );
@@ -811,10 +831,10 @@ describe("web quality performance source contracts", () => {
       '"--desktop-floating-nav-button-width": DESKTOP_FLOATING_NAV_BUTTON_WIDTH',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'left: isPanelCollapsed',
+      '!isPanelCollapsed && desktopPanelSide === "left"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      '? "1rem"',
+      ': "1rem"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       '`calc(min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px)) + 1rem)`',
@@ -851,13 +871,21 @@ describe("web quality performance source contracts", () => {
       "components/home/home-map-container.tsx",
     );
     expect(homeMapContainerSource).toContain("desktopMapLayout?: HomeMapLayoutMode");
+    expect(homeMapContainerSource).toContain("desktopPanelSide?: HomeMapPanelSide");
     expect(homeMapContainerSource).toContain("desktopMapLayout = 'panel-aware'");
     expect(homeMapContainerSource).toContain("desktopMapLayout === 'panel-aware'");
+    expect(homeMapContainerSource).toContain("motion-reduce:transition-none");
     expect(homeMapContainerSource).toContain(
       'data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}',
     );
     expect(homeMapContainerSource).toContain(
-      "reservesDesktopLeftPanelSpace={shouldReserveDesktopLeftPanel}",
+      'data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}',
+    );
+    expect(homeMapContainerSource).toContain(
+      "data-home-map-panel-side={desktopPanelSide}",
+    );
+    expect(homeMapContainerSource).toContain(
+      "reservesDesktopLeftPanelSpace={shouldReserveDesktopSidePanel}",
     );
     expect(source("components/map/NaverMapView.tsx")).toContain(
       "usesExternalPanel: Boolean(onMarkerClick) && !reservesDesktopLeftPanelSpace",
@@ -1144,6 +1172,13 @@ describe("web quality performance source contracts", () => {
     expect(submissionFloatingButtonSource).toContain(
       "aria-label={deviceLocationButtonLabel}",
     );
+    expect(submissionFloatingButtonSource).toContain(
+      "desktopPanelSide?: HomeMapPanelSide",
+    );
+    expect(submissionFloatingButtonSource).toContain("shouldOffsetForRightPanel");
+    expect(submissionFloatingButtonSource).toContain(
+      "DESKTOP_MAP_SIDE_PANEL_WIDTH_CSS",
+    );
     expect(
       submissionFloatingButtonSource.indexOf('aria-label="맛집 제보하기"'),
     ).toBeLessThan(
@@ -1166,6 +1201,8 @@ describe("web quality performance source contracts", () => {
     expect(homeClientSource).toContain(
       "isDeviceLocationPending={isDeviceLocationPending}",
     );
+    expect(homeClientSource).toContain("desktopPanelSide={desktopPanelSide}");
+    expect(homeClientSource).toContain("isPanelCollapsed={isPanelCollapsed}");
     expect(naverMapSource).not.toContain("new naver.maps.Circle");
     expect(naverMapSource).not.toContain("deviceLocationAccuracyCircleRef");
   });
@@ -1630,13 +1667,25 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-view="settings"',
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
-      "writeHomeMapUserPreferences(user.id",
+      "writeHomeMapUserPreferences(",
+    );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      "user.id,",
     );
     expect(source("app/home-client.tsx")).toContain(
       "readHomeMapUserPreferences(user.id)",
     );
     expect(source("app/home-client.tsx")).toContain(
       "HOME_MAP_USER_PREFERENCES_EVENT",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      "!customEvent.detail.preservePanelCollapse",
+    );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      "preservePanelCollapse: true",
+    );
+    expect(source("lib/home-map-user-preferences.ts")).toContain(
+      "preservePanelCollapse?: boolean",
     );
     expect(overlayLayoutSource).toContain(
       'router.replace("/", { scroll: false });',
@@ -1834,10 +1883,9 @@ describe("web quality performance source contracts", () => {
     expect(myPageSource).not.toContain("useRouter");
     expect(myPageLayoutSource).toContain("<AppRuntimeLayout>");
     expect(myPageLayoutContentSource).toContain("dynamic(");
-    expect(myPageLayoutContentSource).toContain("function MyPageMobileBrandHeader()");
-    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-brand-logo="true"');
-    expect(myPageLayoutContentSource).toContain('aria-label="쯔동여지도 홈으로 이동"');
-    expect(myPageLayoutContentSource).toContain('<MyPageMobileBrandHeader />');
+    expect(myPageLayoutContentSource).not.toContain("function MyPageMobileBrandHeader()");
+    expect(myPageLayoutContentSource).not.toContain('data-mypage-mobile-brand-logo="true"');
+    expect(myPageLayoutContentSource).not.toContain('<MyPageMobileBrandHeader />');
     expect(myPageLayoutContentSource).toContain('data-mypage-viewport-layout="edge-to-edge"');
     expect(myPageLayoutContentSource).toContain("w-full max-w-none");
     expect(myPageLayoutContentSource).not.toContain("container mx-auto h-full min-h-0 max-w-6xl flex");
@@ -1879,11 +1927,11 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       'data-mypage-left-panel-expanded="true"',
     );
-    expect(myPageSidebarSource).toContain('data-mypage-sidebar-brand="true"');
-    expect(myPageSidebarSource).toContain('data-mypage-sidebar-logo="true"');
-    expect(myPageSidebarSource).toContain('aria-label="쯔동여지도 홈으로 이동"');
-    expect(myPageSidebarSource).toContain('<span className="truncate">쯔동여지도</span>');
-    expect(myPageSidebarSource).toContain('src="/logo.png"');
+    expect(myPageSidebarSource).not.toContain('data-mypage-sidebar-brand="true"');
+    expect(myPageSidebarSource).not.toContain('data-mypage-sidebar-logo="true"');
+    expect(myPageSidebarSource).not.toContain('aria-label="쯔동여지도 홈으로 이동"');
+    expect(myPageSidebarSource).not.toContain('<span className="truncate">쯔동여지도</span>');
+    expect(myPageSidebarSource).not.toContain('src="/logo.png"');
     expect(myPageSidebarSource).toContain('aria-current={isActive ? "page" : undefined}');
     expect(myPageSidebarSource).toContain('focus-visible:ring-2 focus-visible:ring-primary');
     expect(myPageSidebarSource).toContain("await import('@/lib/image-utils')");
