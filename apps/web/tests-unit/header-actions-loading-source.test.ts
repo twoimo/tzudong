@@ -1,47 +1,174 @@
-import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
+const source = (relativePath: string) =>
+  readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 
-describe('header action loading source contract', () => {
-  test('desktop header action icons use independent skeleton slots instead of one grouped auth placeholder', () => {
-    const headerSource = source('components/layout/Header.tsx');
+describe("header action loading source contract", () => {
+  test("desktop header action icons use independent skeleton slots instead of one grouped auth placeholder", () => {
+    const headerSource = source("components/layout/Header.tsx");
 
-    expect(headerSource).toContain('function HeaderActionSkeleton');
-    expect(headerSource).toContain('shouldShowNotificationSkeleton');
-    expect(headerSource).toContain('shouldShowBookmarkSkeleton');
-    expect(headerSource).toContain('shouldShowFullscreenSkeleton');
-    expect(headerSource).toContain('shouldShowAccountSkeleton');
+    expect(headerSource).toContain("function HeaderActionSkeleton");
+    expect(headerSource).toContain("shouldShowNotificationSkeleton");
+    expect(headerSource).toContain("shouldShowBookmarkSkeleton");
+    expect(headerSource).toContain("shouldShowFullscreenSkeleton");
+    expect(headerSource).toContain("shouldShowAccountSkeleton");
     expect(headerSource).toContain('label="알림 로딩 중"');
     expect(headerSource).toContain('label="북마크 로딩 중"');
     expect(headerSource).toContain('label="전체화면 로딩 중"');
     expect(headerSource).toContain('label="사용자 메뉴 로딩 중"');
-    expect(headerSource).toContain('loading: () => <HeaderActionSkeleton label="북마크 로딩 중" />');
-    expect(headerSource).toContain('fallback={<HeaderActionSkeleton label="북마크 로딩 중" />}');
-    expect(headerSource).not.toContain('w-[84px] rounded-md md:ml-2 md:h-10 md:w-[96px]');
+    expect(headerSource).toContain(
+      "const HeaderBookmarkMenuButton = useDeferredComponent",
+    );
+    expect(headerSource).toContain(
+      'HeaderBookmarkMenuButton ? <HeaderBookmarkMenuButton /> : <HeaderActionSkeleton label="북마크 로딩 중" />',
+    );
+    expect(headerSource).toContain(
+      'fallback={<HeaderActionSkeleton label="북마크 로딩 중" />}',
+    );
+    expect(headerSource).not.toContain(
+      "w-[84px] rounded-md md:ml-2 md:h-10 md:w-[96px]",
+    );
   });
 
-  test('layout auth loading only blocks header icons until the user object is known', () => {
-    expect(source('components/layout/MainLayout.tsx')).toContain('isAuthLoading={isLoading && !user}');
-    expect(source('components/layout/OverlayLayout.tsx')).toContain('isAuthLoading={isLoading && !user}');
+  test("runtime layouts no longer mount the legacy global header on routed pages", () => {
+    const mainLayoutSource = source("components/layout/MainLayout.tsx");
+    const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
+
+    expect(mainLayoutSource).not.toContain(
+      "dynamic(() => import('@/components/layout/Header')",
+    );
+    expect(overlayLayoutSource).not.toContain(
+      'dynamic(() => import("@/components/layout/Header")',
+    );
+    expect(mainLayoutSource).not.toContain(
+      "isAuthLoading={isLoading && !user}",
+    );
+    expect(overlayLayoutSource).not.toContain(
+      "isAuthLoading={isLoading && !user}",
+    );
+    expect(mainLayoutSource).toContain(
+      'root.style.setProperty(APP_HEADER_HEIGHT_VAR, "0px")',
+    );
   });
 
+  test("desktop map exposes a route-based user menu without opening the home panel", () => {
+    const homeClientSource = source("app/home-client.tsx");
+    const userMenuSource = source("components/home/HomeMapUserMenu.tsx");
 
-
-  test('account dropdown does not expose the announcement shortcut', () => {
-    const headerSource = source('components/layout/Header.tsx');
-
-    expect(headerSource).not.toContain('handleAnnouncementListClick');
-    expect(headerSource).not.toContain('<DropdownMenuItem onClick={handleAnnouncementListClick}');
-    expect(headerSource).toContain('aria-label="관리자 콘솔에서 공지사항 관리"');
+    expect(homeClientSource).toContain("const HomeMapUserMenu = dynamic(");
+    expect(homeClientSource).toContain("<HomeMapUserMenu />");
+    expect(homeClientSource).toContain("function HomeMapUserMenuPendingShell()");
+    expect(homeClientSource).toContain(
+      "data-desktop-map-user-menu-pending=\"true\"",
+    );
+    expect(homeClientSource).toContain(
+      "{ ssr: false, loading: () => <HomeMapUserMenuPendingShell /> }",
+    );
+    expect(homeClientSource).toContain(
+      "DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT",
+    );
+    expect(homeClientSource).toContain(
+      "handleExpandLeftPanelForPageEntry",
+    );
+    expect(homeClientSource).toContain(
+      "setIsPanelCollapsed(false);",
+    );
+    expect(userMenuSource).toContain('data-desktop-map-user-menu="true"');
+    expect(userMenuSource).toContain('data-desktop-map-fullscreen-toggle="true"');
+    expect(userMenuSource).not.toContain("if (!user) return null");
+    expect(userMenuSource).toContain("requestAuthUi({");
+    expect(userMenuSource).toContain('source: "desktop-map-user-menu"');
+    expect(userMenuSource).toContain('aria-label="로그인 열기"');
+    expect(userMenuSource).toContain('className="fixed right-20 top-4 z-[120] h-11 w-11 rounded-full');
+    expect(userMenuSource).toContain('aria-label={isFullscreen ? "지도 전체화면 끄기" : "지도 전체화면 켜기"}');
+    expect(userMenuSource).toContain('document.documentElement.requestFullscreen()');
+    expect(userMenuSource).toContain('document.exitFullscreen()');
+    expect(userMenuSource).toContain('document.addEventListener("fullscreenchange", syncFullscreenState)');
+    expect(userMenuSource).toContain('<Maximize2 className="h-5 w-5" aria-hidden="true" />');
+    expect(userMenuSource).toContain('<Minimize2 className="h-5 w-5" aria-hidden="true" />');
+    expect(userMenuSource).toContain('queryKey: ["home-map-user-menu-avatar", user?.id]');
+    expect(userMenuSource).toContain('.select("avatar_url")');
+    expect(userMenuSource).toContain('className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary"');
+    expect(userMenuSource).toContain("profileAvatarUrl ? (");
+    expect(userMenuSource).toContain('sizes="36px"');
+    expect(userMenuSource).toContain('<UserRound className="h-5 w-5" />');
+    expect(userMenuSource).toContain('navigateToPage("/mypage/profile")');
+    expect(userMenuSource).toContain('navigateToPage("/admin")');
+    expect(userMenuSource).toContain(
+      "shouldExpandDesktopLeftPanelForRoute(href)",
+    );
+    expect(userMenuSource).toContain(
+      "DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT",
+    );
+    expect(userMenuSource).toContain("{isAdmin && (");
+    expect(userMenuSource).toContain("await signOut();");
+    expect(userMenuSource).not.toContain("dispatchWindowEvent('openMyPage')");
+    expect(userMenuSource).toContain("isBusinessInfoExpanded");
+    expect(userMenuSource).toContain('data-desktop-map-business-info="true"');
+    expect(userMenuSource).toContain('aria-label="사업자 정보 펼치기/접기"');
+    expect(userMenuSource).toContain('aria-expanded={isBusinessInfoExpanded}');
+    expect(userMenuSource).toContain("v2.0.0 © 타이니번");
+    expect(userMenuSource).toContain("타이니번 데이터랩");
+    expect(userMenuSource).toContain("대표: 최연우");
+    expect(userMenuSource).toContain("사업자: 601-09-04613");
+    expect(userMenuSource).toContain("이메일: cs@tzudong.app");
+    expect(userMenuSource).toContain("<ChevronDown");
+    expect(userMenuSource).toContain("<ChevronUp");
+    expect(userMenuSource).toContain('className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl');
+    expect(userMenuSource).not.toContain('className="z-[180] w-64 rounded-2xl');
+    expect(userMenuSource).toContain('text-foreground whitespace-nowrap');
+    expect(userMenuSource).toContain('text-left whitespace-nowrap');
+    expect(userMenuSource).toContain('className="flex w-max max-w-full items-center justify-between');
   });
 
-  test('bookmark dropdown keeps its own list skeleton while bookmark data loads', () => {
-    const bookmarkSource = source('components/layout/HeaderBookmarkMenuButton.tsx');
+  test("desktop admin route keeps full-page console chrome instead of map overlay chrome", () => {
+    const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
+    const adminConsoleSource = source(
+      "components/admin/AdminConsoleOverview.tsx",
+    );
+    const tailwindConfigSource = source("tailwind.config.ts");
 
-    expect(bookmarkSource).toContain('isLoading: isBookmarksLoading');
+    expect(overlayLayoutSource).toContain(
+      "const shouldRenderRouteOverlayChrome =",
+    );
+    expect(overlayLayoutSource).toContain(
+      "!isHomeRoute && routeDirectPanelParam !== null",
+    );
+    expect(overlayLayoutSource).toContain(
+      "{shouldRenderRouteOverlayChrome && (",
+    );
+    expect(overlayLayoutSource).not.toContain("{!isHomeRoute && (");
+    expect(adminConsoleSource).toContain(
+      "lg:h-[calc(100dvh_-_var(--app-header-height,0px))]",
+    );
+    expect(tailwindConfigSource).toContain(
+      "lg:h-[calc(100dvh_-_var(--app-header-height,0px))]",
+    );
+  });
+
+  test("account dropdown does not expose the announcement shortcut", () => {
+    const headerSource = source("components/layout/Header.tsx");
+
+    expect(headerSource).not.toContain("handleAnnouncementListClick");
+    expect(headerSource).not.toContain(
+      "<DropdownMenuItem onClick={handleAnnouncementListClick}",
+    );
+    expect(headerSource).toContain(
+      'aria-label="관리자 콘솔에서 공지사항 관리"',
+    );
+  });
+
+  test("bookmark dropdown keeps its own list skeleton while bookmark data loads", () => {
+    const bookmarkSource = source(
+      "components/layout/HeaderBookmarkMenuButton.tsx",
+    );
+
+    expect(bookmarkSource).toContain("isLoading: isBookmarksLoading");
     expect(bookmarkSource).toContain('aria-label="북마크 목록 로딩 중"');
-    expect(bookmarkSource).toContain('<Skeleton className="h-4 w-3/4 rounded" />');
+    expect(bookmarkSource).toContain(
+      '<Skeleton className="h-4 w-3/4 rounded" />',
+    );
   });
 });

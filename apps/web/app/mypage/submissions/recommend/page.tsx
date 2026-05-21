@@ -20,7 +20,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { GlobalLoader } from "@/components/ui/global-loader";
+import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 
 interface RestaurantRequest {
   id: string;
@@ -222,13 +222,7 @@ export default function RecommendSubmissionsPage() {
   };
 
   if (isLoading) {
-    return (
-      <GlobalLoader
-        message="추천 내역을 불러오는 중..."
-        subMessage="잠시만 기다려주세요"
-        fullScreen
-      />
-    );
+    return <MyPageSectionSkeleton label="쯔양 맛집 제보 내역을 불러오는 중…" />;
   }
 
   return (

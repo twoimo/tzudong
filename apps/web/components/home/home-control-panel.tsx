@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useState, type ComponentType } from 'react';
 import type { Region, Restaurant } from '@/types/restaurant';
+import type { Announcement } from '@/types/announcement';
 import type { FilterState } from '@/components/filters/filter-state';
 import { BREAKPOINTS, useDeviceType } from '@/hooks/useDeviceType';
 import type { User } from '@supabase/supabase-js';
@@ -10,6 +11,7 @@ import { useDeferredComponent } from '@/hooks/use-deferred-component';
 
 
 type MobileControlOverlayIntent = 'search' | 'bookmark' | 'notification' | 'user';
+type HomeOverlayPanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
 
 type HomeDesktopControlPanelProps = {
     mapMode: 'domestic' | 'overseas';
@@ -24,9 +26,20 @@ type HomeDesktopControlPanelProps = {
     onRestaurantSearch: (restaurant: Restaurant) => void;
     onSearchExecute: (region?: Region | null) => void;
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
-    leftSidebarWidth?: number;
-    rightPanelWidth?: number;
     initialIntent?: MobileControlOverlayIntent | null;
+    panelRestaurant?: Restaurant | null;
+    isPanelOpen?: boolean;
+    onPanelClose?: () => void;
+    onReviewModalOpen?: () => void;
+    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+    onRequestEditRestaurant?: (restaurant: Restaurant) => void;
+    onModeChange?: (mode: 'domestic' | 'overseas') => void;
+    isPanelCollapsed?: boolean;
+    onTogglePanelCollapse?: () => void;
+    user?: User | null;
+    isAdmin?: boolean;
+    activeRightPanel?: HomeOverlayPanelType;
+    selectedAnnouncement?: Announcement | null;
 };
 
 const loadHomeDesktopControlPanel = async () => {
@@ -55,10 +68,16 @@ export interface HomeControlPanelProps {
     onSearchExecute: (region?: Region | null) => void;
     activePanel?: 'map' | 'detail' | 'control';
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
-    leftSidebarWidth?: number;
-    rightPanelWidth?: number;
+    panelRestaurant?: Restaurant | null;
+    isPanelOpen?: boolean;
+    onPanelClose?: () => void;
+    onReviewModalOpen?: () => void;
+    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+    onRequestEditRestaurant?: (restaurant: Restaurant) => void;
     isAdmin?: boolean;
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
+    isPanelCollapsed?: boolean;
+    onTogglePanelCollapse?: () => void;
     user?: User | null;
     onSubmissionClick?: () => void;
     onTopShellUserIconClick?: () => void;
@@ -67,6 +86,8 @@ export interface HomeControlPanelProps {
     isDeviceLocationPending?: boolean;
     isDeviceHeadingMode?: boolean;
     initialIntent?: MobileControlOverlayIntent | null;
+    activeRightPanel?: HomeOverlayPanelType;
+    selectedAnnouncement?: Announcement | null;
 }
 
 function HomeControlPanelComponent({
@@ -82,8 +103,12 @@ function HomeControlPanelComponent({
     onRestaurantSearch,
     onSearchExecute,
     onPanelClick,
-    leftSidebarWidth = 64,
-    rightPanelWidth = 0,
+    panelRestaurant = null,
+    isPanelOpen = false,
+    onPanelClose,
+    onReviewModalOpen,
+    onAdminEditRestaurant,
+    onRequestEditRestaurant,
     isAdmin = false,
     onModeChange,
     user,
@@ -93,7 +118,11 @@ function HomeControlPanelComponent({
     deviceLocation,
     isDeviceLocationPending = false,
     isDeviceHeadingMode = false,
+    isPanelCollapsed = false,
+    onTogglePanelCollapse,
     initialIntent = null,
+    activeRightPanel = null,
+    selectedAnnouncement = null,
 }: HomeControlPanelProps) {
     const { isMobileOrTablet } = useDeviceType();
     const shouldRenderMobile = isMobileOrTablet || (
@@ -198,9 +227,20 @@ function HomeControlPanelComponent({
             onRestaurantSearch={onRestaurantSearch}
             onSearchExecute={onSearchExecute}
             onPanelClick={onPanelClick}
-            leftSidebarWidth={leftSidebarWidth}
-            rightPanelWidth={rightPanelWidth}
             initialIntent={initialIntent}
+            panelRestaurant={panelRestaurant}
+            isPanelOpen={isPanelOpen}
+            onPanelClose={onPanelClose}
+            onReviewModalOpen={onReviewModalOpen}
+            onAdminEditRestaurant={onAdminEditRestaurant}
+            onRequestEditRestaurant={onRequestEditRestaurant}
+            onModeChange={onModeChange}
+            isPanelCollapsed={isPanelCollapsed}
+            onTogglePanelCollapse={onTogglePanelCollapse}
+            user={user}
+            isAdmin={isAdmin}
+            activeRightPanel={activeRightPanel}
+            selectedAnnouncement={selectedAnnouncement}
         />
     );
 }

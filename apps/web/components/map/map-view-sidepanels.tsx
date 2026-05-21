@@ -2,9 +2,26 @@ import type { MouseEvent, RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import type { Restaurant } from '@/types/restaurant';
 
+
+function MapViewDetailPanelSkeleton() {
+    return (
+        <div
+            role="status"
+            aria-label="맛집 상세 패널 로딩 중"
+            className="flex h-full flex-col gap-3 bg-background p-4"
+            data-map-detail-panel-skeleton="true"
+        >
+            <div className="h-48 rounded-2xl bg-muted animate-pulse motion-reduce:animate-none" />
+            <div className="h-5 w-2/3 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+            <div className="h-3 w-full rounded bg-muted animate-pulse motion-reduce:animate-none" />
+            <div className="h-3 w-1/2 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+        </div>
+    );
+}
+
 const RestaurantDetailPanel = dynamic(
     () => import('@/components/map/map-view-deferred-panels').then((mod) => ({ default: mod.RestaurantDetailPanel })),
-    { ssr: false }
+    { ssr: false, loading: MapViewDetailPanelSkeleton }
 );
 
 const ReviewModal = dynamic(
@@ -65,6 +82,7 @@ export function MapViewDetailPanelShell({
                     onRequestEditRestaurant={onRequestEditRestaurant}
                     onToggleCollapse={onToggleCollapse}
                     isPanelOpen={isPanelOpen}
+                    showDesktopBackButton
                 />
             </div>
         </div>
