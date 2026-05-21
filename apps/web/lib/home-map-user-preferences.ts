@@ -3,25 +3,32 @@ export const HOME_MAP_USER_PREFERENCES_EVENT =
 
 export type HomeMapPanelDefault = "expanded" | "collapsed";
 export type HomeMapLayoutMode = "panel-aware" | "map-first";
+export type HomeMapPanelSide = "left" | "right";
 
 export type HomeMapUserPreferences = {
   desktopPanelDefault: HomeMapPanelDefault;
   desktopMapLayout: HomeMapLayoutMode;
+  desktopPanelSide: HomeMapPanelSide;
   reduceMapMotion: boolean;
 };
 
 export const DEFAULT_HOME_MAP_USER_PREFERENCES: HomeMapUserPreferences = {
   desktopPanelDefault: "expanded",
   desktopMapLayout: "panel-aware",
+  desktopPanelSide: "left",
   reduceMapMotion: true,
 };
 
 type HomeMapUserPreferencesEventDetail = {
   userId: string;
   preferences: HomeMapUserPreferences;
+  preservePanelCollapse?: boolean;
 };
 
 export type HomeMapUserPreferencesEvent = CustomEvent<HomeMapUserPreferencesEventDetail>;
+export type HomeMapUserPreferencesWriteOptions = {
+  preservePanelCollapse?: boolean;
+};
 
 const STORAGE_PREFIX = "tzudong:home-map-user-preferences";
 
@@ -35,6 +42,10 @@ function isPanelDefault(value: unknown): value is HomeMapPanelDefault {
 
 function isMapLayoutMode(value: unknown): value is HomeMapLayoutMode {
   return value === "panel-aware" || value === "map-first";
+}
+
+function isPanelSide(value: unknown): value is HomeMapPanelSide {
+  return value === "left" || value === "right";
 }
 
 export function normalizeHomeMapUserPreferences(
@@ -52,6 +63,9 @@ export function normalizeHomeMapUserPreferences(
     desktopMapLayout: isMapLayoutMode(preferences.desktopMapLayout)
       ? preferences.desktopMapLayout
       : DEFAULT_HOME_MAP_USER_PREFERENCES.desktopMapLayout,
+    desktopPanelSide: isPanelSide(preferences.desktopPanelSide)
+      ? preferences.desktopPanelSide
+      : DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelSide,
     reduceMapMotion:
       typeof preferences.reduceMapMotion === "boolean"
         ? preferences.reduceMapMotion
@@ -80,6 +94,7 @@ export function writeHomeMapUserPreferences(
   preferences: HomeMapUserPreferences,
   storage: Pick<Storage, "setItem"> | undefined =
     typeof window !== "undefined" ? window.localStorage : undefined,
+  options: HomeMapUserPreferencesWriteOptions = {},
 ) {
   const normalized = normalizeHomeMapUserPreferences(preferences);
 
@@ -93,7 +108,11 @@ export function writeHomeMapUserPreferences(
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent(HOME_MAP_USER_PREFERENCES_EVENT, {
-        detail: { userId, preferences: normalized },
+        detail: {
+          userId,
+          preferences: normalized,
+          preservePanelCollapse: options.preservePanelCollapse,
+        },
       }),
     );
   }
