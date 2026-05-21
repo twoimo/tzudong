@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, type MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, type MouseEvent as ReactMouseEvent } from "react";
 import { Bell, CheckCheck, MapPin, Trash2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -119,7 +119,7 @@ export default function DesktopLeftPanelNotifications({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3">
         {isLoading ? (
           <div
             role="status"
@@ -173,63 +173,62 @@ export default function DesktopLeftPanelNotifications({
         ) : (
           <div className="space-y-2">
             {notifications.slice(0, 50).map((notification) => (
-              <Fragment key={notification.id}>
-                <div
-                  className={cn(
-                    "rounded-xl border border-border bg-card shadow-sm transition-colors",
-                    !notification.isRead && "border-primary/30 bg-primary/5",
-                  )}
+              <div
+                key={notification.id}
+                className={cn(
+                  "rounded-xl border border-border bg-card shadow-sm transition-colors",
+                  !notification.isRead && "border-primary/30 bg-primary/5",
+                )}
+              >
+                <button
+                  type="button"
+                  aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
+                  onClick={() => handleNotificationOpen(notification)}
+                  className="flex w-full items-start gap-3 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  <button
-                    type="button"
-                    aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
-                    onClick={() => handleNotificationOpen(notification)}
-                    className="flex w-full items-start gap-3 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    <MapPin
-                      className="mt-0.5 h-8 w-8 shrink-0 rounded-full bg-primary/10 p-2 text-primary"
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-start justify-between gap-2">
-                        <span className="truncate text-sm font-semibold text-foreground">
-                          {notification.title}
-                        </span>
-                        {!notification.isRead && (
-                          <span
-                            className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-700"
-                            aria-hidden="true"
-                          />
-                        )}
+                  <MapPin
+                    className="mt-0.5 h-8 w-8 shrink-0 rounded-full bg-primary/10 p-2 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-start justify-between gap-2">
+                      <span className="truncate text-sm font-semibold text-foreground">
+                        {notification.title}
                       </span>
-                      <span className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground">
-                        {notification.message}
-                      </span>
-                      <span className="mt-2 block text-[11px] text-muted-foreground/70">
-                        {formatDistanceToNow(notification.createdAt, {
-                          addSuffix: true,
-                          locale: ko,
-                        })}
-                      </span>
+                      {!notification.isRead && (
+                        <span
+                          className="mt-1 h-2 w-2 shrink-0 rounded-full bg-red-700"
+                          aria-hidden="true"
+                        />
+                      )}
                     </span>
-                  </button>
-                  <div className="border-t border-border/60 px-3 py-2 text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(event) =>
-                        handleNotificationRemove(notification.id, event)
-                      }
-                      className="h-7 rounded-full px-2 text-xs text-muted-foreground hover:text-destructive"
-                      aria-label={`${notification.title} 알림 삭제`}
-                    >
-                      <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                      삭제
-                    </Button>
-                  </div>
+                    <span className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground">
+                      {notification.message}
+                    </span>
+                    <span className="mt-2 block text-[11px] text-muted-foreground/70">
+                      {formatDistanceToNow(notification.createdAt, {
+                        addSuffix: true,
+                        locale: ko,
+                      })}
+                    </span>
+                  </span>
+                </button>
+                <div className="border-t border-border/60 px-3 py-2 text-right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={(event) =>
+                      handleNotificationRemove(notification.id, event)
+                    }
+                    className="h-7 rounded-full px-2 text-xs text-muted-foreground hover:text-destructive"
+                    aria-label={`${notification.title} 알림 삭제`}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                    삭제
+                  </Button>
                 </div>
-              </Fragment>
+              </div>
             ))}
           </div>
         )}
