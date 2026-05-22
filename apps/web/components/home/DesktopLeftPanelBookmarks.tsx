@@ -8,10 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBookmarks, useToggleBookmark } from "@/hooks/use-bookmarks";
 import type { Restaurant } from "@/types/restaurant";
 
+type InlinePanelRestaurant = Pick<Restaurant, "id" | "name" | "lat" | "lng"> &
+  Partial<Restaurant>;
+
 interface DesktopLeftPanelBookmarksProps {
-  onRestaurantOpen: (
-    restaurant: Pick<Restaurant, "id" | "lat" | "lng">,
-  ) => void;
+  onRestaurantOpen: (restaurant: InlinePanelRestaurant) => void;
   onClose?: () => void;
 }
 
