@@ -26,8 +26,6 @@ import { toast } from "@/lib/no-toast";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import {
-  Mail,
-  Calendar,
   LogOut,
   User,
   Lock,
@@ -55,20 +53,11 @@ interface Profile {
 }
 
 const PROFILE_SELECT = 'nickname, avatar_url';
-const MOBILE_SECONDARY_ACTIONS = [
-  {
-    href: "/mypage/submissions/edit",
-    icon: Edit,
-    title: "맛집 수정 요청",
-    description: "주소·정보를 바로잡기",
-  },
-  {
-    href: "/mypage/submissions/recommend",
-    icon: Youtube,
-    title: "쯔양 맛집 제보",
-    description: "영상 속 맛집 알려주기",
-  },
-];
+const PRIMARY_QUICK_ACTION_HREFS = new Set([
+  "/mypage/bookmarks",
+  "/mypage/reviews",
+  "/mypage/submissions/new",
+]);
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -483,6 +472,7 @@ export default function ProfilePage() {
       title: "저장한 맛집",
       description: `${bookmarks.length}개 북마크 확인`,
       accent: "bg-primary/10 text-primary",
+      desktopAccent: "md:bg-primary/10 md:text-primary",
     },
     {
       href: "/mypage/reviews",
@@ -490,6 +480,7 @@ export default function ProfilePage() {
       title: "내 리뷰",
       description: "작성·수정 내역 관리",
       accent: "bg-sky-500/10 text-sky-600",
+      desktopAccent: "md:bg-sky-500/10 md:text-sky-600",
     },
     {
       href: "/mypage/submissions/new",
@@ -497,6 +488,23 @@ export default function ProfilePage() {
       title: "맛집 제보",
       description: "새로운 맛집 알려주기",
       accent: "bg-emerald-500/10 text-emerald-600",
+      desktopAccent: "md:bg-emerald-500/10 md:text-emerald-600",
+    },
+    {
+      href: "/mypage/submissions/edit",
+      icon: Edit,
+      title: "수정 요청",
+      description: "주소·정보 바로잡기",
+      accent: "bg-amber-500/10 text-amber-600",
+      desktopAccent: "md:bg-amber-500/10 md:text-amber-600",
+    },
+    {
+      href: "/mypage/submissions/recommend",
+      icon: Youtube,
+      title: "쯔양 제보",
+      description: "영상 속 맛집 알려주기",
+      accent: "bg-red-500/10 text-red-600",
+      desktopAccent: "md:bg-red-500/10 md:text-red-600",
     },
     {
       href: "/?panel=settings",
@@ -504,17 +512,18 @@ export default function ProfilePage() {
       title: "지도 환경설정",
       description: "좌측 패널·지도 위치 조정",
       accent: "bg-violet-500/10 text-violet-600",
+      desktopAccent: "md:bg-violet-500/10 md:text-violet-600",
     },
   ];
   const nextProfileStep = profileCompletionItems.find((item) => !item.complete)?.label ?? "맛집 활동";
 
   return (
-    <div className="space-y-4 sm:space-y-5" data-mypage-profile-page="true">
+    <div className="space-y-3 sm:space-y-5" data-mypage-profile-page="true">
       <section
         className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-background to-secondary/30 shadow-sm"
         data-mypage-profile-hero="true"
       >
-        <div className="grid gap-4 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] lg:p-6">
+        <div className="grid gap-3 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] lg:p-6">
           <div className="flex min-w-0 flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:gap-4 sm:text-left">
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-primary/15 bg-background shadow-sm">
               {avatarUrl ? (
@@ -535,13 +544,16 @@ export default function ProfilePage() {
               <div className="min-w-0">
                 <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-primary sm:justify-start">
                   <Sparkles className="h-3.5 w-3.5" />
-                  마이페이지 허브
+                  <span className="md:hidden">내 활동 모아보기</span>
+                  <span className="hidden md:inline">마이페이지 허브</span>
                 </p>
                 <h1 className="mt-1 text-balance text-xl font-bold tracking-tight sm:text-3xl">
-                  {displayName}님, 오늘도 맛집 기록을 이어가요
+                  <span className="md:hidden">{displayName}님, 맛집 기록을 간편하게 관리해요</span>
+                  <span className="hidden md:inline">{displayName}님, 오늘도 맛집 기록을 이어가요</span>
                 </h1>
                 <p className="mt-1 break-words text-xs leading-5 text-muted-foreground sm:text-sm">
-                  {user.email} · 가입일 {joinedDateLabel}
+                  <span className="md:hidden">가입일 {joinedDateLabel}</span>
+                  <span className="hidden md:inline">{user.email} · 가입일 {joinedDateLabel}</span>
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2" data-mypage-profile-summary="true">
@@ -564,20 +576,28 @@ export default function ProfilePage() {
           <div className="rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm" data-mypage-next-actions="true">
             <div className="mb-2 flex items-center justify-between gap-2 px-1">
               <div>
-                <p className="text-sm font-semibold">바로 할 수 있는 일</p>
-                <p className="text-xs text-muted-foreground">마이페이지에서 자주 찾는 기능을 모았습니다</p>
+                <p className="text-sm font-semibold">
+                  <span className="md:hidden">자주 쓰는 메뉴</span>
+                  <span className="hidden md:inline">바로 할 수 있는 일</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="md:hidden">필요한 작업만 한곳에 모았습니다</span>
+                  <span className="hidden md:inline">마이페이지에서 자주 찾는 기능을 모았습니다</span>
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2">
               {profileQuickActions.map((action) => {
                 const Icon = action.icon;
+                const isPrimaryAction = PRIMARY_QUICK_ACTION_HREFS.has(action.href);
                 return (
                   <Link
                     key={action.href}
                     href={action.href}
-                    className="group flex min-w-0 items-center gap-2 rounded-2xl border border-border/70 bg-card px-2.5 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-3 sm:px-3"
+                    className={`group flex min-w-0 items-center gap-2 rounded-2xl border px-2.5 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-3 sm:px-3 md:border-border/70 md:bg-card ${isPrimaryAction ? "border-border/70 bg-card shadow-sm" : "border-border/50 bg-background/70"}`}
+                    data-mypage-primary-action={isPrimaryAction ? "true" : "false"}
                   >
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 ${action.accent}`}>
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 ${isPrimaryAction ? action.accent : "bg-muted text-muted-foreground"} ${action.desktopAccent}`}>
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -594,103 +614,11 @@ export default function ProfilePage() {
       </section>
       {/* 기본 정보 */}
       <Card>
-        <CardHeader>
-          <CardTitle>기본 정보</CardTitle>
-          <CardDescription>계정 정보를 확인하고 수정할 수 있습니다</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle>계정 정보</CardTitle>
+          <CardDescription>프로필에서 중복되는 정보는 줄이고 꼭 필요한 항목만 관리합니다</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-
-          {/* 프로필 사진 - 반응형 UI */}
-          <div className="space-y-4 md:hidden">
-            <Label className="flex items-center gap-2">
-              <Camera className="h-4 w-4" />
-              프로필 사진
-            </Label>
-            {/* 모바일: 중앙 정렬, 태블릿/데스크탑: 가로 배치 */}
-            <div className="flex flex-col items-center gap-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:py-0">
-              <div className="group h-24 w-24 shrink-0 rounded-full">
-                <label
-                  htmlFor="profile-avatar-upload"
-                  aria-label="프로필 사진 변경"
-                  className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full ring-2 ring-muted transition-all group-hover:ring-primary/30"
-                  style={{ width: '6rem', height: '6rem', aspectRatio: '1 / 1', borderRadius: '9999px', overflow: 'hidden' }}
-                >
-                  {avatarUrl ? (
-                    <NextImage
-                      src={avatarUrl}
-                      alt={displayName}
-                      fill
-                      sizes="96px"
-                      className="rounded-full object-cover"
-                      style={{ borderRadius: '9999px' }}
-                    />
-                  ) : (
-                    <div
-                      className="flex h-full w-full items-center justify-center rounded-full bg-primary/10"
-                      style={{ borderRadius: '9999px' }}
-                    >
-                      <User className="h-9 w-9 text-primary" />
-                    </div>
-                  )}
-
-                  <span
-                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 active:opacity-100"
-                    style={{ borderRadius: '9999px' }}
-                  >
-                    {avatarUploading ? (
-                      <Loader2 className="h-6 w-6 text-white animate-spin" />
-                    ) : (
-                      <Camera className="h-6 w-6 text-white" />
-                    )}
-                  </span>
-                  <input
-                    id="profile-avatar-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="sr-only"
-                    disabled={avatarUploading}
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row items-center gap-2">
-                  <h3 className="font-bold text-xl truncate max-w-[200px]">
-                    {displayName}
-                  </h3>
-                </div>
-
-                {/* 안내 텍스트 + 삭제 버튼 */}
-                <div className="text-sm text-muted-foreground text-center sm:text-left">
-                  <p>이미지 클릭하여 변경</p>
-                  <p className="text-xs">최대 2MB, JPG/PNG 권장</p>
-                  {profile?.avatar_url && (
-                    <button
-                      onClick={handleAvatarDelete}
-                      disabled={avatarUploading}
-                      className="text-xs text-destructive hover:underline mt-1 flex items-center gap-1 mx-auto sm:mx-0"
-                    >
-                      <X className="h-3 w-3" />
-                      사진 삭제
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Separator className="md:hidden" />
-
-          {/* 이메일 */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              이메일
-            </Label>
-            <Input value={user.email || ""} disabled className="bg-muted" />
-          </div>
-
+        <CardContent className="space-y-5">
           {/* 닉네임 */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
@@ -701,7 +629,7 @@ export default function ProfilePage() {
               <Input
                 value={newNickname}
                 onChange={(e) => setNewNickname(e.target.value)}
-                placeholder="닉네임을 입력하세요"
+                placeholder="닉네임을 입력하세요…"
               />
               <Button
                 onClick={handleNicknameChange}
@@ -716,14 +644,86 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          {/* 가입일 */}
-          <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">가입일</p>
-              <p className="font-medium">
-                {joinedDateLabel}
-              </p>
+          <Separator />
+
+          <div className="space-y-3" data-mypage-profile-photo-controls="true">
+            <Label className="flex items-center gap-2">
+              <Camera className="h-4 w-4" />
+              프로필 사진
+            </Label>
+            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3">
+              <label
+                htmlFor="profile-avatar-upload"
+                aria-label="프로필 사진 변경"
+                className="group relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border bg-background transition-colors hover:border-primary/40 focus-within:ring-2 focus-within:ring-primary"
+                style={{ aspectRatio: '1 / 1', borderRadius: '9999px', overflow: 'hidden' }}
+              >
+                {avatarUrl ? (
+                  <NextImage
+                    src={avatarUrl}
+                    alt={displayName}
+                    fill
+                    sizes="56px"
+                    className="rounded-full object-cover"
+                    style={{ borderRadius: '9999px' }}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-primary/10">
+                    <User className="h-6 w-6 text-primary" />
+                  </div>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 active:opacity-100">
+                  {avatarUploading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  ) : (
+                    <Camera className="h-5 w-5 text-white" />
+                  )}
+                </span>
+                <input
+                  id="profile-avatar-upload"
+                  name="profile-avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="sr-only"
+                  disabled={avatarUploading}
+                />
+              </label>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">이미지를 눌러 변경</p>
+                <p className="text-xs text-muted-foreground">최대 2MB, JPG/PNG 권장</p>
+              </div>
+              {profile?.avatar_url && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAvatarDelete}
+                  disabled={avatarUploading}
+                  aria-label="프로필 사진 삭제"
+                  className="h-11 w-11 shrink-0 touch-manipulation text-destructive hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-3" data-mypage-session-card="true">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">접속 관리</p>
+                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 shrink-0 touch-manipulation gap-2 rounded-2xl"
+                onClick={() => signOut()}
+              >
+                <LogOut className="h-4 w-4" />
+                로그아웃
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -749,7 +749,7 @@ export default function ProfilePage() {
                 type={showCurrentPassword ? "text" : "password"}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="현재 비밀번호를 입력하세요"
+                placeholder="현재 비밀번호를 입력하세요…"
               />
               <Button
                 type="button"
@@ -757,6 +757,7 @@ export default function ProfilePage() {
                 size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                aria-label={showCurrentPassword ? "현재 비밀번호 숨기기" : "현재 비밀번호 보기"}
               >
                 {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -771,7 +772,7 @@ export default function ProfilePage() {
                 type={showNewPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="새 비밀번호를 입력하세요"
+                placeholder="새 비밀번호를 입력하세요…"
               />
               <Button
                 type="button"
@@ -779,6 +780,7 @@ export default function ProfilePage() {
                 size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={() => setShowNewPassword(!showNewPassword)}
+                aria-label={showNewPassword ? "새 비밀번호 숨기기" : "새 비밀번호 보기"}
               >
                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -793,7 +795,7 @@ export default function ProfilePage() {
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="새 비밀번호를 다시 입력하세요"
+                placeholder="새 비밀번호를 다시 입력하세요…"
               />
               <Button
                 type="button"
@@ -801,6 +803,7 @@ export default function ProfilePage() {
                 size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? "새 비밀번호 확인 숨기기" : "새 비밀번호 확인 보기"}
               >
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
@@ -815,7 +818,7 @@ export default function ProfilePage() {
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                변경 중...
+                변경 중…
               </>
             ) : (
               "비밀번호 변경"
@@ -823,40 +826,6 @@ export default function ProfilePage() {
           </Button>
         </CardContent>
       </Card>
-
-      {/* 모바일 보조 메뉴 */}
-      <div className="space-y-3 md:hidden" data-mypage-mobile-secondary-actions="true">
-        <div className="grid grid-cols-2 gap-2">
-          {MOBILE_SECONDARY_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link key={action.href} href={action.href} className="block">
-                <Card className="h-full cursor-pointer rounded-2xl transition-colors hover:bg-muted/50">
-                  <CardContent className="flex h-full flex-col gap-2 p-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">{action.title}</span>
-                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                        {action.description}
-                      </span>
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-        <Button
-          variant="outline"
-          className="h-11 w-full gap-2 rounded-2xl"
-          onClick={() => signOut()}
-        >
-          <LogOut className="h-4 w-4" />
-          로그아웃
-        </Button>
-      </div>
 
       {/* 계정 비활성화 */}
       <Card className="border-yellow-500/50">
@@ -913,7 +882,7 @@ export default function ProfilePage() {
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      처리 중...
+                      처리 중…
                     </>
                   ) : (
                     "비활성화"
@@ -980,7 +949,7 @@ export default function ProfilePage() {
                   {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      삭제 중...
+                      삭제 중…
                     </>
                   ) : (
                     "영구 삭제"
