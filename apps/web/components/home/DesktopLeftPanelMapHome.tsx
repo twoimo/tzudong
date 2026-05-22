@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Clock, TrendingUp } from 'lucide-react';
+import { Clock, MapPin, TrendingUp } from 'lucide-react';
 
 import { StampCard } from '@/components/stamp/StampCard';
 import {
@@ -20,6 +20,7 @@ import {
   getLatestRestaurantsQueryKey,
   getPopularRestaurantsQueryKey,
   type LatestRestaurantSort,
+  type PopularRankTrend,
   POPULAR_RESTAURANTS_QUERY_KEY,
 } from '@/lib/popular-restaurants';
 import type { Restaurant } from '@/types/restaurant';
@@ -32,8 +33,8 @@ type DesktopLeftPanelMapHomeProps = {
   isKoreanOnly?: boolean;
 };
 
-const POPULAR_RESTAURANT_LIMIT = 3;
-const POPULAR_RESTAURANT_QUERY_LIMIT = 12;
+const POPULAR_RESTAURANT_LIMIT = 5;
+const POPULAR_RESTAURANT_QUERY_LIMIT = 20;
 const LATEST_RESTAURANT_LIMIT = 10;
 const LATEST_RESTAURANT_QUERY_LIMIT = 24;
 const LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT =
@@ -47,12 +48,34 @@ const latestRestaurantSortOptions: Array<{
   { value: 'popular', label: '인기순' },
 ];
 
-function DesktopRestaurantCardSkeleton({ withRank = false }: { withRank?: boolean }) {
+
+function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
+  if (!trend || trend.trend === 'unknown' || trend.trend === 'same') return null;
+
+  if (trend.trend === 'new') {
+    return {
+      label: 'NEW',
+      title: '이전 인기 검색 스냅샷에 없던 맛집',
+      className: 'bg-primary/10 text-primary',
+    };
+  }
+
+  if (trend.rankDelta === null || trend.rankDelta === 0) return null;
+
+  const isUp = trend.rankDelta > 0;
+
+  return {
+    label: `${isUp ? '▲' : '▼'}${Math.abs(trend.rankDelta)}`,
+    title: `이전 인기 검색 스냅샷 대비 ${Math.abs(trend.rankDelta)}위 ${isUp ? '상승' : '하락'}`,
+    className: isUp
+      ? 'bg-emerald-50 text-emerald-700'
+      : 'bg-muted text-muted-foreground',
+  };
+}
+
+function DesktopRestaurantCardSkeleton() {
   return (
     <div className="relative overflow-hidden rounded-xl border border-border bg-card">
-      {withRank && (
-        <Skeleton className="absolute left-2 top-2 z-20 h-7 w-7 rounded-full" />
-      )}
       <Skeleton className="aspect-video w-full rounded-none" />
       <div className="space-y-1.5 p-3">
         <div className="flex items-center justify-between gap-2">
@@ -71,9 +94,6 @@ export default function DesktopLeftPanelMapHome({
   isKoreanOnly = true,
 }: DesktopLeftPanelMapHomeProps) {
   const queryClient = useQueryClient();
-  const [popularThumbnailIndexes, setPopularThumbnailIndexes] = useState<
-    Record<string, number>
-  >({});
   const [latestThumbnailIndexes, setLatestThumbnailIndexes] = useState<
     Record<string, number>
   >({});
@@ -159,16 +179,6 @@ export default function DesktopLeftPanelMapHome({
     [desktopLeftPanelHomePopularQueryKey, onRestaurantOpen, queryClient],
   );
 
-  const handlePopularThumbnailChange = useCallback(
-    (id: string, index: number) => {
-      setPopularThumbnailIndexes((current) => ({
-        ...current,
-        [id]: index,
-      }));
-    },
-    [],
-  );
-
   const handleLatestThumbnailChange = useCallback(
     (id: string, index: number) => {
       setLatestThumbnailIndexes((current) => ({
@@ -200,48 +210,77 @@ export default function DesktopLeftPanelMapHome({
                 <span>인기 검색 맛집</span>
               </h2>
               <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                처음 방문해도 바로 눌러볼 만한 맛집 3곳
+                처음 방문해도 바로 눌러볼 만한 맛집 5곳
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
-              TOP 3
+              TOP 5
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3">
+          <div className="divide-y divide-border/70">
             {isLoading ? (
               Array.from({ length: POPULAR_RESTAURANT_LIMIT }, (_, index) => (
-                <DesktopRestaurantCardSkeleton key={index} withRank />
+                <div key={index} className="flex items-center gap-2 px-1 py-2">
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <Skeleton className="h-4 w-24 rounded-full" />
+                    <Skeleton className="h-3 w-40 rounded-full" />
+                  </div>
+                </div>
               ))
             ) : popularRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
                 인기 검색 데이터가 쌓이면 여기에서 바로 보여드릴게요.
               </div>
             ) : (
-              popularRestaurants.map((restaurant, index) => (
-                <div key={restaurant.id} className="relative">
-                  <span
-                    className="absolute left-2 top-2 z-20 grid h-7 min-w-7 place-items-center rounded-full bg-primary px-2 text-xs font-bold text-primary-foreground shadow-sm"
-                    aria-hidden="true"
+              popularRestaurants.map((restaurant, index) => {
+                const trendBadge = getPopularRankTrendBadge(
+                  restaurant.popularRankTrend,
+                );
+
+                return (
+                  <button
+                    key={restaurant.id}
+                    type="button"
+                    onClick={() => handleRestaurantOpen(restaurant)}
+                    className="group flex w-full items-center gap-2 px-1 py-2 text-left transition-colors hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                    aria-label={`${restaurant.name} 인기 맛집 상세 보기`}
                   >
-                    {index + 1}
-                  </span>
-                  <StampCard
-                    restaurant={restaurant}
-                    isVisited={false}
-                    isUserStampsReady={false}
-                    currentThumbnailIndex={
-                      popularThumbnailIndexes[restaurant.id] ?? 0
-                    }
-                    onThumbnailChange={handlePopularThumbnailChange}
-                    onClick={handleRestaurantOpen}
-                    size="default"
-                    stampSize="compact"
-                    showAddress
-                    categoryFallback="맛집"
-                  />
-                </div>
-              ))
+                    <span
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary"
+                      aria-hidden="true"
+                    >
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                          {restaurant.name}
+                        </span>
+                        {trendBadge ? (
+                          <span
+                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${trendBadge.className}`}
+                            title={trendBadge.title}
+                            aria-label={trendBadge.title}
+                          >
+                            {trendBadge.label}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        <span className="truncate">
+                          {restaurant.road_address ||
+                            restaurant.jibun_address ||
+                            restaurant.english_address ||
+                            '주소 없음'}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
