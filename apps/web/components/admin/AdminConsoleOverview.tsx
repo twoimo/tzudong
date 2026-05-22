@@ -955,8 +955,8 @@ function AdminSidebar({
   return (
     <aside
       className={cn(
-        "sticky top-0 z-30 flex w-full shrink-0 flex-col overflow-x-hidden border-y border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:top-0 md:h-[calc(100dvh_-_var(--app-header-height,0px))] md:w-48 md:overflow-y-auto md:border-y-0 md:border-r md:p-1.5",
-        isCollapsed && "md:w-14 md:items-center md:px-1.5",
+        "relative z-30 flex max-h-[42dvh] w-full shrink-0 flex-col overflow-x-hidden border-y border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:h-full md:max-h-none md:min-h-0 md:w-full md:overflow-y-auto md:border-y-0 md:border-r md:p-2",
+        isCollapsed && "md:items-center md:px-1.5",
       )}
       aria-label="관리자 콘솔 사이드바"
       data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
@@ -2728,10 +2728,10 @@ export function AdminConsoleOverview() {
       <div
         id="overview"
         className={cn(
-          "grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-0 md:grid-rows-1",
+          "grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden md:grid-rows-1",
           isSidebarCollapsed
-            ? "md:grid-cols-[3.5rem_minmax(0,1fr)]"
-            : "md:grid-cols-[12rem_minmax(0,1fr)]",
+            ? "md:grid-cols-[4.5rem_minmax(0,1fr)]"
+            : "md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[18rem_minmax(0,1fr)]",
         )}
         data-admin-console-layout="sidebar-content"
         data-admin-console-sidebar-collapsed={isSidebarCollapsed ? "true" : "false"}
@@ -2751,7 +2751,7 @@ export function AdminConsoleOverview() {
           ref={canvasRef}
           tabIndex={-1}
           aria-label="관리자 콘솔 작업 화면"
-          className="h-full min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain border-y border-border bg-background p-2 md:border-y-0"
+          className="h-full min-h-0 min-w-0 overflow-y-auto overscroll-contain border-y border-border bg-background p-2 sm:p-3 md:border-y-0 md:p-4"
           data-admin-console-content="true"
         >
           <p className="sr-only" aria-live="polite">
