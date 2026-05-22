@@ -27,8 +27,6 @@ import type { Restaurant } from '@/types/restaurant';
 
 type DesktopLeftPanelMapHomeProps = {
   onRestaurantOpen: (restaurant: Restaurant) => void;
-  onOpenUserProfile?: (userId: string) => void;
-  onOpenAuth?: () => void;
   selectedRegion?: string | null;
   isKoreanOnly?: boolean;
 };
@@ -220,15 +218,23 @@ export default function DesktopLeftPanelMapHome({
 
           <div className="divide-y divide-border/70">
             {isLoading ? (
-              Array.from({ length: POPULAR_RESTAURANT_LIMIT }, (_, index) => (
-                <div key={index} className="flex items-center gap-2 px-1 py-2">
-                  <Skeleton className="h-6 w-6 rounded-full" />
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <Skeleton className="h-4 w-24 rounded-full" />
-                    <Skeleton className="h-3 w-40 rounded-full" />
+              <div
+                className="divide-y divide-border/70"
+                role="status"
+                aria-live="polite"
+                aria-label="인기 검색 맛집 로딩 중"
+                data-desktop-left-panel-popular-skeleton="true"
+              >
+                {Array.from({ length: POPULAR_RESTAURANT_LIMIT }, (_, index) => (
+                  <div key={index} className="flex items-center gap-2 px-1 py-2">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <Skeleton className="h-4 w-24 rounded-full" />
+                      <Skeleton className="h-3 w-40 rounded-full" />
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             ) : popularRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
                 인기 검색 데이터가 쌓이면 여기에서 바로 보여드릴게요.
@@ -330,9 +336,17 @@ export default function DesktopLeftPanelMapHome({
 
           <div className="grid grid-cols-1 gap-3">
             {isLatestLoading ? (
-              Array.from({ length: 3 }, (_, index) => (
-                <DesktopRestaurantCardSkeleton key={index} />
-              ))
+              <div
+                className="grid grid-cols-1 gap-3"
+                role="status"
+                aria-live="polite"
+                aria-label="최근 추가된 맛집 로딩 중"
+                data-desktop-left-panel-latest-skeleton="true"
+              >
+                {Array.from({ length: LATEST_RESTAURANT_LIMIT }, (_, index) => (
+                  <DesktopRestaurantCardSkeleton key={index} />
+                ))}
+              </div>
             ) : visibleLatestRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">
                 새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.
