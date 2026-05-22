@@ -62,15 +62,21 @@ function StampPageSkeletonComponent() {
             aria-label="도장 페이지를 불러오는 중"
         >
             <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0 space-y-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="space-y-2 min-w-0 flex-1">
-                            <Skeleton className="h-7 w-32" />
-                            <Skeleton className="h-4 w-52 max-w-full" />
+                <div className="shrink-0 space-y-4 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1 basis-[min(15rem,100%)] space-y-2">
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <Skeleton className="h-7 w-32 max-w-full rounded-lg" />
+                                <Skeleton className="h-4 w-12 rounded-full" />
+                            </div>
+                            <Skeleton className="h-4 w-52 max-w-full rounded-full" />
                         </div>
-                        <Skeleton className="h-9 w-24 rounded-md" />
+                        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2" aria-hidden="true">
+                            <Skeleton className="h-8 w-8 rounded-full" />
+                            <Skeleton className="h-10 w-10 rounded-md" />
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6">
                         <Skeleton className="h-10 rounded-md lg:col-span-2" />
                         <Skeleton className="h-10 rounded-md" />
                         <Skeleton className="h-10 rounded-md" />
