@@ -30,6 +30,9 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(leftPanelBookmarkSource).toContain('onClose?: () => void;');
     expect(leftPanelBookmarkSource).toContain('aria-label="북마크 패널 닫기"');
     expect(leftPanelBookmarkSource).toContain('className="h-9 w-9 rounded-full hover:bg-muted"');
+    expect(leftPanelBookmarkSource).toContain('flex flex-wrap items-start justify-between gap-2');
+    expect(leftPanelBookmarkSource).toContain('basis-[min(10rem,100%)]');
+    expect(leftPanelBookmarkSource).toContain('text-pretty');
     expect(leftPanelBookmarkSource).toContain(
       'className="group rounded-xl border border-border bg-card shadow-sm transition-colors hover:bg-accent"',
     );
@@ -71,7 +74,10 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(leftPanelNotificationSource).toContain('aria-label="알림 패널 닫기"');
     expect(leftPanelNotificationSource).toContain('className="h-9 w-9 rounded-full hover:bg-muted"');
     expect(leftPanelNotificationSource).toContain('className="grid gap-2"');
-    expect(leftPanelNotificationSource).toContain('className="truncate text-xs text-muted-foreground"');
+    expect(leftPanelNotificationSource).toContain('flex flex-wrap items-start justify-between gap-2');
+    expect(leftPanelNotificationSource).toContain('basis-[min(10rem,100%)]');
+    expect(leftPanelNotificationSource).toContain('text-pretty');
+    expect(leftPanelNotificationSource).not.toContain('className="truncate text-xs text-muted-foreground"');
       });
 
   test('mobile bookmark and notification controls keep the same touch, state, and responsive affordances', () => {
