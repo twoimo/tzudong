@@ -956,17 +956,17 @@ function AdminSidebar({
   return (
     <aside
       className={cn(
-        "sticky top-0 z-30 flex w-full shrink-0 flex-col overflow-x-hidden border-y border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none lg:top-0 lg:h-[calc(100dvh_-_var(--app-header-height,0px))] lg:w-48 lg:overflow-y-auto lg:border-y-0 lg:border-r lg:p-1.5",
-        isCollapsed && "lg:w-14 lg:items-center lg:px-1.5",
+        "sticky top-0 z-30 flex w-full shrink-0 flex-col overflow-x-hidden border-y border-border bg-gradient-to-b from-card via-card to-background/95 p-2 shadow-sm transition-[width,padding] duration-300 motion-reduce:transition-none md:top-0 md:h-[calc(100dvh_-_var(--app-header-height,0px))] md:w-48 md:overflow-y-auto md:border-y-0 md:border-r md:p-1.5",
+        isCollapsed && "md:w-14 md:items-center md:px-1.5",
       )}
       aria-label="관리자 콘솔 사이드바"
       data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}
     >
       <div
         className={cn(
-          "mb-2 flex min-h-10 items-center gap-2 border-b border-border/70 px-1 pb-2 transition-[border-color] duration-200 motion-reduce:transition-none lg:mb-1.5 lg:min-h-9 lg:pb-1.5",
+          "mb-2 flex min-h-10 items-center gap-2 border-b border-border/70 px-1 pb-2 transition-[border-color] duration-200 motion-reduce:transition-none md:mb-1.5 md:min-h-9 md:pb-1.5",
           isCollapsed &&
-            "lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1",
+            "md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1",
         )}
       >
         <ReturnToMapButton iconOnly className="h-8 w-8" />
@@ -974,7 +974,7 @@ function AdminSidebar({
           href="/"
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/15 bg-primary/5 text-primary transition hover:border-primary/30 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
-            isCollapsed && "lg:hidden",
+            isCollapsed && "md:hidden",
           )}
           aria-label="쯔동여지도 홈으로 이동"
         >
@@ -991,7 +991,7 @@ function AdminSidebar({
         <div
           className={cn(
             "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
-            (!showLabels || isCollapsed) && "lg:sr-only",
+            (!showLabels || isCollapsed) && "md:sr-only",
           )}
         >
           <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-[-0.03em] text-foreground text-pretty">
@@ -1006,8 +1006,8 @@ function AdminSidebar({
           variant="ghost"
           size="sm"
           className={cn(
-            "ml-auto hidden h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background lg:inline-flex",
-            isCollapsed && "lg:m-0",
+            "ml-auto hidden h-8 w-8 rounded-xl border border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background md:inline-flex",
+            isCollapsed && "md:m-0",
           )}
           aria-pressed={isCollapsed}
           aria-expanded={!isCollapsed}
@@ -1029,22 +1029,22 @@ function AdminSidebar({
         id="admin-console-menu"
         aria-label="관리자 통합 메뉴"
         className={cn(
-          "flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden lg:block lg:min-h-0 lg:flex-1 lg:space-y-1.5 lg:overflow-x-visible lg:pb-0",
-          isCollapsed && "lg:flex lg:w-full lg:flex-col lg:items-center",
+          "flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:block md:min-h-0 md:flex-1 md:space-y-1.5 md:overflow-x-visible md:pb-0",
+          isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
         )}
       >
         {orderedSidebarSections.map((section) => (
           <div
             key={section.label}
             className={cn(
-              "flex shrink-0 gap-2 lg:block lg:space-y-1",
-              isCollapsed && "lg:flex lg:w-full lg:flex-col lg:items-center",
+              "flex shrink-0 gap-2 md:block md:space-y-1",
+              isCollapsed && "md:flex md:w-full md:flex-col md:items-center",
             )}
           >
             <p
               className={cn(
-                "sr-only px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none lg:not-sr-only",
-                (!showLabels || isCollapsed) && "lg:h-px lg:px-0 lg:opacity-0",
+                "sr-only px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none md:not-sr-only",
+                (!showLabels || isCollapsed) && "md:h-px md:px-0 md:opacity-0",
               )}
             >
               {section.label}
@@ -1067,9 +1067,9 @@ function AdminSidebar({
                   aria-current={isActive ? "page" : undefined}
                   aria-controls="admin-console-canvas"
                   className={cn(
-                    "group relative flex min-h-11 min-w-[8.25rem] shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-xl border px-3 py-2 text-left text-sm transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none lg:min-h-9 lg:min-w-0 lg:w-full lg:shrink lg:rounded-lg lg:px-2 lg:py-1",
+                    "group relative flex min-h-11 min-w-[8.25rem] shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-xl border px-3 py-2 text-left text-sm transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none md:min-h-9 md:min-w-0 md:w-full md:shrink md:rounded-lg md:px-2 md:py-1",
                     isCollapsed &&
-                      "lg:mx-auto lg:h-9 lg:min-h-9 lg:w-9 lg:justify-center lg:gap-0 lg:px-0",
+                      "md:mx-auto md:h-9 md:min-h-9 md:w-9 md:justify-center md:gap-0 md:px-0",
                     isActive
                       ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
                       : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
@@ -1078,20 +1078,20 @@ function AdminSidebar({
                 >
                   <span
                     className={cn(
-                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none lg:h-6 lg:w-6 lg:rounded-md",
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors motion-reduce:transition-none md:h-6 md:w-6 md:rounded-md",
                       isActive
                         ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
                         : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
                     )}
                     aria-hidden="true"
                   >
-                    <Icon className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+                    <Icon className="h-4 w-4 md:h-3.5 md:w-3.5" />
                   </span>
                   <span
                     className={cn(
                       "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
                       (!showLabels || isCollapsed) &&
-                        "lg:hidden lg:w-0 lg:flex-none lg:opacity-0",
+                        "md:hidden md:w-0 md:flex-none md:opacity-0",
                     )}
                   >
                     <span className="block truncate font-semibold leading-5">
@@ -1122,7 +1122,7 @@ function AdminSidebar({
                             ? "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground/80"
                             : "border-border bg-background/80 text-muted-foreground",
                         (!showLabels || isCollapsed) &&
-                          "lg:absolute lg:right-1 lg:top-1 lg:h-2 lg:w-2 lg:border-0 lg:p-0 lg:text-[0px]",
+                          "md:absolute md:right-1 md:top-1 md:h-2 md:w-2 md:border-0 md:p-0 md:text-[0px]",
                       )}
                       aria-hidden="true"
                     >
@@ -1139,8 +1139,8 @@ function AdminSidebar({
       <Popover open={isOrderEditorOpen} onOpenChange={setIsOrderEditorOpen}>
         <div
           className={cn(
-            "mt-2 shrink-0 pt-0 lg:mt-auto lg:pt-2",
-            isCollapsed && "lg:flex lg:w-full lg:justify-center",
+            "mt-2 shrink-0 pt-0 md:mt-auto md:pt-2",
+            isCollapsed && "md:flex md:w-full md:justify-center",
           )}
         >
           <PopoverTrigger asChild>
@@ -1149,9 +1149,9 @@ function AdminSidebar({
               variant="ghost"
               size="sm"
               className={cn(
-                "min-h-10 rounded-xl border border-border/80 bg-background/75 px-3 text-xs font-bold text-muted-foreground shadow-sm touch-manipulation hover:border-primary/20 hover:bg-background hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background lg:min-h-8 lg:px-2",
+                "min-h-10 rounded-xl border border-border/80 bg-background/75 px-3 text-xs font-bold text-muted-foreground shadow-sm touch-manipulation hover:border-primary/20 hover:bg-background hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background md:min-h-8 md:px-2",
                 isCollapsed
-                  ? "lg:h-9 lg:w-9 lg:px-0"
+                  ? "md:h-9 md:w-9 md:px-0"
                   : "w-full justify-start gap-2",
               )}
               aria-label="사이드바 메뉴 순서 설정"
@@ -1163,7 +1163,7 @@ function AdminSidebar({
               }
             >
               <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className={cn("truncate", isCollapsed && "lg:sr-only")}>
+              <span className={cn("truncate", isCollapsed && "md:sr-only")}>
                 순서
               </span>
               {!isCollapsed && isOrderLoading ? (
@@ -2577,12 +2577,12 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
   return (
     <section
       aria-label={`${module.title} 작업 화면`}
-      className="flex min-h-full flex-col lg:h-full lg:min-h-0"
+      className="flex min-h-full flex-col md:h-full md:min-h-0"
     >
       <div
         className={cn(
-          "min-h-[420px] flex-1 rounded-xl border border-border bg-background shadow-sm lg:min-h-0",
-          "overflow-visible lg:overflow-hidden",
+          "min-h-[420px] flex-1 rounded-xl border border-border bg-background shadow-sm md:min-h-0",
+          "overflow-visible md:overflow-hidden",
         )}
       >
         {moduleContent}
@@ -2730,10 +2730,10 @@ export function AdminConsoleOverview() {
       <div
         id="overview"
         className={cn(
-          "grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-0 lg:grid-rows-1",
+          "grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-0 md:grid-rows-1",
           isSidebarCollapsed
-            ? "lg:grid-cols-[3.5rem_minmax(0,1fr)]"
-            : "lg:grid-cols-[12rem_minmax(0,1fr)]",
+            ? "md:grid-cols-[3.5rem_minmax(0,1fr)]"
+            : "md:grid-cols-[12rem_minmax(0,1fr)]",
         )}
         data-admin-console-layout="sidebar-content"
         data-admin-console-sidebar-collapsed={isSidebarCollapsed ? "true" : "false"}
@@ -2753,7 +2753,7 @@ export function AdminConsoleOverview() {
           ref={canvasRef}
           tabIndex={-1}
           aria-label="관리자 콘솔 작업 화면"
-          className="h-full min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain border-y border-border bg-background p-2 sm:p-2 lg:border-y-0 lg:p-2 xl:p-2"
+          className="h-full min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain border-y border-border bg-background p-2 md:border-y-0"
           data-admin-console-content="true"
         >
           <p className="sr-only" aria-live="polite">
