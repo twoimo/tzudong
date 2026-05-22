@@ -55,6 +55,20 @@ interface Profile {
 }
 
 const PROFILE_SELECT = 'nickname, avatar_url';
+const MOBILE_SECONDARY_ACTIONS = [
+  {
+    href: "/mypage/submissions/edit",
+    icon: Edit,
+    title: "맛집 수정 요청",
+    description: "주소·정보를 바로잡기",
+  },
+  {
+    href: "/mypage/submissions/recommend",
+    icon: Youtube,
+    title: "쯔양 맛집 제보",
+    description: "영상 속 맛집 알려주기",
+  },
+];
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -495,14 +509,14 @@ export default function ProfilePage() {
   const nextProfileStep = profileCompletionItems.find((item) => !item.complete)?.label ?? "맛집 활동";
 
   return (
-    <div className="space-y-5" data-mypage-profile-page="true">
+    <div className="space-y-4 sm:space-y-5" data-mypage-profile-page="true">
       <section
         className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-background to-secondary/30 shadow-sm"
         data-mypage-profile-hero="true"
       >
-        <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] lg:p-6">
-          <div className="flex min-w-0 gap-4">
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-primary/15 bg-background shadow-sm sm:h-20 sm:w-20">
+        <div className="grid gap-4 p-3 sm:gap-5 sm:p-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.92fr)] lg:p-6">
+          <div className="flex min-w-0 flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:gap-4 sm:text-left">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-primary/15 bg-background shadow-sm">
               {avatarUrl ? (
                 <NextImage
                   src={avatarUrl}
@@ -519,29 +533,29 @@ export default function ProfilePage() {
             </div>
             <div className="min-w-0 flex-1 space-y-3">
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-primary sm:justify-start">
                   <Sparkles className="h-3.5 w-3.5" />
                   마이페이지 허브
                 </p>
-                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
+                <h1 className="mt-1 text-balance text-xl font-bold tracking-tight sm:text-3xl">
                   {displayName}님, 오늘도 맛집 기록을 이어가요
                 </h1>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
+                <p className="mt-1 break-words text-xs leading-5 text-muted-foreground sm:text-sm">
                   {user.email} · 가입일 {joinedDateLabel}
                 </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-3" data-mypage-profile-summary="true">
-                <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+              <div className="grid grid-cols-3 gap-2" data-mypage-profile-summary="true">
+                <div className="rounded-2xl border border-border/70 bg-background/80 p-2.5 sm:p-3">
                   <p className="text-xs text-muted-foreground">북마크</p>
-                  <p className="mt-1 text-xl font-bold">{bookmarks.length}개</p>
+                  <p className="mt-1 text-lg font-bold sm:text-xl">{bookmarks.length}개</p>
                 </div>
-                <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+                <div className="rounded-2xl border border-border/70 bg-background/80 p-2.5 sm:p-3">
                   <p className="text-xs text-muted-foreground">프로필 완성도</p>
-                  <p className="mt-1 text-xl font-bold">{profileCompletionPercent}%</p>
+                  <p className="mt-1 text-lg font-bold sm:text-xl">{profileCompletionPercent}%</p>
                 </div>
-                <div className="rounded-2xl border border-border/70 bg-background/80 p-3">
+                <div className="rounded-2xl border border-border/70 bg-background/80 p-2.5 sm:p-3">
                   <p className="text-xs text-muted-foreground">다음 추천</p>
-                  <p className="mt-1 truncate text-sm font-semibold">{nextProfileStep}</p>
+                  <p className="mt-1 truncate text-xs font-semibold sm:text-sm">{nextProfileStep}</p>
                 </div>
               </div>
             </div>
@@ -554,23 +568,23 @@ export default function ProfilePage() {
                 <p className="text-xs text-muted-foreground">마이페이지에서 자주 찾는 기능을 모았습니다</p>
               </div>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2">
               {profileQuickActions.map((action) => {
                 const Icon = action.icon;
                 return (
                   <Link
                     key={action.href}
                     href={action.href}
-                    className="group flex min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-card px-3 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="group flex min-w-0 items-center gap-2 rounded-2xl border border-border/70 bg-card px-2.5 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:gap-3 sm:px-3"
                   >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${action.accent}`}>
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-9 sm:w-9 ${action.accent}`}>
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{action.title}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{action.description}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground sm:text-xs">{action.description}</span>
                     </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    <ChevronRight className="hidden h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block" />
                   </Link>
                 );
               })}
@@ -810,121 +824,38 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* 데스크탑에서는 숨김 (사이드바에 있음) */}
-      <div className="space-y-4 md:hidden">
-        {/* 북마크 */}
-        <Link href="/mypage/bookmarks" className="block">
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Bookmark className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">나의 북마크 내역</p>
-                    <p className="text-sm text-muted-foreground">
-                      저장한 맛집 {bookmarks.length}개
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* 리뷰 내역 */}
-        <Link href="/mypage/reviews" className="block">
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">나의 리뷰 내역</p>
-                    <p className="text-sm text-muted-foreground">
-                      작성한 리뷰 확인
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* 제보 내역 */}
-        <Link href="/mypage/submissions/new" className="block">
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">신규 맛집 제보</p>
-                    <p className="text-sm text-muted-foreground">
-                      새로운 맛집 알려주기
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* 맛집 수정 요청 */}
-        <Link href="/mypage/submissions/edit" className="block">
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Edit className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">맛집 수정 요청</p>
-                    <p className="text-sm text-muted-foreground">
-                      기존 맛집 정보 수정
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* 쯔양 맛집 제보 */}
-        <Link href="/mypage/submissions/recommend" className="block">
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Youtube className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">쯔양 맛집 제보</p>
-                    <p className="text-sm text-muted-foreground">
-                      쯔양이 방문한 맛집 제보
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* 로그아웃 (모바일용) */}
-        <Card>
-          <CardContent className="pt-6">
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => signOut()}
-            >
-              <LogOut className="h-4 w-4" />
-              로그아웃
-            </Button>
-          </CardContent>
-        </Card>
+      {/* 모바일 보조 메뉴 */}
+      <div className="space-y-3 md:hidden" data-mypage-mobile-secondary-actions="true">
+        <div className="grid grid-cols-2 gap-2">
+          {MOBILE_SECONDARY_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link key={action.href} href={action.href} className="block">
+                <Card className="h-full cursor-pointer rounded-2xl transition-colors hover:bg-muted/50">
+                  <CardContent className="flex h-full flex-col gap-2 p-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{action.title}</span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {action.description}
+                      </span>
+                    </span>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+        <Button
+          variant="outline"
+          className="h-11 w-full gap-2 rounded-2xl"
+          onClick={() => signOut()}
+        >
+          <LogOut className="h-4 w-4" />
+          로그아웃
+        </Button>
       </div>
 
       {/* 계정 비활성화 */}
