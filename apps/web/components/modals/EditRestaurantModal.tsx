@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useEffect, useCallback, useRef } from "react";
+import { memo, useState, useEffect, useCallback, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -36,9 +36,36 @@ interface EditRestaurantModalProps {
         category: string[];
         youtube_reviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[];
     };
+    presentation?: 'auto' | 'map-panel';
 }
 
-export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData }: EditRestaurantModalProps) {
+type DesktopEditPanelPosition = {
+    x: number;
+    y: number;
+};
+
+type DesktopEditPanelDragState = {
+    pointerId: number;
+    startX: number;
+    startY: number;
+    initialLeft: number;
+    initialTop: number;
+    originX: number;
+    originY: number;
+    panelWidth: number;
+    panelHeight: number;
+};
+
+const DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN = 16;
+const DESKTOP_EDIT_PANEL_KEYBOARD_STEP = 24;
+const DEFAULT_DESKTOP_EDIT_PANEL_POSITION: DesktopEditPanelPosition = { x: 0, y: 0 };
+
+const clampDesktopEditPanelAxis = (value: number, min: number, max: number) => {
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+};
+
+export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData, presentation = 'auto' }: EditRestaurantModalProps) {
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [editFormData, setEditFormData] = useState(initialFormData);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
@@ -47,7 +74,11 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
     const [currentStep, setCurrentStep] = useState<EditRestaurantRequestStep>(1);
     const [validationMessage, setValidationMessage] = useState<string | null>(null);
+    const [desktopEditPanelPosition, setDesktopEditPanelPosition] = useState<DesktopEditPanelPosition>(DEFAULT_DESKTOP_EDIT_PANEL_POSITION);
     const mobileFormRef = useRef<HTMLFormElement>(null);
+    const desktopEditPanelRef = useRef<HTMLElement>(null);
+    const desktopEditPanelDragRef = useRef<DesktopEditPanelDragState | null>(null);
+    const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
 
     const handleEditFormChange = (field: string, value: string | string[]) => {
         setValidationMessage(null);
@@ -231,6 +262,111 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         const scrollContainer = mobileFormRef.current?.parentElement;
         scrollContainer?.scrollTo({ top: 0, behavior: 'instant' });
     }, [currentStep, isMobileOrTablet, isOpen]);
+
+    useEffect(() => {
+        if (isOpen) return;
+
+        desktopEditPanelDragRef.current = null;
+        setDesktopEditPanelPosition(DEFAULT_DESKTOP_EDIT_PANEL_POSITION);
+    }, [isOpen]);
+
+    const getClampedDesktopEditPanelPosition = useCallback((clientX: number, clientY: number): DesktopEditPanelPosition | null => {
+        const dragState = desktopEditPanelDragRef.current;
+        if (!dragState || typeof window === 'undefined') return null;
+
+        const deltaX = clientX - dragState.startX;
+        const deltaY = clientY - dragState.startY;
+        const minLeft = DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const minTop = DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = window.innerWidth - dragState.panelWidth - DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const maxTop = window.innerHeight - dragState.panelHeight - DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const clampedLeft = clampDesktopEditPanelAxis(dragState.initialLeft + deltaX, minLeft, maxLeft);
+        const clampedTop = clampDesktopEditPanelAxis(dragState.initialTop + deltaY, minTop, maxTop);
+
+        return {
+            x: dragState.originX + clampedLeft - dragState.initialLeft,
+            y: dragState.originY + clampedTop - dragState.initialTop,
+        };
+    }, []);
+
+    const handleDesktopEditPanelPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+        if (!shouldRenderMapPanel || event.button !== 0) return;
+
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('button,input,textarea,select,a,[role="button"],[data-radix-popper-content-wrapper]')) {
+            return;
+        }
+
+        const panel = desktopEditPanelRef.current;
+        if (!panel) return;
+
+        const rect = panel.getBoundingClientRect();
+        desktopEditPanelDragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            initialLeft: rect.left,
+            initialTop: rect.top,
+            originX: desktopEditPanelPosition.x,
+            originY: desktopEditPanelPosition.y,
+            panelWidth: rect.width,
+            panelHeight: rect.height,
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }, [desktopEditPanelPosition.x, desktopEditPanelPosition.y, shouldRenderMapPanel]);
+
+    const handleDesktopEditPanelPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+        if (desktopEditPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        const nextPosition = getClampedDesktopEditPanelPosition(event.clientX, event.clientY);
+        if (nextPosition) {
+            setDesktopEditPanelPosition(nextPosition);
+        }
+    }, [getClampedDesktopEditPanelPosition]);
+
+    const handleDesktopEditPanelPointerEnd = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+        if (desktopEditPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        desktopEditPanelDragRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    }, []);
+
+    const moveDesktopEditPanelByKeyboard = useCallback((deltaX: number, deltaY: number) => {
+        const panel = desktopEditPanelRef.current;
+        if (!panel || typeof window === 'undefined') return;
+
+        const rect = panel.getBoundingClientRect();
+        const minLeft = DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const minTop = DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = window.innerWidth - rect.width - DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const maxTop = window.innerHeight - rect.height - DESKTOP_EDIT_PANEL_VIEWPORT_MARGIN;
+        const clampedLeft = clampDesktopEditPanelAxis(rect.left + deltaX, minLeft, maxLeft);
+        const clampedTop = clampDesktopEditPanelAxis(rect.top + deltaY, minTop, maxTop);
+
+        setDesktopEditPanelPosition((current) => ({
+            x: current.x + clampedLeft - rect.left,
+            y: current.y + clampedTop - rect.top,
+        }));
+    }, []);
+
+    const handleDesktopEditPanelKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
+        const step = event.shiftKey ? DESKTOP_EDIT_PANEL_KEYBOARD_STEP * 2 : DESKTOP_EDIT_PANEL_KEYBOARD_STEP;
+        const keyboardMoves: Partial<Record<string, [number, number]>> = {
+            ArrowLeft: [-step, 0],
+            ArrowRight: [step, 0],
+            ArrowUp: [0, -step],
+            ArrowDown: [0, step],
+        };
+        const move = keyboardMoves[event.key];
+
+        if (!move) return;
+
+        event.preventDefault();
+        moveDesktopEditPanelByKeyboard(move[0], move[1]);
+    }, [moveDesktopEditPanelByKeyboard]);
 
     const handleNextStep = () => {
         const validationError = validateEditRestaurantRequestStep(currentStep, editFormData);
@@ -484,10 +620,86 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         return renderMobileReviewStep();
     };
 
-    if (isMobileOrTablet) {
-        const mobileTitleId = 'edit-restaurant-sheet-title';
-        const mobileDescriptionId = 'edit-restaurant-sheet-description';
+    const mobileTitleId = 'edit-restaurant-sheet-title';
+    const mobileDescriptionId = 'edit-restaurant-sheet-description';
+    const steppedEditForm = isOpen && restaurant ? (
+        <form
+            ref={mobileFormRef}
+            onSubmit={handleSubmit}
+            className={mobileSheetStyles.frame}
+        >
+            <div
+                className={`${mobileSheetStyles.header}${shouldRenderMapPanel ? ' cursor-move select-none touch-none' : ''}`}
+                data-desktop-map-edit-drag-handle={shouldRenderMapPanel ? "true" : undefined}
+                title={shouldRenderMapPanel ? "빈 영역을 드래그하거나 화살표 키로 수정 요청 창 이동" : undefined}
+                onKeyDown={shouldRenderMapPanel ? handleDesktopEditPanelKeyDown : undefined}
+                onPointerDown={shouldRenderMapPanel ? handleDesktopEditPanelPointerDown : undefined}
+                onPointerMove={shouldRenderMapPanel ? handleDesktopEditPanelPointerMove : undefined}
+                onPointerUp={shouldRenderMapPanel ? handleDesktopEditPanelPointerEnd : undefined}
+                onPointerCancel={shouldRenderMapPanel ? handleDesktopEditPanelPointerEnd : undefined}
+            >
+                <div className="mb-2 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <p className="text-xs font-medium text-red-700 dark:text-red-300">
+                            {currentStep} / {EDIT_RESTAURANT_REQUEST_STEPS.length} · {EDIT_RESTAURANT_REQUEST_STEPS[currentStep - 1].title}
+                        </p>
+                        <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                            맛집 수정 요청
+                        </h2>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 요청 닫기" onClick={onClose}>
+                        <X className="h-5 w-5" />
+                    </Button>
+                </div>
+                <p id={mobileDescriptionId} className="text-sm text-muted-foreground">
+                    {restaurant.name}의 정보를 3단계로 확인하고 수정 요청을 제출해주세요.
+                </p>
+                <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="수정 요청 단계 진행률">
+                    {EDIT_RESTAURANT_REQUEST_STEPS.map((step) => (
+                        <div key={step.id} className="space-y-1">
+                            <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
+                            <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                {step.shortTitle}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-2 min-h-4">{draftStatus}</div>
+            </div>
 
+            <div className={mobileSheetStyles.content}>
+                {renderMobileStepContent()}
+            </div>
+
+            <div className={mobileSheetStyles.footer}>
+                {validationMessage && <div className="pb-2">{renderValidationMessage()}</div>}
+                <div className="flex gap-2">
+                    {currentStep > 1 ? (
+                        <Button type="button" variant="outline" onClick={handlePreviousStep} className="min-w-24" disabled={isSubmitting}>
+                            <ChevronLeft className="mr-1 h-4 w-4" />
+                            이전
+                        </Button>
+                    ) : (
+                        <Button type="button" variant="outline" onClick={onClose} className="min-w-24" disabled={isSubmitting}>
+                            취소
+                        </Button>
+                    )}
+                    {currentStep < 3 ? (
+                        <Button type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
+                            다음
+                        </Button>
+                    ) : (
+                        <Button type="submit" className={`${mobileSheetStyles.primaryAction} flex-1`} disabled={isSubmitting}>
+                            <Send className="mr-2 h-4 w-4" />
+                            {isSubmitting ? '제출 중...' : '수정 요청 제출'}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </form>
+    ) : null;
+
+    if (isMobileOrTablet) {
         return (
             <BottomSheet
                 isOpen={isOpen}
@@ -499,74 +711,28 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 ariaDescribedBy={validationMessage ? `${mobileDescriptionId} ${validationMessageId}` : mobileDescriptionId}
                 focusTrapAllowSelectors={[]}
             >
-                {isOpen && restaurant && (
-                    <form
-                        ref={mobileFormRef}
-                        onSubmit={handleSubmit}
-                        className={mobileSheetStyles.frame}
-                    >
-                        <div className={mobileSheetStyles.header}>
-                            <div className="mb-2 flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-xs font-medium text-red-700 dark:text-red-300">
-                                        {currentStep} / {EDIT_RESTAURANT_REQUEST_STEPS.length} · {EDIT_RESTAURANT_REQUEST_STEPS[currentStep - 1].title}
-                                    </p>
-                                    <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                                        맛집 수정 요청
-                                    </h2>
-                                </div>
-                                <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 요청 닫기" onClick={onClose}>
-                                    <X className="h-5 w-5" />
-                                </Button>
-                            </div>
-                            <p id={mobileDescriptionId} className="text-sm text-muted-foreground">
-                                {restaurant.name}의 정보를 3단계로 확인하고 수정 요청을 제출해주세요.
-                            </p>
-                            <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="수정 요청 단계 진행률">
-                                {EDIT_RESTAURANT_REQUEST_STEPS.map((step) => (
-                                    <div key={step.id} className="space-y-1">
-                                        <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
-                                        <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
-                                            {step.shortTitle}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-2 min-h-4">{draftStatus}</div>
-                        </div>
-
-                        <div className={mobileSheetStyles.content}>
-                            {renderMobileStepContent()}
-                        </div>
-
-                        <div className={mobileSheetStyles.footer}>
-                            {validationMessage && <div className="pb-2">{renderValidationMessage()}</div>}
-                            <div className="flex gap-2">
-                                {currentStep > 1 ? (
-                                    <Button type="button" variant="outline" onClick={handlePreviousStep} className="min-w-24" disabled={isSubmitting}>
-                                        <ChevronLeft className="mr-1 h-4 w-4" />
-                                        이전
-                                    </Button>
-                                ) : (
-                                    <Button type="button" variant="outline" onClick={onClose} className="min-w-24" disabled={isSubmitting}>
-                                        취소
-                                    </Button>
-                                )}
-                                {currentStep < 3 ? (
-                                    <Button type="button" onClick={handleNextStep} className={`${mobileSheetStyles.primaryAction} flex-1`}>
-                                        다음
-                                    </Button>
-                                ) : (
-                                    <Button type="submit" className={`${mobileSheetStyles.primaryAction} flex-1`} disabled={isSubmitting}>
-                                        <Send className="mr-2 h-4 w-4" />
-                                        {isSubmitting ? '제출 중...' : '수정 요청 제출'}
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </form>
-                )}
+                {steppedEditForm}
             </BottomSheet>
+        );
+    }
+
+    if (shouldRenderMapPanel) {
+        if (!isOpen) return null;
+
+        return (
+            <section
+                ref={desktopEditPanelRef}
+                className="fixed bottom-24 right-6 top-6 z-[90] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                style={{ transform: `translate3d(${desktopEditPanelPosition.x}px, ${desktopEditPanelPosition.y}px, 0)` }}
+                data-desktop-map-edit-panel="true"
+                role="dialog"
+                tabIndex={-1}
+                aria-labelledby={mobileTitleId}
+                aria-describedby={validationMessage ? `${mobileDescriptionId} ${validationMessageId}` : mobileDescriptionId}
+                onKeyDown={handleDesktopEditPanelKeyDown}
+            >
+                {steppedEditForm}
+            </section>
         );
     }
 

@@ -127,6 +127,9 @@ describe("web quality performance source contracts", () => {
       "components/home/DesktopLeftPanelMapHome.tsx",
     );
     const popularRestaurantsSource = source("lib/popular-restaurants.ts");
+    const popularRankSnapshotsMigrationSource = source(
+      "supabase/migrations/20260523093000_create_restaurant_popular_rank_snapshots.sql",
+    );
     const stampCardSource = source("components/stamp/StampCard.tsx");
     const homeAppGlobalsSource = source("app/home-app-globals.css");
     const desktopBookmarksSource = source(
@@ -627,8 +630,13 @@ describe("web quality performance source contracts", () => {
       'className="shrink-0 bg-background px-3 pb-2 pt-3"',
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
-      "POPULAR_RESTAURANT_LIMIT = 3",
+      "POPULAR_RESTAURANT_LIMIT = 5",
     );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "POPULAR_RESTAURANT_QUERY_LIMIT = 20",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain("맛집 5곳");
+    expect(desktopLeftPanelMapHomeSource).toContain("TOP 5");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchLatestRestaurants");
     expect(desktopLeftPanelMapHomeSource).toContain(
@@ -636,6 +644,12 @@ describe("web quality performance source contracts", () => {
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       "getLatestRestaurantsQueryKey",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onRestaurantSelect(optimisticRestaurant);",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
+      "onRestaurantSearch(optimisticRestaurant);",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       "desktopLeftPanelHomePopularQueryKey",
@@ -659,6 +673,18 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain("isKoreanOnly");
     expect(popularRestaurantsSource).toContain("POPULAR_RESTAURANTS_QUERY_KEY");
     expect(popularRestaurantsSource).toContain("LATEST_RESTAURANTS_QUERY_KEY");
+    expect(popularRestaurantsSource).toContain("POPULAR_RANK_SNAPSHOTS_QUERY_KEY");
+    expect(popularRestaurantsSource).toContain("export type PopularRankTrend");
+    expect(popularRestaurantsSource).toContain("export type PopularRestaurantWithTrend");
+    expect(popularRestaurantsSource).toContain("getPopularRankScopeKey");
+    expect(popularRestaurantsSource).toContain("fetchPopularRankSnapshots");
+    expect(popularRestaurantsSource).toContain("restaurant_popular_rank_snapshots");
+    expect(popularRestaurantsSource).toContain("attachPopularRankTrends");
+    expect(popularRestaurantsSource).toContain("hasSnapshotPeriod");
+    expect(popularRestaurantsSource).toContain(
+      "console.warn('인기 맛집 순위 스냅샷 조회 실패:', error);",
+    );
+    expect(popularRestaurantsSource).toContain("? 'unknown'");
     expect(popularRestaurantsSource).toContain(
       "export type LatestRestaurantSort = 'latest' | 'oldest' | 'popular'",
     );
@@ -718,22 +744,32 @@ describe("web quality performance source contracts", () => {
     );
     expect(desktopLeftPanelMapHomeSource).toContain("grid grid-cols-1 gap-3");
     expect(desktopLeftPanelMapHomeSource).toContain("function DesktopRestaurantCardSkeleton");
-    expect(desktopLeftPanelMapHomeSource).toContain("popularThumbnailIndexes");
+    expect(desktopLeftPanelMapHomeSource).toContain("function getPopularRankTrendBadge");
+    expect(desktopLeftPanelMapHomeSource).toContain("trend.trend === 'unknown'");
+    expect(desktopLeftPanelMapHomeSource).toContain("trend.trend === 'same'");
+    expect(desktopLeftPanelMapHomeSource).toContain("이전 인기 검색 스냅샷 대비");
+    expect(desktopLeftPanelMapHomeSource).toContain("trendBadge.label");
+    expect(desktopLeftPanelMapHomeSource).toContain("divide-y divide-border/70");
     expect(desktopLeftPanelMapHomeSource).toContain(
+      "group flex w-full items-center gap-2 px-1 py-2 text-left",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      '<MapPin className="h-3 w-3 shrink-0"',
+    );
+    expect(desktopLeftPanelMapHomeSource).not.toContain("popularThumbnailIndexes");
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
       "handlePopularThumbnailChange",
     );
-    expect(desktopLeftPanelMapHomeSource).toContain(
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
       "absolute left-2 top-2 z-20",
     );
-    expect(desktopLeftPanelMapHomeSource).toContain(
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
       "<DesktopRestaurantCardSkeleton key={index} withRank />",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
       "<DesktopRestaurantCardSkeleton key={index} />",
     );
-    expect(
-      desktopLeftPanelMapHomeSource.match(/<StampCard/g)?.length,
-    ).toBeGreaterThanOrEqual(2);
+    expect(desktopLeftPanelMapHomeSource).toContain("<StampCard");
     expect(desktopLeftPanelMapHomeSource).toContain('size="default"');
     expect(desktopLeftPanelMapHomeSource).toContain('stampSize="compact"');
     expect(desktopLeftPanelMapHomeSource).toContain("showAddress");
@@ -748,12 +784,34 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain(
       "readYoutubeMetaTitle(restaurant.youtube_meta)",
     );
+    expect(popularRankSnapshotsMigrationSource).toContain(
+      "create table if not exists public.restaurant_popular_rank_snapshots",
+    );
+    expect(popularRankSnapshotsMigrationSource).toContain(
+      "alter table public.restaurant_popular_rank_snapshots enable row level security",
+    );
+    expect(popularRankSnapshotsMigrationSource).toContain(
+      "grant select on table public.restaurant_popular_rank_snapshots to anon",
+    );
+    expect(popularRankSnapshotsMigrationSource).toContain(
+      "grant select on table public.restaurant_popular_rank_snapshots to authenticated",
+    );
+    expect(popularRankSnapshotsMigrationSource).toContain(
+      "create schema if not exists private",
+    );
+    expect(popularRankSnapshotsMigrationSource).toContain(
+      "create or replace function private.capture_restaurant_popular_rank_snapshot",
+    );
+    expect(popularRankSnapshotsMigrationSource).toContain("security definer");
+    expect(popularRankSnapshotsMigrationSource).not.toContain(
+      "function public.capture_restaurant_popular_rank_snapshot",
+    );
+    expect(popularRankSnapshotsMigrationSource).toContain(
+      "grant execute on function private.capture_restaurant_popular_rank_snapshot",
+    );
     expect(stampCardSource).toContain("flex items-center gap-2 min-w-0");
     expect(stampCardSource).toContain('"font-medium truncate"');
     expect(stampCardSource).toContain("{showAddress && displayAddress && (");
-    expect(desktopLeftPanelMapHomeSource).not.toContain(
-      "divide-y divide-border/70",
-    );
     expect(desktopLeftPanelMapHomeSource).not.toContain("사용자 맛집 리뷰</h2>");
     expect(desktopLeftPanelMapHomeSource).not.toContain("아래로 스크롤해 계속 보기");
     expect(desktopLeftPanelMapHomeSource).not.toContain("rounded-2xl border border-border bg-card px-3 py-2 text-left");
@@ -1372,6 +1430,9 @@ describe("web quality performance source contracts", () => {
     const restaurantSubmissionSource = source(
       "components/modals/RestaurantSubmissionModal.tsx",
     );
+    const editRestaurantSource = source(
+      "components/modals/EditRestaurantModal.tsx",
+    );
     const homeClientSidePanelsSource = source("app/home-client-sidepanels.tsx");
     const homeClientSource = source("app/home-client.tsx");
     const naverMapSource = source("components/map/NaverMapView.tsx");
@@ -1384,6 +1445,19 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeClientSidePanelsSource).toContain(
       "presentation={isMobileOrTablet ? 'auto' : 'map-panel'}",
+    );
+    expect(editRestaurantSource).toContain("presentation?: 'auto' | 'map-panel'");
+    expect(editRestaurantSource).toContain(
+      'data-desktop-map-edit-panel="true"',
+    );
+    expect(editRestaurantSource).toContain("mobileSheetStyles.frame");
+    expect(editRestaurantSource).toContain(
+      "data-desktop-map-edit-drag-handle",
+    );
+    expect(editRestaurantSource).toContain("handleDesktopEditPanelPointerDown");
+    expect(editRestaurantSource).toContain("setPointerCapture");
+    expect(editRestaurantSource).toContain(
+      "translate3d(${desktopEditPanelPosition.x}px, ${desktopEditPanelPosition.y}px, 0)",
     );
     expect(restaurantSubmissionSource).toContain(
       'data-desktop-map-submission-panel="true"',
@@ -1594,7 +1668,8 @@ describe("web quality performance source contracts", () => {
     expect(mapViewSidepanelsSource).toContain("data-map-detail-panel-skeleton");
     expect(naverMapSidepanelsSource).toContain("showDesktopBackButton");
     expect(naverMapSidepanelsSource).toContain("data-map-detail-panel-skeleton");
-    expect(naverMapSidepanelsSource).toContain("<Suspense fallback={<NaverMapDetailPanelSkeleton />}>");
+    expect(naverMapSidepanelsSource).toContain("<Suspense fallback={null}>");
+    expect(naverMapSidepanelsSource).not.toContain("<Suspense fallback={<NaverMapDetailPanelSkeleton />}>");
     expect(naverMapSource).toContain("resolveNaverRestaurantQueryBounds");
     expect(naverMapSource).toContain(
       "shouldUseFullMapData: shouldRunNoncriticalMapEffects",
@@ -2235,7 +2310,9 @@ describe("web quality performance source contracts", () => {
       'data-mypage-section-loading="true"',
     );
     expect(myPageSectionSkeletonSource).toContain("<Skeleton");
-    expect(myPageLoadingSource).toContain("<MyPageSectionSkeleton />");
+    expect(myPageLoadingSource).toContain("return null;");
+    expect(myPageLoadingSource).toContain("동적 영역만 해당 위치에서 한 번");
+    expect(myPageLoadingSource).not.toContain("<MyPageSectionSkeleton />");
     expect(myPageLoadingSource).not.toContain("animate-pulse");
     for (const sectionSource of myPageSectionSources) {
       expect(sectionSource).toContain("<MyPageSectionSkeleton");
