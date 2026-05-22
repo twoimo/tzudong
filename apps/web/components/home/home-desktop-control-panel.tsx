@@ -19,8 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import RegionSelector from "@/components/region/RegionSelector";
+import DesktopLeftPanelMapHome from "@/components/home/DesktopLeftPanelMapHome";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
 import type { FilterState } from "@/components/filters/filter-state";
@@ -91,14 +91,6 @@ type RestaurantSearchComponentProps = {
 const loadDesktopRestaurantSearch = async () => {
   const mod = await import("@/components/search/RestaurantSearch");
   return mod.default as ComponentType<RestaurantSearchComponentProps>;
-};
-
-type DesktopLeftPanelMapHomeComponentProps = {
-  onRestaurantOpen: (restaurant: Restaurant) => void;
-  onOpenUserProfile?: (userId: string) => void;
-  onOpenAuth?: () => void;
-  selectedRegion?: string | null;
-  isKoreanOnly?: boolean;
 };
 
 type DesktopLeftPanelView =
@@ -182,11 +174,6 @@ type AdminReviewPanelComponentProps = {
 const loadFeedOverlay = async () => {
   const mod = await import("@/components/overlay-pages/FeedOverlay");
   return mod.default as ComponentType<FeedOverlayComponentProps>;
-};
-
-const loadDesktopLeftPanelMapHome = async () => {
-  const mod = await import("@/components/home/DesktopLeftPanelMapHome");
-  return mod.default as ComponentType<DesktopLeftPanelMapHomeComponentProps>;
 };
 
 const loadStampOverlay = async () => {
@@ -284,42 +271,6 @@ const replaceBrowserHistoryRoute = (route: string) => {
   if (typeof window === "undefined") return;
   window.history.replaceState(window.history.state, "", route);
 };
-
-const DESKTOP_LEFT_PANEL_LOADING_LABELS: Partial<Record<DesktopLeftPanelView, string>> = {
-  feed: "리뷰",
-  stamp: "도장",
-  leaderboard: "랭킹",
-  profile: "프로필",
-  bookmarks: "북마크",
-  notifications: "알림",
-  settings: "환경설정",
-  announcement: "공지사항",
-  adminReviews: "관리자 리뷰",
-};
-
-function DesktopLeftPanelLoadingState({ label }: { label: string }) {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label={`${label} 패널 불러오는 중`}
-      className="flex h-full min-h-0 flex-col gap-3 bg-background p-4"
-      data-desktop-left-panel-loading="true"
-    >
-      <Skeleton className="h-7 w-32 rounded-full" />
-      <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
-        <Skeleton className="h-4 w-3/4 rounded-full" />
-        <Skeleton className="h-3 w-full rounded-full" />
-        <Skeleton className="h-3 w-2/3 rounded-full" />
-      </div>
-      <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
-        <Skeleton className="h-4 w-2/3 rounded-full" />
-        <Skeleton className="h-3 w-full rounded-full" />
-        <Skeleton className="h-3 w-1/2 rounded-full" />
-      </div>
-    </div>
-  );
-}
 
 const LAYOUT_PRESETS = [
   {
@@ -821,11 +772,6 @@ export default function HomeDesktopControlPanel({
     useDeferredComponent<RestaurantSearchComponentProps>(
       shouldShowDesktopSearchResults,
       loadDesktopRestaurantSearch,
-    );
-  const DeferredDesktopLeftPanelMapHome =
-    useDeferredComponent<DesktopLeftPanelMapHomeComponentProps>(
-      shouldShowDesktopMapHome,
-      loadDesktopLeftPanelMapHome,
     );
   const DeferredFeedOverlay = useDeferredComponent<FeedOverlayComponentProps>(
     activeLeftPanelView === "feed",
@@ -1333,14 +1279,14 @@ export default function HomeDesktopControlPanel({
       }
 
       handleModeChange(inferRestaurantMapMode(optimisticRestaurant));
-      onRestaurantSelect(optimisticRestaurant);
+      onRestaurantSearch(optimisticRestaurant);
     },
     [
       activeRightPanel,
       captureDetailReturnView,
       handleModeChange,
       onPanelClose,
-      onRestaurantSelect,
+      onRestaurantSearch,
     ],
   );
 
@@ -1757,11 +1703,7 @@ export default function HomeDesktopControlPanel({
                 onClose={handleExternalLeftPanelClose}
               />
             </div>
-          ) : isInlinePanelViewActive ? (
-            <DesktopLeftPanelLoadingState
-              label={DESKTOP_LEFT_PANEL_LOADING_LABELS[activeLeftPanelView] ?? "패널"}
-            />
-          ) : (
+          ) : isInlinePanelViewActive ? null : (
             <>
               {isPanelOpen && panelRestaurant ? (
                 <div
@@ -1816,29 +1758,17 @@ export default function HomeDesktopControlPanel({
                   />
                 </div>
               ) : shouldShowDesktopMapHome ? (
-                DeferredDesktopLeftPanelMapHome ? (
-                  <DeferredDesktopLeftPanelMapHome
-                    onRestaurantOpen={
-                      handleInlinePanelRestaurantOpen as (
-                        restaurant: Restaurant,
-                      ) => void
-                    }
-                    onOpenUserProfile={handleInlinePanelUserOpen}
-                    selectedRegion={
-                      mapMode === "domestic" ? selectedRegion : selectedCountry
-                    }
-                    isKoreanOnly={mapMode === "domestic"}
-                    onOpenAuth={() =>
-                      requestAuthUi({
-                        source: "desktop-left-panel-home-feed",
-                        route: "/",
-                        reason: "review-action",
-                      })
-                    }
-                  />
-                ) : (
-                  <DesktopLeftPanelLoadingState label="홈 추천" />
-                )
+                <DesktopLeftPanelMapHome
+                  onRestaurantOpen={
+                    handleInlinePanelRestaurantOpen as (
+                      restaurant: Restaurant,
+                    ) => void
+                  }
+                  selectedRegion={
+                    mapMode === "domestic" ? selectedRegion : selectedCountry
+                  }
+                  isKoreanOnly={mapMode === "domestic"}
+                />
               ) : null}
             </>
           )}
