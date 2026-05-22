@@ -447,7 +447,8 @@ export default function ReviewsPage() {
                             setEditingReview(review);
                             setIsEditModalOpen(true);
                           }}
-                          className="text-muted-foreground hover:text-foreground"
+                          className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-foreground"
+                          aria-label={`${review.restaurantName} 리뷰 수정`}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -459,7 +460,7 @@ export default function ReviewsPage() {
                             setDeleteReviewTarget(review);
                             setDeleteReviewConfirmation("");
                           }}
-	                        className="text-muted-foreground hover:text-destructive"
+	                        className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive"
                           aria-label={`${review.restaurantName} 리뷰 삭제 확인 열기`}
 	                      >
 	                        <Trash2 className="h-4 w-4" />
@@ -571,7 +572,7 @@ export default function ReviewsPage() {
                 <div className="flex items-center justify-center gap-2">
                   <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
                   <span className="text-sm text-muted-foreground">
-                    더 불러오는 중...
+                    더 불러오는 중…
                   </span>
                 </div>
               </div>

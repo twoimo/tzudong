@@ -2401,32 +2401,44 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
     expect(myPageProfileSource).toContain('data-mypage-profile-summary="true"');
     expect(myPageProfileSource).toContain('data-mypage-next-actions="true"');
-    expect(myPageProfileSource).toContain('data-mypage-mobile-secondary-actions="true"');
-    expect(myPageProfileSource).toContain('className="space-y-4 sm:space-y-5"');
+    expect(myPageProfileSource).not.toContain('data-mypage-mobile-secondary-actions="true"');
+    expect(myPageProfileSource).toContain('data-mypage-session-card="true"');
+    expect(myPageProfileSource).toContain('data-mypage-profile-photo-controls="true"');
+    expect(myPageProfileSource.match(/data-mypage-session-card="true"/g)?.length ?? 0).toBe(1);
+    expect(myPageProfileSource).toContain('className="space-y-3 sm:space-y-5"');
     expect(myPageProfileSource).toContain('flex min-w-0 flex-col items-center gap-3 text-center');
     expect(myPageProfileSource).toContain('justify-center gap-1.5 text-xs font-semibold text-primary sm:justify-start');
     expect(myPageProfileSource).toContain('text-balance text-xl font-bold tracking-tight');
     expect(myPageProfileSource).toContain('break-words text-xs leading-5 text-muted-foreground');
     expect(myPageProfileSource).toContain('grid grid-cols-3 gap-2');
     expect(myPageProfileSource).toContain('grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2');
-    expect(myPageProfileSource).toContain('const MOBILE_SECONDARY_ACTIONS = [');
-    expect(myPageProfileSource).toContain('MOBILE_SECONDARY_ACTIONS.map');
-    expect(myPageProfileSource).toContain('className="h-11 w-full gap-2 rounded-2xl"');
-    expect(myPageProfileSource).toContain('마이페이지 허브');
-    expect(myPageProfileSource).toContain('바로 할 수 있는 일');
+    expect(myPageProfileSource).not.toContain('const MOBILE_SECONDARY_ACTIONS = [');
+    expect(myPageProfileSource).not.toContain('MOBILE_SECONDARY_ACTIONS.map');
+    expect(myPageProfileSource).toContain('className="h-11 shrink-0 touch-manipulation gap-2 rounded-2xl"');
+    expect(myPageProfileSource).toContain('내 활동 모아보기');
+    expect(myPageProfileSource).toContain('자주 쓰는 메뉴');
     expect(myPageProfileSource).toContain('지도 환경설정');
+    expect(myPageProfileSource).toContain('수정 요청');
+    expect(myPageProfileSource).toContain('쯔양 제보');
+    expect(myPageProfileSource).toContain("const PRIMARY_QUICK_ACTION_HREFS = new Set");
+    expect(myPageProfileSource).toContain('data-mypage-primary-action={isPrimaryAction ? "true" : "false"}');
+    expect(myPageProfileSource).toContain('desktopAccent: "md:bg-primary/10 md:text-primary"');
+    expect(myPageProfileSource).toContain('<span className="hidden md:inline">마이페이지 허브</span>');
+    expect(myPageProfileSource).toContain('<span className="hidden md:inline">바로 할 수 있는 일</span>');
+    expect(myPageProfileSource).toContain('<span className="md:hidden">가입일 {joinedDateLabel}</span>');
+    expect(myPageProfileSource).toContain('<span className="hidden md:inline">{user.email} · 가입일 {joinedDateLabel}</span>');
     expect(myPageProfileSource).toContain('href: "/?panel=settings"');
     expect(myPageProfileSource).toContain('const profileCompletionPercent = Math.round');
     expect(myPageProfileSource).toContain('const joinedDateLabel = format(createdAt');
     expect(myPageProfileSource).toContain('htmlFor="profile-avatar-upload"');
     expect(myPageProfileSource).toContain('id="profile-avatar-upload"');
     expect(myPageProfileSource).toContain(
-      'className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full ring-2',
+      'className="group relative flex h-14 w-14 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border bg-background',
     );
     expect(myPageProfileSource).toContain("aspectRatio: '1 / 1'");
     expect(myPageProfileSource).toContain("borderRadius: '9999px'");
     expect(myPageProfileSource).toContain("<NextImage");
-    expect(myPageProfileSource).toContain('sizes="96px"');
+    expect(myPageProfileSource).toContain('sizes="56px"');
     expect(myPageProfileSource).toContain(
       'className="rounded-full object-cover"',
     );
@@ -2436,6 +2448,11 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       'className="absolute inset-0 flex items-center justify-center rounded-full',
     );
+    expect(myPageProfileSource).toContain('aria-label={showCurrentPassword ? "현재 비밀번호 숨기기" : "현재 비밀번호 보기"}');
+    expect(myPageProfileSource).toContain('aria-label={showNewPassword ? "새 비밀번호 숨기기" : "새 비밀번호 보기"}');
+    expect(myPageProfileSource).toContain('aria-label={showConfirmPassword ? "새 비밀번호 확인 숨기기" : "새 비밀번호 확인 보기"}');
+    expect(myPageProfileSource).not.toContain('h-24 w-24');
+    expect(myPageProfileSource).not.toContain('sizes="96px"');
     expect(myPageProfileSource).not.toContain("AvatarImage");
     expect(myPageProfileSource).not.toContain("sm:h-18 sm:w-18");
   });
