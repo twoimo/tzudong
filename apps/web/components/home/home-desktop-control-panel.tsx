@@ -151,10 +151,11 @@ type UserProfilePanelComponentProps = {
   onRestaurantClick?: (restaurant: Restaurant) => void;
 };
 
+type InlinePanelRestaurant = Pick<Restaurant, "id" | "name" | "lat" | "lng"> &
+  Partial<Restaurant>;
+
 type DesktopLeftPanelBookmarksComponentProps = {
-  onRestaurantOpen: (
-    restaurant: Pick<Restaurant, "id" | "lat" | "lng">,
-  ) => void;
+  onRestaurantOpen: (restaurant: InlinePanelRestaurant) => void;
   onClose?: () => void;
 };
 
@@ -685,6 +686,70 @@ function inferRestaurantMapMode(
   return "domestic";
 }
 
+function buildOptimisticDetailRestaurant(
+  restaurant: InlinePanelRestaurant,
+): Restaurant {
+  const categories = restaurant.categories ?? restaurant.category ?? [];
+  const address = restaurant.address ?? restaurant.road_address ?? restaurant.jibun_address ?? "";
+  const createdAt = restaurant.created_at ?? new Date(0).toISOString();
+  const updatedAt = restaurant.updated_at ?? createdAt;
+
+  return {
+    id: restaurant.id,
+    approved_name: restaurant.approved_name ?? null,
+    unique_id: restaurant.unique_id ?? restaurant.id,
+    name: restaurant.name,
+    phone: restaurant.phone ?? null,
+    categories,
+    status: restaurant.status ?? "approved",
+    source_type: restaurant.source_type ?? "restaurant-preview",
+    youtube_meta: restaurant.youtube_meta ?? null,
+    evaluation_results: restaurant.evaluation_results ?? null,
+    reasoning_basis: restaurant.reasoning_basis ?? null,
+    tzuyang_review: restaurant.tzuyang_review ?? null,
+    trace_id: restaurant.trace_id ?? null,
+    origin_address: restaurant.origin_address ?? null,
+    road_address: restaurant.road_address ?? null,
+    jibun_address: restaurant.jibun_address ?? null,
+    english_address: restaurant.english_address ?? null,
+    address_elements: restaurant.address_elements ?? null,
+    geocoding_success: restaurant.geocoding_success ?? Boolean(restaurant.lat && restaurant.lng),
+    geocoding_false_stage: restaurant.geocoding_false_stage ?? null,
+    is_missing: restaurant.is_missing ?? false,
+    is_not_selected: restaurant.is_not_selected ?? false,
+    lat: restaurant.lat ?? null,
+    lng: restaurant.lng ?? null,
+    youtube_link: restaurant.youtube_link ?? null,
+    ai_rating: restaurant.ai_rating ?? null,
+    visit_count: restaurant.visit_count ?? null,
+    review_count: restaurant.review_count ?? null,
+    description: restaurant.description ?? null,
+    created_by: restaurant.created_by ?? null,
+    updated_by_admin_id: restaurant.updated_by_admin_id ?? null,
+    db_error_message: restaurant.db_error_message ?? null,
+    db_error_details: restaurant.db_error_details ?? null,
+    search_count: restaurant.search_count ?? null,
+    weekly_search_count: restaurant.weekly_search_count ?? null,
+    origin_name: restaurant.origin_name ?? null,
+    naver_name: restaurant.naver_name ?? null,
+    google_name: restaurant.google_name ?? null,
+    trace_id_name_source: restaurant.trace_id_name_source ?? null,
+    channel_name: restaurant.channel_name ?? null,
+    description_map_url: restaurant.description_map_url ?? null,
+    recollect_version: restaurant.recollect_version ?? null,
+    created_at: createdAt,
+    updated_at: updatedAt,
+    address,
+    category: categories,
+    mergedYoutubeLinks: restaurant.mergedYoutubeLinks,
+    mergedTzuyangReviews: restaurant.mergedTzuyangReviews,
+    mergedYoutubeMetas: restaurant.mergedYoutubeMetas,
+    youtube_links: restaurant.youtube_links,
+    tzuyang_reviews: restaurant.tzuyang_reviews,
+    mergedRestaurants: restaurant.mergedRestaurants,
+  };
+}
+
 export default function HomeDesktopControlPanel({
   mapMode,
   selectedRegion,
@@ -731,8 +796,7 @@ export default function HomeDesktopControlPanel({
   const [isDesktopSearchActive, setIsDesktopSearchActive] = useState(
     initialIntent === "search",
   );
-  const [isInlineDetailOpenPending, setIsInlineDetailOpenPending] =
-    useState(false);
+  const [, setIsInlineDetailOpenPending] = useState(false);
   const activeLeftPanelViewRef = useRef(activeLeftPanelView);
   const activeProfileUserIdRef = useRef(activeProfileUserId);
   const activeDetailRestaurantIdRef = useRef<string | null>(null);
@@ -1242,7 +1306,7 @@ export default function HomeDesktopControlPanel({
       captureDetailReturnView(activeLeftPanelViewRef.current, {
         pendingDetailOpen: true,
       });
-      setIsInlineDetailOpenPending(true);
+      setIsInlineDetailOpenPending(false);
       setIsDesktopSearchActive(false);
       window.dispatchEvent(
         new CustomEvent("selectBookmarkRestaurant", {
@@ -1252,20 +1316,32 @@ export default function HomeDesktopControlPanel({
           },
         }),
       );
-      setActiveLeftPanelView("map");
-      router.replace("/", { scroll: false });
     },
-    [captureDetailReturnView, mapMode, router],
+    [captureDetailReturnView, mapMode],
   );
 
   const handleInlinePanelRestaurantOpen = useCallback(
-    (restaurant: Pick<Restaurant, "id" | "lat" | "lng">) => {
-      handleInlinePanelRestaurantIdOpen(
-        restaurant.id,
-        inferRestaurantMapMode(restaurant),
-      );
+    (restaurant: InlinePanelRestaurant) => {
+      const optimisticRestaurant = buildOptimisticDetailRestaurant(restaurant);
+      captureDetailReturnView(activeLeftPanelViewRef.current, {
+        pendingDetailOpen: true,
+      });
+      setIsInlineDetailOpenPending(false);
+      setIsDesktopSearchActive(false);
+      if (activeRightPanel !== null) {
+        onPanelClose?.();
+      }
+
+      handleModeChange(inferRestaurantMapMode(optimisticRestaurant));
+      onRestaurantSelect(optimisticRestaurant);
     },
-    [handleInlinePanelRestaurantIdOpen],
+    [
+      activeRightPanel,
+      captureDetailReturnView,
+      handleModeChange,
+      onPanelClose,
+      onRestaurantSelect,
+    ],
   );
 
   const handleInlinePanelUserOpen = useCallback(
@@ -1279,8 +1355,6 @@ export default function HomeDesktopControlPanel({
     [router],
   );
   const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant);
-  const isDetailPanelTransitionPending =
-    isInlineDetailOpenPending && !hasActiveDetail;
   const isInlinePanelViewActive = activeLeftPanelView !== "map";
   const panelSideLabel = desktopPanelSide === "right" ? "우측" : "좌측";
   const panelToggleLabel = isPanelCollapsed
@@ -1296,7 +1370,7 @@ export default function HomeDesktopControlPanel({
 
   return (
     <>
-      {!hasActiveDetail && !isDetailPanelTransitionPending && (
+      {!hasActiveDetail && (
         <>
           <nav
             className="fixed top-4 z-[70] flex flex-col items-start gap-2"
@@ -1483,7 +1557,7 @@ export default function HomeDesktopControlPanel({
           aria-hidden={isPanelCollapsed}
           inert={isPanelCollapsed}
         >
-        {!hasActiveDetail && !isDetailPanelTransitionPending && (
+        {!hasActiveDetail && (
           <div className="space-y-3 border-b border-border px-4 py-3">
             <div
               className={cn(
@@ -1574,16 +1648,13 @@ export default function HomeDesktopControlPanel({
           className={cn(
             "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
             hasActiveDetail ||
-              isDetailPanelTransitionPending ||
               isInlinePanelViewActive ||
               shouldShowDesktopMapHome
               ? "px-0 py-0"
               : "px-4 py-4",
           )}
         >
-          {isDetailPanelTransitionPending ? (
-            <DesktopLeftPanelLoadingState label="맛집 상세" />
-          ) : activeLeftPanelView === "feed" && DeferredFeedOverlay ? (
+          {activeLeftPanelView === "feed" && DeferredFeedOverlay ? (
             <DeferredFeedOverlay
               onClose={handleReturnToMapPanel}
               onOpenReviewModal={onReviewModalOpen}
