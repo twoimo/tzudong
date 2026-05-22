@@ -8,20 +8,20 @@ const appRoot = resolve(import.meta.dir, '..');
 const tempDirs: string[] = [];
 
 const criticalDisplayUtilities = [
-  ['lg:block', 'block'],
-  ['lg:flex', 'flex'],
-  ['lg:hidden', 'none'],
-  ['lg:inline-flex', 'inline-flex'],
+  ['md:block', 'block'],
+  ['md:flex', 'flex'],
+  ['md:hidden', 'none'],
+  ['md:inline-flex', 'inline-flex'],
   ['lg:table-cell', 'table-cell'],
 ] as const;
 
 const criticalAdminConsoleLayoutUtilities = [
+  'md:m-0',
+  'md:px-1.5',
+  'md:w-14',
+  'md:w-48',
   'lg:grid',
-  'lg:m-0',
   'lg:place-items-center',
-  'lg:px-1.5',
-  'lg:w-14',
-  'lg:w-48',
 ] as const;
 
 afterAll(() => {
