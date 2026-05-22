@@ -174,7 +174,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('group-hover:scale-[1.02]');
     expect(consoleSource).toContain('return null;');
     expect(adminLoadingSource).not.toContain('AdminConsoleLoadingSkeleton');
-    expect(consoleSource).toContain('lg:w-48');
+    expect(consoleSource).toContain('md:w-48');
     expect(consoleSource).not.toContain('lg:w-[280px]');
     expect(consoleSource).not.toContain('bg-gradient-to-br from-card via-card to-primary/5 p-3');
     expect(routeSkeletonSource).toContain('className="flex h-full min-h-0 flex-col overflow-hidden"');
@@ -258,10 +258,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('aria-label="관리자 콘솔 작업 화면"');
     expect(consoleSource).toContain('data-admin-console-layout="sidebar-content"');
     expect(consoleSource).toContain('data-admin-console-content="true"');
+    expect(consoleSource).toContain('p-2 md:border-y-0');
     expect(consoleSource).toContain('h-[var(--full-height,100vh)]');
     expect(consoleSource).toContain('grid-rows-[auto_minmax(0,1fr)]');
-    expect(consoleSource).toContain('lg:grid-cols-[12rem_minmax(0,1fr)]');
-    expect(consoleSource).toContain('lg:grid-cols-[3.5rem_minmax(0,1fr)]');
+    expect(consoleSource).toContain('md:grid-rows-1');
+    expect(consoleSource).toContain('md:grid-cols-[12rem_minmax(0,1fr)]');
+    expect(consoleSource).toContain('md:grid-cols-[3.5rem_minmax(0,1fr)]');
     expect(consoleSource).toContain('data-admin-console-sidebar-collapsed={isSidebarCollapsed ? "true" : "false"}');
   });
 
@@ -337,15 +339,15 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('aria-controls="admin-sidebar-order-editor"');
     expect(consoleSource).toContain('sticky top-0 z-30 flex w-full shrink-0 flex-col');
     expect(consoleSource).toContain('isCollapsed &&');
-    expect(consoleSource).toContain('"lg:min-h-9 lg:w-full lg:items-center lg:justify-center lg:border-b-0 lg:px-0 lg:pb-1"');
-    expect(consoleSource).toContain('isCollapsed && "lg:hidden"');
+    expect(consoleSource).toContain('"md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1"');
+    expect(consoleSource).toContain('isCollapsed && "md:hidden"');
     expect(consoleSource).toContain('href="/"');
     expect(consoleSource).toContain('aria-label="쯔동여지도 홈으로 이동"');
     expect(consoleSource).toContain('src="/logo.png"');
     expect(consoleSource).toContain('flex gap-2 overflow-x-auto overscroll-x-contain');
-    expect(consoleSource).toContain('lg:block lg:min-h-0 lg:flex-1 lg:space-y-1.5');
+    expect(consoleSource).toContain('md:block md:min-h-0 md:flex-1 md:space-y-1.5');
     expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
-    expect(consoleSource).toContain('mt-2 shrink-0 pt-0 lg:mt-auto lg:pt-2');
+    expect(consoleSource).toContain('mt-2 shrink-0 pt-0 md:mt-auto md:pt-2');
     expect(consoleSource).toContain('메뉴 순서');
     expect(consoleSource).toContain('초기화');
     expect(consoleSource).toContain('aria-label={`${item.title} 메뉴 앞으로`}');
@@ -443,12 +445,14 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const bannersSource = source('app/admin/banners/page.tsx');
     const announcementSource = source('components/announcement/AnnouncementPanel.tsx');
 
-    expect(consoleSource).toContain('lg:w-48');
+    expect(consoleSource).toContain('md:w-48');
+    expect(consoleSource).toContain('md:inline-flex');
     expect(consoleSource).toContain('"flex gap-2 overflow-x-auto overscroll-x-contain');
     expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
-    expect(consoleSource).toContain('p-2 sm:p-2 lg:border-y-0 lg:p-2 xl:p-2');
+    expect(consoleSource).toContain('p-2 md:border-y-0');
     expect(consoleSource).toContain('min-h-[420px] flex-1');
-    expect(consoleSource).toContain('overflow-visible lg:overflow-hidden');
+    expect(consoleSource).toContain('overflow-visible md:overflow-hidden');
+    expect(consoleSource).toContain('md:h-full md:min-h-0');
     expect(consoleSource).toContain('overflow-visible xl:h-full xl:min-h-0');
     expect(consoleSource).toContain('flex h-full min-h-0 flex-col bg-background');
     expect(usersSource).toContain('flex h-full min-h-0 flex-col bg-background');
