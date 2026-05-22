@@ -118,6 +118,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('function AdminMapLoadingSkeleton');
     expect(consoleSource).toContain('aria-label="관리자 네이버 지도 로딩"');
     expect(consoleSource).toContain('data-admin-map-loading-skeleton="true"');
+    expect(consoleSource).toContain('pointer-events-none absolute inset-0 bg-card/35 backdrop-blur-[1px]');
     expect(consoleSource).not.toContain('지도 준비 중');
     expect(consoleSource).not.toContain('w-full max-w-xs space-y-3 rounded-2xl border border-border bg-card/95 p-4 shadow-sm');
     expect(consoleSource).not.toContain('background-image:linear-gradient');
@@ -155,6 +156,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('AdminConsoleLoadingSkeleton');
     expect(consoleSource).toContain('function AdminConsoleCanvasSkeleton()');
     expect(consoleSource).toContain('data-admin-console-content-loading="true"');
+    expect(consoleSource).toContain('aria-label="관리자 콘솔 작업 화면 로딩 중"');
+    expect(consoleSource).toContain('aria-busy="true"');
     expect(consoleSource).toContain('data-admin-map-loading-skeleton="true"');
     expect(consoleSource).toContain('{authLoading ? (');
     expect(consoleSource).toContain('<AdminConsoleCanvasSkeleton />');
@@ -312,6 +315,16 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('moveAdminSidebarSection');
     expect(consoleSource).toContain('moveAdminSidebarItem');
     expect(consoleSource).toContain('buildOrderedSidebarSections');
+    expect(consoleSource).toContain('canLoadPreferences');
+    expect(consoleSource).toContain('if (!canLoadPreferences) {');
+    expect(consoleSource).toContain('setIsOrderLoading(true);');
+    expect(consoleSource).toContain('setIsOrderLoading(false);');
+    expect(consoleSource).toContain('disabled={!canLoadPreferences || isOrderLoading}');
+    expect(consoleSource).toContain('data-admin-sidebar-order-loading=');
+    expect(consoleSource).toContain('useAdBannersAdmin(isAdmin)');
+    expect(consoleSource).toContain('useAnnouncementsAdmin(isAdmin)');
+    expect(source('hooks/use-ad-banners.tsx')).toContain('export function useAdBannersAdmin(enabled = true)');
+    expect(source('hooks/use-ad-banners.tsx')).toContain('enabled: isAdmin && enabled');
     expect(consoleSource).toContain('aria-controls="admin-sidebar-order-editor"');
     expect(consoleSource).toContain('sticky top-0 z-30 flex w-full shrink-0 flex-col');
     expect(consoleSource).toContain('isCollapsed &&');

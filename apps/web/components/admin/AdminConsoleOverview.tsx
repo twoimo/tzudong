@@ -753,9 +753,9 @@ function useAdminOverviewStats(isAdmin: boolean): {
     staleTime: 5 * 60 * 1000,
   });
 
-  const bannersQuery = useAdBannersAdmin();
+  const bannersQuery = useAdBannersAdmin(isAdmin);
   const banners = bannersQuery.data ?? [];
-  const announcementsQuery = useAnnouncementsAdmin();
+  const announcementsQuery = useAnnouncementsAdmin(isAdmin);
   const announcements = announcementsQuery.data ?? [];
 
   return {
@@ -818,6 +818,7 @@ function AdminSidebar({
   isCollapsed,
   showLabels,
   onToggleCollapsed,
+  canLoadPreferences,
   stats,
 }: {
   activeModuleId: AdminModuleId;
@@ -825,12 +826,14 @@ function AdminSidebar({
   isCollapsed: boolean;
   showLabels: boolean;
   onToggleCollapsed: () => void;
+  canLoadPreferences: boolean;
   stats: AdminOverviewStats;
 }) {
   const [sidebarOrder, setSidebarOrder] = useState<AdminSidebarOrderPreference>(
     DEFAULT_ADMIN_SIDEBAR_ORDER,
   );
   const [isOrderEditorOpen, setIsOrderEditorOpen] = useState(false);
+  const [isOrderLoading, setIsOrderLoading] = useState(false);
   const [isOrderSaving, setIsOrderSaving] = useState(false);
   const [sidebarOrderMessage, setSidebarOrderMessage] = useState(
     "사이드바 순서는 관리자 계정별로 저장됩니다.",
@@ -845,9 +848,15 @@ function AdminSidebar({
   const activeSidebarLabel = activeSidebarItem?.title ?? "전체 현황";
 
   useEffect(() => {
+    if (!canLoadPreferences) {
+      setIsOrderLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
 
     async function loadSidebarOrder() {
+      setIsOrderLoading(true);
       try {
         const response = await fetch("/api/admin/preferences/sidebar-order", {
           headers: { Accept: "application/json" },
@@ -867,6 +876,10 @@ function AdminSidebar({
             "저장된 메뉴 순서를 불러오지 못해 처음 상태로 표시합니다.",
           );
         }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsOrderLoading(false);
+        }
       }
     }
 
@@ -875,10 +888,12 @@ function AdminSidebar({
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [canLoadPreferences]);
 
   const persistSidebarOrder = useCallback(
     async (nextOrder: AdminSidebarOrderPreference, successMessage: string) => {
+      if (!canLoadPreferences) return;
+
       const normalizedOrder = normalizeAdminSidebarOrder(nextOrder);
       setSidebarOrder(normalizedOrder);
       setIsOrderSaving(true);
@@ -907,7 +922,7 @@ function AdminSidebar({
         setIsOrderSaving(false);
       }
     },
-    [],
+    [canLoadPreferences],
   );
 
   const getItemStatus = (moduleId: AdminModuleId) => {
@@ -1142,16 +1157,26 @@ function AdminSidebar({
               aria-label="사이드바 메뉴 순서 설정"
               aria-expanded={isOrderEditorOpen}
               aria-controls="admin-sidebar-order-editor"
+              disabled={!canLoadPreferences || isOrderLoading}
+              data-admin-sidebar-order-loading={
+                isOrderLoading ? "true" : "false"
+              }
             >
               <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
               <span className={cn("truncate", isCollapsed && "lg:sr-only")}>
                 순서
               </span>
-              {!isCollapsed && (
+              {!isCollapsed && isOrderLoading ? (
+                <Skeleton
+                  className="ml-auto h-3 w-8 rounded-full motion-reduce:animate-none"
+                  data-admin-sidebar-order-loading="true"
+                  aria-hidden="true"
+                />
+              ) : !isCollapsed ? (
                 <span className="ml-auto text-[10px] font-semibold text-muted-foreground/80">
                   설정
                 </span>
-              )}
+              ) : null}
             </Button>
           </PopoverTrigger>
         </div>
@@ -1178,7 +1203,7 @@ function AdminSidebar({
               variant="outline"
               size="sm"
               className="h-7 shrink-0 rounded-lg px-2 text-[11px] font-bold"
-              disabled={isOrderSaving}
+              disabled={!canLoadPreferences || isOrderLoading || isOrderSaving}
               onClick={() =>
                 void persistSidebarOrder(
                   DEFAULT_ADMIN_SIDEBAR_ORDER,
@@ -1207,7 +1232,12 @@ function AdminSidebar({
                       size="sm"
                       className="h-6 w-6 rounded-md p-0 text-[11px]"
                       aria-label={`${section.label} 섹션 앞으로`}
-                      disabled={sectionIndex === 0 || isOrderSaving}
+                      disabled={
+                        !canLoadPreferences ||
+                        isOrderLoading ||
+                        sectionIndex === 0 ||
+                        isOrderSaving
+                      }
                       onClick={() =>
                         void persistSidebarOrder(
                           moveAdminSidebarSection(
@@ -1228,6 +1258,8 @@ function AdminSidebar({
                       className="h-6 w-6 rounded-md p-0 text-[11px]"
                       aria-label={`${section.label} 섹션 뒤로`}
                       disabled={
+                        !canLoadPreferences ||
+                        isOrderLoading ||
                         sectionIndex === orderedSidebarSections.length - 1 ||
                         isOrderSaving
                       }
@@ -1263,7 +1295,12 @@ function AdminSidebar({
                           size="sm"
                           className="h-6 w-6 rounded-md p-0 text-[11px]"
                           aria-label={`${item.title} 메뉴 앞으로`}
-                          disabled={itemIndex === 0 || isOrderSaving}
+                          disabled={
+                            !canLoadPreferences ||
+                            isOrderLoading ||
+                            itemIndex === 0 ||
+                            isOrderSaving
+                          }
                           onClick={() =>
                             void persistSidebarOrder(
                               moveAdminSidebarItem(
@@ -1285,6 +1322,8 @@ function AdminSidebar({
                           className="h-6 w-6 rounded-md p-0 text-[11px]"
                           aria-label={`${item.title} 메뉴 뒤로`}
                           disabled={
+                            !canLoadPreferences ||
+                            isOrderLoading ||
                             itemIndex === section.items.length - 1 ||
                             isOrderSaving
                           }
@@ -1508,7 +1547,7 @@ function AdminCreatorLayerControls({ tzuyangCount }: { tzuyangCount: number }) {
 function AdminMapLoadingSkeleton() {
   return (
     <div
-      className="absolute inset-0 bg-card/35 backdrop-blur-[1px]"
+      className="pointer-events-none absolute inset-0 bg-card/35 backdrop-blur-[1px]"
       data-admin-map-loading-skeleton="true"
       role="status"
       aria-busy="true"
@@ -2114,7 +2153,10 @@ function AdminMapInfoPanel({
             운영 정보
           </h2>
           {isLoading && (
-            <Skeleton className="h-5 w-20 rounded-full" aria-hidden="true" />
+            <Skeleton
+              className="h-5 w-20 rounded-full motion-reduce:animate-none"
+              aria-hidden="true"
+            />
           )}
         </div>
 
@@ -2526,6 +2568,8 @@ function AdminConsoleCanvasSkeleton() {
     <div
       className="grid min-h-full grid-cols-1 gap-2 xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]"
       data-admin-console-content-loading="true"
+      role="status"
+      aria-busy="true"
       aria-label="관리자 콘솔 작업 화면 로딩 중"
     >
       <div className="min-h-[390px] rounded-xl border border-border bg-card p-3 xl:min-h-0">
@@ -2671,6 +2715,7 @@ export function AdminConsoleOverview() {
           isCollapsed={isSidebarCollapsed}
           showLabels={showSidebarLabels}
           onToggleCollapsed={handleToggleSidebarCollapsed}
+          canLoadPreferences={canLoadAdminConsoleData}
           stats={stats}
         />
 
