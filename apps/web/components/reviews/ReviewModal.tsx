@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,48 @@ interface ReviewModalProps {
     restaurant: { id: string; name: string } | null;
     onSuccess?: () => void;
     inline?: boolean; // Dialog 없이 콘텐츠만 렌더링 (데스크톱 나란히 배치용)
+    presentation?: 'auto' | 'map-panel';
+}
+
+export type DesktopReviewMapPanelPosition = {
+    x: number;
+    y: number;
+};
+
+type DesktopReviewMapPanelDragState = {
+    pointerId: number;
+    startX: number;
+    startY: number;
+    initialLeft: number;
+    initialTop: number;
+    originX: number;
+    originY: number;
+    panelWidth: number;
+    panelHeight: number;
+};
+
+const DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN = 16;
+export const DESKTOP_REVIEW_MAP_PANEL_KEYBOARD_STEP = 24;
+const DEFAULT_DESKTOP_REVIEW_MAP_PANEL_POSITION: DesktopReviewMapPanelPosition = { x: 0, y: 0 };
+
+const clampDesktopReviewMapPanelAxis = (value: number, min: number, max: number) => {
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+};
+
+export function getDesktopReviewMapPanelKeyboardDelta(key: string, step = DESKTOP_REVIEW_MAP_PANEL_KEYBOARD_STEP): DesktopReviewMapPanelPosition | null {
+    switch (key) {
+        case 'ArrowLeft':
+            return { x: -step, y: 0 };
+        case 'ArrowRight':
+            return { x: step, y: 0 };
+        case 'ArrowUp':
+            return { x: 0, y: -step };
+        case 'ArrowDown':
+            return { x: 0, y: step };
+        default:
+            return null;
+    }
 }
 
 const CATEGORIES = [
@@ -266,7 +308,7 @@ function ObjectUrlPreviewImage({ src, alt, className }: { src: string | null; al
     );
 }
 
-export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false }: ReviewModalProps) {
+export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false, presentation = 'auto' }: ReviewModalProps) {
     const { user } = useAuth();
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [visitedDate, setVisitedDate] = useState("");
@@ -309,6 +351,122 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const manuallyEditedOcrFieldsRef = useRef<Set<ReviewOcrFieldKey>>(new Set());
     const mobileFrameRef = useRef<HTMLDivElement>(null);
     const mobileScrollRef = useRef<HTMLDivElement>(null);
+    const desktopReviewMapPanelRef = useRef<HTMLElement>(null);
+    const desktopReviewMapPanelOpenerRef = useRef<HTMLElement | null>(null);
+    const desktopReviewMapPanelDragRef = useRef<DesktopReviewMapPanelDragState | null>(null);
+    const [desktopReviewMapPanelPosition, setDesktopReviewMapPanelPosition] = useState<DesktopReviewMapPanelPosition>(DEFAULT_DESKTOP_REVIEW_MAP_PANEL_POSITION);
+    const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
+
+    const getClampedDesktopReviewMapPanelPosition = useCallback((clientX: number, clientY: number): DesktopReviewMapPanelPosition | null => {
+        const dragState = desktopReviewMapPanelDragRef.current;
+        if (!dragState || typeof window === 'undefined') return null;
+
+        const deltaX = clientX - dragState.startX;
+        const deltaY = clientY - dragState.startY;
+        const minLeft = DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const minTop = DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = window.innerWidth - dragState.panelWidth - DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const maxTop = window.innerHeight - dragState.panelHeight - DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const clampedLeft = clampDesktopReviewMapPanelAxis(dragState.initialLeft + deltaX, minLeft, maxLeft);
+        const clampedTop = clampDesktopReviewMapPanelAxis(dragState.initialTop + deltaY, minTop, maxTop);
+
+        return {
+            x: dragState.originX + clampedLeft - dragState.initialLeft,
+            y: dragState.originY + clampedTop - dragState.initialTop,
+        };
+    }, []);
+
+    const handleDesktopReviewMapPanelPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (!shouldRenderMapPanel || event.button !== 0) return;
+
+        const target = event.target;
+        if (target instanceof HTMLElement && target.closest('button, input, textarea, select, a, [role="button"]')) return;
+
+        const panel = desktopReviewMapPanelRef.current;
+        if (!panel) return;
+
+        const rect = panel.getBoundingClientRect();
+        desktopReviewMapPanelDragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            initialLeft: rect.left,
+            initialTop: rect.top,
+            originX: desktopReviewMapPanelPosition.x,
+            originY: desktopReviewMapPanelPosition.y,
+            panelWidth: rect.width,
+            panelHeight: rect.height,
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }, [desktopReviewMapPanelPosition.x, desktopReviewMapPanelPosition.y, shouldRenderMapPanel]);
+
+    const handleDesktopReviewMapPanelPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (desktopReviewMapPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        const nextPosition = getClampedDesktopReviewMapPanelPosition(event.clientX, event.clientY);
+        if (nextPosition) {
+            setDesktopReviewMapPanelPosition(nextPosition);
+        }
+    }, [getClampedDesktopReviewMapPanelPosition]);
+
+    const handleDesktopReviewMapPanelPointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+        if (desktopReviewMapPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        desktopReviewMapPanelDragRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    }, []);
+
+    const handleDesktopReviewMapPanelKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+        if (!shouldRenderMapPanel || typeof window === 'undefined') return;
+
+        const delta = getDesktopReviewMapPanelKeyboardDelta(event.key);
+        if (!delta) return;
+
+        const panel = desktopReviewMapPanelRef.current;
+        if (!panel) return;
+
+        const rect = panel.getBoundingClientRect();
+        const minLeft = DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const minTop = DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = window.innerWidth - rect.width - DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const maxTop = window.innerHeight - rect.height - DESKTOP_REVIEW_MAP_PANEL_VIEWPORT_MARGIN;
+        const clampedLeft = clampDesktopReviewMapPanelAxis(rect.left + delta.x, minLeft, maxLeft);
+        const clampedTop = clampDesktopReviewMapPanelAxis(rect.top + delta.y, minTop, maxTop);
+
+        setDesktopReviewMapPanelPosition((currentPosition) => ({
+            x: currentPosition.x + clampedLeft - rect.left,
+            y: currentPosition.y + clampedTop - rect.top,
+        }));
+        event.preventDefault();
+    }, [shouldRenderMapPanel]);
+
+    useEffect(() => {
+        if (!shouldRenderMapPanel) return;
+
+        if (isOpen) {
+            if (document.activeElement instanceof HTMLElement) {
+                desktopReviewMapPanelOpenerRef.current = document.activeElement;
+            }
+
+            window.requestAnimationFrame(() => {
+                desktopReviewMapPanelRef.current?.focus({ preventScroll: true });
+            });
+            return;
+        }
+
+        desktopReviewMapPanelOpenerRef.current?.focus({ preventScroll: true });
+        desktopReviewMapPanelOpenerRef.current = null;
+    }, [isOpen, shouldRenderMapPanel]);
+
+    useEffect(() => {
+        if (isOpen) return;
+
+        desktopReviewMapPanelDragRef.current = null;
+        setDesktopReviewMapPanelPosition(DEFAULT_DESKTOP_REVIEW_MAP_PANEL_POSITION);
+    }, [isOpen]);
 
     // 드래그 상태
     const [isVerificationDragging, setIsVerificationDragging] = useState(false);
@@ -2011,30 +2169,30 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         );
     }
 
-    if (isMobileOrTablet) {
+    if (isMobileOrTablet || shouldRenderMapPanel) {
         const mobileTitleId = 'review-sheet-title';
         const mobileDescriptionId = 'review-sheet-description';
 
-        return (
-            <BottomSheet
-                isOpen={isOpen}
-                onClose={handleClose}
-                {...MOBILE_FULL_FORM_SHEET}
-                disableContentScroll
-                layoutSource="review-modal"
-                className="z-[110]"
-                ariaLabelledBy={mobileTitleId}
-                ariaDescribedBy={mobileDescriptionId}
-                focusTrapAllowSelectors={[]}
-            >
-                {isOpen && (
+        const reviewSheetContent = isOpen ? (
                     <div
                         ref={mobileScrollRef}
                         className="h-full overflow-y-auto overscroll-contain bg-background"
                         style={{ WebkitOverflowScrolling: 'touch' }}
                     >
                         <div ref={mobileFrameRef} className={`relative isolate ${mobileSheetStyles.frame}`}>
-                            <div className={mobileSheetStyles.header}>
+                            <div
+                                className={`${mobileSheetStyles.header}${shouldRenderMapPanel ? ' cursor-move select-none touch-none' : ''}`}
+                                data-desktop-map-review-drag-handle={shouldRenderMapPanel ? "true" : undefined}
+                                title={shouldRenderMapPanel ? "마우스로 드래그해서 리뷰 작성 창 이동" : undefined}
+                                role={shouldRenderMapPanel ? "group" : undefined}
+                                tabIndex={shouldRenderMapPanel ? 0 : undefined}
+                                aria-label={shouldRenderMapPanel ? "리뷰 작성 창 이동 핸들" : undefined}
+                                onKeyDown={shouldRenderMapPanel ? handleDesktopReviewMapPanelKeyDown : undefined}
+                                onPointerDown={shouldRenderMapPanel ? handleDesktopReviewMapPanelPointerDown : undefined}
+                                onPointerMove={shouldRenderMapPanel ? handleDesktopReviewMapPanelPointerMove : undefined}
+                                onPointerUp={shouldRenderMapPanel ? handleDesktopReviewMapPanelPointerEnd : undefined}
+                                onPointerCancel={shouldRenderMapPanel ? handleDesktopReviewMapPanelPointerEnd : undefined}
+                            >
                                 <div className="mb-2 flex items-center justify-between gap-3">
                                     <div className="min-w-0">
                                         <p className="text-xs font-medium text-red-700 dark:text-red-300">
@@ -2593,7 +2751,40 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             </div>
                         </div>
                     </div>
-                )}
+        ) : null;
+
+        if (shouldRenderMapPanel) {
+            if (!isOpen) return null;
+
+            return (
+                <section
+                    ref={desktopReviewMapPanelRef}
+                    className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                    style={{ transform: `translate3d(${desktopReviewMapPanelPosition.x}px, ${desktopReviewMapPanelPosition.y}px, 0)` }}
+                    data-desktop-map-review-panel="true"
+                    role="dialog"
+                    tabIndex={-1}
+                    aria-labelledby={mobileTitleId}
+                    aria-describedby={mobileDescriptionId}
+                >
+                    {reviewSheetContent}
+                </section>
+            );
+        }
+
+        return (
+            <BottomSheet
+                isOpen={isOpen}
+                onClose={handleClose}
+                {...MOBILE_FULL_FORM_SHEET}
+                disableContentScroll
+                layoutSource="review-modal"
+                className="z-[110]"
+                ariaLabelledBy={mobileTitleId}
+                ariaDescribedBy={mobileDescriptionId}
+                focusTrapAllowSelectors={[]}
+            >
+                {reviewSheetContent}
             </BottomSheet>
         );
     }

@@ -174,7 +174,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('group-hover:scale-[1.02]');
     expect(consoleSource).toContain('return null;');
     expect(adminLoadingSource).not.toContain('AdminConsoleLoadingSkeleton');
-    expect(consoleSource).toContain('md:w-48');
+    expect(consoleSource).toContain('md:grid-cols-[16rem_minmax(0,1fr)]');
     expect(consoleSource).not.toContain('lg:w-[280px]');
     expect(consoleSource).not.toContain('bg-gradient-to-br from-card via-card to-primary/5 p-3');
     expect(routeSkeletonSource).toContain('className="flex h-full min-h-0 flex-col overflow-hidden"');
@@ -258,12 +258,12 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('aria-label="관리자 콘솔 작업 화면"');
     expect(consoleSource).toContain('data-admin-console-layout="sidebar-content"');
     expect(consoleSource).toContain('data-admin-console-content="true"');
-    expect(consoleSource).toContain('p-2 md:border-y-0');
+    expect(consoleSource).toContain('p-2 sm:p-3 md:border-y-0 md:p-4');
     expect(consoleSource).toContain('h-[var(--full-height,100vh)]');
     expect(consoleSource).toContain('grid-rows-[auto_minmax(0,1fr)]');
     expect(consoleSource).toContain('md:grid-rows-1');
-    expect(consoleSource).toContain('md:grid-cols-[12rem_minmax(0,1fr)]');
-    expect(consoleSource).toContain('md:grid-cols-[3.5rem_minmax(0,1fr)]');
+    expect(consoleSource).toContain('md:grid-cols-[16rem_minmax(0,1fr)]');
+    expect(consoleSource).toContain('md:grid-cols-[4.5rem_minmax(0,1fr)]');
     expect(consoleSource).toContain('data-admin-console-sidebar-collapsed={isSidebarCollapsed ? "true" : "false"}');
   });
 
@@ -337,7 +337,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(source('hooks/use-ad-banners.tsx')).toContain('export function useAdBannersAdmin(enabled = true)');
     expect(source('hooks/use-ad-banners.tsx')).toContain('enabled: isAdmin && enabled');
     expect(consoleSource).toContain('aria-controls="admin-sidebar-order-editor"');
-    expect(consoleSource).toContain('sticky top-0 z-30 flex w-full shrink-0 flex-col');
+    expect(consoleSource).toContain('relative z-30 flex max-h-[42dvh] w-full shrink-0 flex-col');
     expect(consoleSource).toContain('isCollapsed &&');
     expect(consoleSource).toContain('"md:min-h-9 md:w-full md:items-center md:justify-center md:border-b-0 md:px-0 md:pb-1"');
     expect(consoleSource).toContain('isCollapsed && "md:hidden"');
@@ -445,11 +445,11 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     const bannersSource = source('app/admin/banners/page.tsx');
     const announcementSource = source('components/announcement/AnnouncementPanel.tsx');
 
-    expect(consoleSource).toContain('md:w-48');
+    expect(consoleSource).toContain('md:grid-cols-[16rem_minmax(0,1fr)]');
     expect(consoleSource).toContain('md:inline-flex');
     expect(consoleSource).toContain('"flex gap-2 overflow-x-auto overscroll-x-contain');
     expect(consoleSource).toContain('min-h-11 min-w-[8.25rem]');
-    expect(consoleSource).toContain('p-2 md:border-y-0');
+    expect(consoleSource).toContain('p-2 sm:p-3 md:border-y-0 md:p-4');
     expect(consoleSource).toContain('min-h-[420px] flex-1');
     expect(consoleSource).toContain('overflow-visible md:overflow-hidden');
     expect(consoleSource).toContain('md:h-full md:min-h-0');
