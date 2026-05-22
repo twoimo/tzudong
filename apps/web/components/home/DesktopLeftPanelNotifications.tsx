@@ -72,14 +72,14 @@ export default function DesktopLeftPanelNotifications({
       className="flex h-full min-h-0 flex-col bg-background"
       data-desktop-left-panel-view="notifications"
     >
-      <div className="border-b border-border bg-gradient-to-br from-background via-background to-muted/35 px-4 py-3">
+      <div className="border-b border-border bg-gradient-to-br from-background via-background to-muted/35 px-3 py-3 sm:px-4">
         <div className="grid gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="flex min-w-0 items-center gap-2 text-base font-bold text-primary">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h2 className="flex min-w-0 flex-1 basis-[min(10rem,100%)] items-center gap-2 text-base font-bold leading-tight text-primary text-balance">
               <Bell className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">알림</span>
+              <span className="min-w-0 truncate">알림</span>
             </h2>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
               <Badge
                 variant={unreadCount > 0 ? "destructive" : "secondary"}
                 className="rounded-full px-2 py-0.5 text-[11px]"
@@ -100,7 +100,7 @@ export default function DesktopLeftPanelNotifications({
               )}
             </div>
           </div>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="max-w-full text-pretty text-xs leading-5 text-muted-foreground">
             리뷰, 맛집, 공지 소식을 지도 흐름 안에서 확인해요.
           </p>
         </div>
