@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Restaurant } from '@/types/restaurant';
 
 export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-weekly'] as const;
+export const LATEST_RESTAURANTS_QUERY_KEY = ['latest-restaurants'] as const;
 
 export const KOREAN_RESTAURANT_REGIONS = [
   '서울특별시',
@@ -27,7 +28,7 @@ export const KOREAN_RESTAURANT_REGIONS = [
 export const POPULAR_RESTAURANT_SELECT =
   'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count';
 
-type PopularRestaurantsArgs = {
+type RestaurantListArgs = {
   limit: number;
   fetchLimit?: number;
   selectedRegion?: string | null;
@@ -38,8 +39,19 @@ export const getPopularRestaurantsQueryKey = ({
   limit,
   selectedRegion,
   isKoreanOnly = false,
-}: PopularRestaurantsArgs) => [
+}: RestaurantListArgs) => [
   ...POPULAR_RESTAURANTS_QUERY_KEY,
+  limit,
+  selectedRegion ?? 'all',
+  isKoreanOnly ? 'korean' : 'global',
+];
+
+export const getLatestRestaurantsQueryKey = ({
+  limit,
+  selectedRegion,
+  isKoreanOnly = false,
+}: RestaurantListArgs) => [
+  ...LATEST_RESTAURANTS_QUERY_KEY,
   limit,
   selectedRegion ?? 'all',
   isKoreanOnly ? 'korean' : 'global',
@@ -68,7 +80,7 @@ export async function fetchPopularRestaurants({
   fetchLimit = Math.max(limit * 4, 12),
   selectedRegion,
   isKoreanOnly = false,
-}: PopularRestaurantsArgs): Promise<Restaurant[]> {
+}: RestaurantListArgs): Promise<Restaurant[]> {
   const { data, error } = await supabase
     .from('restaurants')
     .select(POPULAR_RESTAURANT_SELECT)
@@ -86,5 +98,32 @@ export async function fetchPopularRestaurants({
     .sort(
       (a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0),
     )
+    .slice(0, limit);
+}
+
+export async function fetchLatestRestaurants({
+  limit,
+  fetchLimit = Math.max(limit * 3, 18),
+  selectedRegion,
+  isKoreanOnly = false,
+}: RestaurantListArgs): Promise<Restaurant[]> {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select(POPULAR_RESTAURANT_SELECT)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(fetchLimit);
+
+  if (error) throw error;
+
+  return mergeRestaurants((data ?? []) as Restaurant[])
+    .filter((restaurant) =>
+      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+    )
+    .sort((a, b) => {
+      const bTime = Date.parse(b.created_at ?? b.updated_at ?? '') || 0;
+      const aTime = Date.parse(a.created_at ?? a.updated_at ?? '') || 0;
+      return bTime - aTime;
+    })
     .slice(0, limit);
 }
