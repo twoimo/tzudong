@@ -112,9 +112,9 @@ export function MyPageLayoutContent({
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
           <div className="flex h-full min-h-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:px-5 md:py-6 md:pb-6 lg:px-6 lg:py-7">
-            <div className="mb-3 md:hidden" data-mypage-mobile-return-slot="true">
+            <div className="mb-3" data-mypage-return-slot="true">
               {userLoading ? (
-                <Skeleton className="h-9 w-24 rounded-full" data-mypage-mobile-return-skeleton="true" />
+                <Skeleton className="h-9 w-24 rounded-full" data-mypage-return-skeleton="true" />
               ) : (
                 <ReturnToMapButton className="w-fit" />
               )}

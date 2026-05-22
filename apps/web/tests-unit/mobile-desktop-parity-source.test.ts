@@ -36,16 +36,16 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain("현재 화면 · {activeSidebarLabel}");
     expect(consoleSource).not.toContain("관리자 메뉴");
     expect(consoleSource).not.toContain("Unified admin console");
-    expect(consoleSource).toContain("sticky top-0 z-30");
+    expect(consoleSource).toContain("relative z-30 flex max-h-[42dvh]");
     expect(consoleSource).toContain(
       "flex gap-2 overflow-x-auto overscroll-x-contain",
     );
-    expect(consoleSource).toContain("md:grid-cols-[12rem_minmax(0,1fr)]");
-    expect(consoleSource).toContain("md:grid-cols-[3.5rem_minmax(0,1fr)]");
+    expect(consoleSource).toContain("md:grid-cols-[16rem_minmax(0,1fr)]");
+    expect(consoleSource).toContain("md:grid-cols-[4.5rem_minmax(0,1fr)]");
     expect(consoleSource).toContain("md:block md:min-h-0 md:flex-1");
-    expect(consoleSource).toContain("md:w-48");
-    expect(consoleSource).toContain("md:w-14");
-    expect(consoleSource).toContain("p-2 md:border-y-0");
+    expect(consoleSource).toContain("md:w-full");
+    expect(consoleSource).toContain("md:items-center md:px-1.5");
+    expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
     expect(consoleSource).toContain("min-h-11 min-w-[8.25rem]");
     expect(consoleSource).toContain(
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
@@ -534,8 +534,9 @@ describe("mobile and desktop parity source contracts", () => {
       homeDesktopControlPanelSource.indexOf('{ id: "feed", label: "리뷰", icon: MessageSquare }'),
     );
     const myPageProfileSource = source("app/mypage/profile/page.tsx");
-    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-return-slot="true"');
-    expect(myPageLayoutContentSource).toContain('data-mypage-mobile-return-skeleton="true"');
+    expect(myPageLayoutContentSource).toContain('data-mypage-return-slot="true"');
+    expect(myPageLayoutContentSource).toContain('data-mypage-return-skeleton="true"');
+    expect(myPageLayoutContentSource.match(/<ReturnToMapButton/g)?.length ?? 0).toBe(1);
     expect(myPageLayoutContentSource).toContain('<ReturnToMapButton className="w-fit" />');
     expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
     expect(myPageProfileSource).toContain('data-mypage-mobile-secondary-actions="true"');
