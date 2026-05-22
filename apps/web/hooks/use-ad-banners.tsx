@@ -26,7 +26,7 @@ const AD_BANNER_SELECT = [
 /**
  * 모든 광고 배너 조회 (관리자용)
  */
-export function useAdBannersAdmin() {
+export function useAdBannersAdmin(enabled = true) {
     const { isAdmin } = useAuth();
 
     return useQuery({
@@ -44,7 +44,7 @@ export function useAdBannersAdmin() {
 
             return data || [];
         },
-        enabled: isAdmin,
+        enabled: isAdmin && enabled,
         staleTime: 5 * 60 * 1000, // 5분
     });
 }

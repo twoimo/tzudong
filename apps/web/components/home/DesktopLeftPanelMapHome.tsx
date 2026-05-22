@@ -2,13 +2,15 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MapPin, MessageSquareText, TrendingUp } from 'lucide-react';
+import { MapPin, TrendingUp } from 'lucide-react';
 
-import FeedContent, { type FeedRestaurantRecord } from '@/components/feed/FeedContent';
+import { StampCard } from '@/components/stamp/StampCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { incrementSearchCount } from '@/lib/search-count';
 import {
+  fetchLatestRestaurants,
   fetchPopularRestaurants,
+  getLatestRestaurantsQueryKey,
   getPopularRestaurantsQueryKey,
   POPULAR_RESTAURANTS_QUERY_KEY,
 } from '@/lib/popular-restaurants';
@@ -24,19 +26,32 @@ type DesktopLeftPanelMapHomeProps = {
 
 const POPULAR_RESTAURANT_LIMIT = 3;
 const POPULAR_RESTAURANT_QUERY_LIMIT = 12;
+const LATEST_RESTAURANT_LIMIT = 10;
+const LATEST_RESTAURANT_QUERY_LIMIT = 24;
+const LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT =
+  LATEST_RESTAURANT_LIMIT + POPULAR_RESTAURANT_LIMIT;
 export default function DesktopLeftPanelMapHome({
   onRestaurantOpen,
-  onOpenUserProfile,
-  onOpenAuth,
   selectedRegion,
   isKoreanOnly = true,
 }: DesktopLeftPanelMapHomeProps) {
   const queryClient = useQueryClient();
-  const [shouldLoadReviewFeed, setShouldLoadReviewFeed] = useState(false);
+  const [latestThumbnailIndexes, setLatestThumbnailIndexes] = useState<
+    Record<string, number>
+  >({});
   const desktopLeftPanelHomePopularQueryKey = useMemo(
     () =>
       getPopularRestaurantsQueryKey({
         limit: POPULAR_RESTAURANT_LIMIT,
+        selectedRegion,
+        isKoreanOnly,
+      }),
+    [isKoreanOnly, selectedRegion],
+  );
+  const desktopLeftPanelHomeLatestQueryKey = useMemo(
+    () =>
+      getLatestRestaurantsQueryKey({
+        limit: LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT,
         selectedRegion,
         isKoreanOnly,
       }),
@@ -60,6 +75,33 @@ export default function DesktopLeftPanelMapHome({
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
   });
+  const { data: latestRestaurants = [], isLoading: isLatestLoading } = useQuery({
+    queryKey: desktopLeftPanelHomeLatestQueryKey,
+    queryFn: async () => {
+      try {
+        return await fetchLatestRestaurants({
+          limit: LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT,
+          fetchLimit: LATEST_RESTAURANT_QUERY_LIMIT,
+          selectedRegion,
+          isKoreanOnly,
+        });
+      } catch (error) {
+        console.warn('좌측 패널 최신 맛집 조회 실패:', error);
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+  const visibleLatestRestaurants = useMemo(() => {
+    const popularRestaurantIds = new Set(
+      popularRestaurants.map((restaurant) => restaurant.id),
+    );
+
+    return latestRestaurants
+      .filter((restaurant) => !popularRestaurantIds.has(restaurant.id))
+      .slice(0, LATEST_RESTAURANT_LIMIT);
+  }, [latestRestaurants, popularRestaurants]);
 
   const handleRestaurantOpen = useCallback(
     (restaurant: Restaurant) => {
@@ -75,25 +117,21 @@ export default function DesktopLeftPanelMapHome({
     [desktopLeftPanelHomePopularQueryKey, onRestaurantOpen, queryClient],
   );
 
-  const handleFeedRestaurantOpen = useCallback(
-    (restaurant: FeedRestaurantRecord) => {
-      onRestaurantOpen(restaurant as unknown as Restaurant);
-    },
-    [onRestaurantOpen],
-  );
-
-  const requestReviewFeed = useCallback(() => {
-    setShouldLoadReviewFeed(true);
+  const handleLatestThumbnailChange = useCallback((id: string, index: number) => {
+    setLatestThumbnailIndexes((current) => ({
+      ...current,
+      [id]: index,
+    }));
   }, []);
 
   return (
     <section
       className="flex h-full min-h-0 flex-col bg-background"
       data-desktop-left-panel-map-home="true"
-      aria-label="쯔동여지도 홈 추천과 리뷰"
+      aria-label="쯔동여지도 홈 추천과 최신 맛집"
     >
       <div
-        className="shrink-0 border-b border-border bg-background px-3 py-3"
+        className="shrink-0 bg-background px-3 pb-2 pt-3"
         data-desktop-left-panel-popular-restaurants="true"
       >
         <div className="mb-2 flex items-center justify-between gap-2">
@@ -111,12 +149,12 @@ export default function DesktopLeftPanelMapHome({
           </span>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="divide-y divide-border/70">
           {isLoading ? (
             Array.from({ length: POPULAR_RESTAURANT_LIMIT }, (_, index) => (
               <div
                 key={index}
-                className="flex items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2"
+                className="flex items-center gap-2 px-1 py-2"
               >
                 <Skeleton className="h-6 w-6 rounded-full" />
                 <div className="min-w-0 flex-1 space-y-1">
@@ -135,7 +173,7 @@ export default function DesktopLeftPanelMapHome({
                 key={restaurant.id}
                 type="button"
                 onClick={() => handleRestaurantOpen(restaurant)}
-                className="group flex w-full items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="group flex w-full items-center gap-2 px-1 py-2 text-left transition-colors hover:bg-secondary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                 aria-label={`${restaurant.name} 인기 맛집 상세 보기`}
               >
                 <span
@@ -165,50 +203,52 @@ export default function DesktopLeftPanelMapHome({
       </div>
 
       <div
-        className="flex min-h-0 flex-1 flex-col"
-        data-desktop-left-panel-review-feed="true"
-        onWheel={requestReviewFeed}
-        onPointerDown={requestReviewFeed}
-        onPointerEnter={requestReviewFeed}
-        onFocusCapture={requestReviewFeed}
-        onTouchMove={requestReviewFeed}
+        className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1"
+        data-desktop-left-panel-latest-restaurants="true"
       >
-        <div className="flex shrink-0 items-center gap-1.5 border-b border-border bg-background px-3 py-2">
-          <MessageSquareText
-            className="h-4 w-4 text-primary"
-            aria-hidden="true"
-          />
-          <h2 className="text-sm font-bold text-foreground">사용자 맛집 리뷰</h2>
-          <span className="text-[11px] text-muted-foreground">
-            아래로 스크롤해 계속 보기
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          <h2 className="text-xs font-bold text-muted-foreground">
+            최근 추가된 맛집
+          </h2>
+          <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+            최신순
           </span>
         </div>
-        {shouldLoadReviewFeed ? (
-          <FeedContent
-            variant="overlay"
-            showHeader={false}
-            hideFloatingButton
-            hideReviewModal
-            onOpenRestaurantDetail={handleFeedRestaurantOpen}
-            onOpenUserProfile={onOpenUserProfile}
-            onOpenAuth={onOpenAuth}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={requestReviewFeed}
-            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-muted-foreground transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
-            aria-label="사용자 맛집 리뷰 불러오기"
-          >
-            <MessageSquareText className="h-6 w-6 text-primary" aria-hidden="true" />
-            <span className="text-sm font-semibold text-foreground">
-              사용자 리뷰를 이어서 볼 수 있어요
-            </span>
-            <span className="max-w-[16rem] text-xs leading-5">
-              리뷰 영역에 마우스를 올리거나 스크롤하면 최신 리뷰를 불러옵니다.
-            </span>
-          </button>
-        )}
+
+        <div className="grid grid-cols-1 gap-3">
+          {isLatestLoading ? (
+            Array.from({ length: 3 }, (_, index) => (
+              <div
+                key={index}
+                className="overflow-hidden rounded-xl border border-border bg-card"
+              >
+                <Skeleton className="aspect-video w-full rounded-none" />
+                <div className="flex items-center justify-between gap-2 p-2">
+                  <Skeleton className="h-4 w-28 rounded-full" />
+                  <Skeleton className="h-4 w-12 rounded-full" />
+                </div>
+              </div>
+            ))
+          ) : visibleLatestRestaurants.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">
+              새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.
+            </div>
+          ) : (
+            visibleLatestRestaurants.map((restaurant) => (
+              <StampCard
+                key={restaurant.id}
+                restaurant={restaurant}
+                isVisited={false}
+                isUserStampsReady={false}
+                currentThumbnailIndex={latestThumbnailIndexes[restaurant.id] ?? 0}
+                onThumbnailChange={handleLatestThumbnailChange}
+                onClick={handleRestaurantOpen}
+                size="compact"
+                stampSize="mobile"
+              />
+            ))
+          )}
+        </div>
       </div>
     </section>
   );
