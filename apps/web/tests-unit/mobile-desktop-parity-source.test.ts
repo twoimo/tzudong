@@ -560,8 +560,9 @@ describe("mobile and desktop parity source contracts", () => {
       "h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']",
     );
     expect(stampOverlaySource).toContain(
-      "border-b border-border bg-background p-4 sm:p-6 shrink-0",
+      "shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4",
     );
+    expect(stampOverlaySource).toContain("flex flex-wrap items-start justify-between gap-3");
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
     expect(stampOverlaySource).toContain("singleColumnCards?: boolean");

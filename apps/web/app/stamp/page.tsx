@@ -851,23 +851,23 @@ export default function StampPage() {
                         onTouchMove={stampBottomNavAutoHide.onTouchMove}
                     >
                         {/* Header */}
-                        <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
-                            <div className="flex items-center justify-between">
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-w-0">
-                                            <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
-                                            <span className="whitespace-nowrap">쯔동여지도 도장</span>
+                        <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1 basis-[min(15rem,100%)]">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                        <h1 className="flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+                                            <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
+                                            <span className="min-w-0 truncate">쯔동여지도 도장</span>
                                         </h1>
-                                        <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap shrink-0">
+                                        <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
                                             ({totalRestaurantCount.toLocaleString()}개)
                                         </span>
                                     </div>
-                                    <p className="text-xs xs:text-sm text-muted-foreground mt-1 whitespace-nowrap">
+                                    <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
                                         맛집을 찾아 도장을 찍어보세요!
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                                     {/* Unvisited Only Toggle */}
                                     <Button
                                         variant="ghost"
@@ -875,11 +875,12 @@ export default function StampPage() {
                                         className="h-8 w-8 rounded-full hover:bg-muted"
                                         onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
                                         title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
+                                        aria-label={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
                                     >
                                         {filters.showUnvisitedOnly ? (
-                                            <EyeOff className="h-5 w-5 text-muted-foreground" />
+                                            <EyeOff className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                                         ) : (
-                                            <Eye className="h-5 w-5 text-muted-foreground" />
+                                            <Eye className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
                                         )}
                                     </Button>
                                     {/* Filter Toggle - 모바일/태블릿에서만 헤더에 표시 */}
@@ -890,8 +891,9 @@ export default function StampPage() {
                                             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
                                             className="relative"
                                             title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
+                                            aria-label={isFilterExpanded ? "도장 필터 접기" : "도장 필터 펼치기"}
                                         >
-                                            <Filter className="h-4 w-4" />
+                                            <Filter className="h-4 w-4" aria-hidden="true" />
                                             {activeFilterCount > 0 && (
                                                 <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
                                                     {activeFilterCount}
@@ -906,8 +908,9 @@ export default function StampPage() {
                                             size="icon"
                                             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                                             title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
+                                            aria-label={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
                                         >
-                                            {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+                                            {viewMode === 'grid' ? <List className="h-5 w-5" aria-hidden="true" /> : <Grid className="h-5 w-5" aria-hidden="true" />}
                                         </Button>
                                     )}
                                 </div>
@@ -919,17 +922,20 @@ export default function StampPage() {
 
                             {/* 필터 컨트롤 그리드 - 데스크톱에서는 항상 표시, 모바일/태블릿에서는 확장시에만 표시 */}
                             <div className={cn(
-                                "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 mt-4 transition-all duration-300 overflow-hidden",
+                                "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 mt-4 overflow-hidden",
                                 isMobileOrTablet && !isFilterExpanded && "hidden"
                             )}>
                                 {/* 검색 */}
                                 <div className="lg:col-span-2">
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                                         <Input
-                                            placeholder="맛집명 검색..."
+                                            aria-label="도장 맛집 검색"
+                                            name="stamp-page-search"
+                                            autoComplete="off"
+                                            placeholder="맛집명 검색…"
                                             value={filters.searchQuery}
-                                            onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+                                            onChange={(e) => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
                                             className="pl-9"
                                         />
                                     </div>
@@ -942,7 +948,7 @@ export default function StampPage() {
                                             <span className="truncate">
                                                 지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
                                             </span>
-                                            <Filter className="h-4 w-4 ml-2" />
+                                            <Filter className="ml-2 h-4 w-4" aria-hidden="true" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-80" align="start">
@@ -978,7 +984,7 @@ export default function StampPage() {
                                             <span className="truncate">
                                                 카테고리 {filters.categories.length > 0 && `(${filters.categories.length})`}
                                             </span>
-                                            <Filter className="h-4 w-4 ml-2" />
+                                            <Filter className="ml-2 h-4 w-4" aria-hidden="true" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-64" align="start">
@@ -1021,7 +1027,7 @@ export default function StampPage() {
                                             <span className="truncate">
                                                 리뷰 {(filters.fanVisitsMin ?? 0) > 0 ? `${filters.fanVisitsMin}개 이상` : "전체"}
                                             </span>
-                                            <Filter className="h-4 w-4 ml-2" />
+                                            <Filter className="ml-2 h-4 w-4" aria-hidden="true" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-80" align="start">
@@ -1117,8 +1123,8 @@ export default function StampPage() {
                                     {/* 무한 스크롤 트리거 및 로딩 표시 */}
                                     <div ref={loadMoreRef} className="col-span-full h-10 flex items-center justify-center">
                                         {hasMoreToDisplay && (
-                                            <span className="text-sm text-muted-foreground">
-                                                더 불러오는 중... ({displayedCards.length} / {filteredAndSortedRestaurants.length}개)
+                                            <span className="text-sm text-muted-foreground" role="status" aria-live="polite">
+                                                더 불러오는 중… ({displayedCards.length} / {filteredAndSortedRestaurants.length}개)
                                             </span>
                                         )}
                                     </div>
@@ -1174,7 +1180,11 @@ export default function StampPage() {
                                             {/* 무한 스크롤 트리거 및 로딩 표시 */}
                                             <TableRow ref={loadMoreTableRef}>
                                                 <TableCell colSpan={4} className="h-10 text-center text-sm text-muted-foreground">
-                                                    {hasMoreToDisplay && `더 불러오는 중... (${displayedRestaurants.length} / ${filteredAndSortedRestaurants.length}개)`}
+                                                    {hasMoreToDisplay && (
+                                                        <span role="status" aria-live="polite">
+                                                            {`더 불러오는 중… (${displayedRestaurants.length} / ${filteredAndSortedRestaurants.length}개)`}
+                                                        </span>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         </TableBody>
