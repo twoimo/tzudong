@@ -537,6 +537,10 @@ describe("mobile and desktop parity source contracts", () => {
     expect(myPageLayoutContentSource).toContain('data-mypage-mobile-return-skeleton="true"');
     expect(myPageLayoutContentSource).toContain('<ReturnToMapButton className="w-fit" />');
     expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
+    expect(myPageProfileSource).toContain('data-mypage-mobile-secondary-actions="true"');
+    expect(myPageProfileSource).toContain('grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2');
+    expect(myPageProfileSource).toContain('text-balance text-xl font-bold tracking-tight');
+    expect(myPageProfileSource).toContain('justify-center gap-1.5 text-xs font-semibold text-primary sm:justify-start');
     expect(myPageProfileSource).toContain('저장한 맛집');
     expect(myPageProfileSource).toContain('내 리뷰');
     expect(myPageProfileSource).toContain('맛집 제보');
