@@ -39,10 +39,13 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain(
       "flex gap-2 overflow-x-auto overscroll-x-contain",
     );
+    expect(consoleSource).toContain("md:grid-cols-[12rem_minmax(0,1fr)]");
+    expect(consoleSource).toContain("md:grid-cols-[3.5rem_minmax(0,1fr)]");
+    expect(consoleSource).toContain("md:block md:min-h-0 md:flex-1");
+    expect(consoleSource).toContain("md:w-48");
+    expect(consoleSource).toContain("md:w-14");
+    expect(consoleSource).toContain("p-2 md:border-y-0");
     expect(consoleSource).toContain("min-h-11 min-w-[8.25rem]");
-    expect(consoleSource).toContain("lg:block lg:min-h-0 lg:flex-1");
-    expect(consoleSource).toContain("lg:w-48");
-    expect(consoleSource).toContain("lg:w-14");
     expect(consoleSource).toContain(
       'data-admin-left-panel-expanded={isCollapsed ? "false" : "true"}',
     );
