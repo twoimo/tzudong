@@ -73,12 +73,17 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(leftPanelNotificationSource).toContain('onClose?: () => void;');
     expect(leftPanelNotificationSource).toContain('aria-label="알림 패널 닫기"');
     expect(leftPanelNotificationSource).toContain('className="h-9 w-9 rounded-full hover:bg-muted"');
-    expect(leftPanelNotificationSource).toContain('className="grid gap-2"');
     expect(leftPanelNotificationSource).toContain('flex flex-wrap items-start justify-between gap-2');
+    expect(leftPanelNotificationSource).toContain('className="min-w-0 flex-1 basis-[min(10rem,100%)]"');
     expect(leftPanelNotificationSource).toContain('basis-[min(10rem,100%)]');
+    expect(leftPanelNotificationSource).toContain('className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground"');
+    expect(leftPanelNotificationSource).toContain('리뷰·맛집·공지 소식을 바로 확인해요.');
     expect(leftPanelNotificationSource).toContain('text-pretty');
+    expect(leftPanelNotificationSource).toContain('className="mt-3 flex justify-end"');
+    expect(leftPanelNotificationSource).not.toContain('className="grid gap-2"');
+    expect(leftPanelNotificationSource).not.toContain('className="min-w-0 flex-1 pt-1"');
     expect(leftPanelNotificationSource).not.toContain('className="truncate text-xs text-muted-foreground"');
-      });
+  });
 
   test('mobile bookmark and notification controls keep the same touch, state, and responsive affordances', () => {
     const mobileBookmarkSource = source('components/home/MobileBookmarkMenuButton.tsx');
