@@ -64,7 +64,7 @@ function StampPageSkeletonComponent() {
             <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                 <div className="shrink-0 space-y-4 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1 basis-[min(15rem,100%)] space-y-2">
+                        <div className="min-w-0 flex-1 basis-[min(11rem,100%)] space-y-2">
                             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                 <Skeleton className="h-7 w-32 max-w-full rounded-lg" />
                                 <Skeleton className="h-4 w-12 rounded-full" />
