@@ -4,6 +4,7 @@ import { memo, useMemo, type KeyboardEvent } from 'react';
 import Image from 'next/image';
 import { MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
@@ -12,6 +13,34 @@ import { getRestaurantDisplayName } from '@/lib/restaurant-display-name';
 
 type StampCardRestaurant = Restaurant & {
     verified_review_count?: number | null;
+};
+
+const readYoutubeMetaTitle = (meta: unknown): string => {
+    if (!meta || typeof meta !== 'object') return '';
+    const title = (meta as { title?: unknown }).title;
+    return typeof title === 'string' ? title : '';
+};
+
+const inferRestaurantCategory = (restaurant: StampCardRestaurant): string | null => {
+    const directCategory = parseCategory(restaurant.category ?? restaurant.categories);
+    if (directCategory) return directCategory;
+
+    const searchableText = [
+        restaurant.reasoning_basis,
+        restaurant.tzuyang_review,
+        readYoutubeMetaTitle(restaurant.youtube_meta),
+        ...(restaurant.mergedYoutubeMetas ?? []).map(readYoutubeMetaTitle),
+    ]
+        .filter((value): value is string => Boolean(value))
+        .join(' ');
+
+    if (!searchableText) return null;
+
+    return (
+        RESTAURANT_CATEGORIES.find((category) =>
+            searchableText.includes(category),
+        ) ?? null
+    );
 };
 
 export interface StampCardProps {
@@ -31,6 +60,8 @@ export interface StampCardProps {
     guideDescription?: string;
     onGuideClose?: () => void;
     isGuideCard?: boolean;
+    showAddress?: boolean;
+    categoryFallback?: string;
 }
 
 /**
@@ -52,6 +83,8 @@ export const StampCard = memo(function StampCard({
     guideDescription,
     onGuideClose,
     isGuideCard = false,
+    showAddress = false,
+    categoryFallback,
 }: StampCardProps) {
     const typedRestaurant = restaurant as StampCardRestaurant;
     const restaurantDisplayName = getRestaurantDisplayName(typedRestaurant);
@@ -60,10 +93,11 @@ export const StampCard = memo(function StampCard({
     const currentIndex = currentThumbnailIndex % (youtubeLinks.length || 1);
     const thumbnailUrl = youtubeLinks[currentIndex] ? getYouTubeThumbnailUrl(youtubeLinks[currentIndex]) : null;
     const category = useMemo(
-        () => parseCategory(typedRestaurant.category ?? typedRestaurant.categories),
-        [typedRestaurant.category, typedRestaurant.categories],
+        () => inferRestaurantCategory(typedRestaurant) ?? categoryFallback ?? null,
+        [categoryFallback, typedRestaurant],
     );
     const reviewCount = typedRestaurant.verified_review_count ?? typedRestaurant.review_count ?? 0;
+    const displayAddress = typedRestaurant.road_address || typedRestaurant.jibun_address || typedRestaurant.english_address || typedRestaurant.address || '';
 
     const handlePrevThumbnail = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -261,29 +295,37 @@ export const StampCard = memo(function StampCard({
                         </span>
                     </div>
                 ) : (
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurantDisplayName}>
-                            {restaurantDisplayName}
-                        </h3>
-                        {category && (
-                            <Badge
-                                variant="secondary"
-                                className={cn(
-                                    "font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60",
-                                    isCompact ? "text-[9px] px-1 h-4" : "text-[10px] px-1.5 h-5"
+                    <div className={cn("min-w-0", showAddress && displayAddress ? "space-y-1.5" : "")}>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <h3 className={cn("font-medium truncate", isCompact ? "text-xs" : "text-sm")} title={restaurantDisplayName}>
+                                    {restaurantDisplayName}
+                                </h3>
+                                {category && (
+                                    <Badge
+                                        variant="secondary"
+                                        className={cn(
+                                            "font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60",
+                                            isCompact ? "text-[9px] px-1 h-4" : "text-[10px] px-1.5 h-5"
+                                        )}
+                                    >
+                                        {category}
+                                    </Badge>
                                 )}
-                            >
-                                {category}
-                            </Badge>
+                            </div>
+                            {(!isCompact || showAddress) && (
+                                <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                                    리뷰 {reviewCount}
+                                </span>
+                            )}
+                        </div>
+                        {showAddress && displayAddress && (
+                            <p className="flex min-w-0 items-center gap-1 text-xs leading-4 text-muted-foreground">
+                                <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                <span className="truncate">{displayAddress}</span>
+                            </p>
                         )}
                     </div>
-                    {!isCompact && (
-                        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                            리뷰 {reviewCount}
-                        </span>
-                    )}
-                </div>
                 )}
             </div>
         </Card>
