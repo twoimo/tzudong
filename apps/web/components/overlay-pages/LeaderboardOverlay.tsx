@@ -85,17 +85,17 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                 className="h-full overflow-y-auto overflow-x-hidden overscroll-contain"
             >
                 {/* 헤더 - 모바일/태블릿 페이지와 동일 스타일 */}
-                <div className="border-b border-border bg-background p-4 sm:p-6">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0 flex-1 pr-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                                <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
-                                    <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
-                                    <span className="whitespace-nowrap">쯔동여지도 랭킹</span>
+                <div className="border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1 basis-[min(15rem,100%)]">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <h1 className="flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+                                    <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
+                                    <span className="min-w-0 truncate">쯔동여지도 랭킹</span>
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="ghost" size="icon" className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0" title="랭킹 및 티어 산정 기준 보기" aria-label="랭킹 및 티어 산정 기준 보기">
-                                                <Info className="h-4 w-4 text-muted-foreground" />
+                                                <Info className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto max-w-sm z-[100]" align="start">
@@ -122,11 +122,11 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                                     </Popover>
                                 </h1>
                             </div>
-                            <p className="text-xs xs:text-sm text-muted-foreground whitespace-nowrap mt-1">
+                            <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
                                 맛집 리뷰를 작성하고 랭킹을 올려보세요!
                             </p>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
                                 <TabsList className="h-8">
                                     <TabsTrigger value="all" className="text-xs px-2 sm:px-3">전체</TabsTrigger>
@@ -136,7 +136,7 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
 
                             {onClose && (
                                 <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="랭킹 패널 닫기">
-                                    <X className="h-5 w-5" />
+                                    <X className="h-5 w-5" aria-hidden="true" />
                                 </Button>
                             )}
                         </div>
@@ -171,8 +171,8 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                         style={DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE}
                     >
                         {hasMoreToDisplay && (
-                            <span className="text-sm text-muted-foreground">
-                                더 불러오는 중... ({displayedUsers.length} / {leaderboardData.length}명)
+                            <span className="text-sm text-muted-foreground" role="status" aria-live="polite">
+                                더 불러오는 중… ({displayedUsers.length} / {leaderboardData.length}명)
                             </span>
                         )}
                     </div>

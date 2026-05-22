@@ -1493,6 +1493,9 @@ describe("web quality performance source contracts", () => {
     expect(stampPageSource).toContain(
       'stampSize={isDesktop ? "compact" : "mobile"}',
     );
+    expect(stampPageSource).toContain('name="stamp-page-search"');
+    expect(stampPageSource).toContain('autoComplete="off"');
+    expect(stampPageSource).not.toContain('transition-all duration-300');
     expect(stampCardSource).toContain("grayscale opacity-60");
     expect(stampCardSource).not.toContain("absolute inset-0 bg-black/");
     expect(skeletonLoadersSource).toContain(
@@ -1501,6 +1504,11 @@ describe("web quality performance source contracts", () => {
     expect(skeletonLoadersSource).toContain(
       'data-testid="stamp-page-skeleton"',
     );
+    expect(skeletonLoadersSource).toContain(
+      "shrink-0 space-y-4 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4",
+    );
+    expect(skeletonLoadersSource).toContain("basis-[min(15rem,100%)] space-y-2");
+    expect(skeletonLoadersSource).toContain("ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2");
     expect(stampLoadingSource).toContain("return <StampPageSkeleton />");
     expect(stampPageSource).toContain(
       "if (!isMounted || authLoading) return <StampPageSkeleton />",
@@ -1748,6 +1756,11 @@ describe("web quality performance source contracts", () => {
     );
     expect(feedContentSource).toContain('aria-label="리뷰 패널 닫기"');
     expect(feedContentSource).toContain('aria-label="리뷰 작성"');
+    expect(feedContentSource).toContain("flex flex-wrap items-start justify-between gap-3");
+    expect(feedContentSource).toContain("basis-[min(15rem,100%)]");
+    expect(feedContentSource).toContain("text-balance");
+    expect(feedContentSource).toContain("text-pretty");
+    expect(feedContentSource).toContain('placeholder="맛집명, 작성자, 내용 검색…"');
     expect(restaurantReviewsPanelSource).toContain(
       'aria-label="맛집 리뷰 패널 닫기"',
     );
@@ -1759,6 +1772,9 @@ describe("web quality performance source contracts", () => {
     expect(stampOverlaySource).toContain(
       'data-desktop-left-panel-stamp-mobile-parity="true"',
     );
+    expect(stampOverlaySource).toContain("flex flex-wrap items-start justify-between gap-3");
+    expect(stampOverlaySource).toContain("basis-[min(15rem,100%)]");
+    expect(stampOverlaySource).toContain("tabular-nums");
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
     expect(stampOverlaySource).toContain("const skeletonCardCount = singleColumnCards ? 8 : 16");
@@ -1794,6 +1810,9 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardOverlaySource).toContain(
       'data-desktop-left-panel-leaderboard-list="true"',
     );
+    expect(leaderboardOverlaySource).toContain("flex flex-wrap items-start justify-between gap-3");
+    expect(leaderboardOverlaySource).toContain("basis-[min(15rem,100%)]");
+    expect(leaderboardOverlaySource).toContain("text-pretty");
     expect(leaderboardOverlaySource).toContain(
       "DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE",
     );
@@ -1824,6 +1843,8 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardListSource).toContain("pl-2 pr-6 sm:px-6");
     expect(leaderboardListSource).not.toContain("px-4 sm:px-6 md:px-6");
     expect(leaderboardPageSource).toContain('className="pl-2 pr-6 sm:px-6"');
+    expect(leaderboardPageSource).toContain("flex flex-wrap items-start justify-between gap-3");
+    expect(leaderboardPageSource).toContain("basis-[min(15rem,100%)]");
     expect(leaderboardLoadingSource).toContain(
       'className="pl-2 pr-6 sm:px-6"',
     );

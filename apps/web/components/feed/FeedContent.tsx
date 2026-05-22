@@ -552,68 +552,71 @@ export default function FeedContent({
             )}>
                 {/* 헤더 */}
                 {showHeader && (
-                    <div className="border-b border-border bg-background p-4 sm:p-6 shrink-0">
-                        <div className="flex items-center justify-between">
-                        <div className="min-w-0">
-                            <h1 className="text-[1.125rem] xs:text-xl sm:text-2xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 min-w-0">
-                                <MessageSquareText className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
-                                <span className="whitespace-nowrap">쯔동여지도 리뷰</span>
-                                <span className="text-xs xs:text-sm font-normal text-muted-foreground whitespace-nowrap">
-                                    ({allReviews.length}개)
-                                </span>
-                            </h1>
-                            <p className="text-xs xs:text-sm text-muted-foreground mt-1 whitespace-nowrap">
-                                {isLoggedIn
-                                    ? "맛집 방문 후기를 공유해보세요!"
-                                    : "로그인하여 리뷰를 작성해보세요!"
-                                }
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {isLoggedIn && (
+                    <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1 basis-[min(15rem,100%)]">
+                                <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+                                    <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
+                                    <span className="min-w-0 truncate">쯔동여지도 리뷰</span>
+                                    <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
+                                        ({allReviews.length}개)
+                                    </span>
+                                </h1>
+                                <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+                                    {isLoggedIn
+                                        ? "맛집 방문 후기를 공유해보세요!"
+                                        : "로그인하여 리뷰를 작성해보세요!"
+                                    }
+                                </p>
+                            </div>
+                            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+                                {isLoggedIn && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full hover:bg-muted"
+                                        onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
+                                        title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                        aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                    >
+                                        {showMyReviewsOnly ? (
+                                            <EyeOff className="h-5 w-5 text-primary" aria-hidden="true" />
+                                        ) : (
+                                            <Eye className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                                        )}
+                                    </Button>
+                                )}
                                 <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="icon"
-                                    className="h-8 w-8 rounded-full hover:bg-muted"
-                                    onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
-                                    title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
-                                    aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                    onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                                    title="검색 필터"
+                                    aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}
                                 >
-                                    {showMyReviewsOnly ? (
-                                        <EyeOff className="h-5 w-5 text-primary" />
-                                    ) : (
-                                        <Eye className="h-5 w-5 text-muted-foreground" />
-                                    )}
+                                    <Filter className="h-4 w-4" aria-hidden="true" />
                                 </Button>
-                            )}
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                                title="검색 필터"
-                                aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}
-                            >
-                                <Filter className="h-4 w-4" />
-                            </Button>
-                            {isOverlay && onClose && (
-                                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="리뷰 패널 닫기">
-                                    <X className="h-5 w-5" />
-                                </Button>
-                            )}
-                        </div>
-                        </div>
-                        {isFilterExpanded && (
-                        <div className="mt-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="맛집명, 작성자, 내용 검색..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-9"
-                                />
+                                {isOverlay && onClose && (
+                                    <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="리뷰 패널 닫기">
+                                        <X className="h-5 w-5" aria-hidden="true" />
+                                    </Button>
+                                )}
                             </div>
                         </div>
+                        {isFilterExpanded && (
+                            <div className="mt-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                                    <Input
+                                        aria-label="리뷰 검색"
+                                        name="feed-review-search"
+                                        autoComplete="off"
+                                        placeholder="맛집명, 작성자, 내용 검색…"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-9"
+                                    />
+                                </div>
+                            </div>
                         )}
                     </div>
                 )}
@@ -669,13 +672,13 @@ export default function FeedContent({
                                 );
                             })}
                             <div ref={loadMoreRef} className={cn(
-                                "flex items-center justify-center transition-all duration-300",
+                                "flex items-center justify-center",
                                 isFetchingNextPage ? "h-20" : "h-4"
                             )}>
                                 {isFetchingNextPage && (
-                                    <div className="flex items-center gap-2">
-                                        <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
-                                        <span className="text-sm text-muted-foreground">더 불러오는 중...</span>
+                                    <div className="flex items-center gap-2" role="status" aria-live="polite">
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent motion-reduce:animate-none" aria-hidden="true" />
+                                        <span className="text-sm text-muted-foreground">더 불러오는 중…</span>
                                     </div>
                                 )}
                             </div>

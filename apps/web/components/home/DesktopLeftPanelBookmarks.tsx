@@ -40,18 +40,18 @@ export default function DesktopLeftPanelBookmarks({
       className="flex h-full min-h-0 flex-col bg-background"
       data-desktop-left-panel-view="bookmarks"
     >
-      <div className="border-b border-border bg-gradient-to-br from-background via-background to-muted/35 px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-base font-bold text-primary">
-              <Bookmark className="h-4 w-4" aria-hidden="true" />
-              북마크
+      <div className="border-b border-border bg-gradient-to-br from-background via-background to-muted/35 px-3 py-3 sm:px-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 basis-[min(10rem,100%)]">
+            <h2 className="flex min-w-0 items-center gap-2 text-base font-bold leading-tight text-primary text-balance">
+              <Bookmark className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 truncate">북마크</span>
             </h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground">
               저장한 맛집을 지도와 상세로 바로 열어요.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Badge
               variant="secondary"
               className="rounded-full px-2 py-0.5 text-[11px]"
