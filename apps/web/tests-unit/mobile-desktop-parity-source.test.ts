@@ -539,14 +539,23 @@ describe("mobile and desktop parity source contracts", () => {
     expect(myPageLayoutContentSource.match(/<ReturnToMapButton/g)?.length ?? 0).toBe(1);
     expect(myPageLayoutContentSource).toContain('<ReturnToMapButton className="w-fit" />');
     expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
-    expect(myPageProfileSource).toContain('data-mypage-mobile-secondary-actions="true"');
+    expect(myPageProfileSource).not.toContain('data-mypage-mobile-secondary-actions="true"');
+    expect(myPageProfileSource).toContain('data-mypage-session-card="true"');
+    expect(myPageProfileSource).toContain('data-mypage-profile-photo-controls="true"');
+    expect(myPageProfileSource.match(/data-mypage-session-card="true"/g)?.length ?? 0).toBe(1);
     expect(myPageProfileSource).toContain('grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2');
     expect(myPageProfileSource).toContain('text-balance text-xl font-bold tracking-tight');
     expect(myPageProfileSource).toContain('justify-center gap-1.5 text-xs font-semibold text-primary sm:justify-start');
     expect(myPageProfileSource).toContain('저장한 맛집');
     expect(myPageProfileSource).toContain('내 리뷰');
     expect(myPageProfileSource).toContain('맛집 제보');
+    expect(myPageProfileSource).toContain('수정 요청');
+    expect(myPageProfileSource).toContain('쯔양 제보');
     expect(myPageProfileSource).toContain('지도 환경설정');
+    expect(myPageProfileSource).toContain('data-mypage-primary-action={isPrimaryAction ? "true" : "false"}');
+    expect(myPageProfileSource).toContain('desktopAccent: "md:bg-primary/10 md:text-primary"');
+    expect(myPageProfileSource).toContain('<span className="hidden md:inline">마이페이지 허브</span>');
+    expect(myPageProfileSource).toContain('<span className="hidden md:inline">바로 할 수 있는 일</span>');
     expect(homeDesktopControlPanelSource).not.toContain("지도 필터");
     expect(homeDesktopControlPanelSource).toContain(
       "const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant)",
