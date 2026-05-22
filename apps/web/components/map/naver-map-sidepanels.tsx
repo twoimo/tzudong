@@ -83,7 +83,7 @@ export function NaverMapDetailPanelShell({
         >
             <div ref={detailPanelRef} className="h-full w-[min(400px,calc(100vw-1rem))] bg-background border-l border-border">
                 {RestaurantDetailPanel ? (
-                    <Suspense fallback={<NaverMapDetailPanelSkeleton />}>
+                    <Suspense fallback={null}>
                         <RestaurantDetailPanel
                             restaurant={restaurant}
                             onClose={onClose}
