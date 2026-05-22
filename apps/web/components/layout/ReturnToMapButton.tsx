@@ -47,8 +47,8 @@ export function ReturnToMapButton({
       variant="ghost"
       size={iconOnly ? "icon" : "sm"}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background/80 text-muted-foreground shadow-sm transition-colors hover:bg-secondary/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
-        iconOnly ? "h-8 w-8" : "h-9 px-3 text-xs font-semibold",
+        "inline-flex shrink-0 touch-manipulation items-center gap-1.5 rounded-full border border-border bg-background/80 text-muted-foreground shadow-sm transition-colors hover:bg-secondary/80 hover:text-foreground focus-visible:ring-primary focus-visible:ring-offset-background",
+        iconOnly ? "h-11 w-11" : "min-h-11 px-3 text-xs font-semibold",
         className,
       )}
       onClick={handleReturn}
