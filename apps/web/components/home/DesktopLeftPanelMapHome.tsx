@@ -2,9 +2,16 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MapPin, TrendingUp } from 'lucide-react';
+import { Clock, MapPin, TrendingUp } from 'lucide-react';
 
 import { StampCard } from '@/components/stamp/StampCard';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { incrementSearchCount } from '@/lib/search-count';
 import {
@@ -12,6 +19,7 @@ import {
   fetchPopularRestaurants,
   getLatestRestaurantsQueryKey,
   getPopularRestaurantsQueryKey,
+  type LatestRestaurantSort,
   POPULAR_RESTAURANTS_QUERY_KEY,
 } from '@/lib/popular-restaurants';
 import type { Restaurant } from '@/types/restaurant';
@@ -30,6 +38,14 @@ const LATEST_RESTAURANT_LIMIT = 10;
 const LATEST_RESTAURANT_QUERY_LIMIT = 24;
 const LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT =
   LATEST_RESTAURANT_LIMIT + POPULAR_RESTAURANT_LIMIT;
+const latestRestaurantSortOptions: Array<{
+  value: LatestRestaurantSort;
+  label: string;
+}> = [
+  { value: 'latest', label: '최신순' },
+  { value: 'oldest', label: '오래된순' },
+  { value: 'popular', label: '인기순' },
+];
 export default function DesktopLeftPanelMapHome({
   onRestaurantOpen,
   selectedRegion,
@@ -39,6 +55,8 @@ export default function DesktopLeftPanelMapHome({
   const [latestThumbnailIndexes, setLatestThumbnailIndexes] = useState<
     Record<string, number>
   >({});
+  const [latestRestaurantSort, setLatestRestaurantSort] =
+    useState<LatestRestaurantSort>('latest');
   const desktopLeftPanelHomePopularQueryKey = useMemo(
     () =>
       getPopularRestaurantsQueryKey({
@@ -52,10 +70,11 @@ export default function DesktopLeftPanelMapHome({
     () =>
       getLatestRestaurantsQueryKey({
         limit: LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT,
+        sort: latestRestaurantSort,
         selectedRegion,
         isKoreanOnly,
       }),
-    [isKoreanOnly, selectedRegion],
+    [isKoreanOnly, latestRestaurantSort, selectedRegion],
   );
   const { data: popularRestaurants = [], isLoading } = useQuery({
     queryKey: desktopLeftPanelHomePopularQueryKey,
@@ -82,6 +101,7 @@ export default function DesktopLeftPanelMapHome({
         return await fetchLatestRestaurants({
           limit: LATEST_RESTAURANT_DEDUPED_QUERY_LIMIT,
           fetchLimit: LATEST_RESTAURANT_QUERY_LIMIT,
+          sort: latestRestaurantSort,
           selectedRegion,
           isKoreanOnly,
         });
@@ -126,14 +146,18 @@ export default function DesktopLeftPanelMapHome({
 
   return (
     <section
-      className="flex h-full min-h-0 flex-col bg-background"
+      className="h-full min-h-0 bg-background"
       data-desktop-left-panel-map-home="true"
       aria-label="쯔동여지도 홈 추천과 최신 맛집"
     >
       <div
-        className="shrink-0 bg-background px-3 pb-2 pt-3"
-        data-desktop-left-panel-popular-restaurants="true"
+        className="h-full overflow-y-auto pb-4"
+        data-desktop-left-panel-home-scroll="true"
       >
+        <div
+          className="bg-background px-3 pb-2 pt-3"
+          data-desktop-left-panel-popular-restaurants="true"
+        >
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="min-w-0">
             <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
@@ -200,19 +224,49 @@ export default function DesktopLeftPanelMapHome({
             ))
           )}
         </div>
-      </div>
+        </div>
 
-      <div
-        className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1"
-        data-desktop-left-panel-latest-restaurants="true"
-      >
-        <div className="mb-2 flex items-center justify-between gap-2 px-1">
-          <h2 className="text-xs font-bold text-muted-foreground">
-            최근 추가된 맛집
-          </h2>
-          <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-            최신순
-          </span>
+        <div
+          className="px-3 pt-1"
+          data-desktop-left-panel-latest-restaurants="true"
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+              <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
+              <span>최근 추가된 맛집</span>
+            </h2>
+            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+              도장 카드처럼 한눈에 보는 맛집 10곳
+            </p>
+          </div>
+          <Select
+            value={latestRestaurantSort}
+            onValueChange={(value) =>
+              setLatestRestaurantSort(value as LatestRestaurantSort)
+            }
+          >
+            <SelectTrigger
+              className="h-8 w-[88px] shrink-0 rounded-full border-primary/15 bg-primary/10 px-2.5 text-[11px] font-semibold text-primary shadow-none hover:bg-primary/15 focus:ring-primary [&>span]:line-clamp-1"
+              aria-label="최근 맛집 정렬"
+            >
+              <SelectValue placeholder="정렬" />
+            </SelectTrigger>
+            <SelectContent
+              align="end"
+              className="z-[190] min-w-[92px] rounded-2xl border-border bg-card p-1 font-serif shadow-xl"
+            >
+              {latestRestaurantSortOptions.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  className="rounded-xl py-2 pl-7 pr-2 text-xs font-semibold"
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -243,11 +297,14 @@ export default function DesktopLeftPanelMapHome({
                 currentThumbnailIndex={latestThumbnailIndexes[restaurant.id] ?? 0}
                 onThumbnailChange={handleLatestThumbnailChange}
                 onClick={handleRestaurantOpen}
-                size="compact"
-                stampSize="mobile"
+                size="default"
+                stampSize="compact"
+                showAddress
+                categoryFallback="맛집"
               />
             ))
           )}
+          </div>
         </div>
       </div>
     </section>

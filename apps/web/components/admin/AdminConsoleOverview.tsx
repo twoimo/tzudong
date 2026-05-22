@@ -1498,8 +1498,9 @@ function AdminYoutubeThumbnailImage({
 function AdminCreatorLayerControls({ tzuyangCount }: { tzuyangCount: number }) {
   return (
     <div
-      className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3"
+      className="grid gap-2"
       aria-label="유튜버별 지도 레이어"
+      data-admin-creator-layer-controls="active-only"
     >
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-2.5">
         <div className="flex items-center justify-between gap-2">
@@ -1518,28 +1519,6 @@ function AdminCreatorLayerControls({ tzuyangCount }: { tzuyangCount: number }) {
           현재 승인 맛집 좌표 기준
         </p>
       </div>
-      {["향후 유튜버 A", "향후 유튜버 B"].map((label) => (
-        <div
-          key={label}
-          className="rounded-2xl border border-dashed border-border bg-muted/25 p-2.5"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-bold text-muted-foreground">{label}</p>
-            <Badge
-              variant="outline"
-              className="rounded-full border-border text-muted-foreground"
-            >
-              숨김
-            </Badge>
-          </div>
-          <p className="mt-1 text-xl font-bold tracking-[-0.04em] text-muted-foreground">
-            준비
-          </p>
-          <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-            채널별 레이어 확장 슬롯
-          </p>
-        </div>
-      ))}
     </div>
   );
 }
@@ -1597,6 +1576,19 @@ function AdminNaverMapSurface({
       ),
     [visibleRestaurants],
   );
+  const adminMapClusterIndex = useMemo(() => {
+    const clusterIndex = createClusterIndex(
+      null,
+      {
+        radius: ADMIN_OVERVIEW_CLUSTER_RADIUS,
+        maxZoom: ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM,
+        minPoints: 2,
+      },
+      false,
+    );
+    clusterIndex.load(adminRestaurantsToClusterFeatures(visibleRestaurants));
+    return clusterIndex;
+  }, [visibleRestaurants]);
   const mapCenter = useMemo(
     () => getAdminMapCenter(visibleRestaurants),
     [visibleRestaurants],
@@ -1669,18 +1661,8 @@ function AdminNaverMapSurface({
 
     const map = mapRef.current;
     const currentZoom = map.getZoom?.() ?? REGION_MAP_CONFIG["서울특별시"].zoom;
-    const clusterIndex = createClusterIndex(
-      null,
-      {
-        radius: ADMIN_OVERVIEW_CLUSTER_RADIUS,
-        maxZoom: ADMIN_OVERVIEW_CLUSTER_MAX_ZOOM,
-        minPoints: 2,
-      },
-      false,
-    );
-    clusterIndex.load(adminRestaurantsToClusterFeatures(visibleRestaurants));
     const clusters = getClusters(
-      clusterIndex,
+      adminMapClusterIndex,
       getAdminMapBbox(map),
       currentZoom,
     );
@@ -1690,7 +1672,7 @@ function AdminNaverMapSurface({
 
       if (isCluster(feature)) {
         const clusterId = feature.properties.cluster_id!;
-        const categories = getClusterCategories(clusterIndex, clusterId);
+        const categories = getClusterCategories(adminMapClusterIndex, clusterId);
         const markerCategories = categories.length > 0 ? categories : ["기타"];
         const renderPlan = buildNaverClusterMarkerRenderPlan({
           categories: markerCategories,
@@ -1710,7 +1692,7 @@ function AdminNaverMapSurface({
         });
         const listener = maps.Event.addListener(marker, "click", () => {
           const expansionZoom = Math.min(
-            clusterIndex.getClusterExpansionZoom(clusterId),
+            adminMapClusterIndex.getClusterExpansionZoom(clusterId),
             18,
           );
           map.setZoom?.(Math.max(currentZoom + 1, expansionZoom), false);
@@ -1754,6 +1736,7 @@ function AdminNaverMapSurface({
     };
   }, [
     isLoaded,
+    adminMapClusterIndex,
     onSelectRestaurant,
     restaurantById,
     selectedRestaurant?.id,
@@ -1925,6 +1908,48 @@ function AdminMapOverviewCanvas({
   );
 }
 
+function AdminMapInfoPanelSkeleton() {
+  return (
+    <aside
+      className="flex min-h-0 flex-col gap-3 lg:h-full lg:overflow-hidden"
+      data-admin-map-info-skeleton="true"
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="관리자 지도 운영 정보 로딩"
+    >
+      <section className="shrink-0 rounded-xl border border-border bg-card p-2.5 shadow-sm">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-background/70 p-2.5">
+            <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="mt-2 h-6 w-40 rounded-full motion-reduce:animate-none" />
+            <Skeleton className="mt-3 h-4 w-full rounded-full motion-reduce:animate-none" />
+            <Skeleton className="mt-2 h-4 w-4/5 rounded-full motion-reduce:animate-none" />
+          </div>
+          <div className="rounded-xl border border-border bg-background/70 p-2.5">
+            <Skeleton className="aspect-video w-full rounded-lg motion-reduce:animate-none" />
+          </div>
+        </div>
+      </section>
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-2.5">
+        <Skeleton className="h-4 w-16 rounded-full motion-reduce:animate-none" />
+        <Skeleton className="mt-2 h-7 w-20 rounded-full motion-reduce:animate-none" />
+      </div>
+      <section className="rounded-xl border border-border bg-card p-2.5 shadow-sm lg:min-h-0 lg:flex-1">
+        <Skeleton className="h-5 w-24 rounded-full motion-reduce:animate-none" />
+        <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton
+              key={index}
+              className="h-20 rounded-xl motion-reduce:animate-none"
+            />
+          ))}
+        </div>
+      </section>
+    </aside>
+  );
+}
+
 function AdminMapInfoPanel({
   stats,
   restaurants,
@@ -1958,6 +1983,10 @@ function AdminMapInfoPanel({
     selectedRestaurant?.lat == null || selectedRestaurant?.lng == null
       ? "좌표 확인 필요"
       : `${selectedRestaurant.lat.toFixed(5)}, ${selectedRestaurant.lng.toFixed(5)}`;
+
+  if (isLoading && !selectedRestaurant) {
+    return <AdminMapInfoPanelSkeleton />;
+  }
 
   return (
     <aside className="flex min-h-0 flex-col gap-3 lg:h-full lg:overflow-hidden">
