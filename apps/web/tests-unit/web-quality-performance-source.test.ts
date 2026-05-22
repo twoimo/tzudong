@@ -717,7 +717,23 @@ describe("web quality performance source contracts", () => {
       "aria-pressed={isSelected}",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("grid grid-cols-1 gap-3");
-    expect(desktopLeftPanelMapHomeSource).toContain("<StampCard");
+    expect(desktopLeftPanelMapHomeSource).toContain("function DesktopRestaurantCardSkeleton");
+    expect(desktopLeftPanelMapHomeSource).toContain("popularThumbnailIndexes");
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "handlePopularThumbnailChange",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "absolute left-2 top-2 z-20",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "<DesktopRestaurantCardSkeleton key={index} withRank />",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "<DesktopRestaurantCardSkeleton key={index} />",
+    );
+    expect(
+      desktopLeftPanelMapHomeSource.match(/<StampCard/g)?.length,
+    ).toBeGreaterThanOrEqual(2);
     expect(desktopLeftPanelMapHomeSource).toContain('size="default"');
     expect(desktopLeftPanelMapHomeSource).toContain('stampSize="compact"');
     expect(desktopLeftPanelMapHomeSource).toContain("showAddress");
@@ -735,7 +751,9 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain("flex items-center gap-2 min-w-0");
     expect(stampCardSource).toContain('"font-medium truncate"');
     expect(stampCardSource).toContain("{showAddress && displayAddress && (");
-    expect(desktopLeftPanelMapHomeSource).toContain("divide-y divide-border/70");
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
+      "divide-y divide-border/70",
+    );
     expect(desktopLeftPanelMapHomeSource).not.toContain("사용자 맛집 리뷰</h2>");
     expect(desktopLeftPanelMapHomeSource).not.toContain("아래로 스크롤해 계속 보기");
     expect(desktopLeftPanelMapHomeSource).not.toContain("rounded-2xl border border-border bg-card px-3 py-2 text-left");
@@ -2272,6 +2290,17 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain('data-mypage-profile-hero="true"');
     expect(myPageProfileSource).toContain('data-mypage-profile-summary="true"');
     expect(myPageProfileSource).toContain('data-mypage-next-actions="true"');
+    expect(myPageProfileSource).toContain('data-mypage-mobile-secondary-actions="true"');
+    expect(myPageProfileSource).toContain('className="space-y-4 sm:space-y-5"');
+    expect(myPageProfileSource).toContain('flex min-w-0 flex-col items-center gap-3 text-center');
+    expect(myPageProfileSource).toContain('justify-center gap-1.5 text-xs font-semibold text-primary sm:justify-start');
+    expect(myPageProfileSource).toContain('text-balance text-xl font-bold tracking-tight');
+    expect(myPageProfileSource).toContain('break-words text-xs leading-5 text-muted-foreground');
+    expect(myPageProfileSource).toContain('grid grid-cols-3 gap-2');
+    expect(myPageProfileSource).toContain('grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2');
+    expect(myPageProfileSource).toContain('const MOBILE_SECONDARY_ACTIONS = [');
+    expect(myPageProfileSource).toContain('MOBILE_SECONDARY_ACTIONS.map');
+    expect(myPageProfileSource).toContain('className="h-11 w-full gap-2 rounded-2xl"');
     expect(myPageProfileSource).toContain('마이페이지 허브');
     expect(myPageProfileSource).toContain('바로 할 수 있는 일');
     expect(myPageProfileSource).toContain('지도 환경설정');
