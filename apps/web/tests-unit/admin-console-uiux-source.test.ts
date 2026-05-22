@@ -100,6 +100,10 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('new maps.Map');
     expect(consoleSource).toContain('new maps.Marker');
     expect(consoleSource).toContain('createClusterIndex');
+    expect(consoleSource).toContain('const adminMapClusterIndex = useMemo');
+    expect(consoleSource).toContain('clusterIndex.load(adminRestaurantsToClusterFeatures(visibleRestaurants));');
+    expect(consoleSource).toContain('const clusters = getClusters(');
+    expect(consoleSource).toContain('      adminMapClusterIndex,');
     expect(consoleSource).toContain('getClusterCategories');
     expect(consoleSource).toContain('mapRef.current.setZoom?.(');
     expect(consoleSource).toContain('visibleRestaurants.length > 1');
@@ -116,6 +120,10 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5');
     expect(consoleSource).not.toContain('홈 마커·클러스터 재사용');
     expect(consoleSource).toContain('function AdminMapLoadingSkeleton');
+    expect(consoleSource).toContain('function AdminMapInfoPanelSkeleton');
+    expect(consoleSource).toContain('data-admin-map-info-skeleton="true"');
+    expect(consoleSource).toContain('aria-label="관리자 지도 운영 정보 로딩"');
+    expect(consoleSource).toContain('if (isLoading && !selectedRestaurant)');
     expect(consoleSource).toContain('aria-label="관리자 네이버 지도 로딩"');
     expect(consoleSource).toContain('data-admin-map-loading-skeleton="true"');
     expect(consoleSource).toContain('pointer-events-none absolute inset-0 bg-card/35 backdrop-blur-[1px]');
@@ -198,8 +206,9 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('실제 이동시간 API가 붙기 전까지는');
     expect(consoleSource).toContain('최근 영상 요약은 승인 맛집과 연결된 데이터가 있을 때만');
     expect(consoleSource).toContain('표시합니다.');
-    expect(consoleSource).toContain('향후 유튜버 A');
-    expect(consoleSource).toContain('향후 유튜버 B');
+    expect(consoleSource).toContain('data-admin-creator-layer-controls="active-only"');
+    expect(consoleSource).not.toContain('향후 유튜버 A');
+    expect(consoleSource).not.toContain('향후 유튜버 B');
     expect(consoleSource).not.toContain('ADMIN_OVERVIEW_WIDGET_STORAGE_KEY');
     expect(consoleSource).not.toContain('normalizeAdminOverviewWidgetOrder');
     expect(consoleSource).not.toContain('moveAdminOverviewWidget');
@@ -380,7 +389,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('const restaurants = realRestaurants;');
     expect(consoleSource).toContain('운영 콘솔에서는 빈 실데이터 상태를 목업으로 대체하지 않습니다.');
     expect(consoleSource).toContain('실제 이동시간 API가 붙기 전까지는');
-    expect(consoleSource).toContain('채널별 레이어 확장 슬롯');
+    expect(consoleSource).not.toContain('채널별 레이어 확장 슬롯');
     expect(overviewSource).not.toContain('오늘 처리할 일');
     expect(overviewSource).not.toContain('제보·리뷰·맛집 검수 상태를 먼저 확인합니다.');
     expect(overviewSource).not.toContain('제보 검토');

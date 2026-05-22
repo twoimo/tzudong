@@ -26,13 +26,16 @@ export const KOREAN_RESTAURANT_REGIONS = [
 ] as const;
 
 export const POPULAR_RESTAURANT_SELECT =
-  'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count';
+  'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count, reasoning_basis';
+
+export type LatestRestaurantSort = 'latest' | 'oldest' | 'popular';
 
 type RestaurantListArgs = {
   limit: number;
   fetchLimit?: number;
   selectedRegion?: string | null;
   isKoreanOnly?: boolean;
+  sort?: LatestRestaurantSort;
 };
 
 export const getPopularRestaurantsQueryKey = ({
@@ -50,12 +53,17 @@ export const getLatestRestaurantsQueryKey = ({
   limit,
   selectedRegion,
   isKoreanOnly = false,
+  sort = 'latest',
 }: RestaurantListArgs) => [
   ...LATEST_RESTAURANTS_QUERY_KEY,
   limit,
+  sort,
   selectedRegion ?? 'all',
   isKoreanOnly ? 'korean' : 'global',
 ];
+
+const isApprovedRestaurant = (restaurant: Restaurant) =>
+  restaurant.status === 'approved';
 
 const matchesRestaurantAddressContext = (
   restaurant: Restaurant,
@@ -92,6 +100,7 @@ export async function fetchPopularRestaurants({
   if (error) throw error;
 
   return mergeRestaurants((data ?? []) as Restaurant[])
+    .filter(isApprovedRestaurant)
     .filter((restaurant) =>
       matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
     )
@@ -106,24 +115,37 @@ export async function fetchLatestRestaurants({
   fetchLimit = Math.max(limit * 3, 18),
   selectedRegion,
   isKoreanOnly = false,
+  sort = 'latest',
 }: RestaurantListArgs): Promise<Restaurant[]> {
-  const { data, error } = await supabase
+  const query = supabase
     .from('restaurants')
     .select(POPULAR_RESTAURANT_SELECT)
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-    .limit(fetchLimit);
+    .eq('status', 'approved');
+  const orderedQuery =
+    sort === 'popular'
+      ? query
+          .order('weekly_search_count', { ascending: false })
+          .order('created_at', { ascending: false })
+      : query.order('created_at', { ascending: sort === 'oldest' });
+  const { data, error } = await orderedQuery.limit(fetchLimit);
 
   if (error) throw error;
 
   return mergeRestaurants((data ?? []) as Restaurant[])
+    .filter(isApprovedRestaurant)
     .filter((restaurant) =>
       matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
     )
     .sort((a, b) => {
+      if (sort === 'popular') {
+        const popularityDelta =
+          (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0);
+        if (popularityDelta !== 0) return popularityDelta;
+      }
+
       const bTime = Date.parse(b.created_at ?? b.updated_at ?? '') || 0;
       const aTime = Date.parse(a.created_at ?? a.updated_at ?? '') || 0;
-      return bTime - aTime;
+      return sort === 'oldest' ? aTime - bTime : bTime - aTime;
     })
     .slice(0, limit);
 }
