@@ -178,7 +178,8 @@ export default function BookmarksPage() {
                                                     size="sm"
                                                     onClick={() => toggleBookmark(bookmark.restaurant.id, true)}
                                                     disabled={isToggling}
-                                                    className="text-muted-foreground hover:text-destructive"
+                                                    className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive"
+                                                    aria-label={`${bookmark.restaurant.name} 북마크 삭제`}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -215,7 +216,7 @@ export default function BookmarksPage() {
                     })}
                     {hasMore && (
                         <div ref={loadMoreRef} className="py-6 text-center text-sm text-muted-foreground">
-                            계속 불러오는 중
+                            계속 불러오는 중…
                         </div>
                     )}
                 </div>
