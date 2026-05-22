@@ -126,7 +126,6 @@ describe("web quality performance source contracts", () => {
     const desktopLeftPanelMapHomeSource = source(
       "components/home/DesktopLeftPanelMapHome.tsx",
     );
-    const feedContentSource = source("components/feed/FeedContent.tsx");
     const popularRestaurantsSource = source("lib/popular-restaurants.ts");
     const homeAppGlobalsSource = source("app/home-app-globals.css");
     const desktopBookmarksSource = source(
@@ -618,18 +617,32 @@ describe("web quality performance source contracts", () => {
       "POPULAR_RESTAURANT_LIMIT = 3",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
+    expect(desktopLeftPanelMapHomeSource).toContain("fetchLatestRestaurants");
     expect(desktopLeftPanelMapHomeSource).toContain(
       "getPopularRestaurantsQueryKey",
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
+      "getLatestRestaurantsQueryKey",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
       "desktopLeftPanelHomePopularQueryKey",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "desktopLeftPanelHomeLatestQueryKey",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "LATEST_RESTAURANT_LIMIT = 10",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("selectedRegion");
     expect(desktopLeftPanelMapHomeSource).toContain("isKoreanOnly");
     expect(popularRestaurantsSource).toContain("POPULAR_RESTAURANTS_QUERY_KEY");
+    expect(popularRestaurantsSource).toContain("LATEST_RESTAURANTS_QUERY_KEY");
     expect(popularRestaurantsSource).toContain("KOREAN_RESTAURANT_REGIONS");
     expect(popularRestaurantsSource).toContain(
       ".gt('weekly_search_count', 0)",
+    );
+    expect(popularRestaurantsSource).toContain(
+      ".order('created_at', { ascending: false })",
     );
     expect(popularRestaurantsSource).toContain("selectedRegion");
     expect(popularRestaurantsSource).toContain("isKoreanOnly");
@@ -640,24 +653,30 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-popular-restaurants="true"',
     )).toBeLessThan(
       desktopLeftPanelMapHomeSource.indexOf(
-        'data-desktop-left-panel-review-feed="true"',
+        'data-desktop-left-panel-latest-restaurants="true"',
       ),
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
+      'data-desktop-left-panel-latest-restaurants="true"',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain("최근 추가된 맛집");
+    expect(desktopLeftPanelMapHomeSource).toContain("최신순");
+    expect(desktopLeftPanelMapHomeSource).toContain("grid grid-cols-1 gap-3");
+    expect(desktopLeftPanelMapHomeSource).toContain("<StampCard");
+    expect(desktopLeftPanelMapHomeSource).toContain('size="compact"');
+    expect(desktopLeftPanelMapHomeSource).toContain('stampSize="mobile"');
+    expect(desktopLeftPanelMapHomeSource).toContain("divide-y divide-border/70");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("사용자 맛집 리뷰</h2>");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("아래로 스크롤해 계속 보기");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("rounded-2xl border border-border bg-card px-3 py-2 text-left");
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
       'data-desktop-left-panel-review-feed="true"',
     );
-    expect(desktopLeftPanelMapHomeSource).toContain("shouldLoadReviewFeed");
-    expect(desktopLeftPanelMapHomeSource).toContain("requestReviewFeed");
-    expect(desktopLeftPanelMapHomeSource).toContain("onWheel={requestReviewFeed}");
-    expect(desktopLeftPanelMapHomeSource).toContain("onPointerEnter={requestReviewFeed}");
-    expect(desktopLeftPanelMapHomeSource).toContain("사용자 맛집 리뷰 불러오기");
-    expect(desktopLeftPanelMapHomeSource).toContain("FeedContent");
-    expect(desktopLeftPanelMapHomeSource).toContain("showHeader={false}");
-    expect(desktopLeftPanelMapHomeSource).toContain("hideFloatingButton");
-    expect(desktopLeftPanelMapHomeSource).toContain("hideReviewModal");
-    expect(feedContentSource).toContain("showHeader?: boolean");
-    expect(feedContentSource).toContain("showHeader = true");
-    expect(feedContentSource).toContain("{showHeader && (");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("shouldLoadReviewFeed");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("requestReviewFeed");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("사용자 맛집 리뷰 불러오기");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("FeedContent");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("hideReviewModal");
     expect(homeDesktopControlPanelSource).toContain(
       'activeLeftPanelView === "map"',
     );
