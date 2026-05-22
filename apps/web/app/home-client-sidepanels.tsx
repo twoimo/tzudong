@@ -119,8 +119,13 @@ export default function HomeClientSidePanels({
         };
     }, []);
 
-    const handleDesktopReviewPanelPointerDown = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const handleDesktopReviewPanelPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
         if (!shouldRenderDesktopReviewPanel || event.button !== 0) return;
+
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('button,input,textarea,select,a,[role="button"],[data-desktop-map-review-no-drag="true"]')) {
+            return;
+        }
 
         const panel = desktopReviewPanelRef.current;
         if (!panel) return;
@@ -141,7 +146,7 @@ export default function HomeClientSidePanels({
         event.preventDefault();
     }, [desktopReviewPanelPosition.x, desktopReviewPanelPosition.y, shouldRenderDesktopReviewPanel]);
 
-    const handleDesktopReviewPanelPointerMove = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const handleDesktopReviewPanelPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
         if (desktopReviewPanelDragRef.current?.pointerId !== event.pointerId) return;
 
         const nextPosition = getClampedDesktopReviewPanelPosition(event.clientX, event.clientY);
@@ -150,7 +155,7 @@ export default function HomeClientSidePanels({
         }
     }, [getClampedDesktopReviewPanelPosition]);
 
-    const handleDesktopReviewPanelPointerEnd = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    const handleDesktopReviewPanelPointerEnd = useCallback((event: ReactPointerEvent<HTMLElement>) => {
         if (desktopReviewPanelDragRef.current?.pointerId !== event.pointerId) return;
 
         desktopReviewPanelDragRef.current = null;
@@ -177,7 +182,7 @@ export default function HomeClientSidePanels({
         }));
     }, []);
 
-    const handleDesktopReviewPanelKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const handleDesktopReviewPanelKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
         const step = event.shiftKey ? DESKTOP_REVIEW_PANEL_KEYBOARD_STEP * 2 : DESKTOP_REVIEW_PANEL_KEYBOARD_STEP;
         const keyboardMoves: Partial<Record<string, [number, number]>> = {
             ArrowLeft: [-step, 0],
@@ -228,6 +233,7 @@ export default function HomeClientSidePanels({
                     }}
                     restaurant={state.restaurantToEdit}
                     initialFormData={state.editFormData}
+                    presentation={isMobileOrTablet ? 'auto' : 'map-panel'}
                 />
             )}
 
@@ -273,39 +279,39 @@ export default function HomeClientSidePanels({
             {shouldRenderDesktopReviewPanel && (
                 <section
                     ref={desktopReviewPanelRef}
-                    className="fixed bottom-6 right-6 top-6 z-[95] flex w-[min(520px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                    className="fixed bottom-24 right-6 top-6 z-[95] flex w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
                     style={{ transform: `translate3d(${desktopReviewPanelPosition.x}px, ${desktopReviewPanelPosition.y}px, 0)` }}
                     data-desktop-map-review-panel="true"
                     role="dialog"
                     tabIndex={-1}
                     aria-label="리뷰 작성 창"
+                    title="빈 영역을 드래그하거나 화살표 키로 리뷰 작성 창 이동"
+                    onKeyDown={handleDesktopReviewPanelKeyDown}
                 >
-                    <div className="flex min-h-0 flex-1 flex-col">
-                        <button
-                            type="button"
-                            className="flex h-7 shrink-0 cursor-move touch-none select-none items-center justify-center border-b border-border/70 bg-muted/35"
-                            data-desktop-map-review-drag-handle="true"
-                            title="마우스 드래그 또는 화살표 키로 리뷰 작성 창 이동"
-                            aria-label="리뷰 작성 창 이동"
-                            onKeyDown={handleDesktopReviewPanelKeyDown}
-                            onPointerDown={handleDesktopReviewPanelPointerDown}
-                            onPointerMove={handleDesktopReviewPanelPointerMove}
-                            onPointerUp={handleDesktopReviewPanelPointerEnd}
-                            onPointerCancel={handleDesktopReviewPanelPointerEnd}
-                        >
-                            <span className="h-1.5 w-12 rounded-full bg-muted-foreground/35" aria-hidden="true" />
-                        </button>
-                        <div className="min-h-0 flex-1">
-                            <ReviewModal
-                                isOpen={state.isReviewModalOpen}
-                                onClose={() => state.setIsReviewModalOpen(false)}
-                                restaurant={reviewRestaurant}
-                                onSuccess={() => {
-                                    state.setRefreshTrigger((prev) => prev + 1);
-                                }}
-                                inline
-                            />
-                        </div>
+                    <button
+                        type="button"
+                        className="flex h-7 shrink-0 cursor-move touch-none select-none items-center justify-center border-b border-border/70 bg-muted/35"
+                        data-desktop-map-review-drag-handle="true"
+                        title="마우스 드래그 또는 화살표 키로 리뷰 작성 창 이동"
+                        aria-label="리뷰 작성 창 이동"
+                        onKeyDown={handleDesktopReviewPanelKeyDown}
+                        onPointerDown={handleDesktopReviewPanelPointerDown}
+                        onPointerMove={handleDesktopReviewPanelPointerMove}
+                        onPointerUp={handleDesktopReviewPanelPointerEnd}
+                        onPointerCancel={handleDesktopReviewPanelPointerEnd}
+                    >
+                        <span className="h-1.5 w-12 rounded-full bg-muted-foreground/35" aria-hidden="true" />
+                    </button>
+                    <div className="min-h-0 flex-1">
+                        <ReviewModal
+                            isOpen={state.isReviewModalOpen}
+                            onClose={() => state.setIsReviewModalOpen(false)}
+                            restaurant={reviewRestaurant}
+                            onSuccess={() => {
+                                state.setRefreshTrigger((prev) => prev + 1);
+                            }}
+                            inline
+                        />
                     </div>
                 </section>
             )}
