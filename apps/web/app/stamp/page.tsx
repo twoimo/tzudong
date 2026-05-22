@@ -853,7 +853,7 @@ export default function StampPage() {
                         {/* Header */}
                         <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1 basis-[min(15rem,100%)]">
+                                <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
                                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                                         <h1 className="flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
                                             <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />

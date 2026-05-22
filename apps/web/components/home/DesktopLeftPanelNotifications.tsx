@@ -73,49 +73,51 @@ export default function DesktopLeftPanelNotifications({
       data-desktop-left-panel-view="notifications"
     >
       <div className="border-b border-border bg-gradient-to-br from-background via-background to-muted/35 px-3 py-3 sm:px-4">
-        <div className="grid gap-2">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h2 className="flex min-w-0 flex-1 basis-[min(10rem,100%)] items-center gap-2 text-base font-bold leading-tight text-primary text-balance">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 basis-[min(10rem,100%)]">
+            <h2 className="flex min-w-0 items-center gap-2 text-base font-bold leading-tight text-primary text-balance">
               <Bell className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="min-w-0 truncate">알림</span>
             </h2>
-            <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <Badge
-                variant={unreadCount > 0 ? "destructive" : "secondary"}
-                className="rounded-full px-2 py-0.5 text-[11px]"
-              >
-                안 읽음 {unreadCount > 99 ? "99+" : unreadCount}
-              </Badge>
-              {onClose && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={onClose}
-                  className="h-9 w-9 rounded-full hover:bg-muted"
-                  aria-label="알림 패널 닫기"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </Button>
-              )}
-            </div>
+            <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground">
+              리뷰·맛집·공지 소식을 바로 확인해요.
+            </p>
           </div>
-          <p className="max-w-full text-pretty text-xs leading-5 text-muted-foreground">
-            리뷰, 맛집, 공지 소식을 지도 흐름 안에서 확인해요.
-          </p>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Badge
+              variant={unreadCount > 0 ? "destructive" : "secondary"}
+              className="rounded-full px-2 py-0.5 text-[11px]"
+            >
+              안 읽음 {unreadCount > 99 ? "99+" : unreadCount}
+            </Badge>
+            {onClose && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-9 w-9 rounded-full hover:bg-muted"
+                aria-label="알림 패널 닫기"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
         </div>
         {unreadCount > 0 && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={markAllAsRead}
-            className="mt-3 h-8 rounded-full px-3 text-xs"
-            aria-label="모든 알림 읽음 처리"
-          >
-            <CheckCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-            모두 읽음
-          </Button>
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={markAllAsRead}
+              className="h-8 rounded-full px-3 text-xs"
+              aria-label="모든 알림 읽음 처리"
+            >
+              <CheckCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              모두 읽음
+            </Button>
+          </div>
         )}
       </div>
 

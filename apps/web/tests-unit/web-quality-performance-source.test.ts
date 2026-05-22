@@ -1507,7 +1507,7 @@ describe("web quality performance source contracts", () => {
     expect(skeletonLoadersSource).toContain(
       "shrink-0 space-y-4 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4",
     );
-    expect(skeletonLoadersSource).toContain("basis-[min(15rem,100%)] space-y-2");
+    expect(skeletonLoadersSource).toContain("basis-[min(11rem,100%)] space-y-2");
     expect(skeletonLoadersSource).toContain("ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2");
     expect(stampLoadingSource).toContain("return <StampPageSkeleton />");
     expect(stampPageSource).toContain(
@@ -1757,7 +1757,7 @@ describe("web quality performance source contracts", () => {
     expect(feedContentSource).toContain('aria-label="리뷰 패널 닫기"');
     expect(feedContentSource).toContain('aria-label="리뷰 작성"');
     expect(feedContentSource).toContain("flex flex-wrap items-start justify-between gap-3");
-    expect(feedContentSource).toContain("basis-[min(15rem,100%)]");
+    expect(feedContentSource).toContain("basis-[min(11rem,100%)]");
     expect(feedContentSource).toContain("text-balance");
     expect(feedContentSource).toContain("text-pretty");
     expect(feedContentSource).toContain('placeholder="맛집명, 작성자, 내용 검색…"');
@@ -1773,7 +1773,7 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-stamp-mobile-parity="true"',
     );
     expect(stampOverlaySource).toContain("flex flex-wrap items-start justify-between gap-3");
-    expect(stampOverlaySource).toContain("basis-[min(15rem,100%)]");
+    expect(stampOverlaySource).toContain("basis-[min(11rem,100%)]");
     expect(stampOverlaySource).toContain("tabular-nums");
     expect(stampOverlaySource).toContain('stampSize="mobile"');
     expect(stampOverlaySource).toContain('size="default"');
@@ -1811,7 +1811,7 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-leaderboard-list="true"',
     );
     expect(leaderboardOverlaySource).toContain("flex flex-wrap items-start justify-between gap-3");
-    expect(leaderboardOverlaySource).toContain("basis-[min(15rem,100%)]");
+    expect(leaderboardOverlaySource).toContain("basis-[min(11rem,100%)]");
     expect(leaderboardOverlaySource).toContain("text-pretty");
     expect(leaderboardOverlaySource).toContain(
       "DESKTOP_LEFT_PANEL_LEADERBOARD_LIST_STYLE",
@@ -1844,7 +1844,7 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardListSource).not.toContain("px-4 sm:px-6 md:px-6");
     expect(leaderboardPageSource).toContain('className="pl-2 pr-6 sm:px-6"');
     expect(leaderboardPageSource).toContain("flex flex-wrap items-start justify-between gap-3");
-    expect(leaderboardPageSource).toContain("basis-[min(15rem,100%)]");
+    expect(leaderboardPageSource).toContain("basis-[min(11rem,100%)]");
     expect(leaderboardLoadingSource).toContain(
       'className="pl-2 pr-6 sm:px-6"',
     );
