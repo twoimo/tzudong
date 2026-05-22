@@ -26,7 +26,8 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain('aria-label="관리자 콘솔 사이드바"');
     expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
     expect(consoleSource).toContain('data-admin-console-shell="true"');
-    expect(consoleSource).toContain('<ReturnToMapButton iconOnly className="h-8 w-8" />');
+    expect(consoleSource).not.toContain('<ReturnToMapButton iconOnly className="h-8 w-8" />');
+    expect(consoleSource).toContain('aria-label="쯔동여지도 홈으로 이동"');
     expect(consoleSource).toContain('data-admin-console-layout="sidebar-content"');
     expect(consoleSource).toContain('data-admin-console-content="true"');
     expect(consoleSource).toContain('data-admin-console-content-loading="true"');
@@ -684,6 +685,18 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(source("components/modals/RestaurantSubmissionModal.tsx")).toContain(
       "translate3d(${desktopSubmissionPanelPosition.x}px, ${desktopSubmissionPanelPosition.y}px, 0)",
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      "presentation?: 'auto' | 'map-panel'",
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      'data-desktop-map-edit-panel="true"',
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      "mobileSheetStyles.frame",
+    );
+    expect(source("components/modals/EditRestaurantModal.tsx")).toContain(
+      "data-desktop-map-edit-drag-handle",
     );
     const homeMapContainerSource = source(
       "components/home/home-map-container.tsx",
