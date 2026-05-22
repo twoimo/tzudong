@@ -127,6 +127,7 @@ describe("web quality performance source contracts", () => {
       "components/home/DesktopLeftPanelMapHome.tsx",
     );
     const popularRestaurantsSource = source("lib/popular-restaurants.ts");
+    const stampCardSource = source("components/stamp/StampCard.tsx");
     const homeAppGlobalsSource = source("app/home-app-globals.css");
     const desktopBookmarksSource = source(
       "components/home/DesktopLeftPanelBookmarks.tsx",
@@ -614,6 +615,18 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-popular-restaurants="true"',
     );
     expect(desktopLeftPanelMapHomeSource).toContain(
+      'data-desktop-left-panel-home-scroll="true"',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      'className="h-full overflow-y-auto pb-4"',
+    );
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
+      'className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-1"',
+    );
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
+      'className="shrink-0 bg-background px-3 pb-2 pt-3"',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
       "POPULAR_RESTAURANT_LIMIT = 3",
     );
     expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
@@ -633,17 +646,39 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain(
       "LATEST_RESTAURANT_LIMIT = 10",
     );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "latestRestaurantSortOptions",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "useState<LatestRestaurantSort>('latest')",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "sort: latestRestaurantSort",
+    );
     expect(desktopLeftPanelMapHomeSource).toContain("selectedRegion");
     expect(desktopLeftPanelMapHomeSource).toContain("isKoreanOnly");
     expect(popularRestaurantsSource).toContain("POPULAR_RESTAURANTS_QUERY_KEY");
     expect(popularRestaurantsSource).toContain("LATEST_RESTAURANTS_QUERY_KEY");
+    expect(popularRestaurantsSource).toContain(
+      "export type LatestRestaurantSort = 'latest' | 'oldest' | 'popular'",
+    );
     expect(popularRestaurantsSource).toContain("KOREAN_RESTAURANT_REGIONS");
+    expect(popularRestaurantsSource).toContain("const isApprovedRestaurant");
+    expect(popularRestaurantsSource).toContain("restaurant.status === 'approved'");
+    expect(popularRestaurantsSource).toContain(".filter(isApprovedRestaurant)");
     expect(popularRestaurantsSource).toContain(
       ".gt('weekly_search_count', 0)",
     );
     expect(popularRestaurantsSource).toContain(
       ".order('created_at', { ascending: false })",
     );
+    expect(popularRestaurantsSource).toContain(
+      ".order('weekly_search_count', { ascending: false })",
+    );
+    expect(popularRestaurantsSource).toContain(
+      "sort === 'oldest' ? aTime - bTime : bTime - aTime",
+    );
+    expect(popularRestaurantsSource).toContain("reasoning_basis");
     expect(popularRestaurantsSource).toContain("selectedRegion");
     expect(popularRestaurantsSource).toContain("isKoreanOnly");
     expect(popularRestaurantsSource).toContain(".slice(0, limit)");
@@ -659,12 +694,47 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain(
       'data-desktop-left-panel-latest-restaurants="true"',
     );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      '<Clock className="h-4 w-4 text-primary"',
+    );
     expect(desktopLeftPanelMapHomeSource).toContain("최근 추가된 맛집");
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      "도장 카드처럼 한눈에 보는 맛집 10곳",
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain("<Select");
+    expect(desktopLeftPanelMapHomeSource).toContain("<SelectTrigger");
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      'aria-label="최근 맛집 정렬"',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain(
+      '<SelectValue placeholder="정렬" />',
+    );
+    expect(desktopLeftPanelMapHomeSource).toContain("<SelectItem");
     expect(desktopLeftPanelMapHomeSource).toContain("최신순");
+    expect(desktopLeftPanelMapHomeSource).toContain("오래된순");
+    expect(desktopLeftPanelMapHomeSource).toContain("인기순");
+    expect(desktopLeftPanelMapHomeSource).not.toContain(
+      "aria-pressed={isSelected}",
+    );
     expect(desktopLeftPanelMapHomeSource).toContain("grid grid-cols-1 gap-3");
     expect(desktopLeftPanelMapHomeSource).toContain("<StampCard");
-    expect(desktopLeftPanelMapHomeSource).toContain('size="compact"');
-    expect(desktopLeftPanelMapHomeSource).toContain('stampSize="mobile"');
+    expect(desktopLeftPanelMapHomeSource).toContain('size="default"');
+    expect(desktopLeftPanelMapHomeSource).toContain('stampSize="compact"');
+    expect(desktopLeftPanelMapHomeSource).toContain("showAddress");
+    expect(desktopLeftPanelMapHomeSource).toContain('categoryFallback="맛집"');
+    expect(stampCardSource).toContain("showAddress?: boolean");
+    expect(stampCardSource).toContain("categoryFallback?: string");
+    expect(stampCardSource).toContain("const displayAddress");
+    expect(stampCardSource).toContain("const inferRestaurantCategory");
+    expect(stampCardSource).toContain("RESTAURANT_CATEGORIES.find");
+    expect(stampCardSource).toContain("categoryFallback ?? null");
+    expect(stampCardSource).toContain("restaurant.reasoning_basis");
+    expect(stampCardSource).toContain(
+      "readYoutubeMetaTitle(restaurant.youtube_meta)",
+    );
+    expect(stampCardSource).toContain("flex items-center gap-2 min-w-0");
+    expect(stampCardSource).toContain('"font-medium truncate"');
+    expect(stampCardSource).toContain("{showAddress && displayAddress && (");
     expect(desktopLeftPanelMapHomeSource).toContain("divide-y divide-border/70");
     expect(desktopLeftPanelMapHomeSource).not.toContain("사용자 맛집 리뷰</h2>");
     expect(desktopLeftPanelMapHomeSource).not.toContain("아래로 스크롤해 계속 보기");
@@ -900,14 +970,14 @@ describe("web quality performance source contracts", () => {
       "min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain",
     );
     expect(desktopNotificationsSource).not.toContain("<Fragment");
-    expect(homeDesktopControlPanelSource).toContain("isInlineDetailOpenPending");
-    expect(homeDesktopControlPanelSource).toContain("isDetailPanelTransitionPending");
-    expect(homeDesktopControlPanelSource).toContain('<DesktopLeftPanelLoadingState label="맛집 상세" />');
+    expect(homeDesktopControlPanelSource).not.toContain("isInlineDetailOpenPending &&");
+    expect(homeDesktopControlPanelSource).not.toContain("setIsInlineDetailOpenPending(true)");
+    expect(homeDesktopControlPanelSource).not.toContain("isDetailPanelTransitionPending");
+    expect(homeDesktopControlPanelSource).not.toContain('<DesktopLeftPanelLoadingState label="맛집 상세" />');
+    expect(homeDesktopControlPanelSource).toContain("onRestaurantSelect(restaurant)");
+    expect(homeDesktopControlPanelSource).toContain("{!hasActiveDetail && (");
     expect(homeDesktopControlPanelSource).toContain(
-      "!hasActiveDetail && !isDetailPanelTransitionPending",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      ') : activeLeftPanelView === "feed" && DeferredFeedOverlay ? (',
+      '{activeLeftPanelView === "feed" && DeferredFeedOverlay ? (',
     );
     expect(homeDesktopControlPanelSource).toContain(
       "onOpenReviewModal={onReviewModalOpen}",
@@ -998,9 +1068,10 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant)",
     );
-    expect(homeDesktopControlPanelSource).toContain("{!hasActiveDetail && !isDetailPanelTransitionPending && (");
+    expect(homeDesktopControlPanelSource).toContain("{!hasActiveDetail && (");
+    expect(homeDesktopControlPanelSource).not.toContain("{!hasActiveDetail && !isDetailPanelTransitionPending && (");
     expect(homeDesktopControlPanelSource).toContain("hasActiveDetail ||");
-    expect(homeDesktopControlPanelSource).toContain("isDetailPanelTransitionPending ||");
+    expect(homeDesktopControlPanelSource).not.toContain("isDetailPanelTransitionPending ||");
     expect(homeDesktopControlPanelSource).toContain("isInlinePanelViewActive ||");
     expect(homeDesktopControlPanelSource).toContain(' ? "px-0 py-0"');
     expect(homeDesktopControlPanelSource).toContain(' : "px-4 py-4"');
