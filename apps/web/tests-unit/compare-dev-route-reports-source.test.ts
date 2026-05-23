@@ -24,6 +24,7 @@ describe('compare-dev-route-reports source contract', () => {
     });
 
     test('is exposed as a package benchmark helper', () => {
+        expect(packageJson).toContain('"bench:routes": "node scripts/measure-dev-routes.mjs"');
         expect(packageJson).toContain('"bench:compare": "node scripts/compare-dev-route-reports.mjs"');
     });
 });
