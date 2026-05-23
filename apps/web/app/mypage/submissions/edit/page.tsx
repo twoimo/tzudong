@@ -22,9 +22,19 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import {
+  MyPageEmptyState,
+  MyPageErrorState,
+  MyPageSectionFrame,
+  myPageListCardClass,
+} from "@/components/mypage/MyPageSectionFrame";
 
-type SubmissionStatus = 'pending' | 'approved' | 'partially_approved' | 'rejected';
-type ItemStatus = 'pending' | 'approved' | 'rejected';
+type SubmissionStatus =
+  | "pending"
+  | "approved"
+  | "partially_approved"
+  | "rejected";
+type ItemStatus = "pending" | "approved" | "rejected";
 
 interface SubmissionItem {
   id: string;
@@ -40,7 +50,7 @@ interface SubmissionItem {
 interface Submission {
   id: string;
   user_id: string;
-  submission_type: 'new' | 'edit';
+  submission_type: "new" | "edit";
   status: SubmissionStatus;
   restaurant_name: string;
   restaurant_address: string | null;
@@ -68,31 +78,31 @@ interface TargetRestaurantSummary {
 
 const PAGE_SIZE = 15;
 const SUBMISSION_SELECT = [
-  'id',
-  'user_id',
-  'submission_type',
-  'status',
-  'restaurant_name',
-  'restaurant_address',
-  'restaurant_phone',
-  'restaurant_categories',
-  'admin_notes',
-  'rejection_reason',
-  'resolved_by_admin_id',
-  'reviewed_at',
-  'created_at',
-  'updated_at',
-].join(', ');
+  "id",
+  "user_id",
+  "submission_type",
+  "status",
+  "restaurant_name",
+  "restaurant_address",
+  "restaurant_phone",
+  "restaurant_categories",
+  "admin_notes",
+  "rejection_reason",
+  "resolved_by_admin_id",
+  "reviewed_at",
+  "created_at",
+  "updated_at",
+].join(", ");
 const SUBMISSION_ITEM_SELECT = [
-  'id',
-  'submission_id',
-  'youtube_link',
-  'tzuyang_review',
-  'target_restaurant_id',
-  'item_status',
-  'rejection_reason',
-  'created_at',
-].join(', ');
+  "id",
+  "submission_id",
+  "youtube_link",
+  "tzuyang_review",
+  "target_restaurant_id",
+  "item_status",
+  "rejection_reason",
+  "created_at",
+].join(", ");
 
 export default function EditSubmissionsPage() {
   const { user } = useAuth();
@@ -103,6 +113,7 @@ export default function EditSubmissionsPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isError,
   } = useInfiniteQuery({
     queryKey: ["myEditSubmissions", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
@@ -135,46 +146,67 @@ export default function EditSubmissionsPage() {
       const typedItems = (items ?? []) as SubmissionItem[];
 
       // 아이템에서 target_restaurant_id 추출
-      const targetRestaurantIds = [...new Set(
-        typedItems
-          .map((item) => item.target_restaurant_id)
-          .filter((restaurantId): restaurantId is string => Boolean(restaurantId))
-      )];
+      const targetRestaurantIds = [
+        ...new Set(
+          typedItems
+            .map((item) => item.target_restaurant_id)
+            .filter((restaurantId): restaurantId is string =>
+              Boolean(restaurantId),
+            ),
+        ),
+      ];
 
       // 대상 맛집 정보 조회
-      let targetRestaurants: Record<string, { name: string; address: string | null }> = {};
+      let targetRestaurants: Record<
+        string,
+        { name: string; address: string | null }
+      > = {};
       if (targetRestaurantIds.length > 0) {
         const { data: restaurants } = await supabase
           .from("restaurants")
           .select("id, name, road_address")
           .in("id", targetRestaurantIds);
 
-        const typedRestaurants = (restaurants ?? []) as TargetRestaurantSummary[];
+        const typedRestaurants = (restaurants ??
+          []) as TargetRestaurantSummary[];
         if (typedRestaurants.length > 0) {
-          targetRestaurants = typedRestaurants.reduce<Record<string, { name: string; address: string | null }>>((acc, restaurant) => {
-            acc[restaurant.id] = { name: restaurant.name, address: restaurant.road_address };
+          targetRestaurants = typedRestaurants.reduce<
+            Record<string, { name: string; address: string | null }>
+          >((acc, restaurant) => {
+            acc[restaurant.id] = {
+              name: restaurant.name,
+              address: restaurant.road_address,
+            };
             return acc;
           }, {});
         }
       }
 
-      const submissionsWithItems: Submission[] = typedSubmissions.map((submission) => {
-        const submissionItems = typedItems.filter((item) => item.submission_id === submission.id);
-        // 첫 번째 아이템의 target_restaurant 정보를 submission 수준에서 표시
-        const firstItemTarget = submissionItems.length > 0 ? submissionItems[0].target_restaurant_id : null;
+      const submissionsWithItems: Submission[] = typedSubmissions.map(
+        (submission) => {
+          const submissionItems = typedItems.filter(
+            (item) => item.submission_id === submission.id,
+          );
+          // 첫 번째 아이템의 target_restaurant 정보를 submission 수준에서 표시
+          const firstItemTarget =
+            submissionItems.length > 0
+              ? submissionItems[0].target_restaurant_id
+              : null;
 
-        return {
-          ...submission,
-          items: submissionItems,
-          target_restaurant: firstItemTarget
-            ? targetRestaurants[firstItemTarget] || null
-            : null,
-        };
-      });
+          return {
+            ...submission,
+            items: submissionItems,
+            target_restaurant: firstItemTarget
+              ? targetRestaurants[firstItemTarget] || null
+              : null,
+          };
+        },
+      );
 
       return {
         data: submissionsWithItems,
-        nextCursor: typedSubmissions.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
+        nextCursor:
+          typedSubmissions.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -198,7 +230,7 @@ export default function EditSubmissionsPage() {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (loadMoreRef.current) {
@@ -211,42 +243,84 @@ export default function EditSubmissionsPage() {
   const getStatusBadge = (status: SubmissionStatus) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />검토 대기</Badge>;
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <Clock className="h-3 w-3" />
+            검토 대기
+          </Badge>
+        );
       case "approved":
-        return <Badge className="gap-1 bg-green-500 hover:bg-green-600"><CheckCircle className="h-3 w-3" />승인됨</Badge>;
+        return (
+          <Badge className="gap-1 bg-green-500 hover:bg-green-600">
+            <CheckCircle className="h-3 w-3" />
+            승인됨
+          </Badge>
+        );
       case "partially_approved":
-        return <Badge className="gap-1 bg-amber-500 hover:bg-amber-600"><AlertCircle className="h-3 w-3" />부분 승인</Badge>;
+        return (
+          <Badge className="gap-1 bg-amber-500 hover:bg-amber-600">
+            <AlertCircle className="h-3 w-3" />
+            부분 승인
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />반려됨</Badge>;
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <XCircle className="h-3 w-3" />
+            반려됨
+          </Badge>
+        );
     }
   };
 
   const getItemStatusBadge = (status: ItemStatus) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="text-xs">대기</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs">
+            대기
+          </Badge>
+        );
       case "approved":
-        return <Badge variant="outline" className="text-xs border-green-500 text-green-600">승인</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="text-xs border-green-500 text-green-600"
+          >
+            승인
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="outline" className="text-xs border-red-500 text-red-600">반려</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="text-xs border-red-500 text-red-600"
+          >
+            반려
+          </Badge>
+        );
     }
   };
 
   const renderSubmissionCard = (submission: Submission) => (
-    <Card key={submission.id} className="overflow-hidden">
+    <Card key={submission.id} className={myPageListCardClass}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Edit3 className="h-4 w-4 text-muted-foreground shrink-0" />
-              <CardTitle className="text-lg">{submission.restaurant_name}</CardTitle>
+              <CardTitle className="text-lg">
+                {submission.restaurant_name}
+              </CardTitle>
               {getStatusBadge(submission.status)}
             </div>
             {/* 수정 대상 맛집 표시 */}
             {submission.target_restaurant && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                 <span>기존:</span>
-                <span className="font-medium">{submission.target_restaurant.name}</span>
+                <span className="font-medium">
+                  {submission.target_restaurant.name}
+                </span>
                 <ArrowRight className="h-3 w-3" />
                 <span>수정요청</span>
               </div>
@@ -257,7 +331,9 @@ export default function EditSubmissionsPage() {
       <CardContent className="pt-0 space-y-4">
         {/* 수정 요청 정보 */}
         <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2">
-          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">수정 요청 내용</p>
+          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+            수정 요청 내용
+          </p>
           {submission.restaurant_address && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
@@ -270,24 +346,27 @@ export default function EditSubmissionsPage() {
               <p className="text-sm">{submission.restaurant_phone}</p>
             </div>
           )}
-          {submission.restaurant_categories && submission.restaurant_categories.length > 0 && (
-            <div className="flex items-start gap-2">
-              <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-              <div className="flex flex-wrap gap-1">
-                {submission.restaurant_categories.map((cat, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {cat}
-                  </Badge>
-                ))}
+          {submission.restaurant_categories &&
+            submission.restaurant_categories.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div className="flex flex-wrap gap-1">
+                  {submission.restaurant_categories.map((cat, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {cat}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* 제보 항목 */}
         {submission.items.length > 0 && (
           <div>
-            <p className="text-sm font-medium mb-2">관련 영상 ({submission.items.length}개)</p>
+            <p className="text-sm font-medium mb-2">
+              관련 영상 ({submission.items.length}개)
+            </p>
             <div className="space-y-2">
               {submission.items.map((item, idx) => (
                 <div key={item.id} className="border rounded-lg p-3">
@@ -311,7 +390,7 @@ export default function EditSubmissionsPage() {
                       💬 {item.tzuyang_review}
                     </p>
                   )}
-                  {item.rejection_reason && item.item_status === 'rejected' && (
+                  {item.rejection_reason && item.item_status === "rejected" && (
                     <p className="text-xs text-red-500 mt-1">
                       ❌ 반려 사유: {item.rejection_reason}
                     </p>
@@ -330,7 +409,7 @@ export default function EditSubmissionsPage() {
             </p>
           </div>
         )}
-        {submission.rejection_reason && submission.status === 'rejected' && (
+        {submission.rejection_reason && submission.status === "rejected" && (
           <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3">
             <p className="text-sm text-red-700 dark:text-red-300">
               <strong>반려 사유:</strong> {submission.rejection_reason}
@@ -340,9 +419,19 @@ export default function EditSubmissionsPage() {
 
         {/* 날짜 정보 */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-          <span>요청일: {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", { locale: ko })}</span>
+          <span>
+            요청일:{" "}
+            {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", {
+              locale: ko,
+            })}
+          </span>
           {submission.reviewed_at && (
-            <span>검토일: {format(new Date(submission.reviewed_at), "yyyy년 M월 d일", { locale: ko })}</span>
+            <span>
+              검토일:{" "}
+              {format(new Date(submission.reviewed_at), "yyyy년 M월 d일", {
+                locale: ko,
+              })}
+            </span>
           )}
         </div>
       </CardContent>
@@ -353,35 +442,40 @@ export default function EditSubmissionsPage() {
     return <MyPageSectionSkeleton label="맛집 수정 요청 내역을 불러오는 중…" />;
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Edit3 className="h-6 w-6" />
-            맛집 수정 요청
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            기존 맛집 정보 수정 요청 목록입니다
-          </p>
-        </div>
-        <Badge variant="secondary" className="text-sm">
-          총 {submissions.length}건
-        </Badge>
-      </div>
+  if (isError) {
+    return (
+      <MyPageErrorState
+        title="맛집 수정 요청을 불러오지 못했습니다"
+        description="수정 요청 목록을 다시 불러오려면 잠시 후 재시도해주세요."
+      />
+    );
+  }
 
+  return (
+    <MyPageSectionFrame
+      icon={Edit3}
+      eyebrow="제보 관리"
+      title="맛집 수정 요청"
+      description="기존 맛집 정보 수정 요청의 검토 흐름을 확인합니다."
+      countLabel={`총 ${submissions.length}건`}
+      data-section="submissions-edit"
+    >
       {submissions.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Edit3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>아직 맛집 수정 요청 내역이 없습니다.</p>
-            <p className="text-sm mt-1">잘못된 정보를 발견하면 수정 요청해주세요!</p>
-          </CardContent>
-        </Card>
+        <MyPageEmptyState
+          icon={Edit3}
+          title="아직 맛집 수정 요청 내역이 없습니다"
+          description="잘못된 정보를 발견해 수정 요청하면 이곳에 기록됩니다."
+        />
       ) : (
-        <div className="space-y-4">
+        <div
+          className="grid gap-3 xl:grid-cols-2"
+          data-mypage-responsive-list="submissions-edit"
+        >
           {submissions.map(renderSubmissionCard)}
-          <div ref={loadMoreRef} className="pt-4 flex justify-center">
+          <div
+            ref={loadMoreRef}
+            className="flex justify-center pt-4 xl:col-span-2"
+          >
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -391,6 +485,6 @@ export default function EditSubmissionsPage() {
           </div>
         </div>
       )}
-    </div>
+    </MyPageSectionFrame>
   );
 }

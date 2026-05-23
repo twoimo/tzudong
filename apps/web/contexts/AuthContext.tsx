@@ -72,6 +72,7 @@ const isSessionExpired = (currentSession: Session | null) => {
 type AuthUserState = {
     isAdmin: boolean;
     needsNicknameSetup: boolean;
+    profileNickname: string | null;
 };
 
 type AuthUserStateCacheEntry = {
@@ -140,6 +141,7 @@ async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
     const state: AuthUserState = {
         isAdmin: !roleResponse.error && Boolean(roleResponse.data),
         needsNicknameSetup: profileResponse.error ? false : !profileData || nickname === "탈퇴한 사용자",
+        profileNickname: typeof nickname === "string" && nickname.trim().length > 0 ? nickname.trim() : null,
     };
 
     authUserStateCache = {
@@ -179,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
+    const [profileNickname, setProfileNickname] = useState<string | null>(null);
     const activeAuthUserIdRef = useRef<string | null>(null);
 
     const clearStaleSession = useCallback(async () => {
@@ -195,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setIsAdmin(false);
         setNeedsNicknameSetup(false);
+        setProfileNickname(null);
         dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-clear-stale-session' });
     }, []);
 
@@ -204,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (activeAuthUserIdRef.current !== userId) return;
             setIsAdmin(state.isAdmin);
             setNeedsNicknameSetup(state.needsNicknameSetup);
+            setProfileNickname(state.profileNickname);
         } catch (error) {
             if (isAuthSessionInvalidError(error)) {
                 await clearStaleSession();
@@ -212,6 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error("Error loading auth user state:", error);
             setIsAdmin(false);
             setNeedsNicknameSetup(false);
+            setProfileNickname(null);
         }
     }, [clearStaleSession]);
 
@@ -286,6 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         invalidateAuthUserStateCache();
                         setIsAdmin(false);
                         setNeedsNicknameSetup(false);
+                        setProfileNickname(null);
                     }
                 });
                 subscription = authSubscription.data.subscription;
@@ -391,6 +398,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setIsAdmin(false);
             setNeedsNicknameSetup(false);
+            setProfileNickname(null);
             dispatchHomeAuthSessionUpdated({ hasSession: false, source: 'auth-signout' });
             return;
         }
@@ -426,6 +434,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAdmin,
         needsNicknameSetup,
+        profileNickname,
         signIn,
         signInWithGoogle,
         signUp,
@@ -433,7 +442,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         completeNicknameSetup,
         resetPassword,
         updatePassword,
-    }), [user, session, isLoading, isAdmin, needsNicknameSetup, signIn, signInWithGoogle, signUp, signOut, completeNicknameSetup, resetPassword, updatePassword]);
+    }), [user, session, isLoading, isAdmin, needsNicknameSetup, profileNickname, signIn, signInWithGoogle, signUp, signOut, completeNicknameSetup, resetPassword, updatePassword]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
