@@ -625,16 +625,16 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-profile-identity="standard"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-side-layout="right-stack"',
+      'data-mypage-profile-side-layout="matrix"',
     );
     expect(myPageProfileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3",
+      "grid min-w-0 gap-3 sm:gap-5 md:contents",
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-danger-zone-layout="full-row"',
+      'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 border-destructive/30 md:order-3 md:col-span-2"',
+      'className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
@@ -669,14 +669,17 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-mobile-quick-actions="grouped"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-desktop-quick-actions="list"',
+      'data-mypage-desktop-tier-dashboard="true"',
     );
     expect(myPageProfileSource).toContain(
-      "data-mypage-desktop-action-section={section.id}",
+      "data-mypage-desktop-tier-progress",
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-desktop-action-row="true"',
+      'data-mypage-desktop-tier-metrics="true"',
     );
+    expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity="true"');
+    expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
+    expect(myPageProfileSource).toContain("최근 활동");
     expect(myPageProfileSource).not.toContain("바로 할 수 있는 일");
     expect(myPageProfileSource).not.toContain(
       "grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2",
@@ -693,7 +696,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(myPageProfileSource).toContain("맛집 수정 요청");
     expect(myPageProfileSource).toContain("쯔양 맛집 제보");
     expect(myPageProfileSource).toContain(
-      "data-mypage-desktop-action-grid={section.id}",
+      "data-mypage-mobile-action-grid={section.id}",
     );
     expect(homeDesktopControlPanelSource).not.toContain("지도 필터");
     expect(homeDesktopControlPanelSource).toContain(

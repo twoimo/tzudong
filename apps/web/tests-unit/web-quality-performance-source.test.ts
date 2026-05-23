@@ -2705,10 +2705,10 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-side-column="true"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-side-layout="right-stack"',
+      'data-mypage-profile-side-layout="matrix"',
     );
     expect(myPageProfileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3",
+      "grid min-w-0 gap-3 sm:gap-5 md:contents",
     );
     expect(myPageProfileSource).toContain(
       'CardTitle className="flex items-center gap-2 text-base"',
@@ -2716,11 +2716,13 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain("lg:text-xs");
     expect(myPageProfileSource).not.toContain("lg:text-base");
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-density="viewport-fill"',
+      'data-mypage-profile-density="dashboard-matrix"',
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-profile-viewport-fit="true"',
     );
+    expect(myPageProfileSource).toContain("md:min-h-0");
+    expect(myPageProfileSource).toContain("md:content-stretch md:items-stretch");
     expect(myPageProfileSource).not.toContain(
       'data-mypage-profile-account-column="true"',
     );
@@ -2743,14 +2745,14 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
-    expect(myPageProfileSource).toContain("md:h-full md:min-h-0");
-    expect(myPageProfileSource).toContain("md:grid-rows-[minmax(0,1fr)_auto]");
+    expect(myPageProfileSource).toContain("md:h-full");
+    expect(myPageProfileSource).toContain("md:[grid-template-rows:repeat(2,minmax(0,1fr))]");
     expect(myPageProfileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(myPageProfileSource).toContain(
-      "md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]",
+      "md:[grid-template-columns:repeat(2,minmax(0,1fr))]",
     );
     expect(myPageProfileSource).toContain(
-      "lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]",
+      "lg:gap-3",
     );
     expect(myPageProfileSource).toContain("md:order-1");
     expect(myPageProfileSource).toContain("md:order-2");
@@ -2763,7 +2765,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-mobile-quick-actions="grouped"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-desktop-quick-actions="list"',
+      'data-mypage-desktop-tier-dashboard="true"',
     );
     expect(myPageProfileSource).toContain(
       "data-mypage-mobile-action-section={section.id}",
@@ -2772,11 +2774,25 @@ describe("web quality performance source contracts", () => {
       'data-mypage-mobile-action-row="true"',
     );
     expect(myPageProfileSource).toContain(
-      "data-mypage-desktop-action-section={section.id}",
+      "data-mypage-desktop-tier-progress",
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-desktop-action-row="true"',
+      'data-mypage-desktop-tier-metrics="true"',
     );
+    expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity="true"');
+    expect(myPageProfileSource).toContain('data-mypage-password-guidance="true"');
+    expect(myPageProfileSource).toContain('data-mypage-danger-zone-guidance="true"');
+    expect(myPageProfileSource).toContain(
+      'className="min-w-0 md:order-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(myPageProfileSource).toContain(
+      'className="hidden min-w-0 md:order-3 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
+    expect(myPageProfileSource).toContain("최근 활동");
+    expect(myPageProfileSource).toContain("취향 신호");
+    expect(myPageProfileSource).toContain("등급 핵심");
+    expect(myPageProfileSource).toContain("신뢰도 반영");
     expect(myPageProfileSource).toContain("저장하고 작성한 기록");
     expect(myPageProfileSource).toContain("새 맛집과 정보 수정");
     expect(myPageProfileSource).not.toContain("바로 할 수 있는 일");
@@ -2784,7 +2800,6 @@ describe("web quality performance source contracts", () => {
       "grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2",
     );
     expect(myPageProfileSource).not.toContain("lg:min-h-8 lg:rounded-xl");
-    expect(myPageProfileSource).toContain("md:overflow-hidden");
     expect(myPageProfileSource).toContain('data-mypage-next-actions="true"');
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
@@ -2851,7 +2866,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("맛집 수정 요청");
     expect(myPageProfileSource).toContain("쯔양 맛집 제보");
     expect(myPageProfileSource).toContain(
-      "data-mypage-desktop-action-grid={section.id}",
+      "data-mypage-mobile-action-grid={section.id}",
     );
     expect(myPageProfileSource).not.toContain(
       "const PRIMARY_QUICK_ACTION_HREFS = new Set",
@@ -2906,14 +2921,19 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("새 비밀번호 보기");
     expect(myPageProfileSource).toContain("새 비밀번호 확인 숨기기");
     expect(myPageProfileSource).toContain("새 비밀번호 확인 보기");
+    expect(myPageProfileSource).toContain("disabled:bg-muted disabled:text-muted-foreground");
     expect(myPageProfileSource).toContain('data-mypage-danger-zone="true"');
     expect(myPageProfileSource).toContain(
-      'data-mypage-danger-zone-layout="full-row"',
+      'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 border-destructive/30 md:order-3 md:col-span-2"',
+      'className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
-    expect(myPageProfileSource).toContain('className="mt-3 grid gap-2"');
+    expect(myPageProfileSource).toContain("<details\n              open");
+    expect(myPageProfileSource).toContain('className="mt-3 grid gap-2 md:flex-1"');
+    expect(myPageProfileSource).toContain(
+      'data-mypage-danger-zone-impact-grid="true"',
+    );
     expect(myPageProfileSource).not.toContain(
       'className="mt-3 grid gap-2 sm:grid-cols-2"',
     );
