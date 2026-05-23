@@ -12,7 +12,7 @@ import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/resta
 // ============================================================================
 
 /** 티어 정보 타입 */
-interface TierInfo {
+export interface TierInfo {
     readonly name: string;
     readonly color: string;
     readonly bgColor: string;
@@ -66,7 +66,7 @@ export interface UserStamp {
 // ============================================================================
 
 /** 티어 임계값 및 정보 (품질 점수 기준, 내림차순 정렬) */
-const TIER_THRESHOLDS: ReadonlyArray<{ threshold: number; tier: TierInfo }> = [
+export const USER_TIER_THRESHOLDS: ReadonlyArray<{ threshold: number; tier: TierInfo }> = [
     { threshold: 150, tier: { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" } },
     { threshold: 75, tier: { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" } },
     { threshold: 35, tier: { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" } },
@@ -74,7 +74,7 @@ const TIER_THRESHOLDS: ReadonlyArray<{ threshold: number; tier: TierInfo }> = [
     { threshold: 7, tier: { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" } },
 ] as const;
 
-const DEFAULT_TIER: TierInfo = { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
+export const DEFAULT_TIER: TierInfo = { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
 
 /** Query 기본 설정 */
 const QUERY_STALE_TIME = 1000 * 60 * 5; // 5분
@@ -87,10 +87,41 @@ const USER_PROFILE_RESTAURANT_SELECT = 'id,name:approved_name,approved_name,road
 
 /** 티어 계산 함수 - 품질 점수 기준 */
 export function getUserTier(qualityScore: number): TierInfo {
-    for (const { threshold, tier } of TIER_THRESHOLDS) {
+    for (const { threshold, tier } of USER_TIER_THRESHOLDS) {
         if (qualityScore >= threshold) return tier;
     }
     return DEFAULT_TIER;
+}
+
+export function getNextUserTierProgress(qualityScore: number) {
+    const ascendingThresholds = [...USER_TIER_THRESHOLDS].reverse();
+    const next = ascendingThresholds.find(({ threshold }) => qualityScore < threshold);
+
+    if (!next) {
+        return {
+            nextTier: null,
+            nextThreshold: null,
+            remainingScore: 0,
+            progressPercent: 100,
+        } as const;
+    }
+
+    const previousThreshold =
+        [...ascendingThresholds]
+            .reverse()
+            .find(({ threshold }) => qualityScore >= threshold)?.threshold ?? 0;
+    const scoreRange = Math.max(next.threshold - previousThreshold, 1);
+    const scoreInsideRange = Math.max(qualityScore - previousThreshold, 0);
+
+    return {
+        nextTier: next.tier,
+        nextThreshold: next.threshold,
+        remainingScore: Math.max(Math.ceil((next.threshold - qualityScore) * 10) / 10, 0),
+        progressPercent: Math.min(
+            Math.max(Math.round((scoreInsideRange / scoreRange) * 100), 0),
+            100
+        ),
+    } as const;
 }
 
 /** Map에 카운트 증가 헬퍼 */

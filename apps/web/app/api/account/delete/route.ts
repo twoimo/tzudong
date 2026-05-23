@@ -62,7 +62,7 @@ export async function DELETE(request: NextRequest) {
 
         // 4. 북마크 삭제
         const { error: bookmarksError } = await supabaseAdmin
-            .from('restaurant_bookmarks')
+            .from('user_bookmarks')
             .delete()
             .eq('user_id', targetUserId);
 
