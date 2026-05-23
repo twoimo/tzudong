@@ -7,6 +7,18 @@ import { cn } from "@/lib/utils";
 
 export const myPageListCardClass =
   "overflow-hidden border-border/80 bg-card/95 shadow-sm transition-colors hover:bg-secondary/20";
+export const myPageResponsiveListClass = "grid gap-3 xl:grid-cols-2";
+export const myPageListContentClass = "p-4";
+export const myPageCardTitleClass =
+  "truncate text-base font-semibold tracking-tight sm:text-lg";
+export const myPageInfoPanelClass =
+  "space-y-2 rounded-2xl bg-muted/45 p-3 text-sm";
+export const myPageNestedCardClass =
+  "rounded-xl border border-border/70 bg-background/70 p-3";
+export const myPageFooterMetaClass =
+  "flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-2 text-xs text-muted-foreground";
+export const myPageInlineLinkClass =
+  "inline-flex min-w-0 items-center gap-1 truncate text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 interface MyPageSectionFrameProps {
   icon: LucideIcon;

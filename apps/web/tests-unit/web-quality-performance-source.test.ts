@@ -2548,22 +2548,22 @@ describe("web quality performance source contracts", () => {
     expect(myPageLayoutContentSource).toContain(
       'data-mypage-viewport-layout="edge-to-edge"',
     );
-    expect(myPageLayoutContentSource).toContain(
+    expect(myPageLayoutContentSource).not.toContain(
       'data-mypage-return-slot="true"',
     );
-    expect(myPageLayoutContentSource).toContain(
+    expect(myPageLayoutContentSource).not.toContain(
       'className="mb-2 hidden items-center justify-between gap-3 md:flex"',
     );
-    expect(myPageLayoutContentSource).toContain(
+    expect(myPageLayoutContentSource).not.toContain(
       'data-mypage-return-skeleton="true"',
     );
     expect(
       myPageLayoutContentSource.match(/<ReturnToMapButton/g)?.length ?? 0,
-    ).toBe(1);
-    expect(myPageLayoutContentSource).toContain(
+    ).toBe(0);
+    expect(myPageLayoutContentSource).not.toContain(
       '<ReturnToMapButton className="w-fit md:h-9 md:min-h-9 md:px-2.5" />',
     );
-    expect(myPageLayoutContentSource).toContain("<MyPageTopActions />");
+    expect(myPageLayoutContentSource).not.toContain("<MyPageTopActions />");
     expect(myPageTopActionsSource).toContain(
       'data-mypage-top-actions="map-style"',
     );
@@ -2585,8 +2585,9 @@ describe("web quality performance source contracts", () => {
       'data-mypage-content-width="viewport-fill"',
     );
     expect(myPageLayoutContentSource).toContain(
-      'data-mypage-content-density="compact-profile"',
+      'data-mypage-content-density="viewport-profile"',
     );
+    expect(myPageLayoutContentSource).toContain("md:h-full md:min-h-0");
     expect(myPageLayoutContentSource).toContain(
       "flex min-h-full w-full flex-col",
     );
@@ -2719,7 +2720,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-side-layout="right-stack"',
     );
     expect(myPageProfileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:order-2 lg:gap-3",
+      "grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3",
     );
     expect(myPageProfileSource).toContain(
       'CardTitle className="flex items-center gap-2 text-base"',
@@ -2727,7 +2728,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain("lg:text-xs");
     expect(myPageProfileSource).not.toContain("lg:text-base");
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-density="one-screen"',
+      'data-mypage-profile-density="viewport-fill"',
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-profile-viewport-fit="true"',
@@ -2754,7 +2755,9 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
-    expect(myPageProfileSource).toContain("lg:max-h-[calc(100dvh-6.25rem)]");
+    expect(myPageProfileSource).toContain("md:h-full md:min-h-0");
+    expect(myPageProfileSource).toContain("md:grid-rows-[minmax(0,1fr)_auto]");
+    expect(myPageProfileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(myPageProfileSource).toContain(
       "md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]",
     );
@@ -2793,7 +2796,7 @@ describe("web quality performance source contracts", () => {
       "grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2",
     );
     expect(myPageProfileSource).not.toContain("lg:min-h-8 lg:rounded-xl");
-    expect(myPageProfileSource).toContain("lg:overflow-hidden");
+    expect(myPageProfileSource).toContain("md:overflow-hidden");
     expect(myPageProfileSource).toContain('data-mypage-next-actions="true"');
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
@@ -2857,8 +2860,11 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("내 활동");
     expect(myPageProfileSource).toContain("제보하기");
     expect(myPageProfileSource).not.toContain("지도 환경설정");
-    expect(myPageProfileSource).toContain("수정 요청");
-    expect(myPageProfileSource).toContain("쯔양 제보");
+    expect(myPageProfileSource).toContain("맛집 수정 요청");
+    expect(myPageProfileSource).toContain("쯔양 맛집 제보");
+    expect(myPageProfileSource).toContain(
+      "data-mypage-desktop-action-grid={section.id}",
+    );
     expect(myPageProfileSource).not.toContain(
       "const PRIMARY_QUICK_ACTION_HREFS = new Set",
     );

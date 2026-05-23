@@ -597,19 +597,19 @@ describe("mobile and desktop parity source contracts", () => {
       ),
     );
     const myPageProfileSource = source("app/mypage/profile/page.tsx");
-    expect(myPageLayoutContentSource).toContain(
+    expect(myPageLayoutContentSource).not.toContain(
       'data-mypage-return-slot="true"',
     );
-    expect(myPageLayoutContentSource).toContain(
+    expect(myPageLayoutContentSource).not.toContain(
       'className="mb-2 hidden items-center justify-between gap-3 md:flex"',
     );
-    expect(myPageLayoutContentSource).toContain(
+    expect(myPageLayoutContentSource).not.toContain(
       'data-mypage-return-skeleton="true"',
     );
     expect(
       myPageLayoutContentSource.match(/<ReturnToMapButton/g)?.length ?? 0,
-    ).toBe(1);
-    expect(myPageLayoutContentSource).toContain(
+    ).toBe(0);
+    expect(myPageLayoutContentSource).not.toContain(
       '<ReturnToMapButton className="w-fit md:h-9 md:min-h-9 md:px-2.5" />',
     );
     expect(myPageProfileSource).toContain(
@@ -628,7 +628,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-profile-side-layout="right-stack"',
     );
     expect(myPageProfileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:order-2 lg:gap-3",
+      "grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3",
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-danger-zone-layout="full-row"',
@@ -687,11 +687,14 @@ describe("mobile and desktop parity source contracts", () => {
     expect(myPageProfileSource).toContain(
       "data-mypage-action-group={section.id}",
     );
-    expect(myPageProfileSource).toContain("저장한 맛집");
-    expect(myPageProfileSource).toContain("내 리뷰");
-    expect(myPageProfileSource).toContain("맛집 제보");
-    expect(myPageProfileSource).toContain("수정 요청");
-    expect(myPageProfileSource).toContain("쯔양 제보");
+    expect(myPageProfileSource).toContain("나의 북마크 내역");
+    expect(myPageProfileSource).toContain("나의 리뷰 내역");
+    expect(myPageProfileSource).toContain("신규 맛집 제보");
+    expect(myPageProfileSource).toContain("맛집 수정 요청");
+    expect(myPageProfileSource).toContain("쯔양 맛집 제보");
+    expect(myPageProfileSource).toContain(
+      "data-mypage-desktop-action-grid={section.id}",
+    );
     expect(homeDesktopControlPanelSource).not.toContain("지도 필터");
     expect(homeDesktopControlPanelSource).toContain(
       "const hasActiveDetail = isPanelOpen && Boolean(panelRestaurant)",
