@@ -551,29 +551,6 @@ export default function ProfilePage() {
         className="min-w-0 space-y-3 sm:space-y-5 md:contents md:space-y-0"
         data-mypage-profile-main-column="true"
       >
-        <header
-          className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm md:hidden"
-          data-mypage-mobile-page-header="true"
-        >
-          <div className="flex min-w-0 items-start gap-3">
-            <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-              aria-hidden="true"
-            >
-              <User className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-primary">내 계정</p>
-              <h1 className="mt-1 truncate text-xl font-bold tracking-tight">
-                마이페이지
-              </h1>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                프로필과 보안 설정을 한곳에서 관리합니다.
-              </p>
-            </div>
-          </div>
-        </header>
-
         <Card
           className="overflow-hidden md:hidden"
           data-mypage-profile-hero="mobile-only"
