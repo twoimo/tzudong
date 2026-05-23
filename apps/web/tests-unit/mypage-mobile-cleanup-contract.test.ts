@@ -79,6 +79,15 @@ describe("mypage mobile cleanup source contracts", () => {
     const profileSource = source("app/mypage/profile/page.tsx");
     const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
 
+    expect(profileSource).toContain('data-mypage-mobile-page-header="true"');
+    expect(profileSource).toContain("내 계정");
+    expect(profileSource).toContain("마이페이지");
+    expect(profileSource).toContain(
+      "프로필과 보안 설정을 한곳에서 관리합니다.",
+    );
+    expect(profileSource).toContain(
+      'className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm md:hidden"',
+    );
     expect(profileSource).toContain('data-mypage-profile-hero="mobile-only"');
     expect(profileSource).toContain('className="overflow-hidden md:hidden"');
     expect(profileSource).toContain(
@@ -144,23 +153,30 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
     expect(profileSource).toContain(
-      'className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:border-0 md:bg-transparent md:shadow-none"',
+      'className="overflow-hidden md:order-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
     expect(profileSource).toContain('data-mypage-profile-main-column="true"');
+    expect(profileSource).toContain(
+      'className="min-w-0 space-y-3 sm:space-y-5 md:contents md:space-y-0"',
+    );
     expect(profileSource).toContain('data-mypage-profile-side-column="true"');
     expect(profileSource).toContain(
-      'data-mypage-profile-side-layout="right-stack"',
+      'data-mypage-profile-side-layout="matrix"',
     );
     expect(profileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3",
+      "grid min-w-0 gap-3 sm:gap-5 md:contents",
     );
     expect(profileSource).toContain(
       'CardTitle className="flex items-center gap-2 text-base"',
     );
     expect(profileSource).not.toContain("lg:text-xs");
     expect(profileSource).not.toContain("lg:text-base");
-    expect(profileSource).toContain('data-mypage-profile-density="viewport-fill"');
+    expect(profileSource).toContain('data-mypage-profile-density="dashboard-matrix"');
     expect(profileSource).toContain('data-mypage-profile-viewport-fit="true"');
+    expect(profileSource).toContain('data-mypage-profile-matrix="equal-2x2"');
+    expect(profileSource).toContain('data-mypage-profile-matrix-size="equal-track-fill"');
+    expect(profileSource).toContain("md:min-h-0");
+    expect(profileSource).toContain("md:content-stretch md:items-stretch");
     expect(profileSource).not.toContain(
       'data-mypage-profile-account-column="true"',
     );
@@ -182,14 +198,14 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
-    expect(profileSource).toContain("md:h-full md:min-h-0");
-    expect(profileSource).toContain("md:grid-rows-[minmax(0,1fr)_auto]");
+    expect(profileSource).toContain("md:h-full");
+    expect(profileSource).toContain("md:[grid-template-rows:repeat(2,minmax(0,1fr))]");
     expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(profileSource).toContain(
-      "md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]",
+      "md:[grid-template-columns:repeat(2,minmax(0,1fr))]",
     );
     expect(profileSource).toContain(
-      "lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]",
+      "lg:gap-3",
     );
     expect(profileSource).toContain("md:order-1");
     expect(profileSource).toContain("md:order-2");
@@ -220,13 +236,33 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="space-y-3 p-4 md:hidden"');
     expect(profileSource).toContain("저장하고 작성한 기록");
     expect(profileSource).toContain("새 맛집과 정보 수정");
-    expect(profileSource).toContain('data-mypage-desktop-quick-actions="list"');
+    expect(profileSource).toContain('data-mypage-desktop-tier-dashboard="true"');
     expect(profileSource).toContain(
-      "data-mypage-desktop-action-section={section.id}",
+      "data-mypage-desktop-tier-progress",
     );
-    expect(profileSource).toContain('data-mypage-desktop-action-row="true"');
+    expect(profileSource).toContain('data-mypage-desktop-tier-metrics="true"');
+    expect(profileSource).toContain('data-mypage-desktop-recent-activity="true"');
+    expect(profileSource).toContain('data-mypage-password-guidance="true"');
+    expect(profileSource).toContain('data-mypage-danger-zone-guidance="true"');
     expect(profileSource).toContain(
-      'className="hidden min-h-0 flex-1 space-y-3 rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm md:flex md:flex-col"',
+      'className="min-w-0 md:order-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(profileSource).toContain(
+      'className="hidden min-w-0 md:order-3 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
+    expect(profileSource).toContain("최근 활동");
+    expect(profileSource).toContain("취향 신호");
+    expect(profileSource).toContain("등급 핵심");
+    expect(profileSource).toContain("신뢰도 반영");
+    expect(profileSource).toContain(
+      'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"',
+    );
+    expect(profileSource).toContain(
+      'data-mypage-desktop-tier-action-guide="true"',
+    );
+    expect(profileSource).toContain(
+      'className="shrink-0 rounded-2xl border border-border/70 bg-card px-3 py-2.5"',
     );
     expect(profileSource).toContain("data-mypage-action-group={section.id}");
     expect(profileSource).not.toContain("바로 할 수 있는 일");
@@ -235,7 +271,6 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(profileSource).not.toContain("data-mypage-primary-action");
     expect(profileSource).not.toContain("lg:min-h-8 lg:rounded-xl");
-    expect(profileSource).toContain("md:overflow-hidden");
     expect(profileSource).toContain('data-mypage-next-actions="true"');
     expect(profileSource).not.toContain('data-mypage-session-card="true"');
     expect(profileSource).not.toContain("MOBILE_SECONDARY_ACTIONS");
@@ -355,12 +390,16 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain("min-h-14 min-w-0 touch-manipulation");
     expect(profileSource).toContain('data-mypage-danger-zone="true"');
     expect(profileSource).toContain(
-      'data-mypage-danger-zone-layout="full-row"',
+      'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(profileSource).toContain(
-      'className="min-w-0 border-destructive/30 md:order-3 md:col-span-2"',
+      'className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
-    expect(profileSource).toContain('className="mt-3 grid gap-2"');
+    expect(profileSource).toContain("<details\n              open");
+    expect(profileSource).toContain('className="mt-3 grid gap-2 md:flex-1"');
+    expect(profileSource).toContain(
+      'data-mypage-danger-zone-impact-grid="true"',
+    );
     expect(profileSource).not.toContain(
       'className="mt-3 grid gap-2 sm:grid-cols-2"',
     );
