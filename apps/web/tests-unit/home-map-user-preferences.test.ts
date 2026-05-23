@@ -3,7 +3,9 @@ import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_HOME_MAP_USER_PREFERENCES,
   getHomeMapUserPreferencesStorageKey,
+  getLastHomeMapUserPreferencesStorageKey,
   normalizeHomeMapUserPreferences,
+  readLastHomeMapUserPreferences,
   readHomeMapUserPreferences,
   writeHomeMapUserPreferences,
 } from "../lib/home-map-user-preferences";
@@ -11,6 +13,10 @@ import {
 function createMemoryStorage(initial: Record<string, string> = {}) {
   const values = new Map(Object.entries(initial));
   return {
+    get length() {
+      return values.size;
+    },
+    key: (index: number) => Array.from(values.keys())[index] ?? null,
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => {
       values.set(key, value);
@@ -45,6 +51,25 @@ describe("home map user preferences", () => {
     );
     expect(getHomeMapUserPreferencesStorageKey(userId)).toBe(
       "tzudong:home-map-user-preferences:user-123",
+    );
+    expect(getLastHomeMapUserPreferencesStorageKey()).toBe(
+      "tzudong:home-map-user-preferences:last-active",
+    );
+    expect(readLastHomeMapUserPreferences(storage)).toEqual(saved);
+  });
+
+  test("hydrates the last panel side before account auth finishes", () => {
+    const storage = createMemoryStorage({
+      "tzudong:home-map-user-preferences:user-123": JSON.stringify({
+        desktopPanelDefault: "expanded",
+        desktopMapLayout: "panel-aware",
+        desktopPanelSide: "right",
+        reduceMapMotion: true,
+      }),
+    });
+
+    expect(readLastHomeMapUserPreferences(storage).desktopPanelSide).toBe(
+      "right",
     );
   });
 
