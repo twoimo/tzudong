@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   ExternalLink,
   Youtube,
@@ -20,7 +26,9 @@ import {
   Phone,
   Tag,
   PlusCircle,
+  Trash2,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -72,6 +80,7 @@ interface Submission {
 }
 
 const PAGE_SIZE = 15;
+const SUBMISSION_DELETE_CONFIRMATION = "내역삭제";
 const SUBMISSION_SELECT = [
   "id",
   "user_id",
@@ -101,6 +110,9 @@ const SUBMISSION_ITEM_SELECT = [
 
 export default function NewSubmissionsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [deleteTarget, setDeleteTarget] = useState<Submission | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   const {
     data: submissionsData,
@@ -185,6 +197,57 @@ export default function NewSubmissionsPage() {
     return () => observer.disconnect();
   }, [loadMore]);
 
+  const deleteSubmission = useMutation({
+    mutationFn: async (submissionId: string) => {
+      const response = await fetch("/api/mypage/submissions/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: submissionId, type: "new" }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(data?.error || "신규 맛집 제보 삭제에 실패했습니다.");
+      }
+    },
+    onSuccess: async () => {
+      setDeleteTarget(null);
+      setDeleteConfirmation("");
+      await queryClient.invalidateQueries({
+        queryKey: ["myNewSubmissions", user?.id],
+      });
+      toast({
+        title: "삭제 완료",
+        description: "신규 맛집 제보 내역을 삭제했습니다.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "삭제 실패",
+        description:
+          error instanceof Error
+            ? error.message
+            : "신규 맛집 제보 삭제에 실패했습니다.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteSubmission = (submission: Submission) => {
+    if (deleteConfirmation !== SUBMISSION_DELETE_CONFIRMATION) {
+      toast({
+        title: "삭제 확인 문구가 일치하지 않습니다",
+        description: `${SUBMISSION_DELETE_CONFIRMATION}를 입력해야 삭제할 수 있습니다.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    deleteSubmission.mutate(submission.id);
+  };
+
   const getStatusBadge = (status: SubmissionStatus) => {
     switch (status) {
       case "pending":
@@ -252,12 +315,27 @@ export default function NewSubmissionsPage() {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <Store className="h-4 w-4 text-muted-foreground shrink-0" />
-              <CardTitle className={myPageCardTitleClass}>
-                {submission.restaurant_name}
-              </CardTitle>
-              {getStatusBadge(submission.status)}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <Store className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <CardTitle className={myPageCardTitleClass}>
+                  {submission.restaurant_name}
+                </CardTitle>
+                {getStatusBadge(submission.status)}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDeleteTarget(submission);
+                  setDeleteConfirmation("");
+                }}
+                className="h-11 w-11 shrink-0 touch-manipulation text-muted-foreground hover:text-destructive"
+                aria-label={`${submission.restaurant_name} 신규 맛집 제보 삭제 확인 열기`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -363,6 +441,51 @@ export default function NewSubmissionsPage() {
             </span>
           )}
         </div>
+        {deleteTarget?.id === submission.id && (
+          <div
+            className="rounded-lg border border-destructive/25 bg-destructive/5 p-3"
+            role="region"
+            aria-label="신규 맛집 제보 삭제 확인"
+          >
+            <p className="text-sm font-semibold text-destructive">
+              신규 맛집 제보 삭제 확인
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              삭제하려면 <strong>{SUBMISSION_DELETE_CONFIRMATION}</strong>를
+              입력하세요.
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+              <Input
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                placeholder={SUBMISSION_DELETE_CONFIRMATION}
+                aria-label="신규 맛집 제보 삭제 확인 문구"
+                className="bg-background"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteConfirmation("");
+                }}
+              >
+                취소
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={
+                  deleteSubmission.isPending ||
+                  deleteConfirmation !== SUBMISSION_DELETE_CONFIRMATION
+                }
+                onClick={() => handleDeleteSubmission(submission)}
+              >
+                삭제
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
