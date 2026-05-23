@@ -26,7 +26,13 @@ import {
   MyPageEmptyState,
   MyPageErrorState,
   MyPageSectionFrame,
+  myPageCardTitleClass,
+  myPageFooterMetaClass,
+  myPageInfoPanelClass,
+  myPageInlineLinkClass,
   myPageListCardClass,
+  myPageNestedCardClass,
+  myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
 type SubmissionStatus =
@@ -248,7 +254,7 @@ export default function NewSubmissionsPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Store className="h-4 w-4 text-muted-foreground shrink-0" />
-              <CardTitle className="text-lg">
+              <CardTitle className={myPageCardTitleClass}>
                 {submission.restaurant_name}
               </CardTitle>
               {getStatusBadge(submission.status)}
@@ -258,7 +264,7 @@ export default function NewSubmissionsPage() {
       </CardHeader>
       <CardContent className="pt-0 space-y-4">
         {/* 맛집 기본 정보 */}
-        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+        <div className={myPageInfoPanelClass}>
           {submission.restaurant_address && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
@@ -293,7 +299,7 @@ export default function NewSubmissionsPage() {
           </p>
           <div className="space-y-2">
             {submission.items.map((item, idx) => (
-              <div key={item.id} className="border rounded-lg p-3">
+              <div key={item.id} className={myPageNestedCardClass}>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <Youtube className="h-4 w-4 text-red-500 shrink-0" />
@@ -301,7 +307,7 @@ export default function NewSubmissionsPage() {
                       href={item.youtube_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:underline truncate"
+                      className={myPageInlineLinkClass}
                     >
                       영상 #{idx + 1}
                       <ExternalLink className="h-3 w-3 inline ml-1" />
@@ -341,7 +347,7 @@ export default function NewSubmissionsPage() {
         )}
 
         {/* 날짜 정보 */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+        <div className={myPageFooterMetaClass}>
           <span>
             제보일:{" "}
             {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", {
@@ -391,7 +397,7 @@ export default function NewSubmissionsPage() {
         />
       ) : (
         <div
-          className="grid gap-3 xl:grid-cols-2"
+          className={myPageResponsiveListClass}
           data-mypage-responsive-list="submissions-new"
         >
           {submissions.map(renderSubmissionCard)}
@@ -402,7 +408,7 @@ export default function NewSubmissionsPage() {
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                더 불러오는 중...
+                더 불러오는 중…
               </div>
             )}
           </div>

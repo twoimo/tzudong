@@ -26,7 +26,13 @@ import {
   MyPageEmptyState,
   MyPageErrorState,
   MyPageSectionFrame,
+  myPageCardTitleClass,
+  myPageFooterMetaClass,
+  myPageInfoPanelClass,
+  myPageInlineLinkClass,
   myPageListCardClass,
+  myPageNestedCardClass,
+  myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
 type SubmissionStatus =
@@ -309,7 +315,7 @@ export default function EditSubmissionsPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Edit3 className="h-4 w-4 text-muted-foreground shrink-0" />
-              <CardTitle className="text-lg">
+              <CardTitle className={myPageCardTitleClass}>
                 {submission.restaurant_name}
               </CardTitle>
               {getStatusBadge(submission.status)}
@@ -330,26 +336,26 @@ export default function EditSubmissionsPage() {
       </CardHeader>
       <CardContent className="pt-0 space-y-4">
         {/* 수정 요청 정보 */}
-        <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2">
-          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+        <div className={myPageInfoPanelClass}>
+          <p className="font-medium text-foreground">
             수정 요청 내용
           </p>
           {submission.restaurant_address && (
             <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-sm">{submission.restaurant_address}</p>
             </div>
           )}
           {submission.restaurant_phone && (
             <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
               <p className="text-sm">{submission.restaurant_phone}</p>
             </div>
           )}
           {submission.restaurant_categories &&
             submission.restaurant_categories.length > 0 && (
               <div className="flex items-start gap-2">
-                <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <Tag className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="flex flex-wrap gap-1">
                   {submission.restaurant_categories.map((cat, idx) => (
                     <Badge key={idx} variant="outline" className="text-xs">
@@ -369,7 +375,7 @@ export default function EditSubmissionsPage() {
             </p>
             <div className="space-y-2">
               {submission.items.map((item, idx) => (
-                <div key={item.id} className="border rounded-lg p-3">
+                <div key={item.id} className={myPageNestedCardClass}>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Youtube className="h-4 w-4 text-red-500 shrink-0" />
@@ -377,7 +383,7 @@ export default function EditSubmissionsPage() {
                         href={item.youtube_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-blue-500 hover:underline truncate"
+                        className={myPageInlineLinkClass}
                       >
                         영상 #{idx + 1}
                         <ExternalLink className="h-3 w-3 inline ml-1" />
@@ -418,7 +424,7 @@ export default function EditSubmissionsPage() {
         )}
 
         {/* 날짜 정보 */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
+        <div className={myPageFooterMetaClass}>
           <span>
             요청일:{" "}
             {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", {
@@ -468,7 +474,7 @@ export default function EditSubmissionsPage() {
         />
       ) : (
         <div
-          className="grid gap-3 xl:grid-cols-2"
+          className={myPageResponsiveListClass}
           data-mypage-responsive-list="submissions-edit"
         >
           {submissions.map(renderSubmissionCard)}
@@ -479,7 +485,7 @@ export default function EditSubmissionsPage() {
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                더 불러오는 중...
+                더 불러오는 중…
               </div>
             )}
           </div>
