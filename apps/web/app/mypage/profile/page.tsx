@@ -40,6 +40,7 @@ import {
   Bookmark,
   Camera,
   ChevronRight,
+  Heart,
   MessageSquare,
   MapPin,
   Edit,
@@ -48,7 +49,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useBookmarks } from "@/hooks/use-bookmarks";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import {
+  getNextUserTierProgress,
+  useUserProfile,
+} from "@/hooks/useUserProfile";
 import { cn } from "@/lib/utils";
 
 interface Profile {
@@ -441,6 +445,19 @@ export default function ProfilePage() {
   // 프로필 사진 URL (avatar_url 컬럼만 사용 - 삭제 시 완전히 제거됨)
   const avatarUrl = profile?.avatar_url || userProfile?.avatarUrl;
   const isMobileNicknameUnchanged = mobileNicknameInput.trim() === displayName;
+  const tierProgress = getNextUserTierProgress(userProfile?.qualityScore ?? 0);
+  const tierRemainingScore = tierProgress.remainingScore;
+  const hasVerifiedReviews = (userProfile?.verifiedReviewCount ?? 0) > 0;
+  const tierVerifiedReviewsNeeded = Math.ceil(tierRemainingScore);
+  const tierLikesNeeded = hasVerifiedReviews
+    ? Math.ceil(tierRemainingScore * 10)
+    : null;
+  const currentTierName = userProfile?.tier?.name ?? "🌱 뉴비";
+  const nextTierName = tierProgress.nextTier?.name ?? "최고 등급";
+  const tierRemainingLabel = tierProgress.nextTier
+    ? `${tierRemainingScore}점`
+    : "완료";
+  const tierProgressLabel = `${tierProgress.progressPercent}%`;
   const activityActions = [
     {
       href: "/mypage/bookmarks",
@@ -486,28 +503,77 @@ export default function ProfilePage() {
       title: "내 활동",
       helper: "저장하고 작성한 기록",
       actions: activityActions,
-      desktopGridClass: "md:grid-cols-2",
     },
     {
       id: "report" as const,
       title: "제보하기",
       helper: "새 맛집과 정보 수정",
       actions: reportActions,
-      desktopGridClass: "md:grid-cols-2 xl:grid-cols-3",
+    },
+  ];
+  const recentActivityItems = [
+    {
+      icon: Bookmark,
+      label: "저장한 맛집",
+      value: `${bookmarks.length}개`,
+      helper: "북마크에 담아둔 곳",
+      impact: "취향 신호",
+      accent: "bg-primary/10 text-primary",
+    },
+    {
+      icon: MessageSquare,
+      label: "작성한 리뷰",
+      value: `${userProfile?.reviewCount ?? 0}개`,
+      helper: "내가 남긴 리뷰 기록",
+      impact: "등급 핵심",
+      accent: "bg-sky-500/10 text-sky-600",
+    },
+    {
+      icon: Heart,
+      label: "받은 좋아요",
+      value: `${userProfile?.totalLikes ?? 0}개`,
+      helper: "리뷰에 쌓인 반응",
+      impact: "신뢰도 반영",
+      accent: "bg-red-500/10 text-red-600",
     },
   ];
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)_auto] md:items-stretch md:overflow-hidden lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)] lg:gap-3"
+      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:[grid-template-columns:repeat(2,minmax(0,1fr))] md:[grid-template-rows:repeat(2,minmax(0,1fr))] md:content-stretch md:items-stretch lg:gap-3"
       data-mypage-profile-page="true"
-      data-mypage-profile-density="viewport-fill"
+      data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="true"
+      data-mypage-profile-matrix="equal-2x2"
+      data-mypage-profile-matrix-size="equal-track-fill"
     >
       <div
-        className="min-w-0 space-y-3 sm:space-y-5 md:order-1 md:flex md:min-h-0 md:flex-col md:space-y-0 lg:space-y-0"
+        className="min-w-0 space-y-3 sm:space-y-5 md:contents md:space-y-0"
         data-mypage-profile-main-column="true"
       >
+        <header
+          className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm md:hidden"
+          data-mypage-mobile-page-header="true"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+              aria-hidden="true"
+            >
+              <User className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-primary">내 계정</p>
+              <h1 className="mt-1 truncate text-xl font-bold tracking-tight">
+                마이페이지
+              </h1>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                프로필과 보안 설정을 한곳에서 관리합니다.
+              </p>
+            </div>
+          </div>
+        </header>
+
         <Card
           className="overflow-hidden md:hidden"
           data-mypage-profile-hero="mobile-only"
@@ -520,7 +586,7 @@ export default function ProfilePage() {
               <label
                 htmlFor="mypage-mobile-avatar-upload"
                 aria-label="프로필 사진 변경"
-                className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm transition-all group-hover:ring-2 group-hover:ring-primary/30 md:pointer-events-none"
+                className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm transition-[border-color,box-shadow] group-hover:ring-2 group-hover:ring-primary/30 md:pointer-events-none"
                 style={{
                   width: "6rem",
                   height: "6rem",
@@ -716,7 +782,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:border-0 md:bg-transparent md:shadow-none"
+          className="overflow-hidden md:order-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -737,8 +803,8 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <div
-                  className={cn("grid gap-2", section.desktopGridClass)}
-                  data-mypage-desktop-action-grid={section.id}
+                  className="grid gap-2"
+                  data-mypage-mobile-action-grid={section.id}
                 >
                   {section.actions.map((action) => {
                     const Icon = action.icon;
@@ -775,67 +841,225 @@ export default function ProfilePage() {
             ))}
           </CardContent>
           <CardContent
-            className="hidden min-h-0 flex-1 space-y-3 rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm md:flex md:flex-col"
-            data-mypage-desktop-quick-actions="list"
+            className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-mypage-desktop-tier-dashboard="true"
           >
-            {quickActionSections.map((section) => (
-              <section
-                key={section.id}
-                className="space-y-2"
-                data-mypage-desktop-action-section={section.id}
-              >
-                <div className="flex items-end justify-between gap-2 px-1">
-                  <h4 className="text-sm font-semibold">{section.title}</h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    {section.helper}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold">등급 대시보드</h4>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  현재 등급과 다음 목표를 한눈에 확인합니다
+                </p>
+              </div>
+              {userProfile?.tier && (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-[10px]",
+                    userProfile.tier.color,
+                    userProfile.tier.bgColor,
+                  )}
+                >
+                  {userProfile.tier.name}
+                </Badge>
+              )}
+            </div>
+
+            <div
+              className="rounded-2xl border border-border/70 bg-card px-3 py-3"
+              data-mypage-desktop-tier-progress="true"
+            >
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">다음 목표</p>
+                  <p className="mt-0.5 truncate text-xl font-bold tracking-tight">
+                    {tierProgress.nextTier
+                      ? `${nextTierName}까지 인증 리뷰 ${tierVerifiedReviewsNeeded}개`
+                      : "최고 등급 유지 중"}
                   </p>
                 </div>
-                <div className="grid gap-2">
-                  {section.actions.map((action) => {
-                    const Icon = action.icon;
-                    return (
-                      <Link
-                        key={action.href}
-                        href={action.href}
-                        className="group flex min-h-12 min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-card px-3 py-2.5 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                        data-mypage-desktop-action-row="true"
-                        data-mypage-action-group={section.id}
-                      >
-                        <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${action.accent}`}
-                        >
-                          <Icon className="h-4 w-4" aria-hidden="true" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold">
-                            {action.title}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {action.description}
-                          </span>
-                        </span>
-                        <ChevronRight
-                          className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                    );
-                  })}
+                <div className="shrink-0 text-right">
+                  <p className="text-[11px] text-muted-foreground">
+                    품질 점수
+                  </p>
+                  <p className="text-lg font-bold tracking-tight">
+                    {(userProfile?.qualityScore ?? 0).toFixed(1)}
+                    <span className="ml-1 text-xs font-semibold text-muted-foreground">
+                      점
+                    </span>
+                  </p>
                 </div>
-              </section>
-            ))}
+              </div>
+              <div
+                className="mt-3 h-2 overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-label="다음 등급 진행률"
+                aria-valuenow={tierProgress.progressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-[width]"
+                  style={{ width: `${tierProgress.progressPercent}%` }}
+                  aria-hidden="true"
+                />
+              </div>
+            </div>
+
+            <div
+              className="grid min-h-0 flex-1 grid-cols-2 gap-2"
+              data-mypage-desktop-tier-metrics="true"
+            >
+              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
+                <span className="block text-[11px] text-muted-foreground">
+                  현재 등급
+                </span>
+                <span className="block truncate text-sm font-bold">
+                  {currentTierName}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  공개 프로필 배지
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
+                <span className="block text-[11px] text-muted-foreground">
+                  다음 목표
+                </span>
+                <span className="block truncate text-sm font-bold">
+                  {nextTierName}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  인증 활동 기준
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
+                <span className="block text-[11px] text-muted-foreground">
+                  남은 점수
+                </span>
+                <span className="block truncate text-sm font-bold">
+                  {tierRemainingLabel}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  리뷰·좋아요로 채우기
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
+                <span className="block text-[11px] text-muted-foreground">
+                  진행률
+                </span>
+                <span className="block truncate text-sm font-bold">
+                  {tierProgressLabel}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  다음 등급까지
+                </span>
+              </div>
+            </div>
+
+            <div
+              className="shrink-0 rounded-2xl border border-border/70 bg-card px-3 py-2.5"
+              data-mypage-desktop-tier-action-guide="true"
+            >
+              {tierProgress.nextTier ? (
+                <>
+                  <p className="text-xs font-semibold text-foreground">
+                    등급 올리는 법
+                  </p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl bg-muted/35 px-3 py-1.5">
+                      <span className="block text-[11px] text-muted-foreground">
+                        인증 리뷰
+                      </span>
+                      <span className="mt-0.5 block text-xs font-semibold text-foreground">
+                        {tierVerifiedReviewsNeeded}개 더 필요
+                      </span>
+                      <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
+                        인증 도장 1개는 품질 점수 약 1점으로 반영돼요.
+                      </span>
+                    </div>
+                    <div className="rounded-xl bg-muted/35 px-3 py-1.5">
+                      <span className="block text-[11px] text-muted-foreground">
+                        받은 좋아요
+                      </span>
+                      <span className="mt-0.5 block text-xs font-semibold text-foreground">
+                        {hasVerifiedReviews && tierLikesNeeded !== null
+                          ? `약 ${tierLikesNeeded}개 더 필요`
+                          : "인증 리뷰 후 반영"}
+                      </span>
+                      <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
+                        좋아요 10개는 품질 점수 약 1점으로 반영돼요.
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  이미 최고 등급입니다. 인증 리뷰와 좋아요를 꾸준히 유지해
+                  랭킹 경쟁력을 지켜보세요.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="hidden min-w-0 md:order-3 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          data-mypage-desktop-recent-activity="true"
+        >
+          <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
+            <CardTitle className="text-base">최근 활동</CardTitle>
+            <CardDescription className="lg:hidden">
+              저장·리뷰·반응 기록을 간단히 확인합니다
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid min-h-0 flex-1 gap-2 md:grid-rows-3 lg:p-3 lg:pt-0">
+            {recentActivityItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className="flex min-h-0 min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-background px-3 py-2.5"
+                  data-mypage-desktop-recent-activity-row="true"
+                >
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${item.accent}`}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="block truncate text-sm font-semibold">
+                        {item.label}
+                      </span>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {item.impact}
+                      </span>
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {item.helper}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm font-bold tabular-nums">
+                    {item.value}
+                  </span>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       </div>
 
       <div
-        className="grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3"
-        data-mypage-profile-side-layout="right-stack"
+        className="grid min-w-0 gap-3 sm:gap-5 md:contents"
+        data-mypage-profile-side-layout="matrix"
         data-mypage-profile-side-column="true"
       >
         {/* 비밀번호 변경 */}
-        <Card className="min-w-0" data-mypage-password-card="full-width">
-          <CardHeader className="lg:p-3 lg:pb-1.5">
+        <Card
+          className="min-w-0 md:order-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          data-mypage-password-card="full-width"
+        >
+          <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
             <CardTitle className="flex items-center gap-2 text-base">
               <Lock className="h-5 w-5" aria-hidden="true" />
               비밀번호 변경
@@ -844,7 +1068,7 @@ export default function ProfilePage() {
               계정 보안을 위해 정기적으로 비밀번호를 변경해주세요
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 lg:space-y-2 lg:p-3 lg:pt-0">
+          <CardContent className="min-h-0 space-y-4 md:flex md:flex-1 md:flex-col lg:space-y-3 lg:p-3 lg:pt-0">
             <div className="space-y-1.5">
               <Label htmlFor="current-password">현재 비밀번호</Label>
               <div className="relative">
@@ -945,12 +1169,37 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            <div
+              className="hidden rounded-2xl border border-border/70 bg-muted/25 px-3 py-3 md:block"
+              data-mypage-password-guidance="true"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-foreground">
+                  안전한 비밀번호 기준
+                </p>
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  변경 전 확인
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
+                <span className="rounded-xl bg-background px-2 py-2">
+                  8-12자
+                </span>
+                <span className="rounded-xl bg-background px-2 py-2">
+                  현재 비밀번호
+                </span>
+                <span className="rounded-xl bg-background px-2 py-2">
+                  재입력 일치
+                </span>
+              </div>
+            </div>
+
             <Button
               onClick={handlePasswordChange}
               disabled={
                 loading || !currentPassword || !newPassword || !confirmPassword
               }
-              className="w-full lg:h-9"
+              className="w-full border border-transparent md:mt-auto lg:h-9 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
             >
               {loading ? (
                 <>
@@ -963,190 +1212,240 @@ export default function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card
+          className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          data-mypage-danger-zone="true"
+          data-mypage-danger-zone-layout="matrix-bottom-right"
+        >
+          <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
+            <CardTitle className="flex items-center gap-2 text-base text-destructive">
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              계정 위험 작업
+            </CardTitle>
+            <CardDescription className="lg:hidden">
+              자주 쓰지 않는 작업은 한곳에 모았습니다. 필요한 경우에만 열어
+              처리하세요.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="min-h-0 md:flex md:flex-1 md:flex-col lg:p-3 lg:pt-0">
+            <details
+              open
+              className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"
+            >
+              <summary className="flex min-h-10 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">
+                <span>비활성화·삭제 옵션 보기</span>
+                <ChevronRight
+                  className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+                  aria-hidden="true"
+                />
+              </summary>
+              <div className="mt-3 grid gap-2 md:flex-1">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="min-h-11 w-full touch-manipulation border-yellow-500 text-yellow-700 hover:bg-yellow-50 lg:min-h-9 lg:px-3"
+                    >
+                      <EyeOff className="mr-2 h-4 w-4" aria-hidden="true" />
+                      계정 비활성화
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        계정을 비활성화하시겠습니까?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <span className="block">계정을 비활성화하면:</span>
+                        <span className="block">
+                          • 닉네임이 &apos;탈퇴한 사용자&apos;로 변경됩니다
+                        </span>
+                        <span className="block">• 작성한 리뷰는 유지됩니다</span>
+                        <span className="block">• 랭킹에서 제외됩니다</span>
+                        <span className="block">
+                          • 나중에 다시 로그인하면 복구할 수 있습니다
+                        </span>
+                        <span className="block mt-4">
+                          계속하시려면 아래에 계정 이메일을 입력해주세요.
+                        </span>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4">
+                      <Input
+                        value={deactivateConfirmationEmail}
+                        onChange={(e) =>
+                          setDeactivateConfirmationEmail(e.target.value)
+                        }
+                        placeholder={user.email || ""}
+                        className="text-center"
+                        aria-label="계정 비활성화 확인 이메일"
+                        name="deactivate-confirmation-email"
+                        autoComplete="email"
+                      />
+                      {deactivateConfirmationEmail &&
+                        deactivateConfirmationEmail !== user.email && (
+                          <p className="text-sm text-destructive mt-2 text-center">
+                            이메일이 일치하지 않습니다
+                          </p>
+                        )}
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel
+                        onClick={() => setDeactivateConfirmationEmail("")}
+                      >
+                        취소
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleAccountDeactivate}
+                        className="bg-yellow-600 text-white hover:bg-yellow-700"
+                        disabled={
+                          loading || deactivateConfirmationEmail !== user.email
+                        }
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            처리 중…
+                          </>
+                        ) : (
+                          "비활성화"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="min-h-11 w-full touch-manipulation lg:min-h-9 lg:px-3"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                      계정 완전 삭제
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        정말로 계정을 완전히 삭제하시겠습니까?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <span className="block font-semibold text-destructive">
+                          이 작업은 되돌릴 수 없습니다.
+                        </span>
+                        <span className="block">계정을 완전히 삭제하면:</span>
+                        <span className="block">
+                          • 모든 개인 정보가 삭제됩니다
+                        </span>
+                        <span className="block">
+                          • 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
+                        </span>
+                        <span className="block">
+                          • 다시는 이 계정으로 로그인할 수 없습니다
+                        </span>
+                        <span className="block mt-4">
+                          계속하시려면 아래에 계정 이메일을 입력해주세요.
+                        </span>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4">
+                      <Input
+                        value={deleteConfirmationEmail}
+                        onChange={(e) =>
+                          setDeleteConfirmationEmail(e.target.value)
+                        }
+                        placeholder={user.email || ""}
+                        className="text-center"
+                        aria-label="계정 영구 삭제 확인 이메일"
+                        name="delete-confirmation-email"
+                        autoComplete="email"
+                      />
+                      {deleteConfirmationEmail &&
+                        deleteConfirmationEmail !== user.email && (
+                          <p className="text-sm text-destructive mt-2 text-center">
+                            이메일이 일치하지 않습니다
+                          </p>
+                        )}
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel
+                        onClick={() => setDeleteConfirmationEmail("")}
+                      >
+                        취소
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleAccountPermanentDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        disabled={
+                          loading || deleteConfirmationEmail !== user.email
+                        }
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            삭제 중…
+                          </>
+                        ) : (
+                          "영구 삭제"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <div
+                  className="rounded-xl bg-destructive/5 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
+                  data-mypage-danger-zone-guidance="true"
+                >
+                  <p className="font-semibold text-destructive">진행 전 확인</p>
+                  <p className="mt-1">
+                    비활성화는 복구 가능하지만, 완전 삭제는 로그인과 개인정보 복구가
+                    불가능합니다.
+                  </p>
+                </div>
+                <div
+                  className="grid grid-cols-2 gap-2 text-[11px]"
+                  data-mypage-danger-zone-impact-grid="true"
+                >
+                  <div className="rounded-xl bg-muted/35 px-3 py-2">
+                    <span className="block text-muted-foreground">
+                      비활성화
+                    </span>
+                    <span className="mt-0.5 block font-semibold">
+                      재로그인 복구
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-muted/35 px-3 py-2">
+                    <span className="block text-muted-foreground">
+                      완전 삭제
+                    </span>
+                    <span className="mt-0.5 block font-semibold text-destructive">
+                      복구 불가
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-muted/35 px-3 py-2">
+                    <span className="block text-muted-foreground">
+                      리뷰 표시
+                    </span>
+                    <span className="mt-0.5 block font-semibold">
+                      탈퇴 사용자
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-muted/35 px-3 py-2">
+                    <span className="block text-muted-foreground">
+                      확인 방식
+                    </span>
+                    <span className="mt-0.5 block font-semibold">
+                      이메일 입력
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </CardContent>
+        </Card>
       </div>
-
-      <Card
-        className="min-w-0 border-destructive/30 md:order-3 md:col-span-2"
-        data-mypage-danger-zone="true"
-        data-mypage-danger-zone-layout="full-row"
-      >
-        <CardHeader className="pb-3 lg:p-3 lg:pb-1.5">
-          <CardTitle className="flex items-center gap-2 text-base text-destructive">
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-            계정 위험 작업
-          </CardTitle>
-          <CardDescription className="lg:hidden">
-            자주 쓰지 않는 작업은 한곳에 모았습니다. 필요한 경우에만 열어
-            처리하세요.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="lg:p-3 lg:pt-0">
-          <details className="group rounded-2xl border border-border bg-muted/20 p-3 lg:p-2.5">
-            <summary className="flex min-h-11 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">
-              <span>비활성화·삭제 옵션 보기</span>
-              <ChevronRight
-                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
-                aria-hidden="true"
-              />
-            </summary>
-            <div className="mt-3 grid gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="min-h-11 w-full touch-manipulation border-yellow-500 text-yellow-700 hover:bg-yellow-50 lg:min-h-9 lg:px-3"
-                  >
-                    <EyeOff className="mr-2 h-4 w-4" aria-hidden="true" />
-                    계정 비활성화
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      계정을 비활성화하시겠습니까?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="space-y-2">
-                      <span className="block">계정을 비활성화하면:</span>
-                      <span className="block">
-                        • 닉네임이 &apos;탈퇴한 사용자&apos;로 변경됩니다
-                      </span>
-                      <span className="block">• 작성한 리뷰는 유지됩니다</span>
-                      <span className="block">• 랭킹에서 제외됩니다</span>
-                      <span className="block">
-                        • 나중에 다시 로그인하면 복구할 수 있습니다
-                      </span>
-                      <span className="block mt-4">
-                        계속하시려면 아래에 계정 이메일을 입력해주세요.
-                      </span>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="py-4">
-                    <Input
-                      value={deactivateConfirmationEmail}
-                      onChange={(e) =>
-                        setDeactivateConfirmationEmail(e.target.value)
-                      }
-                      placeholder={user.email || ""}
-                      className="text-center"
-                      aria-label="계정 비활성화 확인 이메일"
-                      name="deactivate-confirmation-email"
-                      autoComplete="email"
-                    />
-                    {deactivateConfirmationEmail &&
-                      deactivateConfirmationEmail !== user.email && (
-                        <p className="text-sm text-destructive mt-2 text-center">
-                          이메일이 일치하지 않습니다
-                        </p>
-                      )}
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel
-                      onClick={() => setDeactivateConfirmationEmail("")}
-                    >
-                      취소
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleAccountDeactivate}
-                      className="bg-yellow-600 text-white hover:bg-yellow-700"
-                      disabled={
-                        loading || deactivateConfirmationEmail !== user.email
-                      }
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          처리 중…
-                        </>
-                      ) : (
-                        "비활성화"
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    className="min-h-11 w-full touch-manipulation lg:min-h-9 lg:px-3"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                    계정 완전 삭제
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      정말로 계정을 완전히 삭제하시겠습니까?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="space-y-2">
-                      <span className="block font-semibold text-destructive">
-                        이 작업은 되돌릴 수 없습니다.
-                      </span>
-                      <span className="block">계정을 완전히 삭제하면:</span>
-                      <span className="block">
-                        • 모든 개인 정보가 삭제됩니다
-                      </span>
-                      <span className="block">
-                        • 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
-                      </span>
-                      <span className="block">
-                        • 다시는 이 계정으로 로그인할 수 없습니다
-                      </span>
-                      <span className="block mt-4">
-                        계속하시려면 아래에 계정 이메일을 입력해주세요.
-                      </span>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="py-4">
-                    <Input
-                      value={deleteConfirmationEmail}
-                      onChange={(e) =>
-                        setDeleteConfirmationEmail(e.target.value)
-                      }
-                      placeholder={user.email || ""}
-                      className="text-center"
-                      aria-label="계정 영구 삭제 확인 이메일"
-                      name="delete-confirmation-email"
-                      autoComplete="email"
-                    />
-                    {deleteConfirmationEmail &&
-                      deleteConfirmationEmail !== user.email && (
-                        <p className="text-sm text-destructive mt-2 text-center">
-                          이메일이 일치하지 않습니다
-                        </p>
-                      )}
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel
-                      onClick={() => setDeleteConfirmationEmail("")}
-                    >
-                      취소
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleAccountPermanentDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      disabled={
-                        loading || deleteConfirmationEmail !== user.email
-                      }
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          삭제 중…
-                        </>
-                      ) : (
-                        "영구 삭제"
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </details>
-        </CardContent>
-      </Card>
     </div>
   );
 }
