@@ -14,6 +14,7 @@ import {
 } from "@/lib/desktop-left-panel-entry";
 import {
   HOME_MAP_USER_PREFERENCES_EVENT,
+  readLastHomeMapUserPreferences,
   readHomeMapUserPreferences,
   type HomeMapLayoutMode,
   type HomeMapPanelSide,
@@ -104,7 +105,6 @@ const requestDesktopDetailReturnCapture = () => {
   window.dispatchEvent(new Event(HOME_DESKTOP_DETAIL_RETURN_CAPTURE_EVENT));
 };
 
-
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
 
 const isHomeStartupIntent = (
@@ -135,11 +135,18 @@ export default function HomeClient() {
   const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-  const [desktopMapLayout, setDesktopMapLayout] =
-    useState<HomeMapLayoutMode>("panel-aware");
-  const [desktopPanelSide, setDesktopPanelSide] =
-    useState<HomeMapPanelSide>("left");
+  const [initialHomeMapPreferences] = useState(() =>
+    readLastHomeMapUserPreferences(),
+  );
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(
+    () => initialHomeMapPreferences.desktopPanelDefault === "collapsed",
+  );
+  const [desktopMapLayout, setDesktopMapLayout] = useState<HomeMapLayoutMode>(
+    initialHomeMapPreferences.desktopMapLayout,
+  );
+  const [desktopPanelSide, setDesktopPanelSide] = useState<HomeMapPanelSide>(
+    initialHomeMapPreferences.desktopPanelSide,
+  );
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [deviceLocation, setDeviceLocation] =
@@ -283,8 +290,7 @@ export default function HomeClient() {
   useEffect(() => {
     const handleExpandLeftPanelForPageEntry = (event: Event) => {
       const href =
-        event instanceof CustomEvent &&
-        typeof event.detail?.href === "string"
+        event instanceof CustomEvent && typeof event.detail?.href === "string"
           ? event.detail.href
           : "";
 
