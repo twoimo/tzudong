@@ -21,6 +21,12 @@ import {
   XCircle,
 } from "lucide-react";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import {
+  MyPageEmptyState,
+  MyPageErrorState,
+  MyPageSectionFrame,
+  myPageListCardClass,
+} from "@/components/mypage/MyPageSectionFrame";
 
 interface RestaurantRequest {
   id: string;
@@ -42,22 +48,22 @@ interface RestaurantRequest {
 
 const PAGE_SIZE = 15;
 const RESTAURANT_REQUEST_SELECT = [
-  'id',
-  'user_id',
-  'restaurant_name',
-  'origin_address',
-  'road_address',
-  'jibun_address',
-  'english_address',
-  'phone',
-  'categories',
-  'recommendation_reason',
-  'youtube_link',
-  'lat',
-  'lng',
-  'geocoding_success',
-  'created_at',
-].join(', ');
+  "id",
+  "user_id",
+  "restaurant_name",
+  "origin_address",
+  "road_address",
+  "jibun_address",
+  "english_address",
+  "phone",
+  "categories",
+  "recommendation_reason",
+  "youtube_link",
+  "lat",
+  "lng",
+  "geocoding_success",
+  "created_at",
+].join(", ");
 
 export default function RecommendSubmissionsPage() {
   const { user } = useAuth();
@@ -68,6 +74,7 @@ export default function RecommendSubmissionsPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isError,
   } = useInfiniteQuery({
     queryKey: ["myRecommendRequests", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
@@ -84,7 +91,8 @@ export default function RecommendSubmissionsPage() {
 
       return {
         data: data as RestaurantRequest[],
-        nextCursor: data && data.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
+        nextCursor:
+          data && data.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -107,7 +115,7 @@ export default function RecommendSubmissionsPage() {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (loadMoreRef.current) {
@@ -118,27 +126,36 @@ export default function RecommendSubmissionsPage() {
   }, [loadMore]);
 
   const renderRequestCard = (request: RestaurantRequest) => {
-    const displayAddress = request.road_address || request.jibun_address || request.origin_address;
+    const displayAddress =
+      request.road_address || request.jibun_address || request.origin_address;
 
     return (
-      <Card key={request.id} className="overflow-hidden">
+      <Card key={request.id} className={myPageListCardClass}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <Store className="h-4 w-4 text-muted-foreground shrink-0" />
-                <CardTitle className="text-lg">{request.restaurant_name}</CardTitle>
+                <CardTitle className="text-lg">
+                  {request.restaurant_name}
+                </CardTitle>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {/* 지오코딩 상태 표시 */}
               {request.geocoding_success ? (
-                <Badge variant="outline" className="gap-1 text-green-600 border-green-300">
+                <Badge
+                  variant="outline"
+                  className="gap-1 text-green-600 border-green-300"
+                >
                   <CheckCircle2 className="h-3 w-3" />
                   위치확인
                 </Badge>
               ) : (
-                <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
+                <Badge
+                  variant="outline"
+                  className="gap-1 text-amber-600 border-amber-300"
+                >
                   <XCircle className="h-3 w-3" />
                   위치미확인
                 </Badge>
@@ -155,11 +172,13 @@ export default function RecommendSubmissionsPage() {
                 <div className="text-sm">
                   <p>{displayAddress}</p>
                   {/* 주소 상세 정보가 있으면 표시 */}
-                  {request.road_address && request.jibun_address && request.road_address !== request.jibun_address && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      (지번) {request.jibun_address}
-                    </p>
-                  )}
+                  {request.road_address &&
+                    request.jibun_address &&
+                    request.road_address !== request.jibun_address && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        (지번) {request.jibun_address}
+                      </p>
+                    )}
                 </div>
               </div>
             )}
@@ -214,7 +233,12 @@ export default function RecommendSubmissionsPage() {
 
           {/* 날짜 정보 */}
           <div className="flex items-center text-xs text-muted-foreground pt-2 border-t">
-            <span>추천일: {format(new Date(request.created_at), "yyyy년 M월 d일 HH:mm", { locale: ko })}</span>
+            <span>
+              추천일:{" "}
+              {format(new Date(request.created_at), "yyyy년 M월 d일 HH:mm", {
+                locale: ko,
+              })}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -225,35 +249,40 @@ export default function RecommendSubmissionsPage() {
     return <MyPageSectionSkeleton label="쯔양 맛집 제보 내역을 불러오는 중…" />;
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Heart className="h-6 w-6 text-pink-500" />
-            쯔양 맛집 제보
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            쯔양에게 추천한 맛집 목록입니다
-          </p>
-        </div>
-        <Badge variant="secondary" className="text-sm">
-          총 {requests.length}건
-        </Badge>
-      </div>
+  if (isError) {
+    return (
+      <MyPageErrorState
+        title="쯔양 맛집 제보를 불러오지 못했습니다"
+        description="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
+      />
+    );
+  }
 
+  return (
+    <MyPageSectionFrame
+      icon={Heart}
+      eyebrow="제보 관리"
+      title="쯔양 맛집 제보"
+      description="쯔양에게 추천한 맛집과 위치 확인 상태를 차분하게 확인합니다."
+      countLabel={`총 ${requests.length}건`}
+      data-section="submissions-recommend"
+    >
       {requests.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>아직 쯔양에게 추천한 맛집이 없습니다.</p>
-            <p className="text-sm mt-1">맛있는 맛집을 쯔양에게 추천해주세요!</p>
-          </CardContent>
-        </Card>
+        <MyPageEmptyState
+          icon={Heart}
+          title="아직 쯔양에게 추천한 맛집이 없습니다"
+          description="추천한 맛집은 이곳에서 다시 확인할 수 있습니다."
+        />
       ) : (
-        <div className="space-y-4">
+        <div
+          className="grid gap-3 xl:grid-cols-2"
+          data-mypage-responsive-list="submissions-recommend"
+        >
           {requests.map(renderRequestCard)}
-          <div ref={loadMoreRef} className="pt-4 flex justify-center">
+          <div
+            ref={loadMoreRef}
+            className="flex justify-center pt-4 xl:col-span-2"
+          >
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -263,6 +292,6 @@ export default function RecommendSubmissionsPage() {
           </div>
         </div>
       )}
-    </div>
+    </MyPageSectionFrame>
   );
 }
