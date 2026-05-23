@@ -25,7 +25,12 @@ import {
   MyPageEmptyState,
   MyPageErrorState,
   MyPageSectionFrame,
+  myPageCardTitleClass,
+  myPageFooterMetaClass,
+  myPageInfoPanelClass,
+  myPageInlineLinkClass,
   myPageListCardClass,
+  myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
 interface RestaurantRequest {
@@ -136,7 +141,7 @@ export default function RecommendSubmissionsPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <Store className="h-4 w-4 text-muted-foreground shrink-0" />
-                <CardTitle className="text-lg">
+                <CardTitle className={myPageCardTitleClass}>
                   {request.restaurant_name}
                 </CardTitle>
               </div>
@@ -165,7 +170,7 @@ export default function RecommendSubmissionsPage() {
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
           {/* 맛집 정보 */}
-          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+          <div className={myPageInfoPanelClass}>
             {displayAddress && (
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
@@ -203,11 +208,11 @@ export default function RecommendSubmissionsPage() {
           </div>
 
           {/* 추천 이유 */}
-          <div className="bg-pink-50 dark:bg-pink-950/30 rounded-lg p-3">
+          <div className={myPageInfoPanelClass}>
             <div className="flex items-start gap-2">
-              <MessageSquare className="h-4 w-4 text-pink-500 mt-0.5 shrink-0" />
+              <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-pink-700 dark:text-pink-300 mb-1">
+                <p className="mb-1 font-medium text-foreground">
                   추천 이유
                 </p>
                 <p className="text-sm">{request.recommendation_reason}</p>
@@ -223,7 +228,7 @@ export default function RecommendSubmissionsPage() {
                 href={request.youtube_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-blue-500 hover:underline truncate"
+                className={myPageInlineLinkClass}
               >
                 관련 영상 보기
                 <ExternalLink className="h-3 w-3 inline ml-1" />
@@ -232,7 +237,7 @@ export default function RecommendSubmissionsPage() {
           )}
 
           {/* 날짜 정보 */}
-          <div className="flex items-center text-xs text-muted-foreground pt-2 border-t">
+          <div className={myPageFooterMetaClass}>
             <span>
               추천일:{" "}
               {format(new Date(request.created_at), "yyyy년 M월 d일 HH:mm", {
@@ -275,7 +280,7 @@ export default function RecommendSubmissionsPage() {
         />
       ) : (
         <div
-          className="grid gap-3 xl:grid-cols-2"
+          className={myPageResponsiveListClass}
           data-mypage-responsive-list="submissions-recommend"
         >
           {requests.map(renderRequestCard)}
@@ -286,7 +291,7 @@ export default function RecommendSubmissionsPage() {
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                더 불러오는 중...
+                더 불러오는 중…
               </div>
             )}
           </div>

@@ -35,7 +35,11 @@ import {
   MyPageEmptyState,
   MyPageErrorState,
   MyPageSectionFrame,
+  myPageCardTitleClass,
+  myPageFooterMetaClass,
   myPageListCardClass,
+  myPageListContentClass,
+  myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
@@ -401,7 +405,7 @@ export default function ReviewsPage() {
     <MyPageSectionFrame
       icon={MessageSquare}
       eyebrow="내 활동"
-      title="리뷰 내역"
+      title="나의 리뷰 내역"
       description="작성한 리뷰와 검수 상태를 차분한 카드 흐름으로 확인합니다."
       countLabel={`총 ${filteredReviews.length}개`}
       action={
@@ -430,7 +434,7 @@ export default function ReviewsPage() {
         />
       ) : (
         <div
-          className="grid gap-3 xl:grid-cols-2"
+          className={myPageResponsiveListClass}
           data-mypage-responsive-list="reviews"
         >
           {filteredReviews.map((review, index) => (
@@ -440,12 +444,12 @@ export default function ReviewsPage() {
               ref={index === filteredReviews.length - 1 ? loadMoreRef : null}
               className={`${myPageListCardClass} transition-all duration-500 ${review.isPinned ? "border-primary border-2" : ""}`}
             >
-              <CardContent className="p-4">
+              <CardContent className={myPageListContentClass}>
                 {/* 헤더: 맛집명 + 상태 */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-lg">
+                      <h3 className={myPageCardTitleClass}>
                         {review.restaurantName}
                       </h3>
                       <ReviewStatusBadge review={review} />
@@ -576,7 +580,7 @@ export default function ReviewsPage() {
                 )}
 
                 {/* 푸터: 날짜 정보 */}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
+                <div className={myPageFooterMetaClass}>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     방문: {formatDate(review.visitedAt)}
