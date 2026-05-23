@@ -445,7 +445,7 @@ export default function ProfilePage() {
     {
       href: "/mypage/bookmarks",
       icon: Bookmark,
-      title: "저장한 맛집",
+      title: "나의 북마크 내역",
       description: `${bookmarks.length}개 저장됨`,
       accent: "bg-primary/10 text-primary",
       desktopAccent: "md:bg-primary/10 md:text-primary",
@@ -453,7 +453,7 @@ export default function ProfilePage() {
     {
       href: "/mypage/reviews",
       icon: MessageSquare,
-      title: "내 리뷰",
+      title: "나의 리뷰 내역",
       description: "작성한 리뷰 관리",
       accent: "bg-sky-500/10 text-sky-600",
       desktopAccent: "md:bg-sky-500/10 md:text-sky-600",
@@ -463,7 +463,7 @@ export default function ProfilePage() {
     {
       href: "/mypage/submissions/new",
       icon: MapPin,
-      title: "맛집 제보",
+      title: "신규 맛집 제보",
       description: "새 맛집 등록",
       accent: "bg-emerald-500/10 text-emerald-600",
       desktopAccent: "md:bg-emerald-500/10 md:text-emerald-600",
@@ -487,14 +487,14 @@ export default function ProfilePage() {
     {
       href: "/mypage/submissions/edit",
       icon: Edit,
-      title: "수정 요청",
+      title: "맛집 수정 요청",
       description: "정보 바로잡기",
       accent: "bg-amber-500/10 text-amber-600",
     },
     {
       href: "/mypage/submissions/recommend",
       icon: Youtube,
-      title: "쯔양 제보",
+      title: "쯔양 맛집 제보",
       description: "영상 속 맛집",
       accent: "bg-red-500/10 text-red-600",
     },
@@ -505,24 +505,26 @@ export default function ProfilePage() {
       title: "내 활동",
       helper: "저장하고 작성한 기록",
       actions: activityActions,
+      desktopGridClass: "md:grid-cols-2",
     },
     {
       id: "report" as const,
       title: "제보하기",
       helper: "새 맛집과 정보 수정",
       actions: reportActions,
+      desktopGridClass: "md:grid-cols-2 xl:grid-cols-3",
     },
   ];
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)] md:items-start lg:max-h-[calc(100dvh-6.25rem)] lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)] lg:gap-3 lg:overflow-hidden xl:max-h-[calc(100dvh-6rem)]"
+      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)_auto] md:items-stretch md:overflow-hidden lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)] lg:gap-3"
       data-mypage-profile-page="true"
-      data-mypage-profile-density="one-screen"
+      data-mypage-profile-density="viewport-fill"
       data-mypage-profile-viewport-fit="true"
     >
       <div
-        className="min-w-0 space-y-3 sm:space-y-5 md:order-1 lg:space-y-2.5"
+        className="min-w-0 space-y-3 sm:space-y-5 md:order-1 md:flex md:min-h-0 md:flex-col md:space-y-0 lg:space-y-0"
         data-mypage-profile-main-column="true"
       >
         <Card
@@ -733,7 +735,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden md:border-0 md:bg-transparent md:shadow-none"
+          className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:border-0 md:bg-transparent md:shadow-none"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -753,7 +755,10 @@ export default function ProfilePage() {
                     {section.helper}
                   </p>
                 </div>
-                <div className="grid gap-2">
+                <div
+                  className={cn("grid gap-2", section.desktopGridClass)}
+                  data-mypage-desktop-action-grid={section.id}
+                >
                   {section.actions.map((action) => {
                     const Icon = action.icon;
                     return (
@@ -789,7 +794,7 @@ export default function ProfilePage() {
             ))}
           </CardContent>
           <CardContent
-            className="hidden space-y-3 rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm md:block"
+            className="hidden min-h-0 flex-1 space-y-3 rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm md:flex md:flex-col"
             data-mypage-desktop-quick-actions="list"
           >
             {quickActionSections.map((section) => (
@@ -843,7 +848,7 @@ export default function ProfilePage() {
       </div>
 
       <div
-        className="grid min-w-0 gap-3 sm:gap-5 md:order-2 lg:gap-3"
+        className="grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3"
         data-mypage-profile-side-layout="right-stack"
         data-mypage-profile-side-column="true"
       >
