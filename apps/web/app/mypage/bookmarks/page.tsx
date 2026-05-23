@@ -13,7 +13,12 @@ import {
   MyPageEmptyState,
   MyPageErrorState,
   MyPageSectionFrame,
+  myPageCardTitleClass,
+  myPageFooterMetaClass,
+  myPageInlineLinkClass,
   myPageListCardClass,
+  myPageListContentClass,
+  myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
 const PAGE_SIZE = 15;
@@ -104,7 +109,7 @@ export default function BookmarksPage() {
     <MyPageSectionFrame
       icon={Bookmark}
       eyebrow="내 활동"
-      title="북마크 내역"
+      title="나의 북마크 내역"
       description="저장한 맛집을 한눈에 확인하고 지도 탐색으로 자연스럽게 이어갑니다."
       countLabel={`총 ${bookmarks.length}개`}
       data-section="bookmarks"
@@ -124,7 +129,7 @@ export default function BookmarksPage() {
         />
       ) : (
         <div
-          className="grid gap-3 xl:grid-cols-2"
+          className={myPageResponsiveListClass}
           data-mypage-responsive-list="bookmarks"
         >
           {visibleBookmarks.map((bookmark) => {
@@ -156,7 +161,7 @@ export default function BookmarksPage() {
 
             return (
               <Card key={bookmark.id} className={myPageListCardClass}>
-                <CardContent className="p-3 md:p-4">
+                <CardContent className={myPageListContentClass}>
                   <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                     {/* 썸네일 */}
                     <div className="relative w-full sm:w-32 md:w-40 aspect-video bg-muted rounded overflow-hidden shrink-0">
@@ -181,7 +186,7 @@ export default function BookmarksPage() {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-bold text-lg">
+                            <h3 className={myPageCardTitleClass}>
                               {bookmark.restaurant.name}
                             </h3>
                             {bookmark.restaurant.category?.[0] && (
@@ -216,7 +221,7 @@ export default function BookmarksPage() {
                       </p>
 
                       {/* 푸터: 리뷰 수 + 저장일 */}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
+                      <div className={myPageFooterMetaClass}>
                         <div>
                           리뷰 {bookmark.restaurant.review_count || 0}개
                         </div>
@@ -226,7 +231,7 @@ export default function BookmarksPage() {
                             href={bookmark.restaurant.youtube_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-primary hover:underline"
+                            className={myPageInlineLinkClass}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink className="h-3 w-3" />

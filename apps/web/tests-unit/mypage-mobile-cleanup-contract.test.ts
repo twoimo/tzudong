@@ -6,7 +6,7 @@ const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 
 describe("mypage mobile cleanup source contracts", () => {
-  test("layout keeps one shared return control without mobile duplicate chrome", () => {
+  test("layout fills the viewport without duplicate return chrome", () => {
     const layoutSource = source("app/mypage/mypage-layout-content.tsx");
     const returnButtonSource = source(
       "components/layout/ReturnToMapButton.tsx",
@@ -26,15 +26,17 @@ describe("mypage mobile cleanup source contracts", () => {
     const myPageCenteredAvatarIconClass =
       "absolute left-1/2 top-1/2 !h-5 !w-5 -translate-x-1/2 -translate-y-1/2";
 
-    expect(layoutSource.match(/<ReturnToMapButton/g)?.length ?? 0).toBe(1);
-    expect(
-      layoutSource.match(/data-mypage-return-slot="true"/g)?.length ?? 0,
-    ).toBe(1);
-    expect(layoutSource).toContain(
+    expect(layoutSource.match(/<ReturnToMapButton/g)?.length ?? 0).toBe(0);
+    expect(layoutSource).not.toContain('data-mypage-return-slot="true"');
+    expect(layoutSource).not.toContain(
       'className="mb-2 hidden items-center justify-between gap-3 md:flex"',
     );
-    expect(layoutSource).toContain("import { MyPageTopActions }");
-    expect(layoutSource).toContain("{!userLoading && <MyPageTopActions />}");
+    expect(layoutSource).not.toContain("import { MyPageTopActions }");
+    expect(layoutSource).not.toContain("<MyPageTopActions />");
+    expect(layoutSource).toContain(
+      'data-mypage-content-density="viewport-profile"',
+    );
+    expect(layoutSource).toContain("md:h-full md:min-h-0");
     expect(layoutSource).not.toContain("data-mypage-mobile-return-slot");
     expect(layoutSource).not.toContain("data-mypage-mobile-return-skeleton");
     expect(returnButtonSource).toContain("touch-manipulation");
@@ -142,7 +144,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
     expect(profileSource).toContain(
-      'className="overflow-hidden md:border-0 md:bg-transparent md:shadow-none"',
+      'className="overflow-hidden md:flex md:min-h-0 md:flex-1 md:border-0 md:bg-transparent md:shadow-none"',
     );
     expect(profileSource).toContain('data-mypage-profile-main-column="true"');
     expect(profileSource).toContain('data-mypage-profile-side-column="true"');
@@ -150,14 +152,14 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-profile-side-layout="right-stack"',
     );
     expect(profileSource).toContain(
-      "grid min-w-0 gap-3 sm:gap-5 md:order-2 lg:gap-3",
+      "grid min-w-0 gap-3 sm:gap-5 md:order-2 md:min-h-0 md:content-start lg:gap-3",
     );
     expect(profileSource).toContain(
       'CardTitle className="flex items-center gap-2 text-base"',
     );
     expect(profileSource).not.toContain("lg:text-xs");
     expect(profileSource).not.toContain("lg:text-base");
-    expect(profileSource).toContain('data-mypage-profile-density="one-screen"');
+    expect(profileSource).toContain('data-mypage-profile-density="viewport-fill"');
     expect(profileSource).toContain('data-mypage-profile-viewport-fit="true"');
     expect(profileSource).not.toContain(
       'data-mypage-profile-account-column="true"',
@@ -180,7 +182,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
-    expect(profileSource).toContain("lg:max-h-[calc(100dvh-6.25rem)]");
+    expect(profileSource).toContain("md:h-full md:min-h-0");
+    expect(profileSource).toContain("md:grid-rows-[minmax(0,1fr)_auto]");
+    expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(profileSource).toContain(
       "md:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]",
     );
@@ -222,7 +226,7 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(profileSource).toContain('data-mypage-desktop-action-row="true"');
     expect(profileSource).toContain(
-      'className="hidden space-y-3 rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm md:block"',
+      'className="hidden min-h-0 flex-1 space-y-3 rounded-3xl border border-border/70 bg-background/85 p-3 shadow-sm backdrop-blur-sm md:flex md:flex-col"',
     );
     expect(profileSource).toContain("data-mypage-action-group={section.id}");
     expect(profileSource).not.toContain("바로 할 수 있는 일");
@@ -231,7 +235,7 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(profileSource).not.toContain("data-mypage-primary-action");
     expect(profileSource).not.toContain("lg:min-h-8 lg:rounded-xl");
-    expect(profileSource).toContain("lg:overflow-hidden");
+    expect(profileSource).toContain("md:overflow-hidden");
     expect(profileSource).toContain('data-mypage-next-actions="true"');
     expect(profileSource).not.toContain('data-mypage-session-card="true"');
     expect(profileSource).not.toContain("MOBILE_SECONDARY_ACTIONS");
@@ -246,8 +250,8 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("지도 환경설정");
     expect(profileSource).toContain("const activityActions = [");
     expect(profileSource).toContain("const reportActions = [");
-    expect(profileSource).toContain('title: "수정 요청"');
-    expect(profileSource).toContain('title: "쯔양 제보"');
+    expect(profileSource).toContain('title: "맛집 수정 요청"');
+    expect(profileSource).toContain('title: "쯔양 맛집 제보"');
     expect(profileSource).toContain("내 활동");
     expect(profileSource).toContain("제보하기");
     expect(
@@ -287,6 +291,11 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sectionFrameSource).not.toContain("bg-gradient");
     expect(sectionFrameSource).not.toContain("shadow-2xl");
     expect(sectionFrameSource).toContain("myPageListCardClass");
+    expect(sectionFrameSource).toContain("myPageResponsiveListClass");
+    expect(sectionFrameSource).toContain("myPageCardTitleClass");
+    expect(sectionFrameSource).toContain("myPageInfoPanelClass");
+    expect(sectionFrameSource).toContain("myPageFooterMetaClass");
+    expect(sectionFrameSource).toContain("myPageInlineLinkClass");
     expect(sectionFrameSource).toContain("MyPageEmptyState");
     expect(sectionFrameSource).toContain("MyPageErrorState");
     expect(sectionFrameSource).not.toContain("myPageSoftPanelClass");
@@ -296,9 +305,12 @@ describe("mypage mobile cleanup source contracts", () => {
       expect(sectionSource).toContain("<MyPageEmptyState");
       expect(sectionSource).toContain("<MyPageErrorState");
       expect(sectionSource).toContain("myPageListCardClass");
-      expect(sectionSource).toContain("xl:grid-cols-2");
+      expect(sectionSource).toContain("myPageResponsiveListClass");
+      expect(sectionSource).toContain("myPageCardTitleClass");
       expect(sectionSource).toContain("data-mypage-responsive-list");
       expect(sectionSource).not.toContain('className="space-y-6"');
+      expect(sectionSource).not.toContain('className="text-lg"');
+      expect(sectionSource).not.toContain("더 불러오는 중...");
       expect(sectionSource).not.toContain("bg-gradient");
       expect(sectionSource).not.toContain("shadow-2xl");
     }
