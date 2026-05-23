@@ -5,8 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import dynamic from "next/dynamic";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ReturnToMapButton } from "@/components/layout/ReturnToMapButton";
-import { MyPageTopActions } from "@/components/mypage/MyPageTopActions";
 
 const MyPageSidebar = dynamic(
   () =>
@@ -124,24 +122,10 @@ export function MyPageLayoutContent({
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
           <div
-            className="flex min-h-full w-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:px-5 md:py-3 md:pb-3 lg:px-6 lg:py-3"
+            className="flex min-h-full w-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:h-full md:min-h-0 md:px-4 md:py-3 md:pb-3 lg:px-5 lg:py-3"
             data-mypage-content-width="viewport-fill"
-            data-mypage-content-density="compact-profile"
+            data-mypage-content-density="viewport-profile"
           >
-            <div
-              className="mb-2 hidden items-center justify-between gap-3 md:flex"
-              data-mypage-return-slot="true"
-            >
-              {userLoading ? (
-                <Skeleton
-                  className="h-9 w-24 rounded-full"
-                  data-mypage-return-skeleton="true"
-                />
-              ) : (
-                <ReturnToMapButton className="w-fit md:h-9 md:min-h-9 md:px-2.5" />
-              )}
-              {!userLoading && <MyPageTopActions />}
-            </div>
             {userLoading ? <MyPageContentLoadingState /> : children}
           </div>
         </div>
