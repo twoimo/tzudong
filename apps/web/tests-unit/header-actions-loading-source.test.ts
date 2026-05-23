@@ -61,9 +61,11 @@ describe("header action loading source contract", () => {
     expect(homeClientSource).toContain("<HomeMapUserMenu");
     expect(homeClientSource).toContain("desktopPanelSide={desktopPanelSide}");
     expect(homeClientSource).toContain("isPanelCollapsed={isPanelCollapsed}");
-    expect(homeClientSource).toContain("function HomeMapUserMenuPendingShell()");
     expect(homeClientSource).toContain(
-      "data-desktop-map-user-menu-pending=\"true\"",
+      "function HomeMapUserMenuPendingShell()",
+    );
+    expect(homeClientSource).toContain(
+      'data-desktop-map-user-menu-pending="true"',
     );
     expect(homeClientSource).toContain(
       "{ ssr: false, loading: () => <HomeMapUserMenuPendingShell /> }",
@@ -71,30 +73,46 @@ describe("header action loading source contract", () => {
     expect(homeClientSource).toContain(
       "DESKTOP_LEFT_PANEL_EXPAND_ON_ENTRY_EVENT",
     );
-    expect(homeClientSource).toContain(
-      "handleExpandLeftPanelForPageEntry",
-    );
-    expect(homeClientSource).toContain(
-      "setIsPanelCollapsed(false);",
-    );
+    expect(homeClientSource).toContain("handleExpandLeftPanelForPageEntry");
+    expect(homeClientSource).toContain("setIsPanelCollapsed(false);");
     expect(userMenuSource).toContain('data-desktop-map-user-menu="true"');
-    expect(userMenuSource).toContain('data-desktop-map-fullscreen-toggle="true"');
+    expect(userMenuSource).toContain(
+      'data-desktop-map-fullscreen-toggle="true"',
+    );
     expect(userMenuSource).not.toContain("if (!user) return null");
     expect(userMenuSource).toContain("requestAuthUi({");
     expect(userMenuSource).toContain('source: "desktop-map-user-menu"');
     expect(userMenuSource).toContain('aria-label="로그인 열기"');
-    expect(userMenuSource).toContain('fixed top-4 z-[120] h-11 w-11 rounded-full');
-    expect(userMenuSource).toContain('shouldOffsetForRightPanel ? "" : "right-20"');
-    expect(userMenuSource).toContain('style={fullscreenButtonStyle}');
-    expect(userMenuSource).toContain('aria-label={isFullscreen ? "지도 전체화면 끄기" : "지도 전체화면 켜기"}');
-    expect(userMenuSource).toContain('document.documentElement.requestFullscreen()');
-    expect(userMenuSource).toContain('document.exitFullscreen()');
-    expect(userMenuSource).toContain('document.addEventListener("fullscreenchange", syncFullscreenState)');
-    expect(userMenuSource).toContain('<Maximize2 className="h-5 w-5" aria-hidden="true" />');
-    expect(userMenuSource).toContain('<Minimize2 className="h-5 w-5" aria-hidden="true" />');
-    expect(userMenuSource).toContain('queryKey: ["home-map-user-menu-avatar", user?.id]');
+    expect(userMenuSource).toContain(
+      "fixed top-4 z-[120] h-11 w-11 rounded-full",
+    );
+    expect(userMenuSource).toContain(
+      'shouldOffsetForRightPanel ? "" : "right-20"',
+    );
+    expect(userMenuSource).toContain("style={fullscreenButtonStyle}");
+    expect(userMenuSource).toContain(
+      'aria-label={isFullscreen ? "지도 전체화면 끄기" : "지도 전체화면 켜기"}',
+    );
+    expect(userMenuSource).toContain(
+      "document.documentElement.requestFullscreen()",
+    );
+    expect(userMenuSource).toContain("document.exitFullscreen()");
+    expect(userMenuSource).toContain(
+      'document.addEventListener("fullscreenchange", syncFullscreenState)',
+    );
+    expect(userMenuSource).toContain(
+      '<Maximize2 className="h-5 w-5" aria-hidden="true" />',
+    );
+    expect(userMenuSource).toContain(
+      '<Minimize2 className="h-5 w-5" aria-hidden="true" />',
+    );
+    expect(userMenuSource).toContain(
+      'queryKey: ["home-map-user-menu-avatar", user?.id]',
+    );
     expect(userMenuSource).toContain('.select("avatar_url")');
-    expect(userMenuSource).toContain('className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary"');
+    expect(userMenuSource).toContain(
+      'className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary"',
+    );
     expect(userMenuSource).toContain("profileAvatarUrl ? (");
     expect(userMenuSource).toContain('sizes="36px"');
     expect(userMenuSource).toContain('<UserRound className="h-5 w-5" />');
@@ -117,7 +135,7 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).toContain("isBusinessInfoExpanded");
     expect(userMenuSource).toContain('data-desktop-map-business-info="true"');
     expect(userMenuSource).toContain('aria-label="사업자 정보 펼치기/접기"');
-    expect(userMenuSource).toContain('aria-expanded={isBusinessInfoExpanded}');
+    expect(userMenuSource).toContain("aria-expanded={isBusinessInfoExpanded}");
     expect(userMenuSource).toContain("v2.0.0 © 타이니번");
     expect(userMenuSource).toContain("타이니번 데이터랩");
     expect(userMenuSource).toContain("대표: 최연우");
@@ -125,11 +143,15 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).toContain("이메일: cs@tzudong.app");
     expect(userMenuSource).toContain("<ChevronDown");
     expect(userMenuSource).toContain("<ChevronUp");
-    expect(userMenuSource).toContain('className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl');
+    expect(userMenuSource).toContain(
+      'className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl',
+    );
     expect(userMenuSource).not.toContain('className="z-[180] w-64 rounded-2xl');
-    expect(userMenuSource).toContain('text-foreground whitespace-nowrap');
-    expect(userMenuSource).toContain('text-left whitespace-nowrap');
-    expect(userMenuSource).toContain('className="flex w-max max-w-full items-center justify-between');
+    expect(userMenuSource).toContain("text-foreground whitespace-nowrap");
+    expect(userMenuSource).toContain("text-left whitespace-nowrap");
+    expect(userMenuSource).toContain(
+      'className="flex w-max max-w-full items-center justify-between',
+    );
   });
 
   test("desktop admin route keeps full-page console chrome instead of map overlay chrome", () => {
@@ -150,7 +172,7 @@ describe("header action loading source contract", () => {
     );
     expect(overlayLayoutSource).not.toContain("{!isHomeRoute && (");
     expect(adminConsoleSource).toContain(
-      "lg:h-[calc(100dvh_-_var(--app-header-height,0px))]",
+      "h-[var(--full-height,100vh)] min-h-0 w-full overflow-hidden",
     );
     expect(tailwindConfigSource).toContain(
       "lg:h-[calc(100dvh_-_var(--app-header-height,0px))]",

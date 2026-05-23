@@ -1813,6 +1813,8 @@ function AdminMapOverviewCanvas({
     () => restaurants.filter(hasAdminMapCoordinates),
     [restaurants],
   );
+  const shouldShowMapStatusOverlay =
+    hasError || (!isLoading && visibleRestaurants.length === 0);
   return (
     <section
       aria-labelledby="admin-map-home-title"
@@ -1851,56 +1853,45 @@ function AdminMapOverviewCanvas({
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden p-2 sm:p-3">
-        {hasError ? (
-          <div className="grid h-full min-h-[360px] place-items-center text-center">
-            <div className="max-w-sm rounded-2xl border border-dashed border-border bg-card/95 p-4 shadow-sm">
-              <p className="text-sm font-bold text-foreground">
-                실데이터를 확인하지 못했습니다
-              </p>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                요약 API가 실패하면 임의 수치를 만들지 않습니다. 맛집 관리
-                화면에서 좌표 상태를 먼저 확인하세요.
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                className="mt-4 rounded-xl"
-                onClick={() => onSelectModule("restaurants")}
-              >
-                맛집 좌표 확인
-              </Button>
+        <div
+          className="relative h-full min-h-[360px]"
+          data-admin-overview-map-canvas="true"
+        >
+          <AdminNaverMapSurface
+            restaurants={visibleRestaurants}
+            selectedRestaurant={selectedRestaurant}
+            isLoading={isLoading}
+            onSelectRestaurant={onSelectRestaurant}
+          />
+
+          {shouldShowMapStatusOverlay && (
+            <div
+              className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex justify-center sm:inset-x-auto sm:left-3 sm:justify-start"
+              data-admin-map-status-overlay="non-blocking"
+            >
+              <div className="pointer-events-auto max-w-sm rounded-2xl border border-border bg-card/95 p-3 text-left shadow-lg backdrop-blur">
+                <p className="text-sm font-bold text-foreground">
+                  {hasError
+                    ? "지도는 유지하고 실데이터만 재확인합니다"
+                    : "표시할 좌표 맛집이 없습니다"}
+                </p>
+                <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                  {hasError
+                    ? "요약 API가 실패하면 임의 수치를 만들지 않습니다. 네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요."
+                    : "운영 콘솔에서는 빈 실데이터 상태를 목업으로 대체하지 않습니다. 지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다."}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-3 rounded-xl"
+                  onClick={() => onSelectModule("restaurants")}
+                >
+                  맛집 좌표 확인
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : !isLoading && visibleRestaurants.length === 0 ? (
-          <div className="grid h-full min-h-[360px] place-items-center text-center">
-            <div className="max-w-sm rounded-2xl border border-dashed border-border bg-card/95 p-4 shadow-sm">
-              <p className="text-sm font-bold text-foreground">
-                표시할 좌표 맛집이 없습니다
-              </p>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                운영 콘솔에서는 빈 실데이터 상태를 목업으로 대체하지 않습니다.
-                맛집 관리에서 좌표가 있는 맛집을 먼저 확인하세요.
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                className="mt-4 rounded-xl"
-                onClick={() => onSelectModule("restaurants")}
-              >
-                맛집 좌표 확인
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="relative h-full min-h-[360px]">
-            <AdminNaverMapSurface
-              restaurants={visibleRestaurants}
-              selectedRestaurant={selectedRestaurant}
-              isLoading={isLoading}
-              onSelectRestaurant={onSelectRestaurant}
-            />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </section>
   );
@@ -2345,9 +2336,9 @@ function AdminOverviewDashboard({
     <div
       role="region"
       aria-label="관리자 지도 운영 개요 2분할"
-      className="grid min-h-full grid-cols-1 gap-2 overflow-visible xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] xl:overflow-hidden"
+      className="grid min-h-full grid-cols-1 gap-2 overflow-visible lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:overflow-hidden"
     >
-      <div className="min-h-[390px] min-w-0 xl:min-h-0">
+      <div className="min-h-[390px] min-w-0 lg:min-h-0">
         <AdminMapOverviewCanvas
           restaurants={restaurants}
           selectedRestaurant={selectedRestaurant}
@@ -2359,7 +2350,7 @@ function AdminOverviewDashboard({
           onSelectModule={onSelectModule}
         />
       </div>
-      <div className="min-h-[420px] min-w-0 xl:min-h-0">
+      <div className="min-h-[420px] min-w-0 lg:min-h-0">
         <AdminMapInfoPanel
           stats={stats}
           restaurants={restaurants}
@@ -2593,16 +2584,16 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
 function AdminConsoleCanvasSkeleton() {
   return (
     <div
-      className="grid min-h-full grid-cols-1 gap-2 xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]"
+      className="grid min-h-full grid-cols-1 gap-2 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]"
       data-admin-console-content-loading="true"
       role="status"
       aria-busy="true"
       aria-label="관리자 콘솔 작업 화면 로딩 중"
     >
-      <div className="min-h-[390px] rounded-xl border border-border bg-card p-3 xl:min-h-0">
+      <div className="min-h-[390px] rounded-xl border border-border bg-card p-3 lg:min-h-0">
         <Skeleton className="h-full min-h-[360px] rounded-lg motion-reduce:animate-none" />
       </div>
-      <div className="min-h-[420px] rounded-xl border border-border bg-card p-3 xl:min-h-0">
+      <div className="min-h-[420px] rounded-xl border border-border bg-card p-3 lg:min-h-0">
         <div className="space-y-3">
           <Skeleton className="h-8 w-40 rounded-lg motion-reduce:animate-none" />
           <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />

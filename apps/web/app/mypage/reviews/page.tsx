@@ -31,6 +31,12 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import {
+  MyPageEmptyState,
+  MyPageErrorState,
+  MyPageSectionFrame,
+  myPageListCardClass,
+} from "@/components/mypage/MyPageSectionFrame";
 import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
 
@@ -77,7 +83,9 @@ interface RestaurantData {
   status?: string | null;
 }
 
-function getRestaurantDisplayName(restaurant: RestaurantData | null | undefined): string {
+function getRestaurantDisplayName(
+  restaurant: RestaurantData | null | undefined,
+): string {
   return restaurant?.name || restaurant?.approved_name || "알 수 없음";
 }
 
@@ -91,7 +99,8 @@ const formatDate = (dateString: string) => {
   });
 };
 const PAGE_SIZE = 15;
-const MY_REVIEWS_SELECT = "id,restaurant_id,title,content,visited_at,created_at,is_verified,admin_note,is_pinned,is_edited_by_admin,food_photos,categories";
+const MY_REVIEWS_SELECT =
+  "id,restaurant_id,title,content,visited_at,created_at,is_verified,admin_note,is_pinned,is_edited_by_admin,food_photos,categories";
 
 // 상태 배지 컴포넌트 (Memoization)
 const ReviewStatusBadge = memo(({ review }: { review: MyReview }) => {
@@ -127,8 +136,12 @@ export default function ReviewsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [editingReview, setEditingReview] = useState<MyReview | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(null);
-  const [deleteReviewTarget, setDeleteReviewTarget] = useState<MyReview | null>(null);
+  const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(
+    null,
+  );
+  const [deleteReviewTarget, setDeleteReviewTarget] = useState<MyReview | null>(
+    null,
+  );
   const [deleteReviewConfirmation, setDeleteReviewConfirmation] = useState("");
 
   // 내 리뷰 조회 - 무한 스크롤
@@ -138,6 +151,7 @@ export default function ReviewsPage() {
     hasNextPage,
     isLoading,
     isFetchingNextPage,
+    isError,
     refetch,
   } = useInfiniteQuery({
     queryKey: ["my-reviews", user?.id, filterStatus],
@@ -164,43 +178,57 @@ export default function ReviewsPage() {
         }
 
         // 2. 레스토랑 정보 조회
-        const restaurantIds = [...new Set(reviewsData.map((r) => r.restaurant_id))];
+        const restaurantIds = [
+          ...new Set(reviewsData.map((r) => r.restaurant_id)),
+        ];
         const { data: restaurantsData } = await supabase
           .from("restaurants")
-          .select("id, name:approved_name, approved_name, road_address, jibun_address, status") // [수정] approved_name을 name으로 사용
+          .select(
+            "id, name:approved_name, approved_name, road_address, jibun_address, status",
+          ) // [수정] approved_name을 name으로 사용
           .in("id", restaurantIds)
           .returns<RestaurantData[]>();
 
         const restaurantsMap = new Map<string, RestaurantData>(
-          (restaurantsData || []).map((restaurant) => [restaurant.id, restaurant])
+          (restaurantsData || []).map((restaurant) => [
+            restaurant.id,
+            restaurant,
+          ]),
         );
         const reviewedRestaurantNames = [
           ...new Set(
             (restaurantsData || [])
-              .map((restaurant) => (restaurant.approved_name || restaurant.name || "").trim())
-              .filter(Boolean)
+              .map((restaurant) =>
+                (restaurant.approved_name || restaurant.name || "").trim(),
+              )
+              .filter(Boolean),
           ),
         ];
-        const { data: approvedRestaurantRows } = reviewedRestaurantNames.length > 0
-          ? await supabase
-            .from("restaurants")
-            .select("id, name:approved_name, approved_name, road_address, jibun_address, status")
-            .eq("status", "approved")
-            .in("approved_name", reviewedRestaurantNames)
-            .returns<RestaurantData[]>()
-          : { data: [] };
+        const { data: approvedRestaurantRows } =
+          reviewedRestaurantNames.length > 0
+            ? await supabase
+                .from("restaurants")
+                .select(
+                  "id, name:approved_name, approved_name, road_address, jibun_address, status",
+                )
+                .eq("status", "approved")
+                .in("approved_name", reviewedRestaurantNames)
+                .returns<RestaurantData[]>()
+            : { data: [] };
         const approvedRestaurants = approvedRestaurantRows || [];
 
         // 3. 리뷰 데이터 매핑
         const reviews: MyReview[] = reviewsData.map((review) => {
-          const reviewedRestaurant = restaurantsMap.get(review.restaurant_id) ?? null;
-          const canonicalRestaurant = reviewedRestaurant?.status === "approved"
-            ? reviewedRestaurant
-            : (findCanonicalVisitedRestaurant({
-              reviewedRestaurant: reviewedRestaurant as Restaurant | null,
-              reviewedRestaurantId: review.restaurant_id,
-              approvedRestaurants: approvedRestaurants as Restaurant[],
-            }) as RestaurantData | null) ?? reviewedRestaurant;
+          const reviewedRestaurant =
+            restaurantsMap.get(review.restaurant_id) ?? null;
+          const canonicalRestaurant =
+            reviewedRestaurant?.status === "approved"
+              ? reviewedRestaurant
+              : ((findCanonicalVisitedRestaurant({
+                  reviewedRestaurant: reviewedRestaurant as Restaurant | null,
+                  reviewedRestaurantId: review.restaurant_id,
+                  approvedRestaurants: approvedRestaurants as Restaurant[],
+                }) as RestaurantData | null) ?? reviewedRestaurant);
 
           return {
             id: review.id,
@@ -215,13 +243,15 @@ export default function ReviewsPage() {
             isPinned: review.is_pinned || false,
             isEditedByAdmin: review.is_edited_by_admin || false,
             foodPhotos: review.food_photos || [],
-            categories: (Array.isArray(review.categories) && review.categories.length > 0)
-              ? review.categories
-              : [],
+            categories:
+              Array.isArray(review.categories) && review.categories.length > 0
+                ? review.categories
+                : [],
           };
         });
 
-        const nextCursor = reviewsData.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null;
+        const nextCursor =
+          reviewsData.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null;
         return { reviews, nextCursor };
       } catch (error) {
         console.error("리뷰 데이터 조회 중 오류:", error);
@@ -234,17 +264,23 @@ export default function ReviewsPage() {
   });
 
   // 모든 페이지 데이터 평탄화 (Memoization)
-  const allReviews = useMemo(() =>
-    reviewsPages?.pages.flatMap((page) => page.reviews) || [],
-    [reviewsPages?.pages]);
+  const allReviews = useMemo(
+    () => reviewsPages?.pages.flatMap((page) => page.reviews) || [],
+    [reviewsPages?.pages],
+  );
 
   // 상태별 필터링 (Memoization)
   const filteredReviews = useMemo(() => {
     return allReviews.filter((review) => {
       if (filterStatus === "all") return true;
       if (filterStatus === "approved") return review.isVerified;
-      if (filterStatus === "rejected") return !review.isVerified && review.adminNote?.includes("거부");
-      if (filterStatus === "pending") return !review.isVerified && (!review.adminNote || !review.adminNote.includes("거부"));
+      if (filterStatus === "rejected")
+        return !review.isVerified && review.adminNote?.includes("거부");
+      if (filterStatus === "pending")
+        return (
+          !review.isVerified &&
+          (!review.adminNote || !review.adminNote.includes("거부"))
+        );
       return true;
     });
   }, [allReviews, filterStatus]);
@@ -265,7 +301,7 @@ export default function ReviewsPage() {
           loadMoreReviews();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (loadMoreRef.current) {
@@ -277,10 +313,10 @@ export default function ReviewsPage() {
 
   // URL 쿼리 파라미터 처리
   useEffect(() => {
-    const status = searchParams.get('status');
-    const reviewId = searchParams.get('reviewId');
+    const status = searchParams.get("status");
+    const reviewId = searchParams.get("reviewId");
 
-    if (status && ['all', 'approved', 'pending', 'rejected'].includes(status)) {
+    if (status && ["all", "approved", "pending", "rejected"].includes(status)) {
       setFilterStatus(status);
     }
 
@@ -294,13 +330,15 @@ export default function ReviewsPage() {
     if (highlightedReviewId && reviewsPages) {
       // 렌더링이 완료된 후 실행하기 위해 requestAnimationFrame 사용
       requestAnimationFrame(() => {
-        const element = document.getElementById(`review-${highlightedReviewId}`);
+        const element = document.getElementById(
+          `review-${highlightedReviewId}`,
+        );
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
           // 하이라이트 효과를 위해 클래스 추가 및 일정 시간 후 제거
-          element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          element.classList.add("ring-2", "ring-primary", "ring-offset-2");
           setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+            element.classList.remove("ring-2", "ring-primary", "ring-offset-2");
             setHighlightedReviewId(null); // 하이라이트 상태 초기화
           }, 3000);
         }
@@ -350,23 +388,28 @@ export default function ReviewsPage() {
     return <MyPageSectionSkeleton label="리뷰를 불러오는 중…" />;
   }
 
-  return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <MessageSquare className="h-6 w-6" />
-            리뷰 내역
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            총 {filteredReviews.length}개의 리뷰
-          </p>
-        </div>
+  if (isError) {
+    return (
+      <MyPageErrorState
+        title="리뷰를 불러오지 못했습니다"
+        description="작성한 리뷰 목록을 다시 불러오려면 잠시 후 재시도해주세요."
+      />
+    );
+  }
 
-        {/* 상태 필터 */}
+  return (
+    <MyPageSectionFrame
+      icon={MessageSquare}
+      eyebrow="내 활동"
+      title="리뷰 내역"
+      description="작성한 리뷰와 검수 상태를 차분한 카드 흐름으로 확인합니다."
+      countLabel={`총 ${filteredReviews.length}개`}
+      action={
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger
+            className="h-10 w-[140px] rounded-full"
+            aria-label="리뷰 상태 필터"
+          >
             <SelectValue placeholder="상태" />
           </SelectTrigger>
           <SelectContent>
@@ -376,208 +419,236 @@ export default function ReviewsPage() {
             <SelectItem value="rejected">거부</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      {/* 리뷰 목록 */}
+      }
+      data-section="reviews"
+    >
       {filteredReviews.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">아직 작성한 리뷰가 없습니다</p>
-            <p className="text-sm mt-2">
-              맛집 방문 후 리뷰를 남겨보세요!
-            </p>
-          </CardContent>
-        </Card>
+        <MyPageEmptyState
+          icon={MessageSquare}
+          title="아직 작성한 리뷰가 없습니다"
+          description="맛집 방문 후 리뷰를 남기면 이곳에서 상태를 확인할 수 있습니다."
+        />
       ) : (
-        <div className="space-y-4">
-            {filteredReviews.map((review, index) => (
-              <Card
-                key={review.id}
-                id={`review-${review.id}`}
-                ref={index === filteredReviews.length - 1 ? loadMoreRef : null}
-                className={`overflow-hidden transition-all duration-500 ${review.isPinned ? "border-primary border-2" : ""}`}
-              >
-                <CardContent className="p-4">
-                  {/* 헤더: 맛집명 + 상태 */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-lg">{review.restaurantName}</h3>
-                        <ReviewStatusBadge review={review} />
-                        {review.isEditedByAdmin && (
-                          <Badge variant="outline" className="border-orange-500 text-orange-500 text-xs">
-                            관리자 수정됨
-                          </Badge>
-                        )}
-                      </div>
-                      {/* 카테고리 */}
-                      {review.categories.length > 0 && (
-                        <div className="flex gap-1 mt-1">
-                          {review.categories.map((cat, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {cat}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 수정/삭제 버튼 */}
-                    <div className="flex gap-1">
-                      {/* 수정 또는 재제출 버튼 */}
-                      {review.adminNote?.includes("거부") ? (
-                        <Button
+        <div
+          className="grid gap-3 xl:grid-cols-2"
+          data-mypage-responsive-list="reviews"
+        >
+          {filteredReviews.map((review, index) => (
+            <Card
+              key={review.id}
+              id={`review-${review.id}`}
+              ref={index === filteredReviews.length - 1 ? loadMoreRef : null}
+              className={`${myPageListCardClass} transition-all duration-500 ${review.isPinned ? "border-primary border-2" : ""}`}
+            >
+              <CardContent className="p-4">
+                {/* 헤더: 맛집명 + 상태 */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-lg">
+                        {review.restaurantName}
+                      </h3>
+                      <ReviewStatusBadge review={review} />
+                      {review.isEditedByAdmin && (
+                        <Badge
                           variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingReview(review);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="text-amber-600 hover:text-amber-700 gap-1"
+                          className="border-orange-500 text-orange-500 text-xs"
                         >
-                          <RefreshCw className="h-4 w-4" />
-                          <span className="hidden sm:inline">재제출</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingReview(review);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-foreground"
-                          aria-label={`${review.restaurantName} 리뷰 수정`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
-	                      <Button
-	                        variant="ghost"
-	                        size="sm"
-	                        onClick={() => {
-                            setDeleteReviewTarget(review);
-                            setDeleteReviewConfirmation("");
-                          }}
-	                        className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive"
-                          aria-label={`${review.restaurantName} 리뷰 삭제 확인 열기`}
-	                      >
-	                        <Trash2 className="h-4 w-4" />
-	                      </Button>
-                    </div>
-                  </div>
-
-                  {/* 리뷰 내용 */}
-                  <p className="text-sm text-foreground mb-3 whitespace-pre-wrap line-clamp-3">
-                    {review.content}
-                  </p>
-
-                  {/* 음식 사진 섬네일 */}
-                  {(review.foodPhotos || []).length > 0 && (
-                    <div className="flex gap-2 mb-3">
-                      {(review.foodPhotos || []).slice(0, 4).map((photo, idx) => (
-                        <div
-                          key={idx}
-                          className="relative w-16 h-16 bg-muted rounded overflow-hidden"
-                        >
-                          <Image
-                            src={supabase.storage.from("review-photos").getPublicUrl(photo).data.publicUrl}
-                            alt={`음식 사진 ${idx + 1}`}
-                            fill
-                            sizes="64px"
-                            className="object-cover"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = "none";
-                            }}
-                          />
-                        </div>
-                      ))}
-                      {(review.foodPhotos || []).length > 4 && (
-                        <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
-                          +{(review.foodPhotos || []).length - 4}
-                        </div>
+                          관리자 수정됨
+                        </Badge>
                       )}
                     </div>
-                  )}
-
-                  {/* 거부 사유 */}
-                  {review.adminNote?.includes("거부") && (
-                    <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded mb-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                        <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                          거부 사유
-                        </span>
-                      </div>
-                      <p className="text-sm text-red-600 dark:text-red-400">
-                        {review.adminNote.startsWith("거부: ")
-                          ? review.adminNote.substring(4)
-                          : review.adminNote}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 푸터: 날짜 정보 */}
-	                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
-	                    <div className="flex items-center gap-1">
-	                      <Calendar className="h-3 w-3" />
-	                      방문: {formatDate(review.visitedAt)}
-	                    </div>
-	                    <div>작성: {formatDate(review.createdAt)}</div>
-	                  </div>
-
-                    {deleteReviewTarget?.id === review.id && (
-                      <div className="mt-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3" role="region" aria-label="리뷰 삭제 확인">
-                        <p className="text-sm font-semibold text-destructive">리뷰 삭제 확인</p>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          모바일과 데스크탑에서 동일하게 확인 문구를 입력한 뒤 삭제합니다. 삭제하려면 <strong>{REVIEW_DELETE_CONFIRMATION}</strong>를 입력하세요.
-                        </p>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-                          <Input
-                            value={deleteReviewConfirmation}
-                            onChange={(event) => setDeleteReviewConfirmation(event.target.value)}
-                            placeholder={REVIEW_DELETE_CONFIRMATION}
-                            aria-label="리뷰 삭제 확인 문구"
-                            className="bg-background"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setDeleteReviewTarget(null);
-                              setDeleteReviewConfirmation("");
-                            }}
+                    {/* 카테고리 */}
+                    {review.categories.length > 0 && (
+                      <div className="flex gap-1 mt-1">
+                        {review.categories.map((cat, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="secondary"
+                            className="text-xs"
                           >
-                            취소
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            disabled={deleteReviewConfirmation !== REVIEW_DELETE_CONFIRMATION}
-                            onClick={() => handleDeleteReview(review.id)}
-                          >
-                            삭제
-                          </Button>
-                        </div>
+                            {cat}
+                          </Badge>
+                        ))}
                       </div>
                     )}
-	                </CardContent>
-	              </Card>
-	            ))}
+                  </div>
 
-            {/* 추가 로딩 표시 */}
-            {isFetchingNextPage && (
-              <div className="text-center py-4">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
-                  <span className="text-sm text-muted-foreground">
-                    더 불러오는 중…
-                  </span>
+                  {/* 수정/삭제 버튼 */}
+                  <div className="flex gap-1">
+                    {/* 수정 또는 재제출 버튼 */}
+                    {review.adminNote?.includes("거부") ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingReview(review);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="text-amber-600 hover:text-amber-700 gap-1"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        <span className="hidden sm:inline">재제출</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingReview(review);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-foreground"
+                        aria-label={`${review.restaurantName} 리뷰 수정`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDeleteReviewTarget(review);
+                        setDeleteReviewConfirmation("");
+                      }}
+                      className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive"
+                      aria-label={`${review.restaurantName} 리뷰 삭제 확인 열기`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+
+                {/* 리뷰 내용 */}
+                <p className="text-sm text-foreground mb-3 whitespace-pre-wrap line-clamp-3">
+                  {review.content}
+                </p>
+
+                {/* 음식 사진 섬네일 */}
+                {(review.foodPhotos || []).length > 0 && (
+                  <div className="flex gap-2 mb-3">
+                    {(review.foodPhotos || []).slice(0, 4).map((photo, idx) => (
+                      <div
+                        key={idx}
+                        className="relative w-16 h-16 bg-muted rounded overflow-hidden"
+                      >
+                        <Image
+                          src={
+                            supabase.storage
+                              .from("review-photos")
+                              .getPublicUrl(photo).data.publicUrl
+                          }
+                          alt={`음식 사진 ${idx + 1}`}
+                          fill
+                          sizes="64px"
+                          className="object-cover"
+                          onError={(e) => {
+                            (
+                              e.currentTarget as HTMLImageElement
+                            ).style.display = "none";
+                          }}
+                        />
+                      </div>
+                    ))}
+                    {(review.foodPhotos || []).length > 4 && (
+                      <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+                        +{(review.foodPhotos || []).length - 4}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 거부 사유 */}
+                {review.adminNote?.includes("거부") && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded mb-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                        거부 사유
+                      </span>
+                    </div>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {review.adminNote.startsWith("거부: ")
+                        ? review.adminNote.substring(4)
+                        : review.adminNote}
+                    </p>
+                  </div>
+                )}
+
+                {/* 푸터: 날짜 정보 */}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground pt-2 border-t">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    방문: {formatDate(review.visitedAt)}
+                  </div>
+                  <div>작성: {formatDate(review.createdAt)}</div>
+                </div>
+
+                {deleteReviewTarget?.id === review.id && (
+                  <div
+                    className="mt-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3"
+                    role="region"
+                    aria-label="리뷰 삭제 확인"
+                  >
+                    <p className="text-sm font-semibold text-destructive">
+                      리뷰 삭제 확인
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      모바일과 데스크탑에서 동일하게 확인 문구를 입력한 뒤
+                      삭제합니다. 삭제하려면{" "}
+                      <strong>{REVIEW_DELETE_CONFIRMATION}</strong>를
+                      입력하세요.
+                    </p>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                      <Input
+                        value={deleteReviewConfirmation}
+                        onChange={(event) =>
+                          setDeleteReviewConfirmation(event.target.value)
+                        }
+                        placeholder={REVIEW_DELETE_CONFIRMATION}
+                        aria-label="리뷰 삭제 확인 문구"
+                        className="bg-background"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setDeleteReviewTarget(null);
+                          setDeleteReviewConfirmation("");
+                        }}
+                      >
+                        취소
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={
+                          deleteReviewConfirmation !==
+                          REVIEW_DELETE_CONFIRMATION
+                        }
+                        onClick={() => handleDeleteReview(review.id)}
+                      >
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* 추가 로딩 표시 */}
+          {isFetchingNextPage && (
+            <div className="py-4 text-center xl:col-span-2">
+              <div className="flex items-center justify-center gap-2">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                <span className="text-sm text-muted-foreground">
+                  더 불러오는 중…
+                </span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Review Edit Modal */}
@@ -593,6 +664,6 @@ export default function ReviewsPage() {
           queryClient.invalidateQueries({ queryKey: ["user-reviews"] });
         }}
       />
-    </div>
+    </MyPageSectionFrame>
   );
 }
