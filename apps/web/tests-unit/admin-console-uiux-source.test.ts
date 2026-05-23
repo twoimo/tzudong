@@ -90,7 +90,10 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('AdminNaverMapSurface');
     expect(consoleSource).toContain('AdminMapInfoPanel');
     expect(consoleSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
-    expect(consoleSource).toContain('xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]');
+    expect(consoleSource).toContain('lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]');
+    expect(consoleSource).toContain('data-admin-overview-map-canvas="true"');
+    expect(consoleSource).toContain('data-admin-map-status-overlay="non-blocking"');
+    expect(consoleSource).toContain('const shouldShowMapStatusOverlay =');
     expect(consoleSource).toContain('useNaverMaps');
     expect(consoleSource).toContain('getNaverIndividualMarkerVisual');
     expect(consoleSource).toContain('buildNaverClusterMarkerRenderPlan');
@@ -135,6 +138,7 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).not.toContain('ADMIN_MAP_MOCK_RESTAURANTS');
     expect(consoleSource).not.toContain('목업 데이터');
     expect(consoleSource).toContain('표시할 좌표 맛집이 없습니다');
+    expect(consoleSource).toContain('지도는 유지하고 실데이터만 재확인합니다');
     expect(consoleSource).not.toContain('overflow-y-auto lg:overflow-hidden');
     expect(consoleSource).not.toContain('overflow-visible md:grid-cols-2 lg:grid-rows-2 lg:overflow-hidden');
     expect(consoleSource).not.toContain('Tzudong admin map');
@@ -387,9 +391,9 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(overviewSource).toContain('aria-label="관리자 지도 운영 개요 2분할"');
     expect(overviewSource).toContain('AdminMapOverviewCanvas');
     expect(overviewSource).toContain('AdminMapInfoPanel');
-    expect(consoleSource).toContain('요약 API가 실패하면 임의 수치를 만들지 않습니다.');
+    expect(consoleSource).toContain('네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요.');
     expect(consoleSource).toContain('const restaurants = realRestaurants;');
-    expect(consoleSource).toContain('운영 콘솔에서는 빈 실데이터 상태를 목업으로 대체하지 않습니다.');
+    expect(consoleSource).toContain('지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다.');
     expect(consoleSource).toContain('실제 이동시간 API가 붙기 전까지는');
     expect(consoleSource).not.toContain('채널별 레이어 확장 슬롯');
     expect(overviewSource).not.toContain('오늘 처리할 일');
@@ -453,7 +457,8 @@ describe('admin console beginner-friendly UI/UX source contract', () => {
     expect(consoleSource).toContain('min-h-[420px] flex-1');
     expect(consoleSource).toContain('overflow-visible md:overflow-hidden');
     expect(consoleSource).toContain('md:h-full md:min-h-0');
-    expect(consoleSource).toContain('overflow-visible xl:h-full xl:min-h-0');
+    expect(consoleSource).toContain('overflow-visible lg:h-full lg:min-h-0');
+    expect(consoleSource).toContain('lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]');
     expect(consoleSource).toContain('flex h-full min-h-0 flex-col bg-background');
     expect(usersSource).toContain('flex h-full min-h-0 flex-col bg-background');
     expect(usersSource).toContain('gap-2 overflow-y-auto p-2');
