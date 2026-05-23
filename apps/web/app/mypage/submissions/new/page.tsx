@@ -22,9 +22,19 @@ import {
   PlusCircle,
 } from "lucide-react";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import {
+  MyPageEmptyState,
+  MyPageErrorState,
+  MyPageSectionFrame,
+  myPageListCardClass,
+} from "@/components/mypage/MyPageSectionFrame";
 
-type SubmissionStatus = 'pending' | 'approved' | 'partially_approved' | 'rejected';
-type ItemStatus = 'pending' | 'approved' | 'rejected';
+type SubmissionStatus =
+  | "pending"
+  | "approved"
+  | "partially_approved"
+  | "rejected";
+type ItemStatus = "pending" | "approved" | "rejected";
 
 interface SubmissionItem {
   id: string;
@@ -40,7 +50,7 @@ interface SubmissionItem {
 interface Submission {
   id: string;
   user_id: string;
-  submission_type: 'new' | 'edit';
+  submission_type: "new" | "edit";
   status: SubmissionStatus;
   restaurant_name: string;
   restaurant_address: string | null;
@@ -57,31 +67,31 @@ interface Submission {
 
 const PAGE_SIZE = 15;
 const SUBMISSION_SELECT = [
-  'id',
-  'user_id',
-  'submission_type',
-  'status',
-  'restaurant_name',
-  'restaurant_address',
-  'restaurant_phone',
-  'restaurant_categories',
-  'admin_notes',
-  'rejection_reason',
-  'resolved_by_admin_id',
-  'reviewed_at',
-  'created_at',
-  'updated_at',
-].join(', ');
+  "id",
+  "user_id",
+  "submission_type",
+  "status",
+  "restaurant_name",
+  "restaurant_address",
+  "restaurant_phone",
+  "restaurant_categories",
+  "admin_notes",
+  "rejection_reason",
+  "resolved_by_admin_id",
+  "reviewed_at",
+  "created_at",
+  "updated_at",
+].join(", ");
 const SUBMISSION_ITEM_SELECT = [
-  'id',
-  'submission_id',
-  'youtube_link',
-  'tzuyang_review',
-  'target_restaurant_id',
-  'item_status',
-  'rejection_reason',
-  'created_at',
-].join(', ');
+  "id",
+  "submission_id",
+  "youtube_link",
+  "tzuyang_review",
+  "target_restaurant_id",
+  "item_status",
+  "rejection_reason",
+  "created_at",
+].join(", ");
 
 export default function NewSubmissionsPage() {
   const { user } = useAuth();
@@ -92,6 +102,7 @@ export default function NewSubmissionsPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isError,
   } = useInfiniteQuery({
     queryKey: ["myNewSubmissions", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
@@ -123,14 +134,19 @@ export default function NewSubmissionsPage() {
       const typedSubmissions = submissions as Submission[];
       const typedItems = (items || []) as SubmissionItem[];
 
-      const submissionsWithItems: Submission[] = typedSubmissions.map((submission) => ({
-        ...submission,
-        items: typedItems.filter((item) => item.submission_id === submission.id),
-      }));
+      const submissionsWithItems: Submission[] = typedSubmissions.map(
+        (submission) => ({
+          ...submission,
+          items: typedItems.filter(
+            (item) => item.submission_id === submission.id,
+          ),
+        }),
+      );
 
       return {
         data: submissionsWithItems,
-        nextCursor: submissions.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
+        nextCursor:
+          submissions.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -153,7 +169,7 @@ export default function NewSubmissionsPage() {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (loadMoreRef.current) {
@@ -166,35 +182,75 @@ export default function NewSubmissionsPage() {
   const getStatusBadge = (status: SubmissionStatus) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />검토 대기</Badge>;
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <Clock className="h-3 w-3" />
+            검토 대기
+          </Badge>
+        );
       case "approved":
-        return <Badge className="gap-1 bg-green-500 hover:bg-green-600"><CheckCircle className="h-3 w-3" />승인됨</Badge>;
+        return (
+          <Badge className="gap-1 bg-green-500 hover:bg-green-600">
+            <CheckCircle className="h-3 w-3" />
+            승인됨
+          </Badge>
+        );
       case "partially_approved":
-        return <Badge className="gap-1 bg-amber-500 hover:bg-amber-600"><AlertCircle className="h-3 w-3" />부분 승인</Badge>;
+        return (
+          <Badge className="gap-1 bg-amber-500 hover:bg-amber-600">
+            <AlertCircle className="h-3 w-3" />
+            부분 승인
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />반려됨</Badge>;
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <XCircle className="h-3 w-3" />
+            반려됨
+          </Badge>
+        );
     }
   };
 
   const getItemStatusBadge = (status: ItemStatus) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="text-xs">대기</Badge>;
+        return (
+          <Badge variant="outline" className="text-xs">
+            대기
+          </Badge>
+        );
       case "approved":
-        return <Badge variant="outline" className="text-xs border-green-500 text-green-600">승인</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="text-xs border-green-500 text-green-600"
+          >
+            승인
+          </Badge>
+        );
       case "rejected":
-        return <Badge variant="outline" className="text-xs border-red-500 text-red-600">반려</Badge>;
+        return (
+          <Badge
+            variant="outline"
+            className="text-xs border-red-500 text-red-600"
+          >
+            반려
+          </Badge>
+        );
     }
   };
 
   const renderSubmissionCard = (submission: Submission) => (
-    <Card key={submission.id} className="overflow-hidden">
+    <Card key={submission.id} className={myPageListCardClass}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Store className="h-4 w-4 text-muted-foreground shrink-0" />
-              <CardTitle className="text-lg">{submission.restaurant_name}</CardTitle>
+              <CardTitle className="text-lg">
+                {submission.restaurant_name}
+              </CardTitle>
               {getStatusBadge(submission.status)}
             </div>
           </div>
@@ -215,23 +271,26 @@ export default function NewSubmissionsPage() {
               <p className="text-sm">{submission.restaurant_phone}</p>
             </div>
           )}
-          {submission.restaurant_categories && submission.restaurant_categories.length > 0 && (
-            <div className="flex items-start gap-2">
-              <Tag className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="flex flex-wrap gap-1">
-                {submission.restaurant_categories.map((cat, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {cat}
-                  </Badge>
-                ))}
+          {submission.restaurant_categories &&
+            submission.restaurant_categories.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Tag className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="flex flex-wrap gap-1">
+                  {submission.restaurant_categories.map((cat, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {cat}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* 제보 항목 */}
         <div>
-          <p className="text-sm font-medium mb-2">제보 영상 ({submission.items.length}개)</p>
+          <p className="text-sm font-medium mb-2">
+            제보 영상 ({submission.items.length}개)
+          </p>
           <div className="space-y-2">
             {submission.items.map((item, idx) => (
               <div key={item.id} className="border rounded-lg p-3">
@@ -255,7 +314,7 @@ export default function NewSubmissionsPage() {
                     💬 {item.tzuyang_review}
                   </p>
                 )}
-                {item.rejection_reason && item.item_status === 'rejected' && (
+                {item.rejection_reason && item.item_status === "rejected" && (
                   <p className="text-xs text-red-500 mt-1">
                     ❌ 반려 사유: {item.rejection_reason}
                   </p>
@@ -273,7 +332,7 @@ export default function NewSubmissionsPage() {
             </p>
           </div>
         )}
-        {submission.rejection_reason && submission.status === 'rejected' && (
+        {submission.rejection_reason && submission.status === "rejected" && (
           <div className="bg-red-50 dark:bg-red-950/30 rounded-lg p-3">
             <p className="text-sm text-red-700 dark:text-red-300">
               <strong>반려 사유:</strong> {submission.rejection_reason}
@@ -283,9 +342,19 @@ export default function NewSubmissionsPage() {
 
         {/* 날짜 정보 */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-          <span>제보일: {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", { locale: ko })}</span>
+          <span>
+            제보일:{" "}
+            {format(new Date(submission.created_at), "yyyy년 M월 d일 HH:mm", {
+              locale: ko,
+            })}
+          </span>
           {submission.reviewed_at && (
-            <span>검토일: {format(new Date(submission.reviewed_at), "yyyy년 M월 d일", { locale: ko })}</span>
+            <span>
+              검토일:{" "}
+              {format(new Date(submission.reviewed_at), "yyyy년 M월 d일", {
+                locale: ko,
+              })}
+            </span>
           )}
         </div>
       </CardContent>
@@ -296,35 +365,40 @@ export default function NewSubmissionsPage() {
     return <MyPageSectionSkeleton label="신규 맛집 제보 내역을 불러오는 중…" />;
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <PlusCircle className="h-6 w-6" />
-            신규 맛집 제보
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            새로 제보한 맛집 목록입니다
-          </p>
-        </div>
-        <Badge variant="secondary" className="text-sm">
-          총 {submissions.length}건
-        </Badge>
-      </div>
+  if (isError) {
+    return (
+      <MyPageErrorState
+        title="신규 맛집 제보를 불러오지 못했습니다"
+        description="제보 내역을 다시 불러오려면 잠시 후 재시도해주세요."
+      />
+    );
+  }
 
+  return (
+    <MyPageSectionFrame
+      icon={PlusCircle}
+      eyebrow="제보 관리"
+      title="신규 맛집 제보"
+      description="새로 제보한 맛집의 처리 상태와 영상 항목을 확인합니다."
+      countLabel={`총 ${submissions.length}건`}
+      data-section="submissions-new"
+    >
       {submissions.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <PlusCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>아직 신규 맛집 제보 내역이 없습니다.</p>
-            <p className="text-sm mt-1">새로운 맛집을 제보해주세요!</p>
-          </CardContent>
-        </Card>
+        <MyPageEmptyState
+          icon={PlusCircle}
+          title="아직 신규 맛집 제보 내역이 없습니다"
+          description="새로운 맛집을 제보하면 이곳에서 검토 상태를 확인할 수 있습니다."
+        />
       ) : (
-        <div className="space-y-4">
+        <div
+          className="grid gap-3 xl:grid-cols-2"
+          data-mypage-responsive-list="submissions-new"
+        >
           {submissions.map(renderSubmissionCard)}
-          <div ref={loadMoreRef} className="pt-4 flex justify-center">
+          <div
+            ref={loadMoreRef}
+            className="flex justify-center pt-4 xl:col-span-2"
+          >
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -334,6 +408,6 @@ export default function NewSubmissionsPage() {
           </div>
         </div>
       )}
-    </div>
+    </MyPageSectionFrame>
   );
 }
