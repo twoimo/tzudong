@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import dynamic from "next/dynamic";
+import { UserRound } from "lucide-react";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -121,6 +122,25 @@ export function MyPageLayoutContent({
           onTouchStart={myPageBottomNavAutoHide.onTouchStart}
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
+          <div
+            className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4 md:hidden"
+            data-mypage-mobile-route-header="true"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
+                <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
+                  <UserRound
+                    className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 truncate">쯔동여지도 마이페이지</span>
+                </h1>
+                <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+                  내 활동과 계정 정보를 한곳에서 관리하세요.
+                </p>
+              </div>
+            </div>
+          </div>
           <div
             className="flex min-h-full w-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:h-full md:min-h-0 md:px-4 md:py-3 md:pb-3 lg:px-5 lg:py-3"
             data-mypage-content-width="viewport-fill"
