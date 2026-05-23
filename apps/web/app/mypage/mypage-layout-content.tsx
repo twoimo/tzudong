@@ -6,13 +6,17 @@ import dynamic from "next/dynamic";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReturnToMapButton } from "@/components/layout/ReturnToMapButton";
+import { MyPageTopActions } from "@/components/mypage/MyPageTopActions";
 
 const MyPageSidebar = dynamic(
-  () => import("@/components/mypage/MyPageSidebar").then((mod) => mod.MyPageSidebar),
+  () =>
+    import("@/components/mypage/MyPageSidebar").then(
+      (mod) => mod.MyPageSidebar,
+    ),
   {
     ssr: false,
     loading: () => <MyPageSidebarExpandedPlaceholder />,
-  }
+  },
 );
 
 function MyPageSidebarExpandedPlaceholder() {
@@ -32,7 +36,10 @@ function MyPageContentLoadingState() {
       data-mypage-content-loading="true"
       aria-label="마이페이지 내용 로딩 중"
     >
-      <div className="rounded-3xl border border-border bg-card p-4" data-mypage-content-hero-skeleton="true">
+      <div
+        className="rounded-3xl border border-border bg-card p-4"
+        data-mypage-content-hero-skeleton="true"
+      >
         <div className="flex gap-4">
           <Skeleton className="h-16 w-16 shrink-0 rounded-2xl sm:h-20 sm:w-20" />
           <div className="min-w-0 flex-1 space-y-3">
@@ -44,7 +51,10 @@ function MyPageContentLoadingState() {
               <Skeleton className="h-16 rounded-2xl" />
               <Skeleton className="h-16 rounded-2xl" />
             </div>
-            <div className="grid gap-2 sm:grid-cols-2" data-mypage-content-actions-skeleton="true">
+            <div
+              className="grid gap-2 sm:grid-cols-2"
+              data-mypage-content-actions-skeleton="true"
+            >
               <Skeleton className="h-14 rounded-2xl" />
               <Skeleton className="h-14 rounded-2xl" />
               <Skeleton className="h-14 rounded-2xl" />
@@ -69,18 +79,20 @@ export function MyPageLayoutContent({
   const [shouldRenderSidebar, setShouldRenderSidebar] = useState(false);
   const myPageBottomNavAutoHide = useMobileBottomNavAutoHide({
     scrollRef,
-    source: 'mypage-scroll',
+    source: "mypage-scroll",
     disabled: !user,
   });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 768px)");
-    const syncSidebarVisibility = () => setShouldRenderSidebar(mediaQuery.matches);
+    const syncSidebarVisibility = () =>
+      setShouldRenderSidebar(mediaQuery.matches);
 
     syncSidebarVisibility();
     mediaQuery.addEventListener("change", syncSidebarVisibility);
 
-    return () => mediaQuery.removeEventListener("change", syncSidebarVisibility);
+    return () =>
+      mediaQuery.removeEventListener("change", syncSidebarVisibility);
   }, []);
 
   const shouldShowSidebarFrame = userLoading || Boolean(user);
@@ -111,13 +123,24 @@ export function MyPageLayoutContent({
           onTouchStart={myPageBottomNavAutoHide.onTouchStart}
           onTouchMove={myPageBottomNavAutoHide.onTouchMove}
         >
-          <div className="flex h-full min-h-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:px-5 md:py-6 md:pb-6 lg:px-6 lg:py-7">
-            <div className="mb-3" data-mypage-return-slot="true">
+          <div
+            className="flex min-h-full w-full flex-col px-3 py-4 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+1rem)] sm:px-4 md:px-5 md:py-3 md:pb-3 lg:px-6 lg:py-3"
+            data-mypage-content-width="viewport-fill"
+            data-mypage-content-density="compact-profile"
+          >
+            <div
+              className="mb-2 hidden items-center justify-between gap-3 md:flex"
+              data-mypage-return-slot="true"
+            >
               {userLoading ? (
-                <Skeleton className="h-9 w-24 rounded-full" data-mypage-return-skeleton="true" />
+                <Skeleton
+                  className="h-9 w-24 rounded-full"
+                  data-mypage-return-skeleton="true"
+                />
               ) : (
-                <ReturnToMapButton className="w-fit" />
+                <ReturnToMapButton className="w-fit md:h-9 md:min-h-9 md:px-2.5" />
               )}
+              {!userLoading && <MyPageTopActions />}
             </div>
             {userLoading ? <MyPageContentLoadingState /> : children}
           </div>

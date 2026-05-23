@@ -25,15 +25,29 @@ type HomeMapUserPreferencesEventDetail = {
   preservePanelCollapse?: boolean;
 };
 
-export type HomeMapUserPreferencesEvent = CustomEvent<HomeMapUserPreferencesEventDetail>;
+export type HomeMapUserPreferencesEvent =
+  CustomEvent<HomeMapUserPreferencesEventDetail>;
 export type HomeMapUserPreferencesWriteOptions = {
   preservePanelCollapse?: boolean;
 };
 
 const STORAGE_PREFIX = "tzudong:home-map-user-preferences";
+const LAST_HOME_MAP_USER_PREFERENCES_KEY = `${STORAGE_PREFIX}:last-active`;
+
+type HomeMapUserPreferencesReadableStorage = Pick<Storage, "getItem"> &
+  Partial<Pick<Storage, "key" | "length">>;
+type HomeMapUserPreferencesWritableStorage = Pick<
+  Storage,
+  "getItem" | "setItem"
+> &
+  Partial<Pick<Storage, "key" | "length">>;
 
 export function getHomeMapUserPreferencesStorageKey(userId: string) {
   return `${STORAGE_PREFIX}:${userId}`;
+}
+
+export function getLastHomeMapUserPreferencesStorageKey() {
+  return LAST_HOME_MAP_USER_PREFERENCES_KEY;
 }
 
 function isPanelDefault(value: unknown): value is HomeMapPanelDefault {
@@ -75,8 +89,10 @@ export function normalizeHomeMapUserPreferences(
 
 export function readHomeMapUserPreferences(
   userId: string | null | undefined,
-  storage: Pick<Storage, "getItem"> | undefined =
-    typeof window !== "undefined" ? window.localStorage : undefined,
+  storage: HomeMapUserPreferencesReadableStorage | undefined = typeof window !==
+  "undefined"
+    ? window.localStorage
+    : undefined,
 ) {
   if (!userId || !storage) return DEFAULT_HOME_MAP_USER_PREFERENCES;
 
@@ -89,11 +105,50 @@ export function readHomeMapUserPreferences(
   }
 }
 
+export function readLastHomeMapUserPreferences(
+  storage: HomeMapUserPreferencesReadableStorage | undefined = typeof window !==
+  "undefined"
+    ? window.localStorage
+    : undefined,
+) {
+  if (!storage) return DEFAULT_HOME_MAP_USER_PREFERENCES;
+
+  try {
+    const raw = storage.getItem(LAST_HOME_MAP_USER_PREFERENCES_KEY);
+    if (raw) return normalizeHomeMapUserPreferences(JSON.parse(raw));
+
+    if (
+      typeof storage.length !== "number" ||
+      typeof storage.key !== "function"
+    ) {
+      return DEFAULT_HOME_MAP_USER_PREFERENCES;
+    }
+
+    const preferenceKeys: string[] = [];
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (!key?.startsWith(`${STORAGE_PREFIX}:`)) continue;
+      if (key === LAST_HOME_MAP_USER_PREFERENCES_KEY) continue;
+      preferenceKeys.push(key);
+    }
+
+    if (preferenceKeys.length !== 1) return DEFAULT_HOME_MAP_USER_PREFERENCES;
+
+    const fallbackRaw = storage.getItem(preferenceKeys[0]);
+    if (!fallbackRaw) return DEFAULT_HOME_MAP_USER_PREFERENCES;
+    return normalizeHomeMapUserPreferences(JSON.parse(fallbackRaw));
+  } catch {
+    return DEFAULT_HOME_MAP_USER_PREFERENCES;
+  }
+}
+
 export function writeHomeMapUserPreferences(
   userId: string,
   preferences: HomeMapUserPreferences,
-  storage: Pick<Storage, "setItem"> | undefined =
-    typeof window !== "undefined" ? window.localStorage : undefined,
+  storage: HomeMapUserPreferencesWritableStorage | undefined = typeof window !==
+  "undefined"
+    ? window.localStorage
+    : undefined,
   options: HomeMapUserPreferencesWriteOptions = {},
 ) {
   const normalized = normalizeHomeMapUserPreferences(preferences);
@@ -101,6 +156,10 @@ export function writeHomeMapUserPreferences(
   if (storage) {
     storage.setItem(
       getHomeMapUserPreferencesStorageKey(userId),
+      JSON.stringify(normalized),
+    );
+    storage.setItem(
+      LAST_HOME_MAP_USER_PREFERENCES_KEY,
       JSON.stringify(normalized),
     );
   }
