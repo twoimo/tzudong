@@ -76,16 +76,21 @@ describe("mypage mobile cleanup source contracts", () => {
   });
 
   test("profile page keeps a quiet mobile-first action hierarchy without noisy duplicate chrome", () => {
+    const layoutSource = source("app/mypage/mypage-layout-content.tsx");
     const profileSource = source("app/mypage/profile/page.tsx");
     const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
 
-    expect(profileSource).toContain('data-mypage-mobile-page-header="true"');
-    expect(profileSource).toContain("내 계정");
-    expect(profileSource).toContain("마이페이지");
-    expect(profileSource).toContain(
-      "프로필과 보안 설정을 한곳에서 관리합니다.",
+    expect(layoutSource).toContain('data-mypage-mobile-route-header="true"');
+    expect(layoutSource).toContain(
+      "shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4 md:hidden",
     );
-    expect(profileSource).toContain(
+    expect(layoutSource).toContain("쯔동여지도 마이페이지");
+    expect(layoutSource).toContain("flex min-w-0 flex-wrap items-center");
+    expect(layoutSource).toContain(
+      "내 활동과 계정 정보를 한곳에서 관리하세요.",
+    );
+    expect(profileSource).not.toContain('data-mypage-mobile-page-header="true"');
+    expect(profileSource).not.toContain(
       'className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm md:hidden"',
     );
     expect(profileSource).toContain('data-mypage-profile-hero="mobile-only"');

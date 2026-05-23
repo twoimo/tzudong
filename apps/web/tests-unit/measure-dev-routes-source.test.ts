@@ -49,4 +49,11 @@ describe('measure-dev-routes source contract', () => {
         expect(source).toContain('| CV | variability |');
     });
 
+
+    test('keeps admin-first route ordering available for focused admin console benchmarks', () => {
+        expect(source).toContain("order === 'admin-first'");
+        expect(source).toContain("route.startsWith('/admin/')");
+        expect(source).toContain('a.route.localeCompare(b.route)');
+    });
+
 });
