@@ -10,6 +10,7 @@ export interface AuthContextType {
     isLoading: boolean;
     isAdmin: boolean;
     needsNicknameSetup: boolean;
+    profileNickname: string | null;
     signIn: (email: string, password: string) => Promise<void>;
     signInWithGoogle: () => Promise<void>;
     signUp: (email: string, password: string, username: string) => Promise<{ session: Session | null }>;
@@ -43,6 +44,7 @@ export function AnonymousHomeAuthProvider({ children }: { children: ReactNode })
         isLoading: false,
         isAdmin: false,
         needsNicknameSetup,
+        profileNickname: null,
         signIn: unavailableSignIn,
         signInWithGoogle: unavailableSignInWithGoogle,
         signUp: unavailableSignUp,
