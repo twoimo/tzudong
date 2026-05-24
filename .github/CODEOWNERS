@@ -1,0 +1,4 @@
+# Security-sensitive automation changes require repository-owner review.
+.github/workflows/ @twoimo
+.github/dependabot.yml @twoimo
+.github/CODEOWNERS @twoimo
