@@ -107,6 +107,24 @@ const requestDesktopDetailReturnCapture = () => {
 
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
 
+function clearAnnouncementPanelUrl() {
+  if (typeof window === "undefined") return;
+
+  const currentUrl = new URL(window.location.href);
+  if (
+    currentUrl.pathname !== "/" ||
+    currentUrl.searchParams.get("panel") !== "announcement"
+  ) {
+    return;
+  }
+
+  currentUrl.searchParams.delete("panel");
+  currentUrl.searchParams.delete("announcementId");
+  const nextSearch = currentUrl.searchParams.toString();
+  const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ""}${currentUrl.hash}`;
+  window.history.replaceState(window.history.state, "", nextUrl);
+}
+
 const isHomeStartupIntent = (
   value: string | null,
 ): value is HomeStartupIntent =>
@@ -224,7 +242,9 @@ export default function HomeClient() {
     clearRestaurantDetailSelection();
     setActiveRightPanel(null);
     setIsAnnouncementSheetOpen(false);
+    setSelectedAnnouncement(null);
     setIsPanelCollapsed(false);
+    clearAnnouncementPanelUrl();
   }, [clearRestaurantDetailSelection]);
 
   useEffect(() => {
@@ -680,6 +700,7 @@ export default function HomeClient() {
         isAdmin={isAdmin}
         isLoggedIn={!!user}
         mapMode={mapMode}
+        closeAllPanels={closeAllPanels}
         openDetailPanelRef={openDetailPanelRef}
         openPanelRef={openPanelRef}
         selectedAnnouncement={selectedAnnouncement}

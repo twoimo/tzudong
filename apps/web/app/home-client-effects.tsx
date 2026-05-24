@@ -17,6 +17,7 @@ type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
 type HomeClientEffectsProps = {
     activeRightPanel: PanelType;
     clearRestaurantDetailSelection: () => void;
+    closeAllPanels: () => void;
     isAdmin: boolean;
     isLoggedIn: boolean;
     mapMode: 'domestic' | 'overseas';
@@ -31,6 +32,7 @@ type HomeClientEffectsProps = {
 export default function HomeClientEffects({
     activeRightPanel,
     clearRestaurantDetailSelection,
+    closeAllPanels,
     isAdmin,
     isLoggedIn,
     mapMode,
@@ -57,6 +59,12 @@ export default function HomeClientEffects({
 
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        if (searchParams.get('panel') !== 'announcement' && activeRightPanel === 'announcement') {
+            closeAllPanels();
+        }
+    }, [activeRightPanel, closeAllPanels, searchParams]);
 
     useEffect(() => {
         const panelParam = searchParams.get('panel');
@@ -111,14 +119,12 @@ export default function HomeClientEffects({
                         schedule(() => {
                             setSelectedAnnouncement(announcement);
                             openPanelRef.current('announcement');
-                            router.replace('/', { scroll: false });
                         }, 500);
                     });
                 } else {
                     schedule(() => {
                         setSelectedAnnouncement(null);
                         openPanelRef.current('announcement');
-                        router.replace('/', { scroll: false });
                     }, 350);
                 }
             }
@@ -306,7 +312,7 @@ export default function HomeClientEffects({
 
         const handleAdminAnnouncementsOpen = () => {
             setSelectedAnnouncement(null);
-            openPanelRef.current('announcement');
+            router.push('/?panel=announcement', { scroll: false });
         };
 
         const handleAnnouncementDetailOpen = (event: Event) => {
@@ -316,7 +322,7 @@ export default function HomeClientEffects({
                 togglePanelCollapse();
             } else {
                 setSelectedAnnouncement(announcement);
-                openPanelRef.current('announcement');
+                router.push(`/?panel=announcement&announcementId=${encodeURIComponent(announcement.id)}`, { scroll: false });
             }
         };
 
