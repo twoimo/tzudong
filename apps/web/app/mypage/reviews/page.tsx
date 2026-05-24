@@ -411,7 +411,7 @@ export default function ReviewsPage() {
       action={
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger
-            className="h-10 w-[140px] rounded-full"
+            className="h-9 w-[104px] rounded-full border-0 bg-transparent px-2 text-xs shadow-none md:h-10 md:w-[140px] md:border md:bg-background md:px-3 md:text-sm"
             aria-label="리뷰 상태 필터"
           >
             <SelectValue placeholder="상태" />
@@ -643,7 +643,7 @@ export default function ReviewsPage() {
 
           {/* 추가 로딩 표시 */}
           {isFetchingNextPage && (
-            <div className="py-4 text-center xl:col-span-2">
+            <div className="py-4 text-center md:col-span-2 xl:col-span-3">
               <div className="flex items-center justify-center gap-2">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                 <span className="text-sm text-muted-foreground">

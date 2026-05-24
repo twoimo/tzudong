@@ -1,3 +1,5 @@
+import { escapeHtmlAttribute } from './html-escape';
+
 export function isMapViewMarkerSelected({
     restaurantId,
     searchedRestaurantId,
@@ -25,6 +27,9 @@ export function buildMapViewMarkerHtml({
     markerSize: number;
     name: string;
 }) {
+    const safeImagePath = escapeHtmlAttribute(imagePath);
+    const safeName = escapeHtmlAttribute(name);
+
     return `
         <div style="
           position: relative;
@@ -34,7 +39,7 @@ export function buildMapViewMarkerHtml({
           transition: all 0.3s ease;
           filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
         " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
-          <img src="${imagePath}" alt="${name}" style="width: 100%; height: 100%; object-fit: contain;" draggable="false" />
+          <img src="${safeImagePath}" alt="${safeName}" style="width: 100%; height: 100%; object-fit: contain;" draggable="false" />
         </div>
       `;
 }
