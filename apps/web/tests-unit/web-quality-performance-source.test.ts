@@ -2665,7 +2665,15 @@ describe("web quality performance source contracts", () => {
       'data-mypage-fullscreen-toggle="true"',
     );
     expect(myPageTopActionsSource).toContain('data-mypage-user-menu="true"');
-    expect(myPageTopActionsSource).toContain("useUserProfile(user?.id ?? \"\")");
+    expect(myPageTopActionsSource).toContain(
+      "useUserProfileIdentity(user?.id ?? \"\")",
+    );
+    expect(source("hooks/useUserProfile.ts")).toContain(
+      "export function useUserProfileIdentity",
+    );
+    expect(source("hooks/useUserProfile.ts")).toContain(
+      "queryKey: ['user-profile-identity', userId]",
+    );
     expect(myPageTopActionsSource).not.toContain("mypage-top-actions-avatar");
     expect(myPageLayoutContentSource).not.toContain(
       '<ReturnToMapButton className="mb-3 w-fit md:hidden" />',
