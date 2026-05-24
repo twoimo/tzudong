@@ -552,7 +552,7 @@ export default function ProfilePage() {
           data-mypage-profile-hero="mobile-only"
         >
           <div
-            className="flex flex-col items-center space-y-4 border-b border-border p-6 text-center md:hidden"
+            className="flex flex-col items-center space-y-4 p-6 text-center md:hidden"
             data-mypage-profile-hero-layout="sidebar-match"
           >
             <div className="group relative h-24 w-24 shrink-0 rounded-full">
