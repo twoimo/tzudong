@@ -6,6 +6,7 @@ const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 const exists = (relativePath: string) =>
   existsSync(join(import.meta.dir, "..", relativePath));
+const importWebConfig = async () => import("../next.config.mjs");
 const sourceFilesUnder = (relativeDir: string): string[] => {
   const absoluteDir = join(import.meta.dir, "..", relativeDir);
   return readdirSync(absoluteDir, { withFileTypes: true }).flatMap((entry) => {
@@ -3219,7 +3220,7 @@ describe("web quality performance source contracts", () => {
     expect(restaurantSource).not.toContain("'description'");
   });
 
-  test("global chrome assets stay small and cacheable without changing page UI", () => {
+  test("global chrome assets stay small and cacheable without changing page UI", async () => {
     const layoutSource = source("app/layout.tsx");
     const appRuntimeShellSource = source("app/app-runtime-shell.tsx");
     const appProvidersSource = source("app/app-providers.tsx");
@@ -3242,6 +3243,36 @@ describe("web quality performance source contracts", () => {
       "components/layout/MobileBottomNav.tsx",
     );
     const nextConfigSource = source("next.config.mjs");
+    const nextConfig = (await importWebConfig()).default;
+    const configuredHeaders = await nextConfig.headers();
+    const globalSecurityHeaderRoute = configuredHeaders.find(
+      (entry) => entry.source === "/:path*",
+    );
+    expect(globalSecurityHeaderRoute?.headers).toEqual(
+      expect.arrayContaining([
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "X-Frame-Options", value: "DENY" },
+        {
+          key: "Permissions-Policy",
+          value: "camera=(), microphone=(), geolocation=(self)",
+        },
+      ]),
+    );
+    for (const staticRoute of [
+      "/images/:path*",
+      "/fonts/:path*",
+      "/favicon.ico",
+      "/:icon(favicon-32x32|apple-touch-icon).png",
+      "/scripts/:path*",
+    ]) {
+      const staticRouteHeaders = configuredHeaders.find(
+        (entry) => entry.source === staticRoute,
+      )?.headers;
+      expect(staticRouteHeaders).toEqual(
+        expect.arrayContaining(globalSecurityHeaderRoute?.headers ?? []),
+      );
+    }
     const viewportFixSource = source("public/scripts/viewport-height-fix.js");
     const authContextSource = source("contexts/AuthContext.tsx");
     const faviconPath = join(import.meta.dir, "..", "public/favicon.ico");
