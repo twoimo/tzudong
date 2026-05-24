@@ -777,7 +777,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(bannersSource).not.toContain('role="listitem"');
     expect(bannersSource).not.toContain("<Dialog");
     expect(bannersSource).not.toContain("<AlertDialog");
-    expect(announcementSource).toContain(
+    expect(announcementSource).not.toContain(
       "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
     );
     expect(announcementSource).toContain(
@@ -790,14 +790,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(announcementSource).toContain(
       "<AnnouncementListItemSkeleton key={index} index={index} />",
     );
+    expect(announcementSource).not.toContain("공지사항을 불러오는 중입니다");
     expect(announcementSource).toContain(
-      "mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground",
+      "group w-full rounded-xl border border-border/70 bg-card px-3 py-3 text-left",
     );
     expect(announcementSource).toContain(
-      "shrink-0 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground",
+      "w-full rounded-xl border border-border/70 bg-card px-3 py-3",
     );
-    expect(announcementSource).toContain("toggleConfirmation !== '상태변경'");
-    expect(announcementSource).toContain("toggleConfirmation !== '배너변경'");
+    expect(announcementSource).not.toContain("toggleConfirmation");
+    expect(announcementSource).not.toContain("deleteConfirmation");
     expect(announcementSource).not.toContain('role="listitem"');
     expect(announcementSource).not.toContain("confirm(`");
     expect(consoleSource).not.toContain(
