@@ -26,8 +26,13 @@ describe('admin restaurant modal presentation source contract', () => {
     expect(adminModalSource).toContain('w-[min(420px,calc(100vw-2rem))]');
     expect(adminModalSource).not.toContain('w-[min(460px,calc(100vw-2rem))]');
     expect(adminModalSource).toContain('data-desktop-map-admin-restaurant-panel="true"');
+    expect(adminModalSource).toContain('aria-modal="true"');
+    expect(adminModalSource).toContain('handleDesktopAdminRestaurantDialogKeyDown');
     expect(adminModalSource).toContain('data-desktop-map-admin-restaurant-drag-handle');
+    expect(adminModalSource).toContain('tabIndex={shouldRenderMapPanel ? 0 : undefined}');
+    expect(adminModalSource).toContain('aria-label={shouldRenderMapPanel ? "맛집 수정 창 이동 핸들" : undefined}');
     expect(adminModalSource).toContain('handleDesktopAdminRestaurantPanelPointerDown');
+    expect(adminModalSource).not.toContain('onKeyDown={handleDesktopAdminRestaurantPanelKeyDown}\\n                >');
     expect(adminModalSource).toContain('setPointerCapture');
     expect(adminModalSource).toContain(
       'translate3d(${desktopAdminRestaurantPanelPosition.x}px, ${desktopAdminRestaurantPanelPosition.y}px, 0)',

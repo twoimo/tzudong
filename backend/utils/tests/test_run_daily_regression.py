@@ -267,8 +267,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
         upload_step = workflow.split("- name: Upload Results to GDrive", 1)[1].split("- name: Upload GDrive Status Artifacts", 1)[0]
 
-        self.assertIn("RUN_DAILY_TARGET_BRANCH:", upload_step)
-        self.assertIn("github.event.inputs.checkout_ref", upload_step)
+        self.assertIn("RUN_DAILY_TARGET_BRANCH: data", upload_step)
+        self.assertNotIn("github.event.inputs.checkout_ref", upload_step)
         self.assertIn('GDRIVE_STATUS_SCOPE_PATH="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE"', upload_step)
         self.assertIn('GDrive status scope path: $GDRIVE_STATUS_SCOPE_PATH', upload_step)
         self.assertIn('GDRIVE_UPLOAD_MAX_FILES: "0"', upload_step)
@@ -290,6 +290,9 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("--require-api-available", daily_workflow)
         self.assertIn("allow_budget_risk", daily_workflow)
         self.assertIn("Guard manual default-branch budget posture", daily_workflow)
+        self.assertIn('GEMINI_CLI_TRUST_WORKSPACE: "false"', daily_workflow)
+        self.assertIn("--requirement backend/restaurant-crawling/scripts/requirements.txt", daily_workflow)
+        self.assertNotIn('pip install -U "yt-dlp[default]"', daily_workflow)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile gdrive-backfill", backfill_workflow)
         self.assertIn("Check Actions budget posture before backfill", backfill_workflow)
         self.assertNotIn("Record budget skip", backfill_workflow)
@@ -440,6 +443,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("--upload-mode backfill", workflow)
         self.assertIn('--completion-proof "$COMPLETION_PROOF"', workflow)
         self.assertIn("actions/upload-artifact@v7.0.1", workflow)
+        self.assertIn("STATUS_SCOPE_SAFE", workflow)
+        self.assertIn("status_scope must match [A-Za-z0-9._-]+", workflow)
+        self.assertNotIn("backend/log/cron/gdrive-upload-staging/**", workflow)
+        self.assertNotIn("backend/log/cron/current-upload-rclone.log", workflow)
         self.assertIn("trap cleanup_lock EXIT", workflow)
         self.assertIn("set +e", workflow)
         self.assertIn("BACKFILL_EXIT", workflow)
@@ -471,6 +478,22 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn('../../../$RCLONE_LOG', workflow)
         self.assertNotIn('../../../$FILES_FROM', workflow)
         self.assertIn('exit "$BACKFILL_EXIT"', workflow)
+
+    def test_security_audit_workflow_and_dependabot_cover_supply_chain(self) -> None:
+        security_workflow = (REPO_ROOT / ".github" / "workflows" / "security-audit.yml").read_text(encoding="utf-8")
+        dependabot = (REPO_ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
+        crawling_requirements = (REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "requirements.txt").read_text(encoding="utf-8")
+        pipeline_requirements = (REPO_ROOT / "backend" / "pipeline" / "requirements.txt").read_text(encoding="utf-8")
+
+        self.assertIn("npm audit --audit-level=high", security_workflow)
+        self.assertIn("python -m pip_audit", security_workflow)
+        self.assertIn("backend/restaurant-crawling/scripts/requirements.txt", security_workflow)
+        self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
+        self.assertNotIn("git+https://github.com/yt-dlp/yt-dlp.git@master", crawling_requirements)
+        self.assertIn("yt-dlp[default]==", crawling_requirements)
+        self.assertNotIn("\nrequests\n", crawling_requirements)
+        self.assertIn("langgraph==", pipeline_requirements)
+        self.assertNotIn("langchain-core>=", pipeline_requirements)
 
     def test_gdrive_upload_status_timeout_records_partial_and_residual_queue(self) -> None:
         frame = self.frames_dir / "pending.jpg"

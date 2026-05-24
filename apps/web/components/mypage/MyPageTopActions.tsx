@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronUp,
@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { toast } from "@/lib/no-toast";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/site-config";
@@ -42,39 +42,23 @@ export function MyPageTopActions() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, isAdmin, signOut, profileNickname } = useAuth();
+  const { data: profile } = useUserProfile(user?.id ?? "");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
 
   const displayName = useMemo(
-    () => profileNickname || user?.email?.split("@")[0] || "사용자",
-    [profileNickname, user?.email],
+    () =>
+      profile?.nickname ||
+      profileNickname ||
+      user?.email?.split("@")[0] ||
+      "사용자",
+    [profile?.nickname, profileNickname, user?.email],
   );
 
-  const { data: profileAvatarUrl = null } = useQuery({
-    queryKey: ["mypage-top-actions-avatar", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error("마이페이지 사용자 프로필 사진 조회 실패:", error);
-        return null;
-      }
-
-      const profile = data as { avatar_url?: string | null } | null;
-      return typeof profile?.avatar_url === "string" &&
-        profile.avatar_url.trim()
-        ? profile.avatar_url
-        : null;
-    },
-    enabled: Boolean(user?.id),
-    staleTime: 5 * 60 * 1000,
-  });
+  const profileAvatarUrl =
+    typeof profile?.avatarUrl === "string" && profile.avatarUrl.trim()
+      ? profile.avatarUrl
+      : null;
 
   useEffect(() => {
     const syncFullscreenState = () => {
