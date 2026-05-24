@@ -2443,6 +2443,7 @@ describe("web quality performance source contracts", () => {
     const naverSearchSource = source("app/api/naver-search/route.ts");
     const naverGeocodeSource = source("app/api/naver-geocode/route.ts");
     const youtubeMetaSource = source("app/api/youtube-meta/route.ts");
+    const authCallbackSource = source("app/auth/callback/route.ts");
     const shortenSource = source("app/api/shorten/route.ts");
     const shortRedirectSource = source("app/s/[code]/page.tsx");
 
@@ -2491,6 +2492,14 @@ describe("web quality performance source contracts", () => {
       "isValidReviewId(target.searchParams.get",
     );
     expect(shortRedirectSource).toContain("redirect('/');");
+    expect(authCallbackSource).toContain("function getTrustedRedirectOrigin");
+    expect(authCallbackSource).toContain(
+      "DEFAULT_PRODUCTION_REDIRECT_ORIGIN",
+    );
+    expect(authCallbackSource).toContain("https://www.tzudong.app");
+    expect(authCallbackSource).toContain("NEXT_PUBLIC_SITE_URL");
+    expect(authCallbackSource).toContain("new URL(configuredSiteUrl).origin");
+    expect(authCallbackSource).not.toContain("x-forwarded-host");
   });
 
   test("feed direct route defers heavy modals and detail panels until interaction", () => {
