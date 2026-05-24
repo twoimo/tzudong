@@ -11,6 +11,13 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const shouldUseStandaloneOutput = process.env.VERCEL !== '1';
 
+const securityHeaders = [
+    { key: 'X-Content-Type-Options', value: 'nosniff' },
+    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+    { key: 'X-Frame-Options', value: 'DENY' },
+    { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+];
+
 const supabaseStorageHostname = (() => {
     try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -86,32 +93,41 @@ const nextConfig = {
     async headers() {
         return [
             {
+                source: '/:path*',
+                headers: securityHeaders,
+            },
+            {
                 source: '/images/:path*',
                 headers: [
+                    ...securityHeaders,
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
             {
                 source: '/fonts/:path*',
                 headers: [
+                    ...securityHeaders,
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
             {
                 source: '/favicon.ico',
                 headers: [
+                    ...securityHeaders,
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
             {
                 source: '/:icon(favicon-32x32|apple-touch-icon).png',
                 headers: [
+                    ...securityHeaders,
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
             {
                 source: '/scripts/:path*',
                 headers: [
+                    ...securityHeaders,
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
