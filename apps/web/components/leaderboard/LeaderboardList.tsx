@@ -63,7 +63,7 @@ export function LeaderboardList({
                         {/* Username */}
                         <div
                             className={cn(
-                                "flex-1 min-w-0",
+                                "flex-1 basis-0 min-w-0",
                                 compactLeftPanel && "max-w-none sm:max-w-none"
                             )}
                         >
