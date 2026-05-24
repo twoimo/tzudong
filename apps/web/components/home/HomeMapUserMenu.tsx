@@ -33,6 +33,7 @@ import {
 import { toast } from "@/lib/no-toast";
 import { cn } from "@/lib/utils";
 import type { HomeMapPanelSide } from "@/lib/home-map-user-preferences";
+import { siteConfig } from "@/lib/site-config";
 
 const desktopUserMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
@@ -287,7 +288,7 @@ export default function HomeMapUserMenu({
                 className="flex w-max max-w-full items-center justify-between rounded-lg px-1 py-1 text-left whitespace-nowrap transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <span className="text-[10px] text-muted-foreground">
-                  v2.0.0 © 타이니번
+                  {siteConfig.operator.copyrightLabel}
                 </span>
                 {isBusinessInfoExpanded ? (
                   <ChevronUp
@@ -306,10 +307,10 @@ export default function HomeMapUserMenu({
                   id="desktop-map-business-info-content"
                   className="mt-1 space-y-0.5 border-t border-border px-1 pt-1 text-[9px] leading-4 text-muted-foreground whitespace-nowrap"
                 >
-                  <p className="font-medium text-foreground">타이니번 데이터랩</p>
-                  <p>대표: 최연우</p>
-                  <p>사업자: 601-09-04613</p>
-                  <p>이메일: cs@tzudong.app</p>
+                  <p className="font-medium text-foreground">{siteConfig.operator.companyName}</p>
+                  <p>대표: {siteConfig.operator.representative}</p>
+                  <p>사업자: {siteConfig.operator.businessRegistrationNumber}</p>
+                  <p>이메일: {siteConfig.contact.email}</p>
                 </div>
               )}
             </div>

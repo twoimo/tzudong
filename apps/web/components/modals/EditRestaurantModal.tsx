@@ -183,6 +183,9 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     category: draft.category,
                     youtube_reviews: draft.youtube_reviews,
                 });
+                if (draft.currentStep && EDIT_RESTAURANT_REQUEST_STEPS.some((step) => step.id === draft.currentStep)) {
+                    setCurrentStep(draft.currentStep);
+                }
                 setLastSavedAt(new Date(draft.savedAt));
 
                 toast.success("임시 저장된 내용을 불러왔습니다", {
@@ -214,6 +217,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 phone: editFormData.phone,
                 category: editFormData.category,
                 youtube_reviews: editFormData.youtube_reviews,
+                currentStep,
             });
             setLastSavedAt(new Date());
         } catch (error) {
@@ -221,7 +225,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         } finally {
             setIsSaving(false);
         }
-    }, [restaurant?.id, editFormData]);
+    }, [restaurant?.id, editFormData, currentStep]);
 
     // 임시 저장 데이터 삭제
     const clearDraft = useCallback(async () => {
@@ -245,7 +249,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [isOpen, editFormData, autoSave]);
+    }, [isOpen, editFormData, currentStep, autoSave]);
 
     // 모달이 열릴 때 임시 저장된 데이터 확인
     useEffect(() => {
