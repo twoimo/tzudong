@@ -18,7 +18,6 @@ import {
   formatActiveRestaurantIdentityConflictMessage,
   isActiveRestaurantIdentityConflictError,
 } from '@/lib/admin-restaurant-update-conflict';
-import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -93,7 +92,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   };
   const [loading, setLoading] = useState(false);
   const [geocodingNaver, setGeocodingNaver] = useState(false);
-  const [geocodingGoogle, setGeocodingGoogle] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     address: '',
@@ -187,7 +185,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         toast({
           variant: 'destructive',
           title: '주소를 찾을 수 없습니다',
-          description: '다른 주소를 시도하거나 Google 지오코딩을 사용해주세요.',
+          description: '다른 주소를 시도하거나 주소를 직접 확인해주세요.',
         });
         setGeocodingError('주소를 찾을 수 없습니다.');
       }
@@ -202,81 +200,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       });
     } finally {
       setGeocodingNaver(false);
-    }
-  };
-
-  // 재지오코딩 - 구글
-  const handleReGeocodeGoogle = async () => {
-    const trimmedAddress = formData.address.trim();
-    const trimmedName = formData.name.trim();
-
-    if (!trimmedAddress) {
-      toast({
-        variant: 'destructive',
-        title: '주소를 입력해주세요',
-      });
-      return;
-    }
-
-    if (!trimmedName) {
-      toast({
-        variant: 'destructive',
-        title: '음식점명을 입력해주세요',
-      });
-      return;
-    }
-
-    try {
-      setGeocodingGoogle(true);
-      setGeocodingError(null);
-      setGeocodingResults([]);
-      setSelectedGeocodingIndex(null);
-
-
-      toast({
-        title: 'Google Geocoding API로 검색 중...',
-      });
-
-      // 1. name + 전체 주소로 지오코딩
-      const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
-
-      // 2. 주소만으로 지오코딩
-      const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
-
-      // 3. 합치고 중복 제거
-      const allResults = [...fullAddressResults, ...addressOnlyResults];
-      const uniqueResults = removeDuplicateAddresses(allResults);
-
-
-
-      if (uniqueResults.length > 0) {
-        setGeocodingResults(uniqueResults);
-        setAddressChanged(false); // 지오코딩 성공 시 플래그 초기화
-        setInitialAddress(trimmedAddress); // 새로운 주소를 초기 주소로 설정
-
-        toast({
-          title: '지오코딩 성공',
-          description: `${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`,
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: '주소를 찾을 수 없습니다',
-          description: '다른 주소를 시도하거나 네이버 지오코딩을 사용해주세요.',
-        });
-        setGeocodingError('주소를 찾을 수 없습니다.');
-      }
-    } catch (error: unknown) {
-      console.error('💥 Google 지오코딩 에러:', error);
-      const message = getErrorMessage(error, 'Google 지오코딩에 실패했습니다');
-      setGeocodingError(message);
-      toast({
-        variant: 'destructive',
-        title: 'Google 지오코딩 실패',
-        description: message,
-      });
-    } finally {
-      setGeocodingGoogle(false);
     }
   };
 
@@ -312,26 +235,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       seen.add(addr.jibun_address);
       return true;
     });
-  };
-
-  // Google Geocoding API 호출 함수
-  const geocodeWithGoogle = async (address: string, limit: number = 3): Promise<Array<{
-    road_address: string;
-    jibun_address: string;
-    english_address: string;
-    address_elements: Record<string, unknown>;
-    x: string;
-    y: string;
-  }>> => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
-    // Client-side Geocoder (works with HTTP referer restricted browser keys)
-    try {
-      return await geocodeWithGoogleMapsJs(address, apiKey, limit);
-    } catch (error: unknown) {
-      console.error('Google Geocoding 에러:', error);
-      throw error instanceof Error ? error : new Error('Google Geocoding 에러');
-    }
   };
 
   // 지오코딩 함수 (여러 개 결과 반환)
@@ -1019,22 +922,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                   size="sm"
                   variant="outline"
                   onClick={handleReGeocodeNaver}
-                  disabled={geocodingNaver || geocodingGoogle || !formData.address.trim()}
+                  disabled={geocodingNaver || !formData.address.trim()}
                 >
                   {geocodingNaver && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                   {!geocodingNaver && <RefreshCw className="mr-1 h-3 w-3" />}
                   네이버 지오코딩
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleReGeocodeGoogle}
-                  disabled={geocodingNaver || geocodingGoogle || !formData.address.trim()}
-                >
-                  {geocodingGoogle && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                  {!geocodingGoogle && <RefreshCw className="mr-1 h-3 w-3" />}
-                  Google 지오코딩
                 </Button>
               </div>
             </div>
