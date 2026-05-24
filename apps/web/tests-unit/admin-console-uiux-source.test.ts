@@ -252,7 +252,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("group-hover:scale-[1.02]");
     expect(consoleSource).toContain("return null;");
     expect(adminLoadingSource).not.toContain("AdminConsoleLoadingSkeleton");
-    expect(consoleSource).toContain("md:grid-cols-[16rem_minmax(0,1fr)]");
+    expect(source("app/app-globals.css")).toContain(
+      "grid-template-columns: 16rem minmax(0, 1fr);",
+    );
     expect(consoleSource).not.toContain("lg:w-[280px]");
     expect(consoleSource).not.toContain(
       "bg-gradient-to-br from-card via-card to-primary/5 p-3",
@@ -372,6 +374,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("keeps unified admin console as the single operator shell", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const adminPageSource = source("app/admin/page.tsx");
+    const appGlobalsSource = source("app/app-globals.css");
 
     expect(adminPageSource).toContain("<AdminConsoleOverview />");
     for (const moduleId of [
@@ -397,12 +400,28 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-console-content="true"');
     expect(consoleSource).toContain("p-2 sm:p-3 md:border-y-0 md:p-4");
     expect(consoleSource).toContain("h-[var(--full-height,100vh)]");
-    expect(consoleSource).toContain("grid-rows-[auto_minmax(0,1fr)]");
-    expect(consoleSource).toContain("md:grid-rows-1");
-    expect(consoleSource).toContain("md:grid-cols-[16rem_minmax(0,1fr)]");
-    expect(consoleSource).toContain("md:grid-cols-[4.5rem_minmax(0,1fr)]");
+    expect(consoleSource).not.toContain("grid-rows-[auto_minmax(0,1fr)]");
+    expect(consoleSource).not.toContain("md:grid-rows-1");
+    expect(consoleSource).not.toContain("md:grid-cols-[16rem_minmax(0,1fr)]");
+    expect(consoleSource).not.toContain("md:grid-cols-[4.5rem_minmax(0,1fr)]");
     expect(consoleSource).toContain("data-admin-console-sidebar-collapsed={");
     expect(consoleSource).toContain('isSidebarCollapsed ? "true" : "false"');
+    expect(appGlobalsSource).toContain(
+      '[data-admin-console-layout="sidebar-content"]',
+    );
+    expect(appGlobalsSource).toContain("[data-admin-console-content]:focus");
+    expect(appGlobalsSource).toContain(
+      "[data-admin-console-content]:focus-visible",
+    );
+    expect(appGlobalsSource).toContain(
+      "grid-template-rows: auto minmax(0, 1fr);",
+    );
+    expect(appGlobalsSource).toContain(
+      "grid-template-columns: 16rem minmax(0, 1fr);",
+    );
+    expect(appGlobalsSource).toContain(
+      "grid-template-columns: 4.5rem minmax(0, 1fr);",
+    );
   });
 
   test("keeps admin console keyboard and screen-reader navigation intact", () => {
@@ -413,6 +432,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("tabIndex={-1}");
     expect(consoleSource).toContain(
       "canvasRef.current?.focus({ preventScroll: true })",
+    );
+    expect(source("app/app-globals.css")).toContain(
+      "[data-admin-console-content]:focus-visible",
     );
     expect(consoleSource).toContain(
       'aria-current={isActive ? "page" : undefined}',
@@ -649,7 +671,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "components/admin/AdminOverviewDashboard.tsx",
     );
 
-    expect(consoleSource).toContain("md:grid-cols-[16rem_minmax(0,1fr)]");
+    expect(source("app/app-globals.css")).toContain(
+      "grid-template-columns: 16rem minmax(0, 1fr);",
+    );
     expect(consoleSource).toContain("md:inline-flex");
     expect(consoleSource).toContain(
       '"flex gap-2 overflow-x-auto overscroll-x-contain',
