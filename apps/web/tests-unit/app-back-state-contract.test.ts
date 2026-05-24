@@ -86,6 +86,9 @@ describe("app back navigation state contracts", () => {
     expect(homeClientEffectsSource).toContain(
       "searchParams.get('panel') !== 'announcement'",
     );
+    expect(homeClientEffectsSource).toContain(
+      "openPanelRef.current('announcement');",
+    );
     expect(homeClientEffectsSource).not.toContain(
       "router.replace('/', { scroll: false });",
     );

@@ -13,7 +13,10 @@ describe('SEO source contracts', () => {
         const rootLayoutSource = source('app/layout.tsx');
         const homePageSource = source('app/page.tsx');
 
-        expect(seoSource).toContain("'https://www.tzudong.app'");
+        const siteConfigSource = source('lib/site-config.ts');
+
+        expect(seoSource).toContain('siteConfig.productionUrl');
+        expect(siteConfigSource).toContain("'https://www.tzudong.app'");
         expect(seoSource).toContain('export const canonicalUrl');
         expect(rootLayoutSource).toContain('metadataBase: new URL(siteUrl)');
         expect(rootLayoutSource).toContain("canonical: '/'");

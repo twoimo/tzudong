@@ -68,9 +68,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain('initialView="submissions"');
     expect(consoleSource).toContain('initialSubmissionTab="reviews"');
     expect(consoleSource).toContain("AdminBannerModule");
-    expect(consoleSource).toContain("AdminAnnouncementModule");
-    expect(consoleSource).toContain('id: "announcements"');
-    expect(consoleSource).toContain("/admin?module=announcements");
+    expect(consoleSource).not.toContain("AdminAnnouncementModule");
+    expect(consoleSource).not.toContain('id: "announcements"');
+    expect(consoleSource).not.toContain("/admin?module=announcements");
     expect(consoleSource).toContain("useSearchParams");
     expect(consoleSource).toContain("router.replace");
     expect(consoleSource).toContain(
@@ -718,10 +718,16 @@ describe("mobile and desktop parity source contracts", () => {
       "isInlinePanelViewActive ||",
     );
     expect(homeDesktopControlPanelSource).toContain("shouldShowDesktopMapHome");
+    expect(homeDesktopControlPanelSource).not.toContain(
+      'activeLeftPanelView === "map" &&\n    !isPanelOpen &&\n    (isDesktopSearchActive',
+    );
     expect(homeDesktopControlPanelSource).toContain(' ? "px-0 py-0"');
     expect(homeDesktopControlPanelSource).toContain(' : "px-4 py-4"');
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-panel-detail-fill="true"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'data-desktop-left-panel-search-shell="true"',
     );
     expect(stampOverlaySource).toContain(
       'data-desktop-left-panel-stamp-mobile-parity="true"',
