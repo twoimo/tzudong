@@ -114,17 +114,18 @@ export const StampCard = memo(function StampCard({
     const isCompact = size === 'compact';
     const resolvedStampSize = stampSize ?? size;
     const isStampCompact = resolvedStampSize === 'compact';
-    const stampSizeClass = resolvedStampSize === 'mobile'
+    const isStampMobile = resolvedStampSize === 'mobile';
+    const stampSizeClass = isStampMobile
         ? "w-auto"
         : isStampCompact
             ? "w-36 h-36 md:w-40 md:h-40"
             : "w-48 h-48 sm:w-56 sm:h-56";
-    const stampImageStyle = resolvedStampSize === 'mobile'
+    const stampImageStyle = isStampMobile
         ? {
-            transform: 'rotate(-45deg)',
-            height: '70%',
-            maxHeight: '8.5rem',
-            maxWidth: '40%',
+            transform: 'translateY(0.375rem) rotate(-45deg)',
+            height: '74%',
+            maxHeight: '9rem',
+            maxWidth: '44%',
         }
         : { transform: 'rotate(-45deg)' };
 
@@ -208,7 +209,12 @@ export const StampCard = memo(function StampCard({
 
                         {/* 방문 완료 스탬프 */}
                         {showStamp && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
+                            <div
+                                className={cn(
+                                    "absolute inset-0 z-10 flex items-center justify-center",
+                                    isStampMobile ? "overflow-visible" : "overflow-hidden"
+                                )}
+                            >
                                 {guideLabel && (
                                     <span
                                         className={cn(
