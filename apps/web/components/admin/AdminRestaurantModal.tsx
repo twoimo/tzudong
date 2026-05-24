@@ -1,5 +1,15 @@
-import { useState, useEffect } from "react";
+import {
+    useState,
+    useEffect,
+    useCallback,
+    useRef,
+    type KeyboardEvent as ReactKeyboardEvent,
+    type PointerEvent as ReactPointerEvent,
+    type ReactNode,
+} from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +35,8 @@ import { toast } from "@/lib/no-toast";
 import { Loader2, ChevronDown, X } from "lucide-react";
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
-import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
+import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
+import { cn } from "@/lib/utils";
 import {
     ADMIN_MODAL_ACTION,
     ADMIN_MODAL_CONTENT_MD_FLEX,
@@ -132,7 +143,34 @@ interface AdminRestaurantModalProps {
     onClose: () => void;
     restaurant?: Restaurant | null;
     onSuccess: (updatedRestaurant?: Restaurant) => void;
+    presentation?: 'auto' | 'map-panel';
 }
+
+type DesktopAdminRestaurantPanelPosition = {
+    x: number;
+    y: number;
+};
+
+type DesktopAdminRestaurantPanelDragState = {
+    pointerId: number;
+    startX: number;
+    startY: number;
+    initialLeft: number;
+    initialTop: number;
+    originX: number;
+    originY: number;
+    panelWidth: number;
+    panelHeight: number;
+};
+
+const DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN = 16;
+const DESKTOP_ADMIN_RESTAURANT_PANEL_KEYBOARD_STEP = 24;
+const DEFAULT_DESKTOP_ADMIN_RESTAURANT_PANEL_POSITION: DesktopAdminRestaurantPanelPosition = { x: 0, y: 0 };
+
+const clampDesktopAdminRestaurantPanelAxis = (value: number, min: number, max: number) => {
+    if (max < min) return min;
+    return Math.min(Math.max(value, min), max);
+};
 
 type AddressElement = Record<string, unknown>;
 type AddressElementsValue = AddressElement | AddressElement[] | null;
@@ -165,16 +203,23 @@ export function AdminRestaurantModal({
     onClose,
     restaurant,
     onSuccess,
+    presentation = 'auto',
 }: AdminRestaurantModalProps) {
+    const isMobileOrTablet = useImmediateMobileOrTablet();
+    const shouldRenderMapPanel = presentation === 'map-panel' && !isMobileOrTablet;
+    const shouldRenderSheetFrame = isMobileOrTablet || shouldRenderMapPanel;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deletedReviewIds, setDeletedReviewIds] = useState<string[]>([]); // X 버튼으로 삭제된 기존 레코드 ID 추적
     const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
     const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
-    const [isGeocodingGoogle, setIsGeocodingGoogle] = useState(false);
     const [isGeocoded, setIsGeocoded] = useState(false); // 재지오코딩 완료 여부
     const [geocodingResults, setGeocodingResults] = useState<GeocodingResultItem[]>([]);
     const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
+    const [desktopAdminRestaurantPanelPosition, setDesktopAdminRestaurantPanelPosition] = useState<DesktopAdminRestaurantPanelPosition>(DEFAULT_DESKTOP_ADMIN_RESTAURANT_PANEL_POSITION);
+    const adminRestaurantFormRef = useRef<HTMLFormElement>(null);
+    const desktopAdminRestaurantPanelRef = useRef<HTMLElement>(null);
+    const desktopAdminRestaurantPanelDragRef = useRef<DesktopAdminRestaurantPanelDragState | null>(null);
     const [formData, setFormData] = useState({
         name: "",
         searchAddress: "", // 검색용 주소 입력
@@ -263,6 +308,118 @@ export function AdminRestaurantModal({
         }
     }, [restaurant, isOpen]);
 
+    useEffect(() => {
+        if (!isOpen || !isMobileOrTablet) return;
+
+        const scrollContainer = adminRestaurantFormRef.current?.parentElement;
+        scrollContainer?.scrollTo({ top: 0, behavior: 'instant' });
+    }, [isMobileOrTablet, isOpen, restaurant?.id]);
+
+    useEffect(() => {
+        if (isOpen) return;
+
+        desktopAdminRestaurantPanelDragRef.current = null;
+        setDesktopAdminRestaurantPanelPosition(DEFAULT_DESKTOP_ADMIN_RESTAURANT_PANEL_POSITION);
+    }, [isOpen]);
+
+    const getClampedDesktopAdminRestaurantPanelPosition = useCallback((clientX: number, clientY: number): DesktopAdminRestaurantPanelPosition | null => {
+        const dragState = desktopAdminRestaurantPanelDragRef.current;
+        if (!dragState || typeof window === 'undefined') return null;
+
+        const deltaX = clientX - dragState.startX;
+        const deltaY = clientY - dragState.startY;
+        const minLeft = DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const minTop = DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = window.innerWidth - dragState.panelWidth - DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const maxTop = window.innerHeight - dragState.panelHeight - DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const clampedLeft = clampDesktopAdminRestaurantPanelAxis(dragState.initialLeft + deltaX, minLeft, maxLeft);
+        const clampedTop = clampDesktopAdminRestaurantPanelAxis(dragState.initialTop + deltaY, minTop, maxTop);
+
+        return {
+            x: dragState.originX + clampedLeft - dragState.initialLeft,
+            y: dragState.originY + clampedTop - dragState.initialTop,
+        };
+    }, []);
+
+    const handleDesktopAdminRestaurantPanelPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+        if (!shouldRenderMapPanel || event.button !== 0) return;
+
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('button,input,textarea,select,a,[role="button"],[data-radix-popper-content-wrapper]')) {
+            return;
+        }
+
+        const panel = desktopAdminRestaurantPanelRef.current;
+        if (!panel) return;
+
+        const rect = panel.getBoundingClientRect();
+        desktopAdminRestaurantPanelDragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            initialLeft: rect.left,
+            initialTop: rect.top,
+            originX: desktopAdminRestaurantPanelPosition.x,
+            originY: desktopAdminRestaurantPanelPosition.y,
+            panelWidth: rect.width,
+            panelHeight: rect.height,
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }, [desktopAdminRestaurantPanelPosition.x, desktopAdminRestaurantPanelPosition.y, shouldRenderMapPanel]);
+
+    const handleDesktopAdminRestaurantPanelPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+        if (desktopAdminRestaurantPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        const nextPosition = getClampedDesktopAdminRestaurantPanelPosition(event.clientX, event.clientY);
+        if (nextPosition) {
+            setDesktopAdminRestaurantPanelPosition(nextPosition);
+        }
+    }, [getClampedDesktopAdminRestaurantPanelPosition]);
+
+    const handleDesktopAdminRestaurantPanelPointerEnd = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+        if (desktopAdminRestaurantPanelDragRef.current?.pointerId !== event.pointerId) return;
+
+        desktopAdminRestaurantPanelDragRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    }, []);
+
+    const moveDesktopAdminRestaurantPanelByKeyboard = useCallback((deltaX: number, deltaY: number) => {
+        const panel = desktopAdminRestaurantPanelRef.current;
+        if (!panel || typeof window === 'undefined') return;
+
+        const rect = panel.getBoundingClientRect();
+        const minLeft = DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const minTop = DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = window.innerWidth - rect.width - DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const maxTop = window.innerHeight - rect.height - DESKTOP_ADMIN_RESTAURANT_PANEL_VIEWPORT_MARGIN;
+        const clampedLeft = clampDesktopAdminRestaurantPanelAxis(rect.left + deltaX, minLeft, maxLeft);
+        const clampedTop = clampDesktopAdminRestaurantPanelAxis(rect.top + deltaY, minTop, maxTop);
+
+        setDesktopAdminRestaurantPanelPosition((current) => ({
+            x: current.x + clampedLeft - rect.left,
+            y: current.y + clampedTop - rect.top,
+        }));
+    }, []);
+
+    const handleDesktopAdminRestaurantPanelKeyDown = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
+        const step = event.shiftKey ? DESKTOP_ADMIN_RESTAURANT_PANEL_KEYBOARD_STEP * 2 : DESKTOP_ADMIN_RESTAURANT_PANEL_KEYBOARD_STEP;
+        const keyboardMoves: Partial<Record<string, [number, number]>> = {
+            ArrowLeft: [-step, 0],
+            ArrowRight: [step, 0],
+            ArrowUp: [0, -step],
+            ArrowDown: [0, step],
+        };
+        const move = keyboardMoves[event.key];
+
+        if (!move) return;
+
+        event.preventDefault();
+        moveDesktopAdminRestaurantPanelByKeyboard(move[0], move[1]);
+    }, [moveDesktopAdminRestaurantPanelByKeyboard]);
+
     const resetForm = () => {
         setFormData({
             name: "",
@@ -306,19 +463,6 @@ export function AdminRestaurantModal({
             seen.add(addr.jibun_address);
             return true;
         });
-    };
-
-    // Google Geocoding API 호출 함수
-    const geocodeWithGoogle = async (address: string, limit: number = 3) => {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-
-        // Client-side Geocoder (works with HTTP referer restricted browser keys)
-        try {
-            return await geocodeWithGoogleMapsJs(address, apiKey, limit);
-        } catch (error) {
-            console.error('Google Geocoding 에러:', error);
-            throw error instanceof Error ? error : new Error(String(error));
-        }
     };
 
     // 지오코딩 함수 (여러 개 결과 반환)
@@ -394,53 +538,6 @@ export function AdminRestaurantModal({
             toast.error('네이버 지오코딩에 실패했습니다');
         } finally {
             setIsGeocodingNaver(false);
-        }
-    };
-
-    // 재지오코딩 버튼 핸들러 - 구글
-    const handleGeocodeGoogle = async () => {
-        const trimmedAddress = formData.searchAddress.trim();
-        const trimmedName = formData.name.trim();
-
-        if (!trimmedAddress) {
-            toast.error('주소를 입력해주세요');
-            return;
-        }
-
-        if (!trimmedName) {
-            toast.error('음식점명을 입력해주세요');
-            return;
-        }
-
-        setIsGeocodingGoogle(true);
-        setGeocodingResults([]);
-        setSelectedGeocodingIndex(null);
-        setIsGeocoded(false);
-
-        try {
-            toast.info('Google Geocoding API로 검색 중...');
-
-            // 1. name + 전체 주소로 지오코딩
-            const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
-
-            // 2. 주소만으로 지오코딩
-            const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
-
-            // 3. 합치고 중복 제거
-            const allResults = [...fullAddressResults, ...addressOnlyResults];
-            const uniqueResults = removeDuplicateAddresses(allResults);
-
-            if (uniqueResults.length > 0) {
-                setGeocodingResults(uniqueResults);
-                toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`);
-            } else {
-                toast.error('주소를 찾을 수 없습니다');
-            }
-        } catch (error) {
-            console.error('Google Geocoding error:', error);
-            toast.error('Google 지오코딩에 실패했습니다');
-        } finally {
-            setIsGeocodingGoogle(false);
         }
     };
 
@@ -765,379 +862,494 @@ export function AdminRestaurantModal({
         }
     };
 
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className={ADMIN_MODAL_CONTENT_MD_FLEX}>
-                <DialogHeader>
-                    <DialogTitle className="text-2xl">
-                        {restaurant ? "맛집 수정" : "맛집 등록"}
-                    </DialogTitle>
-                    <DialogDescription className="sr-only">
-                        {restaurant ? "맛집 정보를 수정합니다" : "새로운 맛집을 등록합니다"}
-                    </DialogDescription>
-                </DialogHeader>
+    const adminRestaurantTitle = restaurant ? "맛집 수정" : "맛집 등록";
+    const adminRestaurantDescription = restaurant ? "맛집 정보를 수정합니다" : "새로운 맛집을 등록합니다";
+    const adminRestaurantTitleId = "admin-restaurant-sheet-title";
+    const adminRestaurantDescriptionId = "admin-restaurant-sheet-description";
+    const adminRestaurantFormClass = shouldRenderMapPanel
+        ? "flex h-full min-h-0 flex-col bg-background"
+        : isMobileOrTablet
+            ? mobileSheetStyles.frame
+            : "mt-4";
+    const adminRestaurantBodyClass = shouldRenderSheetFrame
+        ? cn(mobileSheetStyles.content, "min-h-0 flex-1 overflow-y-auto")
+        : "space-y-4";
+    const adminRestaurantFooterClass = shouldRenderSheetFrame
+        ? cn(mobileSheetStyles.footer, "!mt-0 !flex !flex-row !flex-wrap items-center justify-end gap-2")
+        : ADMIN_MODAL_FOOTER_DIVIDER;
 
-                <form onSubmit={handleSubmit} className="mt-4">
-                    <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">이름 *</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="맛집 이름"
-                                autoComplete="off"
-                                enterKeyHint="next"
-                            />
-                        </div>
+    const adminRestaurantProgressSteps = [
+        {
+            label: "기본",
+            isComplete: Boolean(formData.name.trim() && formData.categories.length > 0),
+        },
+        {
+            label: "주소",
+            isComplete: isGeocoded && Boolean(formData.road_address || formData.jibun_address),
+        },
+        {
+            label: "영상",
+            isComplete: formData.youtube_reviews.some((review) => review.youtube_link.trim()),
+        },
+    ];
+    const adminRestaurantStatusChips = [
+        `${formData.categories.length}개 카테고리`,
+        `${formData.youtube_reviews.length}개 영상`,
+        isGeocoded ? "좌표 확인됨" : "주소 확인 필요",
+    ];
 
-                        <div className="space-y-2">
-                            <Label>카테고리 *</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-between"
-                                    >
-                                        <span className="truncate">
-                                            {formData.categories.length > 0
-                                                ? `${formData.categories.length}개 선택됨`
-                                                : "카테고리 선택"
-                                            }
-                                        </span>
-                                        <ChevronDown className="h-4 w-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    className="w-64 p-0"
-                                    align="start"
-                                    onWheel={(e) => e.stopPropagation()}
-                                    onTouchMove={(e) => e.stopPropagation()}
-                                >
-                                    <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
-                                        <h4 className="font-semibold text-sm">카테고리 선택</h4>
+    const adminRestaurantSheetHeader = (
+        <div
+            className={cn(mobileSheetStyles.header, shouldRenderMapPanel && "cursor-move select-none touch-none")}
+            data-desktop-map-admin-restaurant-drag-handle={shouldRenderMapPanel ? "true" : undefined}
+            title={shouldRenderMapPanel ? "빈 영역을 드래그하거나 화살표 키로 맛집 수정 창 이동" : undefined}
+            onKeyDown={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelKeyDown : undefined}
+            onPointerDown={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelPointerDown : undefined}
+            onPointerMove={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelPointerMove : undefined}
+            onPointerUp={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelPointerEnd : undefined}
+            onPointerCancel={shouldRenderMapPanel ? handleDesktopAdminRestaurantPanelPointerEnd : undefined}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="text-xs font-medium text-red-700 dark:text-red-300">관리자 편집</p>
+                    <h2 id={adminRestaurantTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                        {adminRestaurantTitle}
+                    </h2>
+                    <p id={adminRestaurantDescriptionId} className="mt-1 text-sm text-muted-foreground">
+                        {adminRestaurantDescription}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-1.5" aria-label="맛집 수정 상태 요약">
+                        {adminRestaurantStatusChips.map((chip) => (
+                            <Badge key={chip} variant="outline" className="rounded-full bg-background/70 text-[11px]">
+                                {chip}
+                            </Badge>
+                        ))}
+                    </div>
+                </div>
+                <Button type="button" variant="ghost" size="icon" aria-label="맛집 수정 창 닫기" onClick={onClose}>
+                    <X className="h-5 w-5" />
+                </Button>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="맛집 수정 단계 진행률">
+                {adminRestaurantProgressSteps.map((step) => (
+                    <div key={step.label} className="space-y-1">
+                        <div className={cn("h-1.5 rounded-full", step.isComplete ? "bg-red-800" : "bg-muted")} />
+                        <span className={cn("block text-center text-[11px]", step.isComplete ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                            {step.label}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 
-                                        {/* 커스텀 카테고리 입력 */}
-                                        <div className="flex gap-2 pb-2 border-b">
-                                            <Input
-                                                placeholder="새 카테고리 입력"
-                                                value={customCategory}
-                                                onChange={(e) => setCustomCategory(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && customCategory.trim()) {
-                                                        e.preventDefault();
-                                                        const newCategory = customCategory.trim();
-                                                        if (!formData.categories.includes(newCategory)) {
-                                                            setFormData({
-                                                                ...formData,
-                                                                categories: [...formData.categories, newCategory]
-                                                            });
-                                                        }
-                                                        setCustomCategory("");
-                                                    }
-                                                }}
-                                                className="flex-1"
-                                            />
+    const renderAdminRestaurantSection = ({
+        title,
+        description,
+        badge,
+        children,
+    }: {
+        title: string;
+        description: string;
+        badge?: string;
+        children: ReactNode;
+    }) => (
+        <section className="rounded-2xl border border-border bg-card/95 p-4 shadow-sm" aria-label={title}>
+            <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+                </div>
+                {badge && (
+                    <Badge variant="secondary" className="shrink-0 rounded-full text-[11px]">
+                        {badge}
+                    </Badge>
+                )}
+            </div>
+            {children}
+        </section>
+    );
+
+    const adminRestaurantForm = (
+        <form
+            ref={adminRestaurantFormRef}
+            onSubmit={handleSubmit}
+            className={adminRestaurantFormClass}
+        >
+            {shouldRenderSheetFrame && adminRestaurantSheetHeader}
+            <div className={adminRestaurantBodyClass}>
+                <div className="space-y-4">
+                    <div className="rounded-2xl border border-red-200/70 bg-red-50/70 p-3 text-sm leading-6 text-red-950 shadow-sm dark:border-red-950/70 dark:bg-red-950/25 dark:text-red-100">
+                        지도에 바로 반영되는 관리자 편집 화면입니다. 제보하기와 같은 흐름으로 기본 정보, 주소/좌표, 영상 리뷰를 순서대로 확인하세요.
+                    </div>
+
+                    {renderAdminRestaurantSection({
+                        title: "1. 기본 정보",
+                        description: "상호, 카테고리, 연락처처럼 목록과 상세 패널에 바로 보이는 정보를 정리합니다.",
+                        badge: formData.categories.length > 0 ? `${formData.categories.length}개 선택` : "필수",
+                        children: (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">이름 *</Label>
+                                        <Input
+                                            id="name"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            placeholder="맛집 이름"
+                                            autoComplete="off"
+                                            enterKeyHint="next"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="phone">전화번호</Label>
+                                        <Input
+                                            id="phone"
+                                            type="tel"
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            placeholder="02-1234-5678"
+                                            autoComplete="tel"
+                                            enterKeyHint="next"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>카테고리 *</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
                                             <Button
                                                 type="button"
-                                                size="sm"
-                                                onClick={() => {
-                                                    const newCategory = customCategory.trim();
-                                                    if (newCategory && !formData.categories.includes(newCategory)) {
-                                                        setFormData({
-                                                            ...formData,
-                                                            categories: [...formData.categories, newCategory]
-                                                        });
-                                                        setCustomCategory("");
-                                                    }
-                                                }}
-                                                disabled={!customCategory.trim()}
+                                                variant="outline"
+                                                className="w-full justify-between rounded-xl"
                                             >
-                                                추가
+                                                <span className="truncate">
+                                                    {formData.categories.length > 0
+                                                        ? `${formData.categories.length}개 선택됨`
+                                                        : "카테고리 선택"
+                                                    }
+                                                </span>
+                                                <ChevronDown className="h-4 w-4 opacity-50" />
                                             </Button>
-                                        </div>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            className="w-64 p-0"
+                                            align="start"
+                                            onWheel={(e) => e.stopPropagation()}
+                                            onTouchMove={(e) => e.stopPropagation()}
+                                        >
+                                            <div className="max-h-[400px] space-y-2 overflow-y-auto p-4" style={{ overscrollBehavior: 'contain' }}>
+                                                <h4 className="text-sm font-semibold">카테고리 선택</h4>
 
-                                        <div className="space-y-2">
-                                            {RESTAURANT_CATEGORIES.map((category) => (
-                                                <div key={category} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`admin-category-${category}`}
-                                                        checked={formData.categories.includes(category)}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) {
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    categories: [...formData.categories, category]
-                                                                });
-                                                            } else {
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    categories: formData.categories.filter(c => c !== category)
-                                                                });
+                                                <div className="flex gap-2 border-b pb-2">
+                                                    <Input
+                                                        placeholder="새 카테고리 입력"
+                                                        value={customCategory}
+                                                        onChange={(e) => setCustomCategory(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && customCategory.trim()) {
+                                                                e.preventDefault();
+                                                                const newCategory = customCategory.trim();
+                                                                if (!formData.categories.includes(newCategory)) {
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        categories: [...formData.categories, newCategory]
+                                                                    });
+                                                                }
+                                                                setCustomCategory("");
                                                             }
                                                         }}
+                                                        className="flex-1"
                                                     />
-                                                    <Label
-                                                        htmlFor={`admin-category-${category}`}
-                                                        className="text-sm cursor-pointer flex-1"
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            const newCategory = customCategory.trim();
+                                                            if (newCategory && !formData.categories.includes(newCategory)) {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    categories: [...formData.categories, newCategory]
+                                                                });
+                                                                setCustomCategory("");
+                                                            }
+                                                        }}
+                                                        disabled={!customCategory.trim()}
                                                     >
-                                                        {category}
-                                                    </Label>
+                                                        추가
+                                                    </Button>
                                                 </div>
+
+                                                <div className="space-y-2">
+                                                    {RESTAURANT_CATEGORIES.map((category) => (
+                                                        <div key={category} className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id={`admin-category-${category}`}
+                                                                checked={formData.categories.includes(category)}
+                                                                onCheckedChange={(checked) => {
+                                                                    if (checked) {
+                                                                        setFormData({
+                                                                            ...formData,
+                                                                            categories: [...formData.categories, category]
+                                                                        });
+                                                                    } else {
+                                                                        setFormData({
+                                                                            ...formData,
+                                                                            categories: formData.categories.filter(c => c !== category)
+                                                                        });
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <Label
+                                                                htmlFor={`admin-category-${category}`}
+                                                                className="flex-1 cursor-pointer text-sm"
+                                                            >
+                                                                {category}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {formData.categories.length > 0 && (
+                                                    <div className="border-t pt-2">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setFormData({ ...formData, categories: [] })}
+                                                            className="w-full"
+                                                        >
+                                                            선택 해제
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                    {formData.categories.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                            {formData.categories.map((category) => (
+                                                <Badge key={category} variant="secondary" className="rounded-full text-xs">
+                                                    {category}
+                                                    <button
+                                                        type="button"
+                                                        aria-label={`${category} 카테고리 제거`}
+                                                        onClick={() => setFormData({
+                                                            ...formData,
+                                                            categories: formData.categories.filter(c => c !== category)
+                                                        })}
+                                                        className="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
                                             ))}
                                         </div>
-                                        {formData.categories.length > 0 && (
-                                            <div className="pt-2 border-t">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setFormData({ ...formData, categories: [] })}
-                                                    className="w-full"
-                                                >
-                                                    선택 해제
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                            {formData.categories.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                    {formData.categories.map((category) => (
-                                        <Badge key={category} variant="secondary" className="text-xs">
-                                            {category}
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    categories: formData.categories.filter(c => c !== category)
-                                                })}
-                                                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 재지오코딩 섹션 */}
-                    <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-                        <div className="space-y-2">
-                            <Label htmlFor="searchAddress">주소 검색 *</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    id="searchAddress"
-                                    value={formData.searchAddress}
-                                    onChange={(e) => setFormData({ ...formData, searchAddress: e.target.value })}
-                                    placeholder="서울시 강남구... or Las Vegas..."
-                                    className="flex-1"
-                                    autoComplete="street-address"
-                                    enterKeyHint="search"
-                                />
-                                <Button
-                                    type="button"
-                                    onClick={handleGeocodeNaver}
-                                    disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
-                                    variant={isGeocodingNaver ? "default" : "outline"}
-                                >
-                                    {isGeocodingNaver ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            검색 중...
-                                        </>
-                                    ) : (
-                                        "네이버 지오코딩"
                                     )}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    onClick={handleGeocodeGoogle}
-                                    disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
-                                    variant={isGeocodingGoogle ? "default" : "outline"}
-                                >
-                                    {isGeocodingGoogle ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            검색 중...
-                                        </>
-                                    ) : (
-                                        "Google 지오코딩"
-                                    )}
-                                </Button>
-                            </div>
-                            {isGeocoded && selectedGeocodingIndex !== null && (
-                                <p className="text-xs text-green-600">✓ 지오코딩 완료</p>
-                            )}
-                        </div>
-
-                        {/* 지오코딩 결과 목록 */}
-                        {geocodingResults.length > 0 && (
-                            <div className="space-y-2">
-                                <Label className="text-sm font-semibold">주소 후보 선택 ({geocodingResults.length}개)</Label>
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                    {geocodingResults.map((result, index) => (
-                                        <Card
-                                            key={index}
-                                            className={`p-3 cursor-pointer transition-all ${selectedGeocodingIndex === index
-                                                ? 'border-primary bg-primary/5'
-                                                : 'hover:border-primary/50'
-                                                }`}
-                                            onClick={() => handleSelectGeocodingResult(index)}
-                                        >
-                                            <div className="space-y-1 text-sm">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="font-medium">도로명: {result.road_address}</p>
-                                                    {selectedGeocodingIndex === index && (
-                                                        <Badge variant="default" className="text-xs">선택됨</Badge>
-                                                    )}
-                                                </div>
-                                                <p className="text-muted-foreground">지번: {result.jibun_address}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    좌표: {result.y}, {result.x}
-                                                </p>
-                                            </div>
-                                        </Card>
-                                    ))}
                                 </div>
                             </div>
-                        )}
+                        ),
+                    })}
 
-                        {/* 선택된 지오코딩 결과 표시 */}
-                        {isGeocoded && selectedGeocodingIndex !== null && (
-                            <div className="space-y-2 text-sm p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                                <p className="font-semibold text-green-700 dark:text-green-300">✓ 선택된 주소</p>
-                                <div className="space-y-1">
-                                    <div>
-                                        <Label className="text-xs text-muted-foreground">도로명 주소</Label>
-                                        <p className="text-sm">{formData.road_address}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-xs text-muted-foreground">지번 주소</Label>
-                                        <p className="text-sm">{formData.jibun_address}</p>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        <div>
-                                            <Label className="text-xs text-muted-foreground">위도</Label>
-                                            <p className="text-sm">{formData.lat}</p>
-                                        </div>
-                                        <div>
-                                            <Label className="text-xs text-muted-foreground">경도</Label>
-                                            <p className="text-sm">{formData.lng}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">전화번호</Label>
-                        <Input
-                            id="phone"
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="02-1234-5678"
-                            autoComplete="tel"
-                            enterKeyHint="next"
-                        />
-                    </div>
-
-                    {/* 유튜브 링크 & 쯔양 리뷰 목록 */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label className="text-base font-semibold">유튜브 링크 & 쯔양 리뷰</Label>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setFormData({
-                                    ...formData,
-                                    youtube_reviews: [...formData.youtube_reviews, {
-                                        id: `new-${Date.now()}`,
-                                        youtube_link: "",
-                                        tzuyang_review: "",
-                                    }]
-                                })}
-                            >
-                                + 추가
-                            </Button>
-                        </div>
-
-                        {formData.youtube_reviews.length === 0 ? (
-                            <div className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
-                                등록된 유튜브 링크가 없습니다. &apos;+ 추가&apos; 버튼을 눌러 추가하세요.
-                            </div>
-                        ) : (
+                    {renderAdminRestaurantSection({
+                        title: "2. 주소와 좌표",
+                        description: "주소를 검색하고 후보 중 하나를 선택하면 지도 좌표와 도로명/지번 주소가 함께 갱신됩니다.",
+                        badge: isGeocoded ? "확인됨" : "검색 필요",
+                        children: (
                             <div className="space-y-3">
-                                {formData.youtube_reviews.map((review, index) => (
-                                    <Card key={review.id} className="p-4 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-sm font-medium">링크 #{index + 1}</Label>
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => {
-                                                    const reviewToDelete = formData.youtube_reviews[index];
-                                                    // 기존 레코드(new-로 시작하지 않는 ID)면 삭제 목록에 추가
-                                                    if (!reviewToDelete.id.startsWith('new-')) {
-                                                        setDeletedReviewIds([...deletedReviewIds, reviewToDelete.id]);
-                                                    }
-                                                    // UI에서 제거
-                                                    setFormData({
-                                                        ...formData,
-                                                        youtube_reviews: formData.youtube_reviews.filter((_, i) => i !== index)
-                                                    });
-                                                }}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="searchAddress">주소 검색 *</Label>
+                                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                        <Input
+                                            id="searchAddress"
+                                            value={formData.searchAddress}
+                                            onChange={(e) => setFormData({ ...formData, searchAddress: e.target.value })}
+                                            placeholder="서울시 강남구... or Las Vegas..."
+                                            className="flex-1"
+                                            autoComplete="street-address"
+                                            enterKeyHint="search"
+                                        />
+                                        <Button
+                                            type="button"
+                                            onClick={handleGeocodeNaver}
+                                            disabled={isGeocodingNaver || !formData.searchAddress.trim() || !formData.name.trim()}
+                                            variant={isGeocodingNaver ? "default" : "outline"}
+                                            className="rounded-xl"
+                                        >
+                                            {isGeocodingNaver ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    검색 중...
+                                                </>
+                                            ) : (
+                                                "네이버 주소 검색"
+                                            )}
+                                        </Button>
+                                    </div>
+                                    {isGeocoded && selectedGeocodingIndex !== null && (
+                                        <p className="text-xs font-medium text-green-600">✓ 주소와 좌표를 선택했습니다</p>
+                                    )}
+                                </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor={`youtube_link_${index}`} className="text-xs">유튜브 링크</Label>
-                                            <Input
-                                                id={`youtube_link_${index}`}
-                                                type="url"
-                                                value={review.youtube_link}
-                                                onChange={(e) => {
-                                                    const newReviews = [...formData.youtube_reviews];
-                                                    newReviews[index].youtube_link = e.target.value;
-                                                    setFormData({ ...formData, youtube_reviews: newReviews });
-                                                }}
-                                                placeholder="https://youtube.com/watch?v=..."
-                                                autoComplete="url"
-                                                enterKeyHint="next"
-                                            />
+                                {geocodingResults.length > 0 && (
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-semibold">주소 후보 선택 ({geocodingResults.length}개)</Label>
+                                        <div className="space-y-2 overflow-y-auto rounded-xl border bg-muted/20 p-2 sm:max-h-64">
+                                            {geocodingResults.map((result, index) => (
+                                                <Card
+                                                    key={index}
+                                                    className={cn(
+                                                        "cursor-pointer space-y-1 rounded-xl p-3 text-sm transition-all",
+                                                        selectedGeocodingIndex === index
+                                                            ? 'border-primary bg-primary/5 shadow-sm'
+                                                            : 'hover:border-primary/50',
+                                                    )}
+                                                    onClick={() => handleSelectGeocodingResult(index)}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="font-medium">도로명: {result.road_address}</p>
+                                                        {selectedGeocodingIndex === index && (
+                                                            <Badge variant="default" className="shrink-0 text-xs">선택됨</Badge>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-muted-foreground">지번: {result.jibun_address}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        좌표: {result.y}, {result.x}
+                                                    </p>
+                                                </Card>
+                                            ))}
                                         </div>
+                                    </div>
+                                )}
 
+                                {isGeocoded && selectedGeocodingIndex !== null && (
+                                    <div className="space-y-2 rounded-xl border border-green-200 bg-green-50 p-3 text-sm dark:border-green-800 dark:bg-green-950/20">
+                                        <p className="font-semibold text-green-700 dark:text-green-300">✓ 선택된 주소</p>
                                         <div className="space-y-2">
-                                            <Label htmlFor={`tzuyang_review_${index}`} className="text-xs">쯔양 리뷰</Label>
-                                            <Textarea
-                                                id={`tzuyang_review_${index}`}
-                                                value={review.tzuyang_review}
-                                                onChange={(e) => {
-                                                    const newReviews = [...formData.youtube_reviews];
-                                                    newReviews[index].tzuyang_review = e.target.value;
-                                                    setFormData({ ...formData, youtube_reviews: newReviews });
-                                                }}
-                                                placeholder="쯔양이 어떤 리뷰를 남겼는지 입력해주세요..."
-                                                rows={3}
-                                            />
+                                            <div>
+                                                <Label className="text-xs text-muted-foreground">도로명 주소</Label>
+                                                <p className="break-words text-sm">{formData.road_address}</p>
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs text-muted-foreground">지번 주소</Label>
+                                                <p className="break-words text-sm">{formData.jibun_address}</p>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                <div>
+                                                    <Label className="text-xs text-muted-foreground">위도</Label>
+                                                    <p className="text-sm">{formData.lat}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs text-muted-foreground">경도</Label>
+                                                    <p className="text-sm">{formData.lng}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </Card>
-                                ))}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                    </div>
+                        ),
+                    })}
 
-                    <DialogFooter className={ADMIN_MODAL_FOOTER_DIVIDER}>
+                    {renderAdminRestaurantSection({
+                        title: "3. 유튜브 링크 & 쯔양 리뷰",
+                        description: "병합된 영상/리뷰를 한 줄씩 확인하고, 빠진 영상은 추가합니다.",
+                        badge: `${formData.youtube_reviews.length}개`,
+                        children: (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <Label className="text-sm font-semibold">영상 리뷰 목록</Label>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="rounded-full"
+                                        onClick={() => setFormData({
+                                            ...formData,
+                                            youtube_reviews: [...formData.youtube_reviews, {
+                                                id: `new-${Date.now()}`,
+                                                youtube_link: "",
+                                                tzuyang_review: "",
+                                            }]
+                                        })}
+                                    >
+                                        + 추가
+                                    </Button>
+                                </div>
+
+                                {formData.youtube_reviews.length === 0 ? (
+                                    <div className="rounded-xl border border-dashed py-6 text-center text-sm text-muted-foreground">
+                                        등록된 유튜브 링크가 없습니다. &apos;+ 추가&apos; 버튼을 눌러 추가하세요.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {formData.youtube_reviews.map((review, index) => (
+                                            <Card key={review.id} className="space-y-3 rounded-2xl p-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <Label className="text-sm font-medium">링크 #{index + 1}</Label>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        aria-label={`링크 ${index + 1} 삭제`}
+                                                        onClick={() => {
+                                                            const reviewToDelete = formData.youtube_reviews[index];
+                                                            if (!reviewToDelete.id.startsWith('new-')) {
+                                                                setDeletedReviewIds([...deletedReviewIds, reviewToDelete.id]);
+                                                            }
+                                                            setFormData({
+                                                                ...formData,
+                                                                youtube_reviews: formData.youtube_reviews.filter((_, i) => i !== index)
+                                                            });
+                                                        }}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`youtube_link_${index}`} className="text-xs">유튜브 링크</Label>
+                                                    <Input
+                                                        id={`youtube_link_${index}`}
+                                                        type="url"
+                                                        value={review.youtube_link}
+                                                        onChange={(e) => {
+                                                            const newReviews = [...formData.youtube_reviews];
+                                                            newReviews[index].youtube_link = e.target.value;
+                                                            setFormData({ ...formData, youtube_reviews: newReviews });
+                                                        }}
+                                                        placeholder="https://youtube.com/watch?v=..."
+                                                        autoComplete="url"
+                                                        enterKeyHint="next"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`tzuyang_review_${index}`} className="text-xs">쯔양 리뷰</Label>
+                                                    <Textarea
+                                                        id={`tzuyang_review_${index}`}
+                                                        value={review.tzuyang_review}
+                                                        onChange={(e) => {
+                                                            const newReviews = [...formData.youtube_reviews];
+                                                            newReviews[index].tzuyang_review = e.target.value;
+                                                            setFormData({ ...formData, youtube_reviews: newReviews });
+                                                        }}
+                                                        placeholder="쯔양이 어떤 리뷰를 남겼는지 입력해주세요..."
+                                                        rows={3}
+                                                    />
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ),
+                    })}
+                </div>
+            </div>
+
+            <DialogFooter className={adminRestaurantFooterClass}>
                         {restaurant && (
                             <Button
                                 type="button"
@@ -1175,43 +1387,105 @@ export function AdminRestaurantModal({
                             )}
                         </Button>
                     </DialogFooter>
-                </form>
+        </form>
+    );
+
+    const deleteConfirmDialog = (
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>맛집 삭제 확인</AlertDialogTitle>
+                    <AlertDialogDescription className={ADMIN_MODAL_SCROLL_BODY}>
+                        정말로 이 맛집을 삭제하시겠습니까?
+                        <br />
+                        <br />
+                        <span className="font-semibold text-destructive">
+                            지도에서는 즉시 숨겨지며, 필요 시 데이터베이스에서 상태를 되돌릴 수 있습니다.
+                        </span>
+                        {restaurant && (
+                            <div className="mt-4 p-3 bg-muted rounded-md">
+                                <p className="font-medium">{restaurant.name}</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {restaurant.jibun_address || restaurant.road_address}
+                                </p>
+                            </div>
+                        )}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
+                    <AlertDialogCancel className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDelete}
+                        className={`${ADMIN_MODAL_ACTION} bg-destructive hover:bg-destructive/90`}
+                    >
+                        삭제
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+
+    if (isMobileOrTablet) {
+        return (
+            <>
+                <BottomSheet
+                    isOpen={isOpen}
+                    onClose={onClose}
+                    {...MOBILE_FULL_FORM_SHEET}
+                    layoutSource="admin-restaurant-modal"
+                    className="z-[120]"
+                    ariaLabelledBy={adminRestaurantTitleId}
+                    ariaDescribedBy={adminRestaurantDescriptionId}
+                    focusTrapAllowSelectors={[]}
+                >
+                    {adminRestaurantForm}
+                </BottomSheet>
+                {deleteConfirmDialog}
+            </>
+        );
+    }
+
+    if (shouldRenderMapPanel) {
+        if (!isOpen) return null;
+
+        return (
+            <>
+                <section
+                    ref={desktopAdminRestaurantPanelRef}
+                    className="fixed bottom-24 right-6 top-6 z-[95] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                    style={{ transform: `translate3d(${desktopAdminRestaurantPanelPosition.x}px, ${desktopAdminRestaurantPanelPosition.y}px, 0)` }}
+                    data-desktop-map-admin-restaurant-panel="true"
+                    role="dialog"
+                    tabIndex={-1}
+                    aria-labelledby={adminRestaurantTitleId}
+                    aria-describedby={adminRestaurantDescriptionId}
+                    onKeyDown={handleDesktopAdminRestaurantPanelKeyDown}
+                >
+                    {adminRestaurantForm}
+                </section>
+                {deleteConfirmDialog}
+            </>
+        );
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className={ADMIN_MODAL_CONTENT_MD_FLEX}>
+                <DialogHeader>
+                    <DialogTitle className="text-2xl">
+                        {adminRestaurantTitle}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {adminRestaurantDescription}
+                    </DialogDescription>
+                </DialogHeader>
+
+                {adminRestaurantForm}
             </DialogContent>
 
-            {/* 삭제 확인 모달 */}
-            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogContent className={ADMIN_MODAL_CONTENT_SM}>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>맛집 삭제 확인</AlertDialogTitle>
-                        <AlertDialogDescription className={ADMIN_MODAL_SCROLL_BODY}>
-                            정말로 이 맛집을 삭제하시겠습니까?
-                            <br />
-                            <br />
-                            <span className="font-semibold text-destructive">
-                                삭제된 데이터는 복구할 수 없습니다.
-                            </span>
-                            {restaurant && (
-                                <div className="mt-4 p-3 bg-muted rounded-md">
-                                    <p className="font-medium">{restaurant.name}</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        {restaurant.jibun_address || restaurant.road_address}
-                                    </p>
-                                </div>
-                            )}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className={ADMIN_MODAL_FOOTER}>
-                        <AlertDialogCancel className={ADMIN_MODAL_ACTION}>취소</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDelete}
-                            className={`${ADMIN_MODAL_ACTION} bg-destructive hover:bg-destructive/90`}
-                        >
-                            삭제
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {deleteConfirmDialog}
         </Dialog>
     );
+
 }
 
