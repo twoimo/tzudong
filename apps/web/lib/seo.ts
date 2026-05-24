@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.tzudong.app').replace(/\/$/, '');
-export const SITE_NAME = '쯔동여지도';
+import { siteConfig } from '@/lib/site-config';
+
+export const SITE_URL = siteConfig.productionUrl;
+export const SITE_NAME = siteConfig.name;
 export const DEFAULT_TITLE = '쯔동여지도 - 쯔양이 다녀간 맛집 지도';
 export const DEFAULT_DESCRIPTION =
     '쯔양 유튜브에 나온 국내·해외 맛집을 지도에서 찾고, 영상·리뷰·도장 깨기까지 확인하세요.';
@@ -15,6 +17,8 @@ export const PUBLIC_ROUTES = [
     { path: '/stamp', changeFrequency: 'weekly', priority: 0.6 },
     { path: '/leaderboard', changeFrequency: 'weekly', priority: 0.6 },
     { path: '/insights', changeFrequency: 'monthly', priority: 0.5 },
+    { path: '/privacy', changeFrequency: 'yearly', priority: 0.3 },
+    { path: '/data-deletion', changeFrequency: 'yearly', priority: 0.3 },
 ] as const;
 
 export const canonicalUrl = (path = '/') => `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;

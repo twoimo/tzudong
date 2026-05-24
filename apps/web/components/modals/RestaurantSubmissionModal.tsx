@@ -223,6 +223,9 @@ export default function RestaurantSubmissionModal({
                     youtube_link: draft.youtube_link,
                     description: draft.description,
                 });
+                if (draft.currentStep && RESTAURANT_SUBMISSION_STEPS.some((step) => step.id === draft.currentStep)) {
+                    setCurrentStep(draft.currentStep);
+                }
                 setLastSavedAt(new Date(draft.savedAt));
 
                 toast.success("임시 저장된 내용을 불러왔습니다", {
@@ -254,6 +257,7 @@ export default function RestaurantSubmissionModal({
                 categories: formData.categories,
                 youtube_link: formData.youtube_link,
                 description: formData.description,
+                currentStep,
             });
             setLastSavedAt(new Date());
         } catch (error) {
@@ -261,7 +265,7 @@ export default function RestaurantSubmissionModal({
         } finally {
             setIsSaving(false);
         }
-    }, [user?.id, submissionMode, formData]);
+    }, [user?.id, submissionMode, formData, currentStep]);
 
     // 임시 저장 데이터 삭제
     const clearDraft = useCallback(async () => {
@@ -284,7 +288,7 @@ export default function RestaurantSubmissionModal({
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [isOpen, formData, autoSave]);
+    }, [isOpen, formData, currentStep, autoSave]);
 
     // 모달이 열릴 때 임시 저장된 데이터 확인
     useEffect(() => {
