@@ -189,9 +189,10 @@ describe("header action loading source contract", () => {
     expect(headerSource).not.toContain(
       "<DropdownMenuItem onClick={handleAnnouncementListClick}",
     );
-    expect(headerSource).toContain(
+    expect(headerSource).not.toContain(
       'aria-label="관리자 콘솔에서 공지사항 관리"',
     );
+    expect(headerSource).toContain('HeaderAnnouncementPanel');
   });
 
   test("bookmark dropdown keeps its own list skeleton while bookmark data loads", () => {
