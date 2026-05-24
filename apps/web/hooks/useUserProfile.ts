@@ -31,6 +31,12 @@ export interface UserProfile {
     tier: TierInfo;
 }
 
+export interface UserProfileIdentity {
+    userId: string;
+    nickname: string;
+    avatarUrl?: string;
+}
+
 /** 사용자 리뷰 정보 (ReviewCard용) */
 export interface UserReview {
     id: string;
@@ -209,6 +215,38 @@ interface ReviewLikeRow {
 // ============================================================================
 // Hooks
 // ============================================================================
+
+/**
+ * 상단 사용자 메뉴용 최소 프로필 조회
+ * - 리뷰/좋아요 집계를 가져오지 않아 데스크탑 공통 액션 초기 비용을 줄입니다.
+ */
+export function useUserProfileIdentity(userId: string) {
+    return useQuery({
+        queryKey: ['user-profile-identity', userId],
+        queryFn: async (): Promise<UserProfileIdentity | null> => {
+            if (!userId) return null;
+
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('user_id, nickname, avatar_url')
+                .eq('user_id', userId)
+                .single();
+
+            if (error || !profile) return null;
+
+            const typedProfile = profile as ProfileRow;
+
+            return {
+                userId: typedProfile.user_id,
+                nickname: typedProfile.nickname,
+                avatarUrl: typedProfile.avatar_url || undefined,
+            };
+        },
+        enabled: !!userId,
+        staleTime: QUERY_STALE_TIME,
+        gcTime: QUERY_GC_TIME,
+    });
+}
 
 /**
  * 특정 사용자의 프로필 정보 조회
