@@ -1419,6 +1419,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 if (draft.foodPhotos && draft.foodPhotos.length > 0) {
                     setFoodPhotos(draft.foodPhotos);
                 }
+                if (draft.currentStep && REVIEW_FORM_STEPS.some((step) => step.id === draft.currentStep)) {
+                    setCurrentStep(draft.currentStep);
+                }
 
                 setLastSavedAt(new Date(draft.savedAt));
             }
@@ -1450,6 +1453,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 content,
                 verificationPhoto,
                 foodPhotos,
+                currentStep,
             });
             setLastSavedAt(new Date());
         } catch (error) {
@@ -1457,7 +1461,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         } finally {
             setIsSaving(false);
         }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep]);
 
     // 임시 저장 데이터 삭제 (IndexedDB)
     const clearDraft = useCallback(async () => {
@@ -1483,7 +1487,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [isOpen, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, autoSave]);
+    }, [isOpen, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, currentStep, autoSave]);
 
     // SWR을 사용한 쿼터 조회 (자동 캐싱 및 중복 요청 제거)
     const { data: quota, mutate: mutateQuota } = useSWR(

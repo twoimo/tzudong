@@ -5,6 +5,7 @@ export interface SubmissionDraft {
     id: string; // userId_submissionMode
     userId: string;
     submissionMode: 'new' | 'request';
+    currentStep?: 1 | 2 | 3;
     restaurant_name: string;
     address: string;
     phone: string;

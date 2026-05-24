@@ -60,9 +60,9 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain("관리자 사이드바 펼치기");
     expect(consoleSource).toContain("관리자 사이드바 접기");
     expect(consoleSource).toContain('aria-controls="admin-console-canvas"');
-    expect(consoleSource).toContain("AdminRestaurantEvaluationModule");
-    expect(consoleSource).toContain("AdminSubmissionEvaluationModule");
-    expect(consoleSource).toContain("AdminReviewEvaluationModule");
+    expect(consoleSource).toContain("AdminEvaluationModule");
+    expect(consoleSource).toContain('initialView="submissions"');
+    expect(consoleSource).toContain('initialSubmissionTab="reviews"');
     expect(consoleSource).toContain("AdminBannerModule");
     expect(consoleSource).toContain("AdminAnnouncementModule");
     expect(consoleSource).toContain('id: "announcements"');
@@ -693,8 +693,8 @@ describe("mobile and desktop parity source contracts", () => {
     expect(myPageProfileSource).toContain("나의 북마크 내역");
     expect(myPageProfileSource).toContain("나의 리뷰 내역");
     expect(myPageProfileSource).toContain("신규 맛집 제보");
-    expect(myPageProfileSource).toContain("맛집 수정 요청");
-    expect(myPageProfileSource).toContain("쯔양 맛집 제보");
+    expect(myPageProfileSource).toContain("수정 요청");
+    expect(myPageProfileSource).toContain("쯔양 제보");
     expect(myPageProfileSource).toContain(
       "data-mypage-mobile-action-grid={section.id}",
     );
@@ -767,19 +767,19 @@ describe("mobile and desktop parity source contracts", () => {
       "rounded-xl border border-border bg-background shadow-sm",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "router.replace(`/?panel=${panel}`",
+      "router.push(`/?panel=${panel}`",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'source: "desktop-left-panel"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'router.replace("/?panel=bookmarks", { scroll: false })',
+      'router.push("/?panel=bookmarks", { scroll: false })',
     );
     expect(homeDesktopControlPanelSource).toContain(
       '{ id: "notifications", label: "알림", icon: Bell }',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'router.replace("/?panel=notifications", { scroll: false })',
+      'router.push("/?panel=notifications", { scroll: false })',
     );
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-panel-view="settings"',
