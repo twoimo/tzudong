@@ -26,7 +26,7 @@ import { Announcement } from "@/types/announcement";
 import type { Notification } from "@/types/notification";
 import { useHydration } from "@/hooks/useHydration";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
-import { useActiveAnnouncements, useBannerAnnouncements } from "@/hooks/use-banner-announcements";
+import { useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
 import { siteConfig } from "@/lib/site-config";
@@ -68,6 +68,20 @@ const loadRankingWidget = async () => {
   return mod.RankingWidget as ComponentType<HeaderDeferredComponentProps>;
 };
 
+type HeaderAnnouncementPanelProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  isAdmin?: boolean;
+  initialAnnouncement?: Announcement | null;
+  isBottomSheet?: boolean;
+  adminActionsMode?: "inline";
+};
+
+const loadAnnouncementPanel = async () => {
+  const mod = await import("@/components/announcement/AnnouncementPanel");
+  return mod.default as ComponentType<HeaderAnnouncementPanelProps>;
+};
+
 const BANNER_ROTATION_INTERVAL = 5000;
 const HEADER_BANNER_FRAME_CLASS = "flex items-center gap-2 px-2 py-0.5 md:px-3 md:py-1 rounded-md transition-all duration-300 relative z-10 flex-1 min-w-0";
 
@@ -86,13 +100,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   // 공지사항 바텀시트 상태
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
-  const [announcementViewMode, setAnnouncementViewMode] = useState<'list' | 'detail'>('list');
-  const [announcementPage, setAnnouncementPage] = useState(1);
-  const ANNOUNCEMENTS_PER_PAGE = 3;
-
   const { data: bannerAnnouncements = [], isLoading: isBannerAnnouncementsLoading } = useBannerAnnouncements();
-  const { data: activeAnnouncementsData, isLoading: isActiveAnnouncementsLoading } = useActiveAnnouncements(isAnnouncementSheetOpen);
-  const activeAnnouncements = activeAnnouncementsData ?? bannerAnnouncements;
 
   // 사업자 정보 펼치기 상태
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
@@ -111,6 +119,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const shouldLoadAuthenticatedHeaderWidgets = shouldShowHeaderIcons && !isMobileBannerOnlyHeader;
   const RankingWidget = useDeferredComponent<HeaderDeferredComponentProps>(shouldLoadAuthenticatedHeaderWidgets, loadRankingWidget);
   const HeaderBookmarkMenuButton = useDeferredComponent<HeaderDeferredComponentProps>(shouldShowHeaderIcons, loadHeaderBookmarkMenuButton);
+
+  const HeaderAnnouncementPanel = useDeferredComponent<HeaderAnnouncementPanelProps>(isAnnouncementSheetOpen, loadAnnouncementPanel);
 
   const handleInsightMenuClick = useCallback(() => {
     if (isLoggedIn) {
@@ -179,9 +189,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         onAnnouncementClick(currentAnnouncement);
         return;
       }
-      setAnnouncementPage(1);
       setSelectedAnnouncement(currentAnnouncement);
-      setAnnouncementViewMode('detail');
       setIsAnnouncementSheetOpen(true);
     }
   }, [bannerAnnouncements, currentBannerIndex, isMobileOrTablet, onAnnouncementClick]);
@@ -635,7 +643,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {isHydrated && createPortal(
         <BottomSheet
           isOpen={isAnnouncementSheetOpen}
-          onClose={() => setIsAnnouncementSheetOpen(false)}
+          onClose={() => {
+            setIsAnnouncementSheetOpen(false);
+            setSelectedAnnouncement(null);
+          }}
           defaultHeight={50}
           minHeight={25}
           maxHeight={100}
@@ -645,143 +656,23 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           showBackdrop={false}
           closeOnOutsidePointerDown
           layoutSource="header-announcement-bottom-sheet"
-          className="z-[95]"
+          className="z-[95] p-0"
         >
-          <div className="h-full flex flex-col bg-background font-serif">
-            <div className="flex-shrink-0 border-b border-border px-4 py-3">
-              <div className="flex items-center gap-2">
-                {announcementViewMode === 'detail' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    aria-label="공지사항 목록으로 돌아가기"
-                    onClick={() => setAnnouncementViewMode('list')}
-                    className="p-0 h-auto hover:bg-transparent"
-                  >
-                    <ChevronLeft className="h-5 w-5 text-foreground" />
-                  </Button>
-                )}
-                <div className="flex-1 min-w-0 text-foreground flex items-center gap-2">
-                  <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
-                  <h2 className="font-semibold truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</h2>
-                  {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
-                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap flex-shrink-0">
-                      · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
-                        addSuffix: true,
-                        locale: ko
-                      })}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 overflow-hidden px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
-              {announcementViewMode === 'list' ? (
-                <div className="h-full flex flex-col">
-                  <ScrollArea className="flex-1">
-                    <div className="space-y-3">
-                      {(() => {
-                        const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
-                        const endIdx = startIdx + ANNOUNCEMENTS_PER_PAGE;
-                        const paginatedAnnouncements = activeAnnouncements.slice(startIdx, endIdx);
-
-                        if (activeAnnouncements.length === 0) {
-                          return (
-                            <div className="text-center py-12 text-muted-foreground">
-                              <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                              <p>현재 공지사항이 없습니다</p>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <>
-                            {paginatedAnnouncements.map((announcement) => (
-                              <button
-                                key={announcement.id}
-                                type="button"
-                                className="p-4 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors w-full text-left"
-                                aria-label={`${announcement.title} 공지사항 상세 보기`}
-                                onClick={() => {
-                                  setSelectedAnnouncement(announcement);
-                                  setAnnouncementViewMode('detail');
-                                }}
-                              >
-                                <h4 className="font-semibold text-foreground mb-1">{announcement.title}</h4>
-                                <p className="text-sm text-foreground/80 line-clamp-2 mb-2">{announcement.content}</p>
-                                <div className="text-xs text-muted-foreground">
-                                  {formatDistanceToNow(new Date(announcement.createdAt), {
-                                    addSuffix: true,
-                                    locale: ko
-                                  })}
-                                </div>
-                              </button>
-                            ))}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </ScrollArea>
-
-                  {/* 페이지네이션 */}
-                  {activeAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
-                    <div className="flex items-center justify-center gap-2 pt-3 border-t border-border">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        aria-label="이전 페이지로 이동"
-                        onClick={() => setAnnouncementPage(p => Math.max(1, p - 1))}
-                        disabled={announcementPage === 1}
-                        className="h-8"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span className="text-sm text-foreground/80 px-2">
-                        {announcementPage} / {Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        aria-label="다음 페이지로 이동"
-                        onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
-                        disabled={announcementPage === Math.ceil(activeAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
-                        className="h-8"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="h-full flex flex-col">
-                  <ScrollArea className="flex-1">
-                    <div className="text-foreground text-sm whitespace-pre-wrap leading-relaxed">
-                      {selectedAnnouncement?.content}
-                    </div>
-                  </ScrollArea>
-
-                  {/* 관리자 계정은 헤더에서 읽고, 운영 변경은 관리자 콘솔에서 처리 */}
-                  {isAdmin && selectedAnnouncement && (
-                    <div className="flex-shrink-0 pt-4 border-t border-border mt-4 pb-[calc(env(safe-area-inset-bottom)+8px)]">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        type="button"
-                        aria-label="관리자 콘솔에서 공지사항 관리"
-                        onClick={() => router.push('/admin')}
-                        className="min-h-10 w-full justify-between rounded-xl text-xs"
-                      >
-                        관리자 콘솔 열기
-                        <span aria-hidden="true">→</span>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+          <div className="h-full min-h-0 overflow-hidden bg-background font-serif">
+            {HeaderAnnouncementPanel && (
+              <HeaderAnnouncementPanel
+                key={selectedAnnouncement?.id ?? 'announcement-list'}
+                isOpen={isAnnouncementSheetOpen}
+                onClose={() => {
+                  setIsAnnouncementSheetOpen(false);
+                  setSelectedAnnouncement(null);
+                }}
+                isAdmin={isAdmin}
+                initialAnnouncement={selectedAnnouncement}
+                isBottomSheet
+                adminActionsMode="inline"
+              />
+            )}
           </div>
         </BottomSheet>,
         document.body

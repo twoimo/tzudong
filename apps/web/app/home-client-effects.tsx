@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { flushSync } from 'react-dom';
 import type { MutableRefObject } from 'react';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
@@ -94,6 +95,7 @@ export default function HomeClientEffects({
         if (panelParam === 'announcement') {
             const announcementKey = announcementId ? `detail:${announcementId}` : 'list';
             registeredAnnouncementKey = announcementKey;
+            openPanelRef.current('announcement');
 
             if (lastAnnouncementRequestKeyRef.current !== announcementKey) {
                 lastAnnouncementRequestKeyRef.current = announcementKey;
@@ -116,16 +118,10 @@ export default function HomeClientEffects({
                     void request.promise.then((announcement) => {
                         if (isCancelled || lastAnnouncementRequestKeyRef.current !== announcementKey || !announcement) return;
 
-                        schedule(() => {
-                            setSelectedAnnouncement(announcement);
-                            openPanelRef.current('announcement');
-                        }, 500);
+                        setSelectedAnnouncement(announcement);
                     });
                 } else {
-                    schedule(() => {
-                        setSelectedAnnouncement(null);
-                        openPanelRef.current('announcement');
-                    }, 350);
+                    setSelectedAnnouncement(null);
                 }
             }
         } else {
@@ -311,7 +307,10 @@ export default function HomeClientEffects({
         };
 
         const handleAdminAnnouncementsOpen = () => {
-            setSelectedAnnouncement(null);
+            flushSync(() => {
+                setSelectedAnnouncement(null);
+                openPanelRef.current('announcement');
+            });
             router.push('/?panel=announcement', { scroll: false });
         };
 
@@ -321,7 +320,10 @@ export default function HomeClientEffects({
             if (activeRightPanel === 'announcement' && selectedAnnouncement?.id === announcement.id) {
                 togglePanelCollapse();
             } else {
-                setSelectedAnnouncement(announcement);
+                flushSync(() => {
+                    setSelectedAnnouncement(announcement);
+                    openPanelRef.current('announcement');
+                });
                 router.push(`/?panel=announcement&announcementId=${encodeURIComponent(announcement.id)}`, { scroll: false });
             }
         };

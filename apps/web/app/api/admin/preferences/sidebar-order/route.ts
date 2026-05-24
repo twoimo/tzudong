@@ -12,7 +12,6 @@ const ADMIN_SIDEBAR_ITEM_IDS = [
   'restaurants',
   'submissions',
   'reviews',
-  'announcements',
   'storyboard',
   'banners',
   'users',
@@ -38,7 +37,7 @@ const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
   items: {
     홈: ['overview'],
     검수: ['restaurants', 'submissions', 'reviews'],
-    운영: ['announcements', 'storyboard', 'banners', 'users', 'insights', 'audit'],
+    운영: ['storyboard', 'banners', 'users', 'insights', 'audit'],
     보조: ['llm'],
   },
 };
