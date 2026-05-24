@@ -325,9 +325,13 @@ div[style*="z-index"]>div>.custom-marker {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-[data-admin-console-content]:focus,
-[data-admin-console-content]:focus-visible {
+[data-admin-console-content]:focus {
   outline: none;
+}
+
+[data-admin-console-content]:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 4px;
 }
 
 @media (min-width: 768px) {

@@ -416,6 +416,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "[data-admin-console-content]:focus-visible",
     );
     expect(appGlobalsSource).toContain(
+      "outline: 2px solid hsl(var(--primary));",
+    );
+    expect(appGlobalsSource).toContain(
       "grid-template-rows: auto minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain(
