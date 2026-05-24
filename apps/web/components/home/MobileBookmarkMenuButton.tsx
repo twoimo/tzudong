@@ -17,7 +17,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useBookmarks } from '@/hooks/use-bookmarks';
+import { useBookmarks, useUserBookmarkCount } from '@/hooks/use-bookmarks';
 import { cn } from '@/lib/utils';
 
 interface MobileBookmarkMenuButtonProps {
@@ -34,6 +34,8 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false, op
     const isOpen = open ?? uncontrolledOpen;
     const handleOpenChange = onOpenChange ?? setUncontrolledOpen;
     const { data: bookmarksData = [], isLoading: isBookmarksLoading, isError: isBookmarksError } = useBookmarks({ enabled: isOpen });
+    const { data: bookmarkCount } = useUserBookmarkCount();
+    const visibleBookmarkCount = bookmarkCount ?? bookmarksData.length;
 
     return (
         <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
@@ -42,25 +44,28 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false, op
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        'relative h-9 w-9 rounded-full border border-border bg-background',
-                        'hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
+                        'relative h-9 w-9 rounded-full border border-border bg-background !text-primary',
+                        'hover:border-primary/40 hover:bg-primary/10 hover:!text-primary',
+                        'data-[state=open]:border-primary/50 data-[state=open]:bg-primary/10 data-[state=open]:!text-primary',
+                        '[&_svg]:!text-primary',
+                        'focus-visible:ring-2 focus-visible:ring-primary touch-manipulation'
                     )}
-                    aria-label={bookmarksData.length > 0 ? `북마크, 저장한 맛집 ${bookmarksData.length}개` : "북마크"}
+                    aria-label={visibleBookmarkCount > 0 ? `북마크, 저장한 맛집 ${visibleBookmarkCount}개` : "북마크"}
                 >
-                    <Bookmark className="h-[18px] w-[18px]" aria-hidden="true" />
-                    {!isBookmarksLoading && bookmarksData.length > 0 && (
+                    <Bookmark className="h-[18px] w-[18px] !text-primary" aria-hidden="true" />
+                    {visibleBookmarkCount > 0 && (
                         <Badge
                             variant="secondary"
                             aria-hidden="true"
-                            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground"
+                            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm"
                         >
-                            {bookmarksData.length > 99 ? '99+' : bookmarksData.length}
+                            {visibleBookmarkCount > 99 ? '99+' : visibleBookmarkCount}
                         </Badge>
                     )}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[110]">
-                <DropdownMenuLabel className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2.5 text-foreground">
+                <DropdownMenuLabel className="flex items-start justify-between gap-3 px-1 py-1 text-foreground">
                     <div className="min-w-0">
                         <span className="block font-semibold">북마크</span>
                         <span className="block text-xs font-normal text-muted-foreground">저장한 맛집 {isBookmarksLoading ? '확인 중' : `${bookmarksData.length}개`}</span>
@@ -71,7 +76,7 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false, op
                         type="button"
                         aria-label="북마크 전체보기 페이지로 이동"
                         onClick={() => router.push('/mypage/bookmarks')}
-                        className="h-8 shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                        className="h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                     >
                         전체보기
                     </Button>
