@@ -60,6 +60,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          "var(--font-noto-serif-kr)",
           '"Noto Serif KR"',
           '"Apple SD Gothic Neo"',
           '"Malgun Gothic"',
@@ -68,6 +69,7 @@ const config: Config = {
           "serif",
         ],
         serif: [
+          "var(--font-noto-serif-kr)",
           '"Noto Serif KR"',
           '"Apple SD Gothic Neo"',
           '"Malgun Gothic"',
@@ -77,6 +79,7 @@ const config: Config = {
         ],
         display: [
           '"ChosunCentennial"',
+          "var(--font-noto-serif-kr)",
           '"Noto Serif KR"',
           '"Apple SD Gothic Neo"',
           '"Malgun Gothic"',
