@@ -136,11 +136,14 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).toContain('data-desktop-map-business-info="true"');
     expect(userMenuSource).toContain('aria-label="사업자 정보 펼치기/접기"');
     expect(userMenuSource).toContain("aria-expanded={isBusinessInfoExpanded}");
-    expect(userMenuSource).toContain("v2.0.0 © 타이니번");
-    expect(userMenuSource).toContain("타이니번 데이터랩");
-    expect(userMenuSource).toContain("대표: 최연우");
-    expect(userMenuSource).toContain("사업자: 601-09-04613");
-    expect(userMenuSource).toContain("이메일: cs@tzudong.app");
+    const siteConfigSource = source("lib/site-config.ts");
+    expect(userMenuSource).toContain("siteConfig.operator.copyrightLabel");
+    expect(userMenuSource).toContain("siteConfig.operator.companyName");
+    expect(userMenuSource).toContain("siteConfig.operator.representative");
+    expect(userMenuSource).toContain("siteConfig.operator.businessRegistrationNumber");
+    expect(userMenuSource).toContain("siteConfig.contact.email");
+    expect(siteConfigSource).toContain("NEXT_PUBLIC_SUPPORT_EMAIL");
+    expect(siteConfigSource).toContain("cs@tzudong.app");
     expect(userMenuSource).toContain("<ChevronDown");
     expect(userMenuSource).toContain("<ChevronUp");
     expect(userMenuSource).toContain(
