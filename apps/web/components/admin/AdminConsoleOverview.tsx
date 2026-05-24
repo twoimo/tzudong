@@ -1544,10 +1544,7 @@ export function AdminConsoleOverview() {
       <div
         id="overview"
         className={cn(
-          "grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden md:grid-rows-1",
-          isSidebarCollapsed
-            ? "md:grid-cols-[4.5rem_minmax(0,1fr)]"
-            : "md:grid-cols-[16rem_minmax(0,1fr)] lg:grid-cols-[17rem_minmax(0,1fr)] xl:grid-cols-[18rem_minmax(0,1fr)]",
+          "grid h-full min-h-0 w-full gap-0 overflow-hidden",
         )}
         data-admin-console-layout="sidebar-content"
         data-admin-console-sidebar-collapsed={

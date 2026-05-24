@@ -320,6 +320,47 @@ div[style*="z-index"]>div>.custom-marker {
   overscroll-behavior: contain;
 }
 
+/* 관리자 콘솔의 핵심 shell grid는 Tailwind arbitrary grid class 생성 여부에 의존하지 않는다. */
+[data-admin-console-layout="sidebar-content"] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+[data-admin-console-content]:focus,
+[data-admin-console-content]:focus-visible {
+  outline: none;
+}
+
+@media (min-width: 768px) {
+  [data-admin-console-layout="sidebar-content"] {
+    grid-template-columns: 16rem minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-admin-console-layout="sidebar-content"] {
+    grid-template-columns: 17rem minmax(0, 1fr);
+  }
+
+  [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  [data-admin-console-layout="sidebar-content"] {
+    grid-template-columns: 18rem minmax(0, 1fr);
+  }
+
+  [data-admin-console-layout="sidebar-content"][data-admin-console-sidebar-collapsed="true"] {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+}
+
 /* [PERF] 터치 디바이스 최적화 - 300ms 탭 딜레이 제거 */
 /* [NOTE] 네이버 지도 제스처(핀치 줌 등)와 충돌하여 비활성화
 @media (hover: none) and (pointer: coarse) {
