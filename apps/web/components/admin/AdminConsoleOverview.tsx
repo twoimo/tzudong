@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +12,6 @@ import {
   Clapperboard,
   ClipboardList,
   Image as ImageIcon,
-  Megaphone,
   MessageSquareText,
   PanelLeftClose,
   PanelLeftOpen,
@@ -34,7 +32,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
-import { useAnnouncementsAdmin } from "@/hooks/use-announcements";
 import { fetchSupabaseExactCount } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
@@ -46,7 +43,6 @@ type AdminModuleId =
   | "reviews"
   | "storyboard"
   | "banners"
-  | "announcements"
   | "users"
   | "insights"
   | "audit"
@@ -108,16 +104,6 @@ const consoleModules: ConsoleModule[] = [
     badge: "검수 큐",
     actionLabel: "리뷰 검수하기",
     priority: "urgent",
-  },
-  {
-    id: "announcements",
-    title: "공지사항",
-    description:
-      "관리자 콘솔과 홈 배너에 노출되는 공지를 작성·수정·노출 관리합니다.",
-    href: "/admin?module=announcements",
-    icon: Megaphone,
-    badge: "사용자 고지",
-    actionLabel: "공지사항 운영",
   },
   {
     id: "storyboard",
@@ -206,7 +192,6 @@ const sidebarSections: SidebarSection[] = [
     items: consoleModules
       .filter((module) =>
         [
-          "announcements",
           "storyboard",
           "banners",
           "users",
@@ -402,13 +387,6 @@ const AdminBannerModule = dynamic(() => import("@/app/admin/banners/page"), {
   ssr: false,
 });
 
-const AdminAnnouncementModule = dynamic(
-  () => import("@/components/announcement/AnnouncementPanel"),
-  {
-    ssr: false,
-  },
-);
-
 const AdminUsersModule = dynamic(
   () => import("@/components/admin/AdminUsersPanel"),
   {
@@ -454,12 +432,7 @@ type AdminOverviewStats = {
   withCoordinates: number | null;
   activeBanners: number | null;
   inactiveBanners: number | null;
-  totalAnnouncements: number | null;
-  activeAnnouncements: number | null;
-  bannerAnnouncements: number | null;
-  inactiveAnnouncements: number | null;
   latestRestaurantUpdate: string | null;
-  latestAnnouncementUpdate: string | null;
   dashboardVideos: DashboardSummaryResponse["videos"] | null;
 };
 
@@ -546,9 +519,6 @@ function useAdminOverviewStats(isAdmin: boolean): {
 
   const bannersQuery = useAdBannersAdmin(isAdmin);
   const banners = bannersQuery.data ?? [];
-  const announcementsQuery = useAnnouncementsAdmin(isAdmin);
-  const announcements = announcementsQuery.data ?? [];
-
   return {
     stats: {
       pendingSubmissions: pendingCountsQuery.data?.submissions ?? null,
@@ -563,43 +533,17 @@ function useAdminOverviewStats(isAdmin: boolean): {
       inactiveBanners: bannersQuery.isSuccess
         ? banners.filter((banner) => !banner.is_active).length
         : null,
-      totalAnnouncements: announcementsQuery.isSuccess
-        ? announcements.length
-        : null,
-      activeAnnouncements: announcementsQuery.isSuccess
-        ? announcements.filter((announcement) => announcement.isActive).length
-        : null,
-      bannerAnnouncements: announcementsQuery.isSuccess
-        ? announcements.filter(
-            (announcement) =>
-              announcement.isActive && announcement.showOnBanner,
-          ).length
-        : null,
-      inactiveAnnouncements: announcementsQuery.isSuccess
-        ? announcements.filter((announcement) => !announcement.isActive).length
-        : null,
       latestRestaurantUpdate: dashboardSummaryQuery.data?.asOf ?? null,
-      latestAnnouncementUpdate: announcementsQuery.isSuccess
-        ? announcements.reduce<string | null>((latest, announcement) => {
-            if (!latest) return announcement.updatedAt;
-            return new Date(announcement.updatedAt).getTime() >
-              new Date(latest).getTime()
-              ? announcement.updatedAt
-              : latest;
-          }, null)
-        : null,
       dashboardVideos: dashboardSummaryQuery.data?.videos ?? null,
     },
     isLoading:
       pendingCountsQuery.isLoading ||
       dashboardSummaryQuery.isLoading ||
-      bannersQuery.isLoading ||
-      announcementsQuery.isLoading,
+      bannersQuery.isLoading,
     hasError:
       pendingCountsQuery.isError ||
       dashboardSummaryQuery.isError ||
-      bannersQuery.isError ||
-      announcementsQuery.isError,
+      bannersQuery.isError,
   };
 }
 
@@ -730,14 +674,6 @@ function AdminSidebar({
         value: formatNumber(stats.pendingReviews),
         label: `대기 ${formatCount(stats.pendingReviews, "건")}`,
         urgent: stats.pendingReviews > 0,
-      };
-    }
-
-    if (moduleId === "announcements" && stats.activeAnnouncements != null) {
-      return {
-        value: formatNumber(stats.activeAnnouncements),
-        label: `활성 ${formatCount(stats.activeAnnouncements, "건")}`,
-        urgent: false,
       };
     }
 
@@ -1363,19 +1299,6 @@ function InlineModulePanel({ module }: { module: ConsoleModule }) {
         );
       case "banners":
         return <AdminBannerModule key="admin-banners" embedded />;
-      case "announcements":
-        return (
-          <AnnouncementWorkspace>
-            <AdminAnnouncementModule
-              key="admin-announcements"
-              isOpen
-              isAdmin
-              adminActionsMode="inline"
-              hideCloseButton
-              onClose={() => undefined}
-            />
-          </AnnouncementWorkspace>
-        );
       case "storyboard":
         return <AdminStoryboardGenerator key="admin-storyboard" />;
       case "users":
@@ -1426,14 +1349,6 @@ function AdminConsoleCanvasSkeleton() {
           <Skeleton className="h-24 w-full rounded-xl motion-reduce:animate-none" />
         </div>
       </div>
-    </div>
-  );
-}
-
-function AnnouncementWorkspace({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="min-h-0 flex-1">{children}</div>
     </div>
   );
 }
