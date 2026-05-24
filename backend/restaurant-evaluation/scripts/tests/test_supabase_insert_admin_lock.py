@@ -168,6 +168,47 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual(["고기", "한식"], record["categories"])
 
+    def test_build_record_aligns_missing_category_verdicts_to_accepted_categories(self):
+        incoming = self.make_incoming(
+            categories=["한식"],
+            evaluation_results={"address_TF": {"eval_value": True}},
+        )
+
+        record = supabase_insert.build_record(incoming, "tzuyang")
+
+        self.assertTrue(record["evaluation_results"]["category_validity_TF"]["eval_value"])
+        self.assertEqual(
+            ["한식"],
+            record["evaluation_results"]["category_validity_TF"]["normalized_categories"],
+        )
+        self.assertTrue(record["evaluation_results"]["category_TF"]["eval_value"])
+        self.assertIsNone(record["evaluation_results"]["category_TF"]["category_revision"])
+        self.assertEqual({"eval_value": True}, record["evaluation_results"]["address_TF"])
+
+    def test_build_record_overrides_stale_category_mismatch_when_categories_are_accepted(self):
+        incoming = self.make_incoming(
+            categories=["분식"],
+            evaluation_results={
+                "category_validity_TF": {"eval_value": False, "reason": "stale"},
+                "category_TF": {"eval_value": False, "category_revision": ["한식"]},
+            },
+        )
+
+        record = supabase_insert.build_record(incoming, "tzuyang")
+
+        self.assertTrue(record["evaluation_results"]["category_validity_TF"]["eval_value"])
+        self.assertEqual("stale", record["evaluation_results"]["category_validity_TF"]["reason"])
+        self.assertEqual(["분식"], record["evaluation_results"]["category_validity_TF"]["normalized_categories"])
+        self.assertTrue(record["evaluation_results"]["category_TF"]["eval_value"])
+        self.assertIsNone(record["evaluation_results"]["category_TF"]["category_revision"])
+
+    def test_build_record_preserves_category_verdicts_when_no_categories_are_available(self):
+        incoming = self.make_incoming(categories=[], evaluation_results={"category_TF": {"eval_value": False}})
+
+        record = supabase_insert.build_record(incoming, "tzuyang")
+
+        self.assertEqual({"category_TF": {"eval_value": False}}, record["evaluation_results"])
+
     def test_unreviewed_exact_match_refreshes_pipeline_fields_but_keeps_row_owned_fields(self):
         existing = {
             "id": "row-1",
