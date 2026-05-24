@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import { cn } from "@/lib/utils";
+import { siteConfig } from "@/lib/site-config";
 
 const myPageTopActionButtonClass =
   "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
@@ -234,7 +235,7 @@ export function MyPageTopActions() {
               className="flex w-max max-w-full items-center justify-between rounded-lg px-1 py-1 text-left whitespace-nowrap transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <span className="text-[10px] text-muted-foreground">
-                v2.0.0 © 타이니번
+                {siteConfig.operator.copyrightLabel}
               </span>
               {isBusinessInfoExpanded ? (
                 <ChevronUp
@@ -253,10 +254,10 @@ export function MyPageTopActions() {
                 id="desktop-map-business-info-content"
                 className="mt-1 space-y-0.5 border-t border-border px-1 pt-1 text-[9px] leading-4 text-muted-foreground whitespace-nowrap"
               >
-                <p className="font-medium text-foreground">타이니번 데이터랩</p>
-                <p>대표: 최연우</p>
-                <p>사업자: 601-09-04613</p>
-                <p>이메일: cs@tzudong.app</p>
+                <p className="font-medium text-foreground">{siteConfig.operator.companyName}</p>
+                <p>대표: {siteConfig.operator.representative}</p>
+                <p>사업자: {siteConfig.operator.businessRegistrationNumber}</p>
+                <p>이메일: {siteConfig.contact.email}</p>
               </div>
             )}
           </div>

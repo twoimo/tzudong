@@ -1142,10 +1142,10 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-announcement="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'router.replace("/?panel=announcement", { scroll: false })',
+      'router.push("/?panel=announcement", { scroll: false })',
     );
     expect(homeDesktopControlPanelSource).not.toContain(
-      'router.push("/?panel=announcement", { scroll: false })',
+      'router.replace("/?panel=announcement", { scroll: false })',
     );
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-panel-admin-reviews="true"',
@@ -2236,19 +2236,19 @@ describe("web quality performance source contracts", () => {
       "DESKTOP_LEFT_PANEL_ROUTE_VIEWS",
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
-      "router.replace(`/?panel=${panel}`, { scroll: false })",
+      "router.push(`/?panel=${panel}`, { scroll: false })",
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
-      'router.replace("/?panel=profile", { scroll: false })',
+      'router.push("/?panel=profile", { scroll: false })',
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
-      'router.replace("/?panel=bookmarks", { scroll: false })',
+      'router.push("/?panel=bookmarks", { scroll: false })',
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
       '{ id: "notifications", label: "알림", icon: Bell }',
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
-      'router.replace("/?panel=notifications", { scroll: false })',
+      'router.push("/?panel=notifications", { scroll: false })',
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
       '"settings"',
@@ -2758,10 +2758,10 @@ describe("web quality performance source contracts", () => {
       'data-mypage-sidebar-session-action="logout"',
     );
     expect(myPageProfileSource).toContain("md:h-full");
-    expect(myPageProfileSource).toContain("md:[grid-template-rows:repeat(2,minmax(0,1fr))]");
+    expect(myPageProfileSource).toContain("md:grid-rows-2");
     expect(myPageProfileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(myPageProfileSource).toContain(
-      "md:[grid-template-columns:repeat(2,minmax(0,1fr))]",
+      "md:grid-cols-2",
     );
     expect(myPageProfileSource).toContain(
       "lg:gap-3",
@@ -2875,8 +2875,8 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("내 활동");
     expect(myPageProfileSource).toContain("제보하기");
     expect(myPageProfileSource).not.toContain("지도 환경설정");
-    expect(myPageProfileSource).toContain("맛집 수정 요청");
-    expect(myPageProfileSource).toContain("쯔양 맛집 제보");
+    expect(myPageProfileSource).toContain("수정 요청");
+    expect(myPageProfileSource).toContain("쯔양 제보");
     expect(myPageProfileSource).toContain(
       "data-mypage-mobile-action-grid={section.id}",
     );
@@ -3268,10 +3268,13 @@ describe("web quality performance source contracts", () => {
     expect(appRuntimeShellSource).toContain(
       "<MainLayout>{children}</MainLayout>",
     );
-    expect(headerSource).toContain("v2.0.0 © 타이니번");
-    expect(mobileControlSource).toContain("v2.0.0 © 타이니번");
-    expect(homeMapUserMenuSource).toContain("v2.0.0 © 타이니번");
-    expect(homeMapUserMenuSource).toContain("사업자: 601-09-04613");
+    const siteConfigSource = source("lib/site-config.ts");
+    expect(headerSource).toContain("siteConfig.operator.copyrightLabel");
+    expect(mobileControlSource).toContain("siteConfig.operator.copyrightLabel");
+    expect(homeMapUserMenuSource).toContain("siteConfig.operator.copyrightLabel");
+    expect(homeMapUserMenuSource).toContain("siteConfig.operator.businessRegistrationNumber");
+    expect(siteConfigSource).toContain("NEXT_PUBLIC_COPYRIGHT_LABEL");
+    expect(siteConfigSource).toContain("NEXT_PUBLIC_OPERATOR_BUSINESS_REGISTRATION_NUMBER");
     expect(homeMapUserMenuSource).toContain(
       'aria-label="사업자 정보 펼치기/접기"',
     );
