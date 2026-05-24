@@ -28,7 +28,13 @@ function createUnavailableAuthAction(action: string) {
     };
 }
 
-export function AnonymousHomeAuthProvider({ children }: { children: ReactNode }) {
+export function AnonymousHomeAuthProvider({
+    children,
+    isLoading = false,
+}: {
+    children: ReactNode;
+    isLoading?: boolean;
+}) {
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
 
     const unavailableSignIn = useMemo(() => createUnavailableAuthAction('signIn'), []);
@@ -41,7 +47,7 @@ export function AnonymousHomeAuthProvider({ children }: { children: ReactNode })
     const value = useMemo<AuthContextType>(() => ({
         user: null,
         session: null,
-        isLoading: false,
+        isLoading,
         isAdmin: false,
         needsNicknameSetup,
         profileNickname: null,
@@ -52,7 +58,7 @@ export function AnonymousHomeAuthProvider({ children }: { children: ReactNode })
         completeNicknameSetup: () => setNeedsNicknameSetup(false),
         resetPassword: unavailableResetPassword,
         updatePassword: unavailableUpdatePassword,
-    }), [needsNicknameSetup, unavailableResetPassword, unavailableSignIn, unavailableSignInWithGoogle, unavailableSignOut, unavailableSignUp, unavailableUpdatePassword]);
+    }), [isLoading, needsNicknameSetup, unavailableResetPassword, unavailableSignIn, unavailableSignInWithGoogle, unavailableSignOut, unavailableSignUp, unavailableUpdatePassword]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

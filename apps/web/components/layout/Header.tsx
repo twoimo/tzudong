@@ -30,6 +30,7 @@ import { useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
 import { siteConfig } from "@/lib/site-config";
+import AnnouncementPanelLoadingFallback from "@/components/announcement/AnnouncementPanelLoadingFallback";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -659,7 +660,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           className="z-[95] p-0"
         >
           <div className="h-full min-h-0 overflow-hidden bg-background font-serif">
-            {HeaderAnnouncementPanel && (
+            {HeaderAnnouncementPanel ? (
               <HeaderAnnouncementPanel
                 key={selectedAnnouncement?.id ?? 'announcement-list'}
                 isOpen={isAnnouncementSheetOpen}
@@ -671,6 +672,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 initialAnnouncement={selectedAnnouncement}
                 isBottomSheet
                 adminActionsMode="inline"
+              />
+            ) : (
+              <AnnouncementPanelLoadingFallback
+                isAdmin={isAdmin}
+                onClose={() => {
+                  setIsAnnouncementSheetOpen(false);
+                  setSelectedAnnouncement(null);
+                }}
               />
             )}
           </div>
