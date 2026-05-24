@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUserProfileIdentity } from "@/hooks/useUserProfile";
 import { toast } from "@/lib/no-toast";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/site-config";
@@ -42,7 +42,7 @@ export function MyPageTopActions() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, isAdmin, signOut, profileNickname } = useAuth();
-  const { data: profile } = useUserProfile(user?.id ?? "");
+  const { data: profile } = useUserProfileIdentity(user?.id ?? "");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
 

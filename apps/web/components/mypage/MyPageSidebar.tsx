@@ -98,7 +98,12 @@ export function MyPageSidebar() {
 
       if (error) throw error;
 
-      await queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["user-profile", user.id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["user-profile-identity", user.id],
+      });
       setIsNicknameEditing(false);
       router.refresh();
       toast.success("닉네임이 변경되었습니다");
@@ -162,7 +167,10 @@ export function MyPageSidebar() {
 
       if (updateError) throw updateError;
 
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-identity", user.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["review-feed"] });
       queryClient.invalidateQueries({ queryKey: ["review-feed-panel"] });
       queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
@@ -200,7 +208,10 @@ export function MyPageSidebar() {
 
       if (updateError) throw updateError;
 
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["user-profile-identity", user.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["review-feed"] });
       queryClient.invalidateQueries({ queryKey: ["review-feed-panel"] });
       queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
