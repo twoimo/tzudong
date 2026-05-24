@@ -89,6 +89,7 @@ export default function HomeClientSidePanels({
                         state.setAdminRestaurantToEdit(null);
                     }}
                     restaurant={state.adminRestaurantToEdit}
+                    presentation={isMobileOrTablet ? 'auto' : 'map-panel'}
                     onSuccess={(updatedRestaurant) => {
                         state.setRefreshTrigger((prev) => prev + 1);
                         if (updatedRestaurant && state.selectedRestaurant?.id === updatedRestaurant.id) {
@@ -158,6 +159,7 @@ export default function HomeClientSidePanels({
                             isAdmin={isAdmin}
                             initialAnnouncement={selectedAnnouncement}
                             isBottomSheet
+                            adminActionsMode="inline"
                         />
                     </div>
                 </BottomSheet>
