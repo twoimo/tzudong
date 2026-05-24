@@ -79,7 +79,7 @@ body {
   overflow: hidden;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: var(--font-noto-serif-kr), 'Noto Serif KR', 'Apple SD Gothic Neo', 'Malgun Gothic', ui-serif, Georgia, serif;
+  font-family: var(--font-noto-serif-kr, 'Noto Serif KR'), 'Apple SD Gothic Neo', 'Malgun Gothic', ui-serif, Georgia, serif;
   letter-spacing: -0.025em;
 }
 

@@ -123,17 +123,23 @@ def normalize_categories(raw_categories: Any) -> list[str]:
     )
 
 
-def normalize_category_evaluation_results(raw_results: Any, categories: list[str]) -> dict[str, Any] | Any:
-    """Keep category review badges aligned with accepted Supabase categories.
+def normalize_category_evaluation_results(
+    raw_results: Any,
+    categories: list[str],
+    *,
+    align_accepted_categories: bool = False,
+) -> dict[str, Any] | Any:
+    """Keep category review badges aligned only with operator-accepted categories.
 
     The admin table renders category validity/match badges from
     ``evaluation_results``, while the operator-approved category source of truth
     is the flattened ``categories`` text[] column. If the accepted category list
-    is present, stale/missing category verdicts should not make the same row
-    appear as a category mismatch after a pipeline re-upsert.
+    belongs to a reviewed/admin-locked row, stale/missing category verdicts
+    should not make the same row appear as a category mismatch after a pipeline
+    re-upsert. Fresh pending pipeline rows must keep their evaluator verdicts.
     """
 
-    if not categories:
+    if not align_accepted_categories or not categories:
         return raw_results
 
     results: dict[str, Any] = deepcopy(raw_results) if isinstance(raw_results, dict) else {}
@@ -282,6 +288,11 @@ def merge_restaurant_record(
 
     if is_review_locked(existing):
         preserve_review_owned_fields(existing, merged)
+        merged["evaluation_results"] = normalize_category_evaluation_results(
+            merged.get("evaluation_results"),
+            normalize_categories(merged.get("categories")),
+            align_accepted_categories=True,
+        )
 
     if rebind_trace_id or "trace_id" not in merged:
         merged["trace_id"] = incoming.get("trace_id")

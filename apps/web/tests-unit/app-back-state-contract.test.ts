@@ -84,7 +84,10 @@ describe("app back navigation state contracts", () => {
     expect(homeClientSource).toContain("function clearAnnouncementPanelUrl()");
     expect(homeClientSource).toContain('currentUrl.searchParams.get("panel") !== "announcement"');
     expect(homeClientEffectsSource).toContain(
-      "searchParams.get('panel') !== 'announcement'",
+      "const isAnnouncementUrlActive = searchParams.get('panel') === 'announcement'",
+    );
+    expect(homeClientEffectsSource).toContain(
+      "wasAnnouncementUrlActiveRef.current",
     );
     expect(homeClientEffectsSource).toContain(
       "openPanelRef.current('announcement');",
