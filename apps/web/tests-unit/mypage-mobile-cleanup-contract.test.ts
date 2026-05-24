@@ -111,6 +111,9 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-profile-identity="sidebar-match"',
     );
     expect(profileSource).toContain(
+      "flex flex-col items-center space-y-4 p-6 text-center md:hidden",
+    );
+    expect(profileSource).not.toContain(
       "flex flex-col items-center space-y-4 border-b border-border p-6 text-center md:hidden",
     );
     expect(profileSource).not.toContain(
