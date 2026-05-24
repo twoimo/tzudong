@@ -296,9 +296,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(usersSource).toContain("block min-w-0 text-left");
     expect(usersSource).toContain(
-      "inline-flex h-9 items-center justify-center rounded-lg border border-input bg-background px-3 text-sm font-medium",
+      "overflow-hidden rounded-lg border bg-card",
     );
     expect(usersSource).toContain(
+      'Badge variant="secondary" className="border-transparent bg-muted text-muted-foreground"',
+    );
+    expect(usersSource).not.toContain(
       'Badge variant="outline" className="border-border bg-background text-muted-foreground"',
     );
     expect(usersSource).not.toContain(
