@@ -620,7 +620,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-profile-hero="mobile-only"',
     );
     expect(myPageProfileSource).toContain(
-      'className="overflow-hidden md:hidden"',
+      'className="overflow-hidden shadow-none md:hidden"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-profile-hero-layout="standard"',
@@ -638,7 +638,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
@@ -819,6 +819,18 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(source("app/home-client.tsx")).toContain(
       "onDeviceLocationClick={handleDeviceLocationClick}",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      'const DEVICE_LOCATION_ENABLE_TOAST = "위치 기능을 켜주세요";',
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      "toast.error(DEVICE_LOCATION_ENABLE_TOAST);",
+    );
+    expect(source("app/home-client.tsx")).not.toContain(
+      "현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요",
+    );
+    expect(source("app/home-client.tsx")).not.toContain(
+      "위치 권한이 차단되어 있어요. 브라우저 설정에서 위치 권한을 허용해주세요",
     );
     expect(source("components/home/SubmissionFloatingButton.tsx")).toContain(
       'aria-label="지도 빠른 작업"',
