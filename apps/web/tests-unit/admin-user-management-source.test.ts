@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
@@ -91,6 +91,17 @@ describe('admin user-management source contract', () => {
     expect(middlewareSource).toContain('user_account_status');
     expect(middlewareSource).toContain("accountStatus?.account_status === 'disabled'");
     expect(auditSource).not.toContain('service_role');
+  });
+
+  test('does not keep ad-hoc service-role helper scripts in the web package root', () => {
+    for (const relativePath of [
+      'query_dups.js',
+      'query_triggers.js',
+      'script.ts',
+      'scripts/gemini-daemon.mjs',
+    ]) {
+      expect(existsSync(join(import.meta.dir, '..', relativePath))).toBe(false);
+    }
   });
 
   test('adds an admin audit trail migration with RLS read access for admins', () => {
