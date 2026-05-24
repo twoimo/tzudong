@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import { formatCategoryText } from '@/lib/category-utils';
 import { supabase } from '@/integrations/supabase/client';
-import { geocodeWithGoogleMapsJs } from '@/lib/google-js-geocode';
 
 // ==================== 타입 정의 ====================
 
@@ -330,7 +329,6 @@ export function SubmissionDetailView({
     className,
 }: SubmissionDetailViewProps) {
     const [geocodingNaver, setGeocodingNaver] = useState(false);
-    const [geocodingGoogle, setGeocodingGoogle] = useState(false);
     const [fetchingMeta, setFetchingMeta] = useState<string | null>(null);
     const autoMetadataHandledSubmissionRef = useRef<string | null>(null);
     const autoGeocodeHandledSubmissionRef = useRef<string | null>(null);
@@ -400,37 +398,6 @@ export function SubmissionDetailView({
             setGeocodingNaver(false);
         }
     }, [editableData.address, editableData.name, onGeocodingResultsChange]);
-
-    const handleReGeocodeGoogle = async () => {
-        const address = editableData.address.trim();
-        const name = editableData.name.trim();
-        if (!address || !name) {
-            toast.error('맛집명과 주소를 입력해주세요');
-            return;
-        }
-
-        setGeocodingGoogle(true);
-        try {
-            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-            const searchQuery = `${name} ${address}`;
-
-            const results: GeocodingResult[] = await geocodeWithGoogleMapsJs(searchQuery, apiKey, 3);
-
-            if (results.length > 0) {
-                onGeocodingResultsChange(results);
-                setAddressChanged(false);
-                setInitialAddress(address);
-                toast.success(`${results.length}개의 주소 후보를 찾았습니다`);
-            } else {
-                toast.error('주소를 찾을 수 없습니다');
-            }
-        } catch (error: unknown) {
-            console.error('Google Geocoding error:', error);
-            toast.error(error instanceof Error ? error.message : 'Google 지오코딩에 실패했습니다');
-        } finally {
-            setGeocodingGoogle(false);
-        }
-    };
 
     const handleSelectGeocodingResult = (index: number) => {
         const result = geocodingResults[index];
@@ -553,7 +520,7 @@ export function SubmissionDetailView({
         autoGeocodeHandledSubmissionRef.current = submission.id;
 
         const autoGeocode = async () => {
-            if (editableData.address && geocodingResults.length === 0 && !geocodingNaver && !geocodingGoogle) {
+            if (editableData.address && geocodingResults.length === 0 && !geocodingNaver) {
                 // 승인 데이터가 없을 때만 실행
                 if (!approvalData.lat || !approvalData.lng) {
                     await handleReGeocodeNaver();
@@ -566,7 +533,7 @@ export function SubmissionDetailView({
         }, 100);
 
         return () => clearTimeout(timer);
-    }, [submission.id, editableData.address, geocodingResults.length, geocodingNaver, geocodingGoogle, approvalData.lat, approvalData.lng, handleReGeocodeNaver]);
+    }, [submission.id, editableData.address, geocodingResults.length, geocodingNaver, approvalData.lat, approvalData.lng, handleReGeocodeNaver]);
 
     // 지오코딩 결과 선택 시 자동으로 네이버 검색 검증 실행
     useEffect(() => {
@@ -648,22 +615,11 @@ export function SubmissionDetailView({
                                 size="sm"
                                 variant="outline"
                                 onClick={handleReGeocodeNaver}
-                                disabled={geocodingNaver || geocodingGoogle || !editableData.address.trim()}
+                                disabled={geocodingNaver || !editableData.address.trim()}
                                 className="h-7 text-xs"
                             >
                                 {geocodingNaver ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
                                 네이버 지오코딩
-                            </Button>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={handleReGeocodeGoogle}
-                                disabled={geocodingNaver || geocodingGoogle || !editableData.address.trim()}
-                                className="h-7 text-xs"
-                            >
-                                {geocodingGoogle ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
-                                Google 지오코딩
                             </Button>
                         </div>
                     </div>
