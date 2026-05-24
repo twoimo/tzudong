@@ -5,12 +5,15 @@ export interface ReviewDraft {
     id: string; // userId_restaurantId
     userId: string;
     restaurantId: string;
+    currentStep?: 1 | 2 | 3;
     visitedDate: string;
     visitedTime: string;
     categories: string[];
     content: string;
     verificationPhoto: File | null;
     foodPhotos: File[];
+    existingFoodPhotos?: string[];
+    removedPhotos?: string[];
     savedAt: string;
 }
 
