@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { AUTH_UI_REQUEST_EVENT, createAuthUiRequestDetail } from '../lib/auth-ui-events';
+import { AUTH_UI_REQUEST_EVENT, createAuthUiRequestDetail, requestAuthUi } from '../lib/auth-ui-events';
 import { HOME_AUTH_SESSION_UPDATED_EVENT, dispatchHomeAuthSessionUpdated } from '../lib/home-auth-events';
 
 describe('auth ui request events', () => {
@@ -53,5 +53,97 @@ describe('auth ui request events', () => {
             hasSession: true,
             source: 'unit-test',
         });
+    });
+
+    test('defers login prompts briefly when a Supabase session hint exists', () => {
+        const originalWindow = globalThis.window;
+        const listeners = new Map<string, EventListener>();
+        const dispatchedEvents: Event[] = [];
+        let timeoutCallback: (() => void) | null = null;
+
+        Object.defineProperty(globalThis, 'window', {
+            configurable: true,
+            value: {
+                localStorage: {
+                    length: 1,
+                    key: () => 'sb-test-auth-token',
+                    getItem: () => '{"access_token":"token"}',
+                },
+                addEventListener(type: string, listener: EventListener) {
+                    listeners.set(type, listener);
+                },
+                removeEventListener(type: string) {
+                    listeners.delete(type);
+                },
+                dispatchEvent(event: Event) {
+                    dispatchedEvents.push(event);
+                    return true;
+                },
+                setTimeout(callback: () => void) {
+                    timeoutCallback = callback;
+                    return 1;
+                },
+                clearTimeout() {
+                    timeoutCallback = null;
+                },
+            },
+        });
+
+        try {
+            requestAuthUi({ source: 'bookmark-button', reason: 'bookmark' });
+            expect(dispatchedEvents).toHaveLength(0);
+
+            listeners.get(HOME_AUTH_SESSION_UPDATED_EVENT)?.(
+                new CustomEvent(HOME_AUTH_SESSION_UPDATED_EVENT, { detail: { hasSession: true } }),
+            );
+            timeoutCallback?.();
+
+            expect(dispatchedEvents).toHaveLength(0);
+        } finally {
+            Object.defineProperty(globalThis, 'window', {
+                configurable: true,
+                value: originalWindow,
+            });
+        }
+    });
+
+    test('opens the login prompt after the grace period when a session hint is stale', () => {
+        const originalWindow = globalThis.window;
+        const dispatchedEvents: Event[] = [];
+
+        Object.defineProperty(globalThis, 'window', {
+            configurable: true,
+            value: {
+                localStorage: {
+                    length: 1,
+                    key: () => 'sb-test-auth-token',
+                    getItem: () => '{"access_token":"token"}',
+                },
+                addEventListener() {},
+                removeEventListener() {},
+                dispatchEvent(event: Event) {
+                    dispatchedEvents.push(event);
+                    return true;
+                },
+                setTimeout(callback: () => void) {
+                    callback();
+                    return 1;
+                },
+                clearTimeout() {},
+            },
+        });
+
+        try {
+            requestAuthUi({ source: 'bookmark-button', reason: 'bookmark' });
+        } finally {
+            Object.defineProperty(globalThis, 'window', {
+                configurable: true,
+                value: originalWindow,
+            });
+        }
+
+        expect(dispatchedEvents).toHaveLength(1);
+        expect(dispatchedEvents[0]).toBeInstanceOf(CustomEvent);
+        expect(dispatchedEvents[0]?.type).toBe(AUTH_UI_REQUEST_EVENT);
     });
 });

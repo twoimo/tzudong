@@ -2,6 +2,7 @@
 
 import './home-deferred-globals.css';
 import dynamic from 'next/dynamic';
+import AnnouncementPanelLoadingFallback from '@/components/announcement/AnnouncementPanelLoadingFallback';
 import type { Announcement } from '@/types/announcement';
 import type { useHomeState } from './hooks/useHomeState';
 
@@ -27,7 +28,10 @@ const RestaurantSubmissionModal = dynamic(
 
 const AnnouncementPanel = dynamic(
     () => import('@/components/announcement/AnnouncementPanel'),
-    { ssr: false }
+    {
+        ssr: false,
+        loading: () => <AnnouncementPanelLoadingFallback />,
+    }
 );
 
 const ReviewModal = dynamic(

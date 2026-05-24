@@ -3424,6 +3424,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(authContextSource).toContain("shouldDelayAuthBootstrap");
     expect(authContextSource).toContain("hasPersistedSupabaseSessionHint");
+    expect(authContextSource).toContain("&& !hasPersistedSupabaseSessionHint()");
     expect(authContextSource).toContain("hasSupabaseAuthSessionHint");
     expect(authContextSource).toContain(
       "shouldBootstrapAuthOnGeneralInteraction",
@@ -3441,6 +3442,18 @@ describe("web quality performance source contracts", () => {
     expect(authContextSource).not.toContain("const checkAdminRole");
     expect(authContextSource).not.toContain("const checkProfileStatus");
     expect(authContextSource).not.toContain("import { supabase }");
+    expect(source("app/home-runtime-shell.tsx")).toContain(
+      "useState(() => hasSupabaseAuthSessionHint())",
+    );
+    expect(source("app/home-runtime-shell.tsx")).toContain(
+      "<AnonymousHomeAuthProvider isLoading={hasStoredSession}>",
+    );
+    expect(source("lib/auth-ui-events.ts")).toContain(
+      "AUTH_UI_SESSION_HINT_GRACE_MS",
+    );
+    expect(source("lib/auth-ui-events.ts")).toContain(
+      "hasSupabaseAuthSessionHint()",
+    );
     expect(source("contexts/NotificationContext.tsx")).toContain(
       "import('@/integrations/supabase/client')",
     );
