@@ -29,6 +29,7 @@ import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { useActiveAnnouncements, useBannerAnnouncements } from "@/hooks/use-banner-announcements";
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
 import { updateMobileHeaderHeight } from "@/lib/mobile-sheet-layout";
+import { siteConfig } from "@/lib/site-config";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -591,7 +592,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
                   className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
                 >
-                  <span className="text-[10px] text-muted-foreground">v2.0.0 © 타이니번</span>
+                  <span className="text-[10px] text-muted-foreground">{siteConfig.operator.copyrightLabel}</span>
                   {isBusinessInfoExpanded ? (
                     <ChevronUp className="h-3 w-3 text-muted-foreground ml-1" />
                   ) : (
@@ -600,10 +601,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 </button>
                 {isBusinessInfoExpanded && (
                   <div className="mt-1 pt-1 border-t border-border text-[9px] text-muted-foreground space-y-0.5 px-1">
-                    <p className="font-medium text-foreground">타이니번 데이터랩</p>
-                    <p>대표: 최연우</p>
-                    <p>사업자: 601-09-04613</p>
-                    <p>이메일: cs@tzudong.app</p>
+                    <p className="font-medium text-foreground">{siteConfig.operator.companyName}</p>
+                    <p>대표: {siteConfig.operator.representative}</p>
+                    <p>사업자: {siteConfig.operator.businessRegistrationNumber}</p>
+                    <p>이메일: {siteConfig.contact.email}</p>
                   </div>
                 )}
               </div>
