@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import { useQueryClient } from "@tanstack/react-query";
@@ -291,7 +291,9 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePasswordChange = async () => {
+  const handlePasswordChange = async (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
     if (!user?.email) {
       toast.error("사용자 정보를 찾을 수 없습니다");
       return;
@@ -501,20 +503,6 @@ export default function ProfilePage() {
       accent: "bg-red-500/10 text-red-600",
       desktopAccent: "md:bg-red-500/10 md:text-red-600",
     },
-    {
-      href: "/mypage/submissions/edit",
-      icon: Edit,
-      title: "맛집 수정 요청",
-      description: "정보 바로잡기",
-      accent: "bg-amber-500/10 text-amber-600",
-    },
-    {
-      href: "/mypage/submissions/recommend",
-      icon: Youtube,
-      title: "쯔양 맛집 제보",
-      description: "영상 속 맛집",
-      accent: "bg-red-500/10 text-red-600",
-    },
   ];
   const quickActionSections = [
     {
@@ -559,7 +547,7 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:[grid-template-columns:repeat(2,minmax(0,1fr))] md:[grid-template-rows:repeat(2,minmax(0,1fr))] md:content-stretch md:items-stretch lg:gap-3"
+      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:content-stretch md:items-stretch lg:gap-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="true"
@@ -1064,148 +1052,155 @@ export default function ProfilePage() {
               계정 보안을 위해 정기적으로 비밀번호를 변경해주세요
             </CardDescription>
           </CardHeader>
-          <CardContent className="min-h-0 space-y-4 md:flex md:flex-1 md:flex-col lg:space-y-3 lg:p-3 lg:pt-0">
-            <div className="space-y-1.5">
-              <Label htmlFor="current-password">현재 비밀번호</Label>
-              <div className="relative">
-                <Input
-                  id="current-password"
-                  name="current-password"
-                  autoComplete="current-password"
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="현재 비밀번호를 입력하세요…"
-                  className="lg:h-9"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  aria-label={
-                    showCurrentPassword
-                      ? "현재 비밀번호 숨기기"
-                      : "현재 비밀번호 보기"
-                  }
-                >
-                  {showCurrentPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="new-password">새 비밀번호</Label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  name="new-password"
-                  autoComplete="new-password"
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="새 비밀번호를 입력하세요…"
-                  className="lg:h-9"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  aria-label={
-                    showNewPassword ? "새 비밀번호 숨기기" : "새 비밀번호 보기"
-                  }
-                >
-                  {showNewPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  name="confirm-password"
-                  autoComplete="new-password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="새 비밀번호를 다시 입력하세요…"
-                  className="lg:h-9"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label={
-                    showConfirmPassword
-                      ? "새 비밀번호 확인 숨기기"
-                      : "새 비밀번호 확인 보기"
-                  }
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div
-              className="hidden rounded-2xl border border-border/70 bg-muted/25 px-3 py-3 md:block"
-              data-mypage-password-guidance="true"
+          <CardContent className="min-h-0 md:flex md:flex-1 md:flex-col lg:p-3 lg:pt-0">
+            <form
+              className="min-h-0 space-y-4 md:flex md:flex-1 md:flex-col lg:space-y-3"
+              onSubmit={handlePasswordChange}
             >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold text-foreground">
-                  안전한 비밀번호 기준
-                </p>
-                <span className="text-[10px] font-medium text-muted-foreground">
-                  변경 전 확인
-                </span>
+              <div className="space-y-1.5">
+                <Label htmlFor="current-password">현재 비밀번호</Label>
+                <div className="relative">
+                  <Input
+                    id="current-password"
+                    name="current-password"
+                    autoComplete="current-password"
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="현재 비밀번호를 입력하세요…"
+                    className="lg:h-9"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    aria-label={
+                      showCurrentPassword
+                        ? "현재 비밀번호 숨기기"
+                        : "현재 비밀번호 보기"
+                    }
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
-                <span className="rounded-xl bg-background px-2 py-2">
-                  8-12자
-                </span>
-                <span className="rounded-xl bg-background px-2 py-2">
-                  현재 비밀번호
-                </span>
-                <span className="rounded-xl bg-background px-2 py-2">
-                  재입력 일치
-                </span>
-              </div>
-            </div>
 
-            <Button
-              onClick={handlePasswordChange}
-              disabled={
-                loading || !currentPassword || !newPassword || !confirmPassword
-              }
-              className="w-full border border-transparent md:mt-auto lg:h-9 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  변경 중…
-                </>
-              ) : (
-                "비밀번호 변경"
-              )}
-            </Button>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-password">새 비밀번호</Label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    name="new-password"
+                    autoComplete="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="새 비밀번호를 입력하세요…"
+                    className="lg:h-9"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label={
+                      showNewPassword
+                        ? "새 비밀번호 숨기기"
+                        : "새 비밀번호 보기"
+                    }
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="새 비밀번호를 다시 입력하세요…"
+                    className="lg:h-9"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={
+                      showConfirmPassword
+                        ? "새 비밀번호 확인 숨기기"
+                        : "새 비밀번호 확인 보기"
+                    }
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div
+                className="hidden rounded-2xl border border-border/70 bg-muted/25 px-3 py-3 md:block"
+                data-mypage-password-guidance="true"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold text-foreground">
+                    안전한 비밀번호 기준
+                  </p>
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    변경 전 확인
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
+                  <span className="rounded-xl bg-background px-2 py-2">
+                    8-12자
+                  </span>
+                  <span className="rounded-xl bg-background px-2 py-2">
+                    현재 비밀번호
+                  </span>
+                  <span className="rounded-xl bg-background px-2 py-2">
+                    재입력 일치
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={
+                  loading || !currentPassword || !newPassword || !confirmPassword
+                }
+                className="w-full border border-transparent md:mt-auto lg:h-9 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    변경 중…
+                  </>
+                ) : (
+                  "비밀번호 변경"
+                )}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

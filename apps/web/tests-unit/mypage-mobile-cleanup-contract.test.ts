@@ -204,10 +204,10 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-sidebar-session-action="logout"',
     );
     expect(profileSource).toContain("md:h-full");
-    expect(profileSource).toContain("md:[grid-template-rows:repeat(2,minmax(0,1fr))]");
+    expect(profileSource).toContain("md:grid-rows-2");
     expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(profileSource).toContain(
-      "md:[grid-template-columns:repeat(2,minmax(0,1fr))]",
+      "md:grid-cols-2",
     );
     expect(profileSource).toContain(
       "lg:gap-3",
@@ -290,8 +290,18 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("지도 환경설정");
     expect(profileSource).toContain("const activityActions = [");
     expect(profileSource).toContain("const reportActions = [");
-    expect(profileSource).toContain('title: "맛집 수정 요청"');
-    expect(profileSource).toContain('title: "쯔양 맛집 제보"');
+    expect(profileSource).toContain('title: "수정 요청"');
+    expect(profileSource).toContain('title: "쯔양 제보"');
+    expect(
+      profileSource.match(/href: "\/mypage\/submissions\/edit"/g)?.length ??
+        0,
+    ).toBe(1);
+    expect(
+      profileSource.match(/href: "\/mypage\/submissions\/recommend"/g)
+        ?.length ?? 0,
+    ).toBe(1);
+    expect(profileSource).not.toContain('title: "맛집 수정 요청"');
+    expect(profileSource).not.toContain('title: "쯔양 맛집 제보"');
     expect(profileSource).toContain("내 활동");
     expect(profileSource).toContain("제보하기");
     expect(
@@ -412,6 +422,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('aria-label="계정 영구 삭제 확인 이메일"');
     expect(profileSource).toContain('autoComplete="current-password"');
     expect(profileSource).toContain('autoComplete="new-password"');
+    expect(profileSource).toContain("onSubmit={handlePasswordChange}");
+    expect(profileSource).toContain('type="submit"');
+    expect(profileSource).not.toContain("onClick={handlePasswordChange}");
     expect(profileSource).toContain("현재 비밀번호 숨기기");
     expect(profileSource).toContain("현재 비밀번호 보기");
     expect(profileSource).toContain("새 비밀번호 숨기기");

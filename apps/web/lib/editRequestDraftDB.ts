@@ -5,6 +5,7 @@ export interface EditRequestDraft {
     id: string; // userId_restaurantId
     userId: string;
     restaurantId: string;
+    currentStep?: 1 | 2 | 3;
     name: string;
     address: string;
     phone: string;

@@ -175,7 +175,9 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     categories: categories,
                     content: content,
                     verificationPhoto: null,
-                    foodPhotos: [], // Don't save file objects for edit drafts
+                    foodPhotos: newFoodPhotos,
+                    existingFoodPhotos,
+                    removedPhotos,
                 });
                 setLastSavedAt(new Date());
             } catch (error) {
@@ -184,7 +186,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         }, 2000); // Save after 2 seconds of inactivity
 
         return () => clearTimeout(saveTimer);
-    }, [isOpen, review, user, content, categories]);
+    }, [isOpen, review, user, content, categories, newFoodPhotos, existingFoodPhotos, removedPhotos]);
 
     // Load draft on open
     useEffect(() => {
@@ -203,6 +205,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     }
                     if (draft.categories && draft.categories.length > 0) {
                         setCategories(draft.categories as Category[]);
+                    }
+                    if (Array.isArray(draft.foodPhotos) && draft.foodPhotos.length > 0) {
+                        setNewFoodPhotos(draft.foodPhotos);
+                    }
+                    if (Array.isArray(draft.existingFoodPhotos)) {
+                        setExistingFoodPhotos(draft.existingFoodPhotos);
+                    }
+                    if (Array.isArray(draft.removedPhotos)) {
+                        setRemovedPhotos(draft.removedPhotos);
                     }
                 }
             } catch (error) {
@@ -362,6 +373,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                 description: "관리자 재검토 후 다시 공개됩니다.",
             });
 
+            try {
+                await deleteEditDraft(user.id, `edit_${review.id}`);
+            } catch (e) {
+                console.error('Draft cleanup failed:', e);
+            }
+
             if (onSuccess) {
                 onSuccess();
             }
@@ -434,15 +451,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         }
     };
 
-    const handleClose = useCallback(async () => {
-        // Delete draft when closing if submitted successfully
-        if (user && review) {
-            try {
-                await deleteEditDraft(user.id, `edit_${review.id}`);
-            } catch (e) {
-                console.error('Draft cleanup failed:', e);
-            }
-        }
+    const handleClose = useCallback(() => {
         setCategories([]);
         setContent("");
         setNewFoodPhotos([]);
@@ -450,7 +459,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         setRemovedPhotos([]);
         setLastSavedAt(null);
         onClose();
-    }, [onClose, user, review]);
+    }, [onClose]);
 
     // Form validation
     const isFormValid = useMemo(() => {
