@@ -170,7 +170,7 @@ export default function LeaderboardPage() {
                         <LeaderboardSkeleton
                             count={8}
                             showHeader={false}
-                            className="pl-2 pr-6 sm:px-6"
+                            className="pl-2 pr-4 sm:px-6"
                         />
                     ) : (
                         <LeaderboardList
