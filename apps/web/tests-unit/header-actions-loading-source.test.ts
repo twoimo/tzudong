@@ -82,6 +82,12 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).not.toContain("if (!user) return null");
     expect(userMenuSource).toContain("requestAuthUi({");
     expect(userMenuSource).toContain('source: "desktop-map-user-menu"');
+    expect(userMenuSource).toContain("isLoading: isAuthLoading");
+    expect(userMenuSource).toContain('data-auth-session-pending="true"');
+    expect(userMenuSource).toContain('aria-label="사용자 세션 확인 중"');
+    expect(homeClientSource).toContain('<Maximize2 className="h-4 w-4" />');
+    expect(homeClientSource).toContain('<UserRound className="h-4 w-4" />');
+    expect(userMenuSource).not.toContain("[&_svg]:!size-5");
     expect(userMenuSource).toContain('aria-label="로그인 열기"');
     expect(userMenuSource).toContain(
       "fixed top-4 z-[120] h-11 w-11 rounded-full",

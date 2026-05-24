@@ -64,7 +64,7 @@ export default function HomeMapUserMenu({
   desktopPanelSide?: HomeMapPanelSide;
   isPanelCollapsed?: boolean;
 }) {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isLoading: isAuthLoading, isAdmin, signOut } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -316,6 +316,23 @@ export default function HomeMapUserMenu({
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
+      ) : isAuthLoading ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          data-desktop-map-user-menu="true"
+          data-auth-session-pending="true"
+          className={cn(
+            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            shouldOffsetForRightPanel ? "" : "right-6",
+          )}
+          style={userButtonStyle}
+          aria-label="사용자 세션 확인 중"
+          disabled
+        >
+          {userAvatarButton}
+        </Button>
       ) : (
         <Button
           type="button"

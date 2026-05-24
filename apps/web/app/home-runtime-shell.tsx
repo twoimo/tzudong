@@ -40,7 +40,7 @@ const loadNotificationProvider = async () => {
 };
 
 function HomeSessionProviders({ children }: ProviderProps) {
-    const [hasStoredSession, setHasStoredSession] = useState(false);
+    const [hasStoredSession, setHasStoredSession] = useState(() => hasSupabaseAuthSessionHint());
 
     useEffect(() => {
         const updateSessionHint = (event?: Event) => {
@@ -75,7 +75,7 @@ function HomeSessionProviders({ children }: ProviderProps) {
     }
 
     return (
-        <AnonymousHomeAuthProvider>
+        <AnonymousHomeAuthProvider isLoading={hasStoredSession}>
             <StaticNotificationProvider>{children}</StaticNotificationProvider>
         </AnonymousHomeAuthProvider>
     );
