@@ -87,14 +87,23 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(layoutSource).toContain("쯔동여지도 마이페이지");
     expect(layoutSource).toContain("flex min-w-0 flex-wrap items-center");
     expect(layoutSource).toContain(
-      "내 활동과 계정 정보를 한곳에서 관리하세요.",
+      "내 활동과 계정 정보를 관리하세요.",
     );
+    expect(layoutSource).toContain(
+      'data-mypage-mobile-route-header-action="logout"',
+    );
+    expect(layoutSource).toContain("await signOut();");
+    expect(layoutSource).toContain('aria-label="로그아웃"');
+    expect(layoutSource).toContain(
+      'className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"',
+    );
+    expect(layoutSource).not.toContain("<span>로그아웃</span>");
     expect(profileSource).not.toContain('data-mypage-mobile-page-header="true"');
     expect(profileSource).not.toContain(
       'className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm md:hidden"',
     );
     expect(profileSource).toContain('data-mypage-profile-hero="mobile-only"');
-    expect(profileSource).toContain('className="overflow-hidden md:hidden"');
+    expect(profileSource).toContain('className="overflow-hidden shadow-none md:hidden"');
     expect(profileSource).toContain(
       'data-mypage-profile-hero-layout="sidebar-match"',
     );
@@ -110,19 +119,23 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain(
       'data-mypage-profile-identity="standard"',
     );
-    expect(profileSource).toContain("rounded-full border-2 border-border");
+    expect(profileSource).toContain("rounded-full border-2 border-border shadow-sm");
+    expect(profileSource).toContain("transition-[border-color,box-shadow]");
+    expect(profileSource).toContain(
+      "border-2 border-border shadow-sm transition-[border-color,box-shadow]",
+    );
     expect(profileSource).toContain("grid w-full grid-cols-3 gap-2 pt-2");
     expect(profileSource).toContain("useUserProfile");
     expect(profileSource).toContain("userProfile?.tier");
     expect(profileSource).toContain("도장");
     expect(profileSource).toContain("리뷰");
     expect(profileSource).toContain("좋아요");
-    expect(profileSource).toContain(
+    expect(profileSource).not.toContain(
       'data-mypage-profile-session-action="logout"',
     );
     expect(profileSource).not.toContain("마이페이지 허브");
     expect(profileSource).toContain(
-      "const { user, signOut, profileNickname } = useAuth();",
+      "const { user, profileNickname } = useAuth();",
     );
     expect(profileSource).toContain(
       'profile?.nickname || userProfile?.nickname || profileNickname || "사용자"',
@@ -158,7 +171,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
     expect(profileSource).toContain(
-      'className="overflow-hidden md:order-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="overflow-hidden md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
     expect(profileSource).toContain('data-mypage-profile-main-column="true"');
     expect(profileSource).toContain(
@@ -248,12 +261,18 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('data-mypage-desktop-tier-metrics="true"');
     expect(profileSource).toContain('data-mypage-desktop-recent-activity="true"');
     expect(profileSource).toContain('data-mypage-password-guidance="true"');
-    expect(profileSource).toContain('data-mypage-danger-zone-guidance="true"');
     expect(profileSource).toContain(
-      'className="min-w-0 md:order-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'data-mypage-danger-zone-guidance="compact"',
     );
     expect(profileSource).toContain(
-      'className="hidden min-w-0 md:order-3 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      "비활성화는 복구 가능, 완전 삭제는 복구 불가입니다.",
+    );
+    expect(profileSource).not.toContain("진행 전 확인");
+    expect(profileSource).toContain(
+      'className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(profileSource).toContain(
+      'className="hidden min-w-0 md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
     expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(profileSource).toContain("최근 활동");
@@ -312,6 +331,38 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("const joinedDateLabel");
   });
 
+  test("mobile loading keeps static mypage chrome and uses borderless dynamic skeletons", () => {
+    const layoutSource = source("app/mypage/mypage-layout-content.tsx");
+    const routeLoadingSource = source("app/mypage/loading.tsx");
+    const sectionSkeletonSource = source(
+      "components/mypage/MyPageSectionSkeleton.tsx",
+    );
+
+    expect(layoutSource).toContain('data-mypage-mobile-route-header="true"');
+    expect(layoutSource).toContain(
+      'data-mypage-content-loading-behavior="static-shell-dynamic-skeleton"',
+    );
+    expect(layoutSource).toContain(
+      'data-mypage-content-hero-skeleton="borderless-mobile"',
+    );
+    expect(layoutSource).toContain(
+      "space-y-5 md:rounded-3xl md:border md:border-border md:bg-card md:p-5",
+    );
+    expect(layoutSource).not.toContain(
+      "rounded-3xl border border-border bg-card p-4",
+    );
+    expect(layoutSource).toContain("STAT_SKELETON_WIDTHS.map");
+    expect(layoutSource).toContain("ACTION_SKELETON_WIDTHS.map");
+    expect(routeLoadingSource).toContain("return null;");
+    expect(routeLoadingSource).not.toContain("animate-pulse");
+    expect(sectionSkeletonSource).toContain(
+      'data-mypage-section-skeleton-card="borderless-mobile"',
+    );
+    expect(sectionSkeletonSource).not.toContain(
+      "rounded-2xl border border-border bg-card p-4",
+    );
+  });
+
   test("mypage sections share a calm responsive frame across desktop and mobile", () => {
     const sectionFrameSource = source(
       "components/mypage/MyPageSectionFrame.tsx",
@@ -335,8 +386,21 @@ describe("mypage mobile cleanup source contracts", () => {
 
     expect(sectionFrameSource).toContain("data-mypage-section-hero");
     expect(sectionFrameSource).toContain('data-mypage-section-hero="quiet"');
-    expect(sectionFrameSource).toContain("border-border/80 bg-card/95");
-    expect(sectionFrameSource).toContain("shadow-sm");
+    expect(sectionFrameSource).toContain(
+      "hidden rounded-3xl border border-border/80 bg-card/95 p-5 shadow-sm md:block",
+    );
+    expect(sectionFrameSource).toContain(
+      "hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary sm:flex",
+    );
+    expect(sectionFrameSource).toContain(
+      "mt-1 hidden max-w-2xl text-sm leading-6 text-muted-foreground sm:block",
+    );
+    expect(sectionFrameSource).toContain(
+      "data-mypage-section-mobile-controls",
+    );
+    expect(sectionFrameSource).not.toContain(
+      "rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm sm:p-5",
+    );
     expect(sectionFrameSource).not.toContain("animate-pulse");
     expect(sectionFrameSource).not.toContain("bg-gradient");
     expect(sectionFrameSource).not.toContain("shadow-2xl");
@@ -408,13 +472,29 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(profileSource).toContain(
-      'className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(profileSource).not.toContain("계정 위험 작업");
+    expect(profileSource).not.toContain(
+      "자주 쓰지 않는 작업은 한곳에 모았습니다.",
+    );
+    expect(profileSource).toContain(
+      'className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3"',
+    );
+    expect(profileSource).toContain(
+      'className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"',
+    );
+    expect(profileSource).not.toContain(
+      'className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"',
     );
     expect(profileSource).toContain("<details\n              open");
+    expect(profileSource).toContain("비활성화·삭제 옵션 보기");
     expect(profileSource).toContain('className="mt-3 grid gap-2 md:flex-1"');
-    expect(profileSource).toContain(
+    expect(profileSource).not.toContain(
       'data-mypage-danger-zone-impact-grid="true"',
     );
+    expect(profileSource).not.toContain("재로그인 복구");
+    expect(profileSource).not.toContain("리뷰 표시");
     expect(profileSource).not.toContain(
       'className="mt-3 grid gap-2 sm:grid-cols-2"',
     );
@@ -441,6 +521,9 @@ describe("mypage mobile cleanup source contracts", () => {
       "aria-label={`${review.restaurantName} 리뷰 수정`}",
     );
     expect(reviewsSource).toContain('aria-label="리뷰 상태 필터"');
+    expect(reviewsSource).toContain(
+      "h-9 w-[104px] rounded-full border-0 bg-transparent px-2 text-xs shadow-none md:h-10 md:w-[140px] md:border md:bg-background md:px-3 md:text-sm",
+    );
     expect(reviewsSource).toContain(
       "aria-label={`${review.restaurantName} 리뷰 삭제 확인 열기`}",
     );

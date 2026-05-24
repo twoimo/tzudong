@@ -106,6 +106,7 @@ const requestDesktopDetailReturnCapture = () => {
 };
 
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
+const DEVICE_LOCATION_ENABLE_TOAST = "위치 기능을 켜주세요";
 
 function clearAnnouncementPanelUrl() {
   if (typeof window === "undefined") return;
@@ -593,7 +594,7 @@ export default function HomeClient() {
 
   const handleDeviceLocationClick = useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      toast.error("현재 브라우저에서 기기 위치를 사용할 수 없어요");
+      toast.error(DEVICE_LOCATION_ENABLE_TOAST);
       return;
     }
 
@@ -625,23 +626,8 @@ export default function HomeClient() {
       }
 
       applyDevicePosition(position, nextMode, { shouldFocus: true });
-    } catch (error) {
-      const code =
-        typeof error === "object" && error !== null && "code" in error
-          ? Number((error as { code?: unknown }).code)
-          : null;
-      const permissionDeniedCode =
-        typeof GeolocationPositionError !== "undefined"
-          ? GeolocationPositionError.PERMISSION_DENIED
-          : 1;
-
-      if (code === permissionDeniedCode) {
-        toast.error(
-          "위치 권한이 차단되어 있어요. 브라우저 설정에서 위치 권한을 허용해주세요",
-        );
-      } else {
-        toast.error("현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해주세요");
-      }
+    } catch {
+      toast.error(DEVICE_LOCATION_ENABLE_TOAST);
     } finally {
       setIsDeviceLocationPending(false);
     }
