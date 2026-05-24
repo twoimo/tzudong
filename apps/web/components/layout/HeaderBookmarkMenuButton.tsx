@@ -16,13 +16,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useBookmarks } from '@/hooks/use-bookmarks';
+import { useBookmarks, useUserBookmarkCount } from '@/hooks/use-bookmarks';
 
 export default function HeaderBookmarkMenuButton() {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const { data: bookmarksData = [], isLoading: isBookmarksLoading, isError: isBookmarksError } = useBookmarks({ enabled: isOpen });
+  const { data: bookmarkCount } = useUserBookmarkCount();
+  const triggerBookmarkCount = bookmarkCount ?? bookmarksData.length;
   const [visibleBookmarkCount, setVisibleBookmarkCount] = useState(20);
 
   return (
@@ -37,17 +39,17 @@ export default function HeaderBookmarkMenuButton() {
           variant="ghost"
           size="icon"
           type="button"
-          aria-label={bookmarksData.length > 0 ? `북마크, 저장한 맛집 ${bookmarksData.length}개` : "북마크"}
-          className="h-11 w-11 rounded-xl hover:bg-accent text-foreground relative transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+          aria-label={triggerBookmarkCount > 0 ? `북마크, 저장한 맛집 ${triggerBookmarkCount}개` : "북마크"}
+          className="relative h-11 w-11 rounded-xl !text-primary transition-colors hover:bg-primary/10 hover:!text-primary data-[state=open]:bg-primary/10 data-[state=open]:!text-primary focus-visible:ring-2 focus-visible:ring-primary touch-manipulation [&_svg]:!text-primary"
         >
-          <Bookmark className="h-5 w-5" aria-hidden="true" />
-          {!isBookmarksLoading && bookmarksData.length > 0 && (
+          <Bookmark className="h-5 w-5 !text-primary" aria-hidden="true" />
+          {triggerBookmarkCount > 0 && (
             <Badge
               variant="secondary"
               aria-hidden="true"
-              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border-primary/20 bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground"
+              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm"
             >
-              {bookmarksData.length > 99 ? '99+' : bookmarksData.length}
+              {triggerBookmarkCount > 99 ? '99+' : triggerBookmarkCount}
             </Badge>
           )}
         </Button>
@@ -56,7 +58,7 @@ export default function HeaderBookmarkMenuButton() {
         align="end"
         className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[100]"
       >
-        <DropdownMenuLabel className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2.5 text-foreground">
+        <DropdownMenuLabel className="flex items-start justify-between gap-3 px-1 py-1 text-foreground">
           <div className="min-w-0">
             <span className="block font-semibold">북마크</span>
             <span className="block text-xs font-normal text-muted-foreground">저장한 맛집 {isBookmarksLoading ? '확인 중' : `${bookmarksData.length}개`}</span>
@@ -67,7 +69,7 @@ export default function HeaderBookmarkMenuButton() {
             type="button"
             aria-label="북마크 전체보기 페이지로 이동"
             onClick={() => router.push('/mypage/bookmarks')}
-            className="h-8 w-8 shrink-0 rounded-full border border-border/70 bg-background/80 text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+            className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
           >
             <Settings className="h-4 w-4" aria-hidden="true" />
           </Button>

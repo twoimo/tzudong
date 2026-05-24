@@ -614,10 +614,13 @@ function MobileControlOverlayComponent({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={mobileTopIconButtonClass}
+                    className={cn(
+                        mobileTopIconButtonClass,
+                        '!text-primary hover:!text-primary data-[state=open]:!text-primary [&_svg]:!text-primary'
+                    )}
                     aria-label="북마크"
                 >
-                    <Bookmark className={mobileTopIconGlyphClass} aria-hidden="true" />
+                    <Bookmark className={cn(mobileTopIconGlyphClass, '!text-primary')} aria-hidden="true" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[min(calc(100vw-1rem),22rem)] bg-card border-border font-serif z-[110] shadow-primary">

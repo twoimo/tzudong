@@ -36,7 +36,6 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  LogOut,
   Bookmark,
   Camera,
   ChevronRight,
@@ -63,7 +62,7 @@ interface Profile {
 const PROFILE_SELECT = "nickname, avatar_url";
 
 export default function ProfilePage() {
-  const { user, signOut, profileNickname } = useAuth();
+  const { user, profileNickname } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: bookmarks = [] } = useBookmarks();
@@ -276,18 +275,6 @@ export default function ProfilePage() {
       toast.error("프로필 사진 삭제에 실패했습니다");
     } finally {
       setMobileAvatarUploading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      queryClient.clear();
-      toast.success("로그아웃되었습니다");
-      router.push("/");
-    } catch (error) {
-      console.error("로그아웃 실패:", error);
-      toast.error("로그아웃에 실패했습니다");
     }
   };
 
@@ -547,19 +534,21 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:content-stretch md:items-stretch lg:gap-3"
+      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-fr md:content-stretch md:items-stretch lg:gap-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="true"
       data-mypage-profile-matrix="equal-2x2"
       data-mypage-profile-matrix-size="equal-track-fill"
+      data-mypage-profile-mobile-flow="stack"
+      data-mypage-profile-desktop-flow="matrix-2x2"
     >
       <div
         className="min-w-0 space-y-3 sm:space-y-5 md:contents md:space-y-0"
         data-mypage-profile-main-column="true"
       >
         <Card
-          className="overflow-hidden md:hidden"
+          className="overflow-hidden shadow-none md:hidden"
           data-mypage-profile-hero="mobile-only"
         >
           <div
@@ -752,21 +741,11 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 w-full rounded-xl text-xs"
-              onClick={handleLogout}
-              data-mypage-profile-session-action="logout"
-            >
-              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
-              로그아웃
-            </Button>
           </div>
         </Card>
 
         <Card
-          className="overflow-hidden md:order-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="overflow-hidden md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -987,7 +966,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="hidden min-w-0 md:order-3 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="hidden min-w-0 md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
           data-mypage-desktop-recent-activity="true"
         >
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
@@ -1040,7 +1019,7 @@ export default function ProfilePage() {
       >
         {/* 비밀번호 변경 */}
         <Card
-          className="min-w-0 md:order-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
           data-mypage-password-card="full-width"
         >
           <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
@@ -1205,24 +1184,14 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
           data-mypage-danger-zone="true"
           data-mypage-danger-zone-layout="matrix-bottom-right"
         >
-          <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
-            <CardTitle className="flex items-center gap-2 text-base text-destructive">
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              계정 위험 작업
-            </CardTitle>
-            <CardDescription className="lg:hidden">
-              자주 쓰지 않는 작업은 한곳에 모았습니다. 필요한 경우에만 열어
-              처리하세요.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="min-h-0 md:flex md:flex-1 md:flex-col lg:p-3 lg:pt-0">
+          <CardContent className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3">
             <details
               open
-              className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"
+              className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"
             >
               <summary className="flex min-h-10 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">
                 <span>비활성화·삭제 옵션 보기</span>
@@ -1232,6 +1201,12 @@ export default function ProfilePage() {
                 />
               </summary>
               <div className="mt-3 grid gap-2 md:flex-1">
+                <p
+                  className="text-xs leading-5 text-muted-foreground"
+                  data-mypage-danger-zone-guidance="compact"
+                >
+                  비활성화는 복구 가능, 완전 삭제는 복구 불가입니다.
+                </p>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -1247,19 +1222,9 @@ export default function ProfilePage() {
                       <AlertDialogTitle>
                         계정을 비활성화하시겠습니까?
                       </AlertDialogTitle>
-                      <AlertDialogDescription className="space-y-2">
-                        <span className="block">계정을 비활성화하면:</span>
-                        <span className="block">
-                          • 닉네임이 &apos;탈퇴한 사용자&apos;로 변경됩니다
-                        </span>
-                        <span className="block">• 작성한 리뷰는 유지됩니다</span>
-                        <span className="block">• 랭킹에서 제외됩니다</span>
-                        <span className="block">
-                          • 나중에 다시 로그인하면 복구할 수 있습니다
-                        </span>
-                        <span className="block mt-4">
-                          계속하시려면 아래에 계정 이메일을 입력해주세요.
-                        </span>
+                      <AlertDialogDescription>
+                        닉네임은 탈퇴한 사용자로 표시되고, 다시 로그인하면 복구할 수 있습니다.
+                        계속하려면 계정 이메일을 입력하세요.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="py-4">
@@ -1320,25 +1285,10 @@ export default function ProfilePage() {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>
-                        정말로 계정을 완전히 삭제하시겠습니까?
+                        계정을 완전히 삭제하시겠습니까?
                       </AlertDialogTitle>
-                      <AlertDialogDescription className="space-y-2">
-                        <span className="block font-semibold text-destructive">
-                          이 작업은 되돌릴 수 없습니다.
-                        </span>
-                        <span className="block">계정을 완전히 삭제하면:</span>
-                        <span className="block">
-                          • 모든 개인 정보가 삭제됩니다
-                        </span>
-                        <span className="block">
-                          • 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
-                        </span>
-                        <span className="block">
-                          • 다시는 이 계정으로 로그인할 수 없습니다
-                        </span>
-                        <span className="block mt-4">
-                          계속하시려면 아래에 계정 이메일을 입력해주세요.
-                        </span>
+                      <AlertDialogDescription>
+                        이 작업은 되돌릴 수 없습니다. 계속하려면 계정 이메일을 입력하세요.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="py-4">
@@ -1385,53 +1335,6 @@ export default function ProfilePage() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-                <div
-                  className="rounded-xl bg-destructive/5 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
-                  data-mypage-danger-zone-guidance="true"
-                >
-                  <p className="font-semibold text-destructive">진행 전 확인</p>
-                  <p className="mt-1">
-                    비활성화는 복구 가능하지만, 완전 삭제는 로그인과 개인정보 복구가
-                    불가능합니다.
-                  </p>
-                </div>
-                <div
-                  className="grid grid-cols-2 gap-2 text-[11px]"
-                  data-mypage-danger-zone-impact-grid="true"
-                >
-                  <div className="rounded-xl bg-muted/35 px-3 py-2">
-                    <span className="block text-muted-foreground">
-                      비활성화
-                    </span>
-                    <span className="mt-0.5 block font-semibold">
-                      재로그인 복구
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-muted/35 px-3 py-2">
-                    <span className="block text-muted-foreground">
-                      완전 삭제
-                    </span>
-                    <span className="mt-0.5 block font-semibold text-destructive">
-                      복구 불가
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-muted/35 px-3 py-2">
-                    <span className="block text-muted-foreground">
-                      리뷰 표시
-                    </span>
-                    <span className="mt-0.5 block font-semibold">
-                      탈퇴 사용자
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-muted/35 px-3 py-2">
-                    <span className="block text-muted-foreground">
-                      확인 방식
-                    </span>
-                    <span className="mt-0.5 block font-semibold">
-                      이메일 입력
-                    </span>
-                  </div>
-                </div>
               </div>
             </details>
           </CardContent>
