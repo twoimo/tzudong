@@ -2195,7 +2195,8 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardListSource).toContain(
       '? "flex w-full max-w-full items-center gap-2 overflow-hidden pl-2 pr-5',
     );
-    expect(leaderboardListSource).toContain("pl-2 pr-4 sm:px-6");
+    expect(leaderboardListSource).toContain("pl-2 pr-2 sm:px-6");
+    expect(leaderboardListSource).not.toContain("pl-2 pr-4 sm:px-6");
     expect(leaderboardListSource).not.toContain("px-4 sm:px-6 md:px-6");
     expect(leaderboardPageSource).toContain('className="pl-2 pr-4 sm:px-6"');
     expect(leaderboardPageSource).toContain(
@@ -2917,6 +2918,9 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-hero-layout="sidebar-match"',
     );
     expect(myPageProfileSource).toContain(
+      "flex flex-col items-center space-y-4 p-6 text-center md:hidden",
+    );
+    expect(myPageProfileSource).not.toContain(
       "flex flex-col items-center space-y-4 border-b border-border p-6 text-center md:hidden",
     );
     expect(myPageProfileSource).toContain(
@@ -3748,11 +3752,18 @@ describe("web quality performance source contracts", () => {
     );
     expect(leaderboardListSource).toContain('"flex-1 min-w-0"');
     expect(leaderboardListSource).toContain(
-      '"ml-auto flex shrink-0 items-center gap-1.5',
+      '"ml-auto flex min-w-max shrink-0 items-center gap-1 text-sm tabular-nums',
     );
     expect(leaderboardListSource).toContain(
-      "h-4 w-4 text-red-500 fill-red-500",
+      'data-leaderboard-mobile-stats="no-clip"',
     );
+    expect(leaderboardListSource).toContain(
+      "h-3.5 w-3.5 text-red-500 fill-red-500",
+    );
+    expect(leaderboardListSource).toContain(
+      "flex-shrink-0 w-8 sm:w-10",
+    );
+    expect(leaderboardListSource).not.toContain("pl-2 pr-4 sm:px-6");
     expect(leaderboardListSource).not.toContain("max-w-[42vw]");
   });
 
