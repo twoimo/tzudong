@@ -2193,16 +2193,16 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardOverlaySource).not.toContain("<ScrollArea");
     expect(leaderboardListSource).toContain("compactLeftPanel?: boolean");
     expect(leaderboardListSource).toContain(
-      '? "flex items-center gap-2 pl-2 pr-5',
+      '? "flex w-full max-w-full items-center gap-2 overflow-hidden pl-2 pr-5',
     );
-    expect(leaderboardListSource).toContain("pl-2 pr-6 sm:px-6");
+    expect(leaderboardListSource).toContain("pl-2 pr-4 sm:px-6");
     expect(leaderboardListSource).not.toContain("px-4 sm:px-6 md:px-6");
-    expect(leaderboardPageSource).toContain('className="pl-2 pr-6 sm:px-6"');
+    expect(leaderboardPageSource).toContain('className="pl-2 pr-4 sm:px-6"');
     expect(leaderboardPageSource).toContain(
       "flex flex-wrap items-start justify-between gap-3",
     );
     expect(leaderboardPageSource).toContain("basis-[min(11rem,100%)]");
-    expect(leaderboardLoadingSource).toContain('className="pl-2 pr-6 sm:px-6"');
+    expect(leaderboardLoadingSource).toContain('className="pl-2 pr-4 sm:px-6"');
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel?: boolean");
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel = false");
     expect(leaderboardSkeletonSource).toContain(
@@ -3333,8 +3333,8 @@ describe("web quality performance source contracts", () => {
     );
     expect(layoutSource).not.toContain("next/script");
     expect(layoutSource).not.toContain('strategy="beforeInteractive"');
-    expect(layoutSource).not.toContain("next/font/google");
-    expect(layoutSource).not.toContain("Noto_Serif_KR");
+    expect(layoutSource).toContain('import { Noto_Serif_KR } from "next/font/google"');
+    expect(layoutSource).toContain("className={notoSerifKr.variable}");
     expect(layoutSource).not.toContain("QueryProvider");
     expect(layoutSource).not.toContain("AppProviders");
     expect(layoutSource).not.toContain("MainLayout");
@@ -3677,5 +3677,37 @@ describe("web quality performance source contracts", () => {
     expect(desktopControlSource).toContain(
       'name="desktop-left-panel-restaurant-search"',
     );
+  });
+
+  test("mobile leaderboard rows keep stats visible inside narrow viewports", () => {
+    const leaderboardListSource = source(
+      "components/leaderboard/LeaderboardList.tsx",
+    );
+
+    expect(leaderboardListSource).toContain(
+      "flex w-full max-w-full items-center gap-2 overflow-hidden",
+    );
+    expect(leaderboardListSource).toContain('"flex-1 min-w-0"');
+    expect(leaderboardListSource).toContain(
+      '"ml-auto flex shrink-0 items-center gap-1.5',
+    );
+    expect(leaderboardListSource).toContain(
+      "h-4 w-4 text-red-500 fill-red-500",
+    );
+    expect(leaderboardListSource).not.toContain("max-w-[42vw]");
+  });
+
+  test("direct mobile routes use a self-hosted Korean font before fallback stacks", () => {
+    const rootLayoutSource = source("app/layout.tsx");
+    const rootGlobalsSource = source("app/globals.css");
+    const tailwindConfigSource = source("tailwind.config.ts");
+
+    expect(rootLayoutSource).toContain('import { Noto_Serif_KR } from "next/font/google"');
+    expect(rootLayoutSource).toContain("variable: '--font-noto-serif-kr'");
+    expect(rootLayoutSource).toContain("className={notoSerifKr.variable}");
+    expect(rootGlobalsSource).toContain(
+      "font-family: var(--font-noto-serif-kr), 'Noto Serif KR'",
+    );
+    expect(tailwindConfigSource).toContain('"var(--font-noto-serif-kr)"');
   });
 });
