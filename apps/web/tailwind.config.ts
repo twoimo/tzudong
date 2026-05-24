@@ -46,6 +46,12 @@ const config: Config = {
   safelist: [
     ...ADMIN_EVALUATION_RESPONSIVE_DISPLAY_CLASSES,
     ...ADMIN_CONSOLE_RESPONSIVE_LAYOUT_CLASSES,
+    // MyPage profile desktop matrix depends on display: contents + equal row tracks.
+    // Keep these emitted when dev CSS is regenerated incrementally.
+    "md:contents",
+    "md:grid-cols-2",
+    "md:grid-rows-2",
+    "md:content-stretch",
   ],
   theme: {
     extend: {

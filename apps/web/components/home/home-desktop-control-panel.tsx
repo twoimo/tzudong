@@ -1138,7 +1138,7 @@ export default function HomeDesktopControlPanel({
       }
 
       setActiveLeftPanelView(panel);
-      router.replace(`/?panel=${panel}`, { scroll: false });
+      router.push(`/?panel=${panel}`, { scroll: false });
     },
     [activeRightPanel, onPanelClose, router],
   );
@@ -1175,7 +1175,7 @@ export default function HomeDesktopControlPanel({
 
     setActiveProfileUserId(user.id);
     setActiveLeftPanelView("profile");
-    router.replace("/?panel=profile", { scroll: false });
+    router.push("/?panel=profile", { scroll: false });
   }, [activeRightPanel, onPanelClose, router, user]);
 
   const handleBookmarkClick = useCallback(() => {
@@ -1196,7 +1196,7 @@ export default function HomeDesktopControlPanel({
     }
 
     setActiveLeftPanelView("bookmarks");
-    router.replace("/?panel=bookmarks", { scroll: false });
+    router.push("/?panel=bookmarks", { scroll: false });
   }, [activeRightPanel, onPanelClose, router, user]);
 
   const handleNotificationClick = useCallback(() => {
@@ -1217,7 +1217,7 @@ export default function HomeDesktopControlPanel({
     }
 
     setActiveLeftPanelView("notifications");
-    router.replace("/?panel=notifications", { scroll: false });
+    router.push("/?panel=notifications", { scroll: false });
   }, [activeRightPanel, onPanelClose, router, user]);
 
   const handleFloatingNavClick = useCallback(
@@ -1294,7 +1294,7 @@ export default function HomeDesktopControlPanel({
     (userId: string) => {
       setActiveProfileUserId(userId);
       setActiveLeftPanelView("profile");
-      router.replace(`/?panel=profile&user=${encodeURIComponent(userId)}`, {
+      router.push(`/?panel=profile&user=${encodeURIComponent(userId)}`, {
         scroll: false,
       });
     },
@@ -1665,10 +1665,10 @@ export default function HomeDesktopControlPanel({
                 if (!user) return;
                 setActiveProfileUserId(user.id);
                 setActiveLeftPanelView("profile");
-                router.replace("/?panel=profile", { scroll: false });
+                router.push("/?panel=profile", { scroll: false });
               }}
               onOpenAnnouncements={() =>
-                router.replace("/?panel=announcement", { scroll: false })
+                router.push("/?panel=announcement", { scroll: false })
               }
             />
           ) : activeLeftPanelView === "settings" && user ? (
