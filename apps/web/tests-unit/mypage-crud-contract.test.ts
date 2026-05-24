@@ -19,7 +19,10 @@ describe("mypage CRUD QA/QC source contracts", () => {
       expect(currentSource).toContain('from("profile-avatars")');
       expect(currentSource).toContain("upsert: true");
       expect(currentSource).toContain("update({ avatar_url:");
-      expect(currentSource).toContain('queryKey: ["user-profile"]');
+      expect(currentSource).toMatch(/queryKey: \["user-profile"(?:, user\.id)?\]/);
+      if (currentSource === sidebarSource) {
+        expect(currentSource).toContain('queryKey: ["user-profile-identity", user.id]');
+      }
     }
 
     expect(profileSource).toContain("supabase.auth.signInWithPassword");
