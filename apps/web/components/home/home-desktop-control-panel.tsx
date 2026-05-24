@@ -768,6 +768,7 @@ export default function HomeDesktopControlPanel({
   });
   const shouldShowDesktopSearchResults =
     activeLeftPanelView === "map" &&
+    !isPanelOpen &&
     (isDesktopSearchActive || desktopSearchQuery.trim().length > 0);
   const shouldShowDesktopMapHome =
     activeLeftPanelView === "map" &&

@@ -443,9 +443,15 @@ describe("web quality performance source contracts", () => {
     expect(homeClientSource).toContain("clearRestaurantDetailSelection");
     expect(homeClientSource).toContain("openRestaurantDetailSelection");
     expect(homeClientSource).toContain("releaseSearchSelectionOwnership");
+    expect(homeClientSource).toContain("DEFAULT_HOME_MAP_USER_PREFERENCES");
+    expect(homeClientSource).toContain(
+      "const preferences = readLastHomeMapUserPreferences();",
+    );
     expect(homeClientEffectsSource).toContain(
       "clearRestaurantDetailSelection: () => void",
     );
+    expect(homeClientEffectsSource).toContain("isAnnouncementSheetOpen: boolean");
+    expect(homeClientEffectsSource).toContain("wasAnnouncementUrlActiveRef");
     expect(homeClientEffectsSource).toContain("lastAnnouncementRequestKeyRef");
     expect(homeClientEffectsSource).toContain(
       "lastRestaurantDeepLinkRequestKeyRef",
@@ -456,6 +462,14 @@ describe("web quality performance source contracts", () => {
       "pendingRestaurantDeepLinkRequestRef",
     );
     expect(homeClientEffectsSource).toContain("pendingCoordinateRequestRef");
+    expect(homeClientEffectsSource).toContain("setSelectedAnnouncement(null)");
+    expect(homeClientEffectsSource).toContain(
+      "setSelectedAnnouncement(announcement ?? null)",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "const shouldShowDesktopSearchResults =",
+    );
+    expect(homeDesktopControlPanelSource).toContain("!isPanelOpen &&");
     expect(homeClientEffectsSource).not.toContain(
       "MOBILE_RESTAURANT_DEEP_LINK_IDLE_DELAY_MS",
     );
@@ -618,7 +632,7 @@ describe("web quality performance source contracts", () => {
       "shouldShowDesktopSearchResults",
     );
     expect(homeDesktopControlPanelSource).toContain("shouldShowDesktopMapHome");
-    expect(homeDesktopControlPanelSource).not.toContain(
+    expect(homeDesktopControlPanelSource).toContain(
       'activeLeftPanelView === "map" &&\n    !isPanelOpen &&\n    (isDesktopSearchActive',
     );
     expect(homeDesktopControlPanelSource).toContain("<DesktopLeftPanelMapHome");
@@ -2316,7 +2330,10 @@ describe("web quality performance source contracts", () => {
       "readLastHomeMapUserPreferences",
     );
     expect(source("app/home-client.tsx")).toContain(
-      "initialHomeMapPreferences.desktopPanelSide",
+      "DEFAULT_HOME_MAP_USER_PREFERENCES.desktopPanelSide",
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      "setDesktopPanelSide(preferences.desktopPanelSide)",
     );
     expect(source("app/home-client.tsx")).toContain(
       "readHomeMapUserPreferences(user.id)",
@@ -2469,6 +2486,10 @@ describe("web quality performance source contracts", () => {
     }
 
     expect(shortenSource).toContain("function getAllowedShortUrlTarget");
+    expect(shortenSource).toContain("function isRateLimited");
+    expect(shortenSource).toContain("SHORTEN_RATE_LIMIT_MAX_REQUESTS = 20");
+    expect(shortenSource).toContain("{ status: 429 }");
+    expect(shortenSource).toContain("export const runtime = 'nodejs';");
     expect(shortenSource).toContain("import { randomInt } from 'node:crypto';");
     expect(shortenSource).toContain("randomInt(chars.length)");
     expect(shortenSource).not.toContain("Math.random() * chars.length");
@@ -2493,13 +2514,24 @@ describe("web quality performance source contracts", () => {
     );
     expect(shortRedirectSource).toContain("redirect('/');");
     expect(authCallbackSource).toContain("function getTrustedRedirectOrigin");
+    expect(authCallbackSource).toContain("function getSafeNextPath");
+    expect(authCallbackSource).toContain("next.startsWith('//')");
+    expect(authCallbackSource).toContain("safePathPattern");
+    expect(authCallbackSource).not.toContain("if (!next.startsWith('/'))");
     expect(authCallbackSource).toContain(
       "DEFAULT_PRODUCTION_REDIRECT_ORIGIN",
     );
     expect(authCallbackSource).toContain("https://www.tzudong.app");
     expect(authCallbackSource).toContain("NEXT_PUBLIC_SITE_URL");
     expect(authCallbackSource).toContain("new URL(configuredSiteUrl).origin");
+    expect(authCallbackSource).toContain("process.env.NODE_ENV !== 'production'");
+    expect(authCallbackSource).toContain("new URL(requestOrigin).origin");
+    expect(authCallbackSource).toContain("return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;");
+    expect(authCallbackSource).toContain("getTrustedRedirectOrigin(origin)}");
     expect(authCallbackSource).not.toContain("x-forwarded-host");
+    expect(shortenSource).toContain("const DEFAULT_SITE_ORIGIN = 'https://www.tzudong.app';");
+    expect(shortenSource).toContain("process.env.NODE_ENV !== 'production'");
+    expect(shortenSource).toContain("return DEFAULT_SITE_ORIGIN;");
   });
 
   test("feed direct route defers heavy modals and detail panels until interaction", () => {
@@ -2633,6 +2665,8 @@ describe("web quality performance source contracts", () => {
       'data-mypage-fullscreen-toggle="true"',
     );
     expect(myPageTopActionsSource).toContain('data-mypage-user-menu="true"');
+    expect(myPageTopActionsSource).toContain("useUserProfile(user?.id ?? \"\")");
+    expect(myPageTopActionsSource).not.toContain("mypage-top-actions-avatar");
     expect(myPageLayoutContentSource).not.toContain(
       '<ReturnToMapButton className="mb-3 w-fit md:hidden" />',
     );
@@ -3783,9 +3817,11 @@ describe("web quality performance source contracts", () => {
 
     expect(rootLayoutSource).toContain('import { Noto_Serif_KR } from "next/font/google"');
     expect(rootLayoutSource).toContain("variable: '--font-noto-serif-kr'");
+    expect(rootLayoutSource).toContain("preload: false");
+    expect(rootLayoutSource).not.toContain("subsets: ['latin']");
     expect(rootLayoutSource).toContain("className={notoSerifKr.variable}");
     expect(rootGlobalsSource).toContain(
-      "font-family: var(--font-noto-serif-kr), 'Noto Serif KR'",
+      "font-family: var(--font-noto-serif-kr, 'Noto Serif KR')",
     );
     expect(tailwindConfigSource).toContain('"var(--font-noto-serif-kr)"');
   });
