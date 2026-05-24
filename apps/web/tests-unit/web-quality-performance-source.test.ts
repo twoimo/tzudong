@@ -3750,7 +3750,7 @@ describe("web quality performance source contracts", () => {
     expect(leaderboardListSource).toContain(
       "flex w-full max-w-full items-center gap-2 overflow-hidden",
     );
-    expect(leaderboardListSource).toContain('"flex-1 min-w-0"');
+    expect(leaderboardListSource).toContain('"flex-1 basis-0 min-w-0"');
     expect(leaderboardListSource).toContain(
       '"ml-auto flex min-w-max shrink-0 items-center gap-1 text-sm tabular-nums',
     );
