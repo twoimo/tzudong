@@ -26,6 +26,7 @@ function shouldDelayAuthBootstrap() {
         && window.location.pathname === '/'
         && !window.location.search
         && !window.location.hash
+        && !hasPersistedSupabaseSessionHint()
     );
 }
 
