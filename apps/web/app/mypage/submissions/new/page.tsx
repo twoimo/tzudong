@@ -526,7 +526,7 @@ export default function NewSubmissionsPage() {
           {submissions.map(renderSubmissionCard)}
           <div
             ref={loadMoreRef}
-            className="flex justify-center pt-4 xl:col-span-2"
+            className="flex justify-center pt-4 md:col-span-2 xl:col-span-3"
           >
             {isFetchingNextPage && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

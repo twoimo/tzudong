@@ -18,6 +18,18 @@ describe('overseas map marker helpers', () => {
         expect(html).toContain('marker-container');
     });
 
+    test('escapes marker image attributes before assigning HTML strings', () => {
+        const html = buildOverseasMarkerHtml({
+            imagePath: '/images/maker-images/asian.png" onerror="alert(1)',
+            name: '해외 "식당" <img>',
+        });
+
+        expect(html).toContain('/images/maker-images/asian.png&quot; onerror=&quot;alert(1)');
+        expect(html).toContain('해외 &quot;식당&quot; &lt;img&gt;');
+        expect(html).not.toContain('onerror="alert(1)');
+        expect(html).not.toContain('<img>');
+    });
+
     test('prefers selected restaurant id over searched id', () => {
         expect(getOverseasMarkerActiveId({
             searchedRestaurantId: 'searched',

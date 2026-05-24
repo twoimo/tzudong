@@ -111,9 +111,9 @@ function getProfileForm(user: ManagedUser): EditableProfile {
 function SummaryMetric({ label, value, tone = "default", isLoading = false }: { label: string; value: number | string; tone?: "default" | "danger" | "primary"; isLoading?: boolean }) {
   return (
     <div className={cn(
-      "rounded-xl border bg-background/80 p-2 shadow-sm",
-      tone === "primary" && "border-primary/20 bg-primary/5",
-      tone === "danger" && "border-destructive/20 bg-destructive/5",
+      "rounded-lg bg-muted/35 p-2",
+      tone === "primary" && "bg-primary/10",
+      tone === "danger" && "bg-destructive/10",
     )}>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-0.5 text-xl font-bold tracking-[-0.04em] text-foreground">
@@ -125,11 +125,11 @@ function SummaryMetric({ label, value, tone = "default", isLoading = false }: { 
 
 function UserTableSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl border border-border" role="status" aria-busy="true" aria-label="사용자 목록 로딩 중">
+    <div className="overflow-hidden rounded-lg border bg-card" role="status" aria-busy="true" aria-label="사용자 목록 로딩 중">
       <span className="sr-only">사용자 목록을 불러오는 중입니다.</span>
       <table className="w-full text-left text-sm">
         <caption className="sr-only">관리자 사용자 목록 로딩</caption>
-        <thead className="bg-muted/45 text-xs text-muted-foreground">
+        <thead className="bg-muted/35 text-xs text-muted-foreground">
           <tr>
             <th scope="col" className="px-3 py-2 font-semibold">사용자</th>
             <th scope="col" className="px-3 py-2 font-semibold">권한</th>
@@ -137,7 +137,7 @@ function UserTableSkeleton() {
             <th scope="col" className="px-3 py-2 font-semibold">작업</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border bg-background/70">
+        <tbody className="divide-y divide-border/50 bg-background/70">
           {Array.from({ length: 6 }).map((_, index) => (
             <tr key={index}>
               <td className="min-w-0 px-3 py-3 align-top">
@@ -151,17 +151,17 @@ function UserTableSkeleton() {
                 </button>
               </td>
               <td className="px-3 py-3 align-top">
-                <Badge variant="outline" className="border-border bg-background text-muted-foreground">
+                <Badge variant="secondary" className="border-transparent bg-muted text-muted-foreground">
                   <Skeleton className="h-4 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
                 </Badge>
               </td>
               <td className="hidden px-3 py-3 align-top md:table-cell">
-                <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800">
+                <Badge variant="secondary" className="border-transparent bg-emerald-50 text-emerald-800">
                   <Skeleton className="h-4 w-8 rounded-full motion-reduce:animate-none" aria-hidden="true" />
                 </Badge>
               </td>
               <td className="px-3 py-3 align-top">
-                <span className="inline-flex h-9 items-center justify-center rounded-lg border border-input bg-background px-3 text-sm font-medium" aria-hidden="true">
+                <span className="inline-flex h-9 items-center justify-center rounded-md bg-muted/60 px-3 text-sm font-medium" aria-hidden="true">
                   <Skeleton className="h-5 w-6 rounded-full motion-reduce:animate-none" />
                 </span>
               </td>
@@ -175,21 +175,21 @@ function UserTableSkeleton() {
 
 function StatusBadge({ user }: { user: ManagedUser }) {
   if (user.isDisabled) {
-    return <Badge variant="outline" className="border-destructive/30 bg-destructive/5 text-destructive">비활성</Badge>;
+    return <Badge variant="secondary" className="border-transparent bg-destructive/10 text-destructive">비활성</Badge>;
   }
 
   if (!user.emailConfirmedAt) {
-    return <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">이메일 미확인</Badge>;
+    return <Badge variant="secondary" className="border-transparent bg-amber-50 text-amber-800">이메일 미확인</Badge>;
   }
 
-  return <Badge variant="outline" className="border-emerald-300 bg-emerald-50 text-emerald-800">활성</Badge>;
+  return <Badge variant="secondary" className="border-transparent bg-emerald-50 text-emerald-800">활성</Badge>;
 }
 
 function RoleBadge({ isAdmin }: { isAdmin: boolean }) {
   return isAdmin ? (
     <Badge className="bg-primary text-primary-foreground">관리자</Badge>
   ) : (
-    <Badge variant="outline" className="border-border bg-background text-muted-foreground">일반 사용자</Badge>
+    <Badge variant="secondary" className="border-transparent bg-muted text-muted-foreground">일반 사용자</Badge>
   );
 }
 
@@ -326,25 +326,26 @@ export default function AdminUsersPanel() {
 
   return (
     <section aria-labelledby="admin-users-title" className="flex h-full min-h-0 flex-col bg-background">
-      <div className="shrink-0 border-b border-border bg-card/95 px-2 py-2 sm:px-3">
+      <div className="shrink-0 border-b border-border bg-card px-2 py-1.5">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-primary">계정·권한 운영</p>
-            <h2 id="admin-users-title" className="mt-0.5 text-xl font-bold tracking-[-0.04em] text-foreground md:text-2xl">
+            <h2 id="admin-users-title" className="flex items-center gap-1.5 bg-gradient-primary bg-clip-text text-base font-bold text-transparent">
+              <UsersRound className="h-5 w-5 text-primary" aria-hidden="true" />
               사용자 관리
             </h2>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">
+            <p className="mt-0.5 max-w-3xl text-xs leading-5 text-muted-foreground">
               계정 상태, 관리자 권한, 프로필 정보를 한 화면에서 확인하고 위험 변경은 재확인 후 적용합니다.
             </p>
           </div>
           <div className="flex flex-wrap gap-2" aria-label="사용자 관리 안전 원칙">
             {['관리자 확인 필수', '자기 잠금 방지', '상태 재확인', '삭제 대신 비활성화'].map((label) => (
-              <Badge key={label} variant="outline" className="border-primary/25 bg-background text-primary">{label}</Badge>
+              <Badge key={label} variant="outline" className="max-w-full truncate border-primary/25 bg-background text-primary">{label}</Badge>
             ))}
           </div>
         </div>
 
-        <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-2 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryMetric label="불러온 사용자" value={summary.loadedUsers} tone="primary" isLoading={isLoading} />
           <SummaryMetric label="관리자" value={summary.adminUsers} isLoading={isLoading} />
           <SummaryMetric label="비활성 계정" value={summary.disabledUsers} tone={summary.disabledUsers > 0 ? 'danger' : 'default'} isLoading={isLoading} />
@@ -353,13 +354,10 @@ export default function AdminUsersPanel() {
       </div>
 
       <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto p-2 xl:grid-cols-[minmax(340px,0.95fr)_minmax(400px,1.05fr)] xl:overflow-hidden xl:p-2">
-        <Card className="min-h-0 border-border bg-card/95 shadow-sm xl:flex xl:flex-col xl:overflow-hidden">
-          <CardHeader className="shrink-0 space-y-2 pb-2">
+        <Card className="min-h-0 border-border bg-card shadow-sm xl:flex xl:flex-col xl:overflow-hidden">
+          <CardHeader className="shrink-0 space-y-2 p-2 pb-2">
             <div className="flex items-center justify-between gap-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <UsersRound className="h-5 w-5 text-primary" aria-hidden="true" />
-                사용자 목록
-              </CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">사용자 목록</CardTitle>
               <Button type="button" variant="outline" size="sm" className="rounded-lg" onClick={() => void loadUsers()} disabled={isLoading || isMutating}>
                 <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden="true" />
                 새로고침
@@ -386,23 +384,23 @@ export default function AdminUsersPanel() {
               <Button type="submit" className="rounded-lg">검색</Button>
             </form>
             {errorMessage && (
-              <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive" role="alert">
+              <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
                 {errorMessage}
               </p>
             )}
           </CardHeader>
-          <CardContent className="min-h-0 flex-1 space-y-2 xl:overflow-y-auto">
+          <CardContent className="min-h-0 flex-1 space-y-2 p-2 pt-0 xl:overflow-y-auto">
             {isLoading ? (
               <UserTableSkeleton />
             ) : users.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+              <div className="rounded-lg bg-muted/25 p-4 text-center text-sm text-muted-foreground">
                 조건에 맞는 사용자가 없습니다. 필터를 줄이거나 전체 보기로 돌아가세요.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-border">
+              <div className="overflow-hidden rounded-lg">
                 <table className="w-full text-left text-sm">
                   <caption className="sr-only">관리자 사용자 목록</caption>
-                  <thead className="bg-muted/45 text-xs text-muted-foreground">
+                  <thead className="bg-muted/35 text-xs text-muted-foreground">
                     <tr>
                       <th scope="col" className="px-3 py-2 font-semibold">사용자</th>
                       <th scope="col" className="px-3 py-2 font-semibold">권한</th>
@@ -410,7 +408,7 @@ export default function AdminUsersPanel() {
                       <th scope="col" className="px-3 py-2 font-semibold">작업</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border bg-background/70">
+                  <tbody className="divide-y divide-border/50 bg-background/70">
                     {users.map((managedUser) => {
                       const isSelected = managedUser.id === selectedUser?.id;
                       return (
@@ -444,8 +442,8 @@ export default function AdminUsersPanel() {
         </Card>
 
         <div className="min-h-0 space-y-2 xl:overflow-y-auto">
-          <Card className="border-border bg-card/95 shadow-sm">
-            <CardHeader className="pb-2">
+          <Card className="border-border bg-card shadow-sm">
+            <CardHeader className="p-2 pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <UserPlus className="h-5 w-5 text-primary" aria-hidden="true" />
                 사용자 생성
@@ -454,7 +452,7 @@ export default function AdminUsersPanel() {
                 서버의 Supabase Auth Admin API로 계정을 만들고, 프로필/관리자 권한은 서버에서만 연결합니다.
               </p>
             </CardHeader>
-            <CardContent className="grid gap-2 md:grid-cols-2">
+            <CardContent className="grid gap-2 p-2 pt-0 md:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="new-user-email">이메일</Label>
                 <Input id="new-user-email" type="email" value={createForm.email} onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))} className="rounded-lg" />
@@ -471,7 +469,7 @@ export default function AdminUsersPanel() {
                 <Label htmlFor="new-user-username">사용자명</Label>
                 <Input id="new-user-username" value={createForm.username} onChange={(event) => setCreateForm((current) => ({ ...current, username: event.target.value }))} className="rounded-lg" />
               </div>
-              <label className="flex items-center gap-2 rounded-lg border border-border bg-background/80 px-2.5 py-1.5 text-sm md:col-span-2">
+              <label className="flex items-center gap-2 rounded-md bg-muted/30 px-2.5 py-1.5 text-sm md:col-span-2">
                 <input type="checkbox" checked={createForm.isAdmin} onChange={(event) => setCreateForm((current) => ({ ...current, isAdmin: event.target.checked }))} />
                 생성 즉시 관리자 권한 부여
               </label>
@@ -497,8 +495,8 @@ export default function AdminUsersPanel() {
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card/95 shadow-sm">
-            <CardHeader className="pb-2">
+          <Card className="border-border bg-card shadow-sm">
+            <CardHeader className="p-2 pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
                 상세·위험 변경
@@ -507,14 +505,14 @@ export default function AdminUsersPanel() {
                 권한 변경과 계정 비활성화는 입력 확인 후 적용합니다. 마지막 관리자와 본인 계정 잠금은 서버에서 차단됩니다.
               </p>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2 p-2 pt-0">
               {!selectedUser ? (
-                <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+                <div className="rounded-lg bg-muted/25 p-4 text-center text-sm text-muted-foreground">
                   사용자를 선택하면 상세 정보와 변경 작업이 표시됩니다.
                 </div>
               ) : (
                 <>
-                  <div className="rounded-xl border border-border bg-background/80 p-3">
+                  <div className="rounded-lg bg-muted/25 p-3">
                     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
                         <p className="truncate text-lg font-bold text-foreground">{selectedUser.nickname}</p>
@@ -523,7 +521,7 @@ export default function AdminUsersPanel() {
                       <div className="flex flex-wrap gap-2">
                         <RoleBadge isAdmin={selectedUser.isAdmin} />
                         <StatusBadge user={selectedUser} />
-                        {isSelfSelected && <Badge variant="outline" className="border-primary/25 text-primary">현재 로그인 계정</Badge>}
+                        {isSelfSelected && <Badge variant="secondary" className="border-transparent bg-primary/10 text-primary">현재 로그인 계정</Badge>}
                       </div>
                     </div>
                     <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
@@ -557,7 +555,7 @@ export default function AdminUsersPanel() {
 
                   <Separator />
 
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3">
                     <h3 className="flex items-center gap-2 text-sm font-bold text-amber-950">
                       <Crown className="h-4 w-4" aria-hidden="true" />
                       권한 변경 전 확인
@@ -576,7 +574,7 @@ export default function AdminUsersPanel() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3">
+                  <div className="rounded-lg border border-destructive/25 bg-destructive/10 p-3">
                     <h3 className="flex items-center gap-2 text-sm font-bold text-destructive">
                       <Ban className="h-4 w-4" aria-hidden="true" />
                       계정 처리 전 확인
