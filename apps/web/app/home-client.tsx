@@ -44,14 +44,14 @@ function HomeMapUserMenuPendingShell() {
         data-desktop-map-fullscreen-toggle="true"
         className="fixed right-20 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg backdrop-blur-sm"
       >
-        <Maximize2 className="h-5 w-5" />
+        <Maximize2 className="h-4 w-4" />
       </span>
       <span
         data-desktop-map-user-menu="true"
         className="fixed right-6 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm"
       >
         <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary">
-          <UserRound className="h-5 w-5" />
+          <UserRound className="h-4 w-4" />
         </span>
       </span>
     </div>
