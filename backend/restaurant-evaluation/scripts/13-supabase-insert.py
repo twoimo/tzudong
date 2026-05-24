@@ -102,6 +102,25 @@ def unique_non_empty(values: Iterable[Any]) -> list[Any]:
     return ordered
 
 
+def normalize_categories(raw_categories: Any) -> list[str]:
+    """Return a flat, de-duplicated category list for Supabase text[] columns."""
+
+    if raw_categories in (None, ""):
+        return []
+
+    raw_values = raw_categories if isinstance(raw_categories, list) else [raw_categories]
+    flattened: list[Any] = []
+    for value in raw_values:
+        if isinstance(value, list):
+            flattened.extend(normalize_categories(value))
+        else:
+            flattened.append(value)
+
+    return unique_non_empty(
+        str(value).strip() for value in flattened if value is not None and str(value).strip()
+    )
+
+
 def chunked(values: list[Any], size: int) -> Iterable[list[Any]]:
     for start in range(0, len(values), size):
         yield values[start : start + size]
@@ -513,12 +532,9 @@ def process_and_upsert(
 
 
 def build_record(data: dict[str, Any], channel: str) -> dict[str, Any]:
-    categories = data.get("categories")
-    if categories is None:
-        category = data.get("category")
-        categories = [category] if category else []
-    elif not isinstance(categories, list):
-        categories = [categories]
+    categories = normalize_categories(
+        data.get("categories") if data.get("categories") is not None else data.get("category")
+    )
 
     youtube_meta = data.get("youtube_meta")
     record_created_at = datetime.now(KST).isoformat()
