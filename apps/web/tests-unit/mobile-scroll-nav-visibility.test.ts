@@ -86,7 +86,7 @@ describe("mobile mypage scroll frame guards", () => {
     expect(layoutSource).toContain("쯔동여지도 마이페이지");
     expect(layoutSource).toContain("flex min-w-0 flex-wrap items-center");
     expect(layoutSource).toContain(
-      "내 활동과 계정 정보를 한곳에서 관리하세요.",
+      "내 활동과 계정 정보를 관리하세요.",
     );
     expect(layoutSource).not.toContain("md:mx-auto md:w-full md:max-w-6xl");
     expect(layoutSource).toContain("md:h-full md:min-h-0 md:px-4 md:py-3");
