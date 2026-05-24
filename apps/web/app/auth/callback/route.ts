@@ -1,6 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+const DEFAULT_PRODUCTION_REDIRECT_ORIGIN = 'https://www.tzudong.app';
+
+function getTrustedRedirectOrigin(requestOrigin: string) {
+    if (process.env.NODE_ENV === 'development') {
+        return requestOrigin;
+    }
+
+    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    if (configuredSiteUrl) {
+        try {
+            return new URL(configuredSiteUrl).origin;
+        } catch {
+            return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
+        }
+    }
+
+    return DEFAULT_PRODUCTION_REDIRECT_ORIGIN;
+}
+
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
@@ -15,16 +34,7 @@ export async function GET(request: Request) {
         const supabase = await createClient();
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) {
-            const forwardedHost = request.headers.get('x-forwarded-host');
-            const isLocalEnv = process.env.NODE_ENV === 'development';
-            if (isLocalEnv) {
-                // 로컬 환경에서는 로드 밸런서가 없으므로 origin 사용
-                return NextResponse.redirect(`${origin}${next}`);
-            } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`);
-            } else {
-                return NextResponse.redirect(`${origin}${next}`);
-            }
+            return NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}${next}`);
         }
     }
 
