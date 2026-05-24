@@ -37,18 +37,54 @@ describe('admin announcements console integration source contract', () => {
     expect(announcementPanelSource).not.toContain('공지 관리 열기');
   });
 
-  test('keeps announcement admin operations in a two-pane no-modal console', () => {
+  test('keeps announcement admin operations in full-panel transitions instead of a split preview', () => {
     const announcementPanelSource = source('components/announcement/AnnouncementPanel.tsx');
+    const headerSource = source('components/layout/Header.tsx');
+    const desktopControlPanelSource = source('components/home/home-desktop-control-panel.tsx');
+    const homeSidePanelsSource = source('app/home-client-sidepanels.tsx');
 
-    expect(announcementPanelSource).toContain('xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]');
-    expect(announcementPanelSource).toContain('목록과 상세·작성 패널을 반반으로 나눠 모달 없이');
-    expect(announcementPanelSource).toContain('공지 삭제 확인 문구');
-    expect(announcementPanelSource).toContain("deleteConfirmation !== '공지삭제'");
-    expect(announcementPanelSource).toContain('공지 노출 상태 변경 확인 문구');
-    expect(announcementPanelSource).toContain("toggleConfirmation !== '상태변경'");
-    expect(announcementPanelSource).toContain("toggleConfirmation !== '배너변경'");
+    expect(announcementPanelSource).not.toContain('xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]');
+    expect(announcementPanelSource).not.toContain('목록과 상세·작성 패널을 반반으로 나눠');
+    expect(announcementPanelSource).toContain("setViewMode('detail')");
+    expect(announcementPanelSource).toContain("viewMode === 'detail'");
+    expect(announcementPanelSource).not.toContain('목록 보기');
+    expect(announcementPanelSource).toContain("onClick={viewMode === 'list' ? onClose : handleCancel}");
+    expect(announcementPanelSource).toContain("aria-label={viewMode === 'list' ? '공지 패널 닫기' : '공지 목록으로 이동'}");
+    expect(announcementPanelSource).toContain('group w-full rounded-xl border border-border/70 bg-card px-3 py-3 text-left');
+    expect(announcementPanelSource).toContain('aria-label="공지사항 목록 로딩 중"');
+    expect(announcementPanelSource).toContain('<AnnouncementListItemSkeleton key={index} index={index} />');
+    expect(announcementPanelSource).not.toContain('공지사항을 불러오는 중입니다');
+    expect(announcementPanelSource).not.toContain('line-clamp-2 break-words');
+    expect(announcementPanelSource).not.toContain('우선순위:');
+    expect(announcementPanelSource).not.toContain('hover:bg-muted/50 -mx-4 -mt-4 p-4 rounded-t-lg');
+    expect(announcementPanelSource).not.toContain('공지 삭제 확인 문구');
+    expect(announcementPanelSource).not.toContain('deleteConfirmation');
+    expect(announcementPanelSource).not.toContain('공지 노출 상태 변경 확인 문구');
+    expect(announcementPanelSource).not.toContain('toggleConfirmation');
+    expect(announcementPanelSource).not.toContain('상태변경');
+    expect(announcementPanelSource).not.toContain('배너변경');
     expect(announcementPanelSource).not.toContain('role="listitem"');
     expect(announcementPanelSource).not.toContain('confirm(`');
+
+    expect(headerSource).toContain('AnnouncementPanelLoadingFallback');
+    expect(headerSource).toContain('HeaderAnnouncementPanel ?');
+    expect(desktopControlPanelSource).toContain('AnnouncementPanelLoadingFallback');
+    expect(desktopControlPanelSource).toContain('activeLeftPanelView === "announcement" ?');
+    expect(homeSidePanelsSource).toContain('loading: () => <AnnouncementPanelLoadingFallback');
+  });
+
+  test('keeps multiple banner announcements toast-safe and query-refreshable', () => {
+    const adminHookSource = source('hooks/use-announcements.tsx');
+    const bannerHookSource = source('hooks/use-banner-announcements.tsx');
+    const runtimeSource = source('components/map/NaverMapAnnouncementRuntime.tsx');
+
+    expect(adminHookSource).toContain("toast.success(variables.showOnBanner ? '배너 노출이 설정되었습니다' : '배너 노출이 해제되었습니다')");
+    expect(adminHookSource).toContain("queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_QUERY_KEY })");
+    expect(bannerHookSource).toContain("['show_on_banner', 'eq.true']");
+    expect(bannerHookSource).toContain('return parseAnnouncements(rows);');
+    expect(bannerHookSource).not.toContain('limit(1)');
+    expect(runtimeSource).toContain('announcementToastIndexRef.current = announcementPlan.nextIndex');
+    expect(runtimeSource).toContain('bannerAnnouncements.length === 0');
   });
 
   test('removes announcement operations from the URL-backed admin console module list', () => {

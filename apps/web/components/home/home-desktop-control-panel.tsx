@@ -29,6 +29,7 @@ import type { Announcement } from "@/types/announcement";
 import type { Region, Restaurant } from "@/types/restaurant";
 import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
+import AnnouncementPanelLoadingFallback from "@/components/announcement/AnnouncementPanelLoadingFallback";
 import HydratedDetailRestaurant from "@/components/home/HydratedDetailRestaurant";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { cn } from "@/lib/utils";
@@ -1702,19 +1703,25 @@ export default function HomeDesktopControlPanel({
                 onClose={handleReturnToMapPanel}
                 onSetPanelCollapsed={onSetPanelCollapsed}
               />
-            ) : activeLeftPanelView === "announcement" &&
-              DeferredAnnouncementPanel ? (
+            ) : activeLeftPanelView === "announcement" ? (
               <div
                 className="h-full min-h-0 overflow-hidden bg-background"
                 data-desktop-left-panel-announcement="true"
               >
-                <DeferredAnnouncementPanel
-                  isOpen
-                  onClose={handleExternalLeftPanelClose}
-                  isAdmin={isAdmin}
-                  initialAnnouncement={selectedAnnouncement}
-                  adminActionsMode="inline"
-                />
+                {DeferredAnnouncementPanel ? (
+                  <DeferredAnnouncementPanel
+                    isOpen
+                    onClose={handleExternalLeftPanelClose}
+                    isAdmin={isAdmin}
+                    initialAnnouncement={selectedAnnouncement}
+                    adminActionsMode="inline"
+                  />
+                ) : (
+                  <AnnouncementPanelLoadingFallback
+                    isAdmin={isAdmin}
+                    onClose={handleExternalLeftPanelClose}
+                  />
+                )}
               </div>
             ) : activeLeftPanelView === "adminReviews" &&
               DeferredAdminReviewPanel ? (
