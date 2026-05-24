@@ -1,3 +1,5 @@
+import { escapeHtmlAttribute } from './html-escape';
+
 export function buildOverseasMarkerHtml({
     imagePath,
     name,
@@ -5,9 +7,12 @@ export function buildOverseasMarkerHtml({
     imagePath: string;
     name: string;
 }) {
+    const safeImagePath = escapeHtmlAttribute(imagePath);
+    const safeName = escapeHtmlAttribute(name);
+
     return `
         <div class="marker-container" style="width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-            <img src="${imagePath}" style="width: 100%; height: 100%; object-fit: contain;" alt="${name}" />
+            <img src="${safeImagePath}" style="width: 100%; height: 100%; object-fit: contain;" alt="${safeName}" />
         </div>
     `;
 }
