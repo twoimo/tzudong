@@ -248,7 +248,7 @@ export default function BookmarksPage() {
           {hasMore && (
             <div
               ref={loadMoreRef}
-              className="py-6 text-center text-sm text-muted-foreground xl:col-span-2"
+              className="py-6 text-center text-sm text-muted-foreground md:col-span-2 xl:col-span-3"
             >
               계속 불러오는 중…
             </div>

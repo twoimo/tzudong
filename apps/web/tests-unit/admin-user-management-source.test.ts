@@ -34,6 +34,13 @@ describe('admin user-management source contract', () => {
     expect(panelSource).toContain('관리자 생성 확인 문구');
     expect(panelSource).not.toContain('confirmation: createForm.isAdmin ? "권한변경"');
     expect(panelSource).toContain('자기 잠금 방지');
+    expect(panelSource).toContain('border-b border-border bg-card px-2 py-1.5');
+    expect(panelSource).toContain('bg-gradient-primary bg-clip-text text-base font-bold text-transparent');
+    expect(panelSource).toContain('rounded-lg bg-muted/35 p-2');
+    expect(panelSource).toContain('min-h-0 border-border bg-card shadow-sm');
+    expect(panelSource).toContain('overflow-hidden rounded-lg border bg-card');
+    expect(panelSource).not.toContain('border-border bg-card/95 shadow-sm');
+    expect(panelSource).not.toContain('rounded-xl border border-border bg-background/80 p-3');
     expect(panelSource).toContain('aria-live="polite"');
     expect(panelSource).toContain('<caption className="sr-only">관리자 사용자 목록</caption>');
     expect(panelSource).toContain('role="alert"');

@@ -2,7 +2,7 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { PanelLeft, Bell, Maximize, User, LogOut, X, CheckCheck, Megaphone, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Fragment, useState, useEffect, useCallback, memo, useMemo, useRef, Suspense, type ComponentType } from "react";
+import { useState, useEffect, useCallback, memo, useMemo, useRef, Suspense, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import {
   DropdownMenu,
@@ -421,7 +421,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               align="end"
               className="w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-serif shadow-primary z-[100]"
             >
-              <DropdownMenuLabel className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-3 py-2.5 text-foreground">
+              <DropdownMenuLabel className="flex items-start justify-between gap-3 px-1 py-1 text-foreground">
                 <div className="min-w-0">
                   <span className="block font-semibold">알림</span>
                   <span className="block text-xs font-normal text-muted-foreground">최근 알림 {notifications.length}개 · 안 읽음 {unreadCount > 99 ? '99+' : unreadCount}</span>
@@ -433,7 +433,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     type="button"
                     aria-label="모든 알림 읽음 처리"
                     onClick={markAllAsRead}
-                    className="h-8 shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 text-xs text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                    className="h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
                   >
                     <CheckCheck className="h-3 w-3 mr-1" aria-hidden="true" />
                     모두 읽음
@@ -470,52 +470,54 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 ) : (
                   <DropdownMenuGroup>
                     {notifications.slice(0, 50).map((notification) => (
-                      <Fragment key={notification.id}>
-                        <DropdownMenuItem
-                          aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
-                          className={cn(
-                            "flex w-full max-w-full cursor-pointer items-center gap-3 rounded-xl p-2.5 touch-manipulation hover:bg-accent focus:bg-accent",
-                            !notification.isRead && "bg-primary/5"
-                          )}
-                          onSelect={() => handleNotificationClick(notification)}
-                        >
-                          {/* 타입별 컬러 인디케이터 */}
-                          <div className={cn(
-                            "h-12 w-1.5 shrink-0 rounded-full",
-                            getNotificationColor(notification.type)
-                          )} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                                {notification.title}
-                              </p>
-                              {!notification.isRead && (
-                                <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">새 알림</span>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {notification.message}
+                      <DropdownMenuItem
+                        key={notification.id}
+                        aria-label={`${notification.title} 알림 열기${notification.isRead ? "" : ", 읽지 않음"}`}
+                        className={cn(
+                          "flex w-full max-w-full cursor-pointer items-center gap-2 rounded-xl p-2.5 touch-manipulation hover:bg-accent focus:bg-accent",
+                          !notification.isRead && "bg-primary/5"
+                        )}
+                        onSelect={() => handleNotificationClick(notification)}
+                      >
+                        {/* 타입별 컬러 인디케이터 */}
+                        <div className={cn(
+                          "h-12 w-1.5 shrink-0 rounded-full",
+                          getNotificationColor(notification.type)
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                              {notification.title}
                             </p>
-                            <p className="text-xs text-muted-foreground/70 mt-0.5">
-                              {formatDistanceToNow(notification.createdAt, {
-                                addSuffix: true,
-                                locale: ko
-                              })}
-                            </p>
+                            {!notification.isRead && (
+                              <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">새 알림</span>
+                            )}
                           </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
+                          <p className="text-xs text-muted-foreground truncate">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">
+                            {formatDistanceToNow(notification.createdAt, {
+                              addSuffix: true,
+                              locale: ko
+                            })}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
                           aria-label={`${notification.title} 알림 삭제`}
-                          className="ml-1 mt-1 flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-xs text-muted-foreground touch-manipulation hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive"
-                          onSelect={(event) => {
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
                             event.preventDefault();
+                            event.stopPropagation();
                             removeNotification(notification.id);
                           }}
                         >
                           <X className="h-3.5 w-3.5" aria-hidden="true" />
-                          알림 삭제
-                        </DropdownMenuItem>
-                      </Fragment>
+                          <span className="sr-only">알림 삭제</span>
+                        </button>
+                      </DropdownMenuItem>
                     ))}
                   </DropdownMenuGroup>
                 )}

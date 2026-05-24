@@ -22,7 +22,8 @@ export function MyPageSectionSkeleton({
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="rounded-2xl border border-border bg-card p-4"
+            className="rounded-2xl bg-muted/30 p-4 md:border md:border-border md:bg-card"
+            data-mypage-section-skeleton-card="borderless-mobile"
           >
             <div className="flex items-start gap-3">
               <Skeleton className="h-14 w-14 shrink-0 rounded-xl" />

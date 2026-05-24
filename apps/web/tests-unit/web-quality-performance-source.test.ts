@@ -2467,6 +2467,9 @@ describe("web quality performance source contracts", () => {
     }
 
     expect(shortenSource).toContain("function getAllowedShortUrlTarget");
+    expect(shortenSource).toContain("import { randomInt } from 'node:crypto';");
+    expect(shortenSource).toContain("randomInt(chars.length)");
+    expect(shortenSource).not.toContain("Math.random() * chars.length");
     expect(shortenSource).toContain("trimmedTargetUrl.startsWith('//')");
     expect(shortenSource).toContain("function isValidReviewId");
     expect(shortenSource).toContain(".from('reviews')");
@@ -2666,18 +2669,35 @@ describe("web quality performance source contracts", () => {
       'data-mypage-content-loading="true"',
     );
     expect(myPageLayoutContentSource).toContain(
-      'data-mypage-content-hero-skeleton="true"',
-    );
-    expect(myPageLayoutContentSource).toContain(
       'data-mypage-content-actions-skeleton="true"',
     );
     expect(myPageLayoutContentSource).toContain(
+      'data-mypage-content-loading-behavior="static-shell-dynamic-skeleton"',
+    );
+    expect(myPageLayoutContentSource).toContain(
+      'data-mypage-content-hero-skeleton="borderless-mobile"',
+    );
+    expect(myPageLayoutContentSource).toContain(
+      "space-y-5 md:rounded-3xl md:border md:border-border md:bg-card md:p-5",
+    );
+    expect(myPageLayoutContentSource).not.toContain(
       "rounded-3xl border border-border bg-card p-4",
     );
+    expect(myPageLayoutContentSource).toContain("STAT_SKELETON_WIDTHS.map");
+    expect(myPageLayoutContentSource).toContain("ACTION_SKELETON_WIDTHS.map");
     expect(myPageLayoutContentSource).toContain("<Skeleton");
     expect(myPageLayoutContentSource).not.toContain("<GlobalLoader");
     expect(myPageSectionSkeletonSource).toContain(
       'data-mypage-section-loading="true"',
+    );
+    expect(myPageSectionSkeletonSource).toContain(
+      'data-mypage-section-skeleton-card="borderless-mobile"',
+    );
+    expect(myPageSectionSkeletonSource).toContain(
+      "rounded-2xl bg-muted/30 p-4 md:border md:border-border md:bg-card",
+    );
+    expect(myPageSectionSkeletonSource).not.toContain(
+      "rounded-2xl border border-border bg-card p-4",
     );
     expect(myPageSectionSkeletonSource).toContain("<Skeleton");
     expect(myPageLoadingSource).toContain("return null;");
@@ -2697,6 +2717,15 @@ describe("web quality performance source contracts", () => {
     expect(myPageLayoutContentSource).toContain(
       'window.matchMedia("(min-width: 768px)")',
     );
+    expect(myPageLayoutContentSource).toContain(
+      'data-mypage-mobile-route-header-action="logout"',
+    );
+    expect(myPageLayoutContentSource).toContain("await signOut();");
+    expect(myPageLayoutContentSource).toContain('aria-label="로그아웃"');
+    expect(myPageLayoutContentSource).toContain(
+      'className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"',
+    );
+    expect(myPageLayoutContentSource).not.toContain("<span>로그아웃</span>");
     expect(myPageSidebarSource).toContain(
       'data-mypage-left-panel-expanded="true"',
     );
@@ -2756,7 +2785,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-hero="mobile-only"',
     );
     expect(myPageProfileSource).toContain(
-      'className="overflow-hidden md:hidden"',
+      'className="overflow-hidden shadow-none md:hidden"',
     );
     expect(myPageProfileSource).toContain('data-mypage-profile-summary="true"');
     expect(myPageProfileSource).toContain(
@@ -2842,12 +2871,18 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity="true"');
     expect(myPageProfileSource).toContain('data-mypage-password-guidance="true"');
-    expect(myPageProfileSource).toContain('data-mypage-danger-zone-guidance="true"');
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 md:order-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'data-mypage-danger-zone-guidance="compact"',
     );
     expect(myPageProfileSource).toContain(
-      'className="hidden min-w-0 md:order-3 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      "비활성화는 복구 가능, 완전 삭제는 복구 불가입니다.",
+    );
+    expect(myPageProfileSource).not.toContain("진행 전 확인");
+    expect(myPageProfileSource).toContain(
+      'className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(myPageProfileSource).toContain(
+      'className="hidden min-w-0 md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
     );
     expect(myPageProfileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(myPageProfileSource).toContain("최근 활동");
@@ -2894,7 +2929,11 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-identity="standard"',
     );
     expect(myPageProfileSource).toContain(
-      "rounded-full border-2 border-border",
+      "rounded-full border-2 border-border shadow-sm",
+    );
+    expect(myPageProfileSource).toContain("transition-[border-color,box-shadow]");
+    expect(myPageProfileSource).toContain(
+      "border-2 border-border shadow-sm transition-[border-color,box-shadow]",
     );
     expect(myPageProfileSource).toContain("truncate text-lg font-bold");
     expect(myPageProfileSource).toContain(
@@ -2906,7 +2945,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("도장");
     expect(myPageProfileSource).toContain("리뷰");
     expect(myPageProfileSource).toContain("좋아요");
-    expect(myPageProfileSource).toContain(
+    expect(myPageProfileSource).not.toContain(
       'data-mypage-profile-session-action="logout"',
     );
     expect(myPageProfileSource).toContain("const activityActions = [");
@@ -2988,13 +3027,29 @@ describe("web quality performance source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 border-border/70 md:order-4 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+    );
+    expect(myPageProfileSource).not.toContain("계정 위험 작업");
+    expect(myPageProfileSource).not.toContain(
+      "자주 쓰지 않는 작업은 한곳에 모았습니다.",
+    );
+    expect(myPageProfileSource).toContain(
+      'className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3"',
+    );
+    expect(myPageProfileSource).toContain(
+      'className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"',
+    );
+    expect(myPageProfileSource).not.toContain(
+      'className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"',
     );
     expect(myPageProfileSource).toContain("<details\n              open");
+    expect(myPageProfileSource).toContain("비활성화·삭제 옵션 보기");
     expect(myPageProfileSource).toContain('className="mt-3 grid gap-2 md:flex-1"');
-    expect(myPageProfileSource).toContain(
+    expect(myPageProfileSource).not.toContain(
       'data-mypage-danger-zone-impact-grid="true"',
     );
+    expect(myPageProfileSource).not.toContain("재로그인 복구");
+    expect(myPageProfileSource).not.toContain("리뷰 표시");
     expect(myPageProfileSource).not.toContain(
       'className="mt-3 grid gap-2 sm:grid-cols-2"',
     );
@@ -3253,6 +3308,10 @@ describe("web quality performance source contracts", () => {
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "X-Frame-Options", value: "DENY" },
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=31536000; includeSubDomains",
+        },
         {
           key: "Permissions-Policy",
           value: "camera=(), microphone=(), geolocation=(self)",
